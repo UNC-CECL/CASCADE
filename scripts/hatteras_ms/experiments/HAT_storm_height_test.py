@@ -1,43 +1,13 @@
-r"""
-HAT_storm_height_test.py -- are the storm water levels too low for Hatteras?
-==============================================================================
-WHY (storms-and-overwash/2026-09-28-dune-ceiling-per-domain): once the dunes
-match the 2009 lidar, the low spots overwash where Irene really did. But
-Irene also overwashed 47 of the 60 domains with dunes of 4.3 m and up, and the
-model manages 10: a modelled Irene Rhigh of 3.80 m MHW cannot clear them.
-The storm series takes water level from the Duck gauge (8651370), about 80 km
-north of the reach, and adds Stockdon (2006) R2% run-up on WIS ST63228 waves
-with one beach slope, 0.06.
+"""
+Are the storm water levels too low for Hatteras?
 
-PART 1 -- observations (no model runs)
-    gauges   peak water level (m above MHW) at Duck against the gauges in or
-             near the reach, for the named storms 1996-2024. The ocean-side
-             record inside the reach is the Cape Hatteras Fishing Pier
-             (8654400, historic); Oregon Inlet Marina (8652587) and USCG
-             Station Hatteras (8654467) sit inside the inlets, on the sound
-             side. Fetched from the NOAA CO-OPS API into this folder's data/.
-    slope    the foreshore slope the run-up should use, measured from the
-             domains' 10 m elevation profiles (first land cell to the dune
-             toe), against the 0.06 in the storm builder
-PART 2 -- sensitivity runs
-    storm variants of the trim24 series: run-up slope 0.08 and 0.10
-    (Stockdon recomputed, events re-found), and Rhigh/Rlow raised by 0.25 and
-    0.5 m (a local surge Duck does not see; the events are unchanged)
-    x dune ceilings uniform 5.5 m NAVD88 and per-cell (the two candidates)
-    x managed, both windows. Controls: the trim24 runs of those two ceilings.
+    python scripts/hatteras_ms/experiments/HAT_storm_height_test.py gauges
+    python scripts/hatteras_ms/experiments/HAT_storm_height_test.py build
+    python scripts/hatteras_ms/experiments/HAT_storm_height_test.py run --workers 6
+    python scripts/hatteras_ms/experiments/HAT_storm_height_test.py score
 
-NOTHING IN THE MAIN CODE CHANGES (storm files and ceilings are swapped in
-each run's own process, as in the earlier experiments).
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-height/
-
-USAGE
-    python HAT_storm_height_test.py gauges
-    python HAT_storm_height_test.py slope
-    python HAT_storm_height_test.py build
-    python HAT_storm_height_test.py run [--workers 6]
-    python HAT_storm_height_test.py score
-==============================================================================
+Duck against the gauges in the reach, then storm series with a steeper
+run-up slope or raised Rhigh, run and scored. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -68,6 +38,7 @@ import HAT_storm_length_selection as S  # noqa: E402
 import HAT_dune_ceiling_rebuild as E  # noqa: E402
 import HAT_dune_ceiling_per_domain as P  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-28-storm-height"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 DATA = EXP_DIR / "data"
@@ -85,13 +56,13 @@ EVENTS = {"Fran 1996": "1996-09-05", "Bonnie 1998": "1998-08-27", "Dennis 1999":
           "Joaquin 2015": "2015-10-03", "Matthew 2016": "2016-10-09", "Mar 2018 nor'easter": "2018-03-04",
           "Florence 2018": "2018-09-14", "Dorian 2019": "2019-09-06", "Isaias 2020": "2020-08-04",
           "Ian 2022": "2022-09-30", "Lee 2023": "2023-09-16"}
+# -----------------------------------------------------------------------------
 
 
-# --- PART 1: gauges ------------------------------------------------------------------
+# Part 1: gauges
 
+# Hourly water levels for one gauge, m above MHW, cached under data/
 def fetch(station, begin, end):
-    """Hourly heights (historical stations: 'hourly_height'; otherwise
-    'water_level'), m above MHW. Cached under data/."""
     DATA.mkdir(parents=True, exist_ok=True)
     cache = DATA / f"{station}_{begin}_{end}.csv"
     if cache.exists():
@@ -119,6 +90,7 @@ def fetch(station, begin, end):
     return pd.DataFrame(columns=["t", "v"])
 
 
+# Each named storm's peak water level at every gauge, as a table
 def gauges():
     rows = []
     for ev, day in EVENTS.items():
@@ -145,24 +117,24 @@ def gauges():
                   f"(range {d.min():+.2f} to {d.max():+.2f})")
 
 
-# --- PART 2: sensitivity runs ------------------------------------------------------
+# Part 2: sensitivity runs
 
 VARIANTS = ("slope0p10", "plus0p25", "plus0p50")
 CEILINGS = ("uniform5p5", "cell")
 
 
+# A variant's storm file
 def storm_file(w, v):
     return EXP_DIR / "storms" / S.wtag(w) / f"{S.wtag(w)}_storms_{v}.npy"
 
 
+# A variant's storm summary
 def summary_csv(w, v):
     return EXP_DIR / "storms" / S.wtag(w) / f"{S.wtag(w)}_storms_{v}_summary.csv"
 
 
+# The slope0p10 and raised-Rhigh (plusX) storm series
 def build():
-    """slope0p10: the builder's chain with run-up slope 0.10, events re-found
-    (every event kept), trimmed to 24 h. plusX: the trim24 series with Rhigh
-    and Rlow raised X m (the same events)."""
     fn = S.MD.builder_functions()
     for w in S.WINDOWS:
         out = EXP_DIR / "storms" / S.wtag(w)
@@ -190,10 +162,12 @@ def build():
                   f"max {a[:, 1].max() * 10:.2f} m MHW  storm-hours {a[:, 4].sum():.0f}")
 
 
+# A run group's name
 def group(v, ceiling):
     return f"{v}_{ceiling}_full_management"
 
 
+# A variant's finished run under a ceiling, or None
 def run_dir(w, v, ceiling):
     if v == "trim24":
         return (E.run_dir(w, "trim24", 5.5, "current", "full_management") if ceiling == "uniform5p5"
@@ -203,6 +177,7 @@ def run_dir(w, v, ceiling):
     return hits[-1] if hits else None
 
 
+# Subprocess entry: the runner with this ceiling and storm file
 def _launch(start, storm_path, ceiling):
     if ceiling == "uniform5p5":
         E._launch(start, storm_path, 5.5, "current")
@@ -210,6 +185,7 @@ def _launch(start, storm_path, ceiling):
         P._launch(start, storm_path, "cell")
 
 
+# Run one job in its own process, logged, via this file's _launch entry
 def launch(job):
     w, v, ceiling = job
     g = group(v, ceiling)
@@ -233,12 +209,14 @@ def launch(job):
     return rec
 
 
+# Every variant x ceiling not yet run, in parallel
 def run(workers):
     jobs = [(w, v, c) for w in S.WINDOWS for v in VARIANTS for c in CEILINGS]
     with ThreadPoolExecutor(workers) as ex:
         list(ex.map(launch, [j for j in jobs if run_dir(*j) is None]))
 
 
+# Score every run against the overwash imagery
 def score():
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
@@ -277,6 +255,7 @@ def score():
         print(t[[x for x in cols if x in t.columns]].round(2).to_string(index=False))
 
 
+# Run: the subprocess entry, or the action asked for
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         _launch(*sys.argv[2:5])

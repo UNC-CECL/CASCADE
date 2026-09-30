@@ -1,50 +1,12 @@
 #!/usr/bin/env python3
-"""Does the dune line ever reach NC-12? Original vs observed vs modelled.
+"""
+Does the dune line ever reach NC-12? Original, observed and modelled positions, per domain.
 
-WHY THIS FIGURE EXISTS
-
-    The 1984-2004 relocation comparison reports that almost no domain relocates
-    unaided once the road setbacks are measured against `1984-start` row 0. The
-    obvious objection is that the roads are still only 3-6 cells behind the
-    dune, so something must be wrong. This figure is the check: it puts the
-    three cross-shore positions on one axis, per domain, so the claim can be
-    read off rather than argued.
-
-        original   the 1984 dune line -- the run's own year-0 position, and the
-                   datum every other quantity here is measured from
-        observed   the surveyed 2004 dune line, from
-                   2-brie-offset/raw_offsets/2004_duneline_offset_raw.csv minus
-                   the 1984 file. This is the SAME target the run scores its
-                   misfit against (cascade_pipeline.hindcast.
-                   build_shoreline_target), not a second opinion.
-        modelled   where the run put the dune line in 2004
-
-    and draws NC-12 as the 20 m band it occupies, at the setback the model was
-    initialised with.
-
-WHAT "CORRECT BEHAVIOUR" LOOKS LIKE HERE
-
-    `road_relocation_checks` relocates when the setback goes STRICTLY negative,
-    and the setback is driven by
-
-        dune_migration = barrier3d.ShorelineChangeTS[t-1] * 10       # m
-
-    -- whole 10 m cells, because ShorelineChangeTS counts cells. So the road is
-    overrun only when the dune line travels PAST the near edge of the road band.
-    A domain whose observed and modelled 2004 dune lines both stop short of that
-    edge SHOULD not relocate, and a model that agrees with the survey about
-    where the dune line got to is behaving correctly even though it misses the
-    historical relocation. That is the distinction this figure is drawn to make
-    visible: a miss caused by the TRIGGER (geometric overrun) is not the same as
-    a miss caused by the PHYSICS (dune line in the wrong place).
-
-SIGN CONVENTION
-    +x is LANDWARD throughout, matching x_s_TS and the raw offset files. The
-    1984 dune line is 0 by construction on every domain.
-
-USAGE
     python scripts/hatteras_ms/experiments/HAT_relocation_dune_position_check.py
     python scripts/hatteras_ms/experiments/HAT_relocation_dune_position_check.py --preset calibBE
+
+The 1984 dune line, the surveyed and modelled 2004 dune line and the road, on one
+axis; the misses split by cause. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -66,10 +28,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -81,10 +40,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 _HERE = Path(__file__).resolve()
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Repo root, found by searching upward
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 for _p in (SCRIPTS_DIR, _HERE.parent):
@@ -99,6 +55,7 @@ from site_layer.hatteras_site_config import (                                 # 
 )
 from cascade_pipeline.roadway import RelocationEvent               # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 START_YEAR, END_YEAR = 1984, 2004
 from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 RUN_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs" / "1984_2004"
@@ -106,23 +63,22 @@ OUT_ROOT = PROJECT_BASE_DIR / "output" / "comparisons" / "relocation" / "1984_20
 
 ROAD_WIDTH_M = 20.0          # roadway_manager default, and what the runs use
 
-# Palette. Deliberately not a rainbow: the three positions are one family
-# (where is the dune line) and the road is the thing they are compared against,
-# so the road is the only warm colour on the figure.
+# Palette: the positions one cool family, the road the only warm colour
 C_ORIGINAL = "#1f4e79"       # 1984 dune line, the datum
 C_OBSERVED = "#2E7D32"       # surveyed 2004
 C_MODELLED = "#B36AE2"       # modelled 2004
 C_ROAD = "#C1440E"
 C_RELOC = "#C1440E"
+# -----------------------------------------------------------------------------
 
 
+# The free-running arm for a preset
 def arm_a_dir(preset):
-    """The free-running arm for a preset. Same name rule as the comparison."""
     return RUN_ROOT / preset / f"HAT_{START_YEAR}_{END_YEAR}_{preset}_road_bdm_nogroin"
 
 
+# (cascade, shoreline matrix) for a finished run
 def load_run(run_dir):
-    """(cascade, shoreline matrix) for a finished run."""
     npz = sorted(glob.glob(os.path.join(str(run_dir), "*.npz")))
     if not npz:
         raise SystemExit(
@@ -135,22 +91,19 @@ def load_run(run_dir):
     return cascade, (np.load(mat[0]) if mat else None)
 
 
+# Each relocated GIS domain, mapped to its event year in this period
 def historical_targets():
-    """{gis: event year} for the relocations inside this period."""
     return {g: e.year for e in HATTERAS_ROAD_EVENTS
             if isinstance(e, RelocationEvent) and e.enabled
             and START_YEAR <= e.year <= END_YEAR
             for g in e.displacement_m}
 
 
+# Per-domain positions, all metres landward of the 1984 dune line
 def collect(preset):
-    """Per-domain positions, all metres landward of the 1984 dune line."""
     cascade, shoreline = load_run(arm_a_dir(preset))
 
-    # Observed: difference two ABSOLUTE surveyed distances. The padded offset
-    # files each subtract their own year's minimum, so differencing THOSE is
-    # not a shoreline change -- this is the same call build_shoreline_target
-    # makes for the run's own misfit line.
+    # Observed: the difference of two absolute surveyed distances, not of padded offsets
     d0 = load_absolute_dune_distance(START_YEAR, HATTERAS_DOMAINS, RAW_OFFSET_DIR)
     d1 = load_absolute_dune_distance(END_YEAR, HATTERAS_DOMAINS, RAW_OFFSET_DIR)
     observed = d1 - d0                                    # + = landward
@@ -170,11 +123,7 @@ def collect(preset):
             continue
         m = roadways[pad]
         sb = np.asarray(m._road_setback_TS, dtype=float)
-        # `margin_m` mirrors HAT_relocation_comparison.relocation_margin():
-        # the trigger is `setback < 0` STRICT and the setback moves in whole
-        # 10 m cells, so the extra migration needed is the closest approach
-        # plus one cell. Meaningless where the road did relocate -- the reset
-        # in _apply_relocation puts an artificial minimum in the series.
+        # margin_m as in HAT_relocation_comparison.relocation_margin(): closest approach plus one cell
         closest = float(sb.min())
         relocations = int(np.asarray(m._road_relocated_TS).sum())
         rows.append(dict(
@@ -191,6 +140,7 @@ def collect(preset):
     return rows
 
 
+# The figure: the three positions and the road band per domain
 def draw(rows, preset, out_path):
     targets = historical_targets()
     gis = np.array([r["gis"] for r in rows])
@@ -203,9 +153,9 @@ def draw(rows, preset, out_path):
         2, 1, figsize=figsize("double", height=4.92), height_ratios=[1.45, 1],
         constrained_layout=True)
 
-    # ---- panel A: every managed domain -------------------------------------
-    # The road band is drawn as a bar from its near (seaward) edge landward,
-    # because that near edge is the thing the dune line has to cross.
+    # Panel a: every managed domain
+
+    # The road bar starts at its seaward edge, the line the dune has to cross
     ax.bar(gis, ROAD_WIDTH_M, bottom=sb0, width=0.85, color=C_ROAD,
            alpha=0.85, zorder=2, label=f"NC-12 (20 m wide, at its 1984 setback)")
     ax.axhline(0, color=C_ORIGINAL, lw=2.0, zorder=3)
@@ -259,7 +209,7 @@ def draw(rows, preset, out_path):
             fontsize=8.5, color="0.25",
             bbox=dict(boxstyle="round,pad=0.45", fc="white", ec="0.8", alpha=0.92))
 
-    # ---- panel B: the ten scored domains, zoomed ---------------------------
+    # Panel b: the ten scored domains, zoomed
     sel = [r for r in rows if r["gis"] in targets]
     x = np.arange(len(sel))
     s0 = np.array([r["setback0"] for r in sel])
@@ -272,15 +222,7 @@ def draw(rows, preset, out_path):
     bx.axhline(0, color=C_ORIGINAL, lw=2.0, zorder=3)
     bx.plot(x, ob, "o", ms=9, color=C_OBSERVED, zorder=4)
     bx.plot(x, md, "^", ms=9, color=C_MODELLED, zorder=5)
-    # Both labels go ABOVE the road bar. An earlier version put the relocation
-    # count below the lowest marker, where it collided with the tick labels on
-    # exactly the two domains that relocate.
-    #
-    # For a domain that never fired, the useful number is not "it did not
-    # relocate" but HOW CLOSE it came: the extra landward dune migration that
-    # would have fired the trigger. The setback moves in whole 10 m cells and
-    # the test is `< 0` strict, so a road sitting at setback 0 still needs one
-    # more full cell -- hence min_setback + 10, not min_setback.
+    # Both labels above the road bar; a domain that never fired shows how close it came
     for i, r in enumerate(sel):
         tag = f"{r['setback0']:.0f} m"
         if r["relocations"]:
@@ -302,14 +244,14 @@ def draw(rows, preset, out_path):
     return sel
 
 
+# Run: collect the positions, draw the figure
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--preset", default="zeroBE")
     args = ap.parse_args()
     preset, _ = resolve_be_preset(args.preset)
 
-    # under the dune-topo version the run was made on (2026-09-09), read from
-    # the run's metadata; the layout is OUT_ROOT/<version>/dune_position_check/
+    # Filed under the dune-topo version the run was made on, from its metadata
     import glob as _glob, json as _json
     _hits = sorted(_glob.glob(str(RUN_ROOT / preset / f"HAT_{START_YEAR}_{END_YEAR}_{preset}_road_bdm_nogroin" / "*_run_metadata.json")))
     _ver = _json.load(open(_hits[0], encoding="utf-8")).get("identity", {}).get("topo_dune_version", "v?") if _hits else "v?"
@@ -350,10 +292,9 @@ def main():
     print(f"  domains where the dune line passes the road's near edge by {END_YEAR}:"
           f"  observed {n_obs}/{len(rows)},  modelled {n_mod}/{len(rows)}")
 
-    # ---- the decomposition this figure was drawn to produce ----------------
-    # Splitting the misses by CAUSE is the whole point. An island-wide misfit
-    # near zero hides it: the model tracks the survey on average and still
-    # under-predicts badly on exactly the domains under test.
+    # The decomposition this figure was drawn to produce
+
+    # The misses split by cause; an island-wide misfit near zero would hide them
     obs_over = [r for r in sel if r["observed"] > r["setback0"]]
     obs_short = [r for r in sel if r["observed"] <= r["setback0"]]
     got = [r for r in obs_over if r["relocations"]]

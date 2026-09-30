@@ -1,39 +1,10 @@
-"""Re-solve the two end domains under the metres offset (2026-09-27).
-
-Hannah, 2026-09-26/27: sweep the waves with the end source/sink terms FIXED,
-"but we might need to resolve the ends now that we fixed the offset". The
-stored values (HATTERAS_BE_EDGE_ONLY: 1996 +32.2 / +10.0, 2010 +72.6 / +31.3
-m/yr) were solved at Hs 2.5 on the /10 offset. Chosen with Hannah:
-
-    reference  the step-2 baseline wave climate, Hs 1.0 m, Tp 8 s,
-               asymmetry 0.8, high-angle 0.45: a neutral setting, not the
-               winner of either search, so the fixed ends do not pre-favour
-               the sweep that uses them
-    scenario   full management (road, beach and dune management, fills; no
-               relocations, no groin), as the matrix end values always were;
-               the pair is then used for natural and managed runs alike
-    target     each window's CoastSat LRR: GIS 1 against the raw domain mean,
-               GIS 90 against the LOWESS value (10 domains until 2026-09-28,
-               7 since: common.SMOOTH_DOMAINS)
-    solve      step 0 a fresh zeroBE run; then HAT_wave_shortlist_ends_solved's
-               safeguarded step (secant capped at +-30 m/yr until a probe lies
-               on each side of the target, then interpolation held inside the
-               bracket), first step from the metres response measured on
-               2026-09-26 (about 0.24 m/yr of residual per m/yr imposed at
-               GIS 1, 0.20 at GIS 90); converged at |residual| <= 0.02 m/yr,
-               at most MAX_STEPS probes
-    output     tables/ends.json -- {period: {"1": rate, "90": rate}} -- read by
-               HAT_wave_grid_fixed_ends.py. The config (HATTERAS_BE_EDGE_ONLY)
-               is NOT changed.
-
-WHERE: output/raw_runs/experiments/end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/
+"""
+Re-solve the two end domains under the metres offset.
 
     python scripts/hatteras_ms/experiments/HAT_resolve_ends_metres.py
 
-    --tag   file the solve under another study (2026-09-28: the LOWESS-7 re-solve)
-    --seed  "1996=4.8394,17.545;2010=18.8,24.535": step 1 probes these ends
-            instead of the first-gain guess from zeroBE, so a re-solve near a
-            known answer starts there
+Step 0 on zeroBE, then safeguarded secant probes until both ends converge; writes
+tables/ends.json for HAT_wave_grid_fixed_ends.py. The config is not changed. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -54,6 +25,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_wave_shortlist_ends_solved as E  # noqa: E402
 
 grid, common, step2 = E.grid, E.common, E.step2
+# --- CONFIG ------------------------------------------------------------------
 TAG = "end-domain-boundaries/2026-09-27-ends-resolved-metres-offset"
 STUDY_DIR = grid.RAW_RUNS / "experiments" / TAG
 REFERENCE = {"hs": 1.0, "wave_period_s": 8.0, "wave_asymmetry": 0.8,
@@ -61,14 +33,15 @@ REFERENCE = {"hs": 1.0, "wave_period_s": 8.0, "wave_asymmetry": 0.8,
 SCENARIO = "full_management"
 MAX_STEPS = 8
 E.FIRST_GAIN = {1: 0.24, 90: 0.20}          # measured under metres, 2026-09-26
+# -----------------------------------------------------------------------------
 
 # point the shared launch/find helpers at this study
 E.TAG, E.STUDY_DIR = TAG, STUDY_DIR
 E.TABLES_DIR, E.LOGS_DIR = STUDY_DIR / "tables", STUDY_DIR / "logs"
 
 
+# Step 0: the reference setting on zeroBE
 def zerobe_run(period):
-    """Step 0: the reference setting on zeroBE, run here on the fixed Barrier3D."""
     import subprocess
     s = pd.Series(REFERENCE)
     log = E.LOGS_DIR / SCENARIO / "step0" / f"{period}_{E.label(s)}.log"
@@ -81,11 +54,7 @@ def zerobe_run(period):
                            timeout=grid.RUN_TIMEOUT_S)
         log.write_text((p.stdout or "") + "\n--- STDERR ---\n" + (p.stderr or ""), encoding="utf-8")
         print(f"step0 {period}: exit {p.returncode}", flush=True)
-    # Matched on the wave settings (fixed 2026-09-27): the folder holds the
-    # step-0 run of every reference solved so far, and taking the first one
-    # found gave the Hs-2 and Hs-2.5 solves the Hs-1 run's residuals as their
-    # step 0. The values those solves adopted were each confirmed by a probe
-    # run at the right waves, so only the solver's path was affected.
+    # Step 0 matched on the wave settings, since the folder holds every reference's
     d = STUDY_DIR / "runs" / f"{SCENARIO}_step0" / grid.window(period) / "zeroBE"
     want = [REFERENCE[k] for k in E.KEYS]
     for md in d.glob("*/*_run_metadata.json"):
@@ -97,13 +66,9 @@ def zerobe_run(period):
     raise SystemExit(f"step 0 for {period} left no run: {step2.stop_reason(log)}")
 
 
+# Run: solve each period's ends, merge them into ends.json
 def main():
-    # Re-solve one window at other waves (2026-09-27, Hannah: "re-solve the
-    # 2010 ends at Hs 2"): --periods and the wave settings; the result is
-    # merged into ends.json, the replaced value kept under "history". The
-    # closest probe (smallest worst-end residual) is the answer, and --accept
-    # is the residual the caller will act on (the 0.02 target is not reachable
-    # at GIS 1 in 2010-2024, whose response is not monotonic below ~0.1).
+    # --periods and the wave settings re-solve one window; --accept is the tolerance acted on
     import argparse
     global REFERENCE
     ap = argparse.ArgumentParser()

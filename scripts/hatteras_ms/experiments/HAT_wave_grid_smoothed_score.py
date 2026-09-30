@@ -1,41 +1,13 @@
-"""Four-parameter wave grid, scored on the smoothed model (2026-09-25).
+"""
+Four-parameter wave grid, scored on the smoothed model.
 
-Designed with Hannah on 2026-09-25, after the 2026-09-24 step-2 study
-(one parameter at a time plus two 2-D grids) left no search over all four
-wave parameters together, and none at all under full management:
-
-    score     share of the alongshore variation explained, 1 - SSE/SST, with
-              the MODEL SMOOTHED LIKE THE COASTSAT TARGET (LOWESS over 10
-              domains, the southern 10 raw: common.smooth_like_target),
-              interior GIS 2-89, against the window's CoastSat LRR target.
-              Bias, RMSE, correlation and the raw (unsmoothed) score beside it.
-    coarse    Hs 0.75 1 1.5 2  x  Tp 7 8 10  x  asym 0.5 0.7 0.9
-              x  high-angle 0.3 0.45 0.55  = 108 per period x scenario
-              (Hs 0.65 and Tp 12 left out: they drowned the barrier)
-    scope     natural and full management, 1996-2010 first, then 2010-2024
-    refine    per period x scenario, a 3x3x3x3 grid at half the coarse step
-              around the best coarse-or-refine setting (the midpoints to the
-              neighbouring coarse values), launched automatically
-    cross     the top 5 per period x scenario that lack a run in the other
-              window are run there, so the shared pick has candidates
-    shared    one setting for both windows: the lowest mean of smoothed RMSE
-              / that window's flat-line RMSE, among settings run in both
-
-Every run here is made on the Barrier3D route_overwash fix (checked at
-start). The step-2 runs are not reused as grid cells (most predate the fix);
-they are rescored on the smoothed output into tables/step2_rescored_smoothed.csv
-for comparison.
-
-WHERE: output/raw_runs/experiments/wave-climate/2026-09-25-wave-grid-smoothed-score/
-    README.md, tables/, figures/, logs/<phase>_<scenario>/<period>/<settings>.log
-    runs/<phase>_<scenario>/<period>/zeroBE/<run_name>/   (on disk only)
-    phase = coarse, refine, cross
-
-USAGE (from the project root):
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py run all
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py run coarse --periods 1996
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py score
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py rescore-step2
+
+A coarse factorial, a refine around each best, cross-runs in the other window;
+scored as the share of alongshore variation explained. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -62,6 +34,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 import HAT_metres_1_offset_units as common  # noqa: E402
 import HAT_metres_2_wave_sensitivity as step2  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 TAG = "wave-climate/2026-09-25-wave-grid-smoothed-score"
@@ -79,24 +52,30 @@ COARSE = {"hs": (0.75, 1.0, 1.5, 2.0),
           "wave_asymmetry": (0.5, 0.7, 0.9),
           "wave_angle_high_fraction": (0.3, 0.45, 0.55)}
 CROSS_TOP = 5
+# -----------------------------------------------------------------------------
 
 
+# A period's window name
 def window(period):
     return f"{period}_{period + 14}"
 
 
+# A setting's name
 def label(s):
     return step2.settings_label(s)
 
 
+# A phase x scenario group name
 def group(phase, scenario):
     return f"{phase}_{scenario}"
 
 
+# A cell's log file
 def log_path(phase, scenario, period, s):
     return LOGS_DIR / group(phase, scenario) / window(period) / f"{label(s)}.log"
 
 
+# The environment that runs one cell
 def run_env(phase, scenario, period, s):
     import os
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
@@ -121,8 +100,8 @@ def run_env(phase, scenario, period, s):
     return env
 
 
+# A clean finish or a drowned barrier is a result
 def finished(log):
-    """A clean finish or a drowned barrier is a result; anything else re-runs."""
     if not log.is_file():
         return False
     text = log.read_text(encoding="utf-8", errors="replace")
@@ -130,6 +109,7 @@ def finished(log):
     return "Traceback" not in text or "Model stopped at year" in text or index_race
 
 
+# Run one cell through the runner, logged
 def launch(cell):
     phase, scenario, period, s = cell
     name = f"{group(phase, scenario)} {window(period)} {label(s)}"
@@ -152,6 +132,7 @@ def launch(cell):
     return True
 
 
+# Every cell not yet run, `jobs` at a time
 def run_cells(cells, jobs):
     todo = [c for c in cells if not finished(log_path(*c))]
     print(f"{len(cells)} cells, {len(cells) - len(todo)} already run, {len(todo)} to run, "
@@ -161,6 +142,7 @@ def run_cells(cells, jobs):
             list(pool.map(launch, todo))
 
 
+# Refuse to run on a Barrier3D without the route_overwash fix
 def check_barrier3d():
     from cascade_pipeline.run_registry import barrier3d_provenance
     b = barrier3d_provenance()
@@ -169,18 +151,16 @@ def check_barrier3d():
     print(f"BARRIER3D = {b['branch']} {b['commit'][:7]} (route_overwash fix)", flush=True)
 
 
-# =============================================================================
-# CELLS
-# =============================================================================
+# Cells
 
+# The coarse factorial's cells
 def coarse_cells(periods, scenarios):
     return [("coarse", sc, p, dict(zip(KEYS, v)))
             for p in periods for sc in scenarios for v in product(*(COARSE[k] for k in KEYS))]
 
 
+# The best value and the midpoints to its coarse neighbours, clipped to the range
 def refine_values(key, best):
-    """The best value and the midpoints to its coarse neighbours (half the
-    coarse step), clipped at the ends of the coarse range."""
     c = list(COARSE[key])
     if best in c:
         i = c.index(best)
@@ -197,6 +177,7 @@ def refine_values(key, best):
     return sorted(out)
 
 
+# Cells around each period x scenario's best
 def refine_cells(t):
     cells = []
     for p, sc in product(PERIODS, SCENARIOS):
@@ -212,8 +193,8 @@ def refine_cells(t):
     return drop_already_run(cells, t)
 
 
+# The top CROSS_TOP settings per period x scenario, run in the other window
 def cross_cells(t):
-    """The top CROSS_TOP settings per period x scenario, run in the other window."""
     cells = []
     for p, sc in product(PERIODS, SCENARIOS):
         other = PERIODS[1 - PERIODS.index(p)]
@@ -223,9 +204,8 @@ def cross_cells(t):
     return drop_already_run(cells, t)
 
 
+# Skip a cell whose settings already have a result (any phase) in that period and scenario
 def drop_already_run(cells, t):
-    """Skip a cell whose settings already have a result (any phase) in that
-    period and scenario: a refine grid overlaps the coarse one at its centre."""
     have = {(int(r.period_start), r.scenario, label({k: r[k] for k in KEYS}))
             for _, r in t.iterrows() if r.status != "not run"}
     out, seen = [], set()
@@ -238,10 +218,9 @@ def drop_already_run(cells, t):
     return out
 
 
-# =============================================================================
-# SCORE
-# =============================================================================
+# Score
 
+# One run's raw and smoothed scores
 def score_run(run_dir, target):
     rates = common.run_rates(run_dir)
     raw = common.alongshore_scores(rates, target)
@@ -257,12 +236,14 @@ def score_run(run_dir, target):
             "raw_rmse_m_yr": raw["_rmse"], "raw_r": raw["r_alongshore"]}
 
 
+# Each period's CoastSat target and flat-line spread
 def targets():
     t = {p: common.coastsat_target(p) for p in PERIODS}
     flat = {p: float(common.interior(t[p]).std(ddof=0)) for p in PERIODS}
     return t, flat
 
 
+# Score every run, write all_runs.csv and the best tables
 def cmd_score(_=None, quiet=False):
     import pandas as pd
     from cascade_pipeline.run_registry import load_run_index, rebuild_run_index
@@ -320,6 +301,7 @@ def cmd_score(_=None, quiet=False):
     return t
 
 
+# The best setting per period and shared, per scenario
 def best_tables(t):
     import pandas as pd
     s = t[t.status == "scored"]
@@ -353,8 +335,8 @@ def best_tables(t):
     out[[c for c in cols if c in out]].to_csv(TABLES_DIR / "best_settings.csv", index=False)
 
 
+# The 2026-09-24 step-2 runs scored the same way, for comparison
 def cmd_rescore_step2(_=None):
-    """The 2026-09-24 step-2 runs scored the same way, for comparison."""
     import pandas as pd
     t = pd.read_csv(step2.TABLES_DIR / "all_runs.csv")
     tg, flat = targets()
@@ -375,10 +357,7 @@ def cmd_rescore_step2(_=None):
     return 0
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run the chosen phase
 def cmd_run(a):
     check_barrier3d()
     common.keep_awake()
@@ -398,6 +377,7 @@ def cmd_run(a):
     return 0
 
 
+# Run: the chosen subcommand
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])

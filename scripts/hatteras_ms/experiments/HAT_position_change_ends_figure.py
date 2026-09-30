@@ -1,15 +1,10 @@
-"""Figure 3 redrawn on the position-change ends (2026-09-28).
-
-Hannah: "redraw the figure with the position-change ends when done". The solve
-(HAT_resolve_ends_on_position_change.py) runs full management only; this runs
-the natural scenario at the same ends (option A waves), then draws
-HAT_wave_recommendation_figures.fig3 on the two runs per window. The LRR-ends
-figure is left as it is, for comparison.
+"""
+Figure 3 of the wave recommendation, redrawn on the ends solved on position change.
 
     python scripts/hatteras_ms/experiments/HAT_position_change_ends_figure.py
 
-Natural runs land under <study>/runs/natural_final/; the figure goes to the
-study's figures/ folder.
+Runs the natural scenario at those ends (option A waves), then draws the figure
+from both scenarios' runs into the study's figures/ folder. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -32,12 +27,15 @@ import HAT_resolve_ends_on_position_change as S  # noqa: E402
 import HAT_wave_recommendation_figures as W  # noqa: E402
 
 E, grid = S.E, S.R.grid
+# --- CONFIG ------------------------------------------------------------------
 STUDY_DIR = grid.RAW_RUNS / "experiments" / S.TAG
 E.TAG, E.STUDY_DIR = S.TAG, STUDY_DIR
 E.TABLES_DIR, E.LOGS_DIR = STUDY_DIR / "tables", STUDY_DIR / "logs"
 WAVES = pd.Series(W.REC)
+# -----------------------------------------------------------------------------
 
 
+# Run: the natural runs at the solved ends, then the figure
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     j = json.loads((E.TABLES_DIR / "ends.json").read_text(encoding="utf-8"))

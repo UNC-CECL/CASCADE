@@ -1,28 +1,12 @@
-"""Dune line vs shoreline as the island offset (orientation), 1996-2010 (2026-09-25).
-
-Asked by Hannah on 2026-09-25: how much does setting the island's planform
-from the dune line rather than the CoastSat shoreline change the output?
-
-    offsets   duneline (1996/duneline/v1) and shoreline (1996/shoreline/v1),
-              both metres, the Hermite wrap-around written in the file
-    waves     Hs 1.0 m, Tp 8 s, asymmetry 0.8 -- the best managed 1996-2010
-              setting found (tuned with the DUNE-LINE offset) -- and, so the
-              shoreline offset gets a fair chance, high-angle fraction
-              0.3 0.4 0.45 0.5 0.55 (the lever that mattered most)
-    scope     natural and full management, 1996-2010
-    score     as wave-climate/2026-09-25-wave-grid-smoothed-score: share of the alongshore
-              variation explained by the model SMOOTHED like the CoastSat
-              target, interior GIS 2-89; raw score, bias and r beside it
-Both offsets are run fresh here (20 runs) so every run in the comparison is
-on the same code and the same Barrier3D (the route_overwash fix).
-
-WHERE: output/raw_runs/experiments/island-offset/2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8/
-    README.md, tables/all_runs.csv, figures/, logs/<source>_<scenario>/<settings>.log
-    runs/<source>_<scenario>/1996_2010/zeroBE/<run_name>/   (on disk only)
+"""
+How much does the output change when the island offset comes from the dune line rather than the CoastSat shoreline?
 
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py run
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py score
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py plot
+
+Metres offsets, 1996-2010, natural and full management over a high-angle sweep;
+also holds house_figures, the one figure form every island-offset study shares. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -47,6 +31,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_wave_grid_smoothed_score as grid  # noqa: E402
 
 common, step2 = grid.common, grid.step2
+# --- CONFIG ------------------------------------------------------------------
 TAG = "island-offset/2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8"
 STUDY_DIR = grid.RAW_RUNS / "experiments" / TAG
 TABLES_DIR, LOGS_DIR, FIG = STUDY_DIR / "tables", STUDY_DIR / "logs", STUDY_DIR / "figures"
@@ -56,29 +41,33 @@ SCENARIOS = grid.SCENARIOS
 BASE = {"hs": 1.0, "wave_period_s": 8.0, "wave_asymmetry": 0.8}
 HIGH_ANGLE = (0.3, 0.4, 0.45, 0.5, 0.55)
 HEADLINE = 0.45
-# Figure labels, overridden by a study that reuses this driver
-# (HAT_offset_source_comparison_div10.py).
+# Figure labels; a study that reuses this driver overrides them
 WAVE_NOTE = ("the 09-25 setting, tuned with the dune-line offset; superseded by "
              "option A on 09-27")
 OFFSET_NOTE = "in metres (duneline/v1, shoreline/v1)"
 FORM_NOTE = ("Redrawn 2026-09-28 in the form of "
              "../2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a/.")
 LEGEND_TITLE = "No source/sink correction at the ends"
+# -----------------------------------------------------------------------------
 
 
+# Every (source, scenario, wave setting) the study runs
 def cells():
     return [(src, sc, {**BASE, "wave_angle_high_fraction": f})
             for src, sc, f in product(SOURCES, SCENARIOS, HIGH_ANGLE)]
 
 
+# A run group's name from source and scenario
 def group(src, sc):
     return f"{src}_{sc}"
 
 
+# The log file for one cell
 def log_path(src, sc, s):
     return LOGS_DIR / group(src, sc) / f"{grid.label(s)}.log"
 
 
+# The runner's environment for one cell: offset source and run tag on top of the grid's
 def env(src, sc, s):
     e = grid.run_env("x", sc, PERIOD, s)
     e["HAT_ISLAND_OFFSET_SOURCE"] = src
@@ -86,6 +75,7 @@ def env(src, sc, s):
     return e
 
 
+# One hindcast run in a subprocess, its output logged; skipped if already finished
 def launch(cell):
     src, sc, s = cell
     log = log_path(src, sc, s)
@@ -102,6 +92,7 @@ def launch(cell):
           flush=True)
 
 
+# Run every unfinished cell, then score
 def cmd_run(a):
     grid.check_barrier3d()
     common.keep_awake()
@@ -112,6 +103,7 @@ def cmd_run(a):
     return cmd_score(a)
 
 
+# Score every cell against the CoastSat target, checking the offset each run read
 def cmd_score(_=None):
     import pandas as pd
     from cascade_pipeline.run_registry import load_run_index, rebuild_run_index
@@ -133,8 +125,7 @@ def cmd_score(_=None):
         if hit and grid.finished(log):
             d, md = hit
             got = md["identity"]["island_offset_version"]
-            # a superseded build records the source alone
-            # (hatteras_site_config.island_offset_version)
+            # A superseded build records the source alone
             if not (str(got) == src or str(got).startswith(src + "/")):
                 raise ValueError(f"{d}: ran on offset {got!r}, filed as {src}")
             rec.update(status="scored", **grid.score_run(d, target),
@@ -152,24 +143,9 @@ def cmd_score(_=None):
     return 0
 
 
+# The four island-offset figures, in the one form every offset study shares
 def house_figures(panels, fig_dir, legend_title, note, suffix,
                   shoreline_window="over 1995-1997 for 1996, 2009-2011 for 2010"):
-    """The four island-offset figures, in ONE form for every study that asks the
-    dune-line-or-shoreline question (Hannah, 2026-09-28: "ensure the figures
-    among these experiments are consistent ... so it is easier to compare").
-
-    panels   [{"label": "Natural 1996–2010", "start": 1996, "end": 2010,
-               "rates": {"duneline": df, "shoreline": df}}, ...], one row each;
-               df is a run's tables/shoreline_change_rate.csv indexed by
-               gis_domain, or None where that arm has no run
-    note     the study's own sentence for every caption (waves, offset, ends)
-    suffix   the stem ending, e.g. "1996_2010" or "full_management"
-    shoreline_window  the mean-shoreline windows the shoreline offset was built
-             on, for the captions; the default is the v1 (calendar) builds
-
-    Net change in metres; observations smoothed with LOWESS over LOWESS_DOMAINS
-    (southern SKIP_SOUTHERN raw), the model unsmoothed; the model's ENABLED
-    fills marked above each panel; no scores on the figures."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -185,12 +161,10 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
     import numpy as np
     from matplotlib.ticker import MultipleLocator
     col = {"duneline": "#1b7f6b", "shoreline": "#6a3d9a"}
-    # Text sized for reading the figures side by side (Hannah, 2026-09-29:
-    # "make all the text larger"); the canvas stays 16 in wide.
+    # Text sized for reading the figures side by side; the canvas stays 16 in wide
     rc = {"font.size": 17, "axes.titlesize": 18, "axes.labelsize": 17,
           "xtick.labelsize": 15, "ytick.labelsize": 15, "legend.fontsize": 15}
-    # One y-axis for every island-offset study (09-22, 09-25, 09-28 option A),
-    # set from the largest of them: the change figures, and the difference one
+    # One y-axis for every island-offset study, set from the largest of them
     CHANGE_YLIM, DIFF_YLIM = (-80, 100), (-20, 30)
     shoal_c = C["ADDED"]
     n = len(panels)
@@ -224,8 +198,7 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
             ax.set_xlabel(DOMAIN_AXIS_LABEL)
 
     def legend(f, handles):
-        # legend_title (the end correction) goes to the caption, not the canvas:
-        # it read as a heading for the legend entries (2026-09-29)
+        # The end correction goes to the caption, not the canvas
         handles = handles + [Patch(color=shoal_c, alpha=0.25, label="Shoals"),
                              Patch(color="0.90", label="Villages")]
         f.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False)
@@ -235,10 +208,8 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
                                sharey=True, constrained_layout=True, squeeze=False)
         return f, axes[:, 0]
 
+    # Fixed y-limits shared by every island-offset study, widened by `step` only if the data leave them
     def limits(values, fixed, step, what):
-        """The FIXED y-limits, the same in every island-offset study so the
-        figures compare across studies (Hannah, 2026-09-29), widened to `step`
-        only if a study's data leaves them, with a warning."""
         v = np.concatenate([np.asarray(x, float) for x in values])
         v = v[np.isfinite(v)]
         lo, hi = fixed
@@ -288,8 +259,7 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
                       "carried onto each period rather than fitted on it; the model (purple) "
                       "is the same run as in the total-change figure.")),
     ]
-    # Every observed and modelled line first, so the three comparison figures
-    # share ONE y-axis and read against each other (Hannah, 2026-09-29).
+    # Every line first, so the three comparison figures share one y-axis
     series = {}
     for spec in figs:
         for j, pan in enumerate(panels):
@@ -304,9 +274,7 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
             if rt is not None:
                 m = (rt.change_rate_m_yr if spec["kind"] == "dune" else rt.lrr_m_yr) * years
             series[(spec["stem"], j)] = (obs, m)
-    # No headroom above the data: the one value past the label line is the
-    # observed +96 m at GIS 1-2 (2010-2024), where no label sits; headroom for
-    # it pushed the top to 160 m and flattened every line.
+    # No headroom above the data: the one value past the labels is GIS 1-2, 2010-2024
     ylim = limits([x.values for pair in series.values() for x in pair if x is not None],
                   CHANGE_YLIM, 20, "change")
 
@@ -353,8 +321,7 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
             dress(ax, j, pan, pan["label"])
             ax.set_ylabel("Shoreline start minus\ndune-line start (m)")
         if diffs:
-            # its own quantity, so its own axis, with room above the bars for
-            # the village and shoal labels
+            # Its own quantity, so its own axis, with room for the village and shoal labels
             lo, hi = limits(diffs, DIFF_YLIM, 5, "difference")
             for ax in axes:
                 ax.set_ylim(lo, hi)
@@ -373,22 +340,23 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
     return out
 
 
-# THE FIGURES ARE FULL MANAGEMENT x BOTH PERIODS (Hannah, 2026-09-28: "showing
-# only full management and both periods per figure", as the option A study
-# draws them). 1996's run is the study's own; 2010's comes from `run-2010`.
+# The figures are full management x both periods; 2010's run comes from `run-2010`
 FM = "full_management"
 PERIODS_FM = (1996, 2010)
 
 
+# The log file for a full-management run at the headline setting
 def fm_log(src, start):
     sub = [] if start == PERIOD else [grid.window(start)]
     return LOGS_DIR.joinpath(*sub, group(src, FM), f"{grid.label(fm_settings())}.log")
 
 
+# The headline wave setting
 def fm_settings():
     return {**BASE, "wave_angle_high_fraction": HEADLINE}
 
 
+# One full-management run at the headline setting, for either period
 def fm_launch(cell):
     src, start = cell
     log = fm_log(src, start)
@@ -407,8 +375,8 @@ def fm_launch(cell):
           f"{(time.perf_counter() - t0) / 60:.1f} min", flush=True)
 
 
+# The 2010-2024 full-management pair at the study's headline setting
 def cmd_run_2010(a):
-    """The 2010-2024 full-management pair at the study's headline setting."""
     grid.check_barrier3d()
     common.keep_awake()
     todo = [(src, 2010) for src in SOURCES if not grid.finished(fm_log(src, 2010))]
@@ -418,8 +386,8 @@ def cmd_run_2010(a):
     return cmd_plot()
 
 
+# The full-management run at the headline setting, or None if not run
 def fm_rates(src, start):
-    """The full-management run at the headline setting, or None if not run."""
     import pandas as pd
     root = STUDY_DIR / "runs" / group(src, FM) / grid.window(start) / "zeroBE"
     for md in sorted(root.glob("*/*_run_metadata.json")):
@@ -430,9 +398,8 @@ def fm_rates(src, start):
     return None
 
 
+# This study's figures through house_figures
 def cmd_plot(_=None):
-    """This study's figures through house_figures: (a) full management
-    1996-2010, (b) full management 2010-2024, at the headline setting."""
     panels = []
     for start in PERIODS_FM:
         a, b = grid.window(start).split("_")
@@ -449,15 +416,13 @@ def cmd_plot(_=None):
     return 0
 
 
-# Observations for the house-form figures: smoothed at 7 domains, the research
-# group's range (Hannah, 2026-09-28), the southern 10 domains left raw.
+# Observations for the house-form figures: LOWESS 7 domains, southern 10 raw
 LOWESS_DOMAINS = 7
 SKIP_SOUTHERN = 10
 
 
+# The CoastSat LRR target built as the runner builds it, at LOWESS_DOMAINS, the rate fitted on ...
 def coastsat_target_lowess(start, window):
-    """The CoastSat LRR target built as the runner builds it, at LOWESS_DOMAINS,
-    the rate fitted on `window` ("1996_2010", or "1996_2024" for the long-term rate)."""
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
     from cascade_pipeline.hindcast import build_target_table
@@ -473,9 +438,8 @@ def coastsat_target_lowess(start, window):
         "gis_domain")["target_lrr_m_yr"]
 
 
+# A per-domain series smoothed as the target is
 def smooth_lowess(series):
-    """A per-domain series smoothed as the target is: LOWESS over LOWESS_DOMAINS,
-    the southern SKIP_SOUTHERN left raw."""
     import pandas as pd
     from statsmodels.nonparametric.smoothers_lowess import lowess
     x = series.index.to_numpy(dtype=float)
@@ -488,14 +452,15 @@ def smooth_lowess(series):
     return out
 
 
+# Observed dune-line net change per domain (m), between the lines that bound the window
 def duneline_change(start, end):
-    """Observed dune-line net change per domain (m), between the lines that bound the window."""
     import pandas as pd
     from site_layer.hat_observed_rates import DUNELINE_ENDPOINT_ROOT
     t = pd.read_csv(DUNELINE_ENDPOINT_ROOT / f"{start}_{end}" / "domain_endpoint_summary.csv")
     return t.set_index("domain_number")["mean_change_m"]
 
 
+# Run: the chosen subcommand
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()

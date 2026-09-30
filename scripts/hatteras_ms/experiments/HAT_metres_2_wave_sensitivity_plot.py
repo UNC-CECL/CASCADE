@@ -1,26 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_metres_2_wave_sensitivity_plot.py -- the figures for the natural-scenario wave sensitivity
-==============================================================================
-Reads tables/all_runs.csv and tables/stage2_selection.csv (written by
-HAT_metres_2_wave_sensitivity.py), each scored run's tables/shoreline_change_rate.csv,
-the CoastSat LRR target and the observed CoastSat position change. Writes,
-under output/raw_runs/experiments/wave-climate/2026-09-24-metres-2-wave-sensitivity/figures/:
+"""
+The figures for the natural-scenario wave sensitivity.
 
-  stage1/scores_by_<parameter>_both_periods.png
-      share of alongshore variation explained, bias and RMSE against the
-      parameter, both periods on one axis (cross-period consistency)
-  alongshore/<period>/{natural,full_management}/rate_and_position_change_by_<parameter>[_full_management]_<period>.png
-      the modelled rate and position change along the island for each value
-      against CoastSat
-  management/natural_vs_full_management_baseline_both_periods.png
-      the baseline under the natural scenario and under full management
-  stage2/grid_<p1>_x_<p2>_both_periods.png
-  best/best_settings_by_period.png, best/best_settings_both_periods.png
-      the best settings found for each window, and one setting for both
-      the grid as lines: the score against the first parameter, one line per
-      value of the second, a panel per period
-==============================================================================
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity_plot.py
+
+Stage-1 scores, alongshore profiles, management, the stage-2 grids and the
+best settings. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -50,6 +35,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     town_bands)
 from site_layer.hat_topo_version import INIT_ROOT  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 FIG = study.STUDY_DIR / "figures"
 common = study.common
 # the two windows: the earlier red, the later blue (the house vintage pair)
@@ -66,20 +52,22 @@ COMMON_CAPTION = ("Natural scenario (no road, beach or dune management, no fills
                   "each window's CoastSat LRR target (LOWESS, 10 domains) over the interior "
                   "domains GIS 2-89. Every value is fitted on the window it is scored on, "
                   "so a best value is a band, not a calibrated value.")
+# -----------------------------------------------------------------------------
 
 
+# A marker for a run with no score: drowned or crashed
 def no_score_marker(status):
-    """A drowned barrier is a model result; a crash is not (Barrier3D's
-    route_overwash access violation), so they get different marks."""
     return ("x", "drowned") if "drowned" in str(status) else ("D", "crashed")
 
 
+# The study's run table, with a scored flag
 def load():
     t = pd.read_csv(study.TABLES_DIR / "all_runs.csv")
     t["scored"] = t.status == "scored"
     return t
 
 
+# Rows at the baseline in every setting but one
 def baseline_mask(t, except_setting=None):
     keep = [k for k in study.BASELINE if k != except_setting]
     return np.logical_and.reduce([np.isclose(t[k], study.BASELINE[k]) for k in keep])
@@ -89,13 +77,14 @@ SCENARIO_LS = {study.SCENARIO: "-", study.MANAGED: "--"}
 SCENARIO_LABEL = {study.SCENARIO: "Natural", study.MANAGED: "Full management"}
 
 
+# The baseline and every stage-1 value of one parameter, in one period
 def one_at_a_time(t, group, period, scenario=study.SCENARIO):
-    """The baseline and every stage-1 value of one parameter, in one period."""
     setting = study.PARAMS[group][0]
     p = t[(t.period_start == period) & (t.scenario == scenario)]
     return p[baseline_mask(p, setting)].drop_duplicates(setting).sort_values(setting)
 
 
+# Observed CoastSat position change per domain for a window
 def observed_change(period):
     f = (INIT_ROOT / "5-scr" / "3-rates" / "coastsat" / "total_change"
          / study.window(period) / "smoothed" / "tables" / "domain_smoothed.csv")
@@ -103,19 +92,20 @@ def observed_change(period):
     return d[d.window_domains == 10].set_index("domain_number")["observed_m"]
 
 
+# A table row's rate table
 def run_table(row):
     return pd.read_csv(study.STUDY_DIR / row.run_dir / "tables" / "shoreline_change_rate.csv"
                        ).set_index("gis_domain")
 
 
+# A window's flat-line RMSE: the target's interior spread
 def flat_null(period):
     return float(common.interior(common.coastsat_target(period)).std(ddof=0))
 
 
-# =============================================================================
-# STAGE 1: scores against each parameter, both periods
-# =============================================================================
+# Stage 1: scores against each parameter, both periods
 
+# Share explained, bias and RMSE against one parameter, both periods
 def fig_scores(t, group):
     setting, values, label = study.PARAMS[group]
     fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=2.9),
@@ -185,10 +175,9 @@ def fig_scores(t, group):
     return png
 
 
-# =============================================================================
-# ALONGSHORE: rate and position change, each value, each period
-# =============================================================================
+# Alongshore: rate and position change, each value, each period
 
+# Rate and position change along the island for each value of one parameter
 def fig_alongshore(t, group, period, target, obs, scenario=study.SCENARIO):
     setting, values, label = study.PARAMS[group]
     line = one_at_a_time(t, group, period, scenario)
@@ -249,10 +238,9 @@ def fig_alongshore(t, group, period, target, obs, scenario=study.SCENARIO):
     return png
 
 
-# =============================================================================
-# MANAGEMENT: the baseline natural against full management
-# =============================================================================
+# Management: the baseline natural against full management
 
+# The baseline, natural against full management
 def fig_management(t, targets, obs):
     fig, axes = plt.subplots(2, 2, figsize=figsize("double", height=5.4), sharex=True,
                              constrained_layout=True)
@@ -301,12 +289,9 @@ def fig_management(t, targets, obs):
     return png
 
 
-# =============================================================================
-# STAGE 2: the grid as lines
-# =============================================================================
+# Stage 2: the grid as lines
 
-# The two grids: the one the stage-2 rule chose (both windows), and the Hs x
-# Tp grid the first rule chose, stopped, then finished for 1996-2010 only.
+# The two grids: the stage-2 rule's, and the first rule's Hs x Tp (1996-2010 only)
 GRIDS = (
     ("stage2_selection.csv", study.PERIODS,
      "the two parameters whose range over the runs that survived in 1996-2010 moved "
@@ -318,6 +303,7 @@ GRIDS = (
 )
 
 
+# A stage-2 grid as lines, a panel per period
 def fig_grid(t, selection="stage2_selection.csv", periods=study.PERIODS, why=""):
     sel_path = study.TABLES_DIR / selection
     if not sel_path.is_file():
@@ -382,21 +368,21 @@ def fig_grid(t, selection="stage2_selection.csv", periods=study.PERIODS, why="")
     return png
 
 
-# =============================================================================
-# BEST SETTINGS: each period's own, and one set for both (added 2026-09-24)
-# =============================================================================
+# Best settings: each period's own, and one set for both (added 2026-09-24)
+
 KEYS = ["hs", "wave_period_s", "wave_asymmetry", "wave_angle_high_fraction"]
 SCEN_LINE = {study.SCENARIO: dict(color=C["ACCENT"], lw=1.4, label="Natural"),
              study.MANAGED: dict(color=C["ADDED"], lw=1.4, label="Full management")}
 
 
+# A setting, as text
 def settings_text(r):
     return (f"Hs {r.hs:g}, Tp {r.wave_period_s:g}, asym {r.wave_asymmetry:g}, "
             f"high-angle {r.wave_angle_high_fraction:g}")
 
 
+# The setting with the highest share explained, per scenario and period
 def best_per_period(t):
-    """{(scenario, period): row} with the highest share explained."""
     out = {}
     for sc in (study.SCENARIO, study.MANAGED):
         for p in study.PERIODS:
@@ -405,10 +391,8 @@ def best_per_period(t):
     return out
 
 
+# The one setting best across both periods, per scenario
 def best_both_periods(t):
-    """{(scenario, period): row} for the one setting, run in both periods, with
-    the lowest mean of RMSE / that window's flat-line RMSE. Share explained is
-    not averaged: 2010-2024's values run to -2800% and would decide alone."""
     flat = pd.read_csv(study.TABLES_DIR / "observed_targets.csv").set_index("period")[
         "flat_line_rmse_m_yr"]
     out, table = {}, []
@@ -432,19 +416,19 @@ def best_both_periods(t):
     return out, pd.DataFrame(table)
 
 
-# Split and redrawn 2026-09-25 (Hannah): one figure per scenario and per rule
-# (best/per_period/, best/shared/), drawn for the screen, a colour per
-# scenario, and the model smoothed like the target as a faint dashed line.
+# One best-settings figure per scenario and rule, drawn for the screen
 BEST_COLOR = {study.SCENARIO: "#1b7f6b", study.MANAGED: "#c2571a"}
 BEST_NAME = {study.SCENARIO: "Natural", study.MANAGED: "Full management"}
 smooth_like_target = common.smooth_like_target   # one implementation, shared
 
 
+# A best-settings figure, drawn for the screen
 def fig_best(targets, obs, picks, scenario, rule):
     with plt.rc_context(SCREEN_RC):
         return _fig_best(targets, obs, picks, scenario, rule)
 
 
+# The best-settings figure itself
 def _fig_best(targets, obs, picks, scenario, rule):
     col = BEST_COLOR[scenario]
     fig, axes = plt.subplots(2, 2, figsize=(16, 10.5), sharex=True, constrained_layout=True)
@@ -515,6 +499,7 @@ def _fig_best(targets, obs, picks, scenario, rule):
     return png
 
 
+# The best-settings figures, per rule and scenario
 def best_figures(t, targets, obs):
     per = best_per_period(t)
     joint, table = best_both_periods(t)
@@ -524,15 +509,9 @@ def best_figures(t, targets, obs):
             for sc in (study.SCENARIO, study.MANAGED)]
 
 
-# =============================================================================
-# THE ASYMMETRY x HIGH-ANGLE 2x2 (added 2026-09-25)
-# =============================================================================
-# Hannah's combo test (run combo --hs 1 --tp 8 --asym 0.7 --ahf 0.4) closed a
-# 2x2 whose other corners were already run: the old baseline, and each of the
-# two single changes that give the Buxton dip its observed depth.
-# Only the two Hannah asked to see (2026-09-25): the old baseline and her
-# combination. The single-change corners are in tables/combo_asym0.7_ahf0.4_2x2.csv
-# and the explorer's "Asym x high-angle" set.
+# The asymmetry x high-angle 2x2 (added 2026-09-25)
+
+# The corners drawn: the old baseline and the combination
 CORNERS = [  # (asymmetry, high-angle, style)
     (0.8, 0.45, dict(color=C["BASE"], lw=2.0, label="Old baseline: asym 0.8, high-angle 0.45")),
     (0.7, 0.4, dict(color=C["ACCENT"], lw=2.4, label="Combination: asym 0.7, high-angle 0.4")),
@@ -544,6 +523,7 @@ SCREEN_RC = {"font.size": 13, "axes.titlesize": 15, "axes.labelsize": 13,
 BUXTON_ZOOM = (1, 16)
 
 
+# One asymmetry x high-angle corner's run, or None
 def corner_row(t, period, scenario, a, f):
     x = t[t.scored & (t.period_start == period) & (t.scenario == scenario)
           & np.isclose(t.hs, 1.0) & np.isclose(t.wave_period_s, 8.0)
@@ -551,11 +531,13 @@ def corner_row(t, period, scenario, a, f):
     return None if x.empty else x.iloc[0]
 
 
+# The 2x2 combination figure, drawn for the screen
 def fig_combo(t, period, target, obs):
     with plt.rc_context(SCREEN_RC):
         return _fig_combo(t, period, target, obs)
 
 
+# The combination figure itself
 def _fig_combo(t, period, target, obs):
     w = study.window(period).replace("_", "-")
     fig = plt.figure(figsize=(16, 10.5), constrained_layout=True)
@@ -630,6 +612,7 @@ def _fig_combo(t, period, target, obs):
     return png
 
 
+# Run: every figure
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     apply_style()

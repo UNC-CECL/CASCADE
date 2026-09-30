@@ -1,38 +1,12 @@
 #!/usr/bin/env python3
-"""One relocation event, two hindcast windows: does the start year change
-whether CASCADE reproduces it?
+"""
+One relocation event, two hindcast windows: does the start year change whether CASCADE reproduces it?
 
-THE QUESTION
-    The 1999 NC-12 relocation (GIS 9-14) sits inside BOTH the 1984-2004 and
-    the 1996-2010 hindcast windows. Each window has its own emergent-vs-
-    prescribed comparison (HAT_relocation_comparison.py, one set per preset),
-    scored on its own terms. This script reads those two sets side by side
-    for the domains ONE event moved and asks what the start year changed:
-
-      * how much dune retreat each window accumulates at the road before
-        the event year -- 15 model years from a 1984 start, 3 from 1996;
-      * whether the free-running arm fires at all, and when, in each;
-      * how each window's modelled 2004 road position compares with the one
-        surveyed position, which is the END of one window and the MIDDLE of
-        the other.
-
-    It re-scores nothing. Every number is read from the per-period tables,
-    so a disagreement between this report and a per-period report is a
-    stale set, not a second opinion.
-
-WHAT THE TWO WINDOWS SHARE, AND WHAT THEY DO NOT
-    Same topography product (1984-start, one dune-topo version, read from the
-    sets and required to agree), same road line (1978 for both starts), same
-    code, same relocation target. They differ in the start year, the storm
-    series, the offset survey (1984 line vs the 1997 line), and the setback
-    file: a 1996 start reads the 1984 setbacks with the 1989 event already
-    applied, which does not touch GIS 9-14. So at the event domains the two
-    windows start the road in the SAME place and differ only in how many
-    years of modelled retreat precede 1999.
-
-USAGE
     python scripts/hatteras_ms/experiments/HAT_relocation_period_compare.py
     python scripts/hatteras_ms/experiments/HAT_relocation_period_compare.py --presets zeroBE edgeBE --version v2
+
+Reads the two per-period relocation sets side by side for the domains one event
+moved; re-scores nothing. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -61,34 +35,34 @@ from site_layer.hatteras_site_config import HATTERAS_PERIODS, HATTERAS_ROAD_EVEN
 from cascade_pipeline.roadway import RelocationEvent                      # noqa: E402
 from site_layer import hat_figure_style as style                                          # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 COMPARISONS = PROJECT_BASE_DIR / "output" / "comparisons"
 CHECK_YEAR = 2004                 # the one surveyed road position
 TOLERANCE_YEARS = (2, 5)
 DEFAULT_PERIODS = (1984, 1996)
 DEFAULT_PRESETS = ("zeroBE", "edgeBE")
 DEFAULT_EVENT = 1999
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
 # Reading the per-period sets
-# =============================================================================
 
+# The per-period comparison folder this reads
 def set_dir(start_year, version, preset):
-    """The per-period comparison folder this reads: relocation/<s>_<e>/<version>/<preset>/."""
     end = HATTERAS_PERIODS[start_year]["end_year"]
     return COMPARISONS / "relocation" / f"{start_year}_{end}" / version / preset
 
 
+# The GIS domains one relocation event moved, from HATTERAS_ROAD_EVENTS
 def event_domains(event_year):
-    """The GIS domains one relocation event moved, from HATTERAS_ROAD_EVENTS."""
     for ev in HATTERAS_ROAD_EVENTS:
         if isinstance(ev, RelocationEvent) and ev.enabled and ev.year == event_year:
             return sorted(ev.displacement_m)
     raise SystemExit(f"no enabled relocation event in {event_year}")
 
 
+# The tables and the provenance header of one per-period set
 def read_set(folder):
-    """The tables and the provenance header of one per-period set."""
     tables = folder / "tables"
     need = ["first_relocation_year.csv", "setback_by_year.csv",
             "setback_summary.csv", "road_outcomes.csv", "confusion.csv"]
@@ -114,8 +88,8 @@ def read_set(folder):
     }
 
 
+# 'v2' from a report header's arm lines, or 'v?'
 def _topo_version_of(header):
-    """'v2' from a report header's arm lines, or 'v?'."""
     for line in header:
         if "topo " in line:
             tok = line.split("topo ", 1)[1].split()[0]      # 1984-start/v2
@@ -123,13 +97,10 @@ def _topo_version_of(header):
     return "v?"
 
 
-# =============================================================================
 # The per-domain comparison
-# =============================================================================
 
+# One row per (period, domain)
 def domain_table(sets, domains, event_year):
-    """One row per (period, domain): retreat before the event, the free arm's
-    answer, and the position check. Everything read, nothing re-scored."""
     rows = []
     for start, s in sets.items():
         by = s["by_year"]
@@ -143,10 +114,7 @@ def domain_table(sets, domains, event_year):
             pre_m = float(free.get(pre, np.nan))
             f = first.loc[gis] if gis in first.index else None
             m = summ.loc[gis] if gis in summ.index else None
-            # A domain the free arm relocated BEFORE the event has had its
-            # setback reset to the relocation target, so its pre-event
-            # setback no longer measures retreat. Reported as NaN, and the
-            # first-year table says when it fired.
+            # A domain the free arm relocated early has a reset setback, so it is reported as NaN
             fired_early = (f is not None and pd.notna(f["modelled_first_year"])
                            and int(f["modelled_first_year"]) < event_year)
             rows.append(dict(
@@ -175,11 +143,8 @@ def domain_table(sets, domains, event_year):
     return df
 
 
+# Hits among the event domains, from the FIRST modelled relocation year
 def event_recall(dom, tolerance):
-    """Hits among the event domains, from the FIRST modelled relocation year.
-    The per-period confusion.csv counts every event in the window and any
-    relocation year; this restricts to one event and uses the first firing,
-    which is the model's answer to 'when did the dune reach the road'."""
     out = []
     for period, g in dom.groupby("period", sort=False):
         err = g["error_years"].astype(float)
@@ -191,6 +156,7 @@ def event_recall(dom, tolerance):
     return pd.DataFrame(out)
 
 
+# Each arm's outcome per period, over the event's domains
 def outcomes_at(sets, domains):
     rows = []
     for start, s in sets.items():
@@ -207,16 +173,10 @@ def outcomes_at(sets, domains):
     return pd.DataFrame(rows)
 
 
-# =============================================================================
 # Figure: the setback trajectories, both windows on one axis per domain
-# =============================================================================
 
+# One panel per event domain
 def trajectory_figure(sets, domains, event_year, preset, out_path):
-    """One panel per event domain. Each window is a colour (the vintage pair:
-    the earlier start in the RdBu red, the later in the blue); the free arm
-    is solid, the prescribed arm dashed; the event year is a vertical rule;
-    the surveyed 2004 position is a black marker. A line stops where that
-    arm stopped managing the road."""
     style.apply_style()
     C = style.C
     colours = dict(zip(sorted(sets), (C["EARLY"], C["LATE"])))
@@ -270,16 +230,16 @@ def trajectory_figure(sets, domains, event_year, preset, out_path):
     return style.save(fig, out_path, close=True)
 
 
+# A grid of shared-y panels, flattened
 def plt_subplots(nrow, ncol, size):
     import matplotlib.pyplot as plt
     fig, axes = plt.subplots(nrow, ncol, figsize=size, sharey=True)
     return fig, np.atleast_1d(axes).ravel()
 
 
-# =============================================================================
 # Report
-# =============================================================================
 
+# Run: read both sets, write the tables, the figure and the report
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--periods", type=int, nargs=2, default=DEFAULT_PERIODS,

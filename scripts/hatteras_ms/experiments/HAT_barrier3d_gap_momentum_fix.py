@@ -1,42 +1,11 @@
-r"""
-HAT_barrier3d_gap_momentum_fix.py -- how much do the three overwash fixes move the results?
-==============================================================================
-THE FIXES (found 2026-09-27 with the storm replay,
-scripts/figure_making/model/storm_replay.py; committed 2026-09-28 on Barrier3D
-branch fix/overwash-gaps-momentum, 2.0.2.dev1, LOCAL ONLY - not pushed):
-    990c3bd  DuneGaps dropped the last overtopped cell of the last gap and any
-             single-cell gap
-    015f11e  gap discharge was set on start:stop although stop is inclusive
-    e929e65  the inundation momentum constant C was reset to 0 before routing
-             (upstream b11b880, the 2024 Numba refactor)
+"""
+How much do the three Barrier3D overwash fixes move the results?
 
-THE BRANCH IS NOT CHECKED OUT in the main Barrier3D repository, which stays on
-fix/route-overwash-axis-swap (49fd069), the code every matrix run used. It is
-a git worktree at ../Barrier3D-overwashfix, and a fixed run reaches it through
-PYTHONPATH, which puts the worktree ahead of the editable install. The hindcast
-runner, notebook and config are NOT modified: the run records the Barrier3D it
-actually imported (run_registry.barrier3d_provenance), and this driver refuses
-a run whose log shows any other.
+    python scripts/hatteras_ms/experiments/HAT_barrier3d_gap_momentum_fix.py run --workers 4
+    python scripts/hatteras_ms/experiments/HAT_barrier3d_gap_momentum_fix.py compare
 
-THE CHECK
-    fixed      four runs on the fix branch, each the twin of a matrix run made
-               2026-09-27 on the same CASCADE code (edgeBE, option A waves):
-               natural and full_management, 1996-2010 and 2010-2024
-    controls   the matrix runs themselves. A re-run of the natural 1996 run on
-               today's unchanged code reproduced its shoreline matrix to 0.0 m
-               (2026-09-28), so they are clean controls.
-    compare    net shoreline change and LRR skill per domain, and overwash:
-               domain-years with overwash, and the observed-imagery hit rate
-               (8-overwash-analysis/4-vs-model), fixed against control
-
-WHERE: output/raw_runs/experiments/code-checks/2026-09-28-barrier3d-overwash-gap-momentum-fix/
-           runs/fixed_<member>/<period>/edgeBE/<run_name>/     the runs
-           logs/, tables/comparison.csv, figures/, NOTE.md
-
-USAGE
-    python HAT_barrier3d_gap_momentum_fix.py run [--workers 4]
-    python HAT_barrier3d_gap_momentum_fix.py compare
-==============================================================================
+Four runs on the fix-branch worktree, each against its matrix twin: net
+change, LRR skill and overwash against the imagery. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -62,6 +31,7 @@ _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 WORKTREE = PROJECT_ROOT.parent / "Barrier3D-overwashfix"
 FIX_BRANCH = "fix/overwash-gaps-momentum"
@@ -76,22 +46,27 @@ MEMBERS = {
     "natural_2010": (2010, "natural", "HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin"),
     "managed_2010": (2010, "full_management", "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin"),
 }
+# -----------------------------------------------------------------------------
 
 
+# A start year's window label
 def window(start):
     return f"{start}_{2010 if start == 1996 else 2024}"
 
 
+# A member's matrix run
 def control_dir(member):
     start, _, name = MEMBERS[member]
     return MATRIX / window(start) / "edgeBE" / name
 
 
+# A member's run on the fix branch
 def fixed_dir(member):
     start, _, name = MEMBERS[member]
     return EXP_DIR / "runs" / f"fixed_{member}" / window(start) / "edgeBE" / name
 
 
+# The environment for a member's fixed run
 def env_for(member):
     start, scenario, _ = MEMBERS[member]
     env = dict(os.environ)
@@ -106,6 +81,7 @@ def env_for(member):
     return env
 
 
+# One fixed run, logged, refusing any other Barrier3D
 def run_member(member):
     logs = EXP_DIR / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -127,8 +103,9 @@ def run_member(member):
     return rec
 
 
-# --- comparison ---------------------------------------------------------------
+# Comparison
 
+# overwash_vs_model.py, loaded from its folder
 def _overwash_module():
     path = PROJECT_ROOT / "scripts" / "input_prep" / "8-overwash-analysis" / "4-vs-model" / "overwash_vs_model.py"
     spec = importlib.util.spec_from_file_location("overwash_vs_model", path)
@@ -137,6 +114,7 @@ def _overwash_module():
     return mod
 
 
+# A run's saved model and its metadata
 def load_run(run_dir):
     name = run_dir.name
     c = np.load(run_dir / f"{name}.npz", allow_pickle=True)["cascade"][0]
@@ -144,8 +122,8 @@ def load_run(run_dir):
     return c, meta
 
 
+# Hit rate against the imagery for one run, by overwash_vs_model's rule
 def observed_scores(ovm, c, start, obs):
-    """Hit rate against the imagery for one run, by overwash_vs_model's rule."""
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     win = (start, 2010 if start == 1996 else 2024)
     q = np.array([np.asarray(b.QowTS) for b in c.barrier3d]).T
@@ -161,6 +139,7 @@ def observed_scores(ovm, c, start, obs):
     return ovm.scores(pd.DataFrame(rows))
 
 
+# Fixed against control per member: the tables, then the figure
 def compare():
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
@@ -213,6 +192,7 @@ def compare():
     figure(pd.DataFrame(per_domain))
 
 
+# Net change and overwash years per domain, control against fixed
 def figure(pdm):
     import matplotlib
     matplotlib.use("Agg")
@@ -254,6 +234,7 @@ def figure(pdm):
         "GIS 90 Pea Island.")
 
 
+# Run: the runs or the comparison
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("action", choices=["run", "compare"])

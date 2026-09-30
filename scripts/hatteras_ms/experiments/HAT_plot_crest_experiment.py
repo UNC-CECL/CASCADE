@@ -1,41 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_crest_experiment.py
-==============================================================================
-Compares the three arms written by HAT_run_crest_experiment.py.
+"""
+The three arms of the GIS 84-86 crest experiment, compared (frozen: two arms' runs are gone).
 
-    pea1989base    v1 as shipped -- GIS 85 setback floored to 0
-    pea1989keep    +N rows, the 1996 dune crest left standing in the interior
-    pea1989lower   +N rows, that crest shaved to the backdune platform
+    python scripts/hatteras_ms/experiments/HAT_plot_crest_experiment.py
 
-    FROZEN 2026-09-07. The keep/lower run outputs were deleted with every run
-    on modified topography (their topography had gone on 2026-09-03), so this
-    script can no longer be re-run; output/raw_runs/experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/results/ is the
-    record. Only pea1989base (v1) still exists under output/raw_runs/.
-
-WHAT THE FIGURES ARE FOR
-    Figure 1 is the test. It draws the road setback through time at GIS 84, 85
-    and 86 with the prescribed 1989 relocation marked. The claim being checked
-    is that the baseline's setback hits zero YEARS BEFORE 1989 and triggers an
-    emergent relocation, so the prescribed displacement is then added to a
-    synthetic base rather than to the evolved 1984 position. If the inserts
-    work, their traces reach 1989 still positive.
-
-    Figure 2 is the control. The insert touches three domains out of ninety, so
-    the island-wide shoreline change rate should be unmoved everywhere else. A
-    difference out at GIS 40 would mean the insert leaked through the alongshore
-    coupling and the experiment is not isolating what it claims to.
-
-READING THE SETBACK TRACE
-    roadway_manager keeps `_road_setback_TS` in metres and rewrites it every
-    year as `setback += dune_migrated`. A relocation shows as an upward jump: an
-    EMERGENT one to the fixed `relocation_setback_m`, a PRESCRIBED one by that
-    domain's own measured displacement. Which is which is the point, so both are
-    marked rather than left to the eye.
-
-USAGE
-    python HAT_plot_crest_experiment.py
-==============================================================================
+Figure 1 is the setback at GIS 84-86 through 1989; figure 2 the island-wide control.
+Only pea1989base can still be read. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -56,10 +26,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -69,13 +36,11 @@ from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
 apply_style()
 
 HERE = Path(__file__).resolve().parent
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Repo root, found by searching upward
 REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
 
+# --- CONFIG ------------------------------------------------------------------
 ARMS = [("pea1989base", "baseline (v1, setback floored to 0)", "0.35"),
         ("pea1989keep", "insert, 1996 crest kept", "#2166ac"),
         ("pea1989lower", "insert, crest shaved", "#b2182b")]
@@ -86,11 +51,12 @@ BUFFER = 15          # padded domains each side; npz index = GIS + BUFFER - 1
 START_YEAR = 1984
 EVENT_YEAR = {84: 1989, 85: 1989, 86: 1989}
 OUT = REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains" / "2026-09-02-pea-island-row-insert-control" / "results"
+# -----------------------------------------------------------------------------
 
 
+# The Cascade object and run name for one arm
 def load_arm(arm: str):
-    # experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/<member>/ since 2026-09-16; the two
-    # older layouts (arms/<arm>/ and the loose <arm>/) are tried after it.
+    # The experiments/ layout first, then the two older ones
     member = arm.replace("pea1989", "", 1)
     roots = [REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains/2026-09-02-pea-island-row-insert-control" / member,
              REPO / "output" / "raw_runs" / "arms" / arm,
@@ -110,6 +76,7 @@ def load_arm(arm: str):
     return np.load(hits[0], allow_pickle=True)["cascade"][0], Path(hits[0]).parent.name
 
 
+# A manager time series, padded with NaN to nt years
 def series(mgr, name, nt):
     v = np.asarray(getattr(mgr, name, []), dtype=float)
     if v.size == 0:
@@ -119,6 +86,7 @@ def series(mgr, name, nt):
     return out
 
 
+# Run: load the arms, draw both figures
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(OUT))
@@ -138,7 +106,8 @@ def main() -> None:
     nt = len(np.asarray(loaded[ARMS[0][0]].barrier3d[BUFFER].x_s_TS))
     years = START_YEAR + np.arange(nt)
 
-    # ---------------------------------------------------------------- figure 1
+    # Figure 1
+
     # printed width held fixed; only the height scales with the stack
     fig, axes = plt.subplots(
         len(DOMAINS), 2,
@@ -214,7 +183,7 @@ def main() -> None:
     fig.savefig(f1, dpi=130)
     print("  wrote {}".format(f1))
 
-    # ---------------------------------------------------------------- figure 2
+    # Figure 2
     fig2, ax2 = plt.subplots(2, 1, figsize=figsize("double", height=4.81))
     gis = np.arange(1, 91)
     base_rate = None

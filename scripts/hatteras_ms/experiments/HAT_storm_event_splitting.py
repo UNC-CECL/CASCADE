@@ -1,42 +1,12 @@
-r"""
-HAT_storm_event_splitting.py -- should back-to-back storms be separate events?
-==============================================================================
-WHY (Hannah, 2026-09-29: "test splitting the events"). The storm builder joins
-above-berm spells less than 24 h apart into one event (weather_grouping = 24).
-At Hatteras the berm is overtopped at most high tides during an active spell,
-so two storms a week apart chain into one long event: Edouard + Fran 1996
-(one event, 119 h above the berm) and Jose + Maria 2017 (186 h). The adopted
-series (v3_trim24) then keeps the 24 h around the event's single highest peak,
-so Fran and Jose are not in the model at all, and 1996-2024 loses 56 spells of
->= 8 h above the berm inside merged events (41 peak above 2 m MHW).
+"""
+Should back-to-back storms be separate events?
 
-THE CANDIDATES (every one trims each event to 24 h, as adopted)
-    trim24   the adopted series (hindcast_storms/*_v3_trim24): the control.
-             Rebuilt here from the builder's functions and checked identical.
-    g12      the builder with weather_grouping = 12 h: the one-number change.
-             It recovers Fran and Jose, but a merged storm's tidal fragments
-             shorter than 8 h then fall under the minimum-duration rule and
-             are dropped, so it has FEWER events and storm-hours than trim24.
-    split12  the 24 h grouping kept to define a weather system, then the system
-             split wherever the water stays below the berm for >= 12 h; a
-             piece shorter than 8 h is folded into the piece before it (or
-             after, for the first), so no hour the adopted series counts is
-             lost. Each piece is then trimmed to 24 h and dated by its start.
+    python scripts/hatteras_ms/experiments/HAT_storm_event_splitting.py build
+    python scripts/hatteras_ms/experiments/HAT_storm_event_splitting.py run
+    python scripts/hatteras_ms/experiments/HAT_storm_event_splitting.py score
 
-RUNS: managed (full_management), both windows, edgeBE, the site config's end
-rates (not re-solved, as in the trim-length check), the unchanged runner with
-the period's storm file swapped in its own process (HAT_storm_max_duration).
-SCORES: as the trim-length check -- overwash against the imagery (POD, POFD,
-PSS, timing and space r), interior RMSE/bias against LOWESS-7, total overwash.
-
-NOTHING IN THE MAIN CODE CHANGES.
-
-    python HAT_storm_event_splitting.py build   # series + what each recovers
-    python HAT_storm_event_splitting.py run     # 6 runs, 5 at a time
-    python HAT_storm_event_splitting.py score
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-29-event-splitting/
-==============================================================================
+Three 24 h-trimmed storm series (trim24, g12, split12), run managed in both
+windows and scored against the overwash imagery. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -66,6 +36,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_max_duration as MD  # noqa: E402
 import HAT_storm_length_selection as S  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-29-event-splitting"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 WORKTREE = PROJECT_ROOT.parent / "Barrier3D"          # hatteras/adopted is checked out there
@@ -77,14 +48,16 @@ WATCH = [("Edouard 1996", "1996-08-30", "1996-09-02", 1996), ("Fran 1996", "1996
          ("Dennis 1999", "1999-08-29", "1999-09-05", 1996), ("Isabel 2003", "2003-09-18", "2003-09-19", 1996),
          ("Jose 2017", "2017-09-18", "2017-09-20", 2010), ("Maria 2017", "2017-09-26", "2017-09-27", 2010),
          ("Mar 2018 nor'easter", "2018-03-03", "2018-03-05", 2010)]
+# -----------------------------------------------------------------------------
 
 
+# A window's folder name, start_end
 def wtag(w):
     return f"{w[0]}_{w[1]}"
 
 
+# A variant's storm file and its summary CSV
 def storm_paths(w, v):
-    """(npy, summary csv) for a variant."""
     if v == "trim24":
         from site_layer import hat_env_forcings as env
         f = env.storm_series_file(*w, variant="v3_trim24")
@@ -93,9 +66,8 @@ def storm_paths(w, v):
     return f, f.with_name(f.stem + "_summary.csv")
 
 
+# Split a system's above-berm hours at gaps >= gap_h, folding short pieces into a neighbour
 def _pieces(hours, gap_h, min_h):
-    """Split one system's above-berm hours (a sorted DatetimeIndex) at gaps
-    >= gap_h; fold a piece shorter than min_h into its neighbour."""
     gaps = np.diff(hours.values).astype("timedelta64[h]").astype(int)
     cuts = np.where(gaps >= gap_h)[0] + 1
     pieces = [list(p) for p in np.split(np.arange(len(hours)), cuts)]
@@ -111,8 +83,8 @@ def _pieces(hours, gap_h, min_h):
     return pieces
 
 
+# One event from its kept above-berm hours, computed as the builder does
 def _event_row(hrs, w, trimmed_from):
-    """One event from its kept above-berm hours, computed as the builder does."""
     peak = hrs["TWL"].idxmax()
     start = hrs.index[0]
     return dict(calendar_year=start.year, StartTime=start, EndTime=hrs.index[-1],
@@ -121,9 +93,8 @@ def _event_row(hrs, w, trimmed_from):
                 time=start.year - w[0] + 1)
 
 
+# The series from the untrimmed systems, split at gap_h (None reproduces trim24)
 def split_series(df, systems, w, gap_h):
-    """systems: the untrimmed 24 h-grouped events (the builder's 'full' run).
-    gap_h None = no split (reproduces trim24)."""
     above = df[df["TWL"] > MD.BERM]
     rows = []
     for _, ev in systems.iterrows():
@@ -144,6 +115,7 @@ def split_series(df, systems, w, gap_h):
     return s
 
 
+# Write one series as .npy, .csv and its summary
 def _save(s, w, v):
     npy, summ = storm_paths(w, v)
     npy.parent.mkdir(parents=True, exist_ok=True)
@@ -154,6 +126,7 @@ def _save(s, w, v):
     return arr
 
 
+# Build the three series and record what each recovers
 def build():
     fn = MD.builder_functions()
     rows = []
@@ -199,6 +172,7 @@ def build():
         print(t.to_string(index=False))
 
 
+# A variant's finished run, or None
 def run_dir(w, v):
     base = EXP_DIR / "runs" / f"{v}_full_management" / wtag(w) / "edgeBE"
     # complete runs only: the metadata is written last
@@ -206,6 +180,7 @@ def run_dir(w, v):
     return hits[-1] if hits else None
 
 
+# Run one job in its own process, logged, via this file's _launch entry
 def launch(job):
     w, v = job
     logs = EXP_DIR / "logs"
@@ -219,10 +194,7 @@ def launch(job):
     t0 = time.time()
     log = logs / f"{v}_{wtag(w)}.log"
     with open(log, "w", encoding="utf-8") as fh:
-        # The runner records the storm file relative to data/hatteras_init and
-        # fails at the end of the run on a path outside it (2026-09-29: four
-        # runs lost their metadata and shoreline matrix that way). A relative
-        # path with ".." resolves to the same file and satisfies it.
+        # Relative to data/hatteras_init (through ..), or the runner fails writing its metadata (README)
         rel = os.path.relpath(storm_paths(w, v)[0], PROJECT_ROOT / "data" / "hatteras_init")
         p = subprocess.run([sys.executable, str(_HERE), "_launch", str(w[0]), rel],
                            env=env, cwd=MD.HINDCAST.parent, stdout=fh, stderr=subprocess.STDOUT)
@@ -235,6 +207,7 @@ def launch(job):
     print(f"{wtag(w)} {v:8s} exit {p.returncode} {rec['minutes']} min  {b3d}", flush=True)
 
 
+# Score every run: overwash against the imagery, shoreline skill
 def score():
     import HAT_dune_ceiling_per_domain as P
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
@@ -267,6 +240,7 @@ def score():
         print(t[[x for x in cols if x in t.columns]].round(2).to_string(index=False))
 
 
+# Run: the subprocess entry, or the action asked for
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         MD._launch(*sys.argv[2:4])

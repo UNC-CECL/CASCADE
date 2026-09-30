@@ -1,34 +1,10 @@
-r"""
-HAT_metres_1_offset_units_plot.py -- the figures for the offset-scale study
-==============================================================================
-Reads tables/all_runs.csv (written by `HAT_metres_1_offset_units.py score`),
-each scored run's tables/shoreline_change_rate.csv, and the CoastSat target the
-runner scores against. Writes, under figures/ in the study folder:
+"""
+The figures for the offset-scale study.
 
-  wave_height/rmse_bias_vs_wave_height_by_offset_scale_1996_2010.png
-      the offset each scale hands BRIE; interior RMSE and bias against Hs
-  wave_angle/rmse_bias_vs_high_angle_fraction_by_asymmetry_1996_2010.png
-      RMSE and bias against the high-angle fraction, one line per
-      asymmetry, one column per offset scale
-  combined/best_rmse_by_offset_scale_1996_2010.png
-      the RMSE range each scale reaches in each sweep, best run labelled
-  combined/bias_vs_rmse_all_runs_1996_2010.png
-      every scored run of both sweeps, bias against RMSE
-  combined/alongshore_rate_best_runs_vs_coastsat_1996_2010.png
-      the best run of each scale against the CoastSat target, GIS 1-90
-  combined/variance_explained_by_offset_scale_1996_2010.png
-      the share of the observed alongshore variation each scale explains
-  combined/spread_vs_correlation_all_runs_1996_2010.png
-      each run's alongshore spread against its correlation with CoastSat
-  alongshore_sensitivity/<scale>/rate_and_position_change_by_<parameter>_<scale>_1996_2010.png
-      one parameter moved (Hs, high-angle fraction, asymmetry), the others at
-      their defaults: (a) rate vs the CoastSat LRR target, (b) position change
-      vs the observed CoastSat change 1996 -> 2010
+    python scripts/hatteras_ms/experiments/HAT_metres_1_offset_units_plot.py
 
-Scores are the runner's (interior GIS 2-89, LRR, CoastSat LOWESS 7-domain since 2026-09-28, 10 before
-target), plus the alongshore-variation scores `score` adds from the same
-target (study.coastsat_target, checked there against the runner's RMSE).
-==============================================================================
+Reads the study's tables and scored runs; writes the sweep, combined and
+alongshore-sensitivity figures. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -61,6 +37,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_DOMAINS, SCORE_INTERIOR_GIS)
 from cascade_pipeline.hindcast import build_island_offset  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 FIG_DIR = study.STUDY_DIR / "figures"
 WINDOW = "1996_2010"
 
@@ -81,14 +58,17 @@ SWEEP_LABEL = {"wave_height": "Wave height tuned",
                "wave_angle": "Wave angles tuned"}
 SWEEP_MARKER = {"wave_height": "o", "wave_angle": "^"}
 HIGH_ANGLE_LABEL = "Fraction of high-angle waves (> 45°)"
+# -----------------------------------------------------------------------------
 
 
+# The study's run table, with a scored flag
 def load_runs():
     df = pd.read_csv(study.TABLES_DIR / "all_runs.csv")
     df["scored"] = df["status"] == "scored"
     return df
 
 
+# A table row's modelled rates
 def run_rates(row):
     return study.run_rates(study.STUDY_DIR / row.run_dir)
 
@@ -98,9 +78,8 @@ coastsat_target = study.coastsat_target
 interior = study.interior
 
 
+# RMSE of predicting the observed interior mean at every domain
 def flat_line_rmse(target):
-    """RMSE of predicting the observed interior mean at every domain: the
-    score a model with no alongshore pattern at all would get."""
     t = interior(target)
     return float(np.sqrt(((t - t.mean()) ** 2).mean()))
 
@@ -109,6 +88,7 @@ NULL_STYLE = dict(color=INK, lw=0.9, ls="--")
 NULL_LABEL = "Flat line at the observed mean"
 
 
+# A log RMSE axis, ticks at 1, 2, 5, 10
 def log_rmse_axis(ax):
     ax.set_yscale("log")
     ax.yaxis.set_major_locator(matplotlib.ticker.FixedLocator([1, 2, 5, 10]))
@@ -116,11 +96,13 @@ def log_rmse_axis(ax):
     ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 
 
+# Legend handles, one per offset scale
 def scale_handles():
     return [Line2D([], [], color=SCALE_STYLE[s]["color"], lw=1.6,
                    label=SCALE_STYLE[s]["label"]) for s in SCALES]
 
 
+# The caption text every figure shares
 def caption_common():
     return ("1996-2010 hindcast, no background erosion, full management, no "
             "groin, relocations off. Scores are the modelled LRR shoreline-change "
@@ -130,10 +112,9 @@ def caption_common():
             "calibrated value.")
 
 
-# =============================================================================
-# 1. WAVE HEIGHT
-# =============================================================================
+# 1. wave height
 
+# RMSE and bias against Hs, by offset scale
 def fig_wave_height(df):
     d = df[df.sweep == "wave_height"]
     fig = plt.figure(figsize=figsize("double", height=6.4), constrained_layout=True)
@@ -168,9 +149,7 @@ def fig_wave_height(df):
                 colr = SCALE_STYLE[scale]["color"]
                 ax.plot(g.Hs_m, g[col], ls=s["ls"], marker="o", ms=4, lw=1.3,
                         color=colr, mec=colr, mfc=colr if s["filled"] else "white")
-        # drowned cells, at the foot of the panel, so a missing point says why
-        # drowned cells, at the foot of the panel in the scale's colour, one
-        # row per scale, so a missing point says which run and why
+        # Drowned cells marked at the foot of the panel, one row per scale
         drowned = d[~d.scored]
         for _, g in drowned.iterrows():
             ax.plot(g.Hs_m, 0.03 + 0.045 * SCALES.index(g.offset_scale), marker="x", ms=5,
@@ -182,8 +161,7 @@ def fig_wave_height(df):
             ax.axhline(0, color=INK_MUTED, lw=0.6)
         ax.set_xlabel("Significant wave height, Hs (m)")
         ax.set_ylabel(ylab)
-        # label every half metre plus 0.75; the other Hs run values (0.6,
-        # 0.65) are unlabelled minor ticks, too close to label
+        # Label every half metre plus 0.75
         run_hs = sorted(d.Hs_m.unique())
         major = [h for h in run_hs if np.isclose(h * 2, round(h * 2)) or np.isclose(h, 0.75)]
         ax.set_xticks(major)
@@ -218,10 +196,9 @@ def fig_wave_height(df):
     return png
 
 
-# =============================================================================
-# 2. WAVE ANGLE
-# =============================================================================
+# 2. wave angle
 
+# RMSE and bias against the high-angle fraction, by asymmetry
 def fig_wave_angle(df, null):
     d = df[(df.sweep == "wave_angle") & df.scored]
     control = d[(d.offset_scale == "div10")
@@ -282,16 +259,16 @@ def fig_wave_angle(df, null):
     return png
 
 
-# =============================================================================
-# 3. BEST ACHIEVABLE
-# =============================================================================
+# 3. best achievable
 
+# A best run's setting, as a label
 def best_label(row):
     if row.sweep == "wave_height":
         return f"Hs {row.Hs_m:g} m"
     return f"asymmetry {row.wave_asymmetry:g}, high-angle {row.wave_angle_high_fraction:g}"
 
 
+# The RMSE range each scale reaches in each sweep
 def fig_best(df, null):
     d = df[df.scored & (df.offset_source == "duneline")]
     control_best = d[d.offset_scale == "div10"].rmse_interior_m_yr.min()
@@ -354,10 +331,9 @@ def fig_best(df, null):
     return png
 
 
-# =============================================================================
-# 4. BIAS AGAINST RMSE
-# =============================================================================
+# 4. bias against RMSE
 
+# Bias against RMSE, every scored run
 def fig_scatter(df):
     d = df[df.scored]
     fig, ax = plt.subplots(figsize=figsize("single", height=3.6), constrained_layout=True)
@@ -392,10 +368,9 @@ def fig_scatter(df):
     return png
 
 
-# =============================================================================
-# 5. ALONGSHORE, BEST RUNS
-# =============================================================================
+# 5. alongshore, best runs
 
+# Each scale's best run against the CoastSat target, GIS 1-90
 def fig_alongshore(df, target):
     d = df[df.scored & (df.offset_source == "duneline")]
     fig, ax = plt.subplots(figsize=figsize("double", height=3.6), constrained_layout=True)
@@ -406,8 +381,7 @@ def fig_alongshore(df, target):
     for scale in SCALES:
         best = d[d.offset_scale == scale].sort_values("rmse_interior_m_yr").iloc[0]
         rates = run_rates(best)
-        # the runner's RMSE, reproduced from the drawn curves: a check that
-        # this figure shows what was scored
+        # The runner's RMSE, reproduced from the drawn curves
         rmse = float(np.sqrt(((interior(rates) - interior(target)) ** 2).mean()))
         if not np.isclose(rmse, best.rmse_interior_m_yr, rtol=1e-3):
             raise ValueError(f"{best.run_dir}: RMSE from the drawn curves {rmse:.4f} "
@@ -439,13 +413,12 @@ def fig_alongshore(df, target):
     return png
 
 
-# =============================================================================
-# 6. ALONGSHORE VARIATION EXPLAINED
-# =============================================================================
+# 6. alongshore variation explained
 
 VE_FLOOR = -1.0   # the axis stops here; a worse run is marked at the edge
 
 
+# Share of the alongshore variation each scale explains
 def fig_variance_explained(df):
     d = df[df.scored & (df.offset_source == "duneline")]
     rows = [(scale, sweep) for scale in SCALES for sweep in ("wave_height", "wave_angle")]
@@ -508,15 +481,13 @@ def fig_variance_explained(df):
     return png
 
 
-# =============================================================================
-# 7. SPREAD AGAINST PLACEMENT
-# =============================================================================
+# 7. spread against placement
 
+# Alongshore spread against correlation, every run
 def fig_spread_vs_placement(df):
     d = df[df.scored & (df.offset_source == "duneline")]
     fig, ax = plt.subplots(figsize=figsize("single", height=3.6), constrained_layout=True)
-    # Lines of equal pattern skill (bias removed): skill = 2 r s - s^2 with s
-    # the sd ratio, so r = (skill + s^2) / (2 s).
+    # Lines of equal pattern skill (bias removed)
     s = np.geomspace(0.1, 20, 400)
     for k, style in ((0.0, dict(NULL_STYLE)),
                      (0.2, dict(color=INK_MUTED, lw=0.6, ls=":")),
@@ -568,20 +539,15 @@ def fig_spread_vs_placement(df):
     return png
 
 
-# =============================================================================
-# 8. ALONGSHORE SENSITIVITY: RATE AND POSITION CHANGE, ONE PARAMETER AT A TIME
-# =============================================================================
+# 8. alongshore sensitivity: rate and position change, one parameter at a time
 
-# Observed position change over the window, from 5-scr: mean CoastSat position
-# over calendar 2010 minus calendar 1996, seaward positive, LOWESS-smoothed at
-# 10 domains to match the rate target's window.
+# Observed position change over the window, from 5-scr
 OBSERVED_CHANGE = (INIT_ROOT / "5-scr" / "3-rates" / "coastsat" / "total_change"
                    / WINDOW / "smoothed" / "tables" / "domain_smoothed.csv")
 RUN_YEARS = 14
 SCALE_CMAP = {"div10": "Greys", "metres": "Oranges", "metres-detrended": "Purples"}
 
-# One parameter moved, the other two at the calibration defaults
-# (Hs 2.5 is not a default here: the wave-angle sweep runs at Hs 1.0).
+# One parameter moved, the other two at their sweep defaults (README)
 PARAMETERS = {
     "wave_height": dict(sweep="wave_height", column="Hs_m",
                         fixed={"wave_asymmetry": 0.7, "wave_angle_high_fraction": 0.1},
@@ -596,16 +562,19 @@ PARAMETERS = {
 }
 
 
+# Observed position change per domain, 10-domain smoothing
 def observed_change():
     t = pd.read_csv(OBSERVED_CHANGE)
     return t[t.window_domains == 10].set_index("domain_number")["observed_m"]
 
 
+# A table row's rate table
 def run_table(row):
     return pd.read_csv(study.STUDY_DIR / row.run_dir / "tables" / "shoreline_change_rate.csv"
                        ).set_index("gis_domain")
 
 
+# One parameter moved: rate and position change along the island
 def fig_alongshore_sensitivity(df, target, obs_change, scale, param):
     spec = PARAMETERS[param]
     g = df[(df.sweep == spec["sweep"]) & (df.offset_scale == scale)
@@ -675,12 +644,14 @@ def fig_alongshore_sensitivity(df, target, obs_change, scale, param):
     return png
 
 
+# Every scale x parameter sensitivity figure
 def alongshore_sensitivity_figures(df, target):
     obs = observed_change()
     return [fig_alongshore_sensitivity(df, target, obs, scale, param)
             for scale in SCALES for param in PARAMETERS]
 
 
+# Run: every figure
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     apply_style()

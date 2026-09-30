@@ -1,43 +1,10 @@
 #!/usr/bin/env python3
-r"""
-HAT_score_road_position.py
-==============================================================================
-Scores each arm's MODELLED 2004 road setback against the MEASURED 2004 setback.
+"""
+Scores each arm's modelled 2004 road setback against the measured 2004 setback.
 
-WHY THIS EXISTS -- the timing test cannot do it
-    HAT_score_relocation_timing.py scores the predicted relocation YEAR. It
-    ranks the DSAS-derived N far above the dune-line-derived one (MAE 1.2 yr
-    against 11.0). That ranking is not trustworthy on its own, because the
-    relocation year is a function of TWO unknowns that trade off exactly:
+    python scripts/hatteras_ms/experiments/HAT_score_road_position.py --arms pea1989base
 
-        small initial setback + trigger at zero
-        large initial setback + trigger at a maintenance buffer
-
-    Both reproduce 1989. One observation cannot resolve two unknowns, so a good
-    timing score is evidence about the PAIR, not about N.
-
-    The road's POSITION breaks the degeneracy. Where the road physically ended
-    up by 2004 is measured -- RoadOffset_2004_domains.csv, an independent
-    same-year measurement on the 2004-start topography -- and the two N
-    estimates predict different positions regardless of when the move happened.
-
-REQUIRES THE PRESCRIBED RELOCATIONS ON
-    The real NC-12 was moved by NCDOT in 1989 and 1999. A model run with the
-    events off has not been given those moves, so its 2004 position answers a
-    different question. Score arms built with --relocations 1.
-
-WHAT A GOOD SCORE DOES AND DOES NOT MEAN
-    Agreement here says the modelled road ends the period where the real one
-    did. It does NOT validate the relocation year, the dune history, or the
-    fabricated land -- those need their own observations. It is one number
-    against one measurement, which is exactly why it is worth having alongside
-    the timing test rather than instead of it.
-
-USAGE
-    python HAT_score_road_position.py --arms pea1989base
-    (the insert arms this compared -- blocksv4, blocksduneline, blocksdsas... --
-     lost their run outputs on 2026-09-07; only unmodified topography is kept)
-==============================================================================
+Complements the relocation-timing score, which cannot rank the setback sources. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -56,17 +23,17 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Repo root, found by searching upward
 REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
 
+# --- CONFIG ------------------------------------------------------------------
 BUFFER = 15
 OUT = REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains" / "2026-09-02-pea-island-row-insert-control" / "results"
+# -----------------------------------------------------------------------------
 
 
+# An arm's 1984-2004 calibBE run
 def load(arm):
     hits = glob.glob(str(REPO / "output" / "raw_runs" / arm / "1984_2004"
                          / "calibBE" / "*" / "*.npz"))
@@ -75,10 +42,10 @@ def load(arm):
     return np.load(hits[0], allow_pickle=True)["cascade"][0]
 
 
+# Run: score every arm, write the table
 def main() -> None:
     ap = argparse.ArgumentParser()
-    # blocksv4 was the default until 2026-09-07, when every insert arm's run
-    # output was deleted; pea1989base is the one experiment arm left.
+    # pea1989base is the only experiment arm with runs left
     ap.add_argument("--arms", default="pea1989base")
     ap.add_argument("--suffix", default="")
     args = ap.parse_args()

@@ -1,50 +1,11 @@
-r"""
-HAT_dune_ceiling_rebuild.py -- does a Hatteras dune ceiling and a rebuild that never lowers dunes fix the excess overwash?
-==============================================================================
-WHY (storms-and-overwash/2026-09-28-excess-overwash-diagnosis): the model's
-dunes sit at ~3 m MHW while the 2009 lidar puts Hatteras foredunes at ~4.9 m.
-Two settings hold them there:
-    Dmaxel   never set for Hatteras, so Barrier3D's default 3.4 m NAVD88
-             (3.04 m MHW, Virginia Coast Reserve) is the logistic growth
-             ceiling, and every taller dune shrinks every year
-    rebuild  when ANY front-row dune cell falls below 1.64 m MHW,
-             roadway_manager.rebuild_dunes resets the WHOLE dune field to the
-             design height, 3.0 m MHW, cutting down taller dunes
+"""
+Do a Hatteras dune ceiling and a rebuild that never lowers dunes fix the excess overwash?
 
-THE EXPERIMENT (Hannah, 2026-09-28: "run the Dmaxel and rebuild experiment")
-    Dmaxel     3.4 (current), 5.5, 7.5, 9.0 m NAVD88
-    rebuild    current   | as now
-               nolower   | same trigger, but cells taller than the design
-                           height keep their height (max(old, rebuilt))
-               nolower43 | nolower, with the design height 4.3 m NAVD88
-                           (3.94 m MHW; the NC-12 safe crest the roadway
-                           manager's own docstring cites, Velasquez 2020)
-    storms     drop72 (committed) and trim24, the files of
-               2026-09-28-storm-length-selection
-    windows    1996-2010 and 2010-2024; managed (full_management) every cell,
-               natural for Dmaxel only (it has no rebuild)
-    The two current-Dmaxel / current-rebuild managed cells and the current-
-    Dmaxel natural cells are existing runs (the matrix and the length
-    selection), reused.
+    python scripts/hatteras_ms/experiments/HAT_dune_ceiling_rebuild.py run --workers 6
+    python scripts/hatteras_ms/experiments/HAT_dune_ceiling_rebuild.py score
 
-NOTHING IN THE MAIN CODE CHANGES. In each run's own process, before the
-unchanged runner executes: cascade.brie_coupler.set_yaml also writes Dmaxel
-into the run's parameter copy, and rebuild_dunes is wrapped in both modules
-that call it (roadway_manager, beach_dune_manager). The storm file is swapped
-as in the length selection. Barrier3D is the current one (49fd069).
-
-SCORES: overwash against the imagery (the length selection's POD/POFD/PSS/
-timing/space, storm-dated), the model's 2010 dune crest against the 2009
-lidar (1996-2010 runs), and interior RMSE/bias against CoastSat (at the matrix
-edge rates, so not yet a fair shoreline comparison).
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-dune-ceiling-and-rebuild/
-
-USAGE
-    python HAT_dune_ceiling_rebuild.py run [--workers 6]
-    python HAT_dune_ceiling_rebuild.py score
-    python HAT_dune_ceiling_rebuild.py figures
-==============================================================================
+Dmaxel 3.4-9.0 m against three rebuild rules, both storm series and
+windows, set in each run's own process. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -71,6 +32,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-28-dune-ceiling-and-rebuild"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 DMAX = (3.4, 5.5, 7.5, 9.0)
@@ -78,16 +40,20 @@ RULES = ("current", "nolower", "nolower43")
 STORMS = ("drop72", "trim24")
 BERM_MHW_M = 1.34
 DESIGN43_MHW_M = 4.3 - 0.36
+# -----------------------------------------------------------------------------
 
 
+# A Dmaxel's name token
 def dtok(d):
     return f"dmax{str(d).replace('.', 'p')}"
 
 
+# A job's group name
 def group(storm, dmax, rule, scenario):
     return f"{storm}_{dtok(dmax)}_{rule}_{scenario}"
 
 
+# Every job not already covered by a reused run
 def jobs():
     out = []
     for w in S.WINDOWS:
@@ -101,8 +67,8 @@ def jobs():
     return out
 
 
+# The reused run for the current Dmaxel and rule, or None
 def existing(w, st, d, r, scen):
-    """The reused runs: current Dmaxel, current rule."""
     if d == 3.4 and r == "current":
         if st == "drop72":
             return S.MATRIX / S.wtag(w) / "edgeBE" / S.CONTROLS[(w[0], scen)]
@@ -110,6 +76,7 @@ def existing(w, st, d, r, scen):
     return None
 
 
+# A job's run folder (reused or new), or None
 def run_dir(w, st, d, r, scen):
     e = existing(w, st, d, r, scen)
     if e is not None:
@@ -119,8 +86,9 @@ def run_dir(w, st, d, r, scen):
     return hits[-1] if hits else None
 
 
-# --- the in-process changes -------------------------------------------------------
+# The in-process changes
 
+# Child process: set Dmaxel and wrap rebuild_dunes, then run the hindcast
 def _launch(start, storm_path, dmax, rule):
     import cascade.brie_coupler as bc
     import cascade.roadway_manager as rm
@@ -153,6 +121,7 @@ def _launch(start, storm_path, dmax, rule):
     S.MD._launch(start, storm_path)
 
 
+# One run in its own process, logged, with its launch record
 def launch(job):
     w, st, d, r, scen = job
     g = group(st, d, r, scen)
@@ -177,19 +146,22 @@ def launch(job):
     return rec
 
 
+# Launch every job that has no run folder yet, in parallel
 def run(workers):
     with ThreadPoolExecutor(workers) as ex:
         list(ex.map(launch, [j for j in jobs() if run_dir(*j) is None]))
 
 
-# --- scores ------------------------------------------------------------------------
+# Scores
 
+# Median dune crest per domain per year, m
 def crest_series(c, pads):
     return np.array([[np.median((np.asarray(c.barrier3d[p].DuneDomain[t]).max(axis=1)
                                  + c.barrier3d[p].BermEl) * 10) for p in pads]
                      for t in range(len(c.barrier3d[0].x_s_TS))])
 
 
+# Overwash, dune crest and shoreline scores for every job
 def score():
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
@@ -234,6 +206,7 @@ def score():
                  "rmse_interior_m_yr", "bias_interior_m_yr"]].round(2).to_string(index=False))
 
 
+# Run: the action asked for; `_launch` is the child process's entry point
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         _launch(*sys.argv[2:6])

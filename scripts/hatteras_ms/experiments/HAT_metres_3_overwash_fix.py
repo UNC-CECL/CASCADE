@@ -1,39 +1,12 @@
-r"""
-HAT_metres_3_overwash_fix.py -- how much does the Barrier3D route_overwash fix move the results?
-==============================================================================
-THE BUG (found 2026-09-24): Barrier3D/barrier3d/barrier3d.py, route_overwash,
-the subaerial test indexed Elevation[TS, i, d+1:d+10] (row i, columns d+1..d+9)
-where Elevation[TS, d+1:d+10, i] (the nine cells landward of the flow) is
-meant: the wrong cells whenever i < rows, out of bounds whenever i >= rows.
-The fix is one line, commit 49fd069 on Barrier3D branch
-fix/route-overwash-axis-swap (local). Barrier3D is installed editable, so the
-branch checked out IS the model every run uses.
+"""
+How much does the Barrier3D route_overwash fix move the results?
 
-THE CHECK (Hannah: "patch it on a branch and measure the impact")
-    patched            8 runs on the fix branch, each the twin of a run
-                       already made unpatched
-    patched_boundscheck the natural 1996 and managed 2010 baselines again with
-                       NUMBA_BOUNDSCHECK=1: does the fixed model read out of
-                       bounds anywhere else?
-    unpatched          the two /10 twins re-run on master with today's code:
-                       their archived matrix runs were made on older CASCADE
-                       code, so they are not a clean control. The six metres
-                       twins were made today with today's code and are.
-    compare            runner scores, share of variation explained, and the
-                       per-domain LRR difference, patched minus unpatched
+    python scripts/hatteras_ms/experiments/HAT_metres_3_overwash_fix.py run patched
+    python scripts/hatteras_ms/experiments/HAT_metres_3_overwash_fix.py run unpatched
+    python scripts/hatteras_ms/experiments/HAT_metres_3_overwash_fix.py compare
 
-    Every launch records the Barrier3D branch and commit it ran on, and
-    refuses to run a patched member off the fix branch or an unpatched one on it.
-
-WHERE: output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/
-           runs/<variant>_<member>/<period>/<preset>/<run_name>/   runs (on disk only)
-           logs/ (+ launches.jsonl), tables/comparison.csv, NOTE.md
-
-USAGE
-    python HAT_metres_3_overwash_fix.py run patched            (fix branch checked out)
-    python HAT_metres_3_overwash_fix.py run unpatched          (master checked out)
-    python HAT_metres_3_overwash_fix.py compare
-==============================================================================
+Eight runs on the fix branch, each against an unpatched twin; checks the
+branch before every launch. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -59,6 +32,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_metres_2_wave_sensitivity as N  # noqa: E402
 import HAT_metres_1_offset_units as common  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 BARRIER3D = PROJECT_ROOT.parent / "Barrier3D"
 FIX_BRANCH = "fix/route-overwash-axis-swap"
 TAG = "code-checks/2026-09-24-metres-3-barrier3d-overwash-fix"
@@ -68,8 +42,7 @@ STUDY = N.STUDY_DIR
 ARCH = RAW / "archive" / "2026-09-24-pre-metres" / "matrix"
 DIV10 = {"HAT_OFFSET_MODE": "asrun"}          # plus the build the /10 runs used, per period
 
-# member -> (period, scenario, wave settings or None for the model defaults,
-#            extra env, the unpatched twin's run folder or None)
+# Member: (period, scenario, waves or None for defaults, extra env, unpatched twin)
 BASE = dict(N.BASELINE)
 MEMBERS = {
     "natural_baseline_1996": (1996, N.SCENARIO, BASE, {},
@@ -93,8 +66,10 @@ MEMBERS = {
                               "unpatched"),
 }
 BOUNDSCHECK = ("natural_baseline_1996", "managed_baseline_2010")
+# -----------------------------------------------------------------------------
 
 
+# The Barrier3D checkout's branch, commit and whether it is dirty
 def barrier3d_state():
     def git(*a):
         return subprocess.run(["git", "-C", str(BARRIER3D), *a], capture_output=True,
@@ -103,6 +78,7 @@ def barrier3d_state():
             "dirty": bool(git("status", "--short", "barrier3d"))}
 
 
+# The environment for one member and variant
 def env_for(member, variant):
     period, scenario, waves, extra, _ = MEMBERS[member]
     env = N.run_env("x", period, dict(BASE), scenario)
@@ -120,6 +96,7 @@ def env_for(member, variant):
     return env
 
 
+# One run, refused if Barrier3D is on the wrong branch
 def launch(member, variant):
     state = barrier3d_state()
     want_fix = variant.startswith("patched")
@@ -145,6 +122,7 @@ def launch(member, variant):
     return rec
 
 
+# Run the patched or unpatched set
 def cmd_run(a):
     common.keep_awake()
     if a.what == "patched":
@@ -156,12 +134,13 @@ def cmd_run(a):
     return 0
 
 
+# The one run folder under experiments/<TAG>/<variant>_<member>/
 def run_dir(member, variant):
-    """The one run folder under experiments/<TAG>/<variant>_<member>/."""
     hits = sorted((EXP_DIR / "runs" / f"{variant}_{member}").glob("*/*/*/*_run_metadata.json"))
     return hits[0].parent if hits else None
 
 
+# A member's unpatched twin run, or None
 def twin(member):
     period, scenario, waves, extra, ref = MEMBERS[member]
     if ref is None:
@@ -182,6 +161,7 @@ def twin(member):
     return None
 
 
+# A run's rates and scores
 def scores(d, period):
     rates = common.run_rates(d)
     sc = common.alongshore_scores(rates, common.coastsat_target(period))
@@ -191,6 +171,7 @@ def scores(d, period):
                        r=sc["r_alongshore"])
 
 
+# Patched against unpatched, per member, into the comparison table
 def cmd_compare(a):
     import pandas as pd
     launches = [json.loads(l) for l in (EXP_DIR / "logs" / "launches.jsonl").read_text().splitlines()]
@@ -230,6 +211,7 @@ def cmd_compare(a):
     return 0
 
 
+# Run: the subcommand asked for
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser()

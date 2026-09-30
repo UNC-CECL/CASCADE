@@ -1,46 +1,12 @@
-r"""
-HAT_metres_1_offset_units.py -- island-offset scale against wave-climate tuning
-==============================================================================
-THE QUESTION (Hannah, 2026-09-24). BRIE's shoreline is in metres, and so is
-the island-offset file, but every calibrated run hands BRIE the offset divided
-by ten (`offset_mode: asrun`, a units error). Put back at full scale, can the
-model be re-tuned through its wave climate to match the /10 runs' skill?
+"""
+Island-offset scale against wave-climate tuning: can a full-scale offset be re-tuned to match?
 
-TWO SWEEPS, ONE STUDY
-    wave_height  Hs 0.5-3.0 m at the default wave angles, every offset
-                 scale, dune-line and shoreline sources
-    wave_angle   wave asymmetry 0.5-0.8 x high-angle fraction 0.1-0.4 at
-                 Hs 1.0 m, every offset scale, dune-line source
-    fixed        1996-2010, zeroBE, full_management, no groin, relocations
-                 off, base geometry, Tp 8 s
+    python scripts/hatteras_ms/experiments/HAT_metres_1_offset_units.py run wave_height
+    python scripts/hatteras_ms/experiments/HAT_metres_1_offset_units.py run wave_angle
+    python scripts/hatteras_ms/experiments/HAT_metres_1_offset_units.py score
 
-OFFSET SCALE -- the folder label, and the value the runner reads
-    div10              HAT_OFFSET_MODE=asrun      offset / 10 (every calibrated run)
-    metres             HAT_OFFSET_MODE=metres     the measurement as is
-    metres-detrended   HAT_OFFSET_MODE=detrended  metres, linear trend removed
-
-LAYOUT (output/raw_runs/experiments/<STUDY>/)
-    README.md                     question, design, how to read labels, results
-    tables/                       written by `score`, every setting a column;
-                                  observed_target.csv: the target's mean, sd
-                                  and flat-line RMSE
-    figures/<sweep or combined>/  written by HAT_metres_1_offset_units_plot.py
-    logs/<sweep>/<scale>_<source>/Hs<h>_asymmetry<a>_highangle<f>.log
-    logs/drivers/                 this script's own console logs
-    runs_<sweep>/<scale>_<source>/1996_2010/zeroBE/<run_name>/
-
-    The run folder's tag is <STUDY>/runs_<sweep>/<scale>_<source>, the
-    runner's three-level maximum. The run NAME is the runner's and leaves out
-    whatever is at its default (no offset token for div10, no asym token at
-    0.7, no ahf token at 0.1); the folder, the log name and the tables always
-    carry every setting.
-
-USAGE
-    python HAT_metres_1_offset_units.py run wave_height [--scales ...] [--hs ...]
-    python HAT_metres_1_offset_units.py run wave_angle
-    python HAT_metres_1_offset_units.py score
-    (--jobs N, --dry-run, --overwrite on `run`)
-==============================================================================
+Two sweeps (wave height; asymmetry x high-angle fraction) at each offset
+scale, 1996-2010, zeroBE, full management. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -68,6 +34,7 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
                     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 STUDY = "island-offset/2026-09-24-div10-vs-metres-wave-sweep"
@@ -94,42 +61,42 @@ SWEEPS = {
         scales=tuple(SCALES), sources=SOURCES,
         hs=(1.0, 1.5, 2.0, 2.5, 3.0),
         asymmetry=(DEFAULT_ASYMMETRY,), high_fraction=(DEFAULT_HIGH_FRACTION,),
-        # Run after the first grid, as their own commands (see README):
-        #   --scales metres metres-detrended --hs 0.5 0.75
-        #   --scales div10 --hs 0.5
+        # Run after the first grid, as their own commands (see README)
     ),
     "wave_angle": dict(
         scales=tuple(SCALES), sources=("duneline",),
         hs=(1.0,),
         asymmetry=(0.5, 0.6, 0.7, 0.8), high_fraction=(0.1, 0.2, 0.3, 0.4),
-        # metres was still improving at 0.4, so extended (2026-09-24):
-        #   --scales metres --high-fraction 0.45 0.5
+        # Extended for metres: --scales metres --high-fraction 0.45 0.5
     ),
 }
+# -----------------------------------------------------------------------------
 
 
+# 1.0 -> '1.0', 0.75 -> '0.75': one spelling for every label
 def num(x):
-    """1.0 -> '1.0', 0.75 -> '0.75': one spelling for every label."""
     s = f"{float(x):g}"
     return s if "." in s else s + ".0"
 
 
+# A run's scale_source label
 def member(scale, source):
     return f"{scale}_{source}"
 
 
+# A run's folder tag
 def tag(sweep, scale, source):
     return f"{STUDY}/runs_{sweep}/{member(scale, source)}"
 
 
+# A run's log file
 def log_path(sweep, scale, source, hs, asym, ahf):
     return (LOGS_DIR / sweep / member(scale, source)
             / f"Hs{num(hs)}_asymmetry{num(asym)}_highangle{num(ahf)}.log")
 
 
+# The environment one run reads, built the way HAT_run_all builds it
 def run_env(sweep, scale, source, hs, asym, ahf, overwrite=False):
-    """The environment one run reads, built the way HAT_run_all builds it:
-    every HAT_* variable named here, none inherited from the shell."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
     env.update({
         "HAT_IGNORE_SETTINGS": "1",
@@ -154,12 +121,12 @@ def run_env(sweep, scale, source, hs, asym, ahf, overwrite=False):
     return env
 
 
+# One run, skipped if its log is clean
 def launch(sweep, scale, source, hs, asym, ahf, overwrite=False, dry_run=False):
     label = (f"{sweep} {member(scale, source)} Hs {num(hs)} "
              f"asymmetry {num(asym)} high-angle {num(ahf)}")
     log = log_path(sweep, scale, source, hs, asym, ahf)
-    # A clean log means the run exists; the runner would refuse it anyway,
-    # and that refusal used to read as a failure.
+    # A clean log means the run exists, so it is skipped
     if not overwrite and log.is_file() and "Traceback" not in log.read_text(
             encoding="utf-8", errors="replace"):
         print(f"skip {label}: already run", flush=True)
@@ -184,8 +151,8 @@ def launch(sweep, scale, source, hs, asym, ahf, overwrite=False, dry_run=False):
     return True
 
 
+# Why a run has no score, read from its log: the drowning, or the error
 def stop_reason(log):
-    """Why a run has no score, read from its log: the drowning, or the error."""
     text = log.read_text(encoding="utf-8", errors="replace")
     m = re.search(r"Model stopped at year (\d+)", text)
     if m:
@@ -195,12 +162,13 @@ def stop_reason(log):
     return lines[-1][:200] if lines else "empty log"
 
 
+# A sleeping machine kills a sweep mid-run: hold it awake while the sweep runs
 def keep_awake():
-    """A sleeping machine kills a sweep mid-run; hold it awake while we live."""
     if os.name == "nt":
         ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
 
 
+# Run every cell of a sweep
 def cmd_run(a):
     spec = SWEEPS[a.sweep]
     cells = list(product([a.sweep], a.scales or spec["scales"], spec["sources"],
@@ -215,29 +183,18 @@ def cmd_run(a):
     return 0 if all(ok) else 1
 
 
-# =============================================================================
-# SCORE
-# =============================================================================
+# Score
 
-# THE TARGET AND THE ALONGSHORE SCORES
-#
-# The runner scores RMSE and bias; these add how much of the observed
-# alongshore variation a run explains. The target is rebuilt exactly as the
-# runner builds it (section 8 of HAT_hindcast_1984_2024.py), and every run's
-# RMSE is recomputed from it and checked against the runner's, so the two
-# sets of scores are provably on the same target.
+# Target and alongshore scores, rebuilt as the runner does and checked against its RMSE
 
+# The CoastSat LRR target, GIS 1-90, as the runner builds it
 def coastsat_target(start=PERIOD, end=None):
-    """The CoastSat LRR target, GIS 1-90, as the runner builds it for a start
-    year (section 8 of the runner: LOWESS at 10 domains, the southern 10 raw).
-    Shared with scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py."""
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS
     from cascade_pipeline.hindcast import build_target_table
     from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
-    # `end` scores a window inside a period (2010-2020 inside 2010-2024,
-    # 2026-09-24): the CoastSat table must exist under lrr/<start>_<end>/.
+    # `end` scores a window inside a period; its CoastSat table must exist
     window = f"{start}_{end or HATTERAS_PERIODS[start]['end_year']}"
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
@@ -249,12 +206,14 @@ def coastsat_target(start=PERIOD, end=None):
         "gis_domain")["target_lrr_m_yr"]
 
 
+# A series cut to the scored interior
 def interior(series):
     from site_layer.hatteras_site_config import SCORE_INTERIOR_GIS
     lo, hi = SCORE_INTERIOR_GIS
     return series.loc[lo:hi]
 
 
+# A run's modelled LRR per GIS domain
 def run_rates(run_dir):
     import pandas as pd
     return pd.read_csv(Path(run_dir) / "tables" / "shoreline_change_rate.csv"
@@ -264,13 +223,8 @@ def run_rates(run_dir):
 SMOOTH_DOMAINS = 7                   # the CoastSat target's LOWESS window; 10 until 2026-09-28
 
 
+# A model series (per GIS domain) smoothed as the CoastSat target is
 def smooth_like_target(series):
-    """A model series (per GIS domain) smoothed as the CoastSat target is:
-    LOWESS over a SMOOTH_DOMAINS window (7 since 2026-09-28, 10 before; frac
-    SMOOTH_DOMAINS/90 on the 90 domains, matching the
-    target's 0.110), the southern 10 domains left raw as the target leaves
-    them. Added 2026-09-25 for the smoothed score (Hannah); shared by the
-    step-2 figures and wave-climate/2026-09-25-wave-grid-smoothed-score."""
     import pandas as pd
     from statsmodels.nonparametric.smoothers_lowess import lowess
     from cascade_pipeline.coastsat_lowess import DEFAULT_LOWESS
@@ -285,19 +239,8 @@ def smooth_like_target(series):
     return out
 
 
+# How much of the observed alongshore variation a run explains
 def alongshore_scores(rates, target):
-    """How much of the observed alongshore variation a run explains.
-
-    variance_explained          1 - sum((m - o)^2) / sum((o - mean o)^2).
-                                1 is perfect; 0 is no better than a flat
-                                line at the observed mean; negative is worse.
-                                Bias counts against it.
-    pattern_variance_explained  the same with each series' own mean removed
-                                first: the pattern alone, bias forgiven.
-    r_alongshore                correlation of the two alongshore series
-    sd_ratio                    model sd / observed sd: below 1 the model
-                                varies less along the island than observed
-    """
     m, o = interior(rates), interior(target)
     sst = float(((o - o.mean()) ** 2).sum())
     return {
@@ -311,11 +254,13 @@ def alongshore_scores(rates, target):
     }
 
 
+# Hs, asymmetry and high-angle fraction from a log's name
 def _settings_from_log_name(path):
     m = re.fullmatch(r"Hs([\d.]+)_asymmetry([\d.]+)_highangle([\d.]+)\.log", path.name)
     return tuple(float(g) for g in m.groups())
 
 
+# Score every logged run and write the tables
 def cmd_score(a):
     import pandas as pd
     from cascade_pipeline.run_registry import load_run_index, rebuild_run_index
@@ -417,6 +362,7 @@ def cmd_score(a):
     return 0
 
 
+# Run: the subcommand asked for
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(description=__doc__.split("\n")[1])

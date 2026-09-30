@@ -1,21 +1,11 @@
-"""Figures for wave-climate/2026-09-25-wave-grid-smoothed-score: the best settings on the
-smoothed score, for each window and shared, one figure per scenario.
+"""
+Figures for the smoothed-score wave grid: the best settings per window and shared.
 
-Two sources, drawn by the same code:
-    grid    this study's runs (tables/all_runs.csv), once the sweep has run
-    step2   the 2026-09-24 step-2 runs rescored on the smoothed output
-            (tables/step2_rescored_smoothed.csv): drawn first, 2026-09-25,
-            while the grid was still running (Hannah asked for the figures)
+    python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score_plot.py
+    python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score_plot.py --source step2
 
-Writes, under output/raw_runs/experiments/wave-climate/2026-09-25-wave-grid-smoothed-score/figures/:
-    best/<source>/per_period/best_by_period_<scenario>_<source>.png
-    best/<source>/shared/best_shared_<scenario>_<source>.png
-each with supporting/ (PDF, CAPTIONS.md, the data CSV).
-
-Reads tables only; it never rebuilds the run index, so it is safe to run
-while the sweep is going.
-
-    python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score_plot.py [--source step2|grid|both]
+Draws this grid's runs and the step-2 runs rescored the same way, one figure
+per scenario. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -46,21 +36,21 @@ from site_layer.hat_figure_style import (  # noqa: E402
     save, structures, support_dir, town_bands)
 
 common = study.common
+# --- CONFIG ------------------------------------------------------------------
 FIG = study.STUDY_DIR / "figures"
 KEYS = list(study.KEYS)
 COLOR = {"natural": "#1b7f6b", "full_management": "#c2571a"}
 DARK = {"natural": "#0b4f43", "full_management": "#8a3410"}
-# Which score ranks the runs (2026-09-27, Hannah: pick on the UNSMOOTHED model,
-# as the runner's own RMSE and every matrix run are scored). "raw" draws the
-# per-domain model as a dark line with no smoothed curve; figures go to
-# figures/best/<source>_raw/.
+# Which score ranks the runs: 'smoothed', or 'raw' as the runner scores (README)
 SCORE = "smoothed"
 OTHER = {"smoothed": "raw", "raw": "smoothed"}
 NAME = {"natural": "Natural", "full_management": "Full management"}
 SOURCE_NAME = {"grid": "four-parameter grid (this study)",
                "step2": "2026-09-24 step-2 runs, rescored on the smoothed output"}
+# -----------------------------------------------------------------------------
 
 
+# A source's scored runs, with each run's folder
 def load(source):
     if source == "grid":
         t = pd.read_csv(study.TABLES_DIR / "all_runs.csv")
@@ -72,9 +62,8 @@ def load(source):
     return t
 
 
+# Best setting per window and scenario, and the shared one per scenario
 def picks(t):
-    """Best per window x scenario (smoothed share explained), and the shared
-    setting per scenario (lowest mean smoothed RMSE / flat line, run in both)."""
     per, shared, table = {}, {}, []
     if SCORE == "raw":
         _, flat = study.targets()
@@ -106,16 +95,19 @@ def picks(t):
     return per, shared, pd.DataFrame(table)
 
 
+# A setting as a short label
 def settings_text(r):
     return (f"Hs {r['hs']:g} m, Tp {r['wave_period_s']:g} s, asym {r['wave_asymmetry']:g}, "
             f"high-angle {r['wave_angle_high_fraction']:g}")
 
 
+# One scenario's best-settings figure, in the screen style
 def fig(targets, obs, chosen, scenario, rule, source):
     with plt.rc_context(p2.SCREEN_RC):
         return _fig(targets, obs, chosen, scenario, rule, source)
 
 
+# The best-settings figure: rate and position change, both windows
 def _fig(targets, obs, chosen, scenario, rule, source):
     col = COLOR[scenario]
     f, axes = plt.subplots(2, 2, figsize=(16, 10.5), sharex=True, constrained_layout=True)
@@ -196,10 +188,8 @@ TOP_N = 5
 TOP_COLORS = ["#1b1b8f", "#2f7fc1", "#3aa39a", "#d08c1f", "#b83a5e"]
 
 
+# The top TOP_N runs per window and scenario, as the smoothed profiles scored
 def fig_top(targets, t, source):
-    """The top TOP_N runs by smoothed score in each window x scenario, drawn as
-    the smoothed profiles that were scored (added 2026-09-25: Hannah asked why
-    the best figures looked the same as the raw-scored ones)."""
     with plt.rc_context(p2.SCREEN_RC):
         f, axes = plt.subplots(2, 2, figsize=(16, 11), sharex=True, constrained_layout=True)
         rows = []
@@ -254,6 +244,7 @@ def fig_top(targets, t, source):
     return png
 
 
+# Run: every figure for the chosen sources
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()

@@ -1,66 +1,13 @@
 #!/usr/bin/env python3
-"""Does CASCADE relocate NC-12 where and when history did?
+"""
+Does CASCADE relocate NC-12 where and when history did?
 
-THE QUESTION
-    `roadway_manager` relocates the road on its own when the dune line
-    overruns it -- `road_relocation_checks` fires the moment the setback goes
-    negative. Separately, the pipeline can PRESCRIBE the two historical
-    relocations (1989, GIS 84-87; 1999, GIS 9-14) as measured displacements.
-    This script runs the two against each other:
-
-        arm A  relocations OFF -- the module decides on its own
-        arm B  relocations ON  -- the measured displacements are applied
-
-    and asks whether A reproduces B's timing and footprint unaided.
-
-WHAT IS DELIBERATELY NOT DONE
-    Arm A runs the module EXACTLY as built. `_road_relocation_setback` is left
-    at its initialised value -- the run's starting setback -- rather than being
-    set to a design distance or to the measured post-relocation alignment.
-    That matters because six of the ten historical domains (10-13, 85-87)
-    start at a setback of 0.0 m, so in those domains a relocation puts the road
-    back where it already was and the trigger re-fires the next year the dune
-    line moves landward. That ratcheting is a property of the module, and
-    reporting it is the point; designing around it would hide it.
-
-WHAT THE COMPARISON CAN AND CANNOT SAY
-    CASCADE's trigger is purely geometric: dune line overruns road. There is no
-    storm damage, no cost, and no maintenance decision in it. So a match here
-    means "the modelled physics would have overrun NC-12 near that year", NOT
-    "NCDOT would have moved the road then". The second question is outside what
-    this module represents, and no configuration of it gets there.
-
-BACKGROUND EROSION
-    Both arms run under whichever source/sink preset the runs were driven with.
-    Note that `edgeBE` carries rates on GIS 1 and 90 ONLY, so at every domain
-    under test here edgeBE and zeroBE are the same forcing: the dune-line
-    retreat that fires the trigger comes entirely from Barrier3D/BRIE dynamics.
-    Only `calibBE` puts a background-erosion term on the relocation domains,
-    which makes a calibBE re-run the natural sensitivity test once those
-    source/sink terms are updated.
-
-TIME INDEXING
-    `RoadwayManager` writes every time series at `time_index - 1`, and the
-    loop applies a historical event before the update for `start_year +
-    time_step`. So index i in `_road_setback_TS` is calendar year
-    START_YEAR + i. The prescribed arm is used to CHECK that rather than
-    assume it: arm B's setbacks must jump at exactly 1989 and 1999.
-
-THE PERIOD (2026-09-15)
-    `--period <start year>` selects a hindcast window from HATTERAS_PERIODS
-    (1984 -> 1984-2004, the default; 1996 -> 1996-2010). Only the relocation
-    events INSIDE the window are scored: a 1996 start scores the 1999 event
-    alone, because the 1989 event is already in its derived setback file. The
-    output root follows the period (relocation_<start>_<end>/), the event
-    animations are drawn only for events in the window, and the independent
-    position cross-check stays at the 2004 measurement -- the period's END for
-    1984-2004 and year 8 of 14 for 1996-2010 -- because it is the only
-    surveyed road position; the tables say which year it is.
-
-USAGE
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --period 1996 --preset edgeBE
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --arm-a DIR --arm-b DIR
+
+Relocations off (the module decides) against relocations on (the measured events):
+timing, footprint, near misses and animations, one set per preset. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -87,10 +34,7 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Repo root, found by searching upward
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
@@ -122,24 +66,19 @@ from cascade_pipeline.plotting.shoreline_gif import (           # noqa: E402
     DEFAULT_GIF_CONFIG,
 )
 
-# THE PERIOD. Module globals because every scorer, the arm names and the
-# output root read them; set ONCE by set_period() from --period before any of
-# that runs. 1984-2004 is the default so the six 2026-09-01 sets and every
-# regenerate line in RELOCATION_COMPARISON_RESULTS.md still mean what they did.
+# --- CONFIG ------------------------------------------------------------------
+# The period: module globals, set once by set_period() from --period
 DEFAULT_PERIOD = 1984
 START_YEAR = DEFAULT_PERIOD
 END_YEAR = HATTERAS_PERIODS[DEFAULT_PERIOD]["end_year"]
 
-# The ONE surveyed road position: RoadOffset_2004_domains.csv, measured on
-# the 2008 NC-12 line against 2004-start row 0. It is the end of 1984-2004
-# and the middle of 1996-2010, and the same number in both, which is what
-# makes the position check comparable across periods.
+# The one surveyed road position: the end of 1984-2004, the middle of 1996-2010
 CHECK_YEAR = 2004
+# -----------------------------------------------------------------------------
 
 
+# Points the module at one hindcast window
 def set_period(start_year):
-    """Points the module at one hindcast window. Raises on a year that is not
-    a HATTERAS_PERIODS key, so a typo cannot score an empty window."""
     global START_YEAR, END_YEAR, OUTPUT_ROOT
     if start_year not in HATTERAS_PERIODS:
         raise SystemExit(f"--period {start_year}: not a hindcast period "
@@ -149,86 +88,42 @@ def set_period(start_year):
     OUTPUT_ROOT = (PROJECT_BASE_DIR / "output" / "comparisons"
                    / "relocation" / f"{START_YEAR}_{END_YEAR}")
 
-# The scenario both arms run. `full_management` is the status-quo hindcast,
-# and it is the only scenario where a relocation arm is meaningful and the
-# village management is also present.
+# The scenario both arms run: full management, the only one where relocation means anything
 ARM_SCENARIO_TOKENS = ("road", "bdm", "nogroin")
 
 DEFAULT_PRESET = "zeroBE"
 
 
+# The two run directory names this comparison reads, for one preset
 def arm_names(preset):
-    """The two run directory names this comparison reads, for one preset.
-
-    Built with the same token rule the hindcast derives RUN_NAME with in its
-    section 7.5: the arms are identical in every token except `reloc`. Both
-    are derived from ONE preset argument on purpose -- an arm A read against
-    an arm B from a different preset would produce a clean-looking comparison
-    of two different forcings, and nothing downstream would notice, because
-    every check in this file is a difference between the arms.
-
-    Args:
-        preset: A source/sink preset key or deprecated alias.
-
-    Returns:
-        (arm_a_name, arm_b_name), relocations off and on.
-    """
     canonical, _ = resolve_be_preset(preset)
     head, tail = ARM_SCENARIO_TOKENS[0], ARM_SCENARIO_TOKENS[1:]
     stem = f"HAT_{START_YEAR}_{END_YEAR}_{canonical}_{head}"
     return (f"{stem}_" + "_".join(tail),
             f"{stem}_reloc_" + "_".join(tail))
 
+# Filename-safe form of a window name
 def _slug(text):
-    """Filename-safe form of a window name."""
     return re.sub(r"[^A-Za-z0-9]+", "", str(text))
 
 
-# One directory per preset underneath it. The background-erosion preset is
-# the axis this comparison is repeated over -- edgeBE and zeroBE differ only
-# at GIS 1 and 90, while calibBE is the only one carrying a source/sink term
-# on the relocation domains themselves -- so the artifacts have to be kept
-# apart or the second run silently overwrites the first.
-# relocation/<start>_<end>/ (one relocation tree since 2026-09-17; before that
-# relocation_<start>_<end>/ per window at the top level); re-pointed by
-# set_period().
+# One folder per preset, so one preset's run cannot overwrite another's
 OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "comparisons" / "relocation" / f"{START_YEAR}_{END_YEAR}"
 
-# Tolerance windows for the hit/miss matrix. Two are reported rather than one
-# because the answer is sensitive to it and a single number would hide that.
+# Two tolerance windows, because the answer is sensitive to it
 TOLERANCE_YEARS = (2, 5)
 
-# These animations are READ, not watched. The question they answer -- in which
-# year does this domain's road step landward, and does the model do it when
-# history did -- needs the viewer to hold one frame long enough to find the
-# domain, read the year clock, and compare the two panels. At the shared
-# default of 3 fps that is 333 ms per frame and the eye cannot do it; a 20-year
-# run is over in seven seconds.
-#
-# 1 fps gives a second per model year and a ~21 s loop. Slower than a general
-# shoreline animation wants, which is why this overrides rather than changing
-# GifConfig's default: the per-run shoreline GIFs show a smooth trend where 3
-# fps reads fine, and it is only the discrete, dated relocation events that
-# need dwell time.
+# 1 fps, so each frame can be read: one second per model year
 GIF_CONFIG = dataclasses.replace(DEFAULT_GIF_CONFIG, fps=1)
 
-# Alongshore windows for the animation. The two event windows are padded a
-# few domains beyond the event footprint so the relocating stretch is seen
-# against road that is NOT relocating -- an unpadded window shows every
-# domain stepping at once and reads as a global effect.
+# Windows padded past each event, so the relocating stretch shows against road that is not
 GIF_WINDOWS = (
     ("full island", HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN),
     ("1999 event (GIS 9-14)", 9, 20),
     ("1989 event (GIS 84-87)", 80, 90),
 )
 
-# Windows for the topographic raster. The full island is included despite
-# being 4100 cells wide and a few hundred tall -- rendered wide and short,
-# that IS the shape of Hatteras, and it is the view that reads as the island
-# rather than as a chart. The event windows carry the cross-shore detail.
-# ONE FOLDER PER PLACE inside a set (2026-09-09, Hannah): the two animations
-# of a window sit together under a readable name, and the eight CSVs under
-# tables/, so a set reads as report + tables + places instead of fifteen files.
+# Windows for the topographic raster; one folder per place in a set
 PLACE_DIR = {
     "full island": "1-island",
     "1999 event (GIS 9-14)": "2-event-1999_GIS9-14",
@@ -243,55 +138,27 @@ TOPO_WINDOWS = (
 )
 
 
+# The windows worth drawing for this period
 def windows_in_period(windows, targets):
-    """The windows worth drawing for this period: the island, plus each event
-    window whose event year is one the period actually scores. A 1996 start
-    has no 1989 event to show; drawing that block would animate two identical
-    arms and read as a null result."""
     years = {str(y) for y in targets.values()}
     return tuple(w for w in windows
                  if w[0] == "full island" or w[0].split()[0] in years)
 
-# Recorded on every topographic frame. The measured island planform spans
-# 6.3 km of cross-shore offset across the real domains, but Cascade's
-# shoreline_offset reaches BRIE in decameters where BRIE reads metres, so
-# the run carries a tenth of it. Stated on the figure rather than silently
-# corrected: the animation shows the island the model actually ran.
+# Written on every topographic frame: the run carries a tenth of the planform
 PLANFORM_NOTE = ("planform note: this run's shoreline offset is 1/10 of the "
                  "measured island curvature (shoreline_offset unit mismatch, under review)")
 
 
-# =============================================================================
 # Loading
-# =============================================================================
 
+# Loads the plan-view shoreline matrix a run saved beside its model
 def load_shoreline_matrix(run_dir):
-    """Loads the plan-view shoreline matrix a run saved beside its model.
-
-    Args:
-        run_dir: The run directory.
-
-    Returns:
-        A 2-D [n_years, total_domains] array in metres, raw x_s_TS
-        convention, or None if the run did not save one.
-    """
     hits = sorted(glob.glob(os.path.join(run_dir, "*_shoreline_matrix.npy")))
     return np.load(hits[0]) if hits else None
 
 
+# Back-barrier shoreline per domain per year, metres, raw convention
 def back_barrier_matrix(cascade):
-    """Back-barrier shoreline per domain per year, metres, raw convention.
-
-    The shoreline matrix the run saves carries only x_s. Drawing the island
-    with any width needs x_b as well, on the same sign convention so the two
-    can share an axis.
-
-    Args:
-        cascade: A finished Cascade instance.
-
-    Returns:
-        A [n_years, n_domains] array in metres, or None if x_b_TS is absent.
-    """
     b3d = getattr(cascade, "barrier3d", None)
     if not b3d or not hasattr(b3d[0], "x_b_TS"):
         return None
@@ -300,52 +167,21 @@ def back_barrier_matrix(cascade):
                      for t in range(n)])
 
 
+# Loads the pickled Cascade a run wrote with `cascade.save(run_dir)`
 def load_cascade(run_dir):
-    """Loads the pickled Cascade a run wrote with `cascade.save(run_dir)`.
-
-    Args:
-        run_dir: Directory holding exactly one .npz model state.
-
-    Returns:
-        The Cascade instance.
-
-    Raises:
-        FileNotFoundError: If the directory holds no .npz, which means the run
-            was driven with HAT_SAVE_MODEL_STATE=false and cannot be compared.
-    """
     matches = sorted(glob.glob(os.path.join(run_dir, "*.npz")))
     if not matches:
         raise FileNotFoundError(
             f"no .npz model state in {run_dir}. Re-run with "
             f"HAT_SAVE_MODEL_STATE=1 -- the roadway managers' time series only "
             f"exist inside the saved model.")
-    # np.load changes nothing on disk, but Cascade.save() os.chdir()s into the
-    # run directory, so anything downstream that assumes cwd is the repo root
-    # must not rely on it. Absolute paths are used throughout this file.
+    # Cascade.save() changes the working directory, so every path here is absolute
     with np.load(matches[0], allow_pickle=True) as handle:
         return handle["cascade"][0]
 
 
+# Pulls the per-domain roadway time series out of a finished run
 def road_series(cascade, geometry, first_gis, last_gis):
-    """Pulls the per-domain roadway time series out of a finished run.
-
-    Reads the managers CASCADE already holds rather than re-deriving anything.
-    Only domains the run actually managed are returned: a domain outside
-    `roadway_management_module` has a RoadwayManager object that was never
-    called, and its all-zero series would read as "never relocated" rather
-    than "never asked".
-
-    Args:
-        cascade: A Cascade instance after its run.
-        geometry: DomainGeometry describing the padded array.
-        first_gis: First GIS domain carrying road.
-        last_gis: Last GIS domain carrying road.
-
-    Returns:
-        A {gis: dict} mapping, each dict holding setback, relocated, elevation
-        (numpy arrays indexed by years-since-START_YEAR) plus the drowned and
-        relocation_blocked flags.
-    """
     roadways = getattr(cascade, "roadways", None)
     management = getattr(cascade, "roadway_management_module", None)
     if roadways is None:
@@ -369,19 +205,8 @@ def road_series(cascade, geometry, first_gis, last_gis):
     return out
 
 
+# Maps each domain a relocation event moves to that event's year
 def historical_targets(start_year, end_year):
-    """Maps each domain a relocation event moves to that event's year.
-
-    Read from HATTERAS_ROAD_EVENTS rather than retyped, so dropping a domain
-    from an event (as GIS 15 was) drops it from the scoring too.
-
-    Args:
-        start_year: First calendar year of the period.
-        end_year: Last calendar year of the period.
-
-    Returns:
-        A {gis: event_year} dict for relocation events inside the period.
-    """
     return {gis: event.year
             for event in HATTERAS_ROAD_EVENTS
             if isinstance(event, RelocationEvent) and event.enabled
@@ -389,58 +214,21 @@ def historical_targets(start_year, end_year):
             for gis in event.displacement_m}
 
 
-# =============================================================================
 # Scoring
-# =============================================================================
 
+# Calendar year of the first modelled relocation, or None
 def first_relocation_year(relocated_ts, start_year):
-    """Calendar year of the first modelled relocation, or None.
-
-    Args:
-        relocated_ts: `_road_relocated_TS`, indexed by years since start_year.
-        start_year: First calendar year of the run.
-
-    Returns:
-        The calendar year, or None if the domain never relocated.
-    """
     fired = np.flatnonzero(relocated_ts > 0)
     return int(start_year + fired[0]) if fired.size else None
 
 
+# Every calendar year the domain relocated
 def relocation_years(relocated_ts, start_year):
-    """Every calendar year the domain relocated."""
     return [int(start_year + i) for i in np.flatnonzero(relocated_ts > 0)]
 
 
+# How close a road came to firing the relocation trigger, and never did
 def relocation_margin(entry, start_year):
-    """How close a road came to firing the relocation trigger, and never did.
-
-    THE TRIGGER, EXACTLY. `roadway_manager.road_relocation_checks` does
-
-        road_setback = road_setback + dune_migrated      # dune_migrated < 0 landward
-        if road_setback < 0:  relocate
-
-    and the caller supplies
-
-        dune_migration = barrier3d.ShorelineChangeTS[t-1] * 10       # m
-
-    `ShorelineChangeTS` counts WHOLE dam cells, so the setback only ever moves
-    in 10 m steps and the test is STRICT. Both facts matter for a margin:
-
-      * a setback sitting at exactly 0.0 has NOT fired. The dune line has
-        reached the road and stopped there. It needs one more full cell.
-      * so the extra landward migration needed is `min_setback + 10 m`, not
-        `min_setback`. Reporting the setback alone would say GIS 84 needed 0 m
-        more, which is wrong -- it needed one more cell.
-
-    Args:
-        entry: One road_series() value, with its "setback" array.
-        start_year: First calendar year of the run.
-
-    Returns:
-        dict with the closest approach, the year it happened, the cells still
-        between dune and road there, and the extra migration that would fire.
-    """
     sb = np.asarray(entry["setback"], dtype=float)
     idx = int(np.argmin(sb))
     closest = float(sb[idx])
@@ -454,23 +242,8 @@ def relocation_margin(entry, start_year):
     )
 
 
+# Every managed domain that never relocated, ranked by how close it came
 def near_miss_table(series, targets, start_year):
-    """Every managed domain that never relocated, ranked by how close it came.
-
-    Covers the CONTROL domains as well as the historical ones on purpose. The
-    comparison's headline false-positive count is 0/45, which reads as "the
-    module is appropriately conservative" -- but a control domain sitting one
-    cell from firing is a different statement about robustness than one sitting
-    thirty cells away, and only this table separates them.
-
-    Args:
-        series: road_series() output for the free-running arm.
-        targets: {gis: historical_event_year}.
-        start_year: First calendar year of the run.
-
-    Returns:
-        DataFrame of non-relocating domains, closest first.
-    """
     rows = []
     for gis, entry in sorted(series.items()):
         if np.any(np.asarray(entry["relocated"]) > 0):
@@ -488,21 +261,8 @@ def near_miss_table(series, targets, start_year):
     return df
 
 
+# Builds the first-relocation-year table -- the primary result
 def score_first_year(series, targets, start_year):
-    """Builds the first-relocation-year table -- the primary result.
-
-    Robust to the ratcheting described in the module docstring: however many
-    times a domain relocates afterwards, the FIRST firing is the model's
-    answer to "when did the dune line reach the road".
-
-    Args:
-        series: road_series() output for the free-running arm.
-        targets: {gis: historical_event_year}.
-        start_year: First calendar year of the run.
-
-    Returns:
-        A DataFrame, one row per historical domain.
-    """
     rows = []
     for gis, event_year in sorted(targets.items()):
         entry = series.get(gis)
@@ -525,9 +285,7 @@ def score_first_year(series, targets, start_year):
                      "drowned" if entry["drowned"] else
                      "relocation blocked" if entry["relocation_blocked"] else
                      "relocated"),
-            # Only meaningful where the trigger never fired. On a domain that
-            # DID relocate the setback is reset by _apply_relocation, so its
-            # minimum is an artifact of the reset rather than a near miss.
+            # Near misses only where the trigger never fired: a reset setback is not a near miss
             **({k: None for k in ("min_setback_m", "closest_year",
                                   "cells_remaining", "migration_needed_m",
                                   "years_at_min", "end_setback_m")}
@@ -536,25 +294,8 @@ def score_first_year(series, targets, start_year):
     return pd.DataFrame(rows)
 
 
+# Hit/miss matrix at one tolerance window
 def score_confusion(series, targets, start_year, tolerance):
-    """Hit/miss matrix at one tolerance window.
-
-    A HIT is a historical domain that relocated within +/-tolerance years of
-    its event. A FALSE POSITIVE is a managed road domain history never
-    relocated that relocated anyway, at any time. The false-positive count is
-    the half of this that a per-domain error table cannot show: a module that
-    relocates everywhere scores perfectly on the historical domains while
-    saying nothing.
-
-    Args:
-        series: road_series() output for the free-running arm.
-        targets: {gis: historical_event_year}.
-        start_year: First calendar year of the run.
-        tolerance: Half-width of the match window, in years.
-
-    Returns:
-        A dict of counts and rates.
-    """
     hits, misses = [], []
     for gis, event_year in targets.items():
         entry = series.get(gis)
@@ -586,47 +327,14 @@ def score_confusion(series, targets, start_year, tolerance):
     }
 
 
+# Index of the last year the manager actually ran for this domain
 def last_managed_index(entry):
-    """Index of the last year the manager actually ran for this domain.
-
-    Dated from `_road_ele_TS`, NOT from the setback series. A setback of
-    exactly 0.0 m is legitimate here -- it means the road sits on the dune
-    line, which is where six of the ten historical domains start -- so a
-    nonzero test on the setback would report those domains as never managed.
-    Road ELEVATION has no such ambiguity: the module stops managing the moment
-    it drops below 0 m MHW, so its last non-zero entry dates the last managed
-    year. This is the same signal `summarise_road_management` dates from.
-
-    Args:
-        entry: One road_series() value, carrying "elevation".
-
-    Returns:
-        The index, or -1 if the manager never ran.
-    """
     written = np.flatnonzero(np.asarray(entry["elevation"], dtype=float) != 0)
     return int(written[-1]) if written.size else -1
 
 
+# Per-domain setback trajectory comparison between the two arms
 def score_trajectories(series_a, series_b, targets, start_year, check_2004):
-    """Per-domain setback trajectory comparison between the two arms.
-
-    Compared over the window BOTH arms were still managing the domain. If one
-    arm's road drowns, its series stops being written; extending the
-    comparison past that point would score an unwritten zero against a live
-    setback and report a difference that is really the end of the record.
-
-    Args:
-        series_a: road_series() for the free-running arm.
-        series_b: road_series() for the prescribed arm.
-        targets: {gis: historical_event_year}.
-        start_year: First calendar year of the run.
-        check_2004: {gis: measured_setback_m}, the independent cross-check.
-
-    Returns:
-        A (summary_df, long_df) tuple. long_df is one row per domain-year and
-        is what the GIF and any trajectory plot read; it carries a `managed`
-        flag per arm so a plot can stop the line where the record stops.
-    """
     summary, long = [], []
     for gis in sorted(set(series_a) | set(series_b)):
         a = series_a.get(gis, {}).get("setback")
@@ -650,9 +358,7 @@ def score_trajectories(series_a, series_b, targets, start_year, check_2004):
                              managed_prescribed=bool(i <= last_b)))
 
         wa, wb = a[:common + 1], b[:common + 1]
-        # The modelled position in the check year, per arm, or None if the
-        # manager had stopped by then. For 1984-2004 this is the last year;
-        # for 1996-2010 it is mid-window, and the column says which year.
+        # The modelled position in the check year per arm, or None if management had stopped
         k = CHECK_YEAR - start_year
         at_a = float(a[k]) if 0 <= k <= last_a else None
         at_b = float(b[k]) if 0 <= k <= last_b else None
@@ -677,24 +383,8 @@ def score_trajectories(series_a, series_b, targets, start_year, check_2004):
     return pd.DataFrame(summary), pd.DataFrame(long)
 
 
+# Confirms the two arms are identical before the first prescribed event
 def check_determinism(series_a, series_b, first_event_year, start_year):
-    """Confirms the two arms are identical before the first prescribed event.
-
-    Both arms are the same configuration up to the first event, and Barrier3D
-    runs on a seeded RNG with a prescribed storm file, so every series must
-    agree exactly through `first_event_year - 1`. A divergence there is a bug,
-    not a result, and everything downstream would be uninterpretable -- so
-    this is checked rather than assumed.
-
-    Args:
-        series_a: road_series() for the free-running arm.
-        series_b: road_series() for the prescribed arm.
-        first_event_year: Calendar year of the earliest prescribed event.
-        start_year: First calendar year of the run.
-
-    Returns:
-        A (ok, offenders) tuple; offenders lists the GIS domains that diverged.
-    """
     cutoff = first_event_year - start_year        # exclusive
     offenders = []
     for gis in sorted(set(series_a) & set(series_b)):
@@ -707,31 +397,15 @@ def check_determinism(series_a, series_b, first_event_year, start_year):
     return not offenders, offenders
 
 
+# Confirms index i really is calendar year start_year + i
 def check_event_indexing(series_b, targets, start_year):
-    """Confirms index i really is calendar year start_year + i.
-
-    Arm B's setback is displaced by a measured amount at the event year and by
-    dune migration alone in every other year, so the largest single-year jump
-    in the prescribed arm must land on the event year. If it does not, the
-    time indexing in this file is wrong and every year reported here is off.
-
-    Args:
-        series_b: road_series() for the prescribed arm.
-        targets: {gis: historical_event_year}.
-        start_year: First calendar year of the run.
-
-    Returns:
-        A DataFrame with the located jump year beside the expected one.
-    """
     rows = []
     for gis, event_year in sorted(targets.items()):
         entry = series_b.get(gis)
         if entry is None:
             continue
         setback = entry["setback"]
-        # Bound the search by the last MANAGED year, dated from the elevation
-        # series -- see last_managed_index. Unwritten trailing years would
-        # otherwise contribute a spurious jump back to zero.
+        # Search only up to the last managed year, or unwritten years add a false jump
         stop = last_managed_index(entry) + 1 or len(setback)
         jumps = np.diff(setback[:stop])
         if not jumps.size:
@@ -748,17 +422,10 @@ def check_event_indexing(series_b, targets, start_year):
     return df
 
 
-# =============================================================================
 # Report
-# =============================================================================
 
+# Mirrors everything printed to the console into a buffer
 class _Tee:
-    """Mirrors everything printed to the console into a buffer.
-
-    The report is the run's own console output rather than a second rendering
-    of the same numbers, which is the point: a separately-composed summary can
-    disagree with the CSVs beside it, and this cannot.
-    """
 
     def __init__(self):
         self._real = sys.stdout
@@ -776,8 +443,8 @@ class _Tee:
         return self._buf.getvalue()
 
 
+# One line describing which run a comparison arm actually read
 def _arm_provenance(run_dir):
-    """One line describing which run a comparison arm actually read."""
     hits = sorted(glob.glob(os.path.join(str(run_dir), "*_run_metadata.json")))
     if not hits:
         return f"{os.path.basename(str(run_dir))}   (no run metadata found)"
@@ -791,8 +458,8 @@ def _arm_provenance(run_dir):
             f"commit {str(ident.get('git_commit', '?'))[:12]}{dirty}")
 
 
+# The dune-topo version a run was made on, from its metadata ('v?' if none)
 def _topo_version(run_dir):
-    """The dune-topo version a run was made on, from its metadata ('v?' if none)."""
     hits = sorted(glob.glob(os.path.join(str(run_dir), "*_run_metadata.json")))
     if not hits:
         return "v?"
@@ -800,15 +467,8 @@ def _topo_version(run_dir):
         return str(json.load(fh).get("identity", {}).get("topo_dune_version", "v?"))
 
 
+# The output folder, named for the dune-topo version and preset
 def default_out_dir(arm_a, arm_b, preset):
-    """OUTPUT_ROOT/<topo version>/<preset>[_groin] (2026-09-09, Hannah: the
-    folder must say which dune-topo version a comparison was made on).
-
-    The version is READ from arm A's run metadata, never typed, so a set cannot
-    land unlabelled; the two arms must agree on it. The groin token follows
-    the arm names: a `_groin` arm (not `nogroin`) gets a `_groin` folder, the
-    convention the six 2026-09-01 sets used.
-    """
     va, vb = _topo_version(arm_a), _topo_version(arm_b)
     if va != vb:
         raise SystemExit(f"the two arms are on different dune-topo versions ({va} vs {vb}); "
@@ -817,21 +477,8 @@ def default_out_dir(arm_a, arm_b, preset):
     return OUTPUT_ROOT / va / f"{preset}{groin}"
 
 
+# Provenance block written above the captured output
 def _report_header(arm_a, arm_b, preset):
-    """Provenance block written above the captured output.
-
-    WHY THIS EXISTS. On 2026-08-25 a re-run of this comparison rewrote every
-    CSV and GIF in output/comparisons/relocation_1984_2004/<preset>/ (now relocation/1984_2004/<version>/<preset>/) and left
-    the report.txt from 2026-08-22 sitting beside them -- the script had lost
-    its report-writing step, so nothing overwrote it. For three days that
-    folder held a report describing DIFFERENT runs from the CSVs next to it,
-    with nothing on its face to say so. It even named the pre-restructure flat
-    run paths, which by then did not exist.
-
-    So every report now carries the identity of the two runs it was built
-    from. A report whose arms do not match the runs on disk is visible at a
-    glance instead of having to be inferred from file mtimes.
-    """
     return (
         "=" * 74 + "\n"
         f"generated   {datetime.datetime.now():%Y-%m-%d %H:%M:%S} by "
@@ -847,6 +494,7 @@ def _report_header(arm_a, arm_b, preset):
         + "=" * 74 + "\n\n")
 
 
+# Run: resolve the arms, compare them, write the report
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     raw_runs = PROJECT_BASE_DIR / "output" / "raw_runs"
@@ -871,11 +519,7 @@ def main():
 
     preset, _ = resolve_be_preset(args.preset)
     name_a, name_b = arm_names(preset)
-    # Runs are filed [<forcing arm>/]<period>/<preset>/. Both relocation arms
-    # share a preset by construction -- arm_names derives both from the one
-    # token -- so the directory is resolved once and used for both. Resolved
-    # rather than joined: the join had no slot for the forcing-arm component,
-    # and "arm" here means the relocation switch, not that one.
+    # Both arms share a preset, so their folder is resolved once
     period_dir = preset_dir_for(raw_runs, (START_YEAR, END_YEAR), preset)
     args.arm_a = args.arm_a or str(period_dir / name_a)
     args.arm_b = args.arm_b or str(period_dir / name_b)
@@ -883,9 +527,7 @@ def main():
     out_dir = Path(args.out).resolve() if args.out else default_out_dir(args.arm_a, args.arm_b, preset)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # A STALE report is worse than a missing one -- see _report_header. Delete
-    # any previous report BEFORE doing the work, so a run that dies partway
-    # leaves this folder with no report rather than with the previous run's.
+    # Delete the old report first, so a failed run leaves none rather than a stale one
     report_path = out_dir / "report.txt"
     if report_path.exists():
         report_path.unlink()
@@ -912,8 +554,8 @@ def main():
         print(f"report -> {report_path}")
 
 
+# The comparison itself; everything it prints becomes report.txt
 def _compare(args, preset, out_dir):
-    """The comparison itself. Everything it prints becomes report.txt."""
     tables_dir = out_dir / "tables"
     tables_dir.mkdir(parents=True, exist_ok=True)
     print("=" * 74)
@@ -940,7 +582,7 @@ def _compare(args, preset, out_dir):
         moved = sorted(g for g, y in targets.items() if y == year)
         print(f"    {year}  GIS {moved}")
 
-    # --- 0. the checks that decide whether the rest means anything ----------
+    # 0. the checks that decide whether the rest means anything
     print("\n" + "-" * 74)
     print("0. VALIDITY CHECKS")
     print("-" * 74)
@@ -964,7 +606,7 @@ def _compare(args, preset, out_dir):
             print(idx_df[~idx_df["matches"]].to_string(index=False))
         idx_df.to_csv(tables_dir / "indexing_check.csv", index=False)
 
-    # --- 1. first relocation year -------------------------------------------
+    # 1. first relocation year
     print("\n" + "-" * 74)
     print("1. FIRST MODELLED RELOCATION, free-running arm")
     print("-" * 74)
@@ -981,7 +623,7 @@ def _compare(args, preset, out_dir):
     else:
         print("\n  no historical domain relocated in the free-running arm")
 
-    # --- 1b. how close did the misses come? ---------------------------------
+    # 1b. how close did the misses come?
     print("\n" + "-" * 74)
     print("1b. NEAR MISSES: how much more dune migration would have fired it")
     print("-" * 74)
@@ -1024,7 +666,7 @@ def _compare(args, preset, out_dir):
             print("     margins are wide; this is where that gets checked.")
         print(f"\n  saved -> near_miss_margin.csv")
 
-    # --- 2. hit / miss --------------------------------------------------------
+    # 2. hit / miss
     print("\n" + "-" * 74)
     print("2. HIT / MISS, with false positives")
     print("-" * 74)
@@ -1048,7 +690,7 @@ def _compare(args, preset, out_dir):
                    for k, v in r.items()} for r in conf_rows]).to_csv(
         tables_dir / "confusion.csv", index=False)
 
-    # --- 3. setback trajectories ----------------------------------------------
+    # 3. setback trajectories
     print("\n" + "-" * 74)
     print("3. SETBACK TRAJECTORIES")
     print("-" * 74)
@@ -1066,7 +708,7 @@ def _compare(args, preset, out_dir):
     print(f"\n  saved per-year setbacks for {long_df['gis'].nunique()} domains "
           f"-> setback_by_year.csv")
 
-    # --- 4. outcomes -----------------------------------------------------------
+    # 4. outcomes
     print("\n" + "-" * 74)
     print("4. ROAD OUTCOMES: did prescribing the relocations change the fate?")
     print("-" * 74)
@@ -1096,7 +738,7 @@ def _compare(args, preset, out_dir):
             print(f"    GIS {gis:>3}  free: {wide.loc[gis, ('reason', 'free')]:<20}"
                   f"  prescribed: {wide.loc[gis, ('reason', 'prescribed')]}")
 
-    # --- 5. animation --------------------------------------------------------
+    # 5. animation
     print()
     print("-" * 74)
     print("5. ANIMATION")

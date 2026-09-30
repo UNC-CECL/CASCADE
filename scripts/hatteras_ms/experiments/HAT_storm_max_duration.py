@@ -1,42 +1,14 @@
-r"""
-HAT_storm_max_duration.py -- why does a storm series with longer events drown the barrier?
-==============================================================================
-THE QUESTION (Hannah, 2026-09-28). The storm series keeps events of 8-72 h.
-72 was chosen because runs on 96, 120 and 240 h series "did not work": the
-barrier drowned and the simulation ended (PROVENANCE.md in 3-storms/). But the
-builder DROPS a longer event rather than shortening it, so the 72 h series is
-missing 29 events 1996-2024, among them Isabel 2003 (Rhigh 5.22 m MHW), the
-March 2018 nor'easter, Florence 2018 and Dennis 1999. Which domain drowns on a
-longer series, when, and by what mechanism?
+"""
+Why does a storm series with longer events drown the barrier?
 
-NOTHING IN THE MAIN CODE CHANGES
-    The variants are built by the builder's own functions, read out of
-    historical_storm_creation_v3_HAT.py by `ast` (the script runs at import,
-    so it cannot be imported), with only max_storm_dur and the save location
-    changed. They are written HERE, never into hindcast_storms/. The 72 h
-    variant is rebuilt too and must equal the committed series exactly.
+    python scripts/hatteras_ms/experiments/HAT_storm_max_duration.py build
+    python scripts/hatteras_ms/experiments/HAT_storm_max_duration.py run --workers 4
+    python scripts/hatteras_ms/experiments/HAT_storm_max_duration.py cause
+    python scripts/hatteras_ms/experiments/HAT_storm_max_duration.py diagnose
+    python scripts/hatteras_ms/experiments/HAT_storm_max_duration.py compare
 
-    A run is the unchanged hindcast runner, executed by this file's
-    `_launch` action, which points HATTERAS_PERIODS[start]["storm_file"] at the
-    variant in its own process first. Barrier3D is the current one
-    (49fd069), as in every matrix run.
-
-VARIANTS  (name -> max hours; "trim" keeps a longer event, cut to the 72 h
-around its peak, which the builder cannot do)
-    72     the committed series (check only; the matrix runs are its controls)
-    96, 120, 240, nocap
-    72trim
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-max-duration/
-           storms/<window>/<window>_storms_v3_<variant>.npy (+ _summary.csv)
-           runs/<variant>_<scenario>/<period>/edgeBE/<run_name>/
-           logs/, tables/, figures/, NOTE.md
-
-USAGE
-    python HAT_storm_max_duration.py build
-    python HAT_storm_max_duration.py run [--workers 4]
-    python HAT_storm_max_duration.py diagnose
-==============================================================================
+Rebuilds the storm series at longer caps with the builder's own functions and
+runs them through the unchanged runner. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -62,6 +34,7 @@ _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 BUILDER = PROJECT_ROOT / "scripts" / "input_prep" / "3-env-forcings" / "3-storms" / "historical_storm_creation_v3_HAT.py"
 TAG = "storms-and-overwash/2026-09-28-storm-max-duration"
@@ -80,21 +53,23 @@ CONTROLS = {
 }
 # the builder's settings (historical_storm_creation_v3_HAT.py, "inputs" block)
 BEACH_SLOPE, BERM, MHW, GROUPING, MIN_DUR = 0.06, 1.7, 0.36, 24, 8
+# -----------------------------------------------------------------------------
 
 
+# A window's folder name, start_end
 def wtag(w):
     return f"{w[0]}_{w[1]}"
 
 
+# A variant's storm file
 def storm_file(w, variant):
     return EXP_DIR / "storms" / wtag(w) / f"{wtag(w)}_storms_v3_{variant}.npy"
 
 
-# --- the builder's own functions ---------------------------------------------
+# The builder's own functions
 
+# The builder's load_data, calculate_r2_percent and create_storms, without its module code
 def builder_functions():
-    """load_data, calculate_r2_percent and create_storms, compiled from the
-    builder's source without running its module-level code."""
     tree = ast.parse(BUILDER.read_text(encoding="utf-8"))
     keep = [n for n in tree.body if isinstance(n, ast.FunctionDef)
             and n.name in ("find_time_gaps", "load_data", "calculate_r2_percent", "create_storms")]
@@ -105,6 +80,7 @@ def builder_functions():
     return ns
 
 
+# The builder's merged water-level and wave record for one window
 def merged_record(fn, w):
     from site_layer import hat_env_forcings as env
     df = fn["load_data"](start_time=f"{w[0]}-01-01 00:00:00", end_time=f"{w[1]}-12-31 23:00:00",
@@ -116,10 +92,8 @@ def merged_record(fn, w):
     return df
 
 
+# Cut each event longer than `limit` to its `limit` hours around the peak
 def trim_long_events(df, nocap_summary, w, limit=72):
-    """The nocap events, each longer than `limit` cut to the `limit` hours
-    above the berm centred on its peak TWL; Rhigh, Rlow, period and duration
-    recomputed on what is kept, exactly as the builder computes them."""
     above = df[df["TWL"] > BERM]
     rows = []
     for _, ev in nocap_summary.iterrows():
@@ -138,6 +112,7 @@ def trim_long_events(df, nocap_summary, w, limit=72):
     return s
 
 
+# Build every variant's series, checking the 72 h one against the committed file
 def build():
     fn = builder_functions()
     for w in WINDOWS:
@@ -169,11 +144,10 @@ def build():
                   f"max Rhigh {a[:, 1].max() * 10:.2f} m MHW, storm-hours {a[:, 4].sum():6.0f}")
 
 
-# --- runs ----------------------------------------------------------------------
+# Runs
 
+# Subprocess entry: the unchanged runner with this period's storm file swapped in
 def _launch(start, storm_path):
-    """Subprocess entry: the unchanged runner, with this period's storm file
-    pointed at a variant IN THIS PROCESS ONLY."""
     import runpy
     sys.path.insert(0, str(HINDCAST.parent))
     from site_layer import hatteras_site_config as sc
@@ -182,17 +156,16 @@ def _launch(start, storm_path):
     runpy.run_path(str(HINDCAST), run_name="__main__")
 
 
+# A run group's experiment tag
 def member_tag(variant, scenario):
     return f"{TAG}/runs/{variant}_{scenario}"
 
 
-# THE CAUSE TEST. Barrier3D before 49fd069, the route_overwash axis-swap fix
-# of 2026-09-24, read Elevation[TS, i, d+1:d+10] (out of bounds whenever
-# i >= rows). Longer storms route for more steps. A detached worktree at the
-# commit before the fix (ce36866) runs the 72 h and 240 h series.
+# Pre-fix Barrier3D worktree (ce36866), for the cause test on the 72 h and 240 h series
 PREFIX_WORKTREE = PROJECT_ROOT.parent / "Barrier3D-prefix-ce36866"
 
 
+# Run one member in its own process, logged
 def run_member(job, prefix=False):
     w, variant, scenario = job
     logs = EXP_DIR / "logs"
@@ -224,6 +197,7 @@ def run_member(job, prefix=False):
     return rec
 
 
+# Every variant x scenario x window, in parallel
 def run(workers):
     for w in WINDOWS:
         for v in RUN_VARIANTS:
@@ -234,6 +208,7 @@ def run(workers):
         list(ex.map(run_member, jobs))
 
 
+# Run the 72 h and 240 h natural series on the pre-fix Barrier3D
 def cause(workers):
     if not (PREFIX_WORKTREE / "barrier3d").exists():
         raise SystemExit(f"no pre-fix worktree at {PREFIX_WORKTREE}")
@@ -242,17 +217,17 @@ def cause(workers):
         list(ex.map(lambda j: run_member(j, prefix=True), jobs))
 
 
-# --- diagnosis -----------------------------------------------------------------
+# Diagnosis
 
+# A member's run, or None
 def run_dir(w, variant, scenario):
     base = EXP_DIR / "runs" / f"{variant}_{scenario}" / wtag(w) / "edgeBE"
     hits = list(base.glob("HAT_*")) if base.exists() else []
     return hits[0] if hits else None
 
 
+# Per run: whether it drowned, where, when and how, and that year's storms
 def diagnose():
-    """For every run: did it stop, which domain drowned, in which model year,
-    by width or by height, and the storms of that year in both series."""
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     rows = []
     for w in WINDOWS:
@@ -303,10 +278,8 @@ def diagnose():
         print(t.to_string(index=False))
 
 
+# Each variant against its matrix control: change, overwash, skill, hit rate
 def compare():
-    """Each variant run against its matrix control (the committed 72 h series):
-    net shoreline change, overwash, skill against CoastSat, and the observed
-    overwash hit rate with each run dated by ITS OWN storm file."""
     import importlib.util
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
@@ -360,6 +333,7 @@ def compare():
         print(t.round(3).to_string(index=False))
 
 
+# Run: the subprocess entry, or the action asked for
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         _launch(sys.argv[2], sys.argv[3])

@@ -1,22 +1,11 @@
-"""The four-parameter wave grid with the end domains FIXED (2026-09-27).
-
-Hannah, 2026-09-26/27: sweep the wave climate with the end source/sink
-terms held fixed, the ends first re-solved under the metres offset. The
-fixed pair per window comes from
-end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/tables/ends.json
-(solved at the step-2 baseline waves, full management, against CoastSat) and
-is imposed in every run -- natural and managed alike -- through the edgeBE
-preset and HAT_BE_OVERRIDE.
-
-Everything else is HAT_wave_grid_smoothed_score's, unchanged (the same coarse
-grid, refine, cross-runs and smoothed score), so this study and the zeroBE
-grid (wave-climate/2026-09-25-wave-grid-smoothed-score) compare one to one.
-This module only points that driver at its own folder, preset and ends.
-
-WHERE: output/raw_runs/experiments/wave-climate/2026-09-27-wave-grid-fixed-ends/
+"""
+The four-parameter wave grid with the end domains held fixed.
 
     python scripts/hatteras_ms/experiments/HAT_wave_grid_fixed_ends.py run all --jobs 8
     python scripts/hatteras_ms/experiments/HAT_wave_grid_fixed_ends.py score
+
+Points HAT_wave_grid_smoothed_score at its own folder, the edgeBE preset
+and the re-solved ends; everything else is that driver's. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -33,9 +22,11 @@ _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_wave_grid_smoothed_score as grid  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 ENDS_FILE = (grid.RAW_RUNS / "experiments" / "end-domain-boundaries"
              / "2026-09-27-ends-resolved-metres-offset" / "tables" / "ends.json")
 ENDS = {int(p): v for p, v in json.loads(ENDS_FILE.read_text(encoding="utf-8"))["ends_m_yr"].items()}
+# -----------------------------------------------------------------------------
 
 grid.TAG = "wave-climate/2026-09-27-wave-grid-fixed-ends"
 grid.STUDY_DIR = grid.RAW_RUNS / "experiments" / grid.TAG
@@ -45,6 +36,7 @@ grid.PRESET = "edgeBE"
 _base_env = grid.run_env
 
 
+# The grid's run environment with this window's fixed ends imposed
 def run_env(phase, scenario, period, s):
     e = _base_env(phase, scenario, period, s)
     e["HAT_BE_OVERRIDE"] = f"1={ENDS[period]['1']},90={ENDS[period]['90']}"
@@ -54,11 +46,8 @@ def run_env(phase, scenario, period, s):
 grid.run_env = run_env
 
 
+# The settings to re-run in one window: the top n on the raw score, plus candidates
 def build_targeted(period, archive_tag=None, n=15):
-    """The targeted list for one window (2026-09-27): the top n on the raw score
-    in that window from this study's runs on the superseded ends (read from
-    archive_tag if already archived, else from tables/all_runs.csv) and from the
-    zeroBE grid, the other window's top 5 here, and the adopted candidates."""
     import json
     import pandas as pd
     K = list(grid.KEYS)
@@ -92,15 +81,8 @@ def build_targeted(period, archive_tag=None, n=15):
     return t
 
 
+# Re-run only the settings that can change a decision
 def run_targeted(jobs=8, period=2010):
-    """The 2010-2024 rerun, TARGETED (2026-09-27, Hannah: "is there not a faster
-    version"): after the 2010 ends were re-solved at Hs 2 (GIS 1 +137.6 -> +18.8),
-    only the settings that can change a decision are re-run, as phase "target":
-    the top 15 on the raw score in 2010-2024 from the superseded fixed-ends runs
-    (archive/2026-09-27-fixed-ends-2010-ends-solved-at-hs1) and from the zeroBE
-    grid, the 1996-2010 top 5 (for the one-setting and one-parameter picks),
-    and the adopted candidates. The list is tables/targeted_2010_cells.csv.
-    Coarse cells already run on the new ends are kept."""
     import pandas as pd
     f = grid.TABLES_DIR / f"targeted_{period}_cells.csv"
     if not f.is_file() and period == 2010:

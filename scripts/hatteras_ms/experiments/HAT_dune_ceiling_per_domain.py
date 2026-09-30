@@ -1,39 +1,11 @@
-r"""
-HAT_dune_ceiling_per_domain.py -- does a dune ceiling taken from each domain's own dunes keep the low spots storms break through?
-==============================================================================
-WHY (storms-and-overwash/2026-09-28-dune-ceiling-and-rebuild): one island-
-wide Dmaxel of 5.5 m NAVD88 matches the 2009 lidar on average and fixes
-1996-2010 (PSS 0.60), but every dune grows toward it within a few years. That
-erases the real low spots. In 2010-2024 the hit rate falls to 0.23, and Irene
-overtops 8 of the 60 higher-dune domains against 47 observed.
+"""
+Does a dune ceiling taken from each domain's own dunes keep the low spots storms break through?
 
-THE CEILINGS (Hannah, 2026-09-28: "run the per-domain ceiling test"), each
-built from the run's OWN starting dunes (DuneDomain[0]: the 1996-survey mosaic
-for 1996-2010, the 2009 lidar for 2010-2024), each held at least FLOOR_M above
-the berm, since a ceiling at the berm divides by zero in DuneGrowth:
-    dom_median   each domain's Dmaxel = its median starting crest
-    dom_p25      each domain's Dmaxel = its 25th-percentile starting crest
-    cell         each dune CELL's ceiling = that cell's own starting crest
-                 (Barrier3d.DuneGrowth wrapped in-process to take an array;
-                 the scalar Dmax it returns, used by the flux limiter and
-                 CASCADE's growth-rate reset, is the domain median)
-    rebuild rule as now (it made no difference at realistic ceilings);
-    storms trim24 and drop72; both windows; managed and natural.
-Controls: the current model (3.4 m everywhere) and the uniform 5.5 m ceiling,
-both from the earlier experiments.
+    python scripts/hatteras_ms/experiments/HAT_dune_ceiling_per_domain.py run --workers 6
+    python scripts/hatteras_ms/experiments/HAT_dune_ceiling_per_domain.py score
 
-NOTHING IN THE MAIN CODE CHANGES: in each run's process,
-cascade_pipeline.hindcast.build_cascade is wrapped to set the ceilings on the
-constructed model before the first step; the storm file is swapped as before.
-Scoring applies the same DuneGrowth wrapper, so its crest reconstruction
-matches the run.
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-dune-ceiling-per-domain/
-
-USAGE
-    python HAT_dune_ceiling_per_domain.py run [--workers 6]
-    python HAT_dune_ceiling_per_domain.py score
-==============================================================================
+Three ceilings from the starting dunes (domain median, 25th percentile,
+per cell), both storm series, windows and scenarios. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -61,18 +33,22 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 import HAT_dune_ceiling_rebuild as E  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-28-dune-ceiling-per-domain"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 CEILINGS = ("dom_median", "dom_p25", "cell")
 STORMS = ("trim24", "drop72")
 SCENARIOS = ("full_management", "natural")
 FLOOR_M = 0.5                    # m above the berm
+# -----------------------------------------------------------------------------
 
 
+# A job's group name
 def group(storm, ceiling, scenario):
     return f"{storm}_{ceiling}_{scenario}"
 
 
+# A job's run folder (the controls from the earlier experiment), or None
 def run_dir(w, st, ceiling, sc):
     if ceiling == "uniform3p4":
         return E.run_dir(w, st, 3.4, "current", sc)
@@ -83,12 +59,10 @@ def run_dir(w, st, ceiling, sc):
     return hits[-1] if hits else None
 
 
-# --- the ceilings --------------------------------------------------------------------
+# The ceilings
 
+# Barrier3d.DuneGrowth with a per-cell ceiling where the object carries one
 def install_cell_growth():
-    """Barrier3d.DuneGrowth taking a per-cell ceiling where the object carries
-    one (_hat_cell_dmax, dam above the berm, shape (BarrierLength,)); every
-    other object runs the original. Same arithmetic as barrier3d.py."""
     from barrier3d import Barrier3d
     if getattr(Barrier3d, "_hat_cell_growth", False):
         return
@@ -110,6 +84,7 @@ def install_cell_growth():
     Barrier3d._hat_cell_growth = True
 
 
+# Set every domain's ceiling from its own starting dune crests
 def set_ceilings(cascade, ceiling):
     floor = FLOOR_M / 10.0
     for b in cascade.barrier3d:
@@ -124,6 +99,7 @@ def set_ceilings(cascade, ceiling):
         b._Dmax = h
 
 
+# Child process: wrap build_cascade to set the ceilings, then run the hindcast
 def _launch(start, storm_path, ceiling):
     import cascade_pipeline.hindcast as H
     install_cell_growth()
@@ -139,6 +115,7 @@ def _launch(start, storm_path, ceiling):
     S.MD._launch(start, storm_path)
 
 
+# One run in its own process, logged, with its launch record
 def launch(job):
     w, st, ceiling, sc = job
     g = group(st, ceiling, sc)
@@ -162,25 +139,23 @@ def launch(job):
     return rec
 
 
+# Every (window, storm, ceiling, scenario) job
 def jobs():
     return [(w, st, c, sc) for w in S.WINDOWS for st in STORMS for c in CEILINGS for sc in SCENARIOS]
 
 
+# Launch every job that has no run folder yet, in parallel
 def run(workers):
     with ThreadPoolExecutor(workers) as ex:
         list(ex.map(launch, [j for j in jobs() if run_dir(*j) is None]))
 
-# The matrix controls these experiments compared against were archived on
-# 2026-09-28 (archive/2026-09-28-loess10-ends/, when the runner's target moved
-# to LOWESS-7 and the ends were re-solved in a parallel session). Read from there.
+# The matrix controls are read from their archive
 ARCHIVED_MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"
 TARGET_WINDOW = 7            # the runner's target since 2026-09-28
 
 
+# Interior RMSE and bias against the LOWESS-7 CoastSat target, for every run alike
 def shoreline_lowess7(rd, w):
-    """Interior RMSE and bias against ONE target for every run (CoastSat LRR,
-    LOWESS-7, raw for GIS 1-10, as the runner builds it since 2026-09-28), so
-    runs made before and after the target change compare on equal terms."""
     from cascade_pipeline.hindcast import build_target_table
     from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS, SCORE_INTERIOR_GIS
@@ -205,8 +180,9 @@ def shoreline_lowess7(rd, w):
 _TARGETS = {}
 
 
-# --- scores --------------------------------------------------------------------------
+# Scores
 
+# Overwash, dune crest and shoreline scores for every job and control
 def score():
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
@@ -263,6 +239,7 @@ def score():
         print(t[[c for c in cols if c in t.columns]].round(2).to_string(index=False))
 
 
+# Run: the action asked for; `_launch` is the child process's entry point
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         _launch(*sys.argv[2:5])

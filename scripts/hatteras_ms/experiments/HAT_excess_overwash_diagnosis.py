@@ -1,30 +1,13 @@
-r"""
-HAT_excess_overwash_diagnosis.py -- why does the model overwash more than the imagery shows?
-==============================================================================
-THE QUESTION (Hannah, 2026-09-28). Every storm series, the committed one
-included, overwashes far more domains than the observed record in most image
-windows (storms-and-overwash/2026-09-28-storm-length-selection, stage 1).
+"""
+Why does the model overwash more than the imagery shows?
 
-THREE EXPLANATIONS, EACH TESTED DIRECTLY (read-only: existing runs and inputs)
-    1  volume   the extra overwash is real but too small to see in imagery
-    2  dunes    the model's dune row is lower than the real foredune, either
-                from the extraction (a clipped search window leaves the true
-                crest in interior row 0, behind a lower dune row) or from the
-                dunes changing during the run
-    3  storms   Rhigh (Stockdon R2 on WIS Hs, slope 0.06) clears the dunes by
-                too much
+    python scripts/hatteras_ms/experiments/HAT_excess_overwash_diagnosis.py hidden
+    python scripts/hatteras_ms/experiments/HAT_excess_overwash_diagnosis.py cells
+    python scripts/hatteras_ms/experiments/HAT_excess_overwash_diagnosis.py summary
+    python scripts/hatteras_ms/experiments/HAT_excess_overwash_diagnosis.py all
 
-    `hidden`  per domain, the start-of-run gap between the dune row's crest
-              and the highest of the dune row + first N interior rows: the
-              foredune height the dune row does not carry
-    `cells`   per image x domain cell (managed runs, drop72 and trim24): the
-              storms credited with its overwash, their Rhigh, the pre-storm
-              crest (after growth, as Barrier3D tests it), the margin, the
-              volume, and the domain's hidden crest
-    `summary` how false alarms and hits differ on each of those
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-excess-overwash-diagnosis/
-==============================================================================
+Tests three explanations on existing runs: volume, dune height and storm
+water level. Read-only. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -46,22 +29,24 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-28-excess-overwash-diagnosis"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 N_ROWS = 10          # interior rows (100 m) behind the dune row searched for a higher crest
 DAM = 10.0
 VARIANTS = ("drop72", "trim24")
+# -----------------------------------------------------------------------------
 
 
+# A variant's full-management run for a window
 def run_dir(w, v):
     if v == "drop72":
         return S.MATRIX / S.wtag(w) / "edgeBE" / S.CONTROLS[(w[0], "full_management")]
     return S.run_path(v, "full_management", w)
 
 
+# Start-of-run dune-row crest against the highest ground just behind it, per domain
 def hidden():
-    """Start-of-run dune-row crest vs the highest ground in the dune row plus
-    the first N_ROWS interior rows, per domain (m MHW, alongshore medians)."""
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     rows = []
     for w in S.WINDOWS:
@@ -86,9 +71,8 @@ def hidden():
     return t
 
 
+# Per domain and storm: Rhigh, pre-storm crest, margin and overwash share
 def storm_table(c, summ):
-    """Per (pad, storm): Rhigh, pre-storm crest (after growth), margin, and the
-    overwash share credited to it (S.storm_shares)."""
     shares = S.storm_shares(c, summ)
     rows = []
     for (p, i), vol in shares.items():
@@ -107,6 +91,7 @@ def storm_table(c, summ):
     return pd.DataFrame(rows)
 
 
+# Every image x domain cell: observed, modelled, and why
 def cells():
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
@@ -145,6 +130,7 @@ def cells():
     return t
 
 
+# How hits and false alarms differ, and the false-alarm rate by hidden crest
 def summary():
     t = pd.read_csv(EXP_DIR / "tables" / "cells.csv")
     t["kind"] = np.select([(t.observed == 1) & (t.model == 1), (t.observed == 0) & (t.model == 1),
@@ -161,6 +147,7 @@ def summary():
     t.to_csv(EXP_DIR / "tables" / "cells.csv", index=False)
 
 
+# Run: the steps asked for, in order
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("action", choices=["hidden", "cells", "summary", "all"])

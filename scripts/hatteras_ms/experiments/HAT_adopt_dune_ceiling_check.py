@@ -1,27 +1,11 @@
-r"""
-HAT_adopt_dune_ceiling_check.py -- does the committed per-cell ceiling reproduce the experiment?
-==============================================================================
-Step 4 of adopting the per-cell dune ceiling (Hannah, 2026-09-28).
+"""
+Does the committed per-cell dune ceiling reproduce the experiment that proposed it?
 
-    reproduce  the four trim24 per-cell cases of
-               storms-and-overwash/2026-09-28-dune-ceiling-per-domain
-               (1996/2010 x full_management/natural) run on Barrier3D branch
-               feature/per-cell-dune-ceiling (worktree ../Barrier3D-dune-ceiling,
-               PYTHONPATH) with DuneCeilingFromStart switched on, against the
-               experiment's runs, which set the same ceilings by wrapping the
-               model in-process. The shoreline matrix and every domain's dune
-               domain must be identical.
-    off        with the setting off, the branch must equal the code every run
-               uses now (49fd069): the natural 1996 run against the matrix run's
-               shoreline matrix is not usable (the matrix was re-run on other
-               ends), so the unit-level check is in the Barrier3D tests.
+    python scripts/hatteras_ms/experiments/HAT_adopt_dune_ceiling_check.py run
+    python scripts/hatteras_ms/experiments/HAT_adopt_dune_ceiling_check.py compare
 
-Nothing in the main code changes: the setting reaches the model through
-cascade.brie_coupler.set_yaml in the run's own process, and the storm file is
-swapped as in the experiments.
-
-WHERE: output/raw_runs/experiments/code-checks/2026-09-28-per-cell-dune-ceiling-reproduces/
-==============================================================================
+Runs the four trim24 per-cell cases on the Barrier3D branch worktree and
+requires identical shoreline, dunes and ceilings. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -48,13 +32,16 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 import HAT_dune_ceiling_per_domain as P  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "code-checks/2026-09-28-per-cell-dune-ceiling-reproduces"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 WORKTREE = PROJECT_ROOT.parent / "Barrier3D-dune-ceiling"
 CASES = [((1996, 2010), "full_management"), ((1996, 2010), "natural"),
          ((2010, 2024), "full_management"), ((2010, 2024), "natural")]
+# -----------------------------------------------------------------------------
 
 
+# Child process: switch the ceiling on through set_yaml, then run the hindcast
 def _launch(start, storm_path):
     import cascade.brie_coupler as bc
     orig = bc.set_yaml
@@ -70,12 +57,14 @@ def _launch(start, storm_path):
     S.MD._launch(start, storm_path)
 
 
+# The newest run folder for a case, or None
 def run_dir(w, sc):
     base = EXP_DIR / "runs" / f"trim24_{sc}" / S.wtag(w) / "edgeBE"
     hits = sorted(base.glob("HAT_*")) if base.exists() else []
     return hits[-1] if hits else None
 
 
+# One case in its own process on the branch worktree, logged
 def launch(case):
     w, sc = case
     logs = EXP_DIR / "logs"
@@ -97,6 +86,7 @@ def launch(case):
     print(f"{S.wtag(w)} {sc:16s} exit {p.returncode} {round((time.time() - t0) / 60, 1)} min  {b3d}", flush=True)
 
 
+# Each case against the experiment's run: ends, shoreline, dunes and ceilings
 def compare():
     P.install_cell_growth()           # to unpickle nothing special; the experiment objects carry _hat_cell_dmax
     ok_all = True
@@ -119,6 +109,7 @@ def compare():
     print("ALL IDENTICAL" if ok_all else "NOT IDENTICAL -- stop")
 
 
+# Run: the action asked for; `_launch` is the child process's entry point
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         _launch(*sys.argv[2:4])

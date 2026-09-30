@@ -1,67 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_run_crest_experiment.py
-==============================================================================
-Runs the 1984-2004 hindcast three times -- baseline, insert-with-crest-kept,
-insert-with-crest-shaved -- so the GIS 84/85/86 row insert can be judged on
-model behaviour rather than on cross-sections.
+"""
+Run the 1984-2004 hindcast once per crest-experiment arm.
 
-WHY IT IS A SCRIPT AND NOT THREE COMMANDS
-    The road-setback CSV is GLOBAL state: `hatteras_site_config.py:142`
-    hardcodes its path, so selecting an arm means overwriting a file every other
-    reader of this repo also sees. Doing that by hand leaves the tree pointing at
-    an experiment arm the moment anything goes wrong. Here the restore is in a
-    `finally`.
+    python scripts/hatteras_ms/experiments/HAT_run_crest_experiment.py [--dry-run] [--arms a,b]
 
-    THE TOPOGRAPHY IS NOT SELECTED THAT WAY, and the first version of this
-    script got it wrong. It wrote `dune-topo/CURRENT` per arm -- and every arm
-    still ran on v1, because `resolve_version` reads the EXTRACTOR's VERSION
-    literal before it reads CURRENT. Two of three arms were silent duplicates of
-    the control. The version now comes from HAT_TOPO_VERSION_1984_START, which
-    outranks the extractor, is scoped to one product, and dies with the
-    subprocess instead of persisting.
-
-WHY ARMS RATHER THAN RUN NAMES
-    All three produce the SAME run name -- the name is derived from the
-    management switches, and those are identical by design. Each is filed as
-    an EXPERIMENT (HAT_RUN_KIND=experiment, HAT_RUN_TAG=topography-and-domains/2026-09-02-pea-island-row-insert-control/<arm>)
-    under raw_runs/experiments/, and the run index is keyed on
-    (run_name, kind, tag), so nothing overwrites anything. The existing
-    matrix run is never touched.
-
-RELOCATIONS ON OR OFF -- TWO DIFFERENT QUESTIONS
-    --relocations 1 asks: does an emergent relocation fire BEFORE the prescribed
-        1989 Pea Island event and corrupt the base its displacement is added to?
-        That is a question about whether the prescribed history is applied to the
-        right island.
-
-    --relocations 0 asks: left to itself, WHEN does the module relocate the road,
-        and how close is that to 1989? That is a question about model skill, and
-        it is the one you cannot ask with the events switched on -- prescribing
-        the 1989 relocation and then checking whether the model produces 1989 is
-        circular.
-
-    The second needs a road that starts BEHIND the dune. A setback floored to 0
-    relocates in year 1 by construction and carries no information about
-    anything, which is why the baseline arm is a control here and not a
-    prediction.
-
-ARMS
-    pea1989base    v1              + the setback CSV as shipped -- the ONE arm left
-
-    RETIRED 2026-09-07 (Hannah: keep only unmodified topography). The insert
-    arms islandv5 (as-built v5 = today's v4) and blocksv4 (as-built v4 =
-    today's v3) went with the layers v3-v8 they ran on; their run outputs
-    under output/raw_runs/ were deleted too, as were the outputs of the arms
-    already retired on 2026-09-03 (blocksdate*, blocksdsas*, blocksduneline*,
-    blocksminimum*, pea1989keep*, pea1989lower*). Sizes and reasons in
-    data/hatteras_init/1-barrier3d-domains/archive_purge_20260907.csv.
-    HAT_plot_crest_experiment.py's keep/lower comparison is therefore frozen at
-    output/raw_runs/experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/results/.
-
-USAGE
-    python HAT_run_crest_experiment.py [--dry-run] [--arms a,b]
-==============================================================================
+Each arm's setback CSV is swapped in and always put back; the topography comes from
+HAT_TOPO_VERSION_1984_START. Only pea1989base remains. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -80,13 +24,9 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Repo root, found by searching upward
 REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
-# The runner stays at the top of hatteras_ms; this driver moved into
-# experiments/ on 2026-09-13, so it names the folder rather than its own.
+# The runner sits at the top of hatteras_ms
 HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 
 import sys as _b3dsys
@@ -108,17 +48,9 @@ def _arm(version):
     return (version, DUNE_TOPO / version / "RoadSetback_1984_dunestart.csv")
 
 
+# --- CONFIG ------------------------------------------------------------------
 ARMS = {
-    # Every insert and crest-edit arm is gone (2026-09-07, see the docstring):
-    # islandv5 / blocksv4 with the layers v3-v8; blocksdate*, blocksdsas*,
-    # blocksduneline*, blocksminimum*, pea1989keep*, pea1989lower* had lost
-    # their topography on 2026-09-03 and lost their run outputs on 09-07.
-    # `_arm` is kept so a future arm can be added in one line.
-    #
-    # None = "leave the live forcing-tree CSV". That live file is the
-    # v2-measured one (GIS 85/86 floored to 0), not the v1-era one this arm
-    # was first defined against; v1/ carries its own v1-era CSV if that
-    # pairing is wanted (HAT_run_row_insert_set.py's `original` arm uses it).
+    # Only the baseline arm remains; None leaves the live setback CSV in place
     "pea1989base": ("v1", None),
 }
 
@@ -133,8 +65,10 @@ BASE_ENV = {
     "HAT_SAVE_MODEL_STATE": "1",    # the comparison reads roadway objects
     "HAT_OVERWRITE": "1",           # within this arm's own directory only
 }
+# -----------------------------------------------------------------------------
 
 
+# Run: every chosen arm, restoring the live setback file after each
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -148,10 +82,7 @@ def main() -> None:
     for a in arms:
         if a not in ARMS:
             raise SystemExit("unknown arm {!r}; known: {}".format(a, list(ARMS)))
-        # Most of these versions were retired to dune-topo-experiments/ on
-        # 2026-09-02. Nothing outside dune-topo/ resolves through topo_dirs or
-        # HAT_TOPO_VERSION_1984_START, so the run would otherwise fail deep in
-        # the hindcast with a missing-array error that names no cause.
+        # Fail early if an arm's version has left dune-topo/
         version = ARMS[a][0]
         if not (DUNE_TOPO / version).is_dir():
             retired = DUNE_TOPO.parent / "1-extraction" / "dune-topo-experiments" / version
@@ -181,9 +112,7 @@ def main() -> None:
                 arm, version, setback_src.name if setback_src else "as shipped"))
             print("=" * 78)
 
-            # NOTE: CURRENT is deliberately NOT written. See the docstring --
-            # it loses to the extractor literal, so writing it here would look
-            # like arm selection while doing nothing.
+            # CURRENT is deliberately not written: it loses to the extractor literal
             if setback_src is not None:
                 shutil.copy2(setback_src, LIVE_SETBACK)
             else:
@@ -193,8 +122,7 @@ def main() -> None:
             env.update(BASE_ENV)
             env["HAT_RELOCATIONS"] = args.relocations
             arm_tag = arm if args.relocations == "1" else arm + "noreloc"
-            # Filed as raw_runs/experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/<member>/,
-            # the member being the old arm name without its pea1989 prefix.
+            # Filed as an experiment, the member being the arm name without pea1989
             env["HAT_RUN_KIND"] = "experiment"
             env["HAT_RUN_TAG"] = "topography-and-domains/2026-09-02-pea-island-row-insert-control/" + arm_tag.replace("pea1989", "", 1)
             env["HAT_TOPO_VERSION_1984_START"] = version
@@ -213,9 +141,7 @@ def main() -> None:
                 tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-25:]
                 print("\n".join("    " + t for t in tail))
     finally:
-        # ALWAYS put the tree back. An experiment arm left in CURRENT would make
-        # every later road measurement and every later run silently read a
-        # fabricated topography.
+        # Always put the tree back, or later runs read a fabricated topography
         if saved_current is not None:
             CURRENT.write_text(saved_current, encoding="utf-8")
         elif CURRENT.is_file():

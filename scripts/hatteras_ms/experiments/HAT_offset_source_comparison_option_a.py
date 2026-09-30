@@ -1,26 +1,11 @@
-"""Dune line vs shoreline as the island offset, re-run at the option A waves (2026-09-28).
-
-Asked by Hannah on 2026-09-28: does the 09-25 result (shoreline offset matches
-the dune line under management, beats it in the natural run) hold at the
-waves adopted on 09-27?
-
-    offsets   duneline (1996/duneline/v1) and shoreline (1996/shoreline/v1),
-              both metres. There is no 2010 shoreline offset, so 1996-2010 only
-    waves     option A: Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5 --
-              one setting, no sweep (Hannah's choice)
-    ends      zeroBE, as on 09-25: option A's edgeBE ends were solved on the
-              dune-line offset and would favour it
-    scope     natural and full management; 4 runs, relocations and groins off
-    score     RAW share of the alongshore variation explained, interior GIS 2-89
-              (the score option A was chosen on); smoothed, bias and r beside it
-
-Everything but the settings and the headline score is the 09-25 driver
-(HAT_offset_source_comparison), pointed at this study's folder.
-
-WHERE: output/raw_runs/experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a/
+"""
+Does the 09-25 offset-source result hold at the option A waves?
 
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison_option_a.py run --jobs 4
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison_option_a.py score
+
+The 09-25 driver at option A, 1996-2010; run-2010, grade and plot-own add the
+2010-2024 pair and grade each offset on its own feature. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -38,6 +23,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_offset_source_comparison as base  # noqa: E402
 
 common = base.common
+# --- CONFIG ------------------------------------------------------------------
 TAG = "island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a"
 STUDY_DIR = base.grid.RAW_RUNS / "experiments" / TAG
 OPTION_A = {"hs": 2.0, "wave_period_s": 7.5, "wave_asymmetry": 0.6}
@@ -49,33 +35,18 @@ base.TABLES_DIR, base.LOGS_DIR, base.FIG = (STUDY_DIR / "tables", STUDY_DIR / "l
                                             STUDY_DIR / "figures")
 base.BASE, base.HIGH_ANGLE, base.HEADLINE = OPTION_A, (HEADLINE,), HEADLINE
 
-# ---------------------------------------------------------------------------
-# EACH OFFSET GRADED ON ITS OWN FEATURE (Hannah, 2026-09-28). A run started
-# from the dune line is scored against the dune line's change, a run started
-# from the shoreline against the shoreline's; full management, both periods.
-#   dune line   net change in metres: the observed dune-line endpoint change
-#               (1997->2009, 2009->2023 as surveyed, 11.6 and 14.1 yr) against
-#               the model's endpoint change over its 14 calendar years. The
-#               interval mismatch is reported, not corrected
-#               ([[cascade-period-is-the-calendar-year]]).
-#   shoreline   the CoastSat LRR target against the model's LRR, as before.
-# The two scores are on different targets and different estimators (Hannah's
-# choice), so they rank each offset against its own feature; they are not a
-# head-to-head.
+# Each offset graded on its own feature: dune line on net change, shoreline on LRR
 PERIODS = (1996, 2010)
 OWN_SCENARIO = "full_management"
-# The research group's alongshore smoothing range is 7 domains (Hannah,
-# 2026-09-28), for the CoastSat target and the dune line alike. The runner and
-# the 09-25 helpers still smooth at 10; this study sets 7 here and leaves them.
+# Smoothing at 7 domains, the research group's range; the 09-25 helpers keep 10
 LOWESS_DOMAINS = 7
 SKIP_SOUTHERN = 10
 LONG_WINDOW = "1996_2024"
+# -----------------------------------------------------------------------------
 
 
+# The CoastSat LRR target built as the runner builds it, at 7 domains
 def coastsat_target7(start, window=None):
-    """The CoastSat LRR target built as the runner builds it, at 7 domains.
-    `window` fits the LRR on another span ("1996_2024" for the long-term rate);
-    default the period's own."""
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
     from cascade_pipeline.hindcast import build_target_table
@@ -92,9 +63,8 @@ def coastsat_target7(start, window=None):
         "gis_domain")["target_lrr_m_yr"]
 
 
+# A per-domain series smoothed as the target is
 def smooth7(series):
-    """A per-domain series smoothed as the target is: LOWESS over 7 domains,
-    the southern 10 left raw (common.smooth_like_target, at 7)."""
     import numpy as np
     import pandas as pd
     from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -110,16 +80,19 @@ OWN_SETTINGS = {**OPTION_A, "wave_angle_high_fraction": HEADLINE}
 YEARS = 14
 
 
+# A period's window label, e.g. 1996_2010
 def period_label(start):
     from site_layer.hatteras_site_config import HATTERAS_PERIODS
     return f"{start}_{HATTERAS_PERIODS[start]['end_year']}"
 
 
+# The log file for one own-feature run
 def own_log(src, start):
     return (STUDY_DIR / "logs" / period_label(start) / base.group(src, OWN_SCENARIO)
             / f"{base.grid.label(OWN_SETTINGS)}.log")
 
 
+# The runner's environment for one own-feature run
 def own_env(src, start):
     e = base.grid.run_env("x", OWN_SCENARIO, start, OWN_SETTINGS)
     e["HAT_ISLAND_OFFSET_SOURCE"] = src
@@ -127,6 +100,7 @@ def own_env(src, start):
     return e
 
 
+# One hindcast run in a subprocess, its output logged; skipped if already finished
 def own_launch(cell):
     import subprocess
     import time
@@ -145,8 +119,8 @@ def own_launch(cell):
           flush=True)
 
 
+# The 2010-2024 full-management pair
 def cmd_run_2010(a):
-    """The 2010-2024 full-management pair; 1996's pair is already in runs/."""
     from concurrent.futures import ThreadPoolExecutor
     base.grid.check_barrier3d()
     common.keep_awake()
@@ -157,6 +131,7 @@ def cmd_run_2010(a):
     return cmd_grade()
 
 
+# The one option A run of a source and period, checked against the offset it read
 def own_run_dir(src, start):
     import json
     root = (STUDY_DIR / "runs" / base.group(src, OWN_SCENARIO) / period_label(start)
@@ -176,6 +151,7 @@ def own_run_dir(src, start):
     return hits[0]
 
 
+# Observed dune-line net change per domain (m) over a period
 def duneline_change(start):
     import pandas as pd
     from site_layer.hat_observed_rates import DUNELINE_ENDPOINT_ROOT
@@ -183,8 +159,8 @@ def duneline_change(start):
     return t.set_index("domain_number")["mean_change_m"]
 
 
+# (observed, model, run dir) per (source, start), each offset on its own feature
 def own_profiles():
-    """{(source, start): (observed, model, run_dir)} on each offset's own feature."""
     import pandas as pd
     out = {}
     for src in base.SOURCES:
@@ -192,19 +168,18 @@ def own_profiles():
             d = own_run_dir(src, start)
             rt = pd.read_csv(d / "tables" / "shoreline_change_rate.csv").set_index("gis_domain")
             if src == "duneline":
-                # smoothed as the CoastSat target is: LOWESS over 7 domains, the
-                # southern 10 raw (Hannah, 2026-09-28); the model stays raw
+                # Smoothed as the CoastSat target is; the model stays raw
                 out[(src, start)] = (smooth7(duneline_change(start)),
                                      rt.change_rate_m_yr * YEARS, d)
             else:
                 out[(src, start)] = (coastsat_target7(start) * YEARS, rt.lrr_m_yr * YEARS, d)
-                # PROJECTED shoreline change: the 1996-2024 LRR x 14 yr, the same
-                # observed profile in both periods, against the same model runs
+                # Projected shoreline change: the 1996-2024 LRR x 14 yr, against the same runs
                 out[("shoreline_projected", start)] = (
                     coastsat_target7(1996, LONG_WINDOW) * YEARS, rt.lrr_m_yr * YEARS, d)
     return out
 
 
+# Score each offset against its own feature and write the table
 def cmd_grade(_=None):
     import pandas as pd
     rows = []
@@ -230,9 +205,8 @@ def cmd_grade(_=None):
     return 0
 
 
+# This study's figures through the shared house_figures (09-25 driver)
 def cmd_plot_own(_=None):
-    """This study's figures through the shared house_figures (09-25 driver):
-    (a) full management 1996-2010, (b) full management 2010-2024."""
     import pandas as pd
     panels = []
     for start in PERIODS:
@@ -252,6 +226,7 @@ def cmd_plot_own(_=None):
     return 0
 
 
+# Run: the chosen subcommand
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()

@@ -1,45 +1,12 @@
-"""Shoreline offset v1 vs v2, beside the dune line, on the adopted setup (2026-09-29).
-
-Asked by Hannah on 2026-09-29: re-run the shoreline arm on shoreline offset
-v2, the CoastSat mean over +/-1 yr of the start DEM's lidar flights
-(1995-10-12..1997-10-12 for 1996, 2008-08-17..2010-08-17 for 2010), which
-became CURRENT that day. Every shoreline run before then read v1 (the
-calendar means, 1995-1997 and 2009-2011).
-
-The option A study (2026-09-28) ran before three adopted changes -- the
-per-cell dune ceilings and the beach/dune cap fix (09-28, later that day)
-and the split12 storm files (09-29) -- so its v1 runs cannot be set beside
-a v2 run made now. Hannah chose a clean three-way study instead: all three
-offsets on today's setup, so v1 -> v2 is the only difference between the
-shoreline arms.
-
-    arms      duneline     2-brie-offset/<year>/duneline/CURRENT (v1)
-              shoreline_v1 2-brie-offset/<year>/shoreline/v1, pinned by
-                           HAT_OFFSET_VERSION_<year>_SHORELINE=v1
-              shoreline_v2 2-brie-offset/<year>/shoreline/v2 (CURRENT)
-    waves     option A (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5)
-    ends      zeroBE, as in the option A study (edgeBE ends were solved on
-              the dune-line offset and would favour it)
-    scope     natural and full management, 1996-2010 and 2010-2024;
-              relocations and groins off; 12 runs
-    setup     everything else is the code default: dune ceilings, storm
-              series (v3_split12_trim24), beach/dune cap
-
-Every run's metadata is checked for the offset it actually read.
-
-SCORES, as in the option A study
-    vs CoastSat   each period's own CoastSat LRR, LOWESS 7 domains: raw and
-                  smoothed share of the alongshore variation explained,
-                  interior GIS 2-89, bias and r (the option A headline)
-    own feature   dune-line arm against dune-line net change (m); shoreline
-                  arms against total (own LRR x 14 yr) and projected
-                  (1996-2024 LRR x 14 yr) shoreline change
-
-WHERE: output/raw_runs/experiments/island-offset/2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup/
+"""
+Shoreline offset v1 against v2, beside the dune line, on the adopted setup.
 
     python scripts/hatteras_ms/experiments/HAT_offset_source_shoreline_v2.py run --jobs 4
     python scripts/hatteras_ms/experiments/HAT_offset_source_shoreline_v2.py score
     python scripts/hatteras_ms/experiments/HAT_offset_source_shoreline_v2.py plot
+
+Three arms (dune line, shoreline v1, shoreline v2), natural and full management,
+both periods, option A waves; v1 to v2 is the only difference between shoreline arms. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -65,6 +32,7 @@ import HAT_offset_source_comparison_option_a as oa  # noqa: E402
 
 grid, common, step2 = base.grid, base.common, base.step2
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "island-offset/2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup"
 STUDY_DIR = grid.RAW_RUNS / "experiments" / TAG
 TABLES, LOGS, FIG = STUDY_DIR / "tables", STUDY_DIR / "logs", STUDY_DIR / "figures"
@@ -82,20 +50,25 @@ WINDOWS = {"shoreline_v1": "over calendar 1995-1997 for 1996 and 2009-2011 for 2
            "shoreline_v2": ("over 1995-10-12 to 1997-10-12 for 1996 and 2008-08-17 to 2010-08-17 "
                             "for 2010, +/-1 yr of the start DEM's lidar flights (v2)")}
 YEARS = oa.YEARS
+# -----------------------------------------------------------------------------
 
 
+# Every (arm, scenario, period) the study runs
 def cells():
     return list(product(ARMS, SCENARIOS, PERIODS))
 
 
+# A run group's name from arm and scenario
 def group(arm, scenario):
     return f"{arm}_{scenario}"
 
 
+# The log file for one cell
 def log_path(arm, scenario, start):
     return LOGS / oa.period_label(start) / f"{group(arm, scenario)}.log"
 
 
+# The runner's environment for one cell, pinning the arm's offset source and version
 def env(arm, scenario, start):
     src, pin, _ = ARMS[arm]
     e = grid.run_env("x", scenario, start, SETTINGS)
@@ -106,6 +79,7 @@ def env(arm, scenario, start):
     return e
 
 
+# One hindcast run in a subprocess, its output logged; skipped if already finished
 def launch(cell):
     arm, scenario, start = cell
     log = log_path(*cell)
@@ -122,6 +96,7 @@ def launch(cell):
           f"{(time.perf_counter() - t0) / 60:.1f} min", flush=True)
 
 
+# Run every unfinished cell, then score
 def cmd_run(a):
     grid.check_barrier3d()
     common.keep_awake()
@@ -132,8 +107,8 @@ def cmd_run(a):
     return cmd_score()
 
 
+# The one run of this arm, checked against the offset it read
 def run_dir(arm, scenario, start):
-    """The one run of this arm, checked against the offset it read."""
     root = STUDY_DIR / "runs" / group(arm, scenario) / oa.period_label(start) / grid.PRESET
     dirs = [d for d in sorted(root.glob("*")) if d.is_dir()] if root.is_dir() else []
     if len(dirs) != 1:
@@ -146,12 +121,14 @@ def run_dir(arm, scenario, start):
     return d
 
 
+# A run's shoreline change rate table
 def rates(arm, scenario, start):
     import pandas as pd
     return pd.read_csv(run_dir(arm, scenario, start) / "tables" / "shoreline_change_rate.csv"
                        ).set_index("gis_domain")
 
 
+# Score every run against CoastSat and against its own feature
 def cmd_score(_=None):
     import pandas as pd
     rows = []
@@ -194,8 +171,8 @@ def cmd_score(_=None):
     return 0
 
 
+# How far v2 moves the model from v1
 def diff_table():
-    """How far v2 moves the model from v1: total change (LRR x 14 yr), per run pair."""
     import pandas as pd
     rows = []
     for scenario, start in product(SCENARIOS, PERIODS):
@@ -215,9 +192,8 @@ def diff_table():
         print(t.round(2).to_string(index=False))
 
 
+# The house figures (full management, both periods), once per shoreline version, and the v2-minus-v1 ...
 def cmd_plot(_=None):
-    """The house figures (full management, both periods), once per shoreline
-    version, and the v2-minus-v1 difference."""
     FIG.mkdir(parents=True, exist_ok=True)
     note_base = ("Option A waves (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5); island "
                  "offset in metres; no source/sink correction at the ends (zeroBE); relocations "
@@ -240,9 +216,8 @@ def cmd_plot(_=None):
     return 0
 
 
+# Model total change on shoreline v2 minus v1, per domain
 def diff_figure(note_base):
-    """Model total change on shoreline v2 minus v1, per domain: natural and
-    full management, both periods, on the difference figures' fixed axis."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -285,6 +260,7 @@ def diff_figure(note_base):
     return png
 
 
+# Run: the chosen subcommand
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()

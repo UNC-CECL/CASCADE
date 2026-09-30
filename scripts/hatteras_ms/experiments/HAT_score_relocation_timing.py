@@ -1,41 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_score_relocation_timing.py
-==============================================================================
-Scores each arm's PREDICTED NC-12 relocation year against the two documented
-events: 1989 Pea Island (GIS 84-87) and 1999 inter-village (GIS 9-14).
+"""
+Scores each arm's predicted NC-12 relocation year against the 1989 and 1999 events.
 
-ONLY MEANINGFUL WITH THE PRESCRIBED EVENTS OFF. With HATTERAS_ROAD_EVENTS on,
-1989 and 1999 are inputs, and scoring the model against its own input is
-circular. Pass arms built with --relocations 0.
+    python scripts/hatteras_ms/experiments/HAT_score_relocation_timing.py --arms pea1989base
+    python scripts/hatteras_ms/experiments/HAT_score_relocation_timing.py --holdout 1989
 
-WHAT IS BEING DISCRIMINATED
-    The two independent measurements of the 1984 offset disagree by a factor of
-    ~3 at GIS 85 -- the digitized dune line says 65.9 m, the DSAS shoreline
-    record says 19.5 m. Neither can be preferred on its own terms. But they
-    imply very different relocation dates, and the relocation dates are
-    observed. So the timing test is the tie-breaker the two measurements cannot
-    provide for each other.
-
-THE HOLDOUT, AND WHY IT MATTERS
-    There are TWO events, so an arm can be judged on one and tested on the
-    other. `--holdout 1989` scores only the 1999 block, and vice versa. An N
-    chosen because it reproduces 1989 has no claim on 1999, and that is the
-    check worth having: fitting to both at once produces a better number and no
-    way to know whether it means anything.
-
-CENSORING
-    A domain whose road never relocates inside 1984-2004 is RIGHT-CENSORED, not
-    an error of +20 years. It is reported as ">2004" and excluded from the mean
-    error, with the count stated -- averaging a censored value in would quietly
-    reward an arm for never relocating anything.
-
-USAGE
-    python HAT_score_relocation_timing.py --arms pea1989base
-    (the insert arms this compared -- blocksv4, blocksduneline, blocksdsas... --
-     lost their run outputs on 2026-09-07; only unmodified topography is kept)
-    python HAT_score_relocation_timing.py --holdout 1989
-==============================================================================
+Only meaningful with the prescribed road events off; --holdout scores one
+event as an out-of-sample test. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -54,18 +25,18 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Repo root, found by searching upward
 REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
+# --- CONFIG ------------------------------------------------------------------
 BUFFER = 15
 START, END = 1984, 2004
 EVENTS = {**{d: 1999 for d in range(9, 15)},
           **{d: 1989 for d in range(84, 88)}}
 OUT = REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains" / "2026-09-02-pea-island-row-insert-control" / "results"
+# -----------------------------------------------------------------------------
 
 
+# An arm's 1984-2004 calibBE run
 def load(arm):
     hits = glob.glob(str(REPO / "output" / "raw_runs" / arm / "1984_2004"
                          / "calibBE" / "*" / "*.npz"))
@@ -74,6 +45,7 @@ def load(arm):
     return np.load(hits[0], allow_pickle=True)["cascade"][0]
 
 
+# A domain's first relocation year and its starting setback
 def first_relocation(c, gis):
     mgr = c.roadways[gis + BUFFER - 1]
     if mgr is None:
@@ -85,10 +57,10 @@ def first_relocation(c, gis):
     return (START + int(hit[0]) if hit.size else None), t0
 
 
+# Run: score every arm, write the table named for the arms
 def main() -> None:
     ap = argparse.ArgumentParser()
-    # blocksv4 was the default until 2026-09-07, when every insert arm's run
-    # output was deleted; pea1989base(noreloc) is the one experiment arm left.
+    # pea1989base is the only experiment arm with runs left
     ap.add_argument("--arms", default="pea1989base")
     ap.add_argument("--suffix", default="noreloc")
     ap.add_argument("--holdout", type=int, choices=(1989, 1999), default=None,
@@ -139,10 +111,7 @@ def main() -> None:
         print()
 
     OUT.mkdir(parents=True, exist_ok=True)
-    # NAMED FOR THE ARMS SCORED. A fixed filename meant each run
-    # silently replaced the previous arms' scores -- the
-    # blocksduneline/dsas/minimum comparison was lost that way and had
-    # to be re-derived from the runs.
+    # Named for the arms scored, so a later run cannot overwrite these scores
     tag = "_holdout{}".format(args.holdout) if args.holdout else ""
     tag += "_" + "-".join(a.replace("blocks", "") for a in arms)
     p = OUT / "HAT_relocation_timing_score{}.csv".format(tag)

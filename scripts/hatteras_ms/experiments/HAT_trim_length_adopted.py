@@ -1,30 +1,12 @@
-r"""
-HAT_trim_length_adopted.py -- does the storm trim length still matter once the dunes are realistic?
-==============================================================================
-WHY (Hannah, 2026-09-28: "run the trim-length check first"). trim24 was chosen
-in storms-and-overwash/2026-09-28-storm-length-selection on the OLD dunes (held
-near 3 m MHW by the default Dmaxel), and 24 h was the shortest length tried.
-Barrier3D applies a storm's peak Rhigh for its whole duration, so the length is
-a lever on how much sand overwash moves. This re-asks the question on the
-setup being adopted:
-    Barrier3D  branch hatteras/adopted (worktree ../Barrier3D-adopted): the
-               three overwash fixes + per-cell dune ceilings, switched on
-               (DuneCeilingFromStart true, floor 0.5 m) in each run's process
-    storms     every event kept, trimmed to 12, 24, 48, 72 h, or full length
-               (12: the builder, --long-events trim --max-duration 12, written
-               here; 24: the adopted hindcast_storms v3_trim24 files; 48, 72,
-               full: the storm-length selection's verified files)
-    runs       managed (full_management), both windows, the site config's
-               current end rates (the LOWESS-7 solve)
-SCORES: overwash against the imagery (as before), the 2010 dune crest against
-the lidar, interior RMSE/bias against LOWESS-7 (run_registry.skill_vs_target).
-Scoring runs under the same Barrier3D, so the storm sharing uses the fixed
-DuneGaps and the per-cell DuneGrowth.
+"""
+Does the storm trim length still matter once the dunes are realistic?
 
-NOTHING IN THE MAIN CODE CHANGES.
+    python scripts/hatteras_ms/experiments/HAT_trim_length_adopted.py build
+    python scripts/hatteras_ms/experiments/HAT_trim_length_adopted.py run
+    python scripts/hatteras_ms/experiments/HAT_trim_length_adopted.py score
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-trim-length-adopted/
-==============================================================================
+Trims of 12, 24, 48, 72 h and full length, run managed on the adopted
+Barrier3D in both windows. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -51,18 +33,19 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-28-trim-length-adopted"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
-# The worktree these runs used was removed on 2026-09-28 when hatteras/adopted
-# was checked out in ../Barrier3D itself (the editable install); same branch.
+# ../Barrier3D-adopted is gone; ../Barrier3D carries the same branch (hatteras/adopted)
 WORKTREE = next((p for p in (PROJECT_ROOT.parent / "Barrier3D-adopted", PROJECT_ROOT.parent / "Barrier3D")
                  if (p / "barrier3d").exists()), PROJECT_ROOT.parent / "Barrier3D")
 BUILDER = S.MD.BUILDER
 TRIMS = ("trim12", "trim24", "trim48", "trim72", "full")
+# -----------------------------------------------------------------------------
 
 
+# A variant's storm file and its summary CSV
 def storm_paths(w, v):
-    """(npy, summary csv) for a variant."""
     from site_layer import hat_env_forcings as env
     if v == "trim12":
         d = EXP_DIR / "storms"
@@ -73,6 +56,7 @@ def storm_paths(w, v):
     return S.storm_file(w, v), S.summary_csv(w, v)
 
 
+# Build the 12 h series with the storm builder
 def build():
     (EXP_DIR / "storms").mkdir(parents=True, exist_ok=True)
     for w in S.WINDOWS:
@@ -84,6 +68,7 @@ def build():
             print(f"{S.wtag(w)} {v:7s} {len(a):4d} storms  max {a[:, 4].max():4.0f} h  storm-hours {a[:, 4].sum():6.0f}")
 
 
+# Subprocess entry: the runner with per-cell dune ceilings on and this storm file
 def _launch(start, storm_path):
     import cascade.brie_coupler as bc
     orig = bc.set_yaml
@@ -99,12 +84,14 @@ def _launch(start, storm_path):
     S.MD._launch(start, storm_path)
 
 
+# A trim's finished run, or None
 def run_dir(w, v):
     base = EXP_DIR / "runs" / f"{v}_full_management" / S.wtag(w) / "edgeBE"
     hits = sorted(base.glob("HAT_*")) if base.exists() else []
     return hits[-1] if hits else None
 
 
+# Run one job in its own process, logged, via this file's _launch entry
 def launch(job):
     w, v = job
     logs = EXP_DIR / "logs"
@@ -130,6 +117,7 @@ def launch(job):
     print(f"{S.wtag(w)} {v:7s} exit {p.returncode} {rec['minutes']} min  {b3d}", flush=True)
 
 
+# Score every run under the adopted Barrier3D: overwash, dune crest, skill
 def score():
     import barrier3d
     if not Path(barrier3d.__file__).resolve().is_relative_to(WORKTREE.resolve()):
@@ -177,6 +165,7 @@ def score():
         print(t[[x for x in cols if x in t.columns]].round(2).to_string(index=False))
 
 
+# Run: the subprocess entry, or the action asked for
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         _launch(*sys.argv[2:4])

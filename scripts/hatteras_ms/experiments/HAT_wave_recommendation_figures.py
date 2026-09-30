@@ -1,25 +1,9 @@
-"""Figures behind the recommended hindcast wave climate (2026-09-27).
+"""
+Figures behind the recommended hindcast wave climate.
 
-Hannah, 2026-09-27: "given all of the different tests ... what do you suggest
-as the best wave parameters to use for the model hindcast. Provide figures and
-a clear and detailed explanation". Draws, from the studies already run (no new
-runs), into output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/figures/:
+    python scripts/hatteras_ms/experiments/HAT_wave_recommendation_figures.py
 
-  1_score_by_parameter.png      best raw score reachable at each value of each
-                                parameter (the complete zeroBE grid, coarse +
-                                refine), both windows, both scenarios
-  2_agreement_across_tests.png  the best 1996-2010 setting of each search, by
-                                parameter
-  3_recommended_vs_coastsat.png the recommended setting against CoastSat,
-                                rate and position change, both windows
-  4_high_angle_roughness.png    domain-to-domain roughness and score against
-                                the high-angle fraction
-  5_window_2010.png             the recommended setting scored on 2010-2024
-                                and on 2010-2020 (before the 2021 CoastSat step)
-
-Scores are the RAW share of the alongshore variation explained (the per-domain
-model against the CoastSat LOWESS-10 target, interior GIS 2-89), as the runner
-and the matrix runs are scored.
+Drawn from the wave studies already run; no new runs. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -50,6 +34,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS, HATTERAS_NOURISHMENT_PROJECTS)
 
 common = G.common
+# --- CONFIG ------------------------------------------------------------------
 EXP = G.RAW_RUNS / "experiments" / "wave-climate"
 OUT = EXP / "2026-09-27-wave-recommendation" / "figures"
 K = ["hs", "wave_period_s", "wave_asymmetry", "wave_angle_high_fraction"]
@@ -60,37 +45,37 @@ ENDS = {1996: (4.84, 17.55), 2010: (18.8, 24.535)}
 COLOR = {"natural": "#1b7f6b", "full_management": "#b4501a"}
 NAME = {"natural": "Natural", "full_management": "Full management"}
 PER = {1996: "1996–2010", 2010: "2010–2024"}
+# -----------------------------------------------------------------------------
 
 
+# A table's scored rows
 def scored(path):
     t = pd.read_csv(path)
     return t[t.status == "scored"] if "status" in t else t
 
 
+# The zeroBE grid's runs, one per setting
 def zerobe():
     t = scored(EXP / "2026-09-25-wave-grid-smoothed-score" / "tables" / "all_runs.csv")
     return t.drop_duplicates(["scenario", "period_start", *K])
 
 
+# The fixed-ends grid's runs, one per setting
 def final():
     t = scored(EXP / "2026-09-27-wave-grid-fixed-ends" / "tables" / "all_runs.csv")
     return t.drop_duplicates(["scenario", "period_start", *K])
 
 
+# Observed end-minus-start change, smoothed as the target is
 def observed_change_smoothed(period):
-    """Observed end-minus-start change, smoothed as the target is
-    (common.smooth_like_target: LOWESS at common.SMOOTH_DOMAINS, the southern
-    10 raw). The 5-scr table carries 0/3/5/10 only, so 7 is built from its raw
-    (window 0) column (Hannah, 2026-09-28: the group's range is 7)."""
     f = (p2.INIT_ROOT / "5-scr" / "3-rates" / "coastsat" / "total_change"
          / p2.study.window(period) / "smoothed" / "tables" / "domain_smoothed.csv")
     d = pd.read_csv(f)
     return common.smooth_like_target(d[d.window_domains == 0].set_index("domain_number")["observed_m"])
 
 
+# Shoal zones as faint hatched boxes, named at the bottom when `label`
 def draw_shoals(ax, label=True, label_pt=STRUCTURE_LABEL_PT):
-    """Shoal zones as faint hatched boxes, as coastsat_lrr_windows.draw_shoals
-    (5-scr/3-rates) draws them, named at the bottom when `label`."""
     matplotlib.rcParams["hatch.linewidth"] = 0.5
     for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
         kw = dict(transform=ax.get_xaxis_transform(), facecolor="none", zorder=0.8, clip_on=True)
@@ -103,9 +88,8 @@ def draw_shoals(ax, label=True, label_pt=STRUCTURE_LABEL_PT):
                     ha="center", va="bottom", fontsize=label_pt, color="#8a620e", zorder=1)
 
 
+# A bar with its year over each model-input fill in the window
 def draw_fills(ax, start, end, label_pt=STRUCTURE_LABEL_PT):
-    """A bar over each enabled model-input fill in the window, the year on it,
-    just inside the top of the panel (the title sits above the frame)."""
     trans = ax.get_xaxis_transform()
     for p in HATTERAS_NOURISHMENT_PROJECTS:
         if not (p.enabled and start <= p.year <= end):
@@ -117,17 +101,16 @@ def draw_fills(ax, start, end, label_pt=STRUCTURE_LABEL_PT):
                 fontsize=label_pt, color=INK, zorder=7, transform=trans)
 
 
+# The recommended setting's row, or None
 def rec_row(t, sc, p):
     x = t[(t.scenario == sc) & (t.period_start == p)
           & np.logical_and.reduce([np.isclose(t[k], v) for k, v in REC.items()])]
     return None if x.empty else x.iloc[0]
 
 
-# ---------------------------------------------------------------------------
+# Figure 1: best score reachable at each value of each parameter
 def fig1():
-    # coarse phase only: the one full factorial. Refine values (Hs 1.25, Tp 7.5,
-    # ...) were run next to a few settings only, so their "best" is not
-    # comparable (it drew a false dip at Tp 7.5).
+    # Coarse phase only: the one full factorial, so each value's best is comparable
     z = zerobe()
     z = z[z.phase == "coarse"]
     f, axes = plt.subplots(2, 4, figsize=(17, 8.5), constrained_layout=True)
@@ -164,7 +147,7 @@ def fig1():
     return png
 
 
-# ---------------------------------------------------------------------------
+# The archived 1996 fixed-ends runs, scored
 def archived_1996():
     rows = []
     tg = common.coastsat_target(1996)
@@ -179,6 +162,7 @@ def archived_1996():
     return pd.DataFrame(rows)
 
 
+# Figure 2: each search's best 1996-2010 setting, by parameter
 def fig2():
     tests = [
         ("Step 2: one parameter at a time\n(ends zero, 09-24)",
@@ -232,16 +216,12 @@ def fig2():
     return png
 
 
-# ---------------------------------------------------------------------------
+# Figure 3: the recommended setting against CoastSat, for any end solve
 def fig3(runs=None, ends=None, png=None, solved_on="the CoastSat LRR"):
-    """`runs` {(period, scenario): run folder} and `ends` {period: (GIS 1, GIS 90)}
-    draw another end solve (2026-09-28: the position-change solve); by default
-    the fixed-ends sweep's option-A runs and ENDS."""
     t = final()
     ends = ends or ENDS
     png = png or OUT / "3_recommended_vs_coastsat.png"
-    # Target, observed change and the header scores at common.SMOOTH_DOMAINS
-    # (7 since 2026-09-28); the table's scores were made at 10, so re-scored here.
+    # Re-scored at common.SMOOTH_DOMAINS; the table's scores were made at 10
     targets = {p: common.coastsat_target(p) for p in (1996, 2010)}
     obs = {p: observed_change_smoothed(p) for p in (1996, 2010)}
     f, axes = plt.subplots(2, 2, figsize=(17, 10.5), sharex=True, sharey="row", constrained_layout=True)
@@ -313,11 +293,9 @@ def fig3(runs=None, ends=None, png=None, solved_on="the CoastSat LRR"):
     return png
 
 
-# ---------------------------------------------------------------------------
+# Figure 4: roughness and score against the high-angle fraction
 def fig4():
-    # The step-2 high-angle sweep: the one clean series through 0.5 (0.1-0.55,
-    # Hs 1.0, Tp 8, asym 0.8, ends zero), so every point differs in the
-    # high-angle fraction only.
+    # The step-2 high-angle sweep: every point differs in the high-angle fraction only
     s2 = G.step2
     t = pd.read_csv(s2.TABLES_DIR / "all_runs.csv")
     t = t[(t.status == "scored") & (t.period_start == 1996)
@@ -373,7 +351,7 @@ def fig4():
     return png
 
 
-# ---------------------------------------------------------------------------
+# Figure 5: the recommended setting on 2010-2024 and 2010-2020
 def fig5():
     from cascade_pipeline.shoreline import compute_lrr
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as D
@@ -430,10 +408,8 @@ def fig5():
     return png
 
 
-# ---------------------------------------------------------------------------
+# Figure 6: 2010-2024 at the 1996 setting against Hs 2.5, each on its own ends
 def fig6():
-    """2010-2024: the same setting as 1996-2010 against the one allowed change,
-    Hs 2.0 -> 2.5, each on the ends solved for it (2026-09-27, Hannah)."""
     t = scored(EXP / "2026-09-27-wave-grid-fixed-ends" / "tables" / "all_runs.csv")
     t = t[t.period_start == 2010]
     same = t[(t.phase != "final") & np.logical_and.reduce([np.isclose(t[k], v) for k, v in REC.items()])]
@@ -492,6 +468,7 @@ def fig6():
     return png
 
 
+# Run: every figure
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     apply_style()

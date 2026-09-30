@@ -1,24 +1,10 @@
-r"""
-HAT_metres_3_overwash_fix_plot_explained.py -- a picture of the Barrier3D route_overwash bug
-==============================================================================
-Hannah asked for a figure that shows the bug plainly. Five panels:
+"""
+A picture of the Barrier3D route_overwash bug and what fixing it changed.
 
-  (a) the question the model means to ask: from the cell carrying overwash sand,
-      look at the nine cells LANDWARD of it, down its own column
-  (b) what the code actually looks at: row and column swapped, so a strip
-      ACROSS the island somewhere else
-  (c) on a narrow island (fewer rows than columns) that strip lies off the
-      grid: the read is outside the island's memory
-  (d) every compared run's score with the bug and fixed
-  (e) what fixing it changes along the island in the run it moved most,
-      natural 2010-2024 (experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix)
+    python scripts/hatteras_ms/experiments/HAT_metres_3_overwash_fix_plot_explained.py
 
-The grids in (a)-(c) are schematic (a small domain, not to scale); the
-indexing is the real one from barrier3d.py line 1092.
-
-Output: output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/figures/
-        route_overwash_bug_explained.png
-==============================================================================
+Five panels: the cells meant, the cells read, the off-grid read, the scores,
+and the change along the island. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -44,18 +30,20 @@ from site_layer.hat_figure_style import (  # noqa: E402
     C as COL, INK, INK_MUTED, DOMAIN_AXIS_LABEL, _title, apply_style, figsize,
     open_frame, record_caption, save)
 
+# Letter and title as one left-aligned line
 def title(ax, i, text):
-    """Letter and title as one left-aligned line: the house _title centres the
-    title, which collides with the letter on these narrow panels."""
     ax.set_title(f"({'abcde'[i]})  {text}", loc="left", fontsize=9.5)
 
 
+# --- CONFIG ------------------------------------------------------------------
 OUT = X.EXP_DIR / "figures" / "route_overwash_bug_explained.png"
 LAND, WATER = "#e8dcc0", "#a8c8e0"
 CELL = "#1a1a1a"
 GOOD, BAD = COL["REF"], COL["EARLY"]       # green: what is meant; red: what is read
+# -----------------------------------------------------------------------------
 
 
+# A schematic grid, land and water
 def draw_grid(ax, n_rows, n_cols, water_from_row):
     for r in range(n_rows):
         for c in range(n_cols):
@@ -70,11 +58,13 @@ def draw_grid(ax, n_rows, n_cols, water_from_row):
         s.set_visible(False)
 
 
+# Outline or fill one cell
 def mark_cell(ax, r, c, color, lw=0, fill=True, alpha=0.85, ls="-"):
     ax.add_patch(Rectangle((c, r), 1, 1, facecolor=color if fill else "none",
                            edgecolor=color, lw=lw, alpha=alpha, ls=ls))
 
 
+# Row and column arrows under a grid
 def axis_labels(ax, n_rows, n_cols):
     ax.annotate("", xy=(n_cols * 0.62, -1.3), xytext=(n_cols * 0.38, -1.3),
                 arrowprops=dict(arrowstyle="->", color=INK_MUTED, lw=0.8), annotation_clip=False)
@@ -90,6 +80,7 @@ D, I = 3, 12                # the cell carrying sand: row d, column i
 ROWS, COLS, WATER_ROW = 20, 26, 16
 
 
+# (a) the nine cells the code means to read
 def panel_meant(ax):
     draw_grid(ax, ROWS, COLS, WATER_ROW)
     for r in range(D + 1, D + 10):
@@ -105,6 +96,7 @@ def panel_meant(ax):
     title(ax, 0, "What the model means to check")
 
 
+# (b) the cells the swapped index reads
 def panel_read(ax):
     draw_grid(ax, ROWS, COLS, WATER_ROW)
     for r in range(D + 1, D + 10):
@@ -119,9 +111,8 @@ def panel_read(ax):
     title(ax, 1, "What the code actually checks")
 
 
+# (c) on a narrow island the swapped read falls off the grid
 def panel_offgrid(ax):
-    """A narrow island: fewer rows (8) than the column number of the cell (12),
-    so the swapped read, row 12, lies below the end of the grid."""
     rows, water = 8, 6
     draw_grid(ax, rows, COLS, water)
     for r in range(D + 1, rows):
@@ -152,8 +143,8 @@ RUN_LABELS = {
 }
 
 
+# Each run's interior RMSE with the bug and fixed
 def panel_scores(ax):
-    """Each run's interior RMSE with the bug and fixed."""
     import json
     members = list(RUN_LABELS)
     for y, m in enumerate(members):
@@ -182,6 +173,7 @@ def panel_scores(ax):
     title(ax, 3, "Scores with the bug and fixed")
 
 
+# (e) the fix's change along the island, natural 2010-2024
 def panel_effect(ax):
     member = "natural_baseline_2010"
     p = C.interior(C.run_rates(X.run_dir(member, "patched")))
@@ -203,6 +195,7 @@ def panel_effect(ax):
     title(ax, 4, "Along the island: the run the fix changed most (natural 2010–2024)")
 
 
+# Run: the figure
 def main():
     apply_style()
     fig = plt.figure(figsize=figsize("double", height=9.0), constrained_layout=True)

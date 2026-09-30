@@ -1,56 +1,14 @@
-r"""
-HAT_peaisland_extension.py -- does the buffer's orientation matter?
-==============================================================================
-THE QUESTION (Hannah, 2026-09-16). The hindcast models GIS 1-90 and pads
-each end with 15 invented domains that extrapolate the local shoreline
-slope, then bridge back to close BRIE's periodic ring; edgeBE pins GIS 1
-and 90 to their observed rates with boundary source/sink terms that take up
-whatever the buffer gets wrong (+32.2 and +10.0 m/yr in 1996-2010). What if the
-buffer carried the REAL coast instead -- Pea Island north to GIS 115 --
-with the ends re-solved there? (A one-domain southern extension was run and
-removed the same evening: no domain polygon lies south of GIS 1.)
+"""
+Does the buffer's orientation matter? The domain set extended north over Pea Island to GIS 115.
 
-THE DESIGN
-    geometries   n115 (GIS 1-115) against base
-    offset modes asrun (the compressed planform every calibrated run uses)
-                 and detrended (the planform at full strength; no calibrated
-                 baseline exists, so base-detrended is solved here too)
-    period       1996-2010, full_management, no groin, relocations off, Hs 2.5
-    topography   1984-start CURRENT for GIS 1-90; the buffer profile beyond
-    management   none on the extension (no road, fills, relocation, BE)
-    stage 0      zeroBE on every member: the orientation effect with no
-                 boundary term anywhere, against the zeroBE matrix run
-    stage 1      the end domains solved by Newton steps (edgeBE, one probe
-                 per step through HAT_BE_OVERRIDE), against the edgeBE
-                 matrix run
-    score        interior RMSE on GIS 2-89 against the SURVEYED target (the
-                 runner's rmse_interior_m_yr, identical in meaning for every
-                 geometry), the solved end values, and the rates on GIS 80-90
+    python scripts/hatteras_ms/experiments/HAT_peaisland_extension.py stage0
+    python scripts/hatteras_ms/experiments/HAT_peaisland_extension.py check
+    python scripts/hatteras_ms/experiments/HAT_peaisland_extension.py probe --member n115-asrun --step 1 --override "1=32.2,115=12.0"
+    python scripts/hatteras_ms/experiments/HAT_peaisland_extension.py next --member n115-asrun
+    python scripts/hatteras_ms/experiments/HAT_peaisland_extension.py score
 
-WHERE THINGS ARE
-    inputs   2-brie-offset/1996/ext/<geometry>/          the offsets
-             5-scr/3-rates/coastsat/lrr/1996_2010/ext/            the targets
-    runs     output/raw_runs/experiments/topography-and-domains/2026-09-16-pea-island-domain-extension/<member>/
-             one member per <geometry>-<mode>: its 1996_2010/zeroBE/ run is
-             stage 0, its step<k>/ folders are the Newton probes, and SOLVED
-             names the step that stands as the solved run
-    logs     output/raw_runs/experiments/topography-and-domains/2026-09-16-pea-island-domain-extension/logs/<member>/
-    answer   RESULTS.md and figures/ beside NOTE.md in that folder
-
-USAGE
-    python HAT_peaisland_extension.py stage0                  # the 5 zeroBE runs
-    python HAT_peaisland_extension.py check                   # base geometry, edgeBE:
-                                                              # must reproduce the matrix row
-    python HAT_peaisland_extension.py probe --member n115-asrun --step 1 \
-        --override "1=32.2,115=12.0"                          # one Newton probe
-    python HAT_peaisland_extension.py next --member n115-asrun  # the next probe, from
-                                                              # the runs so far
-    python HAT_peaisland_extension.py score                   # RESULTS.md + figures
-
-Each run is the ordinary hindcast runner driven through the environment,
-exactly as HAT_run_all.py drives the matrix; nothing here reimplements a
-run. Runs are never overwritten (pass --overwrite to redo one).
-==============================================================================
+Stage 0 runs every member on zeroBE; stage 1 solves the ends by Newton probes;
+score writes RESULTS.md and the figures. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -73,6 +31,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from site_layer.hat_extension_domains import GEOMETRIES, BASE_GEOMETRY  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 SOLVE = (PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
          / "be_edge_domain_solve.py")
@@ -89,18 +48,16 @@ RUN_TIMEOUT_S = 3600
 MEMBERS = {
     "n115-asrun": ("n115", "asrun"),
     "n115-detrended": ("n115", "detrended"),
-    # the detrended planform has no calibrated 90-domain run to compare
-    # against, so its baseline is solved here alongside the extensions
+    # The detrended planform has no calibrated baseline, so it is solved here too
     "base-detrended": (BASE_GEOMETRY, "detrended"),
-    # the regression check: base geometry, compressed, edgeBE -- must land
-    # on the matrix row's numbers exactly
+    # The regression check: base geometry, edgeBE, must match the matrix row exactly
     "base-check": (BASE_GEOMETRY, "asrun"),
 }
+# -----------------------------------------------------------------------------
 
 
+# The environment one run reads, built the way HAT_run_all builds it
 def run_env(member, preset, override="", overwrite=False):
-    """The environment one run reads, built the way HAT_run_all builds it:
-    every HAT_* variable named here, none inherited from the shell."""
     geometry, mode = MEMBERS[member]
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
     env.update({
@@ -124,9 +81,8 @@ def run_env(member, preset, override="", overwrite=False):
     return env
 
 
+# One hindcast run, filed under experiments/<TAG>/<member>/ (stage 0) or ...
 def launch(member, preset, step=None, override="", overwrite=False, dry_run=False):
-    """One hindcast run, filed under experiments/<TAG>/<member>/ (stage 0)
-    or experiments/<TAG>/<member>/step<k>/ (a Newton probe)."""
     tag_member = member if step is None else f"{member}/step{step}"
     env = run_env(member, preset, override, overwrite)
     env["HAT_RUN_TAG"] = f"{TAG}/{tag_member}"
@@ -152,6 +108,7 @@ def launch(member, preset, step=None, override="", overwrite=False, dry_run=Fals
     return True
 
 
+# Stage 0: every member on zeroBE
 def cmd_stage0(a):
     ok = True
     for member in (a.members or [m for m in MEMBERS if m != "base-check"]):
@@ -159,18 +116,19 @@ def cmd_stage0(a):
     return 0 if ok else 1
 
 
+# The base geometry on edgeBE, which must reproduce the matrix row
 def cmd_check(a):
     return 0 if launch("base-check", "edgeBE", overwrite=a.overwrite, dry_run=a.dry_run) else 1
 
 
+# One Newton probe for a member, at the given override
 def cmd_probe(a):
     return 0 if launch(a.member, "edgeBE", step=a.step, override=a.override,
                        overwrite=a.overwrite, dry_run=a.dry_run) else 1
 
 
+# (run_name, preset, tag) of the member's stage-0 run and every probe on disk, oldest first, read off ...
 def solve_history(member):
-    """(run_name, preset, tag) of the member's stage-0 run and every probe
-    on disk, oldest first, read off the experiment folder."""
     from cascade_pipeline.run_registry import load_run_index
     index = load_run_index(RAW_RUNS / "run_index.csv")
     mine = index[(index["kind"] == "experiment")
@@ -184,9 +142,8 @@ def solve_history(member):
     return [r[1:] for r in sorted(rows)]
 
 
+# (member, step) from a run's tag
 def _member_step(tag):
-    """(member, step) from a run's tag: <TAG>/<member> is stage 0,
-    <TAG>/<member>/step<k> the k-th Newton probe. (None, None) otherwise."""
     parts = tag.split("/")
     if len(parts) == 2 and parts[1] in MEMBERS:
         return parts[1], 0
@@ -195,17 +152,14 @@ def _member_step(tag):
     return None, None
 
 
+# A SOLVED file in the member folder naming the step that is the solved run, for a reader who is not ...
 def mark_solved(member, step):
-    """A SOLVED file in the member folder naming the step that is the
-    solved run, for a reader who is not going to parse the index."""
     (EXPERIMENT_DIR / member).mkdir(parents=True, exist_ok=True)
     (EXPERIMENT_DIR / member / "SOLVED").write_text(f"step{step}\n", encoding="utf-8")
 
 
+# The solve script over the member's runs so far, with the member's geometry in the environment
 def next_probe(member, quiet=False):
-    """The solve script over the member's runs so far, with the member's
-    geometry in the environment. Returns (override or None, converged,
-    text)."""
     import re
     history = solve_history(member)
     if not history:
@@ -214,9 +168,7 @@ def next_probe(member, quiet=False):
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
     env["HAT_GEOMETRY"] = geometry
     env["PYTHONIOENCODING"] = "utf-8"
-    # the zeroBE stage-0 run sits under zeroBE/, the probes under edgeBE/;
-    # the solve script reads each run's preset off the index, so every run
-    # is passed with its own tag and nothing else
+    # Every run passed with its own tag; the solve script reads the preset off the index
     cmd = [sys.executable, str(SOLVE), "--period", str(PERIOD), "--kind", "experiment"]
     for run_name, _preset, tag in history:
         cmd += ["--run", run_name, "--tag", tag]
@@ -229,23 +181,18 @@ def next_probe(member, quiet=False):
     if proc.returncode != 0:
         return None, False, text
     m = re.search(r'HAT_BE_OVERRIDE="([^"]+)"', text)
-    # Per end: the solve script prints CONVERGED once the residual is inside
-    # tolerance, and "no secant" once two probes imposed the same value --
-    # which only happens after a converged end's step rounded to 0.0. Either
-    # is done. Converged means every end is.
+    # An end is done once it prints CONVERGED or "no secant"; converged means every end is
     blocks = re.split(r"^GIS ", text, flags=re.M)[1:]
     done = [("CONVERGED" in b) or ("no secant" in b) for b in blocks]
     converged = bool(done) and all(done)
     override = m.group(1) if m else None
     if override and not converged:
-        # An end the script gave no step for (converged, or no secant)
-        # keeps its last imposed value: the runner needs a rate at every end.
+        # An end given no step keeps its last imposed value: the runner needs one at every end
         given = {p.split("=")[0] for p in override.split(",")}
         last_imposed = {}
         for b in blocks:
             gis = b.split()[0]
-            # a probe row is "<run name> <imposed> <model> <residual>"; the
-            # "next probe" line also starts with HAT_ and has no numbers
+            # A probe row is "<run name> <imposed> <model> <residual>"
             rows = [l.split() for l in b.splitlines()
                     if l.strip().startswith("HAT_") and len(l.split()) >= 4]
             if rows:
@@ -257,20 +204,18 @@ def next_probe(member, quiet=False):
     return override, converged, text
 
 
+# Print the next probe for a member, from its runs so far
 def cmd_next(a):
     override, converged, _ = next_probe(a.member)
     return 0 if override or converged else 1
 
 
-# A probe whose |value| exceeds this is not a boundary term any more; the
-# matrix values are tens of m/yr and Barrier3D's overwash router has been seen
-# to die silently under runaway progradation. Stop and say so instead.
+# Past this a probe is no longer a boundary term; stop and say so
 PROBE_CEILING_M_YR = 250.0
 
 
+# Newton steps for one member until both ends converge or --max-steps is reached
 def cmd_solve(a):
-    """Newton steps for one member until both ends converge or --max-steps
-    is reached: next probe, run it, repeat."""
     history = solve_history(a.member)
     step = max((int(t.rsplit("step", 1)[-1]) for _, _, t in history if "-step" in t),
                default=0)
@@ -305,9 +250,7 @@ def cmd_solve(a):
     return 3
 
 
-# =============================================================================
-# score: RESULTS.md and the figures
-# =============================================================================
+# Score: RESULTS.md and the figures
 
 BASELINE_RUNS = {
     # (preset) -> the matrix run every compressed member is compared against
@@ -317,6 +260,7 @@ BASELINE_RUNS = {
 NEAR_END_GIS = (80, 90)     # the domains reported beside the interior score
 
 
+# A run's LRR per GIS domain
 def _rates(run_dir, run_name):
     import pandas as pd
     from cascade_pipeline.run_layout import resolve
@@ -324,10 +268,8 @@ def _rates(run_dir, run_name):
     return frame.set_index("gis_domain")["lrr_m_yr"]
 
 
+# The CoastSat target as the runner builds it
 def _target(extended=False):
-    """The CoastSat target as the runner builds it: the surveyed GIS 1-90
-    table (what the interior score uses), or the extension's table over
-    GIS 0-115 (what an extended run's ends are solved against)."""
     from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
     from cascade_pipeline.domains import DEFAULT_DOMAINS, DomainGeometry
@@ -348,13 +290,13 @@ def _target(extended=False):
     return table.set_index("gis_domain")["target_lrr_m_yr"]
 
 
+# The surveyed GIS 1-90 CoastSat target
 def _surveyed_target():
     return _target(extended=False)
 
 
+# Every run of the experiment plus the two matrix baselines, as rows
 def collect():
-    """Every run of the experiment plus the two matrix baselines, as rows:
-    member, step, preset, index row, and the per-domain LRR."""
     from cascade_pipeline.run_registry import load_run_index, find_run_dir
     index = load_run_index(RAW_RUNS / "run_index.csv")
     rows = []
@@ -382,8 +324,8 @@ def collect():
     return rows
 
 
+# Per (member, preset), the last Newton step (edgeBE) or the stage-0 run
 def final_runs(rows):
-    """Per (member, preset), the last Newton step (edgeBE) or the stage-0 run."""
     out = {}
     for d in rows:
         key = (d["member"], d["preset"])
@@ -392,6 +334,7 @@ def final_runs(rows):
     return out
 
 
+# Score the final run of every member and write RESULTS.md and the figures
 def cmd_score(a):
     import numpy as np
     finals = final_runs(collect())
@@ -444,11 +387,8 @@ def cmd_score(a):
     return 0
 
 
+# The figure to read first: the base approach against the solved n115 extension
 def draw_compare(finals, target):
-    """The figure to read first: the main approach (base geometry, edgeBE,
-    compressed planform, the matrix run) against the solved n115 extension
-    on GIS 1-90 only. One panel (Hannah, 2026-09-16: no difference or
-    residual panels, no southern extension)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -502,9 +442,8 @@ def draw_compare(finals, target):
     print(f"wrote {fig_dir / 'compare_main_vs_extension_gis1_90.png'}")
 
 
+# The whole extended reach
 def draw(finals, target):
-    """The whole extended reach: the alongshore LRR of the solved runs
-    against the target, a panel per offset mode, in house style."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -554,6 +493,7 @@ def draw(finals, target):
     print(f"wrote {fig_dir / 'alongshore_rates_extension.png'}")
 
 
+# Run: the chosen subcommand
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     sub = ap.add_subparsers(dest="cmd", required=True)

@@ -1,71 +1,15 @@
-r"""
-HAT_storm_length_selection.py -- which storm duration rule should the hindcast use?
-==============================================================================
-THE QUESTION (Hannah, 2026-09-28): pick the storm series, with overwash that
-matches the observed record as the first priority.
+"""
+Which storm duration rule should the hindcast use?
 
-Why it is open: the committed series (v3_72) DROPS every grouped event
-longer than 72 h, which removes Isabel 2003, March 2018, Florence, Dennis
-and Nor'Ida. The 72 h limit existed only because the pre-49fd069 Barrier3D
-crashed on long storms (storms-and-overwash/2026-09-28-storm-max-duration).
-Barrier3D also routes each storm at its PEAK Rhigh for its WHOLE duration, so
-an event's length is a lever on how much overwash it makes, and the builder's
-24 h grouping makes some events of 150-190 h out of strings of smaller surges.
+    python scripts/hatteras_ms/experiments/HAT_storm_length_selection.py build
+    python scripts/hatteras_ms/experiments/HAT_storm_length_selection.py run --workers 4
+    python scripts/hatteras_ms/experiments/HAT_storm_length_selection.py validate
+    python scripts/hatteras_ms/experiments/HAT_storm_length_selection.py score
+    python scripts/hatteras_ms/experiments/HAT_storm_length_selection.py ends --variants drop72 trim24
+    python scripts/hatteras_ms/experiments/HAT_storm_length_selection.py figures
 
-THE CANDIDATES (all keep every event; "trimL" cuts an event longer than L to
-the L hours around its peak TWL, recomputing Rhigh/Rlow/period on what is kept)
-    drop72   the committed series: the control (the matrix runs)
-    trim24, trim36, trim48, trim72, trim96, trim120, trim168
-    full     no limit (= a 240 h limit: the longest event 1996-2024 is 193 h)
-
-STAGE 1 -- overwash, against the imagery (8-overwash-analysis)
-    Each candidate on both windows, full_management (the imagery is the managed
-    island; also the scenario the ends are solved on) and natural. Edge rates
-    as the matrix (solved on drop72). Overwash barely depends on the two end
-    rates, so this is a fair screen.
-
-    WHICH STORM MADE THE OVERWASH. Barrier3D records overwash per domain per
-    YEAR. Every storm of a year is tested against one crest, the dune after
-    the year's growth; that crest is recomputed exactly (Barrier3d.DuneGrowth
-    on the saved dunes, which SeaLevel has already lowered in place), each
-    storm's gaps come from the model's own DuneGaps, and the year's overwash
-    is shared among the storms that reach a gap in proportion to the water
-    they put through it (gap width x Qdune(Rexcess) x hours, Qdune as in
-    Barrier3D). A storm's share is dated by its end less the observed record's
-    7-day grace. `validate` checks the sharing against the storm replay.
-
-    SCORES, per image x domain cell the imagery assessed, model overwash =
-    shared overwash in the window since the previous image > THRESHOLD:
-        POD    hit rate: observed overwash the model reproduces
-        POFD   false-alarm rate: observed-absent cells the model overwashes
-        PSS    Peirce skill score = POD - POFD (base-rate free; a series that
-               overwashes everywhere scores ~0, not 1)
-        timing r  per-image domain counts, observed vs model
-        space  r  per-domain share of images with overwash, observed vs model
-    "Model only" is not all error (washover fades; NC-12 is cleared), which is
-    why PSS, not accuracy, is the headline.
-
-STAGE 2 -- shoreline, fair (`ends`, then `score`)
-    For the finalists and drop72: the two end rates re-solved on the
-    candidate (full_management, Newton on LRR at GIS 1 and 90, the protocol
-    of be_edge_domain_solve.py), then natural and managed runs at those ends:
-    interior RMSE and bias against CoastSat, and overwash scored again.
-
-NOTHING IN THE MAIN CODE CHANGES: series are built by the builder's own
-functions into this folder; runs are the unchanged runner with the period's
-storm file swapped in its own process (HAT_storm_max_duration._launch);
-Barrier3D is the current one (49fd069).
-
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-length-selection/
-
-USAGE
-    python HAT_storm_length_selection.py build
-    python HAT_storm_length_selection.py run [--workers 4]
-    python HAT_storm_length_selection.py validate
-    python HAT_storm_length_selection.py score
-    python HAT_storm_length_selection.py ends --variants drop72 trimXX ...
-    python HAT_storm_length_selection.py figures
-==============================================================================
+Every event kept and trimmed to L hours (or dropped past 72 h, the control), run in
+both windows and scored on overwash first. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -94,6 +38,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_max_duration as MD  # noqa: E402  (builder functions, launcher)
 
+# --- CONFIG ------------------------------------------------------------------
 TAG = "storms-and-overwash/2026-09-28-storm-length-selection"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
@@ -105,26 +50,32 @@ SCENARIOS = ("full_management", "natural")
 CONTROLS = MD.CONTROLS
 THRESHOLD = 0.0          # m3/m of shared overwash in the window
 THRESHOLDS = (0.0, 1.0, 5.0)
+# -----------------------------------------------------------------------------
 
 
+# A window's folder name, start_end
 def wtag(w):
     return f"{w[0]}_{w[1]}"
 
 
+# A window's storm folder
 def storm_dir(w):
     return EXP_DIR / "storms" / wtag(w)
 
 
+# A variant's storm file
 def storm_file(w, v):
     return storm_dir(w) / f"{wtag(w)}_storms_{v}.npy"
 
 
+# A variant's storm summary
 def summary_csv(w, v):
     return storm_dir(w) / f"{wtag(w)}_storms_{v}_summary.csv"
 
 
-# --- build -----------------------------------------------------------------------
+# Build
 
+# Build the trimmed series from the builder's own functions
 def build():
     fn = MD.builder_functions()
     from site_layer import hat_env_forcings as env
@@ -151,16 +102,17 @@ def build():
                   f"max Rhigh {a[:, 1].max() * 10:.2f} m")
 
 
-# --- runs --------------------------------------------------------------------------
+# Runs
 
+# Where a variant's run lands: matrix ends at stage 1, ends_<variant>/ at stage 2
 def run_path(variant, scenario, w, ends=None):
-    """Stage-1 runs at the matrix ends; stage-2 runs under ends_<variant>/."""
     group = f"{variant}_{scenario}" if ends is None else f"ends_{variant}/{ends}_{scenario}"
     base = EXP_DIR / "runs" / group / wtag(w) / "edgeBE"
     hits = sorted(base.glob("HAT_*")) if base.exists() else []
     return hits[-1] if hits else None
 
 
+# Run one job in its own process, logged, via this file's _launch entry
 def launch(w, variant, scenario, group, override=None, logname=None):
     logs = EXP_DIR / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -185,22 +137,22 @@ def launch(w, variant, scenario, group, override=None, logname=None):
     return rec
 
 
+# Every variant x scenario x window, in parallel
 def run(workers):
     jobs = [(w, v, s) for w in WINDOWS for v in RUN_VARIANTS for s in SCENARIOS]
     with ThreadPoolExecutor(workers) as ex:
         list(ex.map(lambda j: launch(j[0], j[1], j[2], f"{j[1]}_{j[2]}"), jobs))
 
 
-# --- which storm made the overwash ---------------------------------------------
+# Which storm made the overwash
 
+# Barrier3D's gap discharge per cell, dam^3/hr (barrier3d.py, gap loop)
 def _qdune(rexcess_dam):
-    """Barrier3D's gap discharge per cell, dam^3/hr (barrier3d.py, gap loop)."""
     return math.sqrt(2 * 9.8 * (rexcess_dam * 10)) / 10 * rexcess_dam * 3600
 
 
+# Each domain-year's overwash shared among that year's storms that reached a gap
 def storm_shares(c, summ):
-    """{(pad, storm row index): overwash m3/m} -- each domain-year's QowTS
-    shared among that year's storms that reached a dune gap."""
     out = {}
     for p, b in enumerate(c.barrier3d):
         q = np.asarray(b.QowTS)
@@ -226,10 +178,12 @@ def storm_shares(c, summ):
     return out
 
 
+# A run's saved CASCADE object
 def load_state(d):
     return np.load(d / f"{d.name}.npz", allow_pickle=True)["cascade"][0]
 
 
+# overwash_vs_model.py, loaded by path
 def overwash_module():
     path = PROJECT_ROOT / "scripts" / "input_prep" / "8-overwash-analysis" / "4-vs-model" / "overwash_vs_model.py"
     spec = importlib.util.spec_from_file_location("overwash_vs_model", path)
@@ -238,9 +192,8 @@ def overwash_module():
     return mod
 
 
+# Observed and modelled overwash, one row per assessed image and domain
 def overwash_cells(c, w, summ, obs, ovm):
-    """One row per assessed image x domain: observed, and model overwash
-    (shared m3/m in the window since the previous image)."""
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     shares = storm_shares(c, summ)
     dated = pd.to_datetime(summ.EndTime) - ovm.GRACE
@@ -256,6 +209,7 @@ def overwash_cells(c, w, summ, obs, ovm):
     return pd.DataFrame(rows)
 
 
+# Hit, miss and false-alarm scores for one overwash threshold
 def overwash_scores(cells, thr=THRESHOLD):
     a = cells.dropna(subset=["observed"]).copy()
     o, m = a.observed.astype(int), (a.model_m3_per_m > thr).astype(int)
@@ -272,6 +226,7 @@ def overwash_scores(cells, thr=THRESHOLD):
                 model_cells=int(m.sum()), observed_cells=int(o.sum()))
 
 
+# A run's interior skill against CoastSat, from its metadata
 def shoreline_scores(d):
     meta = json.loads((d / f"{d.name}_run_metadata.json").read_text(encoding="utf-8"))
     sk = meta.get("skill", {})
@@ -279,6 +234,7 @@ def shoreline_scores(d):
                 bias_interior_m_yr=float(sk.get("mean_bias_interior_m_yr", "nan")))
 
 
+# Score one stage's runs: overwash against the imagery, then shoreline
 def score(stage="1"):
     from site_layer import hat_overwash as ow
     ovm = overwash_module()
@@ -315,13 +271,10 @@ def score(stage="1"):
               .round(3).to_string(index=False))
 
 
-# --- validation of the storm sharing -------------------------------------------
+# Validation of the storm sharing
 
+# Check the storm sharing against a Barrier3D replay of the same domain-years
 def validate(n_per_window=12, seed=0):
-    """Share each storm's overwash as score() does, then replay the same
-    domain-years through Barrier3D (natural runs, where the replay is exact)
-    and compare per-storm volumes: does the sharing put the overwash on the
-    right storms, i.e. in the right image window?"""
     sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "figure_making" / "model"))
     from storm_replay import replay
     rng = np.random.default_rng(seed)
@@ -360,8 +313,9 @@ def validate(n_per_window=12, seed=0):
           f"volume assigned to the wrong storms: median {err.median():.0%}, 90th pct {err.quantile(0.9):.0%}")
 
 
-# --- stage 2: the ends -----------------------------------------------------------
+# Stage 2: the ends
 
+# be_edge_domain_solve.py, loaded by path
 def _solver():
     path = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate" / "be_edge_domain_solve.py"
     spec = importlib.util.spec_from_file_location("be_edge_domain_solve", path)
@@ -370,17 +324,18 @@ def _solver():
     return mod
 
 
+# Where the solved end rates are kept
 def ends_file():
     return EXP_DIR / "tables" / "ends.json"
 
 
+# The solved end rates so far
 def load_ends():
     return json.loads(ends_file().read_text(encoding="utf-8")) if ends_file().exists() else {}
 
 
+# Secant solve of the GIS 1 and 90 end rates on LRR, for one variant
 def solve_ends(w, v, tol=0.05, max_probes=6):
-    """Newton on LRR at GIS 1 and 90 (full_management), from the matrix ends,
-    each end on its own secant, as be_edge_domain_solve.py prints them."""
     from site_layer.hatteras_site_config import HATTERAS_BE_EDGE_ONLY
     solver = _solver()
     target = solver.load_target(*w)
@@ -414,6 +369,7 @@ def solve_ends(w, v, tol=0.05, max_probes=6):
     return dict(ends=best[1], residual=best[2], probe=best[3], converged=best[0] <= tol)
 
 
+# Solve the end rates for each variant and window, in parallel
 def ends(variants, workers):
     solved = load_ends()
     jobs = [(w, v) for w in WINDOWS for v in variants]
@@ -441,11 +397,12 @@ def ends(variants, workers):
         list(ex.map(final, jobs))
 
 
-# --- figures -------------------------------------------------------------------
+# Figures
 
 LENGTH = {"drop72": None, **{f"trim{L}": L for L in TRIMS}, "full": 240}
 
 
+# One stage's score and per-image figures
 def figures(stage="1"):
     import matplotlib
     matplotlib.use("Agg")
@@ -518,6 +475,7 @@ def figures(stage="1"):
         "candidates. Timing agreement is what the per-image correlation in stage1_scores measures.")
 
 
+# Run: the subprocess entry, or the action asked for
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         MD._launch(sys.argv[2], sys.argv[3])

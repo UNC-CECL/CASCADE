@@ -1,39 +1,12 @@
-"""Wave shortlist with the end domains solved per setting (2026-09-26).
+"""
+Do different wave settings win once the end domains are solved per setting?
 
-Hannah, 2026-09-26: "what about when you solve for the ends, are there
-different wave parameters that perform the best?" The 2026-09-25 wave grid
-ran zeroBE (nothing imposed at GIS 1 or 90), and the stored edgeBE values
-(HATTERAS_BE_EDGE_ONLY) were solved at Hs 2.5 on the old /10 offset, so they
-do not carry over. What the ends must carry depends on the waves, so each
-wave setting gets its own solve. Chosen with Hannah:
-
-    shortlist  the top 10 zeroBE settings (smoothed score) per window x
-               scenario from wave-climate/2026-09-25-wave-grid-smoothed-score
-    scenarios  natural and full management, both windows (40 chains)
-    ends       solved against each window's CoastSat LRR, as the matrix end
-               values were: GIS 1 against the raw domain mean, GIS 90 against
-               the LOWESS-10 value (the target table's own splice)
-    solve      step 0 is the setting's zeroBE grid run (ends 0, 0). Each end
-               is stepped on its own (they are 89 domains apart): step 1 from
-               the 2026-09-11 response (about 0.09 m/yr of residual per m/yr
-               imposed at GIS 1, 0.13 at GIS 90), then the secant through the
-               last two probes. Lockstep: every chain runs its next probe
-               before any is solved again. Converged at |residual| <= 0.02
-               m/yr at both ends, or stop after MAX_STEPS probes
-    score      the converged (or last) run, as the grid: share of the
-               alongshore variation explained by the model smoothed like the
-               CoastSat target, interior GIS 2-89; bias, r, the raw score, the
-               imposed ends and their residuals beside it
-    fixed      metres offset (dune line v1), edgeBE preset with HAT_BE_OVERRIDE,
-               no groin, no relocations, Barrier3D route_overwash fix
-
-WHERE: output/raw_runs/experiments/wave-climate/2026-09-26-wave-shortlist-ends-solved/
-    README.md, tables/{shortlist,solve_log,all_runs}.csv, figures/,
-    logs/<scenario>/step<k>/<period>_<settings>.log
-    runs/<scenario>_step<k>/<period>/edgeBE/<run_name>/     (on disk only)
-
-    python scripts/hatteras_ms/experiments/HAT_wave_shortlist_ends_solved.py run [--jobs 8]
+    python scripts/hatteras_ms/experiments/HAT_wave_shortlist_ends_solved.py run --jobs 8
     python scripts/hatteras_ms/experiments/HAT_wave_shortlist_ends_solved.py score
+    python scripts/hatteras_ms/experiments/HAT_wave_shortlist_ends_solved.py resume --jobs 8
+
+Solves the GIS 1 and 90 ends for each shortlisted setting, then rescores;
+resume continues unconverged chains with a safeguarded step. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -57,6 +30,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_wave_grid_smoothed_score as grid  # noqa: E402
 
 common, step2 = grid.common, grid.step2
+# --- CONFIG ------------------------------------------------------------------
 TAG = "wave-climate/2026-09-26-wave-shortlist-ends-solved"
 STUDY_DIR = grid.RAW_RUNS / "experiments" / TAG
 TABLES_DIR, LOGS_DIR = STUDY_DIR / "tables", STUDY_DIR / "logs"
@@ -66,8 +40,10 @@ MAX_STEPS = 5
 TOL = 0.02                                 # m/yr, both ends
 FIRST_GAIN = {1: 0.09, 90: 0.13}           # d(residual)/d(imposed), the 09-11 solve
 ENDS = (1, 90)
+# -----------------------------------------------------------------------------
 
 
+# The top TOP_N settings per scenario and period from the zeroBE grid
 def shortlist():
     import pandas as pd
     t = pd.read_csv(grid.TABLES_DIR / "all_runs.csv")
@@ -83,19 +59,23 @@ def shortlist():
                              "bias_m_yr": "zerobe_bias_m_yr", "run_dir": "zerobe_run_dir"})
 
 
+# A setting's name
 def label(s):
     return grid.label({k: float(s[k]) for k in KEYS})
 
 
+# A run's end residuals against the target
 def residuals(run_dir, period, targets):
     rates = common.run_rates(run_dir)
     return {g: float(rates[g] - targets[period][g]) for g in ENDS}
 
 
+# A probe's log file
 def log_path(sc, step, period, s):
     return LOGS_DIR / sc / f"step{step}" / f"{period}_{label(s)}.log"
 
 
+# The environment for one probe, its ends imposed
 def run_env(sc, step, period, s, ends):
     e = grid.run_env("x", sc, period, {k: float(s[k]) for k in KEYS})
     e["HAT_SOURCE_SINK_PRESET"] = "edgeBE"
@@ -104,10 +84,12 @@ def run_env(sc, step, period, s, ends):
     return e
 
 
+# A step's run folder
 def run_dir_of(sc, step, period):
     return STUDY_DIR / "runs" / f"{sc}_step{step}" / grid.window(period) / "edgeBE"
 
 
+# Run one probe through the runner, logged
 def launch(job):
     sc, step, period, s, ends = job
     log = log_path(sc, step, period, s)
@@ -126,9 +108,8 @@ def launch(job):
           flush=True)
 
 
+# The run a probe made, matched on its wave settings
 def find_run(sc, step, period, s):
-    """The run a probe made: its folder under the step's tag, matched on the
-    wave settings in its metadata (the run name leaves defaults out)."""
     for md in run_dir_of(sc, step, period).glob("*/*_run_metadata.json"):
         w = json.loads(md.read_text(encoding="utf-8"))["wave climate"]
         got = (float(w["wave_height_m"]), float(w["wave_period_s"]),
@@ -138,6 +119,7 @@ def find_run(sc, step, period, s):
     return None
 
 
+# Run the secant solve for every shortlisted setting
 def cmd_run(a):
     import pandas as pd
     grid.check_barrier3d()
@@ -206,6 +188,7 @@ def cmd_run(a):
     return cmd_score(a)
 
 
+# Score each chain's last run, write the table
 def cmd_score(_=None):
     import pandas as pd
     chains = json.loads((TABLES_DIR / "chains.json").read_text(encoding="utf-8"))
@@ -241,27 +224,15 @@ def cmd_score(_=None):
     return 0
 
 
-# =============================================================================
-# RESUME WITH A SAFEGUARDED STEP (added 2026-09-26)
-# =============================================================================
-# The first pass (plain secant, 5 probes) converged 6 of 40 chains. GIS 90
-# was fine; GIS 1 in 2010-2024 is not smooth -- imposed 0-25 m/yr gives
-# residuals near zero, anything above ~25 gives +5 to +15 whatever the value
-# -- so the secant took steps to -466 and +335 m/yr, and four probes drowned
-# the barrier. The resume keeps every probe already run and steps each end on
-# its own:
-#   bracketed  (a probe on each side of the target): interpolate between the
-#              closest pair, held at least 10% inside it so it always shrinks
-#   otherwise  secant through the two latest probes, capped at +-STEP_CAP
-#   converged  an end within TOL keeps its value
-# A drowned probe carries no residual and is left out of the history.
+# Resume with a safeguarded step (added 2026-09-26)
+
+# Safeguarded step per end: interpolate when bracketed, else a secant capped at STEP_CAP (README)
 STEP_CAP = 30.0
 EXTRA_STEPS = 4
 
 
+# Every (ends, residuals) pair a chain produced, zeroBE run first
 def history(chains_row, log, targets):
-    """[(ends, residuals)] for one chain: its zeroBE run, then every probe
-    that produced a run (from solve_log.csv)."""
     s, sc, p = chains_row, chains_row.scenario, int(chains_row.period_start)
     h = [({1: 0.0, 90: 0.0}, residuals(grid.STUDY_DIR / s.zerobe_run_dir, p, targets))]
     x = log[(log.scenario == sc) & (log.period_start == p)
@@ -271,6 +242,7 @@ def history(chains_row, log, targets):
     return h
 
 
+# One end's next value: interpolate when bracketed, else a capped secant
 def safeguarded_next(h, g):
     pts = [(e[g], r[g]) for e, r in h]
     e_last, r_last = pts[-1]
@@ -291,6 +263,7 @@ def safeguarded_next(h, g):
     return float(e1 - np.clip(r1 / slope, -STEP_CAP, STEP_CAP))
 
 
+# Continue the unconverged chains with the safeguarded step
 def cmd_resume(a):
     import pandas as pd
     grid.check_barrier3d()
@@ -352,6 +325,7 @@ def cmd_resume(a):
     return cmd_score(a)
 
 
+# Run: the chosen subcommand
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()

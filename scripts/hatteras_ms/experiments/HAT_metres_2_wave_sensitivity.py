@@ -1,54 +1,16 @@
 #!/usr/bin/env python3
-r"""
-HAT_metres_2_wave_sensitivity.py -- wave-climate sensitivity, natural scenario, offset in metres
-==============================================================================
-THE QUESTION (Hannah, 2026-09-24, by interview). With the island offset in
-metres, how does the model's alongshore shoreline change respond to each wave
-parameter when nothing human acts on the island, in both canonical windows?
+"""
+Wave-climate sensitivity with the offset in metres, natural scenario, both windows.
 
-THE DESIGN (every choice Hannah's)
-    scenario     natural: no road management, no beach/dune management, no
-                 fills, no relocations; no groin; zeroBE; offset in metres
-                 (dune line, CURRENT v1)
-    periods      1996-2010 and 2010-2024, each against its own CoastSat LRR
-    baseline     Hs 1.0 m, Tp 8 s, asymmetry 0.8, high-angle fraction 0.45
-                 (re-centring on asymmetry 0.7 pending, 2026-09-25)
-                 (the best metres point of experiments/2026-09-24-island-
-                 offset-scale-wave-tuning, found under full management)
-    stage 1      one parameter at a time around the baseline:
-                   wave_height  Hs    0.65 0.75 1.0 1.25 1.5 2.0 2.5 3.0
-                   high_angle   ahf   0.1 0.2 0.3 0.4 0.45 0.5 0.55
-                   asymmetry    asym  0.3 0.4 0.5 0.6 0.7 0.8 0.9
-                   wave_period  Tp    6 7 8 10 12
-                 plus the baseline under full_management, per period
-    stage 2      a 5 x 5 grid per period over the two parameters whose range
-                 moves the share of alongshore variation explained the most
-                 (mean over both periods; a drowned run counts as the worst
-                 score of its period). Each axis: the 5 stage-1 values centred
-                 on that parameter's best value, shifted inward at the ends.
-                 The other two stay at the baseline. Cells already run are
-                 reused, not re-run.
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py run stage1 --jobs 6
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py run stage1 --scenario full_management
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py score
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py score-window --start 2010 --end 2020
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py run stage2 --jobs 6
+    python scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py run combo --hs 1 --tp 8 --asym 0.7 --ahf 0.4
 
-LAYOUT (output/raw_runs/experiments/wave-climate/2026-09-24-metres-2-wave-sensitivity/)
-    README.md, tables/, figures/, logs/<group>/<period>/<settings>.log
-    runs/<group>/<period>/zeroBE/<run_name>/     group = baseline, wave_height,
-                                            high_angle, asymmetry, wave_period,
-                                            baseline_full_management,
-                                            grid_<p1>_x_<p2>
-    The run folders stay on disk only: this scenario's run name is ~85
-    characters and sits twice in each path, past Windows' 260, so git cannot
-    index them (the same choice as the offset-scale study).
-
-USAGE
-    python HAT_metres_2_wave_sensitivity.py run stage1 [--jobs 6] [--dry-run]
-    python HAT_metres_2_wave_sensitivity.py run stage1 --scenario full_management
-    python HAT_metres_2_wave_sensitivity.py score
-    python HAT_metres_2_wave_sensitivity.py score-window --start 2010 --end 2020
-    python HAT_metres_2_wave_sensitivity.py run stage2 [--jobs 6] [--dry-run]
-    python HAT_metres_2_wave_sensitivity.py run combo --hs 1 --tp 8 --asym 0.7 --ahf 0.4
-    python HAT_metres_2_wave_sensitivity.py run grid --pair wave_height wave_period \
-        --values1 1 1.25 1.5 2 2.5 --values2 6 7 8 10 12 --periods 1996
-==============================================================================
+Stage 1 moves one parameter at a time around the baseline; stage 2 is a
+5 x 5 grid over the two that matter most. Details: scripts/hatteras_ms/experiments/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -71,10 +33,10 @@ _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "hatteras_ms" / "experiments"))
-# Shared with the offset-scale study: the target, the alongshore scores, the
-# drowning reader, the number spelling and the keep-awake.
+# Shared with the offset-scale study
 import HAT_metres_1_offset_units as common  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 STUDY_TAG = "wave-climate/2026-09-24-metres-2-wave-sensitivity"
@@ -92,17 +54,10 @@ MANAGED = "full_management"
 ENV = {"hs": "HAT_HS", "wave_period_s": "HAT_WAVE_PERIOD_S",
        "wave_asymmetry": "HAT_WAVE_ASYMMETRY",
        "wave_angle_high_fraction": "HAT_WAVE_ANGLE_HIGH_FRACTION"}
-# PENDING (2026-09-25): Hannah chose asymmetry 0.7 for the Buxton dip (GIS 6-7)
-# and asked to re-centre the one-at-a-time sweeps on it; the re-run was
-# stopped to test a combination first (runs/combos/). Until it runs, the
-# baseline stays 0.8: every figure and the scoring select on it, and 0.7-
-# centred sweeps do not exist yet. To re-centre: set 0.7 here, then
-# `run stage1` and `run stage1 --scenario full_management`.
+# The baseline stays at asymmetry 0.8 until re-centring on 0.7 is run (README)
 BASELINE = {"hs": 1.0, "wave_period_s": 8.0, "wave_asymmetry": 0.8,
             "wave_angle_high_fraction": 0.45}
-# Stage 2 (the two grids) was chosen and run around the first baseline,
-# asymmetry 0.8, and stays there: selecting or drawing it on BASELINE would
-# find no runs.
+# Stage 2 (the two grids) was chosen and run around the first baseline, asymmetry 0.8, and stays there
 STAGE2_BASELINE = {**BASELINE, "wave_asymmetry": 0.8}
 # folder name -> (setting, stage-1 values, label)
 PARAMS = {
@@ -117,34 +72,30 @@ PARAMS = {
 }
 SETTING_TO_PARAM = {v[0]: k for k, v in PARAMS.items()}
 GRID_SIZE = 5
+# -----------------------------------------------------------------------------
 
 
+# A start year's window label
 def window(period):
     return f"{period}_{period + 14}"
 
 
+# A setting's label, every parameter spelled
 def settings_label(s):
     return (f"Hs{common.num(s['hs'])}_period{common.num(s['wave_period_s'])}"
             f"_asymmetry{common.num(s['wave_asymmetry'])}"
             f"_highangle{common.num(s['wave_angle_high_fraction'])}")
 
 
+# A cell's log file
 def log_path(group, period, s, scenario=SCENARIO):
     return LOGS_DIR / group / window(period) / f"{settings_label(s)}.log"
 
 
-# =============================================================================
-# CELLS
-# =============================================================================
+# Cells
 
+# Why a run has no score
 def stop_reason(log):
-    """Why a run has no score: drowned, crashed, or the error it raised.
-
-    A run that dies with no Python traceback and no drowning is the silent
-    access violation in Barrier3D's jitted route_overwash (an out-of-bounds
-    read once a domain has prograded; memory note of 2026-09-11, where it was
-    found with the groin). Seen here with no groin, in 2010-2024 natural runs.
-    """
     import re
     text = log.read_text(encoding="utf-8", errors="replace")
     if "Model stopped at year" in text or "Traceback" in text:
@@ -154,18 +105,17 @@ def stop_reason(log):
             f"(likely Barrier3D route_overwash access violation)")
 
 
-# THE FULL-MANAGEMENT SWEEP (Hannah, 2026-09-24, after stage 1 showed
-# management halves the 2010-2024 bias): the same stage-1 values under
-# full_management, filed as full_management_<parameter>/ beside the natural
-# folders. Its baseline is baseline_full_management/, already run.
+# Full-management sweep: the stage-1 values, filed as full_management_<parameter>/
 MANAGED_PREFIX = "full_management_"
 
 
+# The scenario a group runs
 def scenario_of(group):
     return (MANAGED if group == "baseline_full_management"
             or group.startswith(MANAGED_PREFIX) else SCENARIO)
 
 
+# Stage 1 under full management
 def stage1_managed_cells():
     cells = []
     for period in PERIODS:
@@ -179,6 +129,7 @@ def stage1_managed_cells():
     return cells
 
 
+# Stage 1: the baseline and one parameter at a time
 def stage1_cells():
     cells = []
     for period in PERIODS:
@@ -192,6 +143,7 @@ def stage1_cells():
     return cells
 
 
+# The environment one run reads
 def run_env(group, period, s, scenario):
     import os
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
@@ -216,18 +168,14 @@ def run_env(group, period, s, scenario):
     return env
 
 
+# One run, skipped if already a result
 def launch(cell, dry_run=False):
     group, period, s, scenario = cell
     label = f"{group} {window(period)} {settings_label(s)}"
     log = log_path(group, period, s)
     if log.is_file():
         text = log.read_text(encoding="utf-8", errors="replace")
-        # A clean finish, or a drowned barrier, is a result: re-running either
-        # would only hit the runner's existing-folder guard and overwrite the
-        # log with that refusal (found when the sweep was paused 2026-09-24).
-        # ...and a run that finished and only failed to replace the shared
-        # run_index.csv (a Windows lock between parallel runs, 2026-09-24):
-        # its outputs are complete and scored.
+        # A clean finish, a drowned barrier or an index-lock failure is a result: skip it
         index_race = "rebuild_run_index" in text and "PermissionError" in text
         if "Traceback" not in text or "Model stopped at year" in text or index_race:
             print(f"skip {label}: already run", flush=True)
@@ -251,6 +199,7 @@ def launch(cell, dry_run=False):
     return True
 
 
+# Run cells in parallel, keeping the machine awake
 def run_cells(cells, jobs, dry_run):
     common.keep_awake()
     print(f"{len(cells)} runs, {jobs} at a time", flush=True)
@@ -260,26 +209,14 @@ def run_cells(cells, jobs, dry_run):
     return 0
 
 
-# =============================================================================
-# STAGE 2
-# =============================================================================
+# Stage 2
 
-# THE SELECTION RULE, and why it changed (2026-09-24). The first rule took
-# each parameter's range of variation explained over BOTH periods and counted
-# a run without a score as the worst score of its period. It chose Hs x Tp
-# for the wrong reasons: 2010-2024 natural runs explain -800% to -2800% at
-# every setting (a ~-4.5 m/yr bias), so its ranges measure how badly a
-# setting fails; the drowned Tp 12 became each period's worst score; and two
-# crashes were scored as worst although the rule named drownings only. That
-# selection is kept in tables/stage2_selection_first_rule.csv and its 12
-# finished runs in grid_wave_height_x_wave_period/. Hannah then chose: the
-# range over runs that SURVIVED in 1996-2010 only, best value from the same
-# runs; the grid still covers both periods.
+# Selection rule: the range over runs that survived in 1996-2010 (README)
 SELECTION_PERIOD = 1996
 
 
+# The two parameters with the largest effect, and 5 values for each
 def choose_grid():
-    """The two parameters with the largest effect, and 5 values for each."""
     import pandas as pd
     t = pd.read_csv(TABLES_DIR / "all_runs.csv")
     t = t[(t.scenario == SCENARIO) & t.group.isin(["baseline", *PARAMS])
@@ -312,16 +249,8 @@ def choose_grid():
     return pair, grid
 
 
+# A named grid
 def grid_cells(pair, values, periods):
-    """A named grid: every combination of two parameters' values, the other
-    two at the baseline, in the given periods; cells already run anywhere in
-    the study (natural scenario, same settings) are reused, not re-run.
-
-    Added 2026-09-24 to finish the Hs x Tp grid for 1996-2010 (Hannah), which
-    the first stage-2 rule chose and which was stopped when the rule was
-    replaced; its best cell (Hs 1.25, Tp 10) turned out to be the best
-    natural 1996-2010 run of the study.
-    """
     import pandas as pd
     group = f"grid_{pair[0]}_x_{pair[1]}"
     s1, s2 = PARAMS[pair[0]][0], PARAMS[pair[1]][0]
@@ -341,6 +270,7 @@ def grid_cells(pair, values, periods):
     return cells
 
 
+# The stage-2 grid, minus cells stage 1 already ran
 def stage2_cells():
     pair, grid = choose_grid()
     group = f"grid_{pair[0]}_x_{pair[1]}"
@@ -359,10 +289,9 @@ def stage2_cells():
     return cells
 
 
-# =============================================================================
-# SCORE
-# =============================================================================
+# Score
 
+# Score every logged run and write the tables
 def cmd_score(a):
     import pandas as pd
     from cascade_pipeline.run_registry import load_run_index, rebuild_run_index
@@ -386,9 +315,7 @@ def cmd_score(a):
     records = []
     for log in sorted(LOGS_DIR.glob("*/*/*.log")):
         group, win = log.parts[-3], log.parts[-2]
-        # The crash_check* logs are the NUMBA_BOUNDSCHECK / JIT-off diagnostics
-        # of 2026-09-24, not sweep cells: scored as cells they appeared as
-        # unscored duplicates of the baseline (and put a failure mark on it).
+        # crash_check logs are diagnostics, not sweep cells
         if group.startswith("crash_check") or log.stem.endswith("_boundscheck"):
             continue
         period = int(win[:4])
@@ -411,8 +338,7 @@ def cmd_score(a):
             if not np.isclose(sc.pop("_rmse"), float(r["rmse_interior_m_yr"]), rtol=1e-3):
                 raise ValueError(f"{run_dir}: RMSE against the rebuilt target does not "
                                  f"match the runner's")
-            # which Barrier3D: recorded by the runner since 2026-09-24; a run
-            # without the field predates it and ran on the unfixed model
+            # Which Barrier3D: a run without this field ran on the unfixed model
             fix = md["identity"].get("barrier3d_route_overwash_fix")
             rec["barrier3d_route_overwash_fix"] = bool(fix[0] if isinstance(fix, list) else fix)                 if fix is not None else False
             rec.update(status="scored", island_offset_version=md["identity"]["island_offset_version"],
@@ -447,16 +373,9 @@ def cmd_score(a):
     return 0
 
 
-# =============================================================================
-# SCORE A WINDOW INSIDE A PERIOD
-# =============================================================================
-# Added 2026-09-24 (Hannah): score the 2010-2024 runs on 2010-2020 too. The
-# CoastSat 2010-2024 target is lifted from ~0 to +1.07 m/yr by the island-wide
-# +17 m step into 2021, which no model run can make. The model's rate over
-# the window is the same OLS estimator the runner uses (shoreline.compute_lrr)
-# on the first (end - start + 1) annual states; the observed one is
-# 5-scr/3-rates/coastsat/lrr/<start>_<end>/, LOWESS at the runner's window (7 since 2026-09-28).
+# Score a window inside a period
 
+# Score the 2010-2024 runs on 2010-2020, clear of the 2021 CoastSat step
 def cmd_score_window(a):
     import pandas as pd
     from cascade_pipeline.shoreline import compute_lrr
@@ -510,6 +429,7 @@ def cmd_score_window(a):
     return 0
 
 
+# Run: the subcommand asked for
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(description=__doc__.split("\n")[1])
@@ -544,9 +464,7 @@ def main():
     if a.stage == "stage2":
         cells = stage2_cells()
     elif a.stage == "combo":
-        # One hand-picked setting of all four (added 2026-09-25, Hannah: "test a
-        # combo" before re-running stage 1). Filed as runs/combos/ and
-        # runs/full_management_combos/; scored with everything else.
+        # One hand-picked setting of all four, filed under runs/combos/
         s = {**BASELINE, **{k: v for k, v in (("hs", a.hs), ("wave_period_s", a.tp),
                                               ("wave_asymmetry", a.asym),
                                               ("wave_angle_high_fraction", a.ahf))
