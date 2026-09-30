@@ -1,51 +1,12 @@
 #!/usr/bin/env python3
 """
-matrix_management_ladder.py
-==============================================================================
-The matrix runs of one window and preset in order of increasing management,
-so the effect of each setting can be seen building up (Hannah, 2026-09-29:
-"all of the runs in sequential order of increasing management so we can see
-the effect of each setting"; then "remove the step panels ... show all of the
-curves in each progressive step, also do a lrr version and position change
-version").
+The matrix runs of each window and preset in order of increasing management, one panel per rung.
 
-THE LADDER
-    natural -> road management only -> + beach and dune management
-            -> + nourishment fills
-    Each rung is the matrix run that adds one layer to the rung above. A rung
-    the window does not have is skipped rather than drawn twice: 1996-2010 has
-    no fills (the driver skips full_no_fill there as identical to
-    full_management). What each rung adds is read from the runs themselves
-    (scenario and the fills the run applied), not typed. Left off the ladder:
-    beach/dune-only, a side branch, and the historical-relocation runs
-    (Hannah, 2026-09-29: "remove the historical relocations panel"; in
-    1996-2010 it matched full management to 0.0002 m/yr, since relocation
-    moves the road, not the shoreline; 2010-2024 has no relocation event).
-
-ONE PANEL PER RUNG, CUMULATIVE
-    Panel k draws rungs 1..k, each in its own shade of the house blue ramp
-    (lighter = less managed), the newest rung heaviest, over the observation.
-    A rung keeps its colour in every panel, so a curve can be followed down.
-
-TWO VERSIONS
-    rate      the OLS rate (lrr_m_yr) against the CoastSat LRR scoring target
-              (7-domain LOWESS, raw means GIS 1-10), as the runner scores it;
-              +/-7.5 m/yr, as the runner's own figure
-    position  the position change over the window (endpoint rate x 14 yr)
-              against the observed CoastSat change (mean position in the last
-              calendar year minus the first, smoothed at 7 domains);
-              +/-130 m, as output/comparisons/matrix_vs_observed/
-    Interior (GIS 2-89) RMSE and bias of the newest rung in each row title,
-    every rung's in supporting/ladder_scores.csv.
-
-WRITES
-    output/raw_runs/matrix/figures/<window>/management_ladder_{rate,position}_<preset>_<window>.png
-    output/raw_runs/matrix/figures/<window>/supporting/  PDF, CAPTIONS.md
-    output/raw_runs/matrix/figures/supporting/ladder_scores.csv
-
-USAGE
     python scripts/analyze_output/compare_runs/matrix_management_ladder.py
-==============================================================================
+
+Two versions per window and preset: rate (LRR vs the CoastSat target) and
+position change (vs observed change). Writes output/raw_runs/matrix/figures/.
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -78,13 +39,11 @@ from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, SMOOTH_RAMP, _title, apply_style, figsize,
     open_frame, record_caption, save, structures, support_dir, town_bands)
 
+# --- CONFIG ------------------------------------------------------------------
 OUT = _REPO / "output" / "raw_runs" / "matrix" / "figures"
 PRESETS = ("edgeBE", "zeroBE")
 OBSERVED = dict(color=INK, lw=1.6)
-# One colour per layer, the same in every window (Hannah, 2026-09-29: "keep
-# colours consistent"): a rung takes the colour of the last layer it adds,
-# light -> dark with management, so 1996-2010 (no fills) simply never uses the
-# darkest.
+# One colour per layer, the same in every window; a rung takes its last layer's
 LAYER_COLOUR = dict(zip(("none", "road", "bdm", "fills"), SMOOTH_RAMP))
 LW_NEWEST, LW_EARLIER = 1.7, 1.0
 
@@ -108,10 +67,11 @@ VERSIONS = {
                   "minus the first, smoothed at 7 domains)"),
         what="modelled position change over the window (endpoint rate × 14 yr)"),
 }
+# -----------------------------------------------------------------------------
 
 
+# The management layers a matrix run has, read from the run itself
 def layers(r):
-    """The management layers a matrix run has, from the run itself."""
     md = json.loads(next(Path(r.run_dir).glob("*_run_metadata.json")).read_text(encoding="utf-8"))
     fills = re.match(r"\s*(\d+)", str(md["scenario"].get("nourishment fills", "0")))
     return {"road": r.scenario in ("roadway_only", "full_no_fill", "full_management"),
@@ -120,9 +80,8 @@ def layers(r):
             "reloc": bool(r.relocations_enabled)}
 
 
+# The rungs for one window and preset, least managed first; a run adding nothing is dropped
 def ladder(runs):
-    """The rungs for one window and preset, least managed first, each adding
-    one or more layers to the one above; a run that adds nothing is dropped."""
     order = [("natural", False), ("roadway_only", False), ("full_no_fill", False),
              ("full_management", False)]
     rungs, have = [], None
@@ -140,10 +99,12 @@ def ladder(runs):
     return rungs
 
 
+# Panel title: what this rung adds
 def rung_label(i, added):
     return "Natural" if i == 0 else "+ " + " and ".join(LAYER_TEXT[k] for k in added)
 
 
+# One figure: panel k draws rungs 1..k over the observation; records each rung's scores
 def draw(version, period, preset, rungs, observed, rows_out):
     v = VERSIONS[version]
     n = len(rungs)
@@ -199,6 +160,7 @@ def draw(version, period, preset, rungs, observed, rows_out):
     return png
 
 
+# Run: clear the retired step-panel figures, draw every ladder, write the scores
 def main():
     apply_style()
     runs = matrix_runs()
@@ -208,6 +170,7 @@ def main():
             pdf = old.parent / "supporting" / (old.stem + ".pdf")
             if pdf.exists():
                 pdf.unlink()
+    # Both versions for every window and preset
     rows = []
     for period in sorted(int(p) for p in runs.period.unique()):
         obs = {"rate": common.coastsat_target(period), "position": observed_change(period)}
@@ -219,6 +182,7 @@ def main():
             for version in VERSIONS:
                 png = draw(version, period, preset, rungs, obs[version], rows)
                 print(f"wrote {png.relative_to(_REPO)}  ({len(rungs)} rungs)")
+    # Every rung's scores in one table
     table = support_dir(OUT) / "ladder_scores.csv"
     table.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(table, index=False)

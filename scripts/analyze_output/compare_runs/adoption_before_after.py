@@ -1,39 +1,14 @@
 r"""
-adoption_before_after.py -- the matrix before and after the 2026-09-28 adoption
-==============================================================================
-Hannah, 2026-09-28: "show me the comparison when the matrix finishes".
-
-    before  output/raw_runs/archive/2026-09-28-pre-ceiling/matrix/: Barrier3D
-            fix/route-overwash-axis-swap (49fd069), Dmaxel default (3.4 m
-            NAVD88), storms v3_72, the pre-adoption LOWESS-7 ends
-    after   output/raw_runs/matrix/: Barrier3D hatteras/adopted (overwash
-            fixes + per-cell dune ceilings), storms v3_trim24, the ends
-            re-solved on it (end-domain-boundaries/2026-09-28-ends-resolved-adopted)
-
-For every matrix run (both windows, both presets, every scenario):
-    shoreline  interior (GIS 2-89) RMSE and bias of the model LRR against the
-               CoastSat LOWESS-7 target (run_registry.skill_vs_target, as the
-               runner scores), and the spatial correlation r
-    overwash   against the imagery (8-overwash-analysis), each run dated by its
-               own storm file: POD, POFD, PSS, timing r, space r
-    dunes      1996-2010 runs: the 2010 dune crest minus the 2009 lidar
-
-Per-domain tables beside the scores: cells_<side>.csv (every image x domain,
-observed and model overwash) and crest_<side>.csv (end-of-run crest per GIS
-domain, m MHW); crest_lidar_2009.csv is the 2010-start dune file's crest.
-Figures: adoption_before_after_figures.py.
-
-Each side is scored under the Barrier3D it ran on, so the storm sharing uses
-that version's DuneGaps and DuneGrowth: `score --side before` must run with
-PYTHONPATH=<Barrier3D at 49fd069 + the ceiling feature, off> (the worktree
-../Barrier3D-dune-ceiling), `score --side after` with the editable install.
+Score every matrix run before and after the 2026-09-28 adoption: shoreline, overwash, dune crest.
 
     python adoption_before_after.py score --side before   (PYTHONPATH=../Barrier3D-dune-ceiling)
     python adoption_before_after.py score --side after
     python adoption_before_after.py report
 
-WHERE: output/comparisons/adoption_2026-09-28/
-==============================================================================
+Reads output/raw_runs/archive/2026-09-28-pre-ceiling/matrix/ (before) and
+output/raw_runs/matrix/ (after); writes output/comparisons/adoption_2026-09-28/.
+Each side must be scored under the Barrier3D it ran on (see README.md).
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -56,13 +31,16 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "hatteras_ms" / "experiments"))
 import HAT_storm_length_selection as S  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW = PROJECT_ROOT / "output" / "raw_runs"
 SIDES = {"before": RAW / "archive" / "2026-09-28-pre-ceiling" / "matrix", "after": RAW / "matrix"}
 STORM_VARIANT = {"before": "v3_72", "after": "v3_trim24"}
 OUT = PROJECT_ROOT / "output" / "comparisons" / "adoption_2026-09-28"
 WINDOWS = ((1996, 2010), (2010, 2024))
+# -----------------------------------------------------------------------------
 
 
+# Every finished matrix run on one side: (window, preset, run folder)
 def runs(side):
     for w in WINDOWS:
         for preset_dir in sorted((SIDES[side] / S.wtag(w)).glob("*")):
@@ -71,6 +49,7 @@ def runs(side):
                     yield w, preset_dir.name, rd
 
 
+# The CoastSat LOWESS-7 target for a window, built once
 def target_table(w, _cache={}):
     if w not in _cache:
         from cascade_pipeline.hindcast import build_target_table
@@ -85,6 +64,7 @@ def target_table(w, _cache={}):
     return _cache[w]
 
 
+# Interior RMSE, bias and spatial r of a run's LRR against the target
 def shoreline(rd, w):
     from cascade_pipeline.run_registry import skill_vs_target
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM, SCORE_INTERIOR_GIS
@@ -102,7 +82,9 @@ def shoreline(rd, w):
                 bias_interior_m_yr=float(sk["mean_bias_interior_m_yr"]), shoreline_r=r)
 
 
+# Score every run on one side and write scores, cells and crest tables
 def score(side):
+    # Refuse to score a side under the wrong Barrier3D
     import barrier3d
     import barrier3d.barrier3d as b3d
     import inspect
@@ -113,6 +95,7 @@ def score(side):
                          "PYTHONPATH=../Barrier3D-dune-ceiling")
     if side == "after" and not has_fixes:
         raise SystemExit("score the AFTER side under hatteras/adopted (the editable install)")
+    # Observations and domain map shared by every run
     from site_layer import hat_overwash as ow, hat_env_forcings as env
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     ovm = S.overwash_module()
@@ -120,6 +103,7 @@ def score(side):
     pads = [DOM.gis_to_pad(g) for g in range(1, 91)]
     lid = None
     rows, all_cells, crests = [], [], []
+    # One row per run: shoreline + overwash skill, end-of-run crest
     for w, preset, rd in runs(side):
         c = S.load_state(rd)
         meta = json.loads(next(rd.glob("*_run_metadata.json")).read_text(encoding="utf-8"))
@@ -144,6 +128,7 @@ def score(side):
             row["crest_2010_minus_lidar_m"] = float(np.median(crest - lid))
         rows.append(row)
         print(f"  {side} {S.wtag(w)} {preset} {rd.name}", flush=True)
+    # Write the three tables (and the lidar crest once)
     OUT.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(OUT / f"scores_{side}.csv", index=False)
     pd.concat(all_cells).to_csv(OUT / f"cells_{side}.csv", index=False)
@@ -152,6 +137,7 @@ def score(side):
         pd.DataFrame(dict(gis=range(1, 91), crest_2009_lidar_m_mhw=lid)).to_csv(OUT / "crest_lidar_2009.csv", index=False)
 
 
+# Merge the two sides into before_after.csv and print the changes
 def report():
     b = pd.read_csv(OUT / "scores_before.csv")
     a = pd.read_csv(OUT / "scores_after.csv")
@@ -169,6 +155,7 @@ def report():
     return m
 
 
+# Run: score one side, or report both
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("action", choices=["score", "report"])

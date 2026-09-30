@@ -1,60 +1,13 @@
 #!/usr/bin/env python3
 """
-matrix_vs_observed.py
-==============================================================================
-Every option A matrix run against the observations, two figures per run
-(Hannah, 2026-09-27). The runner draws only rate figures into each run's
-figures/, so neither of these existed for the matrix.
+Every matrix run against the observations: rate and position change, and start/end positions.
 
-RATE AND POSITION CHANGE   ("Where are these position plots?")
-    (a) rate      the model's OLS rate (lrr_m_yr) against the CoastSat LRR
-                  target, 7-domain LOWESS with the southern 10 raw, as scored
-    (b) position  the model's position change over the window, endpoint rate
-                  x 14 yr, against the observed CoastSat change: the mean
-                  position over the last calendar year minus that over the
-                  first, smoothed at 7 domains (10 until 2026-09-28)
-                  (5-scr/3-rates/coastsat/total_change/<w>/smoothed)
-    The layout the wave experiments use (HAT_metres_2_wave_sensitivity_plot).
-
-START AND END POSITIONS   ("the starting island position with the end modeled
-    position and the observed end position", both CoastSat and the dune line)
-    Drawn RELATIVE TO THE START LINE (Hannah chose this): the island's own
-    position swings ~6 km along the reach with its planform while the changes
-    are tens of metres, so on an absolute axis the four lines coincide. The
-    start position is the zero line; each end is metres seaward (+) or
-    landward (-) of it, per domain:
-        model end       the run's last annual shoreline minus its first
-                        (shoreline_matrix.npy, sign flipped to seaward +)
-        CoastSat end    the observed change per domain, unsmoothed (the
-                        total_change domain means, window 0), with its
-                        7-domain LOWESS as a faint line
-        dune-line end   the runner's own end-year target: the dune-line change
-                        between the start and end vintages
-                        (hindcast.build_shoreline_target; 1997 -> 2009 for
-                        1996-2010, 2009 -> 2023 for 2010-2024). Its survey
-                        interval is not the calendar window (11.6 and 14.1 yr);
-                        reported in the caption, not rescaled.
-
-ONE Y AXIS PER PANEL TYPE, across every run (Hannah, 2026-09-27): rate
-+/-7.5 m/yr (as the runner's real-domains rate figure, rerender_run_figures.py
---ylim-real), position change and start/end positions each symmetric about
-zero, set from the widest run or observation and rounded up to 10 m.
-y_bounds.txt says which.
-
-WRITES (subfolders by figure, then window, then preset)
-    each matrix run's figures/vs_observed/
-        rate_and_position_change.png, start_and_end_positions.png
-    output/comparisons/matrix_vs_observed/
-        rate_and_position_change/<window>/
-            scenarios_rate_and_position_<preset>_<window>.png   every scenario
-            <preset>/rate_and_position_<preset>_<scenario>[_reloc]_<window>.png
-        start_and_end_positions/<window>/<preset>/
-            start_and_end_positions_<preset>_<scenario>[_reloc]_<window>.png
-        scores.csv, y_bounds.txt, README.md
-
-USAGE
     python scripts/analyze_output/compare_runs/matrix_vs_observed.py
-==============================================================================
+
+Two figures per run, written into each run's figures/vs_observed/ and to
+output/comparisons/matrix_vs_observed/, plus per-scenario figures, scores.csv
+and y_bounds.txt. Other scripts import its loaders (matrix_runs, rates, score).
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -88,6 +41,7 @@ from site_layer.hat_topo_version import (  # noqa: E402
     INIT_ROOT, RAW_OFFSET_DIR, dune_line_for_year)
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = _REPO / "output" / "raw_runs"
 OUT = COMPARISONS_ROOT / "matrix_vs_observed"
 RUN_SUBDIR = Path("figures") / "vs_observed"
@@ -99,8 +53,7 @@ ENDS_YLIM = None            # set in main()
 
 OBSERVED = dict(color=INK, lw=2.0)
 MODEL_ONE = dict(color="#2166ac", lw=1.4)
-# the start/end figure: the house shoreline blue and dune red for the two
-# observations (rate_windows C_CS_TARGET / C_DUNE_TARGET), the model black
+# start/end figure: shoreline blue and dune red for the observations, the model black
 C_START = INK_MUTED
 C_MODEL_END = INK
 C_COASTSAT = "#2166ac"
@@ -129,33 +82,29 @@ RATE_CAPTION = (
     "window (endpoint rate x 14 yr) against the observed CoastSat change, mean position over "
     "the last calendar year minus the first, smoothed at 7 domains. Seaward positive; "
     "scores over the interior GIS 2-89.")
-
-
+SMOOTH = 7                  # smoothing width in domains, target and observed (10 until 2026-09-28)
 # -----------------------------------------------------------------------------
-# data
-# -----------------------------------------------------------------------------
-# The group's smoothing range, 7 domains, since 2026-09-28 (10 until then):
-# the runner's target and the observed change are both smoothed at it.
-SMOOTH = 7
 
 
+# '1996_2010' from a start year
 def window(p):
     return f"{p}_{p + YEARS}"
 
 
+# The smoothed total-change table for a window
 def _coastsat_change(period):
     f = (INIT_ROOT / "5-scr" / "3-rates" / "coastsat" / "total_change" / window(period)
          / "smoothed" / "tables" / "domain_smoothed.csv")
     return pd.read_csv(f)
 
 
+# CoastSat position change per domain, seaward +; window 0 is the unsmoothed mean
 def observed_change(period, window_domains=SMOOTH):
-    """CoastSat position change per domain, seaward +; window 0 is the
-    unsmoothed domain mean."""
     d = _coastsat_change(period)
     return d[d.window_domains == window_domains].set_index("domain_number")["observed_m"]
 
 
+# The option A matrix runs from the run index, with their folders
 def matrix_runs():
     idx = load_run_index(RAW_RUNS / "run_index.csv")
     m = idx[(idx["kind"] == "matrix") & idx["run_name"].str.contains("offsetmetres")].copy()
@@ -167,21 +116,21 @@ def matrix_runs():
     return m
 
 
+# A run's per-domain rate table
 def rates(run_dir):
     return pd.read_csv(run_dir / "tables" / "shoreline_change_rate.csv").set_index("gis_domain")
 
 
+# Last annual shoreline minus the first, seaward + (x_s grows landward, so the sign flips)
 def model_end_change(run_dir):
-    """Last annual shoreline minus the first, real domains, seaward + (x_s
-    increases landward, so the sign flips)."""
     m = np.load(next(run_dir.glob("*_shoreline_matrix.npy")))
     D = HATTERAS_DOMAINS
     return pd.Series(-(m[-1] - m[0])[D.start_real_index:D.end_real_index],
                      index=np.arange(D.first_gis_id, D.last_gis_id + 1))
 
 
+# The runner's end-year dune-line target as a change, seaward +
 def dune_end_change(run_dir, period):
-    """The runner's end-year dune-line target as a change, seaward +."""
     m = np.load(next(run_dir.glob("*_shoreline_matrix.npy")))
     _, change = build_shoreline_target(m[0], period, period + YEARS, HATTERAS_DOMAINS,
                                        RAW_OFFSET_DIR)
@@ -190,20 +139,20 @@ def dune_end_change(run_dir, period):
                      index=np.arange(D.first_gis_id, D.last_gis_id + 1))
 
 
+# Interior bias and RMSE of model minus observation
 def score(model, obs):
     r = (common.interior(model) - common.interior(obs)).dropna()
     return float(r.mean()), float(np.sqrt((r ** 2).mean()))
 
 
+# Symmetric y limits from the widest value, rounded up to 10
 def _sym(vals):
     half = float(np.ceil(np.nanmax(np.abs(np.concatenate([np.asarray(v, float) for v in vals])))
                          / 10.0) * 10.0)
     return (-half, half)
 
 
-# -----------------------------------------------------------------------------
-# figures
-# -----------------------------------------------------------------------------
+# Shared axis: zero line, GIS 1-90, grid, village bands
 def _axis(ax, label_towns):
     ax.axhline(0, color=INK_MUTED, lw=0.6)
     ax.set_xlim(1, 90)
@@ -212,6 +161,7 @@ def _axis(ax, label_towns):
     town_bands(ax, label=label_towns)
 
 
+# Limits, labels and titles for the rate and position panels
 def frame(axes, period):
     ax_r, ax_p = axes
     for ax in axes:
@@ -227,15 +177,18 @@ def frame(axes, period):
     structures(ax_r, label=False)
 
 
+# Readable run description for legends and captions
 def run_title(r):
     reloc = ", relocations on" if r.relocations_enabled else ""
     return f"{SCEN_LABEL[r.scenario]}{reloc}, {r.source_sink_preset}, {window(r.period).replace('_', '–')}"
 
 
+# File-name stem for a run's figures
 def stem(r):
     return f"{r.source_sink_preset}_{r.scenario}{'_reloc' if r.relocations_enabled else ''}_{window(r.period)}"
 
 
+# Rate and position change for one run, into the run and the comparison tree
 def fig_rate_position(r, target, obs):
     rt = rates(r.run_dir)
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.2), sharex=True,
@@ -265,6 +218,7 @@ def fig_rate_position(r, target, obs):
                 position_bias_m=bp, position_rmse_m=ep), pngs[1]
 
 
+# Start and end positions relative to the start line, for one run
 def fig_start_end(r, cs_raw, cs_smooth, dune):
     model = model_end_change(r.run_dir)
     s, e = r.period, r.period + YEARS
@@ -315,6 +269,7 @@ def fig_start_end(r, cs_raw, cs_smooth, dune):
                 end_bias_vs_duneline_m=bd, end_rmse_vs_duneline_m=ed), pngs[1]
 
 
+# Every scenario of one window and preset on one figure
 def fig_scenarios(runs, period, preset, target, obs):
     sub = runs[(runs.period == period) & (runs.source_sink_preset == preset)
                & ~runs.relocations_enabled]
@@ -348,7 +303,7 @@ def fig_scenarios(runs, period, preset, target, obs):
     return png
 
 
-# -----------------------------------------------------------------------------
+# Run: load every run and observation, fix the y axes, draw every figure, write scores
 def main():
     global POSITION_YLIM, ENDS_YLIM
     apply_style()
@@ -358,6 +313,7 @@ def main():
     dunes = {r.run_name: dune_end_change(r.run_dir, r.period) for r in runs.itertuples()}
     models = {r.run_name: model_end_change(r.run_dir) for r in runs.itertuples()}
 
+    # One y range per panel type, across every run and observation
     POSITION_YLIM = _sym([cs[p][1] for p in periods]
                          + [rates(r.run_dir).change_rate_m_yr * YEARS for r in runs.itertuples()])
     ENDS_YLIM = _sym([cs[p][0] for p in periods] + list(dunes.values()) + list(models.values()))
@@ -371,6 +327,7 @@ def main():
         "the start| over every run's end, the CoastSat domain means and the dune-line change, "
         "rounded up to 10 m\n", encoding="utf-8")
 
+    # Per-run figures, then per-scenario figures, per window
     rows, written = [], []
     for period in periods:
         target = common.coastsat_target(period)
@@ -384,6 +341,7 @@ def main():
             written += [pa, pb]
         for preset in PRESETS:
             written.append(fig_scenarios(runs, period, preset, target, cs_smooth))
+    # Scores table and summary
     s = pd.DataFrame(rows).sort_values(["window", "preset", "scenario", "relocations"])
     s.to_csv(OUT / "scores.csv", index=False)
     print(s.drop(columns="run_name").to_string(index=False, float_format=lambda v: f"{v:+.2f}"))

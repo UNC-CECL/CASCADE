@@ -1,22 +1,11 @@
 r"""
-adoption_before_after_figures.py -- figures of the 2026-09-28 adoption, before vs after
-======================================================================================
-Hannah, 2026-09-28: "make figures of the before and after comparison".
+Figures of the 2026-09-28 adoption, before vs after: scorecard, shoreline, overwash, dune crest.
 
-Reads the tables adoption_before_after.py writes (scores_, cells_, crest_
-<side>.csv, crest_lidar_2009.csv) and the runs' own shoreline_change_rate.csv.
-edgeBE only: zeroBE is within 0.1 of it on every score (README beside the tables).
-The relocation arms are left out: in both windows they score the same as their
-non-relocation twins.
+    python adoption_before_after_figures.py
 
-    adoption_scorecard.png                     every score, before -> after, per scenario
-    adoption_shoreline_alongshore              model LRR vs CoastSat LOWESS-7, managed + natural
-    adoption_overwash_map_<scenario>           image x domain: hit / miss / false alarm
-    adoption_overwash_by_image                 domains overwashed per image, grouped bars
-    adoption_dune_crest_2010                   1996-2010 runs' 2010 crest vs the 2009 lidar
-
-WHERE: output/comparisons/adoption_2026-09-28/figures/
-======================================================================================
+Reads the tables adoption_before_after.py writes and each run's
+shoreline_change_rate.csv; writes output/comparisons/adoption_2026-09-28/figures/.
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -42,6 +31,7 @@ from site_layer.hat_figure_style import (C, C_1997, INK_MUTED, DOMAIN_AXIS_LABEL
                                          figsize, _title, open_frame, town_bands, caption, save)
 import adoption_before_after as AB  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TABLES = AB.OUT
 FIG_DIR = TABLES / "figures"
 PRESET = "edgeBE"
@@ -58,12 +48,31 @@ SCENARIOS = {  # run-name core -> label, in plot order
     "noroad_nobdm": "natural",
 }
 WLABEL = {"1996_2010": "1996–2010", "2010_2024": "2010–2024"}
+PAIR = ("full management", "natural")           # the two scenarios drawn side by side
+METRICS = [("rmse_interior_m_yr", "Shoreline RMSE", "m/yr  ·  lower is better", "{:.2f}"),
+           ("bias_interior_m_yr", "Shoreline bias", "m/yr  ·  0 is best", "{:+.2f}"),
+           ("PSS", "Overwash skill", "POD − POFD  ·  higher is better", "{:.2f}"),
+           ("POD", "Overwash hit rate", "POD  ·  higher is better", "{:.2f}"),
+           ("POFD", "Overwash false-alarm rate", "POFD  ·  lower is better", "{:.2f}"),
+           ("crest_end_median_m", "Dune crest at end of run", "median, m above MHW", "{:.1f}")]
+GAP = 1.1   # blank rows between the two window groups
+OUTCOMES = [  # code, label, colour
+    (1, "hit: observed and modelled", C["REF"]),
+    (2, "miss: observed, not modelled", C_1997),
+    (3, "false alarm: modelled, not observed", C["ADDED"]),
+    (4, "neither", "0.93"),
+]
+BDM_CAP_M = 4.0   # cascade/beach_dune_manager.py:612, m above the berm
+C_1997_FILL = C["LATE_FILL"]
+# -----------------------------------------------------------------------------
 
 
+# The scenario part of a run name
 def core(run):
     return run.split("offsetmetres_", 1)[1].rsplit("_nogroin", 1)[0]
 
 
+# One table kind for both sides, edgeBE and the plotted scenarios only
 def load(kind):
     frames = []
     for side in SIDES:
@@ -76,11 +85,13 @@ def load(kind):
     return d[d.core.isin(SCENARIOS)]
 
 
+# The rows of one scenario in one window
 def run_of(d, window, label):
     cores = [k for k, v in SCENARIOS.items() if v == label]
     return d[(d.window == window) & d.core.isin(cores)]
 
 
+# Shared legend: before/after, plus any extra handles
 def side_legend(fig, extra=(), points=False, ncol=None):
     h = [Line2D([], [], color=c, lw=0 if points else 1.6, marker="o" if points else None, ms=5, label=l)
          for l, c in SIDES.values()]
@@ -88,17 +99,7 @@ def side_legend(fig, extra=(), points=False, ncol=None):
                loc="outside lower center", ncol=ncol or len(h) + len(extra), frameon=False)
 
 
-# --- 1. scorecard -----------------------------------------------------------------
-
-METRICS = [("rmse_interior_m_yr", "Shoreline RMSE", "m/yr  ·  lower is better", "{:.2f}"),
-           ("bias_interior_m_yr", "Shoreline bias", "m/yr  ·  0 is best", "{:+.2f}"),
-           ("PSS", "Overwash skill", "POD − POFD  ·  higher is better", "{:.2f}"),
-           ("POD", "Overwash hit rate", "POD  ·  higher is better", "{:.2f}"),
-           ("POFD", "Overwash false-alarm rate", "POFD  ·  lower is better", "{:.2f}"),
-           ("crest_end_median_m", "Dune crest at end of run", "median, m above MHW", "{:.1f}")]
-GAP = 1.1   # blank rows between the two window groups
-
-
+# (1) Every score, before -> after, per scenario
 def scorecard():
     d = load("scores")
     rows = []
@@ -170,11 +171,7 @@ def scorecard():
     save(fig, FIG_DIR / "adoption_scorecard.png", close=True)
 
 
-# --- 2. shoreline alongshore --------------------------------------------------------
-
-PAIR = ("full management", "natural")
-
-
+# GIS 1-90 axis with village bands
 def domain_axis(ax, xlabel=True):
     ax.set_xlim(0.5, 90.5)
     ax.set_xticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
@@ -184,6 +181,7 @@ def domain_axis(ax, xlabel=True):
         ax.set_xlabel(DOMAIN_AXIS_LABEL)
 
 
+# (2) Model LRR vs the CoastSat target, managed and natural
 def shoreline_alongshore():
     d = load("scores")
     fig, axes = plt.subplots(4, 1, figsize=figsize("double", height=9.2), sharex=True,
@@ -219,16 +217,7 @@ def shoreline_alongshore():
     save(fig, FIG_DIR / "adoption_shoreline_alongshore.png", close=True)
 
 
-# --- 3. overwash maps ---------------------------------------------------------------
-
-OUTCOMES = [  # code, label, colour
-    (1, "hit: observed and modelled", C["REF"]),
-    (2, "miss: observed, not modelled", C_1997),
-    (3, "false alarm: modelled, not observed", C["ADDED"]),
-    (4, "neither", "0.93"),
-]
-
-
+# Image x domain grid of hit / miss / false alarm / neither
 def outcome_grid(sub):
     sub = sub.copy()
     sub["model"] = sub.model_m3_per_m > 0
@@ -238,6 +227,7 @@ def outcome_grid(sub):
     return g.reindex(columns=range(1, 91)).sort_index()
 
 
+# (3) The outcome grid for one scenario, both windows and sides
 def overwash_map(label):
     from matplotlib.colors import ListedColormap, BoundaryNorm
     d = load("cells").dropna(subset=["observed"])
@@ -282,8 +272,7 @@ def overwash_map(label):
     save(fig, FIG_DIR / f"adoption_overwash_map_{label.replace(' ', '_')}.png", close=True)
 
 
-# --- 4. overwash by image -----------------------------------------------------------
-
+# (4) Domains overwashed per image: observed, before, after
 def overwash_by_image():
     d = load("cells").dropna(subset=["observed"])
     d["model"] = (d.model_m3_per_m > 0).astype(int)
@@ -325,11 +314,7 @@ def overwash_by_image():
     save(fig, FIG_DIR / "adoption_overwash_by_image.png", close=True)
 
 
-# --- 5. dune crest ------------------------------------------------------------------
-
-BDM_CAP_M = 4.0   # cascade/beach_dune_manager.py:612, m above the berm
-
-
+# (5) The 1996-2010 runs' 2010 crest against the 2009 lidar
 def dune_crest():
     d = load("crest")
     lid = pd.read_csv(TABLES / "crest_lidar_2009.csv").set_index("gis").crest_2009_lidar_m_mhw
@@ -368,9 +353,7 @@ def dune_crest():
     save(fig, FIG_DIR / "adoption_dune_crest_2010.png", close=True)
 
 
-C_1997_FILL = C["LATE_FILL"]
-
-
+# Run: clear retired figures, then draw all five
 def main():
     apply_style()
     for old in ("adoption_overwash_by_domain",):

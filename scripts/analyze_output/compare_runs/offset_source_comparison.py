@@ -1,49 +1,11 @@
 """
-==============================================================================
-offset_source_comparison.py -- how much does the island offset's source
-(dune line or CoastSat shoreline) change what the model does?
-==============================================================================
-Asked by Hannah on 2026-09-28: a simple comparison of the model output started
-from the dune-line offset against the model output started from the shoreline
-offset, for 1996-2010 and 2010-2024. The main question is how much the island's
-ORIENTATION in the offset affects the outcome.
+How much does the island offset's source (dune line or CoastSat shoreline) change what the model does?
 
-RUNS  (no new runs; the full-management pair of each period from)
-    output/raw_runs/experiments/island-offset/
-        2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a/runs/
-            {duneline,shoreline}_full_management/<period>/zeroBE/<run>/
-    option A waves, zeroBE ends, relocations and groins off. The only thing
-    that differs within a pair is the island offset.
-
-OFFSETS  2-brie-offset/<start>/{duneline,shoreline}/<version>/*_unpadded.csv,
-    at the version each run's metadata records. BRIE adds the offset to x_s,
-    so larger = more LANDWARD; everything below uses the SEAWARD position
-    s = -offset, with the mean removed (a uniform shift does not change what
-    BRIE does, and the builds are not on a common datum).
-
-QUANTITIES  per GIS domain (500 m), shoreline start minus dune-line start
-    orientation   theta = atan(ds/dx), degrees
-    turning       d(theta)/dx, degrees per km; positive where the line
-                  bends landward (an embayment), negative at a bulge
-    model change  each run's LRR x 14 yr (m, seaward positive)
-    Statistics on the interior, GIS 2-89.
-
-OUTPUT   output/comparisons/offset_source/
-    offset_source_model_change_full_management.png  the two runs, both periods
-    offset_source_model_change_vs_projected_full_management.png
-                    the same, with the projected target on top (2026-09-29)
-    offset_source_difference_full_management.png   profiles
-    offset_source_orientation_vs_model_full_management.png   scatter
-    tables/summary.csv, tables/per_domain.csv, tables/vs_projected.csv
-
-TARGET  (second version of the change figure, Hannah 2026-09-29) projected
-    shoreline change: the CoastSat LRR fitted on 1996-2024, LOWESS over 7
-    domains (southern 10 raw), x 14 yr -- one profile, the same in both
-    periods. The model stays unsmoothed.
-
-USAGE
     python scripts/analyze_output/compare_runs/offset_source_comparison.py
-==============================================================================
+
+Reads the full-management pairs of the 2026-09-28 option-A offset study and
+their offsets; writes figures and tables to output/comparisons/offset_source/.
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -75,6 +37,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 from site_layer.hat_topo_version import offset_file  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 STUDY = (_REPO / "output" / "raw_runs" / "experiments" / "island-offset"
          / "2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a")
 OUT = COMPARISONS_ROOT / "offset_source"
@@ -86,42 +49,10 @@ YEARS = 14
 INTERIOR = (2, 89)
 LOWESS_DOMAINS = 7         # the group's smoothing range
 SKIP_SOUTHERN = 10
+# -----------------------------------------------------------------------------
 
 
-def projected_target():
-    """Projected shoreline change (m): the 1996-2024 CoastSat LRR target, built
-    as the runner builds it at LOWESS_DOMAINS, x YEARS."""
-    from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
-    from site_layer.hatteras_site_config import HATTERAS_DOMAINS
-    from cascade_pipeline.hindcast import build_target_table
-    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
-                                                 build_coastsat_series)
-    ds = CoastSatDataset(label="CoastSat LRR (1996-2024)", period_start=1996,
-                         csv_path=str(COASTSAT_LRR_ROOT / "1996_2024" / "transect_lrr_full.csv"))
-    cfg = LowessConfig(window_domains=(LOWESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
-    cs = build_coastsat_series([ds], active_period_start=1996, lowess_config=cfg,
-                               domains=HATTERAS_DOMAINS)[0]
-    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOWESS_DOMAINS).set_index(
-        "gis_domain")["target_lrr_m_yr"] * YEARS
-
-
-def vs_target(t, obs):
-    """Each run against the projected target, interior GIS 2-89: bias and RMS
-    residual are the numbers to read; explained and r beside them."""
-    rows = []
-    for start, end in PERIODS:
-        p = t[t.period == f"{start}_{end}"].set_index("gis_domain").loc[INTERIOR[0]:INTERIOR[1]]
-        o = obs.reindex(p.index)
-        for src in SOURCES:
-            m = p[f"model_change_{src}_m"]
-            res = m - o
-            rows.append(dict(period=f"{start}-{end}", offset=src, bias_m=res.mean(),
-                             rms_residual_m=np.sqrt((res ** 2).mean()),
-                             variance_explained=1 - (res ** 2).sum() / ((o - o.mean()) ** 2).sum(),
-                             r=np.corrcoef(m, o)[0, 1]))
-    return pd.DataFrame(rows)
-
-
+# The one run folder of a source and period
 def run_dir(src, start, end):
     root = STUDY / "runs" / f"{src}_full_management" / f"{start}_{end}" / "zeroBE"
     hits = [d for d in root.glob("*") if d.is_dir()]
@@ -130,6 +61,7 @@ def run_dir(src, start, end):
     return hits[0]
 
 
+# The offset version a run's metadata records; refuse a mis-filed run
 def offset_version(d, src):
     md = json.loads(next(d.glob("*_run_metadata.json")).read_text(encoding="utf-8"))
     got = str(md["identity"]["island_offset_version"])       # e.g. "shoreline/v1"
@@ -138,6 +70,7 @@ def offset_version(d, src):
     return got.split("/", 1)[1]
 
 
+# Seaward position (-offset) per domain, mean removed
 def seaward(src, start, version):
     t = pd.read_csv(offset_file(start, "unpadded", version=version, source=src))
     s = -t.set_index(t.columns[0])[t.columns[1]].astype(float)
@@ -145,12 +78,14 @@ def seaward(src, start, version):
     return s - s.mean()
 
 
+# Orientation (degrees) and turning (degrees per km) of a seaward line
 def orientation(s):
     theta = np.degrees(np.arctan(np.gradient(s.to_numpy(), DX_M)))
     turning = np.gradient(theta, DX_M / 1000.0)
     return pd.Series(theta, s.index), pd.Series(turning, s.index)
 
 
+# Per-domain table and per-period summary for both sources
 def build():
     per, rows = [], []
     for start, end in PERIODS:
@@ -193,6 +128,39 @@ def build():
     return pd.concat(per, ignore_index=True), pd.DataFrame(rows)
 
 
+# Projected change (m): the 1996-2024 CoastSat LRR target x YEARS, built as the runner builds it
+def projected_target():
+    from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS
+    from cascade_pipeline.hindcast import build_target_table
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
+                                                 build_coastsat_series)
+    ds = CoastSatDataset(label="CoastSat LRR (1996-2024)", period_start=1996,
+                         csv_path=str(COASTSAT_LRR_ROOT / "1996_2024" / "transect_lrr_full.csv"))
+    cfg = LowessConfig(window_domains=(LOWESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
+    cs = build_coastsat_series([ds], active_period_start=1996, lowess_config=cfg,
+                               domains=HATTERAS_DOMAINS)[0]
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOWESS_DOMAINS).set_index(
+        "gis_domain")["target_lrr_m_yr"] * YEARS
+
+
+# Each run against the projected target, interior: bias, RMS residual, explained, r
+def vs_target(t, obs):
+    rows = []
+    for start, end in PERIODS:
+        p = t[t.period == f"{start}_{end}"].set_index("gis_domain").loc[INTERIOR[0]:INTERIOR[1]]
+        o = obs.reindex(p.index)
+        for src in SOURCES:
+            m = p[f"model_change_{src}_m"]
+            res = m - o
+            rows.append(dict(period=f"{start}-{end}", offset=src, bias_m=res.mean(),
+                             rms_residual_m=np.sqrt((res ** 2).mean()),
+                             variance_explained=1 - (res ** 2).sum() / ((o - o.mean()) ** 2).sum(),
+                             r=np.corrcoef(m, o)[0, 1]))
+    return pd.DataFrame(rows)
+
+
+# Caption text shared by every figure
 COMMON = (" Full management, option A waves (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle "
           "0.5), no source/sink correction at the ends (zeroBE), relocations and groins off; "
           "within each period the two runs differ ONLY in the island offset (dune-line or "
@@ -203,6 +171,7 @@ COMMON = (" Full management, option A waves (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, 
           "waves-option-a. Statistics in tables/summary.csv, interior GIS 2-89.")
 
 
+# Profiles: the two runs' change, orientation difference, change difference
 def fig_profiles(t):
     f, axes = plt.subplots(3, 2, figsize=figsize("double", height=6.6), sharex=True,
                            sharey="row", constrained_layout=True)
@@ -243,16 +212,9 @@ def fig_profiles(t):
     return png
 
 
+# The two runs' change on their own; with `obs`, the projected target on top
 def fig_change_only(t, obs=None, scores=None):
-    """Panels (a, b) of the profile figure on their own: the two runs' change.
-    With `obs`, the second version: the projected target drawn on top of them.
-    Every label stays out of the data (Hannah, 2026-09-28): the villages and
-    shoals are named in a strip above the highest line, and the groin and
-    piers are drawn below that strip and named in the legend, not on the lines."""
-    # Draw order, bottom to top: village and shoal bands (0-0.5), grid (below
-    # everything, set_axisbelow), zero line (2), groin and piers (3), the two
-    # runs (4), labels (7). The structure lines stop at DATA_TOP, under the
-    # label strip, and the grid has no ticks inside it.
+    # Labels sit in a strip above the data; structure lines stop below it (README)
     DATA_TOP = 0.78       # axes fraction the highest line may reach
     f, axes = plt.subplots(1, 2, figsize=figsize("double", height=3.1), sharey=True,
                            constrained_layout=True)
@@ -331,6 +293,7 @@ def fig_change_only(t, obs=None, scores=None):
     return png
 
 
+# Change difference against orientation and turning difference, per domain
 def fig_scatter(t, summary):
     f, axes = plt.subplots(2, 2, figsize=figsize("double", height=5.4), sharey=True,
                            sharex="col", constrained_layout=True)
@@ -375,6 +338,7 @@ def fig_scatter(t, summary):
     return png
 
 
+# Run: build the tables, score against the target, draw four figures
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     apply_style()

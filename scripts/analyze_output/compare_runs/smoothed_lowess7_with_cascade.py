@@ -1,59 +1,11 @@
 """
-smoothed_lowess7_with_cascade.py
-==============================================================================
-The two smoothed halves-overlay sheets with the CASCADE hindcast drawn over
-them in dark green, so the model's alongshore behaviour can be read against
-both candidate targets at the scale the model resolves. Built 2026-09-22
-(Hannah, by interview).
+The two smoothed halves-overlay sheets with the zeroBE CASCADE hindcast drawn over them.
 
-It is the observations-only pair in
-`5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7/` plus one line.
-Everything about the two observed curves -- the 7-domain LOWESS, the GIS 1-10
-raw splice, both sides smoothed at transect resolution, the faint raw domain
-means behind them -- is imported from that script rather than re-implemented,
-so the sheets differ in exactly one thing: the green line.
+    python scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py [--window 7]
 
-WHY THIS LIVES IN output/ AND NOT BESIDE ITS TWIN (Hannah, 2026-09-22).
-`data/hatteras_init/5-scr/4-comparisons/` is observations only; a figure
-carrying model output is a product, and ORGANIZATION.md rule 1 puts products
-in `output/`. `target_comparison/` already holds exactly this kind of figure
--- both candidate targets with the hindcast over them -- so this is its
-smoothed, two-panel sibling.
-
-THE RUN: zeroBE, full management, groin off, one per period
-    1996-2010  HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin
-    2010-2024  HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin
-
-    zeroBE and not the headline edgeBE matrix run (Hannah's choice): edgeBE
-    has its two END domains SOLVED against the CoastSat target, so at GIS 1
-    and 90 the model would be partly fitted to one of the two things it is
-    being compared against. zeroBE carries NO source/sink term in any domain,
-    so all 90 are the model's own response and NEITHER target was fitted
-    anywhere in it. The run name is checked for `zeroBE` before drawing; a
-    caption that said "nothing was fitted" over a solved run would be a lie.
-
-THE MODEL LINE
-    net change in metres over the window = the run's own endpoint rate
-    (`change_rate_m_yr`) x 14 yr, the same conversion target_comparison uses.
-
-    It is smoothed at the SAME 7-domain window as the two observed curves,
-    because a raw model line against two smoothed targets would make the gap
-    between them partly an artefact of the treatment. One asymmetry remains
-    and is stated rather than hidden: the observed sides are smoothed at
-    TRANSECT resolution (~10 CoastSat and 5 dune transects per domain) while
-    the model exists only per domain, so its LOWESS runs over 90 points rather
-    than ~900. At a 3.5 km window the fitted curve barely notices the
-    difference in density, but it is not literally the same operation.
-
-OUTPUT   output/comparisons/target_comparison/smoothed_lowess7_with_cascade/
-    lowess7_projected_vs_duneline_with_cascade_1996_2010_2024.png
-    lowess7_total_change_vs_duneline_with_cascade_1996_2010_2024.png
-    domain_values.csv, runs_used.csv, PROVENANCE.md, README.md, supporting/
-
-USAGE
-    python scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py
-    python ... --window 7
-==============================================================================
+Imports the observed curves from 5-scr's smoothed_lowess7_vs_duneline.py and
+adds the model line; writes output/comparisons/target_comparison/smoothed_lowess7_with_cascade/.
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -94,20 +46,17 @@ from site_layer.hat_figure_style import (  # noqa: E402
     support_dir,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = COMPARISONS_ROOT / "target_comparison" / "smoothed_lowess7_with_cascade"
-# Dark green: distinct from the blue/red sign fill, the black dune line and
-# the grey raw dots, and it reads on both a screen and a greyscale print.
+# Dark green: distinct from the sign fill, the dune line and the raw dots, in greyscale too
 C_MODEL = "#1b6b3a"
 LW_MODEL = 1.5
 HALVES = sl7.HALVES
+# -----------------------------------------------------------------------------
 
 
+# The zeroBE run's net change in metres, raw and smoothed like the observations
 def model_series(window, years, lowess_window):
-    """The run's net change in metres, raw and smoothed, plus its provenance.
-
-    Smoothed at the same width as the observed curves; see the module
-    docstring for the resolution asymmetry that remains.
-    """
     spec = tc.UNSOLVED_RUNS[window]
     df, row = rw.load_model(window, spec, "coastsat", preset=tc.UNSOLVED_PRESET)
     if df is None:
@@ -125,6 +74,16 @@ def model_series(window, years, lowess_window):
     return d, sm.reindex(idx), row
 
 
+# Interior mean of model minus target
+def _bias(model, target):
+    lo, hi = rw.INTERIOR
+    m = model.loc[lo:hi].to_numpy(float)
+    t = target.loc[lo:hi].to_numpy(float)
+    ok = np.isfinite(m) & np.isfinite(t)
+    return float((m[ok] - t[ok]).mean())
+
+
+# One sheet: both halves, the observed pair from sl7 plus the model line
 def figure(product, stem, what, data, models, lowess_window, out_dir):
     half, tick = tcd.Y_HALF_M, tcd.Y_TICK_M
     km = lowess_window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0
@@ -197,14 +156,7 @@ def figure(product, stem, what, data, models, lowess_window, out_dir):
     return written, rows
 
 
-def _bias(model, target):
-    lo, hi = rw.INTERIOR
-    m = model.loc[lo:hi].to_numpy(float)
-    t = target.loc[lo:hi].to_numpy(float)
-    ok = np.isfinite(m) & np.isfinite(t)
-    return float((m[ok] - t[ok]).mean())
-
-
+# Run: model series, one sheet per shoreline reading, tables and PROVENANCE.md
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--window", type=int, default=sl7.WINDOW,
@@ -213,6 +165,7 @@ def main(argv=None) -> int:
     apply_style()
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
 
+    # The model line for each half, and which runs it came from
     models, prov = {}, []
     for w in HALVES:
         raw, sm, row = model_series(w, float(w[1] - w[0]), a.window)
@@ -220,6 +173,7 @@ def main(argv=None) -> int:
         prov.append(row)
     pd.DataFrame(prov).to_csv(OUT_ROOT / "runs_used.csv", index=False)
 
+    # Both sheets, with every plotted value kept
     written, long, summary = [], [], []
     for product, stem, what in sl7.SHEETS:
         data = sl7.build(product, a.window)
@@ -245,6 +199,7 @@ def main(argv=None) -> int:
     summ = pd.DataFrame(summary)
     summ.to_csv(support_dir(OUT_ROOT) / "island_summary.csv", index=False)
 
+    # PROVENANCE.md with the interior means
     tbl = ["| shoreline reading | window | model − shoreline (m) | model − dune line (m) |",
            "|" + "---|" * 4]
     for _, x in summ.iterrows():
