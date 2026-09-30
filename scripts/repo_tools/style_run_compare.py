@@ -177,6 +177,15 @@ def compare(root: Path, label_dir: Path, rb: dict, ra: dict) -> list[str]:
     return problems
 
 
+# Remove the folders the before side's files left empty, so the after side finds none (a run guard counts them)
+def prune_empty_dirs(root: Path, created) -> None:
+    dirs = {(root / rel).parent for rel in created}
+    for d in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
+        while d != root and d.is_dir() and not any(d.iterdir()):
+            d.rmdir()
+            d = d.parent
+
+
 # Run: install both script versions, then run and compare every spec entry
 def main() -> None:
     ap = argparse.ArgumentParser(description="Compare script outputs before and after a restyle.")
@@ -208,6 +217,7 @@ def main() -> None:
         rb = run_side(a.root, spec, "before", d / "before")
         for rel in rb["created"]:               # so the after side writes them fresh, not over them
             (a.root / rel).unlink(missing_ok=True)
+        prune_empty_dirs(a.root, rb["created"])
         ra = run_side(a.root, spec, "after", d / "after")
         problems = compare(a.root, d, rb, ra)
         status = "SAME" if not problems else "DIFFERS"
