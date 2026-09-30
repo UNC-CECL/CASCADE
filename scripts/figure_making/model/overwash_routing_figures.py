@@ -78,6 +78,8 @@ def interior_rows(s):
     return s["elevation"].shape[1]
 
 
+# Figures
+
 # Plan extent with the dune row at x = 0, landward positive (ocean drawn at the right)
 def extent(nrows, ncols):
     return (-0.5 * CELL_M, (nrows - 0.5) * CELL_M, 0, ncols * CELL_M)

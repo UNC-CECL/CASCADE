@@ -157,6 +157,8 @@ def verify():
     return lines
 
 
+# Figures
+
 # The construction chain on the worked Edouard/Fran stretch
 def fig_steps():
     lo, hi = EXAMPLE

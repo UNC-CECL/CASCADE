@@ -47,6 +47,8 @@ _FIG_REPO = next(_p for _p in _Path(__file__).resolve().parents
 _RAW_RUNS = _FIG_REPO / "output" / "raw_runs"
 
 
+# Section 1: configure paths and labels
+
 # Output folder, under 3-model-inputs/4-management/
 from site_layer import hat_figure_style as _hs  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
@@ -83,6 +85,7 @@ ENABLE_BN = False   # ← change to True for 2004–2024
 # -----------------------------------------------------------------------------
 
 
+# Section 2: domain constants (match your Hatteras CASCADE setup exactly)
 NUM_REAL_DOMAINS   = 90
 NUM_BUFFER_DOMAINS = 15
 FIRST_FILE_NUMBER  = 1
@@ -102,6 +105,7 @@ MAKE_YEARLY_GIF      = True
 GIF_DURATION_SECONDS = 4
 
 
+# Section 3: historical BN schedule (Period 2 only)
 _CY_TO_M3 = 0.764555
 
 HAT_BN_YEARS = [2014, 2022]
@@ -130,6 +134,8 @@ HAT_BN_VOLUME_BY_DOMAIN = {
     88: [round(1_620_000 / 4 * _CY_TO_M3, 1), 0],
 }
 
+
+# Section 4: styling
 
 # Add or change colors here — keys must match RUN_PATHS keys exactly.
 SCENARIO_COLORS = {
@@ -254,6 +260,7 @@ def load_coastsat():
         return None, None
 
 
+# Annotation helpers
 ANN_COMMUNITY_SPANS = [
     (_gis_to_pad(1),  _gis_to_pad(6),  "Cape Point"),
     (_gis_to_pad(7),  _gis_to_pad(8),  "Buxton"),

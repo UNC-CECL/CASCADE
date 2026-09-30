@@ -99,6 +99,7 @@ OUTPUT_DIR = str(COMPARISONS_ROOT / "smoothing_vs_cascade" / "1984_2004")
 
 # CASCADE runs to overlay: one dict(label, period, csv) each (README); [] to skip
 
+# CASCADE model output config
 CASCADE_OUTPUT_BASE = str(PROJECT_BASE_DIR / "output" / "raw_runs")
 
 
@@ -164,6 +165,8 @@ C_CS_2004 = "#833C00"   # dark brown — 2004–2024
 
 # Smoothing-window colours, cool to warm = narrow to wide
 C_WINDOWS = ["#0097a7", "#e6a817", "#c0392b"]   # teal, amber, crimson
+
+# Data loading
 
 # CoastSat domain LRR for one period, or None if the file is missing
 def load_coastsat(path, domain_col, lrr_col, std_col, period_label):
@@ -232,6 +235,8 @@ def add_smoothed_columns(df, frac=LOWESS_FRAC):
 def domains_to_frac(n_domains):
     return n_domains / (DOMAIN_MAX - DOMAIN_MIN + 1)
 
+
+# Shared axis helpers
 
 # Geographic reference layers: shoals, spans, village lines, piers, groins
 def add_annotations(ax):
@@ -456,6 +461,8 @@ def plot_combined_periods(cs_1984, cs_2004, out_path):
     plt.close()
     print(f"  Saved: {os.path.basename(out_path)}")
 
+
+# Figure 4 — smoothing sensitivity (frac comparison)
 
 # Figure 4: one panel per LOWESS window, for one period
 def plot_smoothing_sensitivity(df, period_label, out_path,

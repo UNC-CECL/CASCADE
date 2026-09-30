@@ -54,6 +54,8 @@ LRR_WINDOWS = ((1984, 2004), (2004, 2024), (1996, 2024), (1996, 2010), (2010, 20
 # -----------------------------------------------------------------------------
 
 
+# The targets, at an arbitrary window
+
 # Per-transect along-coast distance (m): each domain's transects spread evenly over its 500 m
 def _along(df, domain_col, order_col):
     df = df.sort_values([domain_col, order_col]).reset_index(drop=True)

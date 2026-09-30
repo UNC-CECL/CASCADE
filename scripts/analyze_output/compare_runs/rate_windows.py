@@ -162,6 +162,8 @@ def _smooth_of(model_set):
     return model_set.split("-", 1)[1] if model_set.startswith("dune-") else None
 
 
+# The runs
+
 # window -> (run, arm) from the dune solve's solved.csv
 def dune_solved_runs(smooth):
     table = pd.read_csv(DUNE_SOLVE_DIR / "solved.csv")
@@ -225,6 +227,8 @@ def load_models(model_set):
     loaded = [load_model(w, runs[w], model_set) for w in WINDOWS]
     return [m for m, _ in loaded], [r for _, r in loaded]
 
+
+# The observations
 
 # A LOWESS target table as a GIS 1-90 frame
 def _target_frame(series):
@@ -398,6 +402,8 @@ def skill(obs_series, mdf, col):
     return float(r.mean()), float(np.sqrt((r ** 2).mean())), int(len(r))
 
 
+# Drawing
+
 # The model line
 def draw_model(ax, df, col, ls="-", scale=1.0):
     ax.plot(df["domain_number"], df[col] * scale, color=C_MODEL, lw=1.3, ls=ls, zorder=8)
@@ -479,6 +485,8 @@ def _ends_clause(model_set):
             f"{DUNE_SOLVE_DIR.relative_to(RAW_RUNS).as_posix()}) instead of CoastSat")
 
 
+# Legends
+
 # The model estimator in legend words
 def _estimator_label(variant):
     if variant in NET_CHANGE_VARIANTS:
@@ -533,6 +541,8 @@ def add_legend(fig, variant, model_keys):
     fig.legend(handles, labels, loc="outside lower center", ncol=1, frameon=False,
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
 
+
+# Captions
 
 # Caption clause with each window's dune-line vintages, dates and interval
 def _dates_clause(metas):
@@ -685,6 +695,8 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
                  "plus 1 m rounded up, so the panels are directly comparable.")
     return head + body
 
+
+# Figures
 
 # The sensitivity arm as a filename token, '' for the main level
 def _stem_tag(root):

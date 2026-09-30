@@ -39,6 +39,8 @@ _FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
                  if (_p / "pyproject.toml").exists())
 
 
+# Section 1: domain configuration (matches HAT_hindcast_1984_2024_old version.py)
+
 # --- CONFIG ------------------------------------------------------------------
 NUM_REAL_DOMAINS   = 90
 NUM_BUFFER_DOMAINS = 15
@@ -74,6 +76,7 @@ def _pad_to_gis(pad_idx):
     return None
 
 
+# Section 2: file paths
 PROJECT_BASE_DIR  = str(_FIG_REPO)
 OUTPUT_BASE_DIR   = os.path.join(PROJECT_BASE_DIR, "scripts", "figure_making", "position_plot", "comparison")
 COASTSAT_BASE_DIR = os.path.join(
@@ -113,6 +116,8 @@ COASTSAT_DATASETS = [
 os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
 
 
+# Section 3: plot parameters
+
 # ← Flip to 1984 or 2004 to match the period(s) in NPZ_PATHS_BY_LABEL
 START_YEAR = 2004
 END_YEAR   = 2024
@@ -144,6 +149,7 @@ DOMAIN_TICK_STEP      = 5
 
 # Matches Section 6b of HAT_hindcast_1984_2024_old version.py exactly
 
+# Section 4: beach nourishment display arrays
 _CY_TO_M3 = 0.764555
 
 HAT_BN_YEARS = [2014, 2022]
@@ -173,6 +179,8 @@ HAT_BN_VOLUME_BY_DOMAIN = {
 }
 
 
+# Section 5: colour palette (matches run script exactly)
+
 # Model line
 ANN_MODEL_COLOR = "#FF8C00"   # warm orange
 
@@ -193,6 +201,7 @@ CS_WINDOW_COLOR_DEFAULT = "#4A7C8E"
 CS_RAW_COLOR = "#5BA3C9"   # individual transect scatter
 
 
+# Section 6: geographic annotation data (matches run script exactly)
 ANN_TOWN_SPANS    = {
     "Buxton":      (7,  8),
     "Avon":        (21, 31),
@@ -335,6 +344,8 @@ def _bn_group_labels(active_gis, bn_real):
     return result
 
 
+# CoastSat LOWESS pipeline (copied from HAT_hindcast_1984_2024_old version.py)
+
 # Median spacing between consecutive transects in metres (positive diffs only)
 def estimate_transect_spacing(along_coast_m):
     arr   = np.sort(along_coast_m)
@@ -455,6 +466,8 @@ def load_all_coastsat(active_start_year):
     return cs_series
 
 
+# Geographic annotation functions (matches run script exactly)
+
 # Add all geographic reference annotations to an axis
 def add_geographic_annotations(ax):
     trans = blended_transform_factory(ax.transData, ax.transAxes)
@@ -511,6 +524,8 @@ def annotation_legend_handles():
         Line2D([0], [0], color=ANN_C_GROIN, lw=1.1, ls=":", label="Groin"),
     ]
 
+
+# Yearly relative shoreline change + BN bar (GIF)
 
 # One PNG per year
 def plot_yearly_relative_shoreline_and_bn(
@@ -663,6 +678,8 @@ def plot_yearly_relative_shoreline_and_bn(
         _save_gif(png_files, output_dir, filename_prefix, gif_duration_seconds)
     return png_files
 
+
+# Yearly absolute shoreline position + BN bar (GIF)
 
 # One PNG per year
 def plot_yearly_absolute_shoreline_and_bn(

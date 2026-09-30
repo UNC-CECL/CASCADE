@@ -151,6 +151,8 @@ def load_qow_matrix(npz_path):
     return years, Q, gis_ids
 
 
+# Observation loader
+
 # (observed matrix aligned to model years, observed years, domain ids)
 def load_obs_matrix(xlsx_path, years_model):
     df = pd.read_excel(xlsx_path, sheet_name='Overwash_Matrix', skiprows=3, header=0)
@@ -175,6 +177,8 @@ def load_obs_matrix(xlsx_path, years_model):
             obs_years.append(yr)
     return mat, np.array(obs_years), domain_ints
 
+
+# Shared helpers
 
 # Vertical section boundaries on a heatmap
 def draw_section_dividers(ax, domain_ids, color='white', lw=1.2, zorder=3):
@@ -201,6 +205,8 @@ def draw_section_bar(axb, domain_ids):
                  fontsize=6 if sec_name=="Buxton" else (6.2 if '\n' in sec_name else 7),
                  rotation=90 if sec_name=="Buxton" else 0, **kw)
 
+
+# Figure 1 — stacked dual-panel
 
 # Figure 1: model Qow above, observed overwash below, shared domain axis
 def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
@@ -351,6 +357,8 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     print(f"Saved: {out}")
     plt.show()
 
+
+# Figure 2 — contingency heatmap
 
 # Figure 2: hit / miss / false alarm / correct rejection per image and domain
 def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):

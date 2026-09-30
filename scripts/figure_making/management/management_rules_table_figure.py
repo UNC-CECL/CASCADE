@@ -47,6 +47,8 @@ SPACING = HATTERAS_DOMAINS.domain_spacing_m
 # -----------------------------------------------------------------------------
 
 
+# The rows, built from the config
+
 # A domain range as text
 def _span(first, last):
     return f"D{first}" if first == last else f"D{first}{EN}{last}"
@@ -138,6 +140,8 @@ SECTIONS = [
 ]
 
 
+# Measured wrapping
+
 # width_in(text, size, bold, italic) -> rendered width in inches, from a scratch canvas
 def _measurer(dpi=100):
     fig = plt.figure(figsize=(1, 1), dpi=dpi)
@@ -176,6 +180,8 @@ def wrap(width_in, text, avail, fs, **kw):
         lines.append(line)
     return lines
 
+
+# The table
 
 # Draw one variant ('paper' or 'slide'); returns the saved paths
 def build(variant):

@@ -86,6 +86,8 @@ SECTIONS = [
     ("Pea Island /\nN. Rodanthe",              84,  90, "inter"),
 ]
 POOR_QUALITY_YEARS = {1996}
+
+# Unified colour palette
 # Colours
 CLR_BAR_VILLAGE = '#CABB9E'   # warm linen / sand
 CLR_BAR_INTER   = '#8DAFC2'   # dusty maritime blue
@@ -149,6 +151,8 @@ def load_qow_matrix(npz_path):
     return years, Q, gis_ids
 
 
+# Observation loader
+
 # (observed matrix aligned to model years, observed years, domain ids)
 def load_obs_matrix(xlsx_path, years_model):
     df = pd.read_excel(xlsx_path, sheet_name='Overwash_Matrix', skiprows=3, header=0)
@@ -178,6 +182,8 @@ def load_obs_matrix(xlsx_path, years_model):
     return mat, np.array(obs_years, dtype=int), domain_ints
 
 
+# Shared drawing helpers
+
 # Vertical section boundaries on a heatmap
 def section_dividers(ax, n_domains, zorder=3):
     section_starts = [s[1] - 1 for s in SECTIONS]   # 0-indexed
@@ -205,6 +211,8 @@ def section_bar(axb, n_domains):
             axb.text(mid, 0.38, sec_name,
                      fontsize=6.2 if '\n' in sec_name else 7, **kw)
 
+
+# Figure 1 — stacked dual-panel
 
 # Figure 1: model Qow above, observed overwash below, shared domain axis
 def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
@@ -323,6 +331,8 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     print(f"Saved: {out}")
     plt.show()
 
+
+# Figure 2 — contingency (imagery years only, equal-height rows)
 
 # Figure 2: hit / miss / false alarm / correct rejection per image and domain
 def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
@@ -444,6 +454,8 @@ def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     print(f"Saved: {out}")
     plt.show()
 
+
+# Spatial profile comparison — shared data prep helper
 
 # Per-domain overwash frequency, model and observed, for the spatial figures
 def compute_spatial_data(Q, obs_mat, domain_ints):

@@ -56,6 +56,8 @@ ORDER_START, ORDER_YEARS = 1996, 14
 # -----------------------------------------------------------------------------
 
 
+# Loading
+
 # A matrix run's Cascade object from its .npz
 @functools.lru_cache(maxsize=4)
 def load_run(spec):
@@ -833,6 +835,8 @@ def fig_brie_asymmetry_explained():
     return out
 
 
+# 4. CASCADE: cross-shore vs alongshore
+
 # Invert BRIE's solve year by year to split each domain's change into its parts
 def split_shoreline_change(c):
     br = c.brie
@@ -1075,6 +1079,8 @@ def fig_cascade_coupling_loop():
         "is in UNITS.md at the repository root.")
     return out
 
+
+# 7. the management modules
 
 # (7) What the roadway and beach/dune managers do to the grid
 def fig_management_modules():

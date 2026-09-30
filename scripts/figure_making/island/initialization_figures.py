@@ -104,6 +104,8 @@ def dune_offset_file(year):
     return str(path)
 
 
+# Elevation arrays, one set per topography product
+
 # Compositing is shared with the QC notebook (init_planview); styling is local
 GEOMETRY = DomainGeometry(num_real_domains=NUM_REAL_DOMAINS,
                           num_buffer_domains=NUM_BUFFER_DOMAINS,
@@ -176,6 +178,8 @@ def absolute_canvas(year, include_buffers):
         grids, offset_cells, GEOMETRY, include_buffers, PLAN_VIEW)
     return canvas
 
+
+# The page figure
 
 # One alongshore scale (m per inch) shared by every panel
 _MARGIN_L, _MARGIN_R = 0.82, 0.26           # in

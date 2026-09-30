@@ -65,6 +65,8 @@ DOMAIN_COLORS = {
 # -----------------------------------------------------------------------------
 
 
+# Data loading
+
 # transect id -> CSV path for every CoastSat time series
 def collect_csv_map(root_dir, site_filter=""):
     csv_map = {}
@@ -173,6 +175,8 @@ def compute_domain_stats(df_all):
 
     return domain_year, lrr_stats
 
+
+# Plot
 
 # The square poster figure
 def make_figure(domain_year, lrr_stats, domain_colors, domain_min, domain_max,

@@ -70,6 +70,8 @@ RUN_RATE_COL   = "lrr_m_yr"
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+
+# Section 3: runs to compare
 # Runs to overlay (fields in README); EMPTY: name live runs before running
 RUNS_TO_COMPARE = [
     # dict(
@@ -97,7 +99,11 @@ RUNS_TO_COMPARE = [
     #     run_dir    = r"D:\shared\HAT_2004_2024_L7_Hs2p5",
     # ),
 ]
+
+# Name this analysis (controls the comparison folder + filenames)
 COMPARISON_NAME = "source_sink_zones"   # <-- EDIT THIS to name your comparison folder
+
+# Section 4: CoastSat datasets
 # CoastSat LRR per period; LOWESS at transect resolution, then domain means
 COASTSAT_DATASETS = [
     dict(
@@ -146,6 +152,8 @@ LOWESS_WINDOW_STYLES = [
 ]
 # The width used as the residuals reference
 RESIDUALS_LOWESS_WINDOW = 7
+
+# Section 5: plot options
 # Draw the residuals figure
 PLOT_RESIDUALS = True
 # Draw the two-panel figure (1984-start left, 2004-start right)
@@ -160,6 +168,8 @@ ANN_GROIN_LABEL_Y = 0.65
 # Accretion / erosion label heights (axes fraction); None = automatic
 LABEL_ACCRETION_Y = None   # e.g. 0.80 to pin near the top
 LABEL_EROSION_Y   = None   # e.g. 0.15 to pin near the bottom
+
+# Colour palette reference
 # Colormap for run colours, sampled light -> dark
 RUN_COLORMAP = "YlOrRd"
 # Part of the colormap used: skips near-white and near-black
@@ -441,6 +451,8 @@ def _style_ax(ax, ylabel="Shoreline change rate (m/yr)"):
     ax.spines[["left", "bottom"]].set_linewidth(1.1)
     ax.set_ylabel(ylabel, fontsize=11, fontweight="bold", labelpad=8)
 
+
+# Plotting
 
 # Quick multi-run diagnostic figure
 def plot_diagnostic(run_data, cs_series, active_period, out_path, comparison_name):

@@ -104,6 +104,8 @@ DARK_HALO = [mpl.patheffects.withStroke(linewidth=1.8, foreground="0.15")]
 # -----------------------------------------------------------------------------
 
 
+# Layers
+
 # The domain boxes, island outline and NC-12 lines, in UTM
 def load_layers():
     dom = gpd.read_file(DOMAIN_BOXES).to_crs(CRS)
@@ -200,6 +202,8 @@ def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
             bbox=dict(facecolor="white", alpha=0.8, edgecolor="none", boxstyle="square,pad=0.1"))
 
 
+# Imagery
+
 # Tile mosaic for a UTM window
 def tiles(bounds_utm, zoom, source, t_crs=CRS):
     import contextily as cx
@@ -243,6 +247,8 @@ def credit(ax, text, loc="lower right"):
     ax.text(x, y, text, transform=ax.transAxes, ha=ha, va=va, fontsize=8, color=INK_MUTED,
             zorder=25, bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", boxstyle="square,pad=0.15"))
 
+
+# Shared drawing
 
 # Set an axes to a map window: equal aspect, no ticks
 def map_axes(ax, window):
@@ -467,6 +473,8 @@ def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
     return fig, fig.add_axes([fx, fy, fw, fh])
 
 
+# Figure 1: study area
+
 # The reach on imagery with domains, NC-12, villages and the regional inset
 def fig_study_area(dom, outline, roads, frame, vector):
     window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
@@ -502,6 +510,8 @@ def fig_study_area(dom, outline, roads, frame, vector):
     plt.close(fig)
     return out[0]
 
+
+# Figure 2: domain framework
 
 # Per domain, from the extraction arrays (m NAVD88, -10 water)
 def domain_metrics(product=TOPO_PRODUCT):
@@ -884,6 +894,7 @@ def fig_domain_grid(dom, roads, vector, gis=EXAMPLE_GIS):
     return out[0]
 
 
+# Figure 4: forcing timeline
 from site_layer import hat_env_forcings as _env  # noqa: E402
 STORM_ROOT = _env.HINDCAST_STORMS
 RSLR_RECORD = _env.RSLR_RECORD_FILE
@@ -1118,6 +1129,7 @@ def fig_observed_rates():
     return out[0]
 
 
+# Figure 6: the dune lines, 1984-2023
 DUNE_VINTAGES = (1984, 1997, 2004, 2009, 2023)
 VINTAGE_COLOUR = {1984: C_1984, 1997: "#ef8a62", 2004: "#7f7f7f", 2009: "#67a9cf", 2023: C_1997}
 ZOOMS = {"Buxton": (4, 7), "Avon": (29, 32), "GIS 50–53": (50, 53), "Rodanthe": (82, 85)}   # detail panels
@@ -1330,6 +1342,8 @@ def fig_domain_schematic(gis=EXAMPLE_GIS):
     plt.close(fig)
     return out[0]
 
+
+# Figure 8: management footprint
 
 # True when `half` ("sea" or "sound") is the LOWER half of a domain box on the page
 def half_is_lower(frame, half):
@@ -1641,6 +1655,8 @@ def fig_management_footprint(dom, outline, roads, frame):
     plt.close(fig)
     return out[0]
 
+
+# Figure 9: the reach at 10 m, both products
 
 # Domains lo..hi of one extraction as one (cross-shore, alongshore) mosaic, m NAVD88, water -10, ...
 def reach_mosaic(product, dom, lo, hi, margin_cells=8):

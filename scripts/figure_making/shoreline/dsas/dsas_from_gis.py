@@ -30,6 +30,7 @@ MIN_DOMAIN = 1
 MAX_DOMAIN = 90
 # -----------------------------------------------------------------------------
 
+# Load and format data
 print("="*70)
 print("DSAS DATA FORMATTING - GIS-CALCULATED DOMAIN MEANS")
 print("="*70)
@@ -59,6 +60,8 @@ if missing_domains:
 else:
     print(f"\n✓ All {len(expected_domains)} domains present")
 
+# Extract relevant columns
+
 # Select columns of interest (you already have domain-level stats from GIS)
 output_df = df[[
     'domain_id',
@@ -81,6 +84,7 @@ output_df = output_df.rename(columns={
 # Sort by domain
 output_df = output_df.sort_values('domain_id').reset_index(drop=True)
 
+# Summary statistics
 print("\n" + "="*70)
 print("DOMAIN-LEVEL STATISTICS")
 print("="*70)
@@ -109,6 +113,8 @@ print(f"  Median: {output_df['n_transects'].median():>5.0f}")
 print(f"  Min:    {output_df['n_transects'].min():>5.0f}")
 print(f"  Max:    {output_df['n_transects'].max():>5.0f}")
 
+# Save output
+
 # Save full version with all statistics
 output_df.to_csv(OUTPUT_DOMAIN_CSV, index=False)
 print(f"\n✓ Saved full comparison: {OUTPUT_DOMAIN_CSV}")
@@ -118,6 +124,7 @@ simple_output = OUTPUT_DOMAIN_CSV.replace('.csv', '_SIMPLE.csv')
 output_df[['domain_id', 'annual_rate_m_per_yr']].to_csv(simple_output, index=False)
 print(f"✓ Saved simple comparison: {simple_output}")
 
+# Preview output
 print("\n" + "="*70)
 print("SAMPLE OUTPUT (first 10 and last 10 domains):")
 print("="*70)
@@ -126,6 +133,7 @@ print(output_df.head(10).to_string(index=False))
 print("\nLast 10 domains:")
 print(output_df.tail(10).to_string(index=False))
 
+# Spatial pattern analysis
 print("\n" + "="*70)
 print("SPATIAL PATTERNS")
 print("="*70)

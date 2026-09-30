@@ -149,6 +149,8 @@ def check_conventions() -> None:
               "HAT_hindcast_1984_2024.py before re-rendering.")
 
 
+# Reading one run
+
 # Run folders to act on: those holding a *_run_metadata.json
 def find_runs(args) -> list[Path]:
     if args.run_dir:

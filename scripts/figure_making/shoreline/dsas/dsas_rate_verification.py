@@ -38,6 +38,7 @@ print("VERIFICATION ANALYSIS")
 print("="*70)
 
 
+# Check 1: Compare to your CASCADE background erosion rate
 print("\nCHECK 1: Comparison to CASCADE Background Erosion Rate")
 print("-"*70)
 
@@ -61,6 +62,7 @@ if 'EPR_1978_1997' in domain_rates.columns:
         print("! DISCREPANCY - May need investigation")
 
 
+# Check 2: Sign convention validation
 print("\n" + "="*70)
 print("CHECK 2: Sign Convention Verification")
 print("-"*70)
@@ -82,6 +84,7 @@ for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
         print(f"{col}: {mean_rate:+.2f} m/yr  |  {pct_erosional:.0f}% domains eroding  |  {status}")
 
 
+# Check 3: Magnitude sanity check
 print("\n" + "="*70)
 print("CHECK 3: Magnitude Sanity Check")
 print("-"*70)
@@ -109,6 +112,7 @@ for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
         print(f"{col}: {min_val:+.2f} to {max_val:+.2f} m/yr (mean: {mean_val:+.2f})  |  {flag}")
 
 
+# Check 4: Spatial pattern validation
 print("\n" + "="*70)
 print("CHECK 4: Known Spatial Patterns")
 print("-"*70)
@@ -150,6 +154,7 @@ if len(rodanthe) > 0 and 'EPR_1978_1997' in rodanthe.columns:
         print("  X WRONG - Should be erosional!")
 
 
+# Check 5: Temporal trends
 print("\n" + "="*70)
 print("CHECK 5: Temporal Trends")
 print("-"*70)
@@ -171,6 +176,7 @@ if len(rodanthe_trends) >= 2:
         print("  -> Erosion slowing (less negative over time)")
 
 
+# Create verification plot
 print("\n" + "="*70)
 print("Creating validation plot...")
 print("-"*70)

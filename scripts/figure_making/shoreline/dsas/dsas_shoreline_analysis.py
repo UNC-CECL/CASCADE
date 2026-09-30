@@ -32,6 +32,7 @@ from site_layer.hat_figure_style import apply_style, figsize  # noqa: E402
 apply_style()
 
 
+# Part 1: load and calculate rates
 print("="*70)
 print("SHORELINE CHANGE RATE ANALYSIS - HATTERAS ISLAND")
 print("="*70)
@@ -118,6 +119,7 @@ domain_rates.to_csv('domain_shoreline_change_rates.csv', index=False)
 print(f"\n✓ Saved: domain_shoreline_change_rates.csv")
 
 
+# Part 2: create publication-quality visualizations
 print("\n" + "="*70)
 print("PART 2: Creating publication-quality visualizations...")
 print("-"*70)
@@ -259,6 +261,7 @@ if 'EPR_1978_1997' in domain_rates.columns and 'EPR_1997_2019' in domain_rates.c
     plt.close()
 
 
+# Summary statistics
 print("\n" + "="*70)
 print("SUMMARY STATISTICS")
 print("="*70)

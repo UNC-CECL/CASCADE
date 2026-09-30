@@ -152,6 +152,8 @@ def _sym(vals):
     return (-half, half)
 
 
+# Figures
+
 # Shared axis: zero line, GIS 1-90, grid, village bands
 def _axis(ax, label_towns):
     ax.axhline(0, color=INK_MUTED, lw=0.6)
