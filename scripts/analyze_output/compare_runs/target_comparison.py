@@ -167,11 +167,14 @@ FULL_WINDOW = (1996, 2024)
 # Re-solved under option A on 2026-09-27 (Hannah: redo target_comparison for
 # the new wave climate and offset); the /10 solve was
 # end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024.
-# The adopted model since 2026-09-28 (Barrier3D hatteras/adopted, storms v3_trim24);
+# The adopted model since 2026-09-28 (Barrier3D hatteras/adopted, storms v3_trim24;
+# v3_split12_trim24 since 2026-09-29);
 # the option A pre-adoption solve was end-domain-boundaries/2026-09-27-ends-solved-on-lrr-1996-2024-option-a.
 # 2026-09-29: re-solved after the dune-cap fix; before it,
 # end-domain-boundaries/2026-09-28-ends-solved-on-lrr-1996-2024-adopted.
-FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-dunecap"
+# 2026-09-29 (later): re-solved after the storms changed to v3_split12_trim24;
+# the solve before it was end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-dunecap.
+FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-split12"
 CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
 # "net": metres over the 14-yr window (every figure until 2026-09-29).

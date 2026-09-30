@@ -246,11 +246,14 @@ WINDOWS = list(MATRIX_RUNS)
 # row points back into the 09-16 experiment.
 # Re-solved under option A on 2026-09-27; the /10 solve was
 # end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline.
-# The adopted model (2026-09-28): Barrier3D hatteras/adopted, storms v3_trim24.
+# The adopted model (2026-09-28): Barrier3D hatteras/adopted, storms v3_trim24;
+# storms v3_split12_trim24 since 2026-09-29.
 # Was end-domain-boundaries/2026-09-27-ends-solved-on-duneline-option-a (pre-adoption).
 # 2026-09-29: re-solved after the dune-cap fix; the adopted-model solve before it was
 # end-domain-boundaries/2026-09-28-ends-solved-on-duneline-adopted.
-DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-duneline-dunecap"
+# 2026-09-29 (later): re-solved after the storms changed to v3_split12_trim24;
+# the solve before it was end-domain-boundaries/2026-09-29-ends-solved-on-duneline-dunecap.
+DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-duneline-split12"
 MODEL_SETS = ("coastsat", "dune-mean3", "dune-raw")   # where the ends were solved
 MAIN_DUNE = "dune-mean3"
 # THE DUNE-SOLVED SETS ARE /10-OFFSET RUNS (2026-09-27). No end domains have
