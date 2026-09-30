@@ -744,7 +744,7 @@ def write_summary(cells, index, start_year, preset, out_dir):
 
 # Run: the figures for one period and preset, and the summary CSV
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--start-year", type=int, default=1984,
                         choices=sorted(HATTERAS_PERIODS))
     parser.add_argument("--preset", default="edgeBE")

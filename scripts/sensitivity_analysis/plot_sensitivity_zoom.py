@@ -22,7 +22,7 @@ import plot_sensitivity as ps
 
 # Run: the cells inside [--lo, --hi], drawn with plot_sensitivity's functions
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--start-year", type=int, required=True,
                         choices=sorted(ps.HATTERAS_PERIODS))
     parser.add_argument("--preset", default="edgeBE")

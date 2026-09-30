@@ -189,7 +189,7 @@ def run_cell(start_year, sweep, value, args):
 
 # Run: every cell of the chosen sweeps, appending each outcome to the manifest
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--start-year", type=int, default=1984,
                         choices=sorted(HATTERAS_PERIODS),
                         help="hindcast period to sweep")
