@@ -1,17 +1,10 @@
 """
-shoreline_trajectory_map.py
-======================
-Geographic maps of Hatteras Island with CASCADE domains coloured by
-shoreline trajectory classification or LRR magnitude.
+Maps of the island with the domains coloured by trajectory class or LRR.
 
-CONFIG options:
-  USE_SATELLITE = True   → Esri WorldImagery satellite basemap (requires internet)
-  USE_SATELLITE = False  → plain ocean-blue background (no internet needed)
+    python scripts/input_prep/5-scr/1-observations/shoreline_patterns/shoreline_trajectory_map.py
 
-Dependencies
-------------
-  pip install geopandas contextily shapely matplotlib pyproj
-  pip install matplotlib-scalebar   (optional — for accurate scale bar)
+Satellite or plain basemap (USE_SATELLITE); reads the classification's
+metrics and writes the maps. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -32,54 +25,47 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 import geopandas as gpd
 import matplotlib.patheffects as pe
 
-# ============================================================
-# CONFIG  — edit here
-# ============================================================
 
-# Resolved through hat_observed_rates.py (2026-09-18); the typed paths named
-# coastsat_lrr/ and used _PATH_REPO before it was defined.
+# Resolved through hat_observed_rates.py (2026-09-18)
 import sys as _sys
 from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 DOMAINS_GEOJSON   = str(_obs.DOMAIN_BOXES)
 TRANSECTS_GEOJSON = str(_obs.TRANSECT_LAYER)
 METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
 from site_layer.hat_map_layers import ISLAND_OUTLINE as _OUTLINE  # noqa: E402
 OUTLINE_SHP= str(_OUTLINE)
-# Anchored on this file 2026-09-12. The literals here were
-# drive-rooted and had never resolved; the data they name also
-# moved out of the scripts tree on that date.
+# Anchored on this file 2026-09-12
 from pathlib import Path as _Path
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in _Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 OUTPUT_DIR        = str(_obs.SHORELINE_PATTERNS / "map_output")
 
-# ── Basemap choice ────────────────────────────────────────────────────────────
+# Basemap choice
 USE_SATELLITE = True   # True = Esri satellite tiles; False = plain ocean blue
 
 OCEAN_COLOR   = "#d0e8f5"   # used when USE_SATELLITE = False
 TILE_ZOOM     = 13           # satellite tile zoom level (12=regional, 14=detailed)
 
-# ── Bounding box (WGS84) ──────────────────────────────────────────────────────
+# Bounding box (wgs84)
 HAT_LON_MIN, HAT_LON_MAX = -75.82, -75.38
 HAT_LAT_MIN, HAT_LAT_MAX =  35.15,  35.82
 
-# Web Mercator (EPSG:3857) bounds — used to set axis limits for satellite tiles
-# (computed from WGS84 bounds above via pyproj)
+# Web Mercator bounds for the satellite tiles (from the WGS84 bounds above)
 HAT_X_MIN, HAT_X_MAX = -8_440_244, -8_391_263
 HAT_Y_MIN, HAT_Y_MAX =  4_184_284,  4_275_882
 
-# ── CRS ───────────────────────────────────────────────────────────────────────
+# Crs
 DOMAIN_CRS = "EPSG:3725"   # UTM — HAT_domains.json native
 # Satellite tiles require Web Mercator; plain mode uses WGS84
 PLOT_CRS = "EPSG:3857" if USE_SATELLITE else "EPSG:4326"
 
-# ── Trajectory colours (matches classification script) ────────────────────────
+# Trajectory colours (matches classification script)
 CLASS_COLORS = {
     "Persistent Erosion":     "#b2182b",   # darkest red    — ongoing, high confidence
     "Accelerating Erosion":   "#d6604d",   # mid red        — getting worse
@@ -93,20 +79,19 @@ CLASS_COLORS = {
     "Insufficient Data":      "#444444",   # dark charcoal
 }
 
-# ── Place-name annotations ────────────────────────────────────────────────────
+# Place-name annotations
 LABEL_DOMAINS = {
     "Buxton":                               7,
     "Avon":                                26,
     "Wimble Shoals":                       67,
     "Tri-Village\n(Salvo/Waves/Rodanthe)": 75,
 }
+# -----------------------------------------------------------------------------
 
-# ============================================================
-# BASEMAP HELPERS
-# ============================================================
+# Basemap helpers
 
+# Add satellite tiles or plain background depending on USE_SATELLITE
 def apply_basemap(ax):
-    """Add satellite tiles or plain background depending on USE_SATELLITE."""
     if USE_SATELLITE:
         # Must set axis limits in Web Mercator BEFORE adding tiles
         ax.set_xlim(HAT_X_MIN, HAT_X_MAX)
@@ -118,21 +103,21 @@ def apply_basemap(ax):
         ax.set_facecolor(OCEAN_COLOR)
 
 
+# White labels on satellite, dark labels on plain background
 def label_color():
-    """White labels on satellite, dark labels on plain background."""
     return "white" if USE_SATELLITE else "#1a1a1a"
 
 
+# Label box style for the basemap in use
 def annotation_box_style():
     return dict(boxstyle="round,pad=0.25",
                 fc="#222222" if USE_SATELLITE else "white",
                 ec=label_color(), alpha=0.80, lw=0.5)
 
 
-# ============================================================
-# DATA LOADERS
-# ============================================================
+# Data loaders
 
+# The island outline in WGS84
 def load_island_outline(path):
     gdf = gpd.read_file(path)
     if gdf.crs is None or str(gdf.crs) != "EPSG:4326":
@@ -140,8 +125,8 @@ def load_island_outline(path):
     return gdf.to_crs(PLOT_CRS)
 
 
+# Load domain polygons, clip to island outline, reproject to PLOT_CRS
 def load_domain_gdf(path, outline_gdf_plot_crs):
-    """Load domain polygons, clip to island outline, reproject to PLOT_CRS."""
     gdf = gpd.read_file(path)
     gdf = gdf.set_crs(DOMAIN_CRS, allow_override=True).to_crs("EPSG:4326")
     gdf = gdf.rename(columns={"domain_id": "domain"})
@@ -152,6 +137,7 @@ def load_domain_gdf(path, outline_gdf_plot_crs):
     return gdf.to_crs(PLOT_CRS)
 
 
+# The Hatteras transects from the GeoJSON
 def load_hatteras_transects(path):
     with open(path) as f:
         data = json.load(f)
@@ -161,6 +147,7 @@ def load_hatteras_transects(path):
     return gpd.GeoDataFrame.from_features(feats, crs="EPSG:4326").to_crs(PLOT_CRS)
 
 
+# The diverging LRR colour map
 def make_lrr_cmap():
     return LinearSegmentedColormap.from_list(
         "lrr_map",
@@ -170,10 +157,9 @@ def make_lrr_cmap():
     )
 
 
-# ============================================================
-# ANNOTATION HELPERS
-# ============================================================
+# Annotation helpers
 
+# A north arrow, top-right
 def add_north_arrow(ax):
     lc = label_color()
     ax.annotate("", xy=(0.95, 0.97), xytext=(0.95, 0.91),
@@ -185,6 +171,7 @@ def add_north_arrow(ax):
             color=lc, fontweight="bold")
 
 
+# A scale bar, if matplotlib_scalebar is installed
 def add_scalebar(ax):
     try:
         from matplotlib_scalebar.scalebar import ScaleBar
@@ -205,11 +192,13 @@ def add_scalebar(ax):
                 fontsize=6, zorder=10)
 
 
+# The island outline
 def draw_outline(ax, outline_gdf):
     outline_gdf.plot(ax=ax, facecolor="none",
                      edgecolor=label_color(), linewidth=0.9, zorder=5)
 
 
+# Every n-th domain number
 def draw_domain_numbers(ax, domain_gdf, every=5, fontsize=6):
     for _, row in domain_gdf.iterrows():
         if row["domain"] % every == 0:
@@ -221,6 +210,7 @@ def draw_domain_numbers(ax, domain_gdf, every=5, fontsize=6):
                         pe.withStroke(linewidth=2, foreground="black")])
 
 
+# The place names
 def draw_place_labels(ax, domain_gdf):
     lc = label_color()
     for label, dom_id in LABEL_DOMAINS.items():
@@ -239,10 +229,9 @@ def draw_place_labels(ax, domain_gdf):
         )
 
 
-# ============================================================
-# FIGURE 1 — Trajectory class map
-# ============================================================
+# Figure 1 — Trajectory class map
 
+# Domains coloured by trajectory class
 def plot_trajectory_map(domain_gdf, outline_gdf, metrics, out_path):
     fig = plt.figure(figsize=(8, 17))
     # Map panel + thin legend panel below
@@ -308,10 +297,9 @@ def plot_trajectory_map(domain_gdf, outline_gdf, metrics, out_path):
     print(f"  Trajectory map saved → {out_path}")
 
 
-# ============================================================
-# FIGURE 2 — LRR magnitude map, Period 1 vs Period 2
-# ============================================================
+# Figure 2 — LRR magnitude map, Period 1 vs Period 2
 
+# Domains coloured by LRR, both periods
 def plot_lrr_map(domain_gdf, outline_gdf, metrics, out_path):
     lrr_vals = np.concatenate([
         metrics["dom_lrr_p1"].dropna().values,
@@ -368,18 +356,10 @@ def plot_lrr_map(domain_gdf, outline_gdf, metrics, out_path):
     print(f"  LRR map saved → {out_path}")
 
 
+# Figure 3 — ΔLRR difference map (P2 − P1)
 
-# ============================================================
-# FIGURE 3 — ΔLRR difference map (P2 − P1)
-# ============================================================
-
+# Single-panel map showing the change in LRR between Period 1 and Period 2
 def plot_delta_lrr_map(domain_gdf, outline_gdf, metrics, out_path):
-    """
-    Single-panel map showing the change in LRR between Period 1 and Period 2.
-    ΔLRR = P2 LRR − P1 LRR
-      Positive (blue) = beach accreted more / eroded less in P2 than P1
-      Negative (red)  = beach eroded more / accreted less in P2 than P1
-    """
     # Compute delta
     delta = metrics["dom_lrr_p2"] - metrics["dom_lrr_p1"]
     valid = delta.dropna().values
@@ -441,10 +421,8 @@ def plot_delta_lrr_map(domain_gdf, outline_gdf, metrics, out_path):
     plt.close(fig)
     print(f"  Delta LRR map saved → {out_path}")
 
-# ============================================================
-# MAIN
-# ============================================================
 
+# Run: both maps
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 

@@ -1,60 +1,10 @@
 """
-coastsat_detrended_position.py
-==============================================================================
-IS THERE ONE SIGNAL THE WHOLE ISLAND SHARES, ON TOP OF EACH TRANSECT'S TREND?
+Is there one signal the whole island shares, on top of each CoastSat transect's own trend?
 
-Detrend every CoastSat transect against its OWN 1996-2024 fit, reduce each to
-one value a year (the annual median position), and average across all 906. Any
-signal that survives that averaging is common to the island, because anything
-local is incoherent between transects and cancels.
+    python scripts/input_prep/5-scr/1-observations/detrended_position/coastsat_detrended_position.py
 
-WHY IT WAS BUILT (2026-09-23). `3-rates/coastsat/window_convergence/` found
-that no window shorter than about 25 years recovers the long-term rate, and
-that the answer barely varies between transects -- a transect with a fast clean
-trend needs as long as a slow noisy one. A per-transect explanation cannot
-produce a per-transect-invariant answer, so the cause had to be shared. This is
-the search for it.
-
-WHAT IT FINDS. One coherent excursion: roughly flat 1996-2004, a landward sag
-through 2005-2020 bottoming at -7.4 m, then +16.8 m in a single year into 2021,
-held through 2024. It is only 17% of the mean transect variance, but it is the
-COHERENT part, and coherent is what moves an OLS slope systematically:
-
-    window        bias the departure alone puts on the fitted rate
-    1996-2010     -0.367 m/yr      (the graded window, ~37% of a median rate)
-    2010-2024     +0.875 m/yr      (the chain's second leg, opposite sign)
-    1996-2024      0.000 m/yr      (zero by construction -- it is detrended
-                                    against this window)
-
-That is the answer to "why do the windows disagree": not noise, a shared
-multi-decadal excursion that an OLS slope cannot separate from the trend until
-the window spans the whole of it. `coastsat_position_attribution.py` beside this file
-then asks what the excursion IS.
-
-WHAT THIS IS NOT. Not a rate product and not a model input. Nothing is graded
-against it; it exists to explain a property of the rate products, which is why
-it lives under 1-observations rather than 3-rates.
-
-Inputs
-------
-    transect_domain_lookup.csv      2-transect-frame/, via hat_observed_rates
-    CoastSat time-series CSVs       1-observations/coastsat_timeseries/
-
-Outputs  (hat_observed_rates.DETRENDED_POSITION)
---------------------------------------------
-    annual_medians_detrended.csv    year x transect, m. The matrix everything
-                                    else here reads, so the detrending is done
-                                    once and cannot drift between scripts
-    detrended_position_by_year.csv        a row per year: the index, the counts, and
-                                    the nourished / untouched split
-    detrended_position_by_domain.csv    a row per domain: its share of the step,
-                                    and how well it tracks the index
-    detrended_position.png              the index, the alongshore step, the record
-
-Usage
------
-    python .../coastsat_detrended_position.py
-==============================================================================
+Detrends every transect against its own 1996-2024 fit, takes the annual
+median, averages across the island; writes the matrix, index and figures. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -83,40 +33,27 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt                       # noqa: E402
 from matplotlib.lines import Line2D                   # noqa: E402
 
-# ============================================================
-# CONFIG
-# ============================================================
 
+# --- CONFIG ------------------------------------------------------------------
 FIRST_YEAR, LAST_YEAR = 1996, 2024
 MIN_YEARS = 25              # a transect needs this many years to be detrended
 
-# The step the index turns out to contain, as two periods to difference. Named
-# here rather than buried so the number quoted in the README and the figure is
-# the same one.
+# The step the index turns out to contain, as two periods to difference
 PRE = (2016, 2020)
 POST = (2021, 2024)
 
-# NOURISHMENT, as the hindcast receives it (hatteras_site_config
-# .HATTERAS_NOURISHMENT_PROJECTS, drawn in 4-mgmt-forcing/nourishment/). Held
-# here so the index can be split by it; `coastsat_position_attribution.py` does the test.
+# NOURISHMENT, as the hindcast receives it (hatteras_site_config .HATTERAS_NOURISHMENT_PROJECTS
 NOURISHED = {"Rodanthe 2014": (2014, range(84, 90)),
              "Buxton 2022": (2022, range(6, 16)),
              "Avon 2022": (2022, range(21, 29))}
 NOURISHED_DOMAINS = sorted({d for _y, ds in NOURISHED.values() for d in ds})
+# -----------------------------------------------------------------------------
 
 
-# ============================================================
-# THE MATRIX
-# ============================================================
+# The matrix
 
+# Detrended annual median position, year x transect, in metres
 def build_matrix():
-    """Detrended annual median position, year x transect, in metres.
-
-    Each transect is detrended against ITS OWN 1996-2024 OLS, so what is left
-    is departure from that transect's long-term behaviour and nothing else. A
-    transect eroding at 3 m/yr and one accreting at 1 m/yr both come out
-    centred on zero, which is what lets them be averaged.
-    """
     lookup = pd.read_csv(obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
     lookup = lookup.dropna(subset=["domain_number"]).sort_values(
         ["domain_number", "transect_id"])
@@ -148,8 +85,8 @@ def build_matrix():
     return M, N, pd.Series(domains, name="domain_number")
 
 
+# One row per year
 def index_table(M, N, domains):
-    """One row per year: the island index, the split, and the sampling."""
     dom = domains.reindex(M.columns).to_numpy()
     touched = np.isin(dom, NOURISHED_DOMAINS)
     out = pd.DataFrame({
@@ -164,8 +101,8 @@ def index_table(M, N, domains):
     return out.reset_index()
 
 
+# One row per domain
 def domain_table(M, domains, index):
-    """One row per domain: its step, and how well it tracks the island."""
     dom = domains.reindex(M.columns)
     step = (M.loc[POST[0]:POST[1]].mean() - M.loc[PRE[0]:PRE[1]].mean())
     corr = M.apply(lambda c: c.corr(index))
@@ -181,12 +118,10 @@ def domain_table(M, domains, index):
     return out
 
 
-# ============================================================
-# THE FIGURE
-# ============================================================
+# The figure
 
+# Three panels
 def draw(index, by_domain, out_dir):
-    """Three panels: what the signal is, where it is, and how well sampled."""
     fs.apply_style()
     fig, axes = plt.subplots(3, 1, figsize=fs.figsize("double", height=7.8),
                              layout="constrained")
@@ -198,8 +133,7 @@ def draw(index, by_domain, out_dir):
     ax.bar(yrs, v, width=0.78, lw=0,
            color=[fs.C["LATE"] if x >= 0 else fs.C["EARLY"] for x in v], zorder=3)
     ax.axhline(0.0, color=fs.C["INK"], lw=0.8, zorder=4)
-    # One label per YEAR, not per project: Buxton and Avon are both 2022 and
-    # two rotated labels on the same bar overprint into a smear.
+    # One label per YEAR, not per project
     by_year = {}
     for name, (fy, _ds) in NOURISHED.items():
         by_year.setdefault(fy, []).append(name.rsplit(" ", 1)[0])
@@ -338,6 +272,7 @@ Producers: `scripts/input_prep/5-scr/1-observations/detrended_position/`
 """
 
 
+# Run: detrend, average, write the tables and figures
 def main():
     out_dir = obs.DETRENDED_POSITION
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -353,8 +288,7 @@ def main():
     by_domain.to_csv(out_dir / "detrended_position_by_domain.csv", index=False)
     draw(index, by_domain, out_dir)
 
-    # .loc throughout: a bare [2021:2024] on an integer index is POSITIONAL
-    # in pandas and silently returns nothing, which printed the step as NaN.
+    # .loc throughout: a bare slice on an integer index is positional
     ix = index.set_index("year")["island_mean_m"]
     jump = ix.loc[POST[0]] - ix.loc[PRE[1]]
     (out_dir / "README.md").write_text(README.format(

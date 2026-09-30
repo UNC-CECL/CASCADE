@@ -1,88 +1,9 @@
 """
-coastsat_position_attribution.py
-==============================================================================
-WHAT IS THE 2021 STEP? FIVE TESTS, INCLUDING THE TWO THAT FAILED.
+What is the 2021 step? Five tests of the island-wide shift, including the two that failed.
 
-`coastsat_detrended_position.py` found one signal the whole island shares, and a +16.8 m
-seaward step in the single year to 2021 that holds through 2024. This script
-asks what it is. Each test is here with its verdict, including the hypotheses
-that were wrong, because a rejected explanation is evidence and the next person
-to look at this will otherwise re-run them (Hannah's standing preference:
-diagnostics and honest reporting over a tidy story).
+    python scripts/input_prep/5-scr/1-observations/detrended_position/coastsat_position_attribution.py   # after coastsat_detrended_position.py
 
-WHY IT MATTERS MORE THAN IT LOOKS. The 2021-2024 years sit at the
-highest-leverage end of the 1996-2024 fit, and that fit is the model's grading
-target. Refitting on 1996-2020 instead shifts the fitted rate a near-uniform
-+0.46 m/yr -- enough to flip the island median from -0.349 m/yr (eroding) to
-+0.172 m/yr (accreting) and to flip the sign at 18% of transects. So whether
-the step is the shoreline or the satellites decides whether the target is
-credible.
-
-THE TESTS
-
-  1. PER-TRANSECT NOISE -- REJECTED. If each transect's own wobble set how long
-     its window takes to settle, convergence time would track that transect's
-     noise-to-trend ratio. Correlation is 0.01 (forward) and 0.16 (backward);
-     the calmest quartile needs 27 years and the swingiest 26. A per-transect
-     cause cannot give a per-transect-invariant answer, which is what sent the
-     search to a shared signal in the first place.
-
-  2. NOURISHMENT -- REJECTED as the cause, CONFIRMED as a real signal. The
-     fills are Rodanthe 2014 (GIS 84-89), Buxton 2022 (6-15) and Avon 2022
-     (21-28), 24 of 90 domains. The 2020->2021 jump is +16.5 m in the 672
-     NEVER-NOURISHED transects against +17.4 m in the nourished ones, and it
-     lands a year BEFORE the 2022 fills. The fills are nonetheless plainly
-     visible against the rest of the island in the year after placement, in
-     the order their fill densities predict.
-
-  3. SAMPLING -- NOT THE CAUSE, but it sharpens the step. Observations per
-     transect per year go 12.8 (2020) to 30.6 (2021), a 2.4x jump in the same
-     year. It is NOT a seasonal-mix effect: comparing like quarters the step
-     is present in all four. 2020 is both the most landward year and the most
-     thinly sampled, so the sparse pre-2021 half is the LESS reliable half,
-     not the more -- the denser record is the better one. Dropping 2020
-     entirely still leaves +14.6 m between 2019 and 2021.
-
-  4. THE DUNE LINE -- CORROBORATES. The digitized lines are 1997, 2009 and
-     2023, so 2023 sits inside the stepped period and the other two before it.
-     Over 1997->2009 the dune line retreats a median -11.7 m; over 2009->2023
-     it ADVANCES +3.7 m, and CoastSat over the same pairs gives -2.4 m then
-     +3.8 m -- the later interval matching to 0.1 m, correlated alongshore at
-     r = 0.71. An artefact would have made the stepped interval carry about
-     +13.6 m MORE CoastSat-minus-dune; it carries 9.7 m LESS.
-     Limit: three snapshots cannot date the advance within 2009-2023, so this
-     confirms direction and magnitude, not the 2021 timing.
-
-  5. SPATIAL STRUCTURE -- CORROBORATES. A sensor or waterline bias applies
-     nearly the same offset everywhere. This does not: domain means run -11.9
-     to +71.5 m (sd 11.5 m between domains) while transects INSIDE a domain
-     agree to 2.8 m, and eight domains step landward. The largest, GIS 1 at
-     +71.5 m, is the Cape Point shoal attachment already documented in
-     3-rates/coastsat/5yr_bins/README.md.
-
-VERDICT. The step is real. The target's sensitivity to including 2021-2024 is
-therefore a physical question -- which period should the model represent? --
-and not a data-quality one.
-
-Inputs
-------
-    annual_medians_detrended.csv    from coastsat_detrended_position.py, via the resolver
-    CoastSat time-series CSVs       for the seasonal and sampling tests
-    duneline / coastsat endpoint    3-rates/*/endpoint/<window>/, stored
-                                    tables only -- nothing is refitted here
-
-Outputs  (hat_observed_rates.DETRENDED_POSITION)
---------------------------------------------
-    attribution_tests.csv           one row per test: what it measured, what
-                                    it returned, and the verdict
-    attribution_nourishment.csv     each fill's local step against the island
-    attribution_duneline.csv        both sources over each survey-date pair
-    detrended_position_attribution.png                 the three tests that carry a figure
-
-Usage
------
-    python .../coastsat_position_attribution.py        (run coastsat_detrended_position.py first)
-==============================================================================
+Writes the test tables and figures beside the detrended position. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -115,28 +36,30 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt                       # noqa: E402
 from matplotlib.lines import Line2D                   # noqa: E402
 
-# The dune-line survey pairs, by the rate-window folder that holds them.
-# The labels stay ASCII: this script prints them, and a Windows console on
-# cp1252 raises UnicodeEncodeError on an arrow. Arrows belong in the figure.
+# --- CONFIG ------------------------------------------------------------------
+# The dune-line survey pairs, by the rate-window folder that holds them
 DUNE_PAIRS = [("1996_2010", "1997-2009", "control, no step"),
               ("2010_2024", "2009-2023", "spans the step"),
               ("1996_2024", "1997-2023", "spans the step")]
+# -----------------------------------------------------------------------------
 
 
+# The detrended position matrix, years as ints
 def load_matrix():
     M = pd.read_csv(obs.DETRENDED_POSITION / obs.DETRENDED_POSITION_MATRIX, index_col=0)
     M.index = M.index.astype(int)
     return M
 
 
+# The domain of each transect
 def domains_of(columns):
     lookup = pd.read_csv(obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
     lookup = lookup.dropna(subset=["domain_number"]).set_index("transect_id")
     return lookup["domain_number"].reindex(columns).astype(int)
 
 
+# Does the step survive on domains that were never touched?
 def test_nourishment(M, dom):
-    """Does the step survive on domains that were never touched?"""
     touched = dom.isin(NOURISHED_DOMAINS).to_numpy()
     out = {}
     for label, sel in (("all", np.ones(len(touched), bool)),
@@ -163,8 +86,8 @@ def test_nourishment(M, dom):
     return out, pd.DataFrame(rows)
 
 
+# Is the step an artefact of when and how often the satellites looked?
 def test_sampling(dom_index_sample=12):
-    """Is the step an artefact of when and how often the satellites looked?"""
     lookup = pd.read_csv(obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
     lookup = lookup.dropna(subset=["domain_number"]).iloc[::dom_index_sample]
     frames = []
@@ -195,13 +118,8 @@ def test_sampling(dom_index_sample=12):
     return pd.DataFrame(rows)
 
 
+# Does the independent dune line show the same reversal? Stored tables only -- both endpoint products ...
 def test_duneline():
-    """Does the independent dune line show the same reversal?
-
-    Stored tables only -- both endpoint products are read as written, nothing
-    is refitted, so this obeys the rule 4-comparisons states for source-against
-    -source work even though it is filed here with the rest of the attribution.
-    """
     rows = []
     for window, label, role in DUNE_PAIRS:
         dune = pd.read_csv(obs.DUNELINE_ENDPOINT_ROOT / window
@@ -226,8 +144,8 @@ def test_duneline():
     return d
 
 
+# The three tests a picture helps with
 def draw(nourish_split, dune, quarters, by_domain, out_dir):
-    """The three tests a picture helps with."""
     fs.apply_style()
     fig, axes = plt.subplots(1, 3, figsize=fs.figsize("double", aspect=0.40),
                              layout="constrained")
@@ -301,6 +219,7 @@ def draw(nourish_split, dune, quarters, by_domain, out_dir):
     return paths[0]
 
 
+# Run: the five tests, then the tables and figures
 def main():
     out_dir = obs.DETRENDED_POSITION
     M = load_matrix()

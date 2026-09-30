@@ -1,82 +1,11 @@
 """
-coastsat_mean_shoreline_on_imagery.py -- the window mean, on that window's photographs
-==============================================================================
-The CoastSat mean shoreline for a window (coastsat_mean_shoreline.py) drawn
-on the USGS aerial photographs flown inside that window, one panel per
-flight year, at a handful of sites along the island. Asked for by Hannah on
-2026-09-23 ("the shoreline position imposed on the aerial imagery from that
-year").
+A window's CoastSat mean shoreline on that window's aerial photographs, one panel per flight year.
 
-WHAT IS ON EACH PANEL
-    the photograph      the USGS Henderson release (doi 10.5066/P1CXBCDW),
-                        read frame by frame from D:\\Hatteras_GIS\\Aerial
-                        through the 1984 imagery review's Imagery class (the
-                        seamline rule and the film-fringe handling live there,
-                        not here); stated accuracy 1.2 m
-    the mean shoreline  the window-mean line, ink with a white halo
-    +/-1 sd             the within-window scatter of each transect, placed
-                        along the transect's own direction and joined
-                        alongshore, as a translucent white band, dashed edges
-    the positions       (second version only) every satellite position behind
-                        the mean, geolocated the same way (origin + chainage *
-                        direction), coloured by date on one scale for the
-                        whole window; the scale marks each flight date
-                        (added 2026-09-23, Hannah: "with and without the dots",
-                        "a gradient to show throughout time")
-    the domains         (third version only) the Barrier3D domain boxes
-                        (transect_domains/HAT_domains.json), white with a grey
-                        edge, each labelled with its GIS number; on the site
-                        zooms and the island overview (added 2026-09-28)
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_on_imagery.py
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_on_imagery.py --centred-on alace_1996
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_on_imagery.py --window 2009 2011 --photo-years 2008
 
-WHAT IT CAN AND CANNOT SHOW
-    A photograph is ONE October day; the line is a three-year mean of ~28
-    satellite passes. The wet/dry line in a photo is not expected to sit on
-    the mean -- it is expected to sit, most days, inside the band. A photo
-    edge far outside the band at one site is worth looking at; nothing is
-    measured from the photographs here.
-
-PHOTOGRAPHS FROM OUTSIDE THE WINDOW (--photo-years, added 2026-09-28)
-    By default the photographs are the window's own years. A window with none
-    (2009-2011: the 2009 folder is raw Google Earth captures, not georeferenced)
-    takes the nearest year instead, e.g. --photo-years 2008 for the NOAA NGS
-    mosaic of 26-27 March 2008; the captions then say the photograph is from
-    outside the window, and the date scale widens to reach its flight date.
-    Sources other than the USGS release are described in PHOTO_SOURCES.
-
-SITES (supporting/sites.csv)
-    Each window is three domains (1.5 km) alongshore, centred on the site's
-    domain, and every panel of a site shares one extent. Cross-shore it runs
-    LAND_M landward and SEA_M seaward of the line. The sites are spread along
-    the island and include the two piers, which are fixed in all three photos.
-
-OUTPUT   <mean_shoreline_dir(window)>/on_imagery/
-    line_and_band/mean_shoreline_<window>_on_imagery_GIS<NN>_<site>.png
-    line_and_band/mean_shoreline_<window>_on_imagery_island_1996.png
-        the whole island in three north-up segments (GIS 1-30, 31-60, 61-90)
-        at one scale on the 1996 photographs (--island-year; the first photo
-        year when 1996 is not among them), the site windows outlined
-    line_and_band/mean_shoreline_<window>_on_imagery_ribbon_1996.png
-        panel (a) of mean_shoreline_<window>.png alone on the 1996 photographs,
-        the island outline beneath where no frame covers
-    with_positions/mean_shoreline_<window>_on_imagery_with_positions_GIS<NN>_<site>.png
-    with_domains/mean_shoreline_<window>_on_imagery_with_domains_GIS<NN>_<site>.png
-    with_domains/mean_shoreline_<window>_on_imagery_with_domains_island_1996.png
-        each subfolder with supporting/CAPTIONS.md (no PDFs: raster panels)
-    supporting/sites.csv   the windows, both files and the position counts per site
-    Also published to output/figures/2-observations/mean_shoreline/<the same subfolders>.
-
-USAGE
-    python coastsat_mean_shoreline_on_imagery.py
-    python coastsat_mean_shoreline_on_imagery.py --window 1995 1997 --sites 26 79
-    python coastsat_mean_shoreline_on_imagery.py --only island   (or sites, ribbon)
-    python coastsat_mean_shoreline_on_imagery.py --window 2009 2011 --photo-years 2008
-    python coastsat_mean_shoreline_on_imagery.py --centred-on alace_1996
-    python coastsat_mean_shoreline_on_imagery.py --centred-on usace_2009 --photo-years 2008
-    A window by dates (2026-09-29) is the one coastsat_mean_shoreline.py built
-    with the same flags; a photograph is inside it by its flight DATE, and the
-    date scale runs over the window itself rather than whole years.
-    Needs the D: drive; the .venv Python (rasterio).
-==============================================================================
+Site zooms, an island view and the ribbon; needs the D: drive for the photos. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -114,6 +43,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     DOMAIN_BOXES, mean_shoreline_csv, mean_shoreline_dir,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 CRS = "EPSG:26918"                        # the line's CRS; the photos are warped to it
 DEFAULT_WINDOW = (1995, 1997)
 # (centre GIS domain, name). Spread south to north; 26 and 79 are the piers.
@@ -123,53 +53,39 @@ HALF = 1                                  # domains either side of the centre
 LAND_M, SEA_M = 300.0, 250.0              # window either side of the line
 RES_M = 0.6                               # display resolution of the photographs
 C_LINE = fs.INK
-# The +/-1 sd band is neutral -- translucent white with a dashed ink edge -- so
-# the only colour on a panel is the positions' date scale. It was yellow until
-# 2026-09-23, when the dates moved to viridis, whose light end is yellow.
+# The +/-1 sd band is neutral -- translucent white with a dashed ink edge
 C_BAND = "white"
 BAND_EDGE = dict(color=C_LINE, lw=0.5, ls=(0, (3, 2)), alpha=0.9)
-# The positions' date scale (Hannah, 2026-09-23: "academic and professional"):
-# viridis is perceptually uniform, reads in greyscale and to colour-blind
-# readers, and is the scale reviewers expect for an ordered variable. The thin
-# ink edge keeps the light end visible on the brightest beach.
+# The positions' date scale (Hannah, 2026-09-23
 CMAP = plt.get_cmap("viridis")
 PUBLISH = fs.figure_dir("observations", "mean_shoreline")
-# One subfolder per version, each with its own supporting/CAPTIONS.md
-# (Hannah, 2026-09-23); sites.csv covers all and stays in on_imagery/supporting.
-# The key is the version, the value its subfolder; with_domains added 2026-09-28.
+# One subfolder per version, each with its own supporting/CAPTIONS.md (Hannah, 2026-09-23)
 VERSION_DIRS = {"line": "line_and_band", "positions": "with_positions",
                 "domains": "with_domains"}
-# The domain boxes follow the island outline's convention in the ribbon figure
-# (white, grey edge), so they cannot be mistaken for the ink shoreline or the
-# dashed band edges.
+# The domain boxes follow the island outline's convention in the ribbon figure (white, grey edge)
 DOMAIN_STYLE = dict(color="white", zorder=4,
                     path_effects=[pe.withStroke(linewidth=1.9, foreground=fs.INK_MUTED)])
 
-# Photographs that are not the USGS Henderson release. The imagery reader dates
-# a year from Henderson frame names only, so the flight date is kept here, read
-# from the source's own metadata.
+# Photographs that are not the USGS Henderson release
 USGS_REF = "doi 10.5066/P1CXBCDW, stated accuracy 1.2 m"
 PHOTO_SOURCES = {
-    # D:\Hatteras_GIS\Aerial\2008, 2008_IOCM_NaturalColorImagery_J1129187_metadata.xml:
-    # "2008 NOAA NGS Ortho-rectified Color Mosaic from Ocracoke, NC to Virginia
-    # Beach, VA", beginPosition 2008-03-26, endPosition 2008-03-27
+    # D:\Hatteras_GIS\Aerial\2008, 2008_IOCM_NaturalColorImagery_J1129187_metadata.xml
     2008: dict(date="2008-03-26", label="26–27 March 2008", short="NOAA NGS orthomosaic",
                ref="the NOAA NGS colour orthomosaic flown 2008-03-26/27 (InPort 48695)"),
 }
+# -----------------------------------------------------------------------------
 
 
+# The flight date as a panel title reads it
 def photo_label(im):
-    """The flight date as a panel title reads it."""
     if im.year in PHOTO_SOURCES:
         return PHOTO_SOURCES[im.year]["label"]
     d = pd.Timestamp(im.date)
     return f"{d.day} {d:%B %Y}"
 
 
+# Was this photograph flown inside the window? By date since 2026-09-29, when windows stopped being ...
 def _inside(im, window):
-    """Was this photograph flown inside the window? By date since 2026-09-29,
-    when windows stopped being whole calendar years; a source whose reader
-    knows only the year (PHOTO_SOURCES) is dated from its table entry."""
     d = PHOTO_SOURCES.get(im.year, {}).get("date", im.date)
     try:
         t = pd.Timestamp(d)
@@ -180,8 +96,8 @@ def _inside(im, window):
     return window.lo <= t <= window.hi
 
 
+# 'the USGS aerial photographs 
 def photo_ref(imagery, window):
-    """'the USGS aerial photographs ... (doi ...)' and/or the other sources."""
     usgs = [im for im in imagery if im.year not in PHOTO_SOURCES]
     parts = []
     if usgs:
@@ -194,8 +110,8 @@ def photo_ref(imagery, window):
     return " and ".join(parts)
 
 
+# The sentence on what a photograph can show against a window mean
 def photo_timing(imagery, window):
-    """The sentence on what a photograph can show against a window mean."""
     outside = [im for im in imagery if not _inside(im, window)]
     if not outside:
         return ("Each photograph is one autumn day; the line is a mean over the window, so "
@@ -212,16 +128,16 @@ REVIEW_SCRIPT = (_REPO / "scripts" / "input_prep" / "1-barrier3d-domains"
                  / "HAT_imagery_review_1984.py")
 
 
+# The 1984 imagery review, for its Imagery reader (one copy of it)
 def _review_module():
-    """The 1984 imagery review, for its Imagery reader (one copy of it)."""
     spec = importlib.util.spec_from_file_location("imagery_review", REVIEW_SCRIPT)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
+# Included transects with their direction, in alongshore order
 def transects(window):
-    """Included transects with their direction, in alongshore order."""
     import coastsat_mean_shoreline as cms
     df = pd.read_csv(mean_shoreline_csv(*window.key))
     df = df[df["included"] & df["x"].notna()].copy()
@@ -233,12 +149,8 @@ def transects(window):
     return df.sort_values(["site", "transect_number"]).reset_index(drop=True)
 
 
+# Every satellite position behind the included means, on the ground
 def positions(df, window):
-    """Every satellite position behind the included means, on the ground.
-
-    The same window filter as coastsat_mean_shoreline.window_means, so these
-    are exactly the positions each mean was taken over.
-    """
     import coastsat_mean_shoreline as cms
     from coastsat_lrr import load_timeseries
     out = []
@@ -254,8 +166,8 @@ def positions(df, window):
     return pd.concat(out, ignore_index=True)
 
 
+# Every position in the window, coloured by its date on one shared scale
 def draw_positions(ax, pos, b, norm):
-    """Every position in the window, coloured by its date on one shared scale."""
     x0, y0, x1, y1 = b
     p = pos[pos["x"].between(x0, x1) & pos["y"].between(y0, y1)].sort_values("t")
     ax.scatter(p["x"], p["y"], s=6, c=p["t"], cmap=CMAP, norm=norm,
@@ -263,8 +175,8 @@ def draw_positions(ax, pos, b, norm):
     return p
 
 
+# North-up window
 def extent(df, boxes, centre):
-    """North-up window: the three domains alongshore, the line +/- cross-shore."""
     seg = boxes[boxes["gis"].between(centre - HALF, centre + HALF)]
     y0, y1 = seg.total_bounds[1], seg.total_bounds[3]
     pts = df[(df["y"] >= y0) & (df["y"] <= y1)]
@@ -272,9 +184,8 @@ def extent(df, boxes, centre):
     return (pts["x"].min() - LAND_M, y0, pts["x"].max() + SEA_M, y1)
 
 
+# The mean line and its band
 def draw_line(ax, df, b, lw=1.3, edges=True):
-    """The mean line and its band. At island scale (edges=False) the band's
-    dashed edges would merge with the line, so only its fill is drawn."""
     x0, y0, x1, y1 = b
     pad = 100.0
     s = df[(df["y"] >= y0 - pad) & (df["y"] <= y1 + pad)]
@@ -289,9 +200,8 @@ def draw_line(ax, df, b, lw=1.3, edges=True):
             path_effects=[pe.withStroke(linewidth=lw + 1.7, foreground="white")])
 
 
+# The Barrier3D domain boxes crossing the window, each labelled at its landward (west) side, clear of ...
 def draw_domains(ax, boxes, b, lw=0.8, labels=True):
-    """The Barrier3D domain boxes crossing the window, each labelled at its
-    landward (west) side, clear of the shoreline."""
     x0, y0, x1, y1 = b
     bd = boxes.bounds
     seg = boxes[(bd["maxy"] > y0) & (bd["miny"] < y1)]
@@ -306,12 +216,13 @@ def draw_domains(ax, boxes, b, lw=0.8, labels=True):
                               boxstyle="square,pad=0.2"))
 
 
+# Legend handle for the domain boxes
 def _domain_handle(lw=0.8):
     return Line2D([], [], lw=lw, **{k: v for k, v in DOMAIN_STYLE.items() if k != "zorder"})
 
 
+# Each year's photograph for one window, read once for both versions
 def read_photos(imagery, b):
-    """Each year's photograph for one window, read once for both versions."""
     x0, y0, x1, y1 = b
     out = []
     for im in imagery:
@@ -322,6 +233,7 @@ def read_photos(imagery, b):
     return out
 
 
+# One photo panel with the line on it
 def panel(ax, im, img, b, df, i):
     x0, y0, x1, y1 = b
     ax.imshow(img, extent=(x0, x1, y0, y1), origin="upper", zorder=0,
@@ -336,14 +248,15 @@ def panel(ax, im, img, b, df, i):
     ax.set_title(f"({chr(97 + i)})  {photo_label(im)}", loc="left", fontsize=9, pad=4)
 
 
+# A timestamp as a decimal year
 def _decimal_year(ts):
     ts = pd.Timestamp(ts)
     start = pd.Timestamp(year=ts.year, month=1, day=1)
     return ts.year + (ts - start).days / (366 if ts.is_leap_year else 365)
 
 
+# The date scale, with each photograph's flight marked by its panel letter
 def time_bar(fig, axes, norm, imagery, window):
-    """The date scale, with each photograph's flight marked by its panel letter."""
     sm = plt.cm.ScalarMappable(cmap=CMAP, norm=norm)
     cb = fig.colorbar(sm, ax=axes, location="bottom", shrink=0.45, aspect=40, pad=0.02)
     cb.set_ticks([y for y in range(int(norm.vmin), int(norm.vmax) + 1)
@@ -361,9 +274,8 @@ def time_bar(fig, axes, norm, imagery, window):
     return cb
 
 
+# Three versions of one site
 def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
-    """Three versions of one site: the line and band, the same with the
-    positions, and the same with the domain boxes."""
     b = extent(df, boxes, centre)
     photos = read_photos(imagery, b)
     w, h = b[2] - b[0], b[3] - b[1]
@@ -429,10 +341,7 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
     return row
 
 
-# =============================================================================
-# the island overview (Hannah, 2026-09-23: "across the island in 3 vertical
-# panels with the 1996 imagery")
-# =============================================================================
+# The island overview (Hannah, 2026-09-23
 
 ISLAND_YEAR = 1996                        # the default; --island-year overrides
 SEGMENTS = [("GIS 1–30", 1, 30), ("GIS 31–60", 31, 60), ("GIS 61–90", 61, 90)]
@@ -441,10 +350,8 @@ ISLAND_LAND_M, ISLAND_SEA_M = 900.0, 600.0
 ISLAND_PANEL_H_IN = 8.2                   # the segments are 15 km tall; this sets the scale
 
 
+# Three north-up segments side by side at one scale, on one year's photos, with the site windows of ...
 def island_figure(df, boxes, im, sites, window, out_dir):
-    """Three north-up segments side by side at one scale, on one year's photos,
-    with the site windows of the zoom figures outlined; drawn twice, the
-    second time with every domain box (the photographs are read once)."""
     ext = []
     for _, lo, hi in SEGMENTS:
         seg = boxes[boxes["gis"].between(lo, hi)]
@@ -465,6 +372,7 @@ def island_figure(df, boxes, im, sites, window, out_dir):
                         version)
 
 
+# One island figure (domains or plain)
 def _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, panel_h, version):
     doms = version == "domains"
     widths = [b[2] - b[0] for b in ext]
@@ -540,9 +448,8 @@ def _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, panel_h, v
 RIBBON_RES_M = 8.0                        # ~ the printed pixel of a 45 km ribbon
 
 
+# Panel (a) of the diagnostic, alone, over one year's photographs
 def ribbon_figure(df, im, window, out_dir):
-    """Panel (a) of the diagnostic, alone, over one year's photographs: the
-    same extent and axes as coastsat_mean_shoreline.outline_figure."""
     import coastsat_mean_shoreline as cms
     ext = cms.ribbon_extent(df)
     n0, n1, e0, e1 = ext
@@ -581,6 +488,7 @@ def ribbon_figure(df, im, window, out_dir):
     print(f"  ribbon figure -> {path.name}")
 
 
+# Run: the window's line, then the site, island and ribbon figures
 def main(argv=None) -> int:
     import coastsat_mean_shoreline as cms
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])

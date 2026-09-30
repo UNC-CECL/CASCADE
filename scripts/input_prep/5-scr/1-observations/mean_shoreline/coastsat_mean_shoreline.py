@@ -1,101 +1,12 @@
 """
-coastsat_mean_shoreline.py -- an averaging window of CoastSat, as a line
-==============================================================================
-One averaging window's MEAN satellite shoreline, placed back on the ground:
-each CoastSat transect's chainage averaged over the window, geolocated, and
-the ~906 mean points strung into a single polyline that the 2-brie-offset
-intersection step reads exactly as it reads a digitised dune line.
+One averaging window of CoastSat as a line: each transect's mean position, strung into a mean shoreline.
 
-Built 2026-09-22 (Hannah, by interview) so BRIE's island offset can be derived
-from the satellite SHORELINE as well as from the digitised DUNE line.
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline.py
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline.py --window 1995 1997 --min-obs 10
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline.py --centred-on alace_1996
 
-WHY THE GEOLOCATION STEP IS THE WHOLE JOB
-    Every other CoastSat product in 5-scr is a DIFFERENCE of chainage -- an
-    LRR slope, an endpoint change -- and in a difference each transect's
-    arbitrary origin cancels. A position is not a difference, so here the
-    origin does not cancel, and it is not small. Aggregated to the 90 domains:
-
-        raw mean chainage        alongshore range  124 m, median step  8.8 m
-        geolocated mean position alongshore range 6222 m, median step 81.7 m
-        the transect ORIGINS alone                6169 m
-
-    The origins follow the shore around the cape, so ~98% of a raw-chainage
-    "island shape" is origin bookkeeping. Each observation is therefore put
-    back in space as
-
-        point = origin + chainage * unit_vector_along_transect
-
-    in EPSG:26918, the CRS the other dune lines declare, before anything is
-    averaged alongshore.
-
-WHY A MEAN AND NOT A DATE
-    A dune line is digitised from imagery flown on ONE day, so it is a moment.
-    A single satellite pass is not: it carries tide, wave setup and cloud-edge
-    noise worth metres. The position a period starts from is therefore a mean
-    over a window of passes. For 1995-1997 that is a median of 28 positions per
-    transect, scatter 9-18 m, so the standard error on each transect mean is
-    2-3 m -- inside the 10 m Barrier3D cell.
-
-    By default the window is the CALENDAR span, not a span centred on the
-    1997 dune survey ([[cascade-period-is-the-calendar-year]]); the mismatch
-    is REPORTED in PROVENANCE.md, not corrected.
-
-    Since 2026-09-29 a window can also be given by dates. --centred-on takes
-    +/-1 yr of the flights of the lidar a period's start DEM is built on
-    (SURVEY_ANCHORS), because the line that becomes the shoreline island
-    offset is a snapshot the model starts from beside that DEM, and should
-    be dated like it (Hannah, by interview). That exception is for the
-    offset only; rates and scoring stay calendar.
-
-WHAT IS NOT DONE TO THE DATA
-    No outlier rejection. The 9-18 m scatter within a window is the beach
-    moving, not error to be cleaned, and per-transect sd, n and date span are
-    written to the CSV so a reader can judge it. No smoothing of the line: the
-    mean points are 50 m apart and the 100 m transect frame samples them.
-    A transect with fewer than --min-obs positions is EXCLUDED and listed, not
-    silently dropped.
-
-ON THE TIDE
-    The chainages come from coastsat.space, whose transect layer carries the
-    per-transect beach_slope (and its confidence interval) used for tidal
-    correction -- which is good evidence these series are already tidally
-    corrected, but it is not a statement from the download, and nothing in
-    this repository records one. See PROVENANCE.md. It matters less than it
-    looks: island_offset_hybrid.py zeroes each build on its own minimum, so a
-    UNIFORM tidal bias cancels entirely and only the alongshore VARIATION in
-    beach slope (0.04-0.06 here) survives, worth a few metres.
-
-OUTPUT   data/hatteras_init/5-scr/1-observations/mean_shoreline/<label>/
-    <label> is `<start>_<end>` in years for a calendar window (1995_1997),
-    in ISO dates otherwise (1995-10-12_1997-10-12).
-    shoreline_mean_<label>.geojson         ONE LineString, EPSG:26918, with the
-                                           metadata properties a dune line
-                                           carries so step 1 of the offset
-                                           build reads it unchanged
-    transect_means_<label>.csv             per CoastSat transect: n, mean, sd,
-                                           se, first/last date, the geolocated
-                                           mean point, domain, included/why not
-    mean_shoreline_<label>.png             the diagnostic: where the line is,
-                                           and how well sampled it is
-    mean_shoreline_<label>_island_outline.png
-                                           its panel (a) alone, over the
-                                           island outline
-    PROVENANCE.md
-    Read through hat_observed_rates.mean_shoreline_{dir,geojson,csv}().
-
-USAGE
-    python coastsat_mean_shoreline.py
-    python coastsat_mean_shoreline.py --window 1995 1997 --min-obs 10
-    python coastsat_mean_shoreline.py --centred-on alace_1996     # 1995-10-12 .. 1997-10-12
-    python coastsat_mean_shoreline.py --centred-on usace_2009     # 2008-08-17 .. 2010-08-17
-    python coastsat_mean_shoreline.py --window-dates 1995-10-12 1997-10-12
-
-THEN (the offset build, which this script does not do)
-    duneline_to_raw_offsets.py --duneline <the geojson above>
-        --out 1995_1997_shoreline_offset_raw.csv
-    island_offset_hybrid.py --year 1996 --source shoreline --version v1
-        --raw-file <the raw file above>
-==============================================================================
+Writes the mean shoreline (points, line, CSV), its provenance and a
+diagnostic figure under the window's folder. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -129,29 +40,19 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     transect_lookup,
 )
 
-# The CRS the 1984, 2009 and 2023 dune lines declare. The 100 m transects are
-# EPSG:3725, NAD83(NSRS2007) / UTM 18N, which is the same grid to within the
-# null transform, and duneline_to_raw_offsets.py reprojects anyway.
+# --- CONFIG ------------------------------------------------------------------
+# The CRS the 1984, 2009 and 2023 dune lines declare
 TARGET_CRS = "EPSG:26918"
 LAYER_CRS = "EPSG:4326"
 
 DEFAULT_WINDOW = (1995, 1997)
-# The house minimum, from coastsat_lrr.MIN_OBS: fewer than ten positions is
-# not a mean of a seasonal cycle.
+# The house minimum, from coastsat_lrr.MIN_OBS
 DEFAULT_MIN_OBS = 10
 
-# Copied into the raw offsets file by duneline_to_raw_offsets.LINE_META, so a
-# shoreline-derived raw file carries as full a provenance as a dune-derived one.
+# Copied into the raw offsets file by duneline_to_raw_offsets.LINE_META
 SOURCE_TYPE = "Landsat 5/7/8 via CoastSat (coastsat.space)"
 
-# The lidar surveys a period's start topography is built on, for --centred-on.
-# Decided 2026-09-29 (Hannah, by interview): the line that becomes the
-# shoreline island offset is a SNAPSHOT paired with the start DEM, so it is
-# averaged over +/-1 yr of the survey's flights rather than over the calendar
-# span. This is a deliberate exception to [[cascade-period-is-the-calendar-year]]
-# for the offset only; rates and scoring stay on calendar years. The centre is
-# the middle of the flights, written out rather than computed so it matches
-# the dates agreed in the interview.
+# The lidar surveys a period's start topography is built on, for --centred-on
 SURVEY_ANCHORS = {
     "alace_1996": {
         "period_start": 1996,
@@ -173,16 +74,11 @@ SURVEY_ANCHORS = {
     },
 }
 DEFAULT_HALF_WIDTH_YEARS = 1
+# -----------------------------------------------------------------------------
 
 
+# An averaging window
 class Window:
-    """An averaging window: first and last day, both inclusive.
-
-    Built from calendar years (1 Jan of the first to 31 Dec of the last) or
-    from two ISO dates. `key` is what the hat_observed_rates resolvers take --
-    years for a calendar window, so its folder stays `1995_1997`, dates
-    otherwise, so its folder is `1995-10-12_1997-10-12`.
-    """
 
     def __init__(self, lo, hi, calendar, anchor=None, half_width=None):
         self.lo, self.hi = pd.Timestamp(lo), pd.Timestamp(hi)
@@ -224,16 +120,16 @@ class Window:
     def label(self):
         return mean_shoreline_label(*self.key)
 
+    # For titles: `1995–1997`, or `1995-10-12 – 1997-10-12`
     @property
     def span(self):
-        """For titles: `1995–1997`, or `1995-10-12 – 1997-10-12`."""
         if self.calendar:
             return "{0}–{1}".format(*self.key)
         return "{0} – {1}".format(*self.key)
 
+    # For captions and prose: what the window IS, not only its ends
     @property
     def described(self):
-        """For captions and prose: what the window IS, not only its ends."""
         if self.calendar:
             return "calendar {0}".format(self.span)
         text = "{0} to {1}".format(self.lo_iso, self.hi_iso)
@@ -250,42 +146,28 @@ class Window:
         # midway between the two end days: 1996-07-01 for calendar 1995-1997
         return (self.lo + (self.hi - self.lo) / 2).normalize()
 
+    # The model period this window starts: the anchor's, else the year of its centre
     @property
     def period_start(self):
-        """The model period this window starts: the anchor's, else the
-        calendar year holding the centre (1996 for 1995-1997)."""
         if self.anchor:
             return SURVEY_ANCHORS[self.anchor]["period_start"]
         return int(self.centre.year)
 
+    # The observations inside the window
     def clip(self, obs):
-        """The observations inside the window. The last day is included WHOLE
-        (to 23:59:59); until 2026-09-29 the calendar filter stopped at
-        midnight on 31 Dec, which dropped nothing in the existing windows --
-        no pass falls on 1997-12-31 or 2011-12-31 -- but would have dropped a
-        pass on the last day of a date window."""
         return filter_dates(obs, self.lo_iso, self.hi_iso + " 23:59:59")
 
 
-# =============================================================================
-# the transect layer
-# =============================================================================
+# The transect layer
 
+# Origin and seaward unit vector of each wanted transect, in TARGET_CRS
 def transect_geometry(wanted):
-    """Origin and seaward unit vector of each wanted transect, in TARGET_CRS.
-
-    The layer is the global CoastSat file (233k transects, 80 MB), so it is
-    read once and filtered to the ids the domain lookup names. Chainage is
-    measured from the FIRST vertex along the line, so that vertex is the
-    origin and the line's own direction is the unit vector.
-    """
     to_utm = pyproj.Transformer.from_crs(LAYER_CRS, TARGET_CRS, always_xy=True)
     out = {}
     with open(TRANSECT_LAYER, "r", encoding="utf-8") as fh:
         layer = json.load(fh)
     for feat in layer["features"]:
-        # The layer spells an id "usa_NC_0032-0001"; the timeseries file and
-        # the domain lookup both spell it with an underscore.
+        # The layer spells an id "usa_NC_0032-0001"
         tid = str(feat["properties"]["id"]).replace("-", "_")
         if tid not in wanted:
             continue
@@ -299,25 +181,16 @@ def transect_geometry(wanted):
     return out
 
 
+# The per-transect CSV, which sits in its site's folder
 def timeseries_file(transect_id):
-    """The per-transect CSV, which sits in its site's folder."""
     site = transect_id.rsplit("_", 1)[0]
     return COASTSAT_TIMESERIES / "{0}_timeseries".format(site) / "{0}.csv".format(transect_id)
 
 
-# =============================================================================
-# the window mean
-# =============================================================================
+# The window mean
 
+# One row per CoastSat transect
 def window_means(lookup, geometry, window, min_obs):
-    """One row per CoastSat transect: its mean position over the window, and
-    the positions behind the INCLUDED means counted by calendar year.
-
-    `window` is a Window, inclusive of its first and last day. A transect is
-    EXCLUDED, with the reason recorded, when its geometry or timeseries is
-    missing or when it holds fewer than `min_obs` positions -- never dropped
-    in silence.
-    """
     rows = []
     by_year = {}
     for tid, domain in zip(lookup["transect_id"], lookup["domain_number"]):
@@ -363,35 +236,17 @@ def window_means(lookup, geometry, window, min_obs):
     return df.reset_index(drop=True), dict(sorted(by_year.items()))
 
 
+# The included mean points in alongshore order
 def line_vertices(df):
-    """The included mean points in alongshore order.
-
-    Ordering is (site, transect number), which is alongshore here: the six
-    Hatteras sites chain south to north with monotonically increasing domain
-    spans, and the resulting vertex spacing is ~50 m with no gap over 300 m
-    (checked 2026-09-22). Where two sites overlap at a domain boundary the
-    line can double back a little; that is why the intersection step records
-    n_crossings and takes one crossing per transect.
-    """
     keep = df[df["included"] & df["x"].notna()]
     return keep.sort_values(["site", "transect_number"]).reset_index(drop=True)
 
 
-# =============================================================================
-# outputs
-# =============================================================================
+# Outputs
 
+# ONE LineString, with the properties a digitised dune line carries
 def write_geojson(vertices, path, window, built_on, n_total):
-    """ONE LineString, with the properties a digitised dune line carries.
-
-    duneline_to_raw_offsets.py exits on a file holding more than one feature
-    and copies LINE_META across, so this has to be a single feature and it is
-    worth filling the metadata in: the raw offsets file is where a reader
-    meets this line next.
-    """
-    # A window, not a moment -- rule 2. The raw offsets file carries `year`
-    # in its `year` column, where "1997" would be a lie. A calendar window
-    # keeps the strings it has always written, so its raw file is unchanged.
+    # A window, not a moment -- rule 2
     if window.calendar:
         year = "{0}-{1}".format(*window.key)
         within = "calendar {0}-{1}".format(*window.key)
@@ -428,21 +283,14 @@ def write_geojson(vertices, path, window, built_on, n_total):
         json.dump(doc, fh, indent=1)
 
 
+# Two panels
 def figure(df, vertices, folder, window):
-    """Two panels: where the line is, and how well sampled it is."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     fs.apply_style()
-    # Two panels STACKED, and the map drawn with northing across the page.
-    # The island is ~45 km north-south by ~6 km east-west, so at equal aspect
-    # -- which a map has to keep, or the shape it is showing is not the shape
-    # on the ground -- a portrait panel is an unreadable sliver. Turned on its
-    # side it is a wide ribbon, and alongshore runs left to right as it does
-    # in every other figure here.
-    # Panel (b) is kept short (Hannah, 2026-09-29: "make panel b thinner");
-    # the figure is shortened with it so panel (a) keeps its size.
+    # Two panels STACKED, and the map drawn with northing across the page
     fig, axes = plt.subplots(
         2, 1, figsize=fs.figsize("double", aspect=0.46),
         gridspec_kw={"height_ratios": [1, 1.1], "hspace": 0.55})
@@ -453,9 +301,7 @@ def figure(df, vertices, folder, window):
     ax.set_xlabel("Northing (km, EPSG:26918)  —  south → north")
     ax.set_ylabel("Easting (km)")
     ax.set_aspect("equal")
-    # Easting increases DOWN, as in ribbon_axes: with north to the right, an
-    # easting-up axis draws the mirror image of the map (Hannah, 2026-09-29,
-    # the same flip the outline figure got on 09-23). Ocean at the bottom.
+    # Easting increases DOWN, as in ribbon_axes
     ax.invert_yaxis()
     fs._title(ax, 0, "Mean shoreline, {0}".format(window.span))
 
@@ -487,25 +333,19 @@ def figure(df, vertices, folder, window):
     print("  figure -> {0}".format(out[0].name))
 
 
-# The ribbon: panel (a) of the diagnostic on its own, over a map (Hannah,
-# 2026-09-23). Northing across the page, easting up, equal aspect. Shared with
-# coastsat_mean_shoreline_on_imagery.py, which draws the same ribbon on photos.
+# The ribbon: panel (a) on its own over a map, shared with the imagery script
 RIBBON_PAD_M = (3500.0, 1200.0, 600.0)    # landward, seaward, alongshore
 
 
+# (n0, n1, e0, e1)
 def ribbon_extent(vertices):
-    """(n0, n1, e0, e1): the line's northing span, and easting wide enough to
-    hold the island landward of it (Buxton Woods is ~3 km across)."""
     land, sea, along = RIBBON_PAD_M
     return (vertices["y"].min() - along, vertices["y"].max() + along,
             vertices["x"].min() - land, vertices["x"].max() + sea)
 
 
+# Km ticks in the same words as the diagnostic's panel (a), but easting increasing DOWN (Hannah, ...
 def ribbon_axes(ax, ext):
-    """Km ticks in the same words as the diagnostic's panel (a), but easting
-    increasing DOWN (Hannah, 2026-09-23: "flip these vertically"): the ocean is
-    at the bottom and the ribbon is a north-up map turned 90 degrees clockwise,
-    where panel (a)'s easting-up axes draw its mirror image."""
     n0, n1, e0, e1 = ext
     ax.set_xlim(n0, n1)
     ax.set_ylim(e1, e0)
@@ -517,13 +357,8 @@ def ribbon_axes(ax, ext):
     fs.spines_for_image(ax)
 
 
+# Water tint and the island outline, in the ribbon's swapped axes
 def draw_island_outline(ax, ext, edge_on_top=None):
-    """Water tint and the island outline, in the ribbon's swapped axes.
-
-    `edge_on_top` (a colour) also draws the outline's edge above everything
-    at zorder 3.5, between the photographs and the mean line; the imagery
-    ribbon passes "white" (Hannah, 2026-09-23) so the outline reads against
-    the photographs."""
     import geopandas as gpd
     from shapely.affinity import affine_transform
     from shapely.geometry import box
@@ -540,8 +375,8 @@ def draw_island_outline(ax, ext, edge_on_top=None):
         gpd.GeoSeries(isl).boundary.plot(ax=ax, color=edge_on_top, lw=0.6, zorder=3.5)
 
 
+# The line over the island outline, alone
 def outline_figure(vertices, folder, window):
-    """The line over the island outline, alone."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -567,12 +402,8 @@ def outline_figure(vertices, folder, window):
     print("  figure -> {0}".format(out[0].name))
 
 
+# The excluded transects as a markdown table
 def _excluded_table(excluded):
-    """The excluded transects as a markdown table.
-
-    Spelled out rather than DataFrame.to_markdown(), which wants `tabulate`;
-    a provenance note is not worth a dependency (2026-09-22).
-    """
     if not len(excluded):
         return "No transect was excluded."
     cols = ["transect_id", "domain_number", "n_obs", "excluded_because"]
@@ -584,11 +415,8 @@ def _excluded_table(excluded):
     return "\n".join(lines)
 
 
+# (vintage, ISO date) of the dune line a period start reads, or None
 def dune_line_date(period_start):
-    """(vintage, ISO date) of the dune line a period start reads, or None.
-
-    The vintage from hat_topo_version.DUNE_LINE_FOR_YEAR, its flight date
-    from coastsat_vs_duneline.KNOWN_SURVEY_DATES -- neither is typed here."""
     from site_layer.hat_topo_version import dune_line_for_year
     from coastsat_vs_duneline import KNOWN_SURVEY_DATES
     vintage = dune_line_for_year(period_start, strict=False)
@@ -596,14 +424,13 @@ def dune_line_date(period_start):
     return (vintage, date) if date else None
 
 
+# A time span in months
 def _months(delta):
     return delta.days / 30.4375
 
 
+# Point 2 of the provenance
 def _window_paragraph(window):
-    """Point 2 of the provenance: what the window is centred on, and how far
-    that sits from the period's dune line. Computed, so it is right for every
-    window (until 2026-09-29 it was 1996's text, printed into 2009_2011 too)."""
     dune = dune_line_date(window.period_start)
     dune_text = None
     if dune:
@@ -661,10 +488,8 @@ def _window_paragraph(window):
     return head + "\n" + " ".join(body)
 
 
+# Point 3
 def _sampling_paragraph(window, by_year):
-    """Point 3: the positions behind the included means, per calendar year,
-    counted over every included transect (the 09-22 text quoted a sample of
-    80)."""
     counts = " / ".join(str(by_year[y]) for y in by_year)
     years = " / ".join(str(y) for y in by_year)
     partial = ""
@@ -685,6 +510,7 @@ def _sampling_paragraph(window, by_year):
         .format(counts, years, partial, landsat))
 
 
+# What went into the line: transects kept, excluded, and why
 def write_provenance(df, vertices, folder, window, by_year, min_obs, built_on):
     excluded = df[~df["included"]]
     per_domain = df[df["included"]].groupby("domain_number").size()
@@ -804,8 +630,7 @@ Never type these paths.
     (folder / "PROVENANCE.md").write_text(text, encoding="utf-8")
 
 
-# =============================================================================
-
+# Run: pick the window, average, geolocate, write the line and figures
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     how = ap.add_mutually_exclusive_group()

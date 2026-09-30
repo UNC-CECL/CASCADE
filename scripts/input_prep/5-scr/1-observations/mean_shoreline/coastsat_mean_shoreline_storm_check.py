@@ -1,73 +1,11 @@
 """
-coastsat_mean_shoreline_storm_check.py -- was a window mean shaped by a storm?
-==============================================================================
-A check on the +/-1 yr mean shorelines that become the shoreline island
-offset (1995-10-12 .. 1997-10-12 for 1996, 2008-08-17 .. 2010-08-17 for
-2010). A two-year mean still leans on whatever the beach was doing in those
-two years, and a big storm inside the window, or just before it, can pull a
-share of the passes landward. This puts each window in its longer storm
-record and asks three questions:
+Was a window mean shaped by a storm? A check on the +/-1 yr means that become the shoreline offset.
 
-    1. WHICH STORMS. Every high-water event from 3 yr before the window to
-       3 yr after it, ranked against the whole 1984-2024 record.
-    2. WAS THE WINDOW STORMY. Storm-hours above the berm in the window
-       against every other 2-yr span of 1984-2024.
-    3. DID IT MOVE THE MEAN. Each transect's window mean recomputed without
-       the passes that fall within --recovery-days after a major storm; the
-       shift is what that storm's aftermath contributed to the line.
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_storm_check.py
+    python scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_storm_check.py --centred-on alace_1996
 
-Built 2026-09-29 (Hannah asked for it as a check inside the mean-shoreline
-folders).
-
-THE STORMS ARE THE MODEL'S STORMS
-    The events, their peak total water level (Rhigh, m above MHW) and their
-    hours above the berm are the hindcast series (hat_env_forcings'
-    DEFAULT_STORM_VARIANT): Duck gauge 8651370 + Stockdon (2006) R2% from WIS
-    63228 waves, berm 1.7 m NAVD88. The full 1984-2024 record is years
-    <= 2003 from the 1984_2004 file and >= 2004 from the 2004_2024 file.
-    Peak hours and the tropical/other class come from storm_figures.py, so
-    the names and colours match 3-storms/figures/. Water levels are an
-    estimate from the gauge and hindcast waves, not observations at
-    Hatteras.
-
-"MAJOR" IS A RETURN LEVEL, NOT A PERCENTILE OF EVENTS
-    A storm is major when its Rhigh OR its hours above the berm reach the
-    MEDIAN ANNUAL MAXIMUM of 1984-2024 -- a level the record reaches in half
-    its years, the ~2-yr event. Height alone missed Nor'Ida (Nov 2009,
-    2.85 m but 103 h, the 13th longest event of the record), and a long
-    nor'easter can move more sand than a higher, shorter storm. A percentile
-    of all events would move with how many small events the berm threshold
-    admits; the annual maximum does not. --major-rhigh / --major-hours
-    override the two levels.
-
-THE SHORELINE SERIES
-    Each included transect of the window's transect_means CSV, its CoastSat
-    positions over the context span, minus that transect's window mean (so
-    zero IS the mean line, positive is seaward). One point per image date:
-    the median across transects, drawn only where at least --min-coverage
-    of the transects have a position that day (a cloud-clipped scene
-    samples one end of the island).
-
-WHAT IS NOT DONE
-    No pass is removed from the mean line. The sensitivity in question 3 is
-    reported, never applied. Same rule as the producer: the scatter is the
-    beach moving.
-
-OUTPUT   <mean_shoreline window folder>/storm_check/
-    storm_check_<label>.png                  the storms around the window
-    storm_check_<label>_events.csv           every event in the context span,
-                                             ranked in 1984-2024
-    storm_check_<label>_mean_shift.csv       per transect: the window mean
-                                             with and without post-storm passes
-    README.md                                the findings, computed
-    supporting/  PDF, CAPTIONS.md, the island-median series
-
-USAGE
-    python coastsat_mean_shoreline_storm_check.py                 # both DEM-centred windows
-    python coastsat_mean_shoreline_storm_check.py --centred-on alace_1996
-    python coastsat_mean_shoreline_storm_check.py --window-dates 1995-10-12 1997-10-12
-    python coastsat_mean_shoreline_storm_check.py --context-years 5 --recovery-days 60
-==============================================================================
+Storms in and around the window, the island-wide anomaly through it, and
+the shift post-storm passes make; writes a figure and README per window. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -103,23 +41,21 @@ from site_layer import hat_env_forcings as env  # noqa: E402
 from site_layer import hat_figure_style as fs  # noqa: E402
 from site_layer.hat_observed_rates import mean_shoreline_csv, mean_shoreline_dir  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RECORD = (1984, 2024)
 DEFAULT_CONTEXT_YEARS = 3
-# Beach recovery after a storm runs weeks to months; 90 days is the middle
-# of that, and it is a parameter because nothing here measures it.
+# Beach recovery after a storm runs weeks to months
 DEFAULT_RECOVERY_DAYS = 90
 DEFAULT_MIN_COVERAGE = 0.5
 MIN_OBS = 10          # the producer's minimum for a transect mean
 CHECK_DIR = "storm_check"
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# the storm record, 1984-2024
-# =============================================================================
+# The storm record, 1984-2024
 
+# Every event of 1984-2024, one row each, with its peak hour, Rhigh (m MHW), hours above the berm ...
 def load_events(variant):
-    """Every event of 1984-2024, one row each, with its peak hour, Rhigh (m
-    MHW), hours above the berm before trimming, and storm type."""
     forcing = sf.load_forcing()
     parts = []
     for (a, b), keep in (((1984, 2004), lambda y: y <= 2003), ((2004, 2024), lambda y: y >= 2004)):
@@ -152,27 +88,28 @@ def load_events(variant):
     return df.sort_values("peak").reset_index(drop=True)
 
 
+# Median over the record of each year's highest event
 def annual_max_median(events, col, empty):
     ann = events.groupby(events.peak.dt.year)[col].max()
     ann = ann.reindex(range(RECORD[0], RECORD[1] + 1)).fillna(empty)   # a year with no event
     return float(ann.median())
 
 
+# 'height', 'length', 'both' or '' per event
 def major_by(df, major):
-    """'height', 'length', 'both' or '' per event."""
     h, l = df.rhigh_m >= major["rhigh"], df.raw_hours >= major["hours"]
     return np.select([h & l, h, l], ["both", "height", "length"], "")
 
 
+# A tropical event's name, or None
 def event_name(r):
     if r["type"] == "tropical":
         return sf.label_text(pd.Series(dict(name=r.tc_name, peak=r.peak, tc_status="")))
     return None
 
 
+# Storm-hours above the berm in every 2-yr span of the record, stepped monthly
 def storm_hours_2yr(events, step_days=30):
-    """Storm-hours above the berm in every 2-yr span of the record, stepped
-    monthly: (span start, span end, hours, events, max Rhigh)."""
     lo, hi = pd.Timestamp(f"{RECORD[0]}-01-01"), pd.Timestamp(f"{RECORD[1]}-12-31")
     rows = []
     t = lo
@@ -185,13 +122,10 @@ def storm_hours_2yr(events, step_days=30):
     return pd.DataFrame(rows, columns=["start", "end", "hours", "events", "max_rhigh"])
 
 
-# =============================================================================
-# the shoreline
-# =============================================================================
+# The shoreline
 
+# Every CoastSat position of the window's included transects over the context span, as the anomaly ...
 def load_positions(window, context_lo, context_hi):
-    """Every CoastSat position of the window's included transects over the
-    context span, as the anomaly from that transect's window mean."""
     means = pd.read_csv(mean_shoreline_csv(*window.key))
     means = means[means.included]
     parts = []
@@ -204,6 +138,7 @@ def load_positions(window, context_lo, context_hi):
     return pd.concat(parts, ignore_index=True), means
 
 
+# Per-day island median anomaly and transect count
 def island_series(pos, n_transects, min_coverage):
     day = pos.assign(day=pos.date.dt.normalize()).groupby("day")
     s = pd.DataFrame({"n_transects": day.transect_id.nunique(),
@@ -215,9 +150,8 @@ def island_series(pos, n_transects, min_coverage):
     return s.reset_index().rename(columns={"day": "date"})
 
 
+# Each transect's window mean without the passes inside `recovery_days` after any of `storms`
 def mean_shift(pos, window, storms, recovery_days):
-    """Each transect's window mean without the passes inside `recovery_days`
-    after any of `storms`; one column per storm and one for all of them."""
     inw = pos[(pos.date >= window.lo) & (pos.date <= window.hi + pd.Timedelta(days=1))]
     rec = pd.Timedelta(days=recovery_days)
     g = inw.groupby("transect_id")
@@ -238,18 +172,15 @@ def mean_shift(pos, window, storms, recovery_days):
     return out.reset_index(), list(masks)
 
 
-# =============================================================================
-# figure
-# =============================================================================
+# Figure
 
+# Shade the window
 def _shade(ax, window):
     ax.axvspan(window.lo, window.hi, color=fs.C["BASE_FILL"], alpha=0.55, lw=0, zorder=0)
 
 
+# The storms around the window, one panel
 def figure(ctx, spans, window, major, folder, label, anchor, dune):
-    """The storms around the window, one panel. The shoreline series and the
-    2-yr storminess are in the README and the CSVs, not drawn (Hannah,
-    2026-09-29: keep only the storm panel)."""
     fig, a = plt.subplots(figsize=fs.figsize("double", height=3.4))
     xlim = (pd.Timestamp(window.lo) - pd.DateOffset(years=spans["ctx"]),
             pd.Timestamp(window.hi) + pd.DateOffset(years=spans["ctx"]))
@@ -274,8 +205,7 @@ def figure(ctx, spans, window, major, folder, label, anchor, dune):
     a.axhline(major["rhigh"], color=fs.INK, lw=0.8, ls=(0, (5, 2)), zorder=1)
     a.text(xlim[1], major["rhigh"] - 0.03, f"median annual maximum 1984–2024 ({major['rhigh']:.2f} m)  ",
            ha="right", va="top", fontsize=6.8, color=fs.INK, path_effects=halo)
-    # Named storms carry their HURDAT2 name; an unnamed storm that is major by
-    # length only carries its hours, since its dot sits below the dashed line.
+    # Named storms carry their HURDAT2 name
     for _, r in big.iterrows():
         txt = r["name"] or (f"{r.raw_hours} h above berm" if r.major_by == "length" else None)
         if txt:
@@ -314,14 +244,14 @@ def figure(ctx, spans, window, major, folder, label, anchor, dune):
     plt.close(fig)
 
 
-# =============================================================================
-# the README
-# =============================================================================
+# The readme
 
+# A signed number, or n/a
 def _pct(v):
     return f"{v:+.1f}" if np.isfinite(v) else "n/a"
 
 
+# The README beside one window's check
 def write_readme(folder, label, window, anchor, dune, ctx, major, n_record, spans_df,
                  window_hours, shift, keys, storms, recovery_days, series, n_transects, variant, ctx_years):
     inw = ctx[(ctx.peak >= window.lo) & (ctx.peak <= window.hi + pd.Timedelta(days=1))]
@@ -459,9 +389,8 @@ Storm series: `{variant}` (`hat_env_forcings.DEFAULT_STORM_VARIANT`).
     (folder / "README.md").write_text(text, encoding="utf-8")
 
 
+# One row in the window's PROVENANCE.md Files table, if it is missing
 def link_from_provenance(window_dir):
-    """One row in the window's PROVENANCE.md Files table, if it is missing.
-    coastsat_mean_shoreline.py writes the same row when the folder exists."""
     p = window_dir / "PROVENANCE.md"
     if not p.is_file():
         return
@@ -476,8 +405,7 @@ def link_from_provenance(window_dir):
         p.write_text(text.replace(tail, "\n" + row + tail[1:], 1), encoding="utf-8")
 
 
-# =============================================================================
-
+# One window: load, compute, draw, write
 def run(window, events, major, variant, ctx_years, recovery_days, min_cov):
     label = window.label
     window_dir = mean_shoreline_dir(*window.key)
@@ -536,6 +464,7 @@ def run(window, events, major, variant, ctx_years, recovery_days, min_cov):
         print(f"  shift without {k}: median {c.median():+.2f} m, p5 {c.quantile(.05):+.2f}, p95 {c.quantile(.95):+.2f}")
 
 
+# Run: the chosen windows
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     g = ap.add_mutually_exclusive_group()

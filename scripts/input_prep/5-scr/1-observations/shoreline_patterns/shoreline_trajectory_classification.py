@@ -1,42 +1,10 @@
 """
-shoreline_trajectory_classification.py
-===========================================
-Classifies shoreline trajectory stability across Hatteras Island domains
-using CoastSat transect time-series over three periods:
-    - Period 1 (calibration): 1984–2004
-    - Period 2 (validation):  2004–2024
-    - Full record:            1984–2024
+Classify each domain's shoreline trajectory from the CoastSat transects, over two periods and the full record.
 
-For each domain and period, computes:
-    - Linear rate of change (LRR) via OLS on annual median chainage
-    - Sign consistency (fraction of year-on-year steps in dominant direction)
-    - Interannual variability (std dev of annual positions around trend)
+    python scripts/input_prep/5-scr/1-observations/shoreline_patterns/shoreline_trajectory_classification.py
 
-Classification scheme (applied per domain, per period pair):
-    Persistent Erosion      — both periods erosional  (LRR < -THRESHOLD)
-    Persistent Accretion    — both periods accretional (LRR > +THRESHOLD)
-    Persistently Stable     — both periods within ±THRESHOLD
-    Switching: Acc→Ero      — full reversal: P1 accretional, P2 erosional
-    Switching: Ero→Acc      — full reversal: P1 erosional,   P2 accretional
-    Decelerating Erosion    — P1 erosional, P2 stable (erosion slowing)
-    Accelerating Erosion    — P1 stable, P2 erosional (recently destabilised)
-    Decelerating Accretion  — P1 accretional, P2 stable (accretion pulse fading)
-    Accelerating Accretion  — P1 stable, P2 accretional (recently gaining)
-
-Outputs
--------
-1.  Along-island classification bar chart (domain × period)
-2.  Period 1 vs Period 2 LRR scatter plot (per domain, coloured by class)
-3.  Hovmöller heatmap (domain × year annual deviation) with classification overlay
-4.  CSV summary table of all metrics
-
-Usage
------
-    python shoreline_trajectory_classification.py
-
-Dependencies
-------------
-    pip install pandas numpy matplotlib scipy tqdm
+Writes the per-domain metrics and the classification, scatter and
+Hovmoller figures. Details: scripts/input_prep/5-scr/1-observations/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -59,18 +27,12 @@ import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ============================================================
-# CONFIG
-# ============================================================
 
-# The three paths below were driveless (str(_PATH_REPO / "scripts" / "..."), resolving to
-# C:\scripts) and one named the pre-2026 "input_preperation" folder, so
-# this script could not run. Anchored on the repo root (2026-09-10).
+# The three paths below were driveless (str(_PATH_REPO / "scripts" / "...")
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
@@ -79,6 +41,7 @@ from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 LOOKUP_CSV    = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
 OUTPUT_DIR    = str(_obs.SHORELINE_PATTERNS / "classification_output")
@@ -107,7 +70,7 @@ HOVM_SMOOTH_SIGMA = 1.5
 
 NUM_REAL_DOMAINS = 90
 
-# ── Publication annotation colours ───────────────────────────────────────────
+# Publication annotation colours
 ANN_TOWN_SPANS = {
     "Buxton":      (7,  8),
     "Avon":        (21, 31),
@@ -124,7 +87,7 @@ ANN_C_VILLAGE_LINE = "0.40"
 ANN_C_PIER         = "#1565C0"
 ANN_C_GROIN        = "#B71C1C"
 
-# ── Trajectory classification colours ────────────────────────────────────────
+# Trajectory classification colours
 CLASS_COLORS = {
     "Persistent Erosion":     "#b2182b",   # darkest red    — ongoing, high confidence
     "Accelerating Erosion":   "#d6604d",   # mid red        — getting worse
@@ -137,11 +100,10 @@ CLASS_COLORS = {
     "Switching: Ero→Acc":     "#9970ab",   # light purple   — full reversal
     "Insufficient Data":      "#444444",   # dark charcoal
 }
+# -----------------------------------------------------------------------------
 
-# ============================================================
-# HELPERS
-# ============================================================
 
+# {transect: CSV path} for the site's CoastSat folders
 def find_csvs(root_dir, site_filter):
     csv_map = {}
     for folder in os.listdir(root_dir):
@@ -156,6 +118,7 @@ def find_csvs(root_dir, site_filter):
     return csv_map
 
 
+# One transect's time series
 def load_transect(csv_path):
     try:
         df = pd.read_csv(csv_path)
@@ -172,8 +135,8 @@ def load_transect(csv_path):
         return None
 
 
+# Return Series of annual median chainage, index = year, for yr_start..yr_end
 def annual_median(ts, yr_start, yr_end, min_obs=2):
-    """Return Series of annual median chainage, index = year, for yr_start..yr_end."""
     years, vals = [], []
     for yr in range(yr_start, yr_end + 1):
         d = ts[ts.index.year == yr]
@@ -185,9 +148,8 @@ def annual_median(ts, yr_start, yr_end, min_obs=2):
     return pd.Series(vals, index=years)
 
 
+# OLS linear rate of change (m/yr) from annual median series
 def compute_lrr(ann_series):
-    """OLS linear rate of change (m/yr) from annual median series.
-    Returns (lrr, r2, n_years) or (nan, nan, 0) if insufficient data."""
     s = ann_series.dropna()
     if len(s) < 4:
         return np.nan, np.nan, len(s)
@@ -195,9 +157,8 @@ def compute_lrr(ann_series):
     return slope, r**2, len(s)
 
 
+# Fraction of year-on-year steps in the dominant direction (0.5–1.0)
 def sign_consistency(ann_series):
-    """Fraction of year-on-year steps in the dominant direction (0.5–1.0).
-    1.0 = monotonic, 0.5 = random walk."""
     s = ann_series.dropna()
     if len(s) < 3:
         return np.nan
@@ -209,15 +170,8 @@ def sign_consistency(ann_series):
     return abs(dominant)               # consistency regardless of direction
 
 
+# Classify trajectory from Period 1 and Period 2 LRRs
 def classify(lrr1, lrr2, thr=THRESHOLD):
-    """Classify trajectory from Period 1 and Period 2 LRRs.
-
-    Uses 8 classes capturing both direction and acceleration/deceleration:
-      - Persistent:    same side of threshold both periods
-      - Switching:     full reversal across threshold
-      - Decelerating:  was outside threshold, now inside (slowing down)
-      - Accelerating:  was inside threshold, now outside (speeding up)
-    """
     if np.isnan(lrr1) or np.isnan(lrr2):
         return "Insufficient Data"
     e1 = lrr1 < -thr;  a1 = lrr1 > thr;  s1 = not e1 and not a1
@@ -238,6 +192,7 @@ def classify(lrr1, lrr2, thr=THRESHOLD):
     else:            return "Insufficient Data"
 
 
+# A 1-D Gaussian smooth, or the input if sigma is 0
 def gaussian_smooth_1d(arr, sigma):
     if sigma <= 0:
         return arr
@@ -250,12 +205,9 @@ def gaussian_smooth_1d(arr, sigma):
         return np.where(wt > 0.05, sm / wt, np.nan)
 
 
+# Add community spans, Wimble Shoals, piers, groin, village lines
 def add_geo_annotations(ax, orientation="horizontal", label_side="top",
                          secondary_axis=True):
-    """
-    Add community spans, Wimble Shoals, piers, groin, village lines.
-    orientation: 'horizontal' (domain on x-axis) or 'vertical' (domain on y-axis).
-    """
     if orientation == "horizontal":
         span_fn   = ax.axvspan
         line_fn   = ax.axvline
@@ -306,16 +258,10 @@ def add_geo_annotations(ax, orientation="horizontal", label_side="top",
                     fontsize=6, color=ANN_C_GROIN, zorder=3)
 
 
-# ============================================================
-# ANALYSIS
-# ============================================================
+# Analysis
 
+# For every domain, compute LRR, sign consistency, and variability for Period 1, Period 2, and the ...
 def compute_domain_metrics(ts_dict, transect_order, domain_per_transect):
-    """
-    For every domain, compute LRR, sign consistency, and variability
-    for Period 1, Period 2, and the full record.
-    Returns a DataFrame indexed by domain number.
-    """
     domains = sorted(set(domain_per_transect))
     rows = []
 
@@ -423,10 +369,9 @@ def compute_domain_metrics(ts_dict, transect_order, domain_per_transect):
     return df
 
 
-# ============================================================
-# FIGURE 1 — Along-island classification bar chart
-# ============================================================
+# Figure 1 — Along-island classification bar chart
 
+# Class and LRR per domain for each period
 def plot_classification_bar(metrics, out_path):
     fig, axes = plt.subplots(4, 1, figsize=(18, 12), sharex=True,
                              gridspec_kw={"height_ratios": [3, 3, 1, 1]})
@@ -434,7 +379,7 @@ def plot_classification_bar(metrics, out_path):
     domains = metrics.index.values
     x       = domains  # plot directly in domain space
 
-    # ── Panel 1: Period 1 LRR ────────────────────────────────────────────────
+    # Panel 1: Period 1 LRR
     ax = axes[0]
     lrr1 = metrics["dom_lrr_p1"].values
     txn1 = metrics["txn_lrr_p1"].values
@@ -454,7 +399,7 @@ def plot_classification_bar(metrics, out_path):
     ax.legend(fontsize=6, loc="upper right")
     add_geo_annotations(ax, "horizontal")
 
-    # ── Panel 2: Period 2 LRR ────────────────────────────────────────────────
+    # Panel 2: Period 2 LRR
     ax = axes[1]
     lrr2 = metrics["dom_lrr_p2"].values
     txn2 = metrics["txn_lrr_p2"].values
@@ -472,7 +417,7 @@ def plot_classification_bar(metrics, out_path):
     ax.tick_params(labelsize=7)
     add_geo_annotations(ax, "horizontal")
 
-    # ── Panel 3: Trajectory classification strip ──────────────────────────────
+    # Panel 3: Trajectory classification strip
     ax = axes[2]
     for dom in domains:
         cl = metrics.loc[dom, "trajectory"]
@@ -489,7 +434,7 @@ def plot_classification_bar(metrics, out_path):
     for name, (d0, d1) in ANN_TOWN_SPANS.items():
         ax.axvspan(d0-0.5, d1+0.5, color=ANN_C_TOWN_SPAN, alpha=0.18, zorder=0)
 
-    # ── Panel 4: Variability strip ────────────────────────────────────────────
+    # Panel 4: Variability strip
     ax = axes[3]
     var_vals = metrics["dom_var_full"].values
     bar_colors = ["#d73027" if v > VARIABILITY_THRESHOLD else "#fee090"
@@ -520,10 +465,9 @@ def plot_classification_bar(metrics, out_path):
     print(f"  Figure 1 saved → {out_path}")
 
 
-# ============================================================
-# FIGURE 2 — P1 vs P2 LRR scatter
-# ============================================================
+# Figure 2 — P1 vs P2 LRR scatter
 
+# Period 1 against period 2 LRR
 def plot_lrr_scatter(metrics, out_path):
     fig, axes = plt.subplots(1, 2, figsize=(13, 6), sharey=False)
 
@@ -610,10 +554,9 @@ def plot_lrr_scatter(metrics, out_path):
     print(f"  Figure 2 saved → {out_path}")
 
 
-# ============================================================
-# FIGURE 3 — Hovmöller heatmap with classification overlay
-# ============================================================
+# Figure 3 — Hovmöller heatmap with classification overlay
 
+# Domain by year anomaly
 def plot_hovmoller(metrics, out_path):
     # Build domain × year matrix from stored annual series
     years   = list(range(FULL_START, FULL_END + 1))
@@ -659,7 +602,7 @@ def plot_hovmoller(metrics, out_path):
     fig = plt.figure(figsize=(16, 9))
     gs  = gridspec.GridSpec(2, 1, height_ratios=[5, 1], hspace=0.08)
 
-    # ── Main heatmap ──────────────────────────────────────────────────────────
+    # Main heatmap
     ax_hov = fig.add_subplot(gs[0])
     im = ax_hov.imshow(
         matrix, aspect="auto", origin="lower",
@@ -706,7 +649,7 @@ def plot_hovmoller(metrics, out_path):
         "with trajectory classification overlay",
         fontsize=11, fontweight="bold")
 
-    # ── Classification colour strip below heatmap ─────────────────────────────
+    # Classification colour strip below heatmap
     ax_cl = fig.add_subplot(gs[1])
     for dom in domains:
         cl  = metrics.loc[dom, "trajectory"]
@@ -743,14 +686,11 @@ def plot_hovmoller(metrics, out_path):
     print(f"  Figure 3 saved → {out_path}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: load, classify every domain, write metrics and figures
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ── 1. Load lookup ────────────────────────────────────────────────────────
+    # 1. Load lookup
     print("Loading lookup table …")
     lookup = pd.read_csv(LOOKUP_CSV)
     lookup["transect_id"]   = lookup["transect_id"].astype(str)
@@ -764,7 +704,7 @@ def main():
     n_transects         = len(transect_order)
     print(f"  {n_transects} transects across {lookup['domain_number'].nunique()} domains.\n")
 
-    # ── 2. Load transects ─────────────────────────────────────────────────────
+    # 2. Load transects
     print("Discovering CSV files …")
     csv_map = find_csvs(ROOT_DATA_DIR, SITE_FILTER)
     print(f"  Found {len(csv_map)} CSVs on disk.\n")
@@ -778,12 +718,12 @@ def main():
                 ts_dict[tid] = ts
     print(f"  Loaded {len(ts_dict)} / {n_transects} transects.\n")
 
-    # ── 3. Compute metrics ────────────────────────────────────────────────────
+    # 3. Compute metrics
     print("Computing domain metrics …")
     metrics = compute_domain_metrics(ts_dict, transect_order, domain_per_transect)
     print()
 
-    # ── 4. Save CSV ───────────────────────────────────────────────────────────
+    # 4. Save CSV
     csv_out = os.path.join(OUTPUT_DIR, "domain_trajectory_metrics.csv")
     metrics.drop(columns=["_ann_full"]).to_csv(csv_out)
     print(f"  Metrics CSV saved → {csv_out}")
@@ -794,7 +734,7 @@ def main():
     for cls, n in counts.items():
         print(f"    {cls:30s}: {n} domains")
 
-    # ── 5. Figures ────────────────────────────────────────────────────────────
+    # 5. Figures
     print("\n" + "=" * 60)
     print("Generating figures …")
     print("=" * 60)
