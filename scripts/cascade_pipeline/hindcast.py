@@ -1,30 +1,11 @@
 #!/usr/bin/env python3
-"""Shared machinery for the Hatteras hindcast: loaders, diagnostics, runner.
+"""
+Shared machinery for the Hatteras hindcast: loaders, diagnostics, build and run.
 
-WHY THIS MODULE EXISTS
-    `HAT_hindcast_1984_2024.ipynb`, its headless mirror
-    `HAT_hindcast_1984_2024.py`, and `HAT_groin_sweep_worker.py` each carried
-    their own copy of these functions -- 667 lines duplicated character for
-    character between the notebook and the .py, and a third copy of
-    `build_cascade` in the sweep worker that the worker's own comment warned
-    "can drift". It had already drifted in the docstrings.
+    from cascade_pipeline.hindcast import build_cascade, run_cascade_simulation
 
-    They live here now, defined once. The notebook and the .py keep everything
-    that describes THIS study -- the paths, the switches, the reports, the
-    figures -- and import the machinery that is the same either way.
-
-WHAT IS NOT HERE
-    Nothing that decides what is simulated. Every run-selecting value still
-    comes from `HAT_hindcast_config` (which reads `hat_run.yaml`, overridden by
-    the environment) and every path still comes from section 2 of the calling
-    file, so a run remains fully described by the settings file plus the file
-    you can read top to bottom. The functions below take those
-    values as arguments rather than reaching for module globals, which is the
-    only change made to any body while moving it.
-
-THE SYNC RULE
-    Editing a function here changes the notebook, the .py, and the sweep at
-    once. That is the point. Verify with a full hindcast run, not by reading.
+Defined once for the notebook, its .py mirror and the groin-sweep worker, which each
+keep only what describes the study. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -41,16 +22,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-# True: sandbox copy with the pre-AST groin hook. False: real package, hook
-# folded in. Resolved here so the notebook, the .py and the sweep worker cannot
-# disagree about which Cascade they built.
-#
-# Read from the environment rather than from `HAT_hindcast_config`, which is
-# the deliberate direction of the dependency: this package is shared, and the
-# Hatteras settings file is not something it should know about. The runner
-# reads `use_sandbox_cascade` from hat_run.yaml and exports it as
-# CASCADE_USE_SANDBOX in its section 1, BEFORE this module is imported -- the
-# choice selects an import, so it cannot be made after the fact.
+# Which Cascade class: the sandbox (pre-AST groin hook) or the package; from CASCADE_USE_SANDBOX
 USE_SANDBOX_CASCADE = os.environ.get(
     "CASCADE_USE_SANDBOX", "1").strip().lower() not in (
         "0", "false", "no", "off")
@@ -59,8 +31,7 @@ if USE_SANDBOX_CASCADE:
 else:
     from cascade.cascade import Cascade
 
-# scripts/ is the parent of this package, so the resolver is importable
-# without a path hack. It owns the dune-topo directory AND the array names.
+# scripts/ is this package's parent, so the topography resolver imports without a path hack
 from site_layer.hat_topo_version import domain_arrays, dune_line_for_year
 
 from cascade_pipeline import roadway as roadway_module
@@ -82,9 +53,9 @@ __all__ = [
     "measure_groin_extent",
 ]
 
-# --- unit and file-format constants ------------------------------------------
-# Fixed by Barrier3D's input contract and by the extractor's RUN_MANIFEST, not
-# by the scenario, so they are the same for every run and every period.
+# Unit and file-format constants
+
+# Fixed by Barrier3D's input contract, the same for every run and period
 DAM_TO_M = 10.0          # Barrier3D works in decameters
 WATER_CLAMP_DAM = -0.3   # SENTINEL_WATER_M / WATER_CLAMP_M from RUN_MANIFEST.txt
 MAX_PLAUSIBLE_DAM = 2.0  # 20 m; a barrier island in metres would blow past this
@@ -94,9 +65,7 @@ RAW_OFFSET_COLUMNS = dict(domain="domain_id", distance="ORIG_LEN",
                           transect="LineID")
 
 
-# =============================================================================
-# INPUT FILES AND THE UNITS CONTRACT
-# =============================================================================
+# Input files and the units contract
 
 def build_domain_file_paths(geometry, product=None, override=None):
     """Builds one elevation and one dune file path per padded domain.
@@ -183,9 +152,7 @@ def check_domain_units(elevation_dam, dune_dam, contract):
     }
 
 
-# =============================================================================
-# PERIOD FORCINGS
-# =============================================================================
+# Period forcings
 
 def load_island_offset_dam(offset_path, geometry):
     """Loads a padded BRIE island-offset file and converts it to decameters.
@@ -350,8 +317,7 @@ def island_offset_tilts(offset, geometry):
     buffer_max = float(np.abs(np.r_[theta[:lo], theta[hi - 1:]]).max())
     return {"island_max_deg": island, "buffer_max_deg": buffer_max,
             "seam_deg": float(theta[-1]),
-            # BRIE's (1.2 sin^2 - cos^2) changes sign here; above it the
-            # shoreline is anti-diffusive.
+            # Above this angle BRIE's (1.2 sin^2 - cos^2) changes sign: the shoreline is anti-diffusive
             "unstable": bool(max(island, buffer_max) > 42.0)}
 
 
@@ -402,9 +368,7 @@ def build_background_erosion(be_rates, geometry):
     return rates
 
 
-# =============================================================================
-# GROIN DIAGNOSTICS
-# =============================================================================
+# Groin diagnostics
 
 def groin_trapping_schedule(callback, start_year, end_year):
     """Effective trapping rate for every model year of a period.
@@ -470,9 +434,7 @@ def measure_groin_extent(shoreline_m, baseline_m, geometry, updrift_gis,
     threshold = threshold_frac * peak
 
     def span(start_gis, step):
-        # A zero peak means the two runs are identical, so the threshold is
-        # also zero and every "abs(value) < 0" test is False -- the walk would
-        # run to the end of the grid and report the whole island as fillet.
+        # A zero peak means identical runs; stop, or the walk reports the whole island as fillet
         if not np.isfinite(peak) or peak <= 0.0:
             return 0
         count, gis = 0, start_gis
@@ -493,9 +455,7 @@ def measure_groin_extent(shoreline_m, baseline_m, geometry, updrift_gis,
     )
 
 
-# =============================================================================
-# COASTSAT TARGETS AND THE SURVEYED END POSITION
-# =============================================================================
+# CoastSat targets and the surveyed end position
 
 def build_target_table(cs, lowess_config, geometry, window):
     """Per-domain target rate, labelled with where each value came from.
@@ -608,10 +568,7 @@ def load_absolute_dune_distance(year, geometry, raw_dir,
     """
     path = Path(raw_dir) / f"{dune_line_for_year(year)}_duneline_offset_raw.csv"
     raw = pd.read_csv(path)
-    # An extended geometry (2026-09-16) reaches beyond the surveyed raw; its
-    # domains are in raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv
-    # (duneline_to_raw_offsets.py --extension), same columns. Read only when
-    # the geometry needs it, so a base run never touches the file.
+    # An extended geometry reads its extra domains from raw_offsets/ext/, only when it needs them
     from site_layer.hat_extension_domains import SURVEYED_GIS
     if (geometry.first_gis_id < SURVEYED_GIS[0]
             or geometry.last_gis_id > SURVEYED_GIS[1]):
@@ -669,9 +626,7 @@ def build_shoreline_target(model_year0_m, start_year, end_year, geometry,
     return target_m, observed_change_m
 
 
-# =============================================================================
-# RUN IDENTITY
-# =============================================================================
+# Run identity
 
 def scenario_run_name(switches, stem, **overrides):
     """Run name for a variant of the current scenario.
@@ -701,23 +656,11 @@ def scenario_run_name(switches, stem, **overrides):
     return f"{stem}_{'_'.join(t for t in tokens if t)}"
 
 
-# =============================================================================
-# SENSITIVITY NAME TOKENS
-# =============================================================================
-# A sensitivity cell differs from the matrix run beside it in ONE value, and
-# nothing in SCENARIO_SWITCHES sees that value -- the switches describe which
-# management modules were built, not what they were forced with. So without a
-# token of its own, an Hs = 1.2 cell derives the matrix run's exact name, lands
-# in its directory, and replaces its row in run_index.csv. That is the failure
-# output/calibration/groin/README.md records for the rig sweep, and it is silent.
-#
-# The token is emitted ONLY when the value is off its calibration default, so
-# every run that predates this file is named exactly as it was. A run at the
-# defaults has no token, which is correct: it IS the matrix run.
+# Sensitivity name tokens
 
-# Field name -> the abbreviation that appears in the run name. Abbreviated
-# rather than spelled out because all four can move at once and
-# "..._wave_angle_high_fraction0p3" is longer than the rest of the name.
+# Forcing tokens: emitted only off the calibration default, so a sensitivity cell never takes the matrix name
+
+# Field name -> its abbreviation in the run name
 _WAVE_TOKEN_FIELDS = (
     ("hs", "Hs"),
     ("wave_period_s", "Tp"),
@@ -776,24 +719,9 @@ def relocation_setback_token(value, default):
     return "rsetmeasured" if value is None else f"rset{_number_token(value)}"
 
 
-# =============================================================================
-# BUILD AND RUN
-# =============================================================================
-# The split is what lets the caller hold a built-but-unstepped Cascade. BRIE's
-# diffusivity and the groin's fillet prediction are only meaningful as initial
-# conditions, and a prediction printed after the run is not one.
-#
-# `run_years` is TRANSITIONS, not states. Barrier3D seeds _x_s_TS = [x_s] at
-# init and appends one entry per update, so N updates produce N+1 annual states
-# spanning N years. The original signature took `nt` and looped `range(nt - 1)`
-# with `nt = END_YEAR - START_YEAR`, which ran 19 updates for a 20-year period
-# while dividing by 20 -- every rate came out low by 19/20, and storm years 20
-# and 21 were never applied. Here time_step_count = run_years + 1 and the loop
-# runs exactly run_years updates.
-#
-# Nourishment goes to cascade.nourishment_volume, which is where CASCADE reads
-# it. Writing it onto the manager instead hits the attribute CASCADE overwrites
-# one line before the manager reads it, so the fill spends the init default.
+# Build and run
+
+# Build and run are split so the caller holds a built, unstepped model; run_years counts transitions
 
 def build_cascade(
     run_years, name, storm_file, alongshore_section_count, num_cores,
@@ -882,9 +810,7 @@ def build_cascade(
         background_erosion=background_erosion,
         alongshore_section_count=alongshore_section_count,
 
-        # run_years transitions need run_years + 1 states. TMAX is set from
-        # this (brie_coupler.py:117), and the loop runs exactly run_years
-        # updates, so the last write lands on the final valid index.
+        # run_years transitions need run_years + 1 states (TMAX is set from this)
         time_step_count=run_years + 1,
 
         min_dune_growth_rate=rmin,
@@ -920,49 +846,7 @@ def build_cascade(
     if groin_callback is not None:
         cascade._groin_callback = groin_callback
 
-    # A STANDARD RELOCATION TARGET IS NOW AN ARGUMENT, not a fix-up.
-    #
-    # `road_setback` used to do two jobs in CASCADE: it placed the road at
-    # t = 0, AND cascade_groin.py re-read it every year as the distance a
-    # relocated road is rebuilt at. There was no separate parameter, so this
-    # function used to overwrite `cascade._road_setback` after construction --
-    # safe only because the constructor had already consumed it, and only for
-    # as long as that stayed true.
-    #
-    # Since 2026-09-14 the model takes `road_relocation_setback` directly and
-    # the yearly update reads that instead, so the measured array keeps its
-    # measured meaning and nothing here reaches into the object afterwards.
-    # Passing None gives the old behaviour: every domain relocates to its own
-    # measured offset.
-    #
-    # WHY A STANDARD AT ALL. The measured setback is observed 1984/2004
-    # geometry, not a design standard: 30 distinct values from 0 to 430 m
-    # across the 55 road domains, exactly one of which is 30 m. Using it as the
-    # relocation target makes a domain's rebuild rule an accident of where the
-    # road happened to sit. At GIS 85 and 86 the measured value is 0 m, so a
-    # relocation returns the road to the dune line with no clearance and the
-    # next 10 m of retreat re-fires it -- 7 relocations against 7.3 cells of
-    # retreat at GIS 85, 6 against 6.0 at GIS 86, one per cell.
-    #
-    # WHAT IT DOES NOT CHANGE. Every domain's FIRST relocation still fires in
-    # exactly the year it fires today, because that depends only on the initial
-    # setback. What changes is where the road lands, and so every trigger after
-    # the first.
-    #
-    # ONE SIDE EFFECT WORTH KNOWING. `road_relocation_checks` refuses to
-    # relocate when `setback + 2 * road_width > average_barrier_width`, and
-    # sets relocation_break, which abandons the road. With measured targets up
-    # to 430 m that guard can fire; with a 20 m standard it effectively cannot.
-    # So a standard does not only move roads, it makes relocation POSSIBLE in
-    # narrow domains where the measured target would have been refused.
-    #
-    # WHAT IT STILL DOES NOT DECOUPLE. A prescribed historical relocation adds
-    # its measured DISPLACEMENT to the road's live setback, so the clearance a
-    # road was last rebuilt at still affects where a later historical event
-    # lands. That is correct -- a historical relocation moved the road from
-    # wherever it then was -- and the alternative, an absolute setback in the
-    # 1984 frame, would count the dune migration between 1984 and the event
-    # twice. The sensitivity is in the physics, not in the plumbing.
+    # The relocation target is an argument (road_relocation_setback); None relocates to the measured offset
 
     return cascade
 
@@ -1003,18 +887,15 @@ def run_cascade_simulation(
         The same Cascade, after the run.
     """
     nourishment_log = []
-    # One emitter for everything the loop says, so the display mechanism is
-    # the caller's choice and this function does not care which it is.
+    # One emitter for everything the loop says: tqdm's write, or print
     emit = progress.write if progress is not None else print
 
     for time_step in range(run_years):
         current_year = start_year + time_step
 
-        # --- historical beach nourishment -----------------------------------
-        # apply_to_cascade rewrites BOTH nourish_now and nourishment_volume in
-        # full every year, so nothing carries over. It writes the volume to
-        # cascade.nourishment_volume, which stock Cascade.update() copies into
-        # each BeachDuneManager before calling it -- see section 6.
+        # Historical beach nourishment
+
+        # The schedule rewrites nourish_now and nourishment_volume in full every year
         if nourishment_schedule is not None:
             applied = nourishment_schedule.apply_to_cascade(
                 cascade, current_year)
@@ -1028,7 +909,7 @@ def run_cascade_simulation(
         else:
             cascade.nourish_now = np.zeros(alongshore_section_count)
 
-        # --- historical roadway events --------------------------------------
+        # Historical roadway events
         for _event in historical_road_events or ():
             if current_year != _event.year:
                 continue
@@ -1068,7 +949,7 @@ def run_cascade_simulation(
             print(f"\nModel stopped at year {time_step + 1} (b3d_break)")
             break
 
-    # --- did the run do what it was configured to do? ------------------------
+    # Did the run do what it was configured to do?
     _states = len(cascade.barrier3d[0].x_s_TS)
     if _states != run_years + 1:
         print(f"\n  NOTE: {_states} annual states for {run_years} run_years "
@@ -1080,13 +961,9 @@ def run_cascade_simulation(
         print("no-groin run despite GROIN_ENABLED being True.")
         print("!" * 74)
 
-    # --- artifacts -----------------------------------------------------------
+    # Artifacts
     os.makedirs(run_dir, exist_ok=True)
-    # The .npz model pickle is ~160 MB and is what lets a figure be re-derived
-    # without re-running, so it is written by default. Everything downstream
-    # (rate CSV, shoreline matrix, metadata) is written regardless, so a run
-    # skipped here is still a complete row in run_index.csv -- just one that
-    # cannot be re-plotted from state.
+    # The ~160 MB model state is optional; every other output is written regardless
     if save_model_state:
         cascade.save(run_dir)
         print(f"\n  saved: {run_dir}")

@@ -1,25 +1,12 @@
 #!/usr/bin/env python3
-"""The printed reports the Hatteras hindcast emits at each section.
+"""
+The printed reports the Hatteras hindcast emits at each section.
 
-WHY THIS MODULE EXISTS
-    The reports are the run's evidence: they are what says a switch reached
-    the module it names, what the sediment budget implies, and where the
-    model disagrees with the survey. They are not debug output, so none of
-    them were dropped -- but ~400 lines of f-strings sat duplicated between
-    `HAT_hindcast_1984_2024.ipynb` and its headless mirror
-    `HAT_hindcast_1984_2024.py`, and every wording change had to be made
-    twice or the two runs stopped saying the same thing.
+    from cascade_pipeline import reports
+    reports.path_inventory([...])
 
-    Every function here prints exactly what the inline block printed. The
-    values still come from the calling file -- these take arguments, never
-    module globals -- so the notebook remains the place that decides what is
-    reported, and this is only where the formatting lives.
-
-ONE RULE
-    A report never computes a result the run depends on. `run_units_check`
-    is the single exception and it is named for it: it loops the domains and
-    returns whether anything failed, because the loop existed only to be
-    printed. Everything else takes already-built objects.
+Defined once for the notebook and its .py mirror; each prints exactly what the inline
+block printed, from values the caller passes. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -54,9 +41,7 @@ def path_inventory(pairs):
         print(f"{name:<20} {'ok' if path.exists() else 'MISSING':<8} {path}")
 
 
-# =============================================================================
-# SECTION 2 -- UNITS
-# =============================================================================
+# Section 2 -- units
 
 def run_units_check(elevation_paths, dune_paths, contract, geometry):
     """Runs the units contract over every real domain and reports the tally.
@@ -92,9 +77,7 @@ def run_units_check(elevation_paths, dune_paths, contract, geometry):
     return not failed_any
 
 
-# =============================================================================
-# SECTION 3 -- SCENARIO
-# =============================================================================
+# Section 3 -- scenario
 
 def scenario_report(*, scenario, scenarios, departures, roadway_on,
                     relocations_on, relocations_forced_off, beach_dune_on,
@@ -136,12 +119,7 @@ def scenario_report(*, scenario, scenarios, departures, roadway_on,
     print(f"    nourishment fills {'on' if fills_on else 'off'}"
           + ("   FORCED off: beach_dune_manager is off"
              if fills_forced_off else ""))
-    # PERIOD["enable_nourishment"] describes the period; nothing reads it. It
-    # is printed beside the switch that does reach the model so the two cannot
-    # quietly disagree -- the volume there is a legacy default that section 6
-    # overwrites. Flagged in one direction only: a period that expects fill and
-    # is not getting it is a scenario choice worth restating, whereas fills
-    # left on in a period with no projects withholds nothing.
+    # The period's expectation is printed beside the switch that reaches the model, flagged one way only
     print(f"    period expects    {period_expects_nourishment}"
           + ("   <- the period has fill and this run suppresses it"
              if period_expects_nourishment and not fills_on else ""))
@@ -156,9 +134,7 @@ def scenario_report(*, scenario, scenarios, departures, roadway_on,
               f"{path.name}")
 
 
-# =============================================================================
-# SECTION 4 -- FORCINGS
-# =============================================================================
+# Section 4 -- forcings
 
 def storm_report(*, storms, storm_file, run_years):
     """Prints the storm series extent and how much of it the run reaches."""
@@ -196,9 +172,7 @@ def background_erosion_report(*, preset, start_year, domain_rates, rates,
         print("  WARNING: 2004 calibrated rates are a copy of the 1984 fit")
 
 
-# =============================================================================
-# SECTION 5 -- ROADWAY
-# =============================================================================
+# Section 5 -- roadway
 
 def roadway_report(*, setback_file, setbacks, missing_setbacks,
                    elevation_file, elevations, missing_elevations,
@@ -261,9 +235,7 @@ def road_audit_report(*, audit, summary):
                   f"{r['road_cells_water'] * 100:>9.0f}% {ends:>18}")
 
 
-# =============================================================================
-# SECTION 6 -- BEACH/DUNE MANAGER
-# =============================================================================
+# Section 6 -- BEACH/DUNE manager
 
 def beach_dune_report(*, start_year, end_year, beach_dune_enabled,
                       fills_enabled, roadway_enabled, config, management_on,
@@ -337,9 +309,7 @@ def beach_dune_report(*, start_year, end_year, beach_dune_enabled,
               "this period")
 
 
-# =============================================================================
-# SECTION 7 -- GROIN
-# =============================================================================
+# Section 7 -- groin
 
 def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
                  install_year, start_year, end_year, geometry,
@@ -466,9 +436,7 @@ def scenario_summary_report(*, scenario, departures, switches, run_name_base,
               f"dune_migration_on False there")
 
 
-# =============================================================================
-# SECTION 8 -- COASTSAT TARGET
-# =============================================================================
+# Section 8 -- CoastSat target
 
 def coastsat_report(*, target, active, target_window, lowess_config, geometry,
                     cs_series, updrift_gis, downdrift_gis):
@@ -517,9 +485,7 @@ def coastsat_report(*, target, active, target_window, lowess_config, geometry,
               f"{d['n_downdrift']} transects   {verdict}")
 
 
-# =============================================================================
-# SECTION 9 -- FIGURE CONFIGURATION
-# =============================================================================
+# Section 9 -- figure configuration
 
 def figure_config_report(*, annotations, lowess_config, gif_config, gif_jobs,
                          flip_sign_model, real_domains_only, groin_enabled,
@@ -561,9 +527,7 @@ def figure_config_report(*, annotations, lowess_config, gif_config, gif_jobs,
                   f"Run once with GROIN_ENABLED=False to create it.")
 
 
-# =============================================================================
-# SECTION 11 -- PRE-RUN
-# =============================================================================
+# Section 11 -- pre-run
 
 def pre_run_report(*, run_name, run_dir, run_years, start_year, end_year,
                    geometry, roadway_on, beach_dune_on, wave_height,
@@ -636,9 +600,7 @@ def pre_run_report(*, run_name, run_dir, run_years, start_year, end_year,
         print(f"  r_ipl (t=0)         {r_ipl:.4f}")
 
 
-# =============================================================================
-# SECTION 12 -- VERIFY
-# =============================================================================
+# Section 12 -- verify
 
 def run_length_report(*, states, run_years):
     """Prints how many annual states the run produced."""

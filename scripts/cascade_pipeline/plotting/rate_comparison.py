@@ -1,25 +1,10 @@
-"""Modeled-vs-CoastSat shoreline-change-rate figures.
+"""
+Modelled against CoastSat shoreline-change-rate figures.
 
-Two entry points:
-  plot_rate_comparison           the working REAL-domains/ALL-domains QC
-                                  figure (toggle via real_domains_only)
-  plot_annotated_rate_comparison the publication/poster figure with the
-                                  full geographic annotation layer
+    from cascade_pipeline.plotting.rate_comparison import plot_rate_comparison, plot_annotated_rate_comparison
 
-Both consume cs_series from cascade_pipeline.coastsat_lowess.build_coastsat_series
--- this module only renders, it doesn't load or smooth CoastSat data itself.
-
-STYLE. Drawn under the house standard (scripts/site_layer/hat_figure_style.py): printed
-width, 8-9 pt type, one alongshore axis label, village bands. The one place
-these figures depart from it is the TITLE. Every other figure in the project
-moves its title sentence into a CAPTIONS.md beside the image; these two are
-written automatically into a run folder and opened months later with nothing
-around them, so the run's identity -- period, scope, background erosion, run
-name -- stays on the canvas. It is set small and muted beside the subject
-rather than as a 14 pt banner, but it is not moved off the image and there is
-no captions file in a run folder. The wave height and the SLR rate came OFF
-that line on 2026-09-10 (Hannah): they crowded it, and both are in the run's
-metadata JSON and TXT beside the PNG.
+The QC figure and the annotated publication figure; renders only, CoastSat comes from
+coastsat_lowess. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -47,8 +32,7 @@ from cascade_pipeline.coastsat_lowess import (
 )
 from cascade_pipeline.domains import DEFAULT_DOMAINS
 
-# `scripts/` is on sys.path already -- cascade_pipeline lives inside it, so
-# importing this package at all means the style module is importable too.
+# scripts/ is already on sys.path, so the style module imports with this package
 from site_layer.hat_figure_style import (
     C,
     DOMAIN_AXIS_LABEL,
@@ -64,16 +48,7 @@ from site_layer.hat_figure_style import (
 apply_style()
 
 
-# COLOUR HERE IS NOT THE HOUSE SEMANTIC PAIR, ON PURPOSE (Hannah, 2026-09-10).
-# This is the figure read most often in the project and it has one reading:
-# the ORANGE model curve against the BLUE observation. Orange is the site
-# config's -- HATTERAS_ANNOTATIONS.model_color -- and this module reads it off
-# the `annotations` object every call site already passes, so the hex is
-# defined in exactly one place and stays there. The blues below are the
-# observed layer: the darker for the widest LOWESS window, the lighter for a
-# narrower one, and a muted blue for the per-transect cloud underneath.
-# The red/blue VINTAGE pair is a different case -- two periods drawn together
-# -- and deliberately does not appear here.
+# Colour: the orange model (annotations.model_color) against the blue observation, not the house pair
 
 
 @dataclasses.dataclass(frozen=True)
@@ -372,8 +347,7 @@ def _run_parameters(run, scope, domains, endpoints=True, wave_climate=None):
         tail = (f"domain {domains.first_gis_id} Cape Point, "
                 f"domain {domains.last_gis_id} Pea Island  ·  {tail}")
     head = "  ·  ".join(bits)
-    # The sensitivity style names the wave settings here, because its model
-    # legend is just "CASCADE" (Hannah, 2026-09-29).
+    # The sensitivity style names the wave settings here; its model legend is just "CASCADE"
     if wave_climate:
         head = f"waves: {wave_climate}\n{head}"
     return head + "\n" + tail
@@ -589,8 +563,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         step = _tick_step(domains.num_real_domains, config.domain_tick_step)
         ax.set_xticks(np.arange(domains.first_gis_id,
                                 domains.last_gis_id + 1, step))
-        # After the limits, so a span outside the view is skipped and a label
-        # is clamped to the visible part of its span.
+        # After the limits: spans outside the view are skipped, labels clamped to the visible part
         town_bands(ax, spans=annotations.town_spans)
         if config.show_features:
             add_geographic_annotations(ax, _features_only(annotations))
@@ -657,8 +630,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         top_ax.set_xlabel(DOMAIN_AXIS_LABEL)
 
         ax.set_ylabel(_rate_axis_label(estimator))
-        # Extra pad: the title row sits above the secondary GIS axis, which
-        # the parent axes' title placement knows nothing about.
+        # Extra pad: the title row sits above the secondary GIS axis
         _provenance(ax, subject,
                     _run_parameters(run, "all domains, buffers included",
                                     domains),
@@ -830,8 +802,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     ax.axhline(0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
                zorder=3)
 
-    # Scatter/LOWESS transition marker -- only when southern domains show
-    # raw scatter only; marks where dots end and LOWESS lines begin.
+    # Scatter/LOWESS transition marker, only when the southern domains show raw scatter
     if config.plot_raw_lrr and config.raw_lrr_southern_only and lowess_config.skip_southern_domains > 0:
         ax.axvline(lowess_config.skip_southern_domains + 0.5, color=INK_MUTED,
                    lw=0.8, ls=(0, (4, 4)), zorder=2)
@@ -852,14 +823,10 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     all_vals = np.concatenate(
         [real_rate] + [w["smoothed"][np.isfinite(w["smoothed"])]
                        for cs in cs_series for w in cs["windows"]]
-        # The unsmoothed means swing wider than the LOWESS at every peak
-        # (GIS 68, 1996-2010: +5.1 against +0.1), so a bound locked to the
-        # smoothed curves alone would cut the new line off (2026-09-22).
+        # The unsmoothed means swing wider than the LOWESS, so they set the bound too
         + ([coastsat_domain_mean(cs)[1] for cs in cs_series]
            if config.plot_domain_means else [])
-        # The southern dots are drawn too, and at Cape Point they run past
-        # every curve (2010-2024 D1: +9.1 against a +7.2 bound), so a bound
-        # without them clipped the top transects off (2026-09-29).
+        # So do the southern dots, which run past every curve at Cape Point
         + ([cs["transect_rates"][cs["transect_domains"]
                                  <= lowess_config.skip_southern_domains]
             for cs in cs_series if cs["active"]]
@@ -876,8 +843,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
              else zero_frac + (1 - zero_frac) / 2)
     ero_y = (annotations.label_erosion_y if annotations.label_erosion_y is not None
              else zero_frac / 2)
-    # A white backing: the erosion label sits at the right edge, which is where
-    # the observed curve runs on this period.
+    # A white backing: the erosion label can sit on the observed curve
     for _y, _txt in ((acc_y, "accretion \u25b2"), (ero_y, "erosion \u25bc")):
         ax.text(1.0, _y, _txt, transform=ax.transAxes, fontsize=8,
                 color=INK_MUTED, ha="right", va="center", zorder=8,
@@ -908,10 +874,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
             transform=ax.transAxes, fontsize=7.5, color=INK_MUTED, ha="right",
             va="bottom", clip_on=False)
 
-    # The run's identity, kept on the canvas -- see the module docstring. The
-    # separate italic "Model | Obs | SLR | Run" footnote this figure used to
-    # carry beneath the legend said the same things twice; it is folded in
-    # here, where the eye already is.
+    # The run's identity, kept on the canvas (see the module docstring)
     _provenance(
         ax,
         f"Modelled against {annotations.obs_source_name} shoreline change, "

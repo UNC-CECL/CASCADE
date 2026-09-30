@@ -1,20 +1,11 @@
-"""cascade_pipeline: post-run analysis and figures for CASCADE hindcasts.
-
-Geometry, shoreline extraction, CoastSat-style transect/LOWESS processing,
-and figure/GIF rendering for a completed CASCADE run. Consumes a run's
-output; it doesn't drive the simulation itself (that stays in your own run
-script). Ships with no site content -- see e.g. hatteras_site_config.py for
-how one study site (Hatteras Island) supplies its own domain geometry and
-place names on top of this package.
-
-Import from submodules explicitly rather than from the package root, e.g.:
+"""
+cascade_pipeline: post-run analysis and figures for CASCADE hindcasts.
 
     from cascade_pipeline.domains import DomainGeometry
-    from cascade_pipeline.run_info import RunInfo
-    from cascade_pipeline.shoreline import build_shoreline_matrix, compute_change_rate, compute_lrr
-    from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
-    from cascade_pipeline.plotting.shoreline_gif import GifConfig, make_all_shoreline_gifs
-    from cascade_pipeline.plotting.rate_comparison import plot_rate_comparison, plot_annotated_rate_comparison
+    from cascade_pipeline.shoreline import compute_lrr
+
+Geometry, shoreline extraction, CoastSat LOWESS and figure/GIF rendering; no site
+content. Import from submodules, not the package root. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

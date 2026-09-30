@@ -1,21 +1,10 @@
-"""Plan-view shoreline animation (GIF) for a completed CASCADE run.
+"""
+Plan-view shoreline animation (GIF) for a completed CASCADE run.
 
-One frame per model year; current shoreline drawn over a year-0 reference
-(dashed grey), shaded blue where seaward of the reference, red where
-landward. See make_shoreline_gif's docstring for the three y-axis modes.
+    from cascade_pipeline.plotting.shoreline_gif import make_shoreline_gif
 
-STYLE. House standard (scripts/site_layer/hat_figure_style.py) for type, colour and
-frame. TWO deliberate departures, both because this is a per-run artefact
-that lands in a run folder and is opened later with no context around it:
-the run's identity stays on the canvas as a small muted line beside the
-subject, and the year clock stays in the corner of every frame. There is no
-CAPTIONS.md in a run folder.
-
-FRAME SIZE. A GIF needs every frame to be the same pixel size, so the frames
-are drawn at a fixed figure size with fixed margins (never bbox_inches=
-"tight") and the pixel width comes from the dpi, not from a 16-inch canvas.
-The dpi is passed to savefig EXPLICITLY: the house rcParams set savefig.dpi
-to 300 for print, which would otherwise triple every frame.
+One frame per model year over a dashed year-0 reference, seaward blue, landward red;
+three y-axis modes. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -90,14 +79,10 @@ class GifConfig:
 
 DEFAULT_GIF_CONFIG = GifConfig()
 
-# Shared with road_planview.RoadPlanViewStyle.relocated and the plan-view
-# animation, so a relocation reads as the same event in all three. The house
-# orange, so the three of them and road_relocation_gif's relocation star are
-# now ONE orange across the project instead of three near-misses.
+# One relocation orange shared with road_planview, the plan-view animation and road_relocation_gif
 RELOCATION_COLOR = C["ADDED"]
 
-# Frames are sized to a target pixel WIDTH: the canvas is the printed double
-# column, and the dpi carries the pixels. Matches road_relocation_gif.
+# Frames sized to a target pixel width: printed double column, the dpi carries the pixels
 FRAME_TARGET_PX = 1400.0
 FRAME_DPI_RANGE = (110.0, 220.0)
 
@@ -370,13 +355,9 @@ def make_shoreline_gif(shoreline_m, run,
 
     ref = series[0]  # year-0 reference; identically zero except in "position"
 
-    # -- Optional observed/target line ----------------------------------------
-    # Referenced exactly as the run is, so it shares the run's axis. "position"
-    # subtracts the same year-0 alongshore mean; "displacement" subtracts the
-    # same per-domain year-0 position, which turns the target into the
-    # displacement the run is trying to reproduce. Both lines therefore sit on
-    # the same year-0 base, so the gap between them is the model's misfit even
-    # though that base is itself an initial condition.
+    # Optional observed/target line
+
+    # The target is referenced exactly as the run is, so the gap between them is the misfit
     target = None
     if target_m is not None:
         tgt = np.asarray(target_m, dtype=float).ravel()
@@ -412,9 +393,7 @@ def make_shoreline_gif(shoreline_m, run,
         year_idx.append(n_years - 1)  # always land on the final year
 
     be_lbl = "on" if run.background_erosion_on else "off"
-    # The run's identity, kept on the canvas -- see the module docstring. No
-    # wave height and no SLR rate (Hannah, 2026-09-10): both crowded the line
-    # and both are in the run's metadata beside the GIF.
+    # The run's identity, kept on the canvas (see the module docstring)
     params = f"background erosion {be_lbl}\nrun {run.run_name}"
     subject = (f"Shoreline difference against the {baseline_label}, "
                f"{run.start_year}–{run.end_year}"
@@ -428,11 +407,10 @@ def make_shoreline_gif(shoreline_m, run,
         cur = series[t]
 
         fig, ax = plt.subplots(figsize=frame_size, dpi=frame_dpi)
-        # Fixed margins (NOT bbox_inches="tight") so every frame is byte-identical
-        # in size -- mismatched frame dimensions break GIF assembly.
+        # Fixed margins (not bbox_inches="tight"): every frame the same size, or the GIF will not assemble
         fig.subplots_adjust(left=0.105, right=0.985, top=0.855, bottom=0.225)
 
-        # -- Geographic context ------------------------------------------------
+        # Geographic context
         if axis_kind == "gis" and annotate:
             add_geographic_annotations(ax, annotations)
         elif axis_kind == "pad":
@@ -446,8 +424,7 @@ def make_shoreline_gif(shoreline_m, run,
                            zorder=2)
             if annotate:
                 trans_pad = blended_transform_factory(ax.transData, ax.transAxes)
-                # Drawn after the limits are set, below: town_bands clamps its
-                # labels to the visible part of each span and needs the view.
+                # Drawn after the limits: town_bands clamps its labels to the view
                 pad_town_spans = {
                     name: (domains.gis_to_pad(d_lo), domains.gis_to_pad(d_hi))
                     for name, (d_lo, d_hi) in annotations.town_spans.items()}
@@ -460,9 +437,9 @@ def make_shoreline_gif(shoreline_m, run,
                             bbox=dict(boxstyle="round,pad=0.15", fc="white",
                                       ec="none", alpha=0.80))
 
-        # -- Shoreline + erosion/accretion shading -----------------------------
-        # The RdBu band fills: light blue where the shoreline lies seaward of
-        # the reference, light red where it lies landward.
+        # Shoreline + erosion/accretion shading
+
+        # RdBu fills: light blue seaward of the reference, light red landward
         ax.fill_between(x, cur, ref, where=(cur >= ref), interpolate=True,
                         color=C_1997_FILL, alpha=0.70, lw=0, zorder=1, label=lbl_up)
         ax.fill_between(x, cur, ref, where=(cur < ref), interpolate=True,
@@ -474,11 +451,9 @@ def make_shoreline_gif(shoreline_m, run,
                     zorder=3.5, label=target_label)
         ax.plot(x, cur, color=INK, lw=1.6, zorder=4, label="shoreline")
 
-        # -- Roadway relocations, in the year they happen ----------------------
-        # An EVENT, not a state: _road_relocated_TS is raised in the year the
-        # roadway manager moves the road, so a frame shows that year's moves
-        # only. Drawn on the shoreline itself because that is the line whose
-        # arrival at the road caused them.
+        # Roadway relocations, in the year they happen
+
+        # An event, not a state: a frame shows that year's relocations only
         if relocations is not None and t < len(relocations):
             moved = np.flatnonzero(np.asarray(relocations[t], dtype=bool))
             in_view = [p for p in moved if pad_lo <= p < pad_hi]
@@ -490,7 +465,7 @@ def make_shoreline_gif(shoreline_m, run,
                         markeredgewidth=0.7, zorder=6,
                         label=f"relocated ({len(in_view)})")
 
-        # -- Axes --------------------------------------------------------------
+        # Axes
         ax.set_xlim(x_lo - 0.5, x_hi + 0.5)
         ax.set_ylim(*ylim)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(10 if n_dom > 40 else 5))
@@ -515,11 +490,7 @@ def make_shoreline_gif(shoreline_m, run,
             top_ax.set_xlabel(DOMAIN_AXIS_LABEL)
         else:
             ax.set_xlabel(DOMAIN_AXIS_LABEL)
-        # The compass ends, on the axis-label row rather than on top of the
-        # tick labels (they landed on "10" and "90" at the printed width).
-        # ONLY on a window that actually reaches both ends of the island: a
-        # groin zoom over GIS 1-15 was being labelled "Pea Island | N" at its
-        # right-hand edge, which is 37 km from Pea Island.
+        # Compass ends on the axis-label row, only on a window reaching both ends of the island
         _full_span = (axis_kind == "pad"
                       or (x_lo <= domains.first_gis_id
                           and x_hi >= domains.last_gis_id))
@@ -534,9 +505,9 @@ def make_shoreline_gif(shoreline_m, run,
 
         ax.set_ylabel(ylabel)
 
-        # -- Year clock + provenance + legend ----------------------------------
-        # Both stay on the canvas: this frame is a run artefact, not a figure
-        # with a caption beside it.
+        # Year clock + provenance + legend
+
+        # Both stay on the canvas: a run artefact has no caption beside it
         ax.text(0.99, 0.05, f"{run.start_year + t}   year {t}",
                 transform=ax.transAxes, ha="right", va="bottom",
                 fontsize=11, fontweight="bold", color=INK, zorder=20,
@@ -546,17 +517,13 @@ def make_shoreline_gif(shoreline_m, run,
         ax.set_title(subject, loc="left", pad=title_pad)
         ax.set_title(params, loc="right", fontsize=7.5, color=INK_MUTED,
                      linespacing=1.4, pad=title_pad)
-        # Legend outside (below) the axes so it never covers the town / shoal
-        # labels, which sit at fixed axes fractions inside the panel.
-        # THREE columns, not five: five long labels ran off the right edge of
-        # the printed width and the last one was clipped.
+        # Legend below the axes, in three columns, so it covers nothing and nothing is clipped
         ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.215),
                   bbox_transform=ax.transAxes, frameon=False, ncol=3)
 
-        # -- Render to an in-memory PNG (constant size, no disk churn) ----------
-        # dpi EXPLICIT: the house rcParams put savefig.dpi at 300 for print,
-        # and a frame rendered at 300 dpi is three times the pixels the GIF
-        # wants (and no longer matches a frame drawn anywhere else).
+        # Render to an in-memory PNG (constant size, no disk churn)
+
+        # dpi explicit: the house savefig.dpi (300) would triple every frame's pixels
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=frame_dpi, facecolor="white")
         buf.seek(0)
@@ -640,10 +607,7 @@ def make_all_shoreline_gifs(shoreline_m, run, jobs,
 
     made = []
     for job in jobs:
-        # A "groin" job fans out into one GIF per structure in
-        # annotations.groins, so adding a second groin needs no change here
-        # or in `jobs`. Use "which" to restrict, or range="groin_span" for
-        # one enclosing window.
+        # A "groin" job fans out into one GIF per structure; "which" restricts it
         if str(job.get("range", "")).strip().lower() == "groin":
             try:
                 targets = [{"groin": g} for g in _select_groins(job.get("which", "all"), annotations)]
@@ -653,8 +617,7 @@ def make_all_shoreline_gifs(shoreline_m, run, jobs,
         else:
             targets = [{"groin": None}]
 
-        # A job's own "target" wins over the shared one; "target": False opts
-        # out, which is how a job stays a clean model-only figure.
+        # A job's own "target" wins over the shared one; False opts out
         job_target = job.get("target", target_m)
         if job_target is False:
             job_target = None

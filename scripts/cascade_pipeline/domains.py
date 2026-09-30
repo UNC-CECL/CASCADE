@@ -1,11 +1,10 @@
-"""Generic CASCADE grid geometry: real domains padded by buffers on each end.
+"""
+Generic CASCADE grid geometry: real domains padded by buffers on each end.
 
-A CASCADE/BRIE run pads its GIS-numbered real domains with buffer domains
-on each side so alongshore diffusion doesn't see an artificial edge at the
-real-domain boundary. DomainGeometry's field defaults happen to match the
-Hatteras Island hindcast (90 real domains, 15-domain buffers, 500 m
-spacing, starting at GIS ID 1) -- override them for a different site or
-grid resolution; nothing else in this module assumes Hatteras' numbers.
+    from cascade_pipeline.domains import DomainGeometry
+
+Defaults match the Hatteras hindcast (90 real, 15-domain buffers, 500 m); override for
+another site. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

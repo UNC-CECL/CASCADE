@@ -1,8 +1,10 @@
-"""Identifying info for one completed CASCADE run.
+"""
+Identifying information for one completed CASCADE run.
 
-Bundles the handful of values every plotting function in cascade_pipeline needs
-(run name/dir, period, wave height, sign convention) so call sites pass one
-object instead of five loose scalars pulled from module globals.
+    from cascade_pipeline.run_info import RunInfo
+
+One object for the values every plotting function needs: name, folder, period, wave
+height, sign convention. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

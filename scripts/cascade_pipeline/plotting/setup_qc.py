@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""Pre-run QC figures for the Hatteras hindcast setup.
+"""
+Pre-run QC figures for the Hatteras hindcast setup.
 
-WHY THIS MODULE EXISTS
-    These three figures answer "does the initial condition look right" before
-    a run is started: which way the island is oriented, what the
-    initialization surface looks like in plan view, and how much sea level
-    rises over the period. They are worth having and cost ~125 lines of
-    matplotlib to define, so the definitions live here and the notebook keeps
-    one call each.
+    from cascade_pipeline.plotting import setup_qc
 
-    Nothing downstream reads their output. Skipping them changes no result --
-    which is exactly why they belong out of the file that describes the run.
+Island orientation, the initialization surface in plan view, and sea-level rise over the
+period; nothing downstream reads them. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -37,10 +32,7 @@ apply_style()
 __all__ = ["plot_island_orientation", "plot_initialization_planview",
            "plot_sea_level_rise"]
 
-# The one alongshore axis label the whole project uses. The endpoints this
-# constant used to carry ("Cape Point to Pea Island") were the only CORRECT
-# pair anywhere in the repo, so they are not lost: ENDPOINT_NOTE states them
-# beside each figure's title instead.
+# The one alongshore axis label the project uses; ENDPOINT_NOTE states the endpoints
 GIS_AXIS_LABEL = DOMAIN_AXIS_LABEL
 ENDPOINT_NOTE = "domain 1 Cape Point, domain 90 Pea Island"
 
@@ -89,11 +81,7 @@ def plot_island_orientation(offsets_by_year, active_year, geometry):
         ax_diff.plot(gis_ids, difference_m, color=C["ACCENT"], lw=1.3)
         ax_diff.axhline(0, color=INK_MUTED, lw=0.8, ls=(0, (4, 3)))
         ax_diff.set_ylabel(f"{later} minus {earlier} (m)")
-        # NOT shoreline change: each year is zeroed on its own most-seaward
-        # domain, so this carries a constant offset. Pattern only; section
-        # 9.4 rebuilds the real change from the raw transect files. The mean
-        # stays on the canvas: these figures are handed back to a notebook and
-        # never written to disk, so there is no CAPTIONS.md to hold it.
+        # Not shoreline change: each year is zeroed on its own most seaward domain, so pattern only
         _title(ax_diff, 1, "offset-file difference, pattern only")
         ax_diff.set_title(f"mean {difference_m.mean():+.1f} m", loc="right",
                           fontsize=7.5, color=INK_MUTED)

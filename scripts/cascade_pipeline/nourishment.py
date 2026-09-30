@@ -1,38 +1,11 @@
-"""Beach and dune forcing for a CASCADE run: nourishment schedule, overwash filter.
+"""
+Beach and dune forcing for a CASCADE run: nourishment schedule and overwash filter.
 
-Everything CASCADE's `beach_dune_manager` needs, prepared before the run and
-checked against what the module actually did afterwards. Nothing here is
-site-specific -- domain geometry arrives as a `DomainGeometry`, and the
-Hatteras instances (project extents, volumes, community zones) live in
-`hatteras_site_config`.
+    from cascade_pipeline import nourishment
+    schedule = nourishment.build_schedule(projects, geometry, start_year, end_year)
 
-Four things about `BeachDuneManager` this module exists to get right:
-
-- **`overwash_filter` is a PERCENT, not a fraction.** `filter_overwash` divides
-  it by 100, and the docstring cites 40-90 % from Rogers et al. (2015):
-  residential to commercial. A value of 0.4 filters 0.4 % of overwash, which
-  is indistinguishable from no filtering. `BeachDuneConfig` rejects the
-  fraction scale rather than letting it pass silently.
-
-- **The per-year volume must be written to the Cascade object, not the
-  manager.** `cascade.update()` copies its own `_nourishment_volume[iB3D]`
-  into each manager on every time step, immediately before calling
-  `BeachDuneManager.update()` (cascade.py:772). A volume assigned straight
-  onto `cascade.nourishments[i]` is therefore overwritten before it is ever
-  used, and every nourishment silently applies the Cascade init default
-  instead. `NourishmentSchedule.apply_to_cascade` writes
-  `cascade.nourishment_volume`, which survives.
-
-- **Enabling the module is not the same as scheduling a nourishment.** With
-  `beach_nourishment_module=True`, a domain runs overwash filtering, the 50 m
-  community-width drowning check, and fixed-dune-line dynamics EVERY year of
-  the run -- `nourish_now` only controls whether sand is added. There is no
-  way to get the fill without the rest.
-
-- **The manager's time series are offset by one.** `update_dune_domain`
-  increments `barrier3d.time_index` before the managers run, so a manager
-  writing at `time_index - 1` lands on index `year - start_year + 1`.
-  `NourishmentSchedule.time_index` is the single place that conversion lives.
+Prepared before the run and checked against what beach_dune_manager did; the site's
+projects and zones live in hatteras_site_config. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -324,9 +297,7 @@ def build_schedule(projects, geometry, start_year, end_year):
         per_m = project.volume_m3_per_m(geometry.domain_spacing_m)
         for gis in project.gis_domains:
             pad = geometry.gis_to_pad(gis)
-            # Two projects overlapping in one domain-year would silently
-            # clobber each other; sum instead, which is what placing both
-            # volumes on the same beach means.
+            # Two projects in one domain-year are summed, not overwritten
             nourish_now[project.year][pad] = 1
             volume_m3_per_m[project.year][pad] += per_m
 
@@ -456,8 +427,7 @@ def audit_schedule(schedule, beach_dune_on, config=DEFAULT_BEACH_DUNE):
     for row in schedule.events():
         if not beach_dune_on[row["pad"]]:
             module_off.append(row["gis"])
-        # Real projects run roughly 20-2000 m^3/m; outside that is a unit slip
-        # (total m^3 not divided by domain length, or cy never converted).
+        # Outside 1-5000 m^3/m is a unit slip (total m^3 not divided by length, or cy never converted)
         if not 1.0 <= row["volume_m3_per_m"] <= 5000.0:
             implausible.append(row)
         if not schedule.start_year <= row["year"] <= schedule.end_year:
@@ -600,8 +570,7 @@ def verify_setbacks_frozen(cascade, double_managed_gis, geometry):
     for gis in double_managed_gis:
         pad = geometry.gis_to_pad(gis)
         setback_TS = np.asarray(cascade.roadways[pad]._road_setback_TS)
-        # Trailing zeros are unwritten years after the road stopped being
-        # managed, not a setback of zero.
+        # Trailing zeros are years after the road stopped being managed, not a setback of zero
         written = setback_TS[: np.max(np.flatnonzero(setback_TS != 0)) + 1] \
             if np.any(setback_TS != 0) else setback_TS[:1]
         rows.append(dict(

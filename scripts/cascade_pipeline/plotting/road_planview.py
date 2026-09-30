@@ -1,18 +1,10 @@
-"""Plan-view of the roadway on a CASCADE initialization surface.
+"""
+Plan view of the roadway on a CASCADE initialization surface.
 
-Draws NC-12 where CASCADE will actually put it: on the same plan-view canvas
-`init_planview` builds, with each domain shifted cross-shore by its island
-offset, so the road's setback is read against the island the model runs on
-rather than against a map.
+    from cascade_pipeline.plotting.road_planview import plot_roadway_island
 
-The road is drawn per domain as a horizontal bar at `offset + setback`, because
-that is literally what CASCADE does -- `road_start = int(setback / cell)` is one
-row index applied to every alongshore profile in the domain. A relocated
-position, when supplied, is drawn as a second bar so the displacement is
-visible against the barrier that has to absorb it.
-
-Nothing here is site-specific: geometry arrives as a DomainGeometry, and the
-setbacks, offsets and events are supplied by the caller.
+NC-12 drawn where CASCADE puts it, at offset + setback per domain, relocated position
+as a second bar. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -31,8 +23,7 @@ from cascade_pipeline.plotting import init_planview
 from site_layer.hat_figure_style import (
     C, C_1997, DOMAIN_AXIS_LABEL, INK, apply_style,
 )
-# Aliased: `figsize` is already a keyword argument of plot_roadway_island,
-# and no caller should have to change name for a restyle.
+# Aliased: figsize is already a keyword of plot_roadway_island
 from site_layer.hat_figure_style import figsize as _figsize
 
 apply_style()
@@ -355,8 +346,7 @@ def plot_roadway_island(elevation_paths, offset_cells, setbacks_m, geometry,
             colorbar=False, ax=zoom_ax, config=config, style=style,
             xlabel=DOMAIN_AXIS_LABEL, **kwargs)
 
-    # The subject line stays on the canvas: this is a per-run artefact that is
-    # opened out of a run folder with nothing around it.
+    # The subject line stays on the canvas: a per-run artefact opened with nothing around it
     figure.suptitle(title, fontsize=10, x=0.012, ha="left",
                     color=style.text_color, y=0.985)
     return figure

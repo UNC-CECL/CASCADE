@@ -1,19 +1,10 @@
-"""Plan-view rendering of a CASCADE initialization surface (t=0).
+"""
+Plan-view rendering of a CASCADE initialization surface (t=0).
 
-Composites per-domain Barrier3D topography onto one alongshore canvas, each
-domain shifted cross-shore by its BRIE island offset, so the initial island
-can be read as a map before a run starts. Nothing here is site-specific --
-domain geometry arrives as a DomainGeometry and the file paths and offsets are
-supplied by the caller.
+    from cascade_pipeline.plotting.init_planview import plot_initialization
 
-Two conventions this module depends on, both Barrier3D's:
-
-- Elevation arrays are stored in decameters on a fixed-size grid cell, and are
-  indexed (cross_shore, alongshore) with row 0 seaward.
-- The extractor writes topography trimmed to the island interior, so the
-  landward water rows are absent from the .npy files. `PlanViewConfig.topo_rows`
-  is the untrimmed frame height; the missing rows are refilled with
-  `sentinel_water_m` (see RUN_MANIFEST.txt in the extractor's version folder).
+Per-domain topography composited onto one canvas, each domain shifted by its island
+offset. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -193,12 +184,7 @@ def build_canvas(domain_grids, offset_cells, geometry, include_buffers=False,
 
         origin = int(plotted_offsets[index])
         row_end = min(origin + n_rows, canvas_rows)
-        # No np.fliplr here. It used to reverse the alongshore cells WITHIN each
-        # domain, inside this very loop, which put every 500 m block backwards
-        # against the ascending domain order. That compensated for the extractor
-        # writing the within-domain alongshore order reversed; the extractor now
-        # fixes it at load (ALONGSHORE_FLIP), so flipping again double-flips.
-        # _warn_if_alongshore_reversed below is the guard.
+        # No np.fliplr: the extractor fixes the alongshore order at load (_warn_if_alongshore_reversed guards it)
         canvas[origin:row_end, col_cursor:col_cursor + n_cols] = (
             grid[:row_end - origin, :])
         col_cursor += n_cols
@@ -276,8 +262,7 @@ def plot_canvas(canvas, domain_col_starts, cells_per_domain, first_real_idx,
         bar.outline.set_linewidth(0.6)
         bar.outline.set_edgecolor(INK)
 
-    # Adaptive so a small multiple (a 7-domain zoom) still gets labels;
-    # a fixed step of 5 gives such a panel only two ticks.
+    # Tick step scales with the reach, so a 7-domain zoom still gets labels
     tick_step = max(1, round(geometry.num_real_domains / 18))
     tick_indices = range(0, geometry.num_real_domains, tick_step)
     ax.set_xticks([domain_col_starts[first_real_idx + i]

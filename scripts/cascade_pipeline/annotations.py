@@ -1,14 +1,10 @@
-"""Geographic reference annotations shared by every cascade_pipeline figure.
+"""
+Geographic reference annotations shared by every cascade_pipeline figure.
 
-Community spans, village centers, piers, groins, and shoal-influence zones
-are drawn identically on the shoreline GIF and both rate-comparison
-figures, so the styling lives in one place instead of three.
+    from cascade_pipeline.annotations import AnnotationConfig
 
-Ships with NO site content: AnnotationConfig()'s dict fields default to
-empty and its text fields default to generic placeholders. Build a
-populated instance for your own site (see e.g. hatteras_site_config.py)
-and pass it explicitly -- a reusable library shouldn't silently draw
-somebody else's place names.
+Towns, piers, groins and shoal zones drawn one way everywhere; ships empty, the site
+supplies a populated instance. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

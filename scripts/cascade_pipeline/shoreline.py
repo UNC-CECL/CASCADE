@@ -1,7 +1,9 @@
-"""Shoreline time-series extraction from a completed CASCADE run.
+"""
+Shoreline time-series extraction from a completed CASCADE run.
 
-Pure data extraction -- nothing here touches matplotlib. Feeds both the
-shoreline GIF and the rate-comparison figures in cascade_pipeline.plotting.
+    from cascade_pipeline.shoreline import build_shoreline_matrix, compute_change_rate, compute_lrr
+
+Pure data extraction; feeds the shoreline GIF and the rate-comparison figures. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -138,9 +140,7 @@ def compute_lrr(shoreline_m, span_years=None, flip_sign=True):
     n_states = shoreline_m.shape[0]
     span = span_years if span_years is not None else max(n_states - 1, 1)
 
-    # Evenly spaced in calendar years, so the slope is per year rather than
-    # per state. The two agree for annual states; being explicit means a
-    # sub-annual save spacing would not silently rescale the rate.
+    # Evenly spaced calendar years, so the slope is per year whatever the save spacing
     years = np.linspace(0.0, float(span), n_states)
 
     slope, intercept = np.polyfit(years, shoreline_m, 1)

@@ -1,25 +1,10 @@
-"""Run provenance, output-directory guarding, and the cross-run index.
+"""
+Run provenance, output-directory guarding, and the cross-run index.
 
-The hindcast is run as a matrix -- period x source/sink preset x groin -- and
-the three failure modes that costs are all bookkeeping ones:
+    from cascade_pipeline.run_registry import find_run_dir, guard_run_dir, rebuild_run_index
 
-  * a re-run silently overwriting the outputs of the run it was meant to be
-    compared against (guard_run_dir),
-  * a finished run whose metadata cannot say which code produced it, because
-    the sandbox flag or the extractor version was flipped days earlier
-    (git_provenance, and the [identity] section callers pass),
-  * twelve runs whose results can only be compared by opening twelve
-    hand-formatted text files (rebuild_run_index, which derives run_index.csv
-    from every run's metadata; append_run_index is the pre-2026-09-16 writer
-    and is kept for the groin sweep).
-
-Metadata is written twice from ONE structure: a .txt to read and a .json to
-parse. Rendering both from the same `sections` mapping is what keeps them from
-disagreeing -- the previous inline version built only the prose, so anything
-downstream had to re-parse it.
-
-Used by both HAT_hindcast_1984_2024.ipynb and its headless mirror
-HAT_hindcast_1984_2024.py, so the two cannot drift apart.
+Where a run is filed, what code made it, and run_index.csv rebuilt from every run's
+metadata. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -40,19 +25,13 @@ from cascade_pipeline.run_layout import SUBFOLDERS
 import numpy as np
 import pandas as pd
 
-# Files whose presence means a run directory holds real output. A directory
-# containing only these is treated as empty, so a stray .gitkeep or an
-# editor's .DS_Store does not block a run.
+# Files whose presence alone does not make a run directory non-empty
 _IGNORABLE_NAMES = {".gitkeep", ".gitignore", ".DS_Store", "Thumbs.db"}
 
 RUN_INDEX_FILENAME = "run_index.csv"
 
 
-# Paths a run WROTE BACK into the repository, so their being modified says
-# nothing about whether the run's code was committed. See git_provenance.
-# Since 2026-09-16 the runner copies the parameters yaml into the run
-# directory and CASCADE rewrites only the copy, so this file should stay
-# clean; it is still excluded so a tree dirtied by an older run reports right.
+# Files a run writes back into the repository, so they do not count as uncommitted code
 EXCLUDED_FROM_DIRTY = (
     "data/hatteras_init/Hatteras-CASCADE-parameters.yaml",
 )
@@ -106,11 +85,7 @@ def git_provenance(repo_root):
         return {"commit": "unknown", "branch": "unknown", "dirty": None}
 
 
-# The route_overwash index fix (2026-09-24). Barrier3D's subaerial test read
-# Elevation[TS, i, d+1:d+10] -- row and column swapped -- which read the wrong
-# cells and, on narrow domains, out of bounds (the silent crashes). Fixed on
-# the local Barrier3D branch fix/route-overwash-axis-swap; see
-# output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md.
+# The route_overwash axis-swap fix (2026-09-24): the corrected line, looked for in Barrier3D's source
 _OVERWASH_FIXED = "Elevation[TS, d + 1: d + 10, i]"
 _OVERWASH_BUGGED = "Elevation[TS, i, d + 1: d + 10]"
 
@@ -139,9 +114,7 @@ def barrier3d_provenance():
         src = inspect.getsource(_b3d)
         out["route_overwash_fix"] = (True if _OVERWASH_FIXED in src
                                      else False if _OVERWASH_BUGGED in src else None)
-        # The 2026-09-28 adoption (Barrier3D branch hatteras/adopted): the three
-        # overwash fixes -- all present, all absent, or mixed (None) -- and
-        # per-cell dune ceilings (DuneCeilingFromStart).
+        # The 2026-09-28 adoption (hatteras/adopted): the three overwash fixes and per-cell dune ceilings
         _fixed = ["Discharge[:, 0, start:stop + 1] = Qdune" in src,
                   "C = 0  # Initialize" not in src,
                   "if i == len(Dow) or Dow[i] - Dow[i - 1] != 1:" in src]
@@ -178,64 +151,19 @@ def values_digest(mapping, length=12):
     """
     if not mapping:
         return "empty"
-    # Sorted and formatted rather than hashed off repr(): dict order and float
-    # repr are not things to make a run's identity depend on.
+    # Sorted and formatted, not hashed off repr(): dict order and float repr must not change an identity
     payload = ";".join(f"{key}:{float(value):.6g}"
                        for key, value in sorted(mapping.items()))
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:length]
 
 
-# =============================================================================
-# WHERE A RUN LIVES
-# =============================================================================
-# One run's outputs are at
-#
-#     <raw_runs>/[<arm>/]<start>_<end>/<preset>/<run_name>/
-#
-# and the ARM COMPONENT IS ABSENT for the calibration arm. That asymmetry is
-# deliberate -- every run made before forcing arms existed is at the short
-# path, and emitting the component unconditionally would rename all of them --
-# but it does mean the path cannot be built by joining a fixed number of parts.
-#
-# THIS IS THE ONLY PLACE THAT SPELLING BELONGS. It was previously rebuilt by
-# hand in six scripts, five of which predate the arm component and so join
-# <period>/<preset>/<name> with no slot for it: an arm-scoped run is simply
-# invisible to them. plot_sensitivity.py skipped its target-window check
-# silently whenever the path did not resolve, which is the quiet-wrong-path
-# failure hat_topo_version.py exists to end for the domain arrays, one tree
-# over. A name that is not on disk is an error here, and the error names the
-# arms the run IS under.
+# Where a run lives
 
-# =============================================================================
-# THE TREE (2026-09-16): filed by PURPOSE
-# =============================================================================
-# A run is filed by what it is FOR, then by period and preset:
-#
-#   matrix/<period>/<preset>/<run_name>/                  the production runs
-#   sensitivity/<axis>/<period>/<preset>/<run_name>_<token>/   sweep cells
-#   experiments/<tag>/<period>/<preset>/<run_name>/       one question each
-#   versions/<tag>/<period>/<preset>/<run_name>/          input-version pairs
-#   archive/<tag>/<period>/<preset>/<run_name>/           superseded, intact
-#
-# The run NAME still describes the scenario and is derived from the switches
-# the runner built. What used to be an "arm" -- one string that meant a
-# forcing value, an input version or an ad hoc experiment label without saying
-# which -- is now a KIND (one of KINDS) and a TAG. A matrix run has no tag. A
-# sensitivity cell's tag is its axis folder, derived from the trailing token on
-# its name, so the value it was swept to is in the NAME and the axis is in the
-# PATH. An experiment's or version's tag is the folder it was filed under,
-# "<set>/<member>" for a set of related runs.
-#
-# Why (Hannah, 2026-09-16): a wave sweep had fanned out into twelve top-level
-# arms/waveHs<x>/ folders, each holding one run; nineteen of thirty arms were
-# finished one-off experiments nothing marked as finished; and the layout
-# could not tell those from the version comparisons that are kept on purpose.
-#
-# BOTH EARLIER LAYOUTS STILL READ. find_run_dir tries the purpose path, then
-# the 2026-09-10 layout (arms/<arm>/..., <period>/<preset>/sweeps/<family>/),
-# then the flat pre-09-10 one, so a tree that is half migrated resolves. The
-# `arm=` keyword is accepted everywhere as a legacy spelling and translated
-# through LEGACY_ARMS.
+# The pre-09-16 path spelling, with an optional arm component; resolved here and nowhere else
+
+# The tree (2026-09-16): filed by purpose
+
+# Filed by purpose: matrix/, sensitivity/<axis>/, experiments/<tag>/, versions/<tag>/, archive/<tag>/
 
 KINDS = ("matrix", "sensitivity", "experiment", "version", "archive")
 MATRIX_KIND = "matrix"
@@ -246,23 +174,14 @@ KIND_DIR = {
     "version": "versions",
     "archive": "archive",
 }
-# The legacy name of the unscoped tree. Still what a pre-09-16 index row says
-# in its `arm` column, and what old call sites pass.
+# The legacy name of the unscoped tree, still in old index rows and call sites
 CALIBRATION_ARM = "calibration"
 ARMS_DIR = "arms"
 SWEEPS_DIR = "sweeps"
-# Trailing name tokens that mark a sensitivity cell, and the axis folder each
-# files under. The runner derives the token (cascade_pipeline.hindcast's
-# wave_climate_token / relocation_setback_token); a token combining two wave
-# fields ("waveHs3Tp10") files under the FIRST family it starts with.
+# Trailing name tokens that mark a sensitivity cell, and the axis folder each files under
 SWEEP_FAMILIES = ("waveHs", "waveTp", "waveahf", "waveasym", "rset")
 
-# Where each pre-09-16 arm was filed on 2026-09-16, decided by Hannah in the
-# same interview: the three version comparisons keep their names under
-# versions/; everything else was a one-off experiment and is filed under
-# experiments/ by the date it was run, with the arm's own name as the member.
-# The twelve waveHs<x> arms are ABSENT on purpose: those were the 1996 wave
-# cells filed by the 2026-09-01 rule, re-run as sensitivity cells and deleted.
+# Where each pre-09-16 arm was filed on 2026-09-16
 LEGACY_ARMS = {
     "offsetv1": ("version", "offsetv1"),
     "version-check/v1": ("version", "version-check/v1"),
@@ -284,9 +203,7 @@ LEGACY_ARMS = {
     "currency-20260914": ("experiment", "code-checks/2026-09-14-calibrated-pair-rerun-current-code"),
 }
 
-# A period directory is exactly <4 digits>_<4 digits>. Anything else directly
-# under a kind folder is a tag, so the two levels can be told apart without a
-# registry of tag names.
+# A period directory is exactly <4 digits>_<4 digits>; anything else under a kind is a tag
 _PERIOD_DIR = re.compile(r"\d{4}_\d{4}")
 
 
@@ -416,8 +333,7 @@ def _resolve_identity(kind, tag, arm, run_name=None):
     tag is the axis folder, derived from the name when not given.
     """
     if kind not in (None, "") and kind not in KINDS:
-        # A pre-09-16 caller passing the ARM positionally, where kind now
-        # sits (find_run_dir(raw, name, period, preset, "version-pair/v2")).
+        # A pre-09-16 caller passing the arm positionally, where kind now sits
         if arm not in (None, ""):
             raise ValueError(f"{kind!r} is not a kind, and arm= was also given")
         arm, kind = kind, None
@@ -563,8 +479,7 @@ def kinds_holding(raw_runs, run_name, period, preset):
         return []
     per = period_component(period)
     found = set()
-    # The purpose layout: kind folders, each holding tags (one or two levels)
-    # or, for the matrix, periods directly.
+    # The purpose layout: kind folders holding tags, or periods directly for the matrix
     for kind, folder in KIND_DIR.items():
         top = root / folder
         if not top.is_dir():
@@ -718,18 +633,9 @@ def arms_holding(raw_runs, run_name, period, preset):
     return sorted(set(out))
 
 
-# =============================================================================
-# THE DERIVED INDEX
-# =============================================================================
-# run_index.csv is a RESTATEMENT of every run's metadata JSON in one table, so
-# a question across runs is one read. Since 2026-09-16 no run appends to it:
-# each run writes the row it would have appended INTO its metadata, under
-# "index row", and the runner then calls rebuild_run_index, which regenerates
-# the whole file from every metadata on disk and replaces it atomically. Two
-# runs finishing at once both rebuild the same complete table, so the last
-# writer wins nothing -- which is what lets runs be concurrent. Rows for runs
-# that predate the "index row" section are carried over from the existing
-# file by their old key, so nothing is lost in the changeover.
+# The derived index
+
+# run_index.csv restates every run's metadata; rebuilt whole, so runs can finish concurrently
 
 INDEX_KEY = ("run_name", "kind", "tag")
 _LEGACY_INDEX_KEY = ("run_name", "Hs_m", "arm")
@@ -849,10 +755,7 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
     existing = _read_index_rows(index_path)
     by_new_key = {tuple(r.get(k, "") for k in INDEX_KEY): r for r in existing
                   if r.get("kind")}
-    # The old key only means something in a file that still HAS the arm
-    # column. On a rebuilt file every row's arm reads "", so three runs of
-    # one name collapse onto one old key and the last wins -- which handed
-    # the 1996 matrix run a version row's skill on 2026-09-16.
+    # The old key only means something in a file that still has the arm column
     by_old_key = {tuple(r.get(k, "") for k in _LEGACY_INDEX_KEY): r
                   for r in existing if "arm" in r}
 
@@ -896,11 +799,7 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
                                    row.get("topo_dune_version", ""),
                                    current_versions)
         rows.append(row)
-        # BACKFILL: a legacy run's row, once found, is written into its own
-        # metadata JSON so the next rebuild derives it from the run and not
-        # from whatever the index file happens to hold. Without this, a
-        # rebuild that read a file lacking the arm column matched three
-        # runs of one name to one row (2026-09-16). The .txt is left alone.
+        # Backfill: a legacy run's row is written into its own metadata, so the next rebuild reads the run
         if INDEX_SECTION not in data and row.get("rmse_interior_m_yr", "") != "":
             data[INDEX_SECTION] = {k: v for k, v in row.items()
                                    if k not in ("kind", "tag", "status")}
@@ -910,8 +809,7 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
             except OSError:
                 pass
 
-    # Column order: identity first, then everything else in first-seen order,
-    # so the file stays readable as columns accumulate.
+    # Column order: identity first, then first-seen order
     columns = [c for c in _LEADING_COLUMNS]
     for row in rows:
         for column in row:
@@ -921,9 +819,7 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
                                   ("start_year", "kind", "tag", "source_sink_preset",
                                    "run_name")))
 
-    # csv, not pandas: pandas round-trips every float through repr, which once
-    # rewrote unrelated rows. Atomic: written beside, then replaced, so a
-    # reader never sees a half-written file and two writers cannot interleave.
+    # csv, not pandas (which rewrites floats); written beside and replaced, so no reader sees half a file
     index_path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=".run_index_", suffix=".csv",
                                dir=str(index_path.parent))
@@ -934,11 +830,7 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
             writer.writeheader()
             for row in rows:
                 writer.writerow({k: ("" if v is None else v) for k, v in row.items()})
-        # WINDOWS: os.replace fails with "Access is denied" while another
-        # process has the target open -- which is exactly when a parallel run
-        # is replacing it too (2026-09-24: a finished run died here, its
-        # outputs already written). The index is derived, so waiting a moment
-        # and trying again is safe; the last writer's table is complete.
+        # Windows: os.replace can be denied while another run holds the file, so retry
         import time as _time
         for attempt in range(20):
             try:
@@ -1044,18 +936,7 @@ def guard_run_dir(run_dir, overwrite=False):
             f"  {run_dir}")
 
     if existing:
-        # Refused rather than handled: every file a run writes is flat, so a
-        # subdirectory here means run_dir is not pointing where it is thought
-        # to be -- a half-built path, a period directory, the output root. The
-        # cost of guessing wrong is a recursive delete of someone's runs.
-        # A run directory holds a KNOWN set of subfolders (run_layout's
-        # figures/ animations/ tables/, plus the gif_frames scratch) and
-        # nothing else. Any OTHER subdirectory still means run_dir is not
-        # pointing where it is thought to be -- a half-built path, a period
-        # directory, the output root -- and the cost of guessing wrong is a
-        # recursive delete of someone's runs, so that stays refused. Before
-        # 2026-09-10 EVERY subdirectory was refused, which stopped OVERWRITE
-        # working at all once the layout gained folders.
+        # Only the known run subfolders may be emptied; any other subdirectory is refused
         known = set(SUBFOLDERS) | {"gif_frames"}
         unknown = sorted(p.name for p in existing
                          if p.is_dir() and p.name not in known)
@@ -1093,8 +974,7 @@ def render_metadata_text(sections, header):
     Returns:
         The file contents as a string.
     """
-    # One column width for the whole file, wide enough for the longest key, so
-    # the "=" stays aligned across sections instead of jogging in and out.
+    # One column width for the whole file, so the '=' stays aligned
     width = max([22] + [len(key) + 1
                         for entries in sections.values() for key in entries])
 
@@ -1242,18 +1122,11 @@ def append_run_index(index_path, row, key="run_name"):
     """
     index_path = Path(index_path)
     new = pd.DataFrame([row])
-    # A COMPOSITE key is allowed because the run name no longer identifies a
-    # run on its own: forcing that is not part of the scenario -- Hs -- scopes
-    # the output DIRECTORY instead of adding a name token, so two runs can share
-    # a name and differ in what they were forced with. Replacing on name alone
-    # would silently drop one of them from the index.
+    # A composite key: two runs can share a name and differ in forcing
     keys = (key,) if isinstance(key, str) else tuple(key)
 
     if index_path.exists():
-        # AS TEXT. Parsing the existing rows into pandas and writing them
-        # back rewrites every float through repr, which on 2026-09-10 silently
-        # truncated the last digit of five columns in a row this call was not
-        # touching. Only the row being added should change.
+        # As text: only the row being added changes (pandas would rewrite every float)
         existing = pd.read_csv(index_path, dtype=str, keep_default_na=False)
         usable = [k for k in keys if k in existing.columns]
         if usable:
@@ -1265,8 +1138,7 @@ def append_run_index(index_path, row, key="run_name"):
     else:
         combined = new
 
-    # Stable ordering: the identity columns first, then whatever else exists,
-    # so the file stays readable as columns accumulate.
+    # Stable ordering: identity columns first, then whatever else exists
     leading = [c for c in keys + ("timestamp", "start_year", "end_year")
                if c in combined.columns]
     combined = combined[leading + [c for c in combined.columns

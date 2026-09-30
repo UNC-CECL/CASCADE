@@ -1,22 +1,10 @@
-"""Roadway forcing for a CASCADE run: setbacks, elevations, events, drowning.
+"""
+Roadway forcing for a CASCADE run: setbacks, elevations, events, drowning.
 
-Everything CASCADE's `roadway_manager` needs, prepared before the run and
-checked against the interior it will actually be spent on. Nothing here is
-site-specific -- domain geometry arrives as a `DomainGeometry`, and the
-Hatteras instances (community zones, historical events, file names) live in
-`hatteras_site_config`.
+    from cascade_pipeline import roadway
 
-Three Barrier3D conventions this module depends on:
-
-- `road_setback` and `road_width` are METERS; `bulldoze` divides them by the
-  cell size to get row indices, so a setback is only ever as precise as one
-  cell.
-- `road_ele` is METERS, MHW-RELATIVE. `bulldoze` writes it straight into the
-  interior grid, which the extractor stores MHW-relative -- see the datum note
-  on `load_road_elevations`.
-- `bulldoze` tests the rows FLANKING the road, never the road's own cells, and
-  drowns the road when either flank is more than `percent_water` water.
-  `predict_drowning` reproduces that test rather than approximating it.
+Prepared before the run and checked against the interior it is spent on; setbacks in
+metres, road elevation in metres MHW. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -103,9 +91,7 @@ class BridgeEvent:
     enabled: bool = True
 
 
-# =============================================================================
 # Loading
-# =============================================================================
 
 def load_padded_series(path, geometry, first_gis, last_gis, fill=0.0):
     """Reads a 2-row CASCADE forcing file into a padded per-domain array.
@@ -192,9 +178,7 @@ def load_road_elevations(path, geometry, first_gis, last_gis,
                               fill=config.elevation_fallback_m)
 
 
-# =============================================================================
 # Management flags
-# =============================================================================
 
 def build_roadway_management_on(geometry, first_gis, last_gis,
                                 community_zones=(), enabled=True):
@@ -234,9 +218,7 @@ def build_roadway_management_on(geometry, first_gis, last_gis,
     return flags
 
 
-# =============================================================================
 # Drowning prediction
-# =============================================================================
 
 def interior_widths(interior_m, config=DEFAULT_ROADWAY):
     """Land run from row 0 to the first water cell, per alongshore profile.
@@ -384,9 +366,7 @@ def summarise_audit(rows, config=DEFAULT_ROADWAY):
     }
 
 
-# =============================================================================
 # Historical events
-# =============================================================================
 
 def relocated_setbacks(setbacks_m, event, geometry):
     """Applies a relocation event to a padded setback array.
@@ -470,9 +450,7 @@ def summarise_road_management(cascade, geometry, first_gis, last_gis):
     return rows
 
 
-# =============================================================================
 # Mid-run historical events
-# =============================================================================
 
 def apply_historical_event(cascade, event, geometry, relocations_enabled=True,
                            setback_check=None):
@@ -592,12 +570,7 @@ def _apply_relocation(cascade, event, pads, roadways, _rm, setback_check):
                     f"island is {island_width_m:.0f} m)")
 
         manager._road_setback = new_setback
-        # The relocation TARGET is deliberately not touched. It used to be set
-        # here "to keep the two in sync", which never survived a year: the
-        # yearly update re-assigns it from the model's own parameter. Since
-        # 2026-09-14 that parameter is a real input rather than the initial
-        # setback, so overwriting it here would quietly give this one domain a
-        # different rebuild rule from every other.
+        # The relocation target is left alone: it is a model input, the same rule for every domain
         manager._road_setback_TS[manager._time_index - 1] = new_setback
 
         rows.append(dict(

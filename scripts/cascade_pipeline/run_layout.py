@@ -1,47 +1,10 @@
-"""Where a run's files live inside its run folder, and what they are called.
+"""
+Where a run's files live inside its run folder, and what they are called.
 
-WHY THIS MODULE EXISTS
-    A run folder used to be thirteen files in a heap, every one of them
-    prefixed with the full run name:
+    from cascade_pipeline.run_layout import resolve, write_path
 
-        HAT_1984_2004_calibBE_road_bdm_groin/
-            HAT_1984_2004_calibBE_road_bdm_groin.npz
-            HAT_1984_2004_calibBE_road_bdm_groin_annotated.png
-            HAT_1984_2004_calibBE_road_bdm_groin_shoreline_change_rate.csv
-            ... ten more
-
-    Since 2026-09-10 the output is sorted by kind, and the files inside those
-    subfolders drop the run-name prefix, which the folder already carries:
-
-        HAT_1984_2004_calibBE_road_bdm_groin/
-            HAT_..._run_metadata.json      identity and state stay at the root:
-            HAT_..._run_metadata.txt       these are globbed ACROSS runs and
-            HAT_....npz                    travel outside the folder, so they
-            HAT_..._shoreline_matrix.npy   keep the prefix
-            figures/     shoreline_change_rate.png, ..._with_buffers.png
-            animations/  displacement_domains_1-90.gif, ...
-            tables/      shoreline_change_rate.csv, groin_diagnostics.csv,
-                         road_management.csv
-
-    The rename is not cosmetic. The longest path in the runs tree was 229
-    characters and Windows gives up at 260; adding a subfolder took it to 240,
-    leaving no headroom for a longer run name. The prefix was 56 of those
-    characters, and dropping it inside the subfolders brings the worst case
-    back to about 184.
-
-THE FALLBACK IS THE POINT
-    `resolve()` looks for the new location first and falls back to the old
-    flat one. So a half-migrated tree always reads correctly, the migration
-    can be interrupted, and a run folder restored from an old backup still
-    works. Nothing in the codebase should join a run-folder filename by hand;
-    call `resolve()` to read and `write_path()` to write.
-
-USAGE
-    from cascade_pipeline.run_layout import resolve, write_path, migrate_run
-
-    p = resolve(run_dir, "rate_csv", run_name)          # read, either layout
-    p = write_path(run_dir, "figure_rate", run_name)    # write, new layout
-    migrate_run(run_dir)                                # move an old folder
+Files sorted into figures/, animations/ and tables/ without the run-name prefix; old
+flat names still resolve. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -60,25 +23,23 @@ ANIMATIONS = "animations"
 TABLES = "tables"
 SUBFOLDERS = (FIGURES, ANIMATIONS, TABLES)
 
-# kind -> (subfolder or "" for the run root,
-#          new filename (no run-name prefix unless it is a root file),
-#          legacy filename as a "{run}" template)
+# kind -> (subfolder, "" for the run root; new filename; legacy "{run}" filename template)
 KINDS = {
-    # --- state and identity: stay at the root, keep the prefix -------------
+    # State and identity: stay at the root, keep the prefix
     "archive":       ("", "{run}.npz", "{run}.npz"),
     "matrix":        ("", "{run}_shoreline_matrix.npy", "{run}_shoreline_matrix.npy"),
     "metadata_json": ("", "{run}_run_metadata.json", "{run}_run_metadata.json"),
     "metadata_txt":  ("", "{run}_run_metadata.txt", "{run}_run_metadata.txt"),
 
-    # --- figures ----------------------------------------------------------
-    # "annotated" never said what the figure was: it is the rate comparison
-    # drawn across the buffer domains as well as the real ones.
+    # Figures
+
+    # The rate comparison drawn across the buffer domains as well as the real ones
     "figure_rate":          (FIGURES, "shoreline_change_rate.png",
                              "{run}_shoreline_change_rate_REAL_DOMAINS_ONLY.png"),
     "figure_rate_buffers":  (FIGURES, "shoreline_change_rate_with_buffers.png",
                              "{run}_annotated.png"),
 
-    # --- tables -----------------------------------------------------------
+    # Tables
     "rate_csv":      (TABLES, "shoreline_change_rate.csv",
                       "{run}_shoreline_change_rate.csv"),
     "groin_csv":     (TABLES, "groin_diagnostics.csv",
@@ -89,13 +50,7 @@ KINDS = {
                         "{run}_nourishment_log.csv"),
 }
 
-# An animation's name is built from its mode and window rather than listed,
-# because the windows are open-ended (any GIS range is legal). These turn the
-# plotting module's range tag into the new form:
-#   D1-90                          -> domains_1-90
-#   groinZoom_BuxtonGroin_D1-15    -> buxton_groin_domains_1-15
-#   groinSpan_D1-15                -> groin_span_domains_1-15
-#   ALL120pad                      -> all_120_padded
+# Animation names are built from mode and window: plotting's range tag -> the new form
 _TAG_RULES = (
     (re.compile(r"^groinZoom_(.+?)_D(\d+)-(\d+)$"), lambda m: f"{_snake(m.group(1))}_domains_{m.group(2)}-{m.group(3)}"),
     (re.compile(r"^groinSpan_D(\d+)-(\d+)$"),       lambda m: f"groin_span_domains_{m.group(1)}-{m.group(2)}"),
@@ -191,9 +146,7 @@ def animation_write_path(run_dir, mode: str, range_tag: str,
     return p
 
 
-# =============================================================================
-# MIGRATION
-# =============================================================================
+# Migration
 
 def plan_run(run_dir) -> list[tuple[Path, Path]]:
     """(source, destination) for every file in this run folder that moves.

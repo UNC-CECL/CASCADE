@@ -1,42 +1,10 @@
-"""Side-by-side animation of NC-12 against a migrating dune line.
+"""
+Side-by-side animation of NC-12 against a migrating dune line.
 
-WHAT IS DRAWN
-    One frame per model year, two panels sharing a year clock and a y-axis:
+    from cascade_pipeline.plotting.road_relocation_gif import make_road_relocation_gif
 
-        left   relocations OFF -- roadway_manager decides on its own
-        right  relocations ON  -- the measured historical displacements
-
-    In each panel, per alongshore domain:
-
-        dune line   the modelled shoreline, as displacement from year 0
-        road        that line PLUS the domain's current setback
-        marker      a domain that relocated in this frame's year
-
-WHY THE ROAD IS DRAWN AS "DUNE LINE PLUS SETBACK"
-    `road_setback` is the road's distance LANDWARD of the interior domain's
-    seaward edge, and `roadway_manager` decrements it by dune migration every
-    year precisely so the road stays geographically put while the dune line
-    advances on it. On a landward-positive axis, `dune + setback` reproduces
-    that: a road that is not moving traces a FLAT line while the dune line
-    climbs toward it, and a relocation shows up as the road stepping up in a
-    single frame. A road drawn at an absolute position would hide the very
-    mechanism the animation exists to show.
-
-    The y-axis is therefore cross-shore displacement relative to each domain's
-    own year-0 dune line, not an absolute cross-shore coordinate. Two domains
-    at the same height on the plot are NOT at the same place on the island.
-
-SIGN CONVENTION
-    x_s_TS increases landward, and `run.flip_sign_model` turns that into a
-    seaward-positive quantity -- which shoreline_gif then draws on an inverted
-    axis. This module negates once more instead, so the axis is plainly
-    landward-positive and ascending: 0 is the year-0 dune line and larger is
-    further landward. Do not pre-flip the matrix before passing it in.
-
-WHERE A LINE STOPS
-    A road that drowns stops being drawn. The managed span is dated from
-    `_road_ele_TS`, never from the setback, because a setback of exactly
-    0.0 m is legitimate -- see `_last_managed`.
+Relocations off against relocations on, one frame per model year; a line version and
+a raster version. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -72,37 +40,20 @@ from site_layer.hat_figure_style import figsize as _figsize
 
 apply_style()
 
-# THE PALETTE IS THE HOUSE PALETTE (2026-09-10). The glyphs, the rings and the
-# panel wording are unchanged -- those were settled on 2026-09-09 and are
-# deliberate -- but every colour now comes from hat_figure_style, so NC-12 is
-# the same ink here as on the road plan view, the relocation marker is the
-# same orange as shoreline_gif's, and the ocean shoreline is the cool pole of
-# the vintage pair rather than a fourth near-identical blue.
+# Every colour from the house palette, shared with the road plan view and shoreline_gif
 COLOR_DUNE = C_1997                     # ocean shoreline
 COLOR_ROAD = C["ROAD"]                  # NC-12, as everywhere else
 COLOR_RELOC = C["ADDED"]                # a relocation the module triggered
 COLOR_BAY = C["WATER"]                  # the sound edge
-# Deliberately not the star colour: a prescribed move and a module-triggered
-# one are different claims and must not share a glyph. Purple rather than the
-# old cyan, which sat a few degrees of hue from the dune line and read as a
-# marker ON that line at GIF resolution. Now the house purple, which is the
-# same hue at a hair more saturation.
+# A prescribed move gets its own colour: it is a different claim from a module-triggered one
 COLOR_PRESCRIBED = C["ACCENT"]
-# The barrier interior: the style module's 0.5-1.0 m elevation class, so the
-# island body is the same sand tone as on every elevation figure.
+# The barrier interior: the house 0.5-1.0 m elevation class
 COLOR_LAND = elevation_cmap()[0].colors[2]
 
 
-# =============================================================================
 # Figure style
-# =============================================================================
-# One place for the typographic and axis conventions every frame in this module
-# shares. The VALUES are the house standard's now, applied per-artist as before
-# -- these functions are called from long analysis scripts that draw their own
-# figures, and per-artist styling means a frame looks the same whichever entry
-# point drew it. (apply_style() above sets the typeface and the rc defaults;
-# it is idempotent, and shoreline_gif calls it too, so importing this module
-# has been touching rcParams since 2026-09-10 either way.)
+
+# Typographic and axis conventions every frame shares, applied per artist
 
 FONT_TITLE = 10.0
 FONT_PANEL = 9.0
@@ -118,9 +69,7 @@ INK_AXIS = _HOUSE_INK
 RULE = "0.85"
 GRID = GRID_C
 
-# Frames are drawn at the PRINTED double-column width and the dpi carries the
-# pixels: an 18 in canvas set this 8-9 pt type at 3-4 pt on a page. The target
-# pixel width is what it always was, so the GIFs are the same size on screen.
+# Drawn at the printed double-column width; the dpi carries the pixels
 FRAME_TARGET_PX = 1500.0
 FRAME_DPI_RANGE = (110.0, 230.0)
 
@@ -178,9 +127,7 @@ def _figure_header(fig, left, right, title, year, note=None, note_pos="below"):
     fig.add_artist(Line2D([left, right], [y - gap, y - gap], color=RULE,
                           lw=0.8, transform=fig.transFigure))
     if note and note_pos == "centre":
-        # the line figures have no room under the rule (the panel titles sit
-        # there); the note goes in the header row, right-aligned against the
-        # clock, so it neither jitters nor runs into a long title
+        # The note goes in the header row, right-aligned against the clock
         fig.text(right - 0.75 / fig.get_figwidth(), y, note, ha="right", va="center",
                  fontsize=FONT_NOTE, color=INK_LIGHT)
     elif note:
@@ -257,13 +204,7 @@ def _last_managed(entry):
     return int(written[-1]) if written.size else -1
 
 
-# =============================================================================
-# The relocation tracker (2026-09-09, Hannah): how many of the historically
-# relocated domains has each panel relocated BY THIS FRAME, and how many
-# relocations it made elsewhere - against how many the record says should
-# have happened by now. Island-wide, from the full road_series, whatever the
-# window; the window's own share is given beside it.
-# =============================================================================
+# The relocation tracker: historical domains relocated by this frame, and relocations elsewhere
 
 def _tracker(road_series, event_years, is_prescribed_arm, t, gis_lo, gis_hi):
     """Counts for one panel at year index `t`.
@@ -366,8 +307,7 @@ def _road_matrix(series, road_series, gis_lo, gis_hi, domains, n_years):
             continue
         setback = np.asarray(entry["setback"], dtype=float)
         reloc = np.asarray(entry["relocated"], dtype=float)
-        # The road stops being drawn where the record stops -- a drowned road
-        # must leave a gap, not a line frozen at its last position.
+        # The road stops where the record stops, so a drowned road leaves a gap
         stop = min(n_years, len(setback), _last_managed(entry) + 1)
         road[:stop, col] = series[:stop, col] + setback[:stop]
         m = min(n_years, len(reloc))
@@ -378,16 +318,7 @@ def _road_matrix(series, road_series, gis_lo, gis_hi, domains, n_years):
 def make_road_relocation_gif(
     arm_a, arm_b, road_series_a, road_series_b,
     gis_lo, gis_hi, out_path, back_a=None, back_b=None,
-    # A STAR IS ALWAYS THE MODULE, IN BOTH PANELS. It is driven by
-    # `_road_relocated_TS`, the RoadwayManager's own counter, and a PRESCRIBED
-    # historical move never increments it -- the pipeline applies those as a
-    # displacement before the manager updates. So arm B stars in the years its
-    # module fired, not in 1989/1999, and the prescribed move shows only as a
-    # step in the road. That was silently misleading, hence the separate
-    # prescribed marker -- a RING, drawn around the star rather than over it,
-    # so a year in which BOTH happened in the same domain still reads as both.
-    # The distinction lives in the legend now: it did not fit in these panel
-    # titles, where the two long labels collided across the gutter.
+    # A star is always the module; a prescribed move is a ring, so a year with both reads as both
     label_a="relocations off — the roadway module decides",
     label_b="relocations on — measured moves applied",
     event_years=None,
@@ -471,20 +402,16 @@ def make_road_relocation_gif(
 
     x = np.arange(gis_lo, gis_hi + 1)
 
-    # One y-axis for both panels, fixed across all frames: a road that jumps
-    # in one panel and not the other must be readable as a difference between
-    # the arms, not as a difference between two autoscaled axes.
+    # One y-axis for both panels, fixed across frames
     parts = [series_a.ravel(), series_b.ravel(), road_a.ravel(), road_b.ravel()]
     if bay_a is not None:
-        # Include the back-barrier or the island body is drawn clipped, which
-        # reads as the sound being part of the barrier.
+        # Include the back-barrier, or the island body is drawn clipped
         parts += [bay_a.ravel(), bay_b.ravel()]
     stack = np.concatenate(parts)
     finite = stack[np.isfinite(stack)]
     ymin, ymax = float(np.min(finite)), float(np.max(finite))
     ypad = (ymax - ymin) * 0.10 or 1.0
-    # Landward-positive (see _panel_series), so ocean-at-bottom is the plain
-    # ascending axis rather than an inverted one.
+    # Landward-positive, so ocean-at-bottom is the plain ascending axis
     ylim = ((ymin - ypad, ymax + ypad) if gif_config.ocean_at_bottom
             else (ymax + ypad, ymin - ypad))
 
@@ -499,10 +426,7 @@ def make_road_relocation_gif(
         year = run_a.start_year + t
         fig, axes = plt.subplots(1, 2, figsize=(width, 4.3),
                                  dpi=_frame_dpi(width), sharey=True)
-        # Fixed margins (NOT bbox_inches="tight") so every frame is the same
-        # size -- mismatched frame dimensions break GIF assembly. Left margin
-        # is wide enough for the y-label at every window width; the bottom
-        # clears a two-row legend strip.
+        # Fixed margins (not bbox_inches="tight"): every frame the same size, or the GIF will not assemble
         fig.subplots_adjust(left=0.105, right=0.985, top=0.825, bottom=0.255,
                             wspace=0.05)
         fig.patch.set_facecolor("white")
@@ -518,8 +442,7 @@ def make_road_relocation_gif(
             ax.set_ylim(*ylim)
             ax.set_xlim(gis_lo - 0.5, gis_hi + 0.5)
             _style_axes(ax)
-            # Domains are integers; the default locator offers halves on a
-            # narrow window, which reads as a domain that does not exist.
+            # Domains are integers: no half ticks
             ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=8))
 
             for span_label, (d_lo, d_hi) in annotations.town_spans.items():
@@ -530,8 +453,7 @@ def make_road_relocation_gif(
                            zorder=0)
 
             if bay is not None:
-                # The island itself: everything between the ocean dune line
-                # and the back-barrier shoreline.
+                # The island: everything between the ocean dune line and the back-barrier shoreline
                 ax.fill_between(x, series[t], bay[t], color=COLOR_LAND,
                                 alpha=0.55, zorder=1, lw=0)
                 ax.plot(x, bay[t], color=COLOR_BAY, lw=1.3, zorder=3,
@@ -540,8 +462,7 @@ def make_road_relocation_gif(
                     label="dune line", zorder=3)
             ax.plot(x, road[t], color=COLOR_ROAD, lw=1.7, zorder=4,
                     label="NC-12")
-            # The gap between the two lines IS the setback; shading it makes
-            # "the dune line is closing on the road" the thing you see.
+            # The shaded gap between the two lines is the setback
             ax.fill_between(x, series[t], road[t], where=np.isfinite(road[t]),
                             color=COLOR_ROAD, alpha=0.10, zorder=1)
 
@@ -551,10 +472,7 @@ def make_road_relocation_gif(
                         ms=10, mfc=COLOR_RELOC, mec="k", mew=0.5, zorder=6,
                         label="relocated this year")
 
-            # The PRESCRIBED move, marked only in the arm that carries it and
-            # only in its event year. Without this the bottom panel's headline
-            # event was invisible: the road simply steps, with no marker at
-            # all, while the stars nearby are the module doing something else.
+            # The prescribed move, marked only in its arm and only in its event year
             if is_prescribed_arm:
                 for gis, ev_year in event_years.items():
                     if gis_lo <= gis <= gis_hi and year == ev_year:
@@ -570,22 +488,17 @@ def make_road_relocation_gif(
                                zorder=2,
                                alpha=0.85 if year >= ev_year else 0.30)
 
-            # Left-aligned and lettered, so the panels can be cited as (a) and
-            # (b) in a caption rather than by position.
+            # Lettered and left-aligned, so a caption can cite (a) and (b)
             ax.set_title(f"({letter})  {label}", loc="left",
                          fontsize=FONT_PANEL, color=INK, pad=6)
             ax.set_xlabel(DOMAIN_AXIS_LABEL, fontsize=FONT_AXIS,
                           color=INK, labelpad=5)
 
-        # No arrow glyph: the label is rotated 90 degrees and a triangle
-        # rotates with it, so it ends up pointing at the axis, not landward.
+        # No arrow glyph: it rotates with the label
         axes[0].set_ylabel("cross-shore displacement since "
                            f"{run_a.start_year} (m)\nlandward positive",
                            fontsize=FONT_AXIS, color=INK, labelpad=6)
-        # Every mark on the frame, including the two shaded bands, which
-        # were previously unexplained. Two rows of four, sized to fit the
-        # narrowest window this function draws (9 in): a legend entry that
-        # runs off the canvas is worse than no legend at all.
+        # Every mark on the frame, the shaded bands included; two rows of four fit the narrowest window
         handles = [
             Line2D([], [], color=COLOR_DUNE, lw=1.9, label="ocean shoreline"),
             Line2D([], [], color=COLOR_BAY, lw=1.3,
@@ -606,8 +519,7 @@ def make_road_relocation_gif(
                         label="measured move applied ("
                               + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")")]
         handles = handles[:-1] + (_ring if any(prescribed_panels) else []) + handles[-1:]
-        # Figure-level and below the axes: an in-axes legend sits on top of
-        # the road wherever the setback is large, which is most of the island.
+        # Figure-level legend below the axes, so it never covers the road
         fig.legend(handles=handles, loc="lower center", ncol=4,
                    fontsize=FONT_LEGEND, frameon=False, labelcolor=INK,
                    handlelength=1.7, handletextpad=0.6, columnspacing=1.4,
@@ -622,9 +534,7 @@ def make_road_relocation_gif(
         _figure_header(fig, 0.105, 0.985, head, year,
                        note=_observed_label(_ca) if event_years else None, note_pos="centre")
 
-        # dpi EXPLICIT: the house rcParams put savefig.dpi at 300 for print,
-        # which would render every frame at nearly twice the pixels the GIF
-        # is sized for (and blow up the file).
+        # dpi explicit: the house savefig.dpi (300) would double every frame's pixels
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=fig.dpi,
                     facecolor=fig.get_facecolor())
@@ -675,31 +585,14 @@ def make_all_road_gifs(arm_a, arm_b, road_series_a, road_series_b,
     return written
 
 
-# =============================================================================
 # Topographic plan view
-# =============================================================================
-# The line version above abstracts the island to two curves. This one paints
-# Barrier3D's actual interior grids, so the animation shows overwash fans,
-# the barrier narrowing, and the road sitting on real ground.
-#
-# GEOMETRY. Every domain carries `DomainTS[t]`, a (cross-shore rows, 50)
-# elevation grid in dam MHW whose row 0 is the seaward edge of the interior.
-# The domain's absolute cross-shore position is `x_s_TS[t]` (dam), so row r
-# lands at `x_s_TS[t] + r`. Alongshore, each domain is 50 cells of 10 m, i.e.
-# 500 m, and the domains abut -- so 90 real domains tile 45 km of island.
-#
-# WHAT IS WATER. The interior grid extends well past the subaerial barrier
-# (176 rows where the barrier is only ~32), so most of it is sound. Cells at
-# or below 0 m MHW are masked and drawn as water rather than as low land.
+
+# The raster version: Barrier3D's interior grids, dam MHW, row 0 seaward; <= 0 m MHW drawn as water
 
 WATER_COLOR = C["WATER"]
 ROAD_ROWS = 2                  # road_width 20 m / dy 10 m: the two rows bulldoze() writes
 
-# Cross-shore window drawn around the window's reference shoreline, in dam.
-# The seaward end is fixed (a few cells of ocean for context); the landward
-# end is chosen per window from how far the land actually reaches, because a
-# fixed value either clips the wide Tri-Village section or drowns narrow Pea
-# Island in an empty frame.
+# Cross-shore window (dam) around the reference shoreline; the landward end set per window
 CROSS_SHORE_SEAWARD_DAM = -4
 CROSS_SHORE_MIN_ROWS = 40
 CROSS_SHORE_HEADROOM_ROWS = 8
@@ -766,11 +659,7 @@ def _cross_shore_rows(cascade, gis_lo, gis_hi, domains, years, x_ref):
                 widest = max(widest, r0 + int(land[-1]))
         reach.append(widest)
 
-    # A PERCENTILE, not the maximum. One wide domain in the window -- a
-    # Tri-Village section beside narrow Pea Island, say -- otherwise sets a
-    # frame tall enough to make the domains under test unreadable. Clipping
-    # the widest domain costs nothing here: the subject is the road corridor,
-    # which sits within a few hundred metres of the ocean shoreline.
+    # A percentile, not the maximum, so one wide domain does not dwarf the rest
     tall = float(np.percentile(reach, CROSS_SHORE_REACH_PERCENTILE)) if reach else 0.0
     return int(max(tall, CROSS_SHORE_MIN_ROWS) + CROSS_SHORE_HEADROOM_ROWS)
 
@@ -795,8 +684,7 @@ def _island_raster(cascade, year, gis_lo, gis_hi, domains, n_cross, x_ref):
     b3d = cascade.barrier3d
     pads = [domains.gis_to_pad(g) for g in range(gis_lo, gis_hi + 1)]
 
-    # One reference shoreline for the whole window, so the panel does not
-    # shift under the island as the shoreline retreats.
+    # One reference shoreline for the whole window, so the panel does not shift as it retreats
     cell = int(np.shape(b3d[pads[0]].DomainTS[0])[1])
     grid = np.full((n_cross, len(pads) * cell), np.nan)
 
@@ -854,8 +742,7 @@ def _road_track(cascade, road_series, year, gis_lo, gis_hi, domains, x_ref):
             continue
         setback = np.asarray(entry["setback"], dtype=float)
         t = min(year, len(setback) - 1)
-        # setback is metres landward of the interior's seaward edge; the
-        # raster is in 10 m rows, so /10 puts it in the same units.
+        # Setback in metres from the interior's seaward edge; /10 puts it in 10 m rows
         rows.append(float(b3d[pad].x_s_TS[t]) - x_ref + setback[t] / 10.0)
         reloc = np.asarray(entry["relocated"], dtype=float)
         flags.append(bool(t < len(reloc) and reloc[t] > 0))
@@ -949,8 +836,7 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         year_idx.append(n_years - 1)
 
     terrain = _land_colormap()
-    # Fixed for the whole animation and shared by both panels, so a colour or
-    # a height means the same thing in every frame and in both arms.
+    # Fixed for the whole animation and shared by both panels
     x_ref = _window_reference((cascade_a, cascade_b), gis_lo, gis_hi, domains,
                               year_idx)
     n_cross = max(
@@ -970,8 +856,7 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
                             hspace=0.20)
         fig.patch.set_facecolor("white")
 
-        # Last flag marks the arm carrying the prescribed moves; see
-        # COLOR_PRESCRIBED and the label note on make_road_relocation_gif.
+        # The last flag marks the arm carrying the prescribed moves
         for ax, letter, cas, series, label, is_prescribed_arm in (
                 (axes[0], "a", cascade_a, road_series_a, label_a, bool(prescribed_panels[0])),
                 (axes[1], "b", cascade_b, road_series_b, label_b, bool(prescribed_panels[1]))):
@@ -985,10 +870,7 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
 
             x, rows, fired = _road_track(cas, series, t, gis_lo, gis_hi,
                                          domains, x_ref)
-            # NC-12 AS CASCADE HOLDS IT (Hannah, 2026-09-09): two straight rows
-            # per domain, 20 m wide, spanning the domain's 50 cells - not a
-            # line through the domain centres, which drew slopes between
-            # domains that no cell of the model has.
+            # NC-12 as CASCADE holds it: two straight 20 m rows per domain
             _cell = grid.shape[1] / (gis_hi - gis_lo + 1)
             for _col, _r in enumerate(rows):
                 if np.isfinite(_r):
@@ -1016,14 +898,12 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
                     ax.axvline((gis - gis_lo) * cell + cell / 2.0,
                                color=INK, ls=(0, (1, 2.5)), lw=0.9,
                                zorder=4, alpha=0.7)
-            # Cells are 10 m, so the axis is labelled in metres: "row 23"
-            # is not a distance anyone can check against a map.
+            # Cells are 10 m, so the axis is labelled in metres
             step = max(10, int(round(n_cross / 5.0 / 10.0)) * 10)
             rows_at = np.arange(0, n_cross, step)
             ax.set_yticks(rows_at)
             ax.set_yticklabels((rows_at * 10).astype(int))
-            # The raster keeps all four spines: here the frame IS the edge
-            # of the data, not decoration.
+            # The raster keeps all four spines: the frame is the edge of the data
             _style_axes(ax, grid_axis=None, box=True)
             ax.set_ylabel("cross-shore (m)\nlandward positive",
                           fontsize=FONT_AXIS, color=INK, labelpad=6)
@@ -1044,11 +924,7 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         cbar.outline.set_linewidth(0.8)
         cbar.outline.set_edgecolor(INK_AXIS)
 
-        # This panel had NO legend at all: the star and the dotted lines were
-        # drawn unexplained, and a reader had no way to tell whether a star
-        # meant "the module decided to move the road" or "history did". The
-        # panel titles now carry the per-panel meaning; these entries name the
-        # glyphs themselves.
+        # Legend entries name the glyphs; the panel titles carry each panel's meaning
         _topo_handles = [
             Line2D([], [], color=COLOR_ROAD, lw=2.0, label="NC-12"),
             Line2D([], [], color="none", marker="*", ms=9,

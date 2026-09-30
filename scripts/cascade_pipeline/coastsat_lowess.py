@@ -1,11 +1,9 @@
-"""CoastSat transect loading and LOWESS smoothing for the rate-comparison figures.
+"""
+CoastSat transect loading and LOWESS smoothing for the rate-comparison figures.
 
-Transect-level LRR (linear regression rate) values are loaded from
-transect_lrr_full.csv, LOWESS-smoothed at transect resolution (physical
-along-coast distance as x), then aggregated to GIS-domain resolution for
-comparison against the CASCADE model. This module only computes -- nothing
-here touches matplotlib; see cascade_pipeline.plotting.rate_comparison for the
-figures that consume its output.
+    from cascade_pipeline.coastsat_lowess import build_coastsat_series, LowessConfig
+
+Transect LRR smoothed at transect resolution, then averaged to domains; computes only. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -124,9 +122,7 @@ def load_transect_data(dataset, domains=DEFAULT_DOMAINS):
     # Spread each domain's transects evenly across its domain_spacing_m band.
     df["_rank"] = df.groupby(domain_col).cumcount()
     df["_n"] = df.groupby(domain_col)[domain_col].transform("count")
-    # From the geometry's first domain, not from 1: rate_comparison maps it
-    # back with along_m / spacing + first_gis_id, and a reach starting at
-    # GIS 0 (an extended geometry) would otherwise plot one domain off.
+    # Chainage from the geometry's first domain, so a reach starting at GIS 0 plots in place
     df["along_coast_m"] = (
         (df[domain_col] - domains.first_gis_id) * domains.domain_spacing_m
         + (df["_rank"] + 0.5) * (domains.domain_spacing_m / df["_n"])
