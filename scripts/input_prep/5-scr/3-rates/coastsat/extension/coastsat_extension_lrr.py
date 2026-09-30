@@ -1,33 +1,9 @@
 """
-CoastSat rates for the coast BEYOND the 90 surveyed domains
-============================================================
-The Pea Island extension experiment (2026-09-16) models GIS 1-115 (and
-0-115) instead of 1-90, and solves the end-domain source/sink at the new
-ends against CoastSat, as the matrix does at GIS 1 and 90. The committed
-rate tables stop at GIS 90 only because the transect-to-domain lookup was a
-polygon join onto 90 polygons; the CoastSat record itself runs to Oregon
-Inlet (263 transects on disk between GIS 90 and 115, ~10 per domain, a
-median 260 observations each over 1996-2010).
+CoastSat rates for the coast beyond the 90 surveyed domains, for the Pea Island extension experiment.
 
-This script numbers those transects the way the surveyed ones were
-numbered -- the transect's origin point within a 500 m domain polygon, now
-Hannah's whole-island polygons (hat_extension_domains.join_origins) -- and
-fits them with the same LRR as coastsat_domain_lrr_fixed.py, for one window.
-A transect no polygon covers is left out, as the surveyed mapping leaves
-them out. It writes, beside the surveyed products and never into them:
+    python scripts/input_prep/5-scr/3-rates/coastsat/extension/coastsat_extension_lrr.py --start-year 1996 --end-year 2010
 
-    5-scr/2-transect-frame/transect_domains/transect_domain_lookup_ext.csv
-    5-scr/3-rates/coastsat/lrr/<start>_<end>/ext/transect_lrr_full.csv
-    5-scr/3-rates/coastsat/lrr/<start>_<end>/ext/domain_lrr_summary.csv
-    5-scr/3-rates/coastsat/lrr/<start>_<end>/ext/transect_lrr_with_base.csv
-
-The last is the surveyed table with the extension rows appended: what an
-extended-geometry run loads as its active dataset. The window's own
-transect_lrr_full.csv must already exist (coastsat_domain_lrr_fixed.py).
-
-Usage
------
-    python coastsat_extension_lrr.py --start-year 1996 --end-year 2010
+Per-transect LRR averaged into the extension's domains. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -59,12 +35,14 @@ from site_layer.hat_observed_rates import (COASTSAT_TIMESERIES, EXT_DIR,  # noqa
 from coastsat_lrr import (_empty_lrr, compute_lrr,  # noqa: E402
                                    filter_dates, load_timeseries)
 
+# --- CONFIG ------------------------------------------------------------------
 TRANSECT_LAYER = TRANSECT_DOMAINS / "CoastSat_transect_layer.geojson"
 MIN_OBS = 3  # as coastsat_domain_lrr_fixed.py
+# -----------------------------------------------------------------------------
 
 
+# Every on-disk CoastSat transect beyond GIS 1-90, numbered by its polygon
 def extension_lookup():
-    """Every on-disk CoastSat transect beyond GIS 1-90, numbered by its polygon."""
     on_disk = {os.path.splitext(os.path.basename(f))[0]
                for f in glob.glob(str(COASTSAT_TIMESERIES / "*" / "*.csv"))}
     layer = gpd.read_file(TRANSECT_LAYER)
@@ -72,9 +50,7 @@ def extension_lookup():
     layer = layer[layer["id"].isin(on_disk)].to_crs(DOMAIN_CRS)
     surveyed = set(pd.read_csv(transect_lookup())["transect_id"])
     layer = layer[~layer["id"].isin(surveyed)].reset_index(drop=True)
-    # The origin point within a polygon, the rule of
-    # coastsat_domain_mapping.py, onto Hannah's whole-island polygons
-    # (2026-09-16). A transect no polygon covers is left out.
+    # The origin point within a polygon, the rule of coastsat_domain_mapping.py
     rows = []
     for (_, tr), gis in zip(layer.iterrows(), join_origins(layer)):
         if gis is None or np.isnan(gis):
@@ -86,10 +62,8 @@ def extension_lookup():
     return lookup.reset_index(drop=True)
 
 
+# coastsat_domain_lrr_fixed.compute_all_lrr, for the extension rows
 def fit_window(lookup, start_year, end_year):
-    """coastsat_domain_lrr_fixed.compute_all_lrr, for the extension rows.
-    That script parses its arguments at import, so the ten lines are
-    repeated here rather than imported."""
     csv_map = {os.path.splitext(os.path.basename(f))[0]: f
                for f in glob.glob(str(COASTSAT_TIMESERIES / "*" / "*.csv"))}
     start, end = f"{start_year}-01-01", f"{end_year}-12-31"
@@ -107,6 +81,7 @@ def fit_window(lookup, start_year, end_year):
     return pd.DataFrame(records)
 
 
+# Per-domain count and mean LRR
 def summarise(transects):
     valid = transects[transects["lrr_m_yr"].notna()]
     out = (valid.groupby("domain_number")["lrr_m_yr"]
@@ -121,6 +96,7 @@ def summarise(transects):
     return out
 
 
+# Run: fit, summarise, write
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--start-year", type=int, required=True)

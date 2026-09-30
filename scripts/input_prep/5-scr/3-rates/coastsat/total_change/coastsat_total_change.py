@@ -1,107 +1,12 @@
 """
-coastsat_total_change.py
-==============================================================================
-The CoastSat linear regression rate turned into a DISTANCE, beside the
-distance the shoreline actually moved. Built 2026-09-19 (Hannah, by
-interview, for her advisor's "total change in shoreline position from the
-long-term rate"); split into two named products 2026-09-21 (Hannah, by
-interview) after the folder called `lrr_projected/` turned out to hold no
-projections at all.
+The CoastSat LRR turned into a distance, beside the distance the shoreline actually moved.
 
-THE VOCABULARY.  A rate turned into a distance is named by the window it was
-FITTED on, never by the arithmetic:
-
-  TOTAL SHORELINE CHANGE   --product total  ->  3-rates/coastsat/total_change/
-      The rate is evaluated over the SAME window it was fitted on.
-      LRR(1996-2010) x 14 yr, LRR(2010-2024) x 14 yr, LRR(1996-2024) x 28 yr.
-      Nothing is extrapolated, so nothing is projected. This is what the
-      whole of the old `lrr_projected/` tree actually was.
-
-  PROJECTED SHORELINE      --product projected  ->  3-rates/coastsat/projected/
-  CHANGE
-      The 1996-2024 rate carried onto a window it was NOT fitted on:
-      LRR(1996-2024) x 14 yr over 1996-2010, and the same over 2010-2024.
-      1996_2024 is deliberately absent -- there it would BE the total change.
-      This is the pairing the model's CoastSat target uses in both halves
-      (output/comparisons/target_comparison/projected/), here on the
-      observations alone.
-
-  OBSERVED CHANGE          both products, unchanged
-      No rate anywhere: per transect, the mean position over the whole END
-      calendar year minus the mean over the whole START calendar year (all of
-      2010 minus all of 1996). Both means are centred mid-year, so the span
-      is the same as the rate's multiply, and both use only data inside the
-      window. Not the dune-date endpoint in 3-rates/coastsat/endpoint
-      (1997-10 to 2023-07, 25.7 yr), which is a shorter span.
-
-    observed - (total or projected) is how far the actual change departs from
-    the trend: positive where the shoreline ended up more seaward than the
-    trend predicts, negative where more landward. Under --product projected
-    it is the more interesting residual of the two, because the rate there
-    was never fitted to the window it is being judged over. SEAWARD IS
-    POSITIVE throughout, as in every 3-rates product.
-
-SMOOTHED    the same comparison after an alongshore LOWESS (Hannah, by
-            interview, 2026-09-21). The rate the MODEL is graded against is not
-            the raw rate: it is raw over GIS 1-10 and a 10-domain LOWESS of the
-            transect values beyond (cascade_pipeline.coastsat_lowess). The raw
-            comparison above therefore tests the fairness of a quantity nobody
-            uses; this one tests the target as it is actually applied.
-
-            Note LOWESS commutes with the x years multiply -- the weights depend
-            only on the transect positions and the robust reweighting is scale
-            equivariant -- so smoothing the RATE and smoothing the DISTANCE
-            give the same number to machine precision. Nothing here turns on
-            the order; what matters is that BOTH sides are smoothed, at the
-            same window, so the residual is not a smoothed quantity minus an
-            unsmoothed one.
-
-            Windows 3, 5 and 10 domains (1.5, 2.5, 5.0 km) are all built. The
-            sweep is the point: if the residual collapses as the window
-            widens, the departures from trend are transect-scale estimation
-            noise; if a departure survives 10 domains, the rate genuinely
-            fails there, at the scale the model resolves. Read the bias and
-            the RMS residual, NOT r -- smoothing strips high-frequency
-            variance that is uncorrelated between the two sides, so r rises
-            whether or not the smoothing is telling the truth.
-
-FIGURE TITLES carry quantity, window and method, so a figure pulled out of
-its folder still says which of the two products it is (Hannah, 2026-09-21):
-"Total shoreline change, 1996-2010 (CoastSat LRR 1996-2010 x 14 yr)" against
-"Projected shoreline change, 1996-2010 (CoastSat LRR 1996-2024 x 14 yr)" --
-the method names the window the rate was FITTED on, so the reader never has
-to trust the folder.
-
-OUTPUT   data/hatteras_init/5-scr/3-rates/coastsat/<product>/<start>_<end>/
-    transect_<product>.csv             per transect: lrr_m_yr, its uncertainty,
-                                       <product>_change_m (and its uncertainty),
-                                       the two calendar-year means with their
-                                       counts, observed_change_m,
-                                       observed_minus_<total|projected>_m
-    domain_<product>_summary.csv       per domain: the means of those, std,
-                                       pct_landward of each
-    <product>_<start>_<end>.png        the rate's distance as the house-style
-                                       fill and dots, observed as a black
-                                       line; PDF and caption under supporting/
-    PROVENANCE.md
-    smoothed/<product>_smoothed_<start>_<end>_w<NN>.png
-                                       one per LOWESS window, same axis as each
-                                       other so the windows can be read side by
-                                       side; PDFs and captions under
-                                       smoothed/supporting/
-    smoothed/tables/domain_smoothed.csv        long: one row per domain per
-                                       window (0 = the raw product above)
-    smoothed/tables/residual_by_scale.csv      the sweep: bias, RMS, range,
-                                       sign agreement and r per window
-    smoothed/PROVENANCE.md
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py
-    python ... --product projected
-    python ... --product both
-    python ... --windows 1996_2024 2010_2024
-    python ... --smooth-windows 3 5 10 | --no-smoothed
-==============================================================================
+    python scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py --product projected
+    python scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py --windows 1996_2024 2010_2024
+
+TOTAL uses the window's own rate; PROJECTED the 1996-2024 rate. Writes
+figures, tables and provenance per window, raw and smoothed. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -140,72 +45,41 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     COASTSAT_LRR_ROOT, COASTSAT_PROJECTED_ROOT, COASTSAT_TOTAL_CHANGE_ROOT,
     PROJECTED_RATE_WINDOW, WINDOW_ROLE,
 )
-# The model target's own smoother, imported rather than re-implemented so the
-# 7-domain figure here IS the treatment the runs are graded under (10 until 2026-09-28).
+# The model target's own smoother, so this figure is the graded treatment
 from cascade_pipeline.coastsat_lowess import spliced_lowess_series  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 N_DOMAINS = 90
-# The canonical 1996 -> 2010 -> 2024 chain: the full period and its two halves.
-# Which of these a product is defined for is on the Product below, because
-# `projected` has no 1996_2024 (see PROJECTED).
+# The canonical 1996 -> 2010 -> 2024 chain
 OBS_LW = 1.1
-# The observed CoastSat line, PURPLE since 2026-09-22 (Hannah). It was
-# black, and a black line in 4-comparisons/shoreline_vs_duneline is the
-# DUNE LINE -- same glyph, two meanings across trees, which is exactly
-# how this one got read as the dune line. The house ACCENT purple, so it
-# is a colour the project already uses rather than a new one.
+# The observed CoastSat line, PURPLE since 2026-09-22 (Hannah)
 C_OBSERVED = C["ACCENT"]
-# ONE fixed metre axis on every figure here (Hannah, 2026-09-22), shared
-# with 4-comparisons/shoreline_vs_duneline/total_change and
-# output/comparisons/target_comparison, so a figure from any of the three
-# can be laid beside another without rescaling by eye. It is FIXED, not a
-# floor: a window whose data exceeds it is marked at the edge and named in
-# the caption (hat_figure_style.mark_offaxis) rather than given its own
-# axis, which would defeat the point. Only Cape Point does, in practice.
+# ONE fixed metre axis on every figure here (Hannah, 2026-09-22)
 Y_HALF_M = 100.0
 Y_TICK_M = 20.0
 NL = chr(10)          # the provenance writers join on it
+# -----------------------------------------------------------------------------
 
 
+# One of the two named products
 class Product:
-    """One of the two named products. The ONLY thing that differs between them
-    is which window the rate is read from; everything downstream -- the
-    observed side, the figures, the LOWESS sweep -- is identical, which is the
-    point of building both from one script.
-
-    Attributes:
-        key: folder name under 3-rates/coastsat/ and the file stem.
-        noun: how the quantity is named in a title, caption or legend.
-        tok: the token that replaces `rate` in the written column names, so
-            every CSV says which product it is without its path.
-        windows: the change windows this product is defined for.
-    """
 
     def __init__(self, key, noun, tok, root, windows, rate_window, method):
         self.key, self.noun, self.tok = key, noun, tok
         self.root, self.windows = root, windows
         self._rate_window, self._method = rate_window, method
 
+    # The window the LRR is FITTED on, which is what names the product
     def rate_window(self, s, e):
-        """The window the LRR is FITTED on, which is what names the product."""
         return self._rate_window(s, e)
 
+    # The parenthetical in a figure title: where the rate came from and how the distance was made
     def method(self, s, e):
-        """The parenthetical in a figure title: WHERE THE RATE CAME FROM and
-        how the distance was made -- "CoastSat LRR 1996-2010 x 14 yr".
-
-        The fit window is in the string on purpose (Hannah, 2026-09-21): the
-        reader compares it against the window in the title, and the two being
-        equal or not IS the difference between total change and a projection.
-        So the two products read in parallel and differ in one number:
-            Total shoreline change, 1996-2010 (CoastSat LRR 1996-2010 x 14 yr)
-            Projected shoreline change, 1996-2010 (CoastSat LRR 1996-2024 x 14 yr)
-        """
         return self._method(s, e)
 
+    # Internal `rate` column names -> the product's written ones
     def cols(self, df):
-        """Internal `rate` column names -> the product's written ones."""
         keep = {"mean_lrr_m_yr", "lrr_window"}
         ren = {c: (f"{self.tok}_change_m" if c == "rate_m" else c.replace("rate", self.tok))
                for c in df.columns if "rate" in c and c not in keep}
@@ -227,9 +101,7 @@ TOTAL = Product(
     rate_window=lambda s, e: (s, e),
     method=lambda s, e: f"CoastSat LRR {s}–{e} × {e - s} yr",
 )
-# The 1996-2024 rate carried onto a window it was not fitted on. 1996_2024 is
-# absent on purpose: there the rate window IS the change window, so the answer
-# is TOTAL, and building it here would put the same numbers under two names.
+# The 1996-2024 rate carried onto a window it was not fitted on
 PROJECTED = Product(
     "projected", "Projected shoreline change", "projected", COASTSAT_PROJECTED_ROOT,
     [(1996, 2010), (2010, 2024)],
@@ -239,33 +111,20 @@ PROJECTED = Product(
 )
 PRODUCTS = {p.key: p for p in (TOTAL, PROJECTED)}
 
-# LOWESS window widths in domain units (1 domain = 500 m). 7 is the model
-# target's window since 2026-09-28 (coastsat_lowess.LowessConfig.window_domains;
-# the group's range); 10 was until then and is kept for what still reads it;
-# 3 and 5 are there to show how fast the residual collapses with scale.
+# LOWESS window widths in domain units (1 domain = 500 m)
 SMOOTH_WINDOWS = (3, 5, 7, 10)
-# GIS 1..SPLICE_DOMAINS keep their raw domain means instead of the LOWESS --
-# coastsat_lowess.LowessConfig.skip_southern_domains, the boundary treatment at
-# Oregon Inlet. Applied to the OBSERVED side too, so the two never differ in
-# treatment at any domain.
+# GIS 1..SPLICE_DOMAINS keep their raw domain means instead of the LOWESS
 SPLICE_DOMAINS = 10
 
 
+# (mean position, n) over one calendar year, or (nan, 0)
 def year_mean(df, year):
-    """(mean position, n) over one calendar year, or (nan, 0)."""
     sel = df.loc[df["date"].dt.year == year, "chainage"]
     return (float(sel.mean()), int(sel.size)) if sel.size else (np.nan, 0)
 
 
+# The product's rate turned into a distance over `start`-`end`, beside the observed change over the ...
 def build(start: int, end: int, cache: dict, prod: Product = TOTAL) -> dict:
-    """The product's rate turned into a distance over `start`-`end`, beside the
-    observed change over the same years.
-
-    The rate is read from `prod.rate_window(start, end)`, which is the window
-    it was FITTED on -- the same window for TOTAL, always 1996-2024 for
-    PROJECTED. That single line is the whole difference between the two
-    products; everything below is shared.
-    """
     years = end - start
     rs, re_ = prod.rate_window(start, end)
     lrr = pd.read_csv(COASTSAT_LRR_ROOT / f"{rs}_{re_}" / "transect_lrr_full.csv")
@@ -283,8 +142,7 @@ def build(start: int, end: int, cache: dict, prod: Product = TOTAL) -> dict:
                          position_end_m=m1, n_end=n1))
     t = lrr[["transect_id", "domain_number", "lrr_m_yr", "unc_m_yr", "r_squared",
              "n_obs", "start_date", "end_date"]].merge(pd.DataFrame(rows), on="transect_id")
-    # Internal names are neutral (`rate`); Product.cols() renames them to the
-    # product's own on the way out, so no CSV is ambiguous about which it is.
+    # Internal names are neutral (`rate`)
     t["rate_change_m"] = t["lrr_m_yr"] * years
     t["rate_unc_m"] = t["unc_m_yr"] * years
     t["observed_change_m"] = t["position_end_m"] - t["position_start_m"]
@@ -320,6 +178,7 @@ def build(start: int, end: int, cache: dict, prod: Product = TOTAL) -> dict:
                 prod=prod, rate_window=(rs, re_))
 
 
+# One window's rate-as-distance against the observed change
 def figure(r) -> list:
     s, e, years, t, dom = r["start"], r["end"], r["years"], r["t"], r["dom"]
     prod, (rs, re_) = r["prod"], r["rate_window"]
@@ -347,17 +206,10 @@ def figure(r) -> list:
               "CoastSat observed change (calendar-year endpoints)"]
     fig.legend(h, labels, loc="outside lower center", ncol=2, frameon=False,
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
-    # Quantity, window, method (Hannah, 2026-09-21). The method is what tells
-    # total from projected at a glance -- "LRR × 14 yr" against "1996–2024 LRR
-    # × 14 yr" -- so it is on the canvas, not left to the folder. draw_fills
-    # puts its bars at 1.025 in axes fractions with the year above them, so
-    # the title has to clear those when the window contains a fill.
+    # Quantity, window, method (Hannah, 2026-09-21)
     ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)})",
                  pad=20 if cw.fills_in(s, e) else 6)
-    # Both series here are CoastSat. 4-comparisons is where a CoastSat
-    # series meets a dune-line one; this tree never mixes sources, and
-    # after the observed line was read as the dune line it says so; it is
-        # purple now for the same reason.
+    # Both series here are CoastSat; the observed line is purple
     compare_header(fig, [
         f"{s}–{e}   ·   BOTH series are CoastSat — no dune line on this figure",
         f"{prod.noun.lower()}: {prod.method(s, e)}   ·   observed: CoastSat mean position, all of {e} minus all of {s}"])
@@ -396,29 +248,14 @@ def figure(r) -> list:
     return out
 
 
+# One alongshore LOWESS pass at transect resolution, averaged to domains, with GIS 1..SPLICE_DOMAINS ...
 def _smooth_series(dom_ids, along_m, values, window):
-    """One alongshore LOWESS pass at transect resolution, averaged to domains,
-    with GIS 1..SPLICE_DOMAINS put back to their raw domain means -- the
-    scoring target's own two steps, shared with the smoothing-scale sweep in
-    analyze_output/compare_runs/smoothing_scale.py.
-
-    Args:
-        dom_ids, along_m, values: per-transect domain id, along-coast distance
-            in metres, and the quantity to smooth (projected or observed).
-        window: LOWESS window width in domain units.
-
-    Returns:
-        (Series indexed 1..N_DOMAINS, the lowess frac used).
-    """
     return spliced_lowess_series(dom_ids, along_m, values, window,
                                 skip=SPLICE_DOMAINS)
 
 
+# The rate-vs-observed comparison repeated under the model target's alongshore LOWESS, at each window ...
 def smooth(r, windows=SMOOTH_WINDOWS) -> dict:
-    """The rate-vs-observed comparison repeated under the model target's
-    alongshore LOWESS, at each window in `windows`. BOTH sides get the same
-    pass and the same splice, so no window compares a smoothed quantity with
-    an unsmoothed one. Window 0 in the output is the raw product."""
     t = r["t"].sort_values(["domain_number", "transect_id"]).reset_index(drop=True)
     tt, x_dom = rf._along(t)                                 # x in domain units, for the dots
     along_m = x_dom * DEFAULT_DOMAINS.domain_spacing_m       # lowess is given metres
@@ -454,9 +291,7 @@ def smooth(r, windows=SMOOTH_WINDOWS) -> dict:
             residual_min_m=float(d.min()), residual_max_m=float(d.max()),
             sd_rate_m=float(a.std(ddof=1)), sd_observed_m=float(b.std(ddof=1)),
             pct_sign_agreement=float(100.0 * (np.sign(a) == np.sign(b)).mean()),
-            # Named for what it is: a symmetric smoother strips variance that is
-            # uncorrelated between the two sides, so this climbs with the window
-            # whether or not the smoothing is right. It is not a score.
+            # Named for what it is: smoothing inflates r, so it is not a score
             r_inflated_by_smoothing=float(np.corrcoef(a, b)[0, 1])))
 
     out = r["out"] / "smoothed"
@@ -470,38 +305,18 @@ def smooth(r, windows=SMOOTH_WINDOWS) -> dict:
                 x_dom=x_dom, proj=proj)
 
 
+# The fixed metre axis, as everywhere else here (Hannah, 2026-09-22)
 def _smooth_bounds(sm):
-    """The fixed metre axis, as everywhere else here (Hannah, 2026-09-22).
-    Kept as a function so the call sites read the same as before."""
     return Y_HALF_M, Y_TICK_M
 
 
+# One y half-range and tick for EVERY window's overlay, from the rate-derived series alone
 def overlay_bounds(sms):
-    """One y half-range and tick for EVERY window's overlay, from the
-    rate-derived series alone.
-
-    The per-window panels bound on projected AND observed together; the
-    overlay draws no observed side, so bounding it that way would set the axis
-    from a series that is not on the figure. These three are meant to be read
-    against each other -- 28 yr against two 14 yr halves -- so they share one
-    bound, and it is not the panels' bound. Said in each caption.
-    """
     return Y_HALF_M, Y_TICK_M
 
 
+# Every LOWESS width's distance on ONE panel, no observed side (Hannah, 2026-09-21)
 def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
-    """Every LOWESS width's distance on ONE panel, no observed side (Hannah,
-    2026-09-21).
-
-    The per-window panels above each answer "does the trend hold HERE"; this
-    one answers "what does the window do to the target", which needs the
-    curves on top of each other and nothing else competing for the eye.
-
-    Note this is the RATE figure of input_prep/5-scr/coastsat_lrr_smoothing_windows.py
-    in metres: LOWESS commutes with the x years multiply, so the curves have
-    the same shape and only the units differ. It is drawn because metres is
-    the unit the model and the dune line are read in, not because it shows a
-    different field."""
     s, e, years = r["start"], r["end"], r["years"]
     prod, (rs, re_) = r["prod"], r["rate_window"]
     if half is None:
@@ -512,9 +327,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
-    # mean all-NaN draws the frame, grid, village bands and structures with no
-    # sign fill: four curves share the panel, so the blue/red pair is not
-    # available and the ordered ramp below carries the width instead.
+    # Mean all-NaN draws the frame, grid, village bands and structures with no sign fill
     frame = pd.DataFrame({"domain_number": np.arange(1, N_DOMAINS + 1),
                           "mean_lrr": np.nan, "std_lrr": 0.0})
     cw.draw_panel(ax, frame, half, std=False)
@@ -538,12 +351,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
             mark_offaxis(ax, np.asarray(sm["series"][w][0].index, dtype=float),
                          sm["series"][w][0].to_numpy(float), half, color=INK))
            for w in windows]
-    # Quantity, window, method, like every other figure in the tree since
-    # 2026-09-21. draw_fills puts its bars at 1.025 in axes fractions and the
-    # year above them, so the title has to clear that when the window contains
-    # a fill -- at the default pad it lands on the 2022 labels. The window's
-    # ROLE in the 1996-2010-2024 chain used to be the title; it is in the
-    # caption now, because the product is the thing a reader cannot recover.
+    # Quantity, window, method, like every other figure in the tree since 2026-09-21
     ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)}, every LOWESS width)",
                  pad=20 if fills else 6)
 
@@ -552,16 +360,14 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
           for i, w in enumerate(windows) if w]
     labels = ["Unsmoothed domain means"] + [
         f"LOWESS {w * km_of:g} km ({w} domains)" for w in windows if w]
-    # At most three columns: five entries on one row ran off both edges of the
-    # canvas once the 7-domain curve joined the overlay.
+    # At most three legend columns
     fig.legend(h, labels, loc="outside lower center", ncol=min(len(h), 3), frameon=False)
 
     # How far apart the windows are, in the unit of the axis.
     spread = {w: float((sm["series"][w][0] - sm["series"][0][0]).abs().max())
               for w in windows if w}
     spread_txt = "; ".join(f"{w * km_of:g} km up to {v:.0f} m" for w, v in spread.items())
-    # The rate figure exists only where coastsat_lrr_smoothing_windows.py has been run;
-    # a cross-reference to a file that is not there is worse than none.
+    # The rate figure exists only where coastsat_lrr_smoothing_windows.py has been run
     rate_png = (COASTSAT_LRR_ROOT / f"{rs}_{re_}" / f"smoothing_windows_{rs}_{re_}.png")
     rate_ref = (
         f"This is the rate figure `3-rates/coastsat/lrr/{rs}_{re_}/{rate_png.name}` in "
@@ -600,8 +406,8 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
     return written
 
 
+# One panel per window, all on the same y axis so they read side by side
 def smooth_figures(r, sm) -> list:
-    """One panel per window, all on the same y axis so they read side by side."""
     s, e, years = r["start"], r["end"], r["years"]
     prod, (rs, re_) = r["prod"], r["rate_window"]
     half, tick = _smooth_bounds(sm)
@@ -634,14 +440,10 @@ def smooth_figures(r, sm) -> list:
                   f"CoastSat observed change, LOWESS {km:g} km"]
         fig.legend(h, labels, loc="outside lower center", ncol=2, frameon=False,
                    handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
-        # Quantity, window, method -- plus the smoothing width, which is the
-        # only thing that separates these panels from each other.
+        # Quantity, window, method -- plus the smoothing width
         ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)}, LOWESS {km:g} km)",
                      pad=20 if cw.fills_in(s, e) else 6)
-        # Both series here are CoastSat. 4-comparisons is where a CoastSat
-        # series meets a dune-line one; this tree never mixes sources, and
-        # after the observed line was read as the dune line it says so; it is
-        # purple now for the same reason.
+        # Both series here are CoastSat; the observed line is purple
         compare_header(fig, [
             f"{s}–{e}   ·   BOTH series are CoastSat — no dune line on this figure",
             f"{prod.noun.lower()}: {prod.method(s, e)}   ·   observed: CoastSat mean position, all of {e} minus all of {s}"])
@@ -684,6 +486,7 @@ def smooth_figures(r, sm) -> list:
     return written
 
 
+# The smoothed comparison's provenance
 def smooth_provenance(r, sm) -> None:
     s, e, years = r["start"], r["end"], r["years"]
     prod, (rs, re_) = r["prod"], r["rate_window"]
@@ -775,6 +578,7 @@ def smooth_provenance(r, sm) -> None:
     ]), encoding="utf-8")
 
 
+# What the figure's numbers are and where they came from
 def provenance(r) -> None:
     s, e, years, t, dom = r["start"], r["end"], r["years"], r["t"], r["dom"]
     prod, (rs, re_) = r["prod"], r["rate_window"]
@@ -837,6 +641,7 @@ def provenance(r) -> None:
     ]), encoding="utf-8")
 
 
+# Run: every window and product
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="The CoastSat LRR as a distance, beside the observed change. "
@@ -858,18 +663,14 @@ def main(argv=None) -> int:
     for prod in prods:
         asked = ([tuple(int(x) for x in w.split("_")) for w in a.windows]
                  if a.windows else list(prod.windows))
-        # A window a product is not defined for is skipped loudly rather than
-        # built: `projected/1996_2024` would be `total_change/1996_2024` under
-        # another name, and two folders of identical numbers is the exact
-        # confusion this rename was done to end.
+        # A window a product is not defined for is skipped loudly rather than built
         wins = [w for w in asked if w in prod.windows]
         for w in asked:
             if w not in prod.windows:
                 print(f"skip  {prod.key} {w[0]}_{w[1]}: not a {prod.key} window "
                       f"(its rate window IS {w[0]}-{w[1]}, so that is total change)")
         print(f"== {prod.noun} -> {prod.root.relative_to(_REPO)}")
-        # The overlays share one y bound across every window built for this
-        # product, so they are drawn in a second pass once all series exist.
+        # The overlays share one y bound across every window built for this product
         built: list = []
         for s, e in wins:
             r = build(s, e, cache, prod)

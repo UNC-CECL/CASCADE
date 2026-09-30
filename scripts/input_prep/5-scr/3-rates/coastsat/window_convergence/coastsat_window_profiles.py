@@ -1,59 +1,11 @@
 """
-coastsat_window_profiles.py
-==============================================================================
-AT WHAT WINDOW DOES THE ALONGSHORE RATE PROFILE START TO LOOK LIKE 1996-2024?
+At what window does the alongshore rate profile start to look like 1996-2024?
 
-A companion to `coastsat_window_convergence.py`, drawn the other way round.
-That script asks, point by point, when each transect's rate settles into a
-tolerance of the reference. This one draws the WHOLE PROFILE -- rate against
-alongshore position -- once per window, over the 1996-2024 reference, and
-scores each window by one number: the alongshore Pearson r against the
-reference, i.e. whether the pattern of erosion and accretion hotspots is right
-regardless of offset (Hannah, 2026-09-29, by interview).
+    python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_window_profiles.py
+    python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_window_profiles.py --direction forward
 
-THE SAME NESTED FAMILIES, FROM TWO YEARS (Hannah, 2026-09-29):
-
-    1-rate_profiles/forward_from_1996/    1996-1997, 1996-1998 ... 1996-2024
-    1-rate_profiles/backward_from_2024/   2023-2024, 2022-2024 ... 1996-2024
-
-The convergence sweep stops at five years because below that an OLS is
-describing a storm cycle, not a trend. Hannah asked to see those windows
-anyway, on a full y-axis: seeing how far off the short windows are is part of
-the question. The minimum is therefore a SEPARATE constant here, and this
-script never writes into the convergence sweep's folders or tables, so its
-five-year scoring is untouched.
-
-THE UNIT is the transect, all 906 on the island, unsmoothed. The x-axis is the
-GIS domain with each domain's transects spread evenly across it in alongshore
-(sorted id) order, so the village bands and the domain numbers read as in
-every other alongshore figure.
-
-WHAT r CAN AND CANNOT SAY
-    The windows are NESTED: each contains the one before and the reference
-    contains them all, so r goes to 1 at the reference BY CONSTRUCTION. Read
-    where the curve gets there and how steadily, not whether it does. r is
-    blind to offset and scale -- a window that has every hotspot in the right
-    place at twice the rate scores 1.0 -- and the convergence sweep's bias and
-    tolerance tables are the magnitude side of the same question.
-
-Each window is fitted by `sweep_one` from the convergence script, which calls
-the target's own `coastsat_lrr.compute_lrr`, so the estimator is the target's.
-A window with fewer than MIN_OBS positions on a transect gets no fit there,
-and r for that window is over the transects that have one (n in the table).
-
-Outputs  (obs.window_profiles_dir(direction, anchor))
-    window_profiles_<direction>_from_<year>.png         (a) every window over
-                                                        the reference, (b) r
-    window_profiles_panels_<direction>_from_<year>.png  one panel per window
-    window_profiles_transects.csv                       a row per transect per window
-    window_profiles_correlation.csv                     a row per window: r, n
-    README.md, supporting/ (PDFs, CAPTIONS.md)
-
-Usage
------
-    python .../coastsat_window_profiles.py                     both directions
-    python .../coastsat_window_profiles.py --direction forward
-==============================================================================
+Every nested window's profile and its correlation with 1996-2024; writes
+figures and a README per direction. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -76,8 +28,7 @@ sys.path.insert(0, str(_REPO / "scripts"))
 from site_layer import hat_observed_rates as obs      # noqa: E402
 from site_layer import hat_figure_style as fs         # noqa: E402
 
-# The sibling sweep, for its loader and its per-transect fit, so the two
-# products cannot fit a window differently.
+# The sibling sweep, for its loader and its per-transect fit
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import coastsat_window_convergence as wc              # noqa: E402
 
@@ -87,40 +38,30 @@ import matplotlib.pyplot as plt                       # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap, Normalize  # noqa: E402
 from matplotlib.cm import ScalarMappable              # noqa: E402
 
-# ============================================================
-# CONFIG
-# ============================================================
 
+# --- CONFIG ------------------------------------------------------------------
 REF_START, REF_END = wc.REF_START, wc.REF_END
 
-# TWO YEARS, not the sweep's five (Hannah, 2026-09-29): the short windows are
-# drawn so their distance from the reference can be seen. Two is the least an
-# OLS through a year boundary can mean anything at all.
+# TWO YEARS, not the sweep's five (Hannah, 2026-09-29)
 MIN_WINDOW_YEARS = 2
 
-# Windows light (short) to dark (long) on the shoreline-blue ramp, coloured by
-# LENGTH so both directions read the same way. The reference is the purple
-# ACCENT, off the ramp, so it cannot be mistaken for a long window.
+# Windows light (short) to dark (long) on the shoreline-blue ramp
 WINDOW_CMAP = LinearSegmentedColormap.from_list(
     "window_length", ["#c6dbef", "#6baed6", fs.C_1997, "#08306b"])
 REF_COLOUR = fs.C["ACCENT"]
 
-# THE PANEL FIGURE IS ZOOMED (Hannah, 2026-09-29: "much more zoomed in"). The
-# reference spans about -3..+3 m/yr, but the full axis ran to +80 for the
-# short windows at Cape Point and flattened every panel. The panels share a
-# fixed +/-PANEL_Y_HALF; a short window that runs past it is cut at the edge,
-# and the caption says so. The overlay figure keeps the full axis.
+# THE PANEL FIGURE IS ZOOMED (Hannah, 2026-09-29
 PANEL_Y_HALF = 5.0
 
-# No window is singled out in the panels (Hannah, 2026-09-29): she is choosing
-# the window, so the 2010 model window is not titled in amber any more.
+# No window is singled out in the panels (Hannah, 2026-09-29)
 PANEL_TITLE_PT = 9.0
 PANEL_TICK_PT = 8.0
 PANEL_LABEL_PT = 9.0
+# -----------------------------------------------------------------------------
 
 
+# The nested family, SHORTEST FIRST, so the reference is always last
 def windows_for(direction):
-    """The nested family, SHORTEST FIRST, so the reference is always last."""
     if direction == "forward":
         return [(REF_START, y, y)
                 for y in range(REF_START + MIN_WINDOW_YEARS - 1, REF_END + 1)]
@@ -130,14 +71,14 @@ def windows_for(direction):
     raise ValueError("direction is 'forward' or 'backward', not {0!r}".format(direction))
 
 
+# A window as 'start-end'
 def window_label(start, end):
     return "{0}–{1}".format(start, end)
 
 
-# ============================================================
-# THE SWEEP
-# ============================================================
+# The sweep
 
+# Every window's domain profile for a direction
 def run(direction):
     windows = windows_for(direction)
     picks = wc.all_transects()
@@ -159,8 +100,8 @@ def run(direction):
     return windows, sweep
 
 
+# One row per window
 def correlations(sweep, windows):
-    """One row per window: alongshore Pearson r against the reference."""
     out = []
     for start, end, moving in windows:
         w = sweep[(sweep["start_year"] == start) & (sweep["end_year"] == end)]
@@ -180,17 +121,15 @@ def correlations(sweep, windows):
     return pd.DataFrame(out)
 
 
-# ============================================================
-# FIGURES
-# ============================================================
+# Figures
 
+# x and rate for one window, in alongshore order, NaN where no fit, so the line breaks instead of ...
 def _profile(frame):
-    """x and rate for one window, in alongshore order, NaN where no fit, so
-    the line breaks instead of bridging a gap."""
     frame = frame.sort_values("x_domain")
     return frame["x_domain"].to_numpy(), frame["lrr_m_yr"].to_numpy()
 
 
+# Zero line, limits and grid for a profile panel
 def _finish_axis(ax, label_towns):
     ax.axhline(0.0, color=fs.C["INK_MUTED"], lw=0.5, zorder=1)
     ax.set_xlim(0.5, 90.5)
@@ -198,6 +137,7 @@ def _finish_axis(ax, label_towns):
     fs.town_bands(ax, label=label_towns)
 
 
+# Every window's profile over the reference, with r
 def draw_overlay(sweep, corr, windows, direction, out_dir):
     fs.apply_style()
     fig, (ax, axr) = plt.subplots(
@@ -253,6 +193,7 @@ def draw_overlay(sweep, corr, windows, direction, out_dir):
     return paths[0]
 
 
+# One panel per window
 def draw_panels(sweep, corr, windows, direction, out_dir):
     fs.apply_style()
     drawn = windows[:-1]
@@ -305,9 +246,7 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
     return paths[0]
 
 
-# ============================================================
-# README
-# ============================================================
+# Readme
 
 README = """# 1-rate_profiles/{folder} — when does the whole profile start to look like {ref}?
 
@@ -345,6 +284,7 @@ Producer:
 """
 
 
+# The README with the correlations
 def write_readme(out_dir, direction, corr, n_transects):
     lines = []
     for row in corr.itertuples(index=False):
@@ -361,10 +301,7 @@ def write_readme(out_dir, direction, corr, n_transects):
     (Path(out_dir) / "README.md").write_text(text, encoding="utf-8")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# One direction: profiles, figures, README
 def one_direction(direction):
     out_dir = obs.window_profiles_dir(direction, wc.pinned_year(direction))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -378,6 +315,7 @@ def one_direction(direction):
     print(corr[["window", "n_years", "r_vs_reference", "n_transects"]].to_string(index=False))
 
 
+# Run: the chosen directions
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[3])
     ap.add_argument("--direction", choices=("forward", "backward", "both"),

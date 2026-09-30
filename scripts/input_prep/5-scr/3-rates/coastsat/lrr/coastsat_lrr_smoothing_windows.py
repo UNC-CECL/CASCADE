@@ -1,37 +1,10 @@
 """
-coastsat_lrr_smoothing_windows.py
-==============================================================================
-The three LOWESS windows overlaid on ONE LRR rate field, in the house style
-(Hannah, 2026-09-21). The rate is the thing smoothed here -- this is the field
-itself, not a projection into metres and not a model comparison.
+The three LOWESS windows overlaid on one LRR rate field, in the house style.
 
-    coastsat/lrr/<w>/smoothing_windows_<w>.png
-
-WHAT IT SHOWS
-    The unsmoothed per-domain mean rate as the palest line, then the LOWESS
-    curve at 3, 5 and 10 domains (1.5, 2.5, 5.0 km) on a light-to-dark ramp,
-    darkest being the window every run is actually graded at. Village bands,
-    groin and piers, the hatched shoal boxes and the model-input beach fills
-    come from the coastsat_lrr_windows panel, so this figure reads directly
-    against lrr_<w>.png beside it -- same y bound, same marks.
-
-WHY THE SIGN FILL IS NOT HERE
-    lrr_<w>.png colours the rate blue seaward / red landward. Four curves
-    share this panel, so that pair is not available: the smoothing width is an
-    ORDERED variable and takes a sequential ramp instead, the one
-    smoothing_scale.py uses, anchored on the house shoreline blue. Sign is
-    read off the zero line, which is drawn.
-
-THE SPLICE
-    Every curve keeps the raw domain means over GIS 1-10 (the Oregon Inlet
-    boundary treatment, cascade_pipeline.coastsat_lowess.DEFAULT_LOWESS), so all
-    four are identical there by construction -- the same splice the scoring
-    target is built through.
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_smoothing_windows.py
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_smoothing_windows.py --window 1996_2024
-==============================================================================
+
+Writes the figure beside the window's LRR tables. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -73,55 +46,37 @@ from site_layer.hat_figure_style import (  # noqa: E402
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT, windows  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 N = cw.N_DOMAINS
 DEFAULT_WINDOW = "1996_2024"
-# Domain units. 0 is the unsmoothed domain means; 10 is the grading window
-# (cascade_pipeline.hindcast TARGET_WINDOW). 3 is roughly the alongshore
-# decorrelation scale of the domain-mean rate, 1.5 km -- the set
-# smoothing_scale/ sweeps (Hannah, 2026-09-21).
+# Domain units: 0 unsmoothed, 3 the decorrelation scale, 10 the grading window
 SMOOTH_WINDOWS = (0, 3, 5, 10)
 GRADED_WINDOW = 10
-# The two shoal-fronted peaks of the full-period field, the ones the widest
-# window flattens. Read off the figure in smoothing_scale/PROVENANCE.md; the
-# caption states the share of removed signal that actually falls in them
-# rather than asserting the attribution.
+# The two shoal-fronted peaks of the full-period field, the ones the widest window flattens
 PEAK_SPANS = ((29, 35), (65, 72))
 LW_RAW = 0.8
 LW_SMOOTH = 1.5
-# The transect cloud the curves are fitted to (Hannah, 2026-09-22): the same
-# size and alpha as the dots on lrr_<w>.png, but ONE neutral grey rather than
-# the sign pair -- sign is the other figure's variable, smoothing width is
-# this one's, and a second colour scale on the same panel reads as a third.
+# The transect cloud the curves are fitted to (Hannah, 2026-09-22)
 DOT_C = INK_MUTED
 DOT_ALPHA = 0.35
 DOT_S = 3.0
+# -----------------------------------------------------------------------------
 
 
+# A width in domain units as kilometres
 def km_of(window_domains):
-    """A width in domain units as kilometres."""
     return window_domains * DOM.domain_spacing_m / 1000.0
 
 
+# One smoothing width, as the legend says it
 def win_label(w):
-    """One smoothing width, as the legend says it: the physical width alone.
-
-    Which width the runs are graded at is a caption matter, not a legend one
-    -- spelling it here ran the four entries past the figure edge. The domain
-    count went the same way when the transect cloud took a fifth entry
-    (2026-09-22); the caption gives both units for every width.
-    """
     if not w:
         return "Unsmoothed domain means"
     return f"LOWESS {km_of(w):g} km"
 
 
+# (frame, domain ids, along-coast metres, rate) for one LRR window
 def transects(stem):
-    """(frame, domain ids, along-coast metres, rate) for one LRR window.
-
-    along-coast metres follow the convention every target build uses: each
-    domain's transects spread evenly across its 500 m band, ordered within the
-    domain by transect_id.
-    """
     t = pd.read_csv(COASTSAT_LRR_ROOT / stem / "transect_lrr_full.csv")
     t = t[t["domain_number"].between(DOM.first_gis_id, DOM.last_gis_id)].copy()
     t["domain_number"] = t["domain_number"].astype(int)
@@ -134,15 +89,13 @@ def transects(stem):
     return t, t["domain_number"].to_numpy(int), along, t["lrr_m_yr"].to_numpy(float)
 
 
+# Along-coast metres on the GIS-domain axis the curves are drawn on
 def domain_x(along):
-    """Along-coast metres on the GIS-domain axis the curves are drawn on."""
     return along / DOM.domain_spacing_m + DOM.first_gis_id - 0.5
 
 
+# The individual transect rates under the curves
 def dots(ax, x, y, half):
-    """The individual transect rates under the curves. Returns how many fell
-    outside the shared y bound, drawn as open markers at the edge as they are
-    on lrr_<w>.png."""
     ok = np.isfinite(y)
     inside = ok & (np.abs(y) <= half)
     ax.scatter(x[inside], y[inside], s=DOT_S, c=DOT_C, alpha=DOT_ALPHA,
@@ -155,8 +108,8 @@ def dots(ax, x, y, half):
     return int(out.sum())
 
 
+# {width
 def series(stem, smooth_windows=SMOOTH_WINDOWS):
-    """{width: per-domain Series} plus {width: lowess frac}, spliced."""
     _, ids, along, rate = transects(stem)
     out, fracs = {}, {}
     for w in smooth_windows:
@@ -164,26 +117,14 @@ def series(stem, smooth_windows=SMOOTH_WINDOWS):
     return out, fracs
 
 
+# What each width takes out of THIS field, for the caption
 def structure(stem, vals, smooth_windows=SMOOTH_WINDOWS):
-    """What each width takes out of THIS field, for the caption.
-
-    Everything is in m/yr of alongshore structure removed, never a share of
-    variance: the domain-mean variance is dominated by the long-wavelength
-    swings, so a wiggle that is plainly visible on the figure reads as a few
-    per cent of it and the percentage badly undersells the effect (Hannah,
-    2026-09-21). These reproduce the target row of
-    output/comparisons/target_comparison/smoothing_scale/tables/
-    target_structure.csv exactly, and are recomputed here so the caption
-    cannot drift from the table.
-    """
     t, _, _, _ = transects(stem)
     dmean = t.groupby("domain_number")["lrr_m_yr"].mean()
     resid = {w: dmean.reindex(vals[w].index) - vals[w]
              for w in smooth_windows if w}
     widest = resid[smooth_windows[-1]]
-    # Does the widest window take its structure out of the shoal-fronted
-    # peaks, or evenly along the island? Squared removed signal per domain,
-    # peaks against the rest, over the unspliced reach only.
+    # Does the widest window take its structure out of the shoal-fronted peaks
     free = widest.loc[DEFAULT_LOWESS.skip_southern_domains + 1:]
     peaks = [g for lo, hi in PEAK_SPANS for g in range(lo, hi + 1)]
     ss = free ** 2
@@ -198,9 +139,8 @@ def structure(stem, vals, smooth_windows=SMOOTH_WINDOWS):
     )
 
 
+# The y bound of every LRR window figure, so this one matches the figure already beside it ...
 def lrr_half():
-    """The y bound of every LRR window figure, so this one matches the figure
-    already beside it (rates_figures.lrr_figures)."""
     frames = [pd.read_csv(COASTSAT_LRR_ROOT / f"{s}_{e}" / "domain_lrr_summary.csv")
               for s, e in windows()]
     return cw.shared_bounds(
@@ -208,8 +148,8 @@ def lrr_half():
          for f in frames])
 
 
+# Draw one window's smoothing family
 def figure(stem, half=None, smooth_windows=SMOOTH_WINDOWS):
-    """Draw one window's smoothing family. Returns the paths written."""
     start, end = (int(v) for v in stem.split("_"))
     half = lrr_half() if half is None else half
     vals, fracs = series(stem, smooth_windows)
@@ -217,8 +157,7 @@ def figure(stem, half=None, smooth_windows=SMOOTH_WINDOWS):
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
-    # mean_lrr all-NaN draws the frame, grid, village bands and structures with
-    # no sign fill: the ramp below carries the ordered variable instead.
+    # Mean_lrr all-NaN draws the frame, grid, village bands and structures with no sign fill
     frame = pd.DataFrame({"domain_number": np.arange(1, N + 1),
                           "mean_lrr": np.nan, "std_lrr": 0.0})
     cw.draw_panel(ax, frame, half, std=False)
@@ -303,6 +242,7 @@ def figure(stem, half=None, smooth_windows=SMOOTH_WINDOWS):
     return out
 
 
+# Run: one figure for the window
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--window", default=DEFAULT_WINDOW,

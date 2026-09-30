@@ -1,20 +1,10 @@
 """
 Shoreline change rate (LRR) for every CoastSat transect in a folder.
 
-Input:  CoastSat time-series CSVs, one per transect (columns "dates UTC",
-        "chainage (m)"), anywhere under FOLDER.
-Output: CSV of transect_id, lrr_m_yr, unc_m_yr (95% CI half-width), n_obs.
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_standalone.py FOLDER START END OUT.csv
 
-Rate = ordinary least-squares slope of position against time, using every
-position from 1 Jan START to 31 Dec END. No filtering, no weighting; at
-least 3 positions. Positive = seaward (accretion), negative = erosion.
-
-    python coastsat_lrr_standalone.py FOLDER START END OUT.csv
-    python coastsat_lrr_standalone.py coastsat_timeseries 1984 2025 rates.csv
-
-START and END are whole calendar years, both included -- the window
-convention of every 5-scr script and of 5-scr/template/, whose
-shoreline_rates_template.py is the fuller version of this file.
+Reads every CoastSat time-series CSV under FOLDER; writes transect_id,
+lrr_m_yr and its uncertainty to OUT.csv. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

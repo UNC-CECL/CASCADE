@@ -1,46 +1,10 @@
 """
-CoastSat Shoreline Change Rate — Discrete Interval Line Plots
-=============================================================
-Divides each analysis period into non-overlapping sequential bins of
-fixed width, computes LRR (m/yr) per domain per bin, and plots all bins
-as overlaid spatial profiles.
+The CoastSat LRR in successive 5-year bins, per GIS domain, for each window of the canonical chain.
 
-Key quality controls (fixes for inflated rate values):
-  1. Bin edges are snapped to whole years — no tiny partial tail bins.
-  2. Bins shorter than MIN_BIN_FRACTION (default 0.75) of the interval
-     width are dropped entirely.
-  3. LRR is computed via compute_lrr() from coastsat_lrr.py,
-     the same function used in all other CoastSat scripts.
-  4. Per-transect results are filtered by p-value and R² before
-     domain aggregation — unreliable fits are excluded.
-  5. Domain aggregation uses the MEDIAN by default — one bad transect
-     cannot dominate the domain value.
-  6. A physical hard cap (MAX_RATE_M_YR) rejects per-transect LRR
-     values that are physically implausible before aggregation.
+    python scripts/input_prep/5-scr/3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py
 
-Expected line counts per figure:
-  Period 1 (1984-2004, 20 yr)  |  5-yr intervals ->  4 lines
-  Period 1 (1984-2004, 20 yr)  |  3-yr intervals ->  6 lines
-  Period 1 (1984-2004, 20 yr)  |  1-yr intervals -> 20 lines
-  Full     (1984-2024, 40 yr)  |  5-yr intervals ->  8 lines
-
-Inputs
-------
-    transect_domain_lookup.csv    (from coastsat_domain_mapping.py)
-    CoastSat time-series CSVs     (one per transect, standard format)
-    coastsat_lrr.py      (same directory or PYTHONPATH)
-
-Outputs  (OUTPUT_DIR / <window>/, since 2026-09-18; tables only)
-----------------------------------------------------------------
-    1996_2010/lrr_bins_5yr.csv   rows = bins, cols = GIS domains, LRR m/yr
-    2010_2024/lrr_bins_5yr.csv
-    1996_2024/lrr_bins_5yr.csv
-    Figures: coastsat_5yr_bins_figure.py -> 4-comparisons/coastsat_5yr_bins/
-
-Usage
------
-    Edit CONFIG section, then:
-        python coastsat_lrr_interval_lines.py
+One folder per window under 3-rates/coastsat/5yr_bins/, tables only;
+coastsat_5yr_bins_figure.py draws them. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -48,83 +12,67 @@ Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
 
-# ============================================================
-# CONFIG
-# ============================================================
-
-# Resolved through hat_observed_rates.py (2026-09-18); the typed path named
-# coastsat_lrr/ and used _PATH_REPO before it was defined.
+# --- CONFIG ------------------------------------------------------------------
+# Resolved through hat_observed_rates.py (2026-09-18)
 import sys as _sys
 from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 LOOKUP_CSV    = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
-# Anchored on this file 2026-09-12. The literals here were
-# drive-rooted and had never resolved; the data they name also
-# moved out of the scripts tree on that date.
+# Anchored on this file 2026-09-12
 from pathlib import Path as _Path
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in _Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 SITE_FILTER   = "usa_NC"
 OUTPUT_DIR    = str(_obs.TIMESERIES_LRR)
 
-# --- Time periods: (file_tag, figure_title, file_stem, start_date, end_date) ---
-# The canonical chain since 2026-09-17 (1996 -> 2010 -> 2024), rebuilt here
-# 2026-09-18; the 1984-2004 / 2004-2024 / 1984-2024 run of 2026-06-02 is in
-# 5-scr/archive/coastsat_5yr_bins/. One folder per WINDOW, the coastsat lrr
-# naming, calendar years inclusive like every other window.
+# Time periods: (file_tag, figure_title, file_stem, start_date, end_date)
+
+# The canonical chain since 2026-09-17; one folder per window, calendar years inclusive
 PERIODS = [
     ("1996_2010", "1996-2010", "1996_2010", "1996-01-01", "2010-12-31"),
     ("2010_2024", "2010-2024", "2010_2024", "2010-01-01", "2024-12-31"),
     ("1996_2024", "1996-2024", "1996_2024", "1996-01-01", "2024-12-31"),
 ]
 
-# --- Interval sizes (years): one subfolder per entry ---
-# On a dynamic barrier island like Hatteras, 5-yr is the minimum window
-# that starts to average through storm-recovery cycles. 1-yr captures
-# mostly interannual noise; 3-yr is marginal. Recommended: [5] or [3, 5].
+# Interval sizes (years): one subfolder per entry
+
+# One subfolder per entry; 5 yr is the minimum that averages through storm recovery
 INTERVAL_SIZES_YR = [5]
 
-# --- Minimum observations per transect per bin ---
-# Only gate that must be passed to compute LRR for a transect.
-# Lower values include more transects; raise to demand denser coverage.
+# Minimum observations per transect per bin
+
+# The only gate a transect must pass
 MIN_OBS_PER_BIN = 3
 
-# --- Statistical quality filters (applied before domain aggregation) ---
-# Set MAX_PVALUE = 1.0 and MIN_R2 = 0.0 to disable (recommended default).
-# Short bins (1-3 yr) rarely achieve p <= 0.10 with only 4-8 observations
-# even when the underlying signal is real — these filters will silently
-# empty most domains and should be left off unless you have a specific
-# reason to restrict to high-confidence fits only.
+# Statistical quality filters (applied before domain aggregation)
+
+# Off by default (1.0 and 0.0): short bins rarely reach p <= 0.10
 MAX_PVALUE = 1.0    # 1.0 = disabled (include all fits regardless of p-value)
 MIN_R2     = 0.0    # 0.0 = disabled (include all fits regardless of R2)
 
-# --- Physical plausibility cap (m/yr) ---
-# Per-transect LRR values with |LRR| > MAX_RATE are excluded before
-# domain aggregation.
+# Physical plausibility cap (m/yr)
+
+# Per-transect |LRR| above this is dropped before aggregation
 MAX_RATE_M_YR = 50.0
 
-# --- Minimum bin width relative to the nominal interval ---
-# A bin covering less than this fraction of the full interval is dropped.
-# Example: with 5-yr intervals, 0.75 drops bins shorter than 3.75 years.
-# This prevents partial tail bins (e.g., "2024-2024*") from polluting results.
+# Minimum bin width relative to the nominal interval
+
+# Bins shorter than this fraction of the interval are dropped
 MIN_BIN_FRACTION = 0.75
 
-# --- Domain aggregation method: "mean" or "median" ---
-# "mean" matches coastsat_domain_lrr_fixed.py and is the correct default
-# for consistency across the pipeline. The per-transect LRR is already
-# computed via a full linear regression on all observations in the bin,
-# so the domain value is the mean of those individual transect slopes.
+# Domain aggregation method: "mean" or "median"
+
+# 'mean' matches the rest of the pipeline
 DOMAIN_AGG = "mean"
 
-# --- Color palette ---
-# "custom" with the list below gives maximally distinct colors for 4-8 bins,
-# running cool (oldest) -> warm (most recent).
+# Color palette
+
+# 'custom' runs cool (oldest) to warm (newest)
 PALETTE = "custom"
 CUSTOM_COLORS = [
     "#d9f0d3",
@@ -134,32 +82,31 @@ CUSTOM_COLORS = [
     "#00441b",
 ]
 
-# --- Line appearance ---
+# Line appearance
 LINE_WIDTH = 2.0
 LINE_ALPHA = 0.88
 
-# --- Y-axis range for LRR panel ---
+# Y-axis range for LRR panel
+
 # None = auto (98th percentile clip). Or fix e.g. (-6, 6) for cross-period comparison.
 YLIM_LRR = None
 
-# --- Y-axis range for the overall LRR bar panel ---
+# Y-axis range for the overall LRR bar panel
 YLIM_OVERALL = None
 
-# --- CASCADE buffer domains to exclude ---
+# CASCADE buffer domains to exclude
 BUFFER_DOMAINS = []
 
-# --- Community span annotations (kept for backward compatibility) ---
-# The full annotation system below supersedes these — leave as-is.
+# Community span annotations (kept for backward compatibility)
+
+# Kept for backward compatibility; the annotation system below supersedes it
 COMMUNITY_SPANS = [
     (7,  8,  "Buxton"),
     (21, 31, "Avon"),
     (68, 83, "Tri-Village"),
 ]
 
-# =============================================================================
-# SECTION 4b: GEOGRAPHIC ANNOTATION STYLING
-# Matches the style used across all CoastSat figures in this project.
-# =============================================================================
+# Section 4b: geographic annotation styling, as in every CoastSat figure
 
 ANN_TOWN_SPANS = {
     "Buxton":      (7,  8),
@@ -183,17 +130,9 @@ ANN_C_VILLAGE_LINE = "0.40"      # dark gray for village dividers
 ANN_C_PIER         = "#1565C0"   # blue for pier markers
 ANN_C_GROIN        = "#B71C1C"   # red for groin line
 
-# --- LOWESS spatial smoothing overlay ---
-# LOWESS_OVERLAY = True  : smoothed line drawn on top of the raw line.
-# LOWESS_ONLY    = True  : raw line is drawn faintly (alpha * RAW_ALPHA_SCALE)
-#                         so the smoothed signal is the dominant visual.
-#                         Set both True to suppress nearly all raw noise.
-# LOWESS_FRAC    : fraction of domains used for each local fit.
-#                 7-domain window over 90 domains -> frac = 7/90 ≈ 0.078 (10/90 until 2026-09-28).
-#                 Matches the window used in the cross-period LOWESS comparison
-#                 and preserves community-scale signals (Avon, Wimble Shoals)
-#                 while filtering sub-kilometer noise.
-#                 Increase toward 0.20 to smooth more aggressively.
+# LOWESS spatial smoothing overlay
+
+# So the smoothed signal is the dominant visual
 LOWESS_OVERLAY      = True
 LOWESS_ONLY         = True    # if True, raw line drawn at reduced alpha
 RAW_ALPHA_SCALE    = 0.25    # multiplier applied to LINE_ALPHA for raw line
@@ -202,10 +141,9 @@ LOWESS_FRAC         = 7 / 90  # 7-domain window, the model target's
 LOWESS_LINE_WIDTH   = 3.0
 LOWESS_LINE_ALPHA   = 0.95
 
-# --- Physical plausibility cap (m/yr) ---
-# 20 m/yr passes genuine extreme signals at Oregon Inlet margin (domain 3)
-# and the Rodanthe / post-Isabel zone (domains 76-77) while still rejecting
-# clear CoastSat detection errors.
+# Physical plausibility cap (m/yr)
+
+# 20 m/yr keeps the real extremes at Oregon Inlet and Rodanthe, drops detection errors
 MAX_RATE_M_YR = 50.0
 
 FIG_WIDTH  = 26
@@ -213,9 +151,6 @@ FIG_HEIGHT = 10
 DPI        = 150
 
 
-# ============================================================
-# IMPORTS
-# ============================================================
 import os
 import sys
 import glob
@@ -236,10 +171,7 @@ sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                        / "scripts" / "input_prep" / "5-scr" / "lib"))
 import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 
-# Use the identical compute_lrr as every other CoastSat script in the project.
-# The companion file sits beside this one (script_dir is on the path above);
-# the package path it was imported by, scripts.input_preperation..., has not
-# existed since the tree was renamed, so this script could not run (2026-09-18).
+# Use the identical compute_lrr as every other CoastSat script in the project
 from coastsat_lrr import load_timeseries, compute_lrr
 
 # Optional LOWESS for spatial overlay
@@ -252,9 +184,7 @@ if LOWESS_OVERLAY or LOWESS_ONLY:
         print("WARNING: statsmodels not found — LOWESS overlay disabled.")
 
 
-# ============================================================
-# COLOR PALETTE BUILDER
-# ============================================================
+# Color palette builder
 
 _PALETTES = {
     "ocean_to_ember": [
@@ -270,13 +200,11 @@ _PALETTES = {
         "#f4d35e", "#ee964b", "#c77b2a", "#8b5e15",
     ],
 }
+# -----------------------------------------------------------------------------
 
 
+# Return exactly n colors interpolated through the chosen palette
 def build_color_list(palette_name: str, n: int) -> list:
-    """
-    Return exactly n colors interpolated through the chosen palette.
-    Handles built-in named palettes, matplotlib colormaps, and "custom".
-    """
     if palette_name == "custom":
         return [CUSTOM_COLORS[i % len(CUSTOM_COLORS)] for i in range(n)]
 
@@ -304,10 +232,9 @@ def build_color_list(palette_name: str, n: int) -> list:
         return [cmap(i / max(n - 1, 1)) for i in range(n)]
 
 
-# ============================================================
-# DATA LOADING
-# ============================================================
+# Data loading
 
+# {transect: CSV path} under the CoastSat root
 def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
     csv_map = {}
     if not os.path.isdir(root_dir):
@@ -328,6 +255,7 @@ def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
     return csv_map
 
 
+# Every transect's time series in the lookup
 def load_all_transect_data(lookup: pd.DataFrame, csv_map: dict) -> dict:
     all_data  = {}
     n_missing = 0
@@ -345,30 +273,11 @@ def load_all_transect_data(lookup: pd.DataFrame, csv_map: dict) -> dict:
     return all_data
 
 
-# ============================================================
-# BIN GENERATION  —  whole-year snapping, no partial tail bins
-# ============================================================
+# Bin generation — whole-year snapping, no partial tail bins
 
+# Divide a period into non-overlapping sequential bins of interval_yr years
 def make_bins(period_start: str, period_end: str,
               interval_yr: int, min_bin_fraction: float) -> list:
-    """
-    Divide a period into non-overlapping sequential bins of interval_yr years.
-
-    Bin edges are snapped to whole years (from the integer start year of
-    the period), which prevents tiny partial tail bins. Any bin shorter
-    than min_bin_fraction * interval_yr is silently dropped.
-
-    Example — period_start="1984-01-01", period_end="2004-12-31",
-               interval_yr=5, min_bin_fraction=0.75:
-        -> [(1984, 1989, "1984-1989"),
-            (1989, 1994, "1989-1994"),
-            (1994, 1999, "1994-1999"),
-            (1999, 2004, "1999-2004")]   ← 4 clean bins, no partial tail
-
-    Returns
-    -------
-    list of (bin_start_yr: int, bin_end_yr: int, label: str)
-    """
     start_yr = pd.Timestamp(period_start).year
     end_yr   = pd.Timestamp(period_end).year + 1   # exclusive end
 
@@ -380,9 +289,7 @@ def make_bins(period_start: str, period_end: str,
             bin_end = end_yr   # clamp last bin to period end
         width = bin_end - cursor
         if width >= interval_yr * min_bin_fraction:
-            # Label shows the INCLUSIVE year range: end year minus 1 makes
-            # clear that e.g. "1984-1988" ends at Dec 31 1988 and
-            # "1989-1993" starts at Jan 1 1989 — no overlap, no gap.
+            # Label shows the INCLUSIVE year range
             label = f"{cursor}\u2013{bin_end - 1}"
             bins.append((cursor, bin_end, label))
         cursor = cursor + interval_yr   # always advance by full interval
@@ -390,10 +297,9 @@ def make_bins(period_start: str, period_end: str,
     return bins
 
 
-# ============================================================
-# LRR COMPUTATION PER BIN  —  identical to reference script logic
-# ============================================================
+# LRR computation per bin — identical to reference script logic
 
+# Build a (bins x domains) LRR matrix
 def compute_domain_bin_lrr(
         all_data:        dict,
         lookup:          pd.DataFrame,
@@ -407,35 +313,6 @@ def compute_domain_bin_lrr(
         agg:             str  = "median",
         buffer_domains:  list = None,
 ) -> pd.DataFrame:
-    """
-    Build a (bins x domains) LRR matrix.
-
-    For each bin and each CASCADE domain:
-      1. Collect all CoastSat observations within the bin date range.
-      2. Compute LRR using compute_lrr() from coastsat_lrr.py
-         (same function as coastsat_custom_range_dates_plot.py and all
-          other scripts in this project).
-      3. Filter transect results by min_obs, max_pvalue, min_r2, and max_rate.
-      4. Aggregate remaining valid transects by median (or mean).
-
-    Parameters
-    ----------
-    all_data      : {transect_id: DataFrame}
-    lookup        : DataFrame with 'transect_id' and 'domain_number'
-    bins          : list of (start_yr, end_yr, label) from make_bins()
-    period_start  : ISO date string — data restriction for the whole period
-    period_end    : ISO date string
-    min_obs       : minimum obs per transect per bin
-    max_pvalue    : maximum p-value to accept a transect fit as valid
-    min_r2        : minimum R² to accept a transect fit as valid
-    max_rate      : physical cap — |LRR| > this is excluded (noise/error)
-    agg           : "median" or "mean" for domain aggregation
-    buffer_domains: domain numbers to exclude
-
-    Returns
-    -------
-    lrr_df : DataFrame, index=bin_label, columns=domain numbers
-    """
     if buffer_domains is None:
         buffer_domains = []
 
@@ -517,6 +394,7 @@ def compute_domain_bin_lrr(
     return lrr_df
 
 
+# Single full-period LRR per domain for the bottom summary bar panel
 def compute_overall_lrr(
         all_data:       dict,
         lookup:         pd.DataFrame,
@@ -529,10 +407,6 @@ def compute_overall_lrr(
         agg:            str  = "median",
         buffer_domains: list = None,
 ) -> tuple:
-    """
-    Single full-period LRR per domain for the bottom summary bar panel.
-    Uses the same quality filters as the per-bin computation.
-    """
     if buffer_domains is None:
         buffer_domains = []
 
@@ -573,15 +447,10 @@ def compute_overall_lrr(
     return np.array(domains), overall
 
 
-# ============================================================
-# LOWESS SPATIAL SMOOTHING HELPER
-# ============================================================
+# LOWESS spatial smoothing helper
 
+# Apply LOWESS smoothing along the domain (spatial) axis
 def lowess_smooth(x: np.ndarray, y: np.ndarray, frac: float) -> np.ndarray:
-    """
-    Apply LOWESS smoothing along the domain (spatial) axis.
-    Only fits on non-NaN points; NaN gaps remain NaN in comparison.
-    """
     valid = ~np.isnan(y)
     if valid.sum() < 4:
         return y
@@ -592,23 +461,10 @@ def lowess_smooth(x: np.ndarray, y: np.ndarray, frac: float) -> np.ndarray:
     return out
 
 
-# ============================================================
-# GEOGRAPHIC ANNOTATION  (Section 4b style)
-# ============================================================
+# Geographic annotation (Section 4b style)
 
+# Apply the full geographic annotation suite to an axes object, matching the Section 4b style used ...
 def draw_annotations(ax, domains, show_labels: bool = True):
-    """
-    Apply the full geographic annotation suite to an axes object,
-    matching the Section 4b style used across all CoastSat figures.
-
-    Parameters
-    ----------
-    ax           : matplotlib Axes to annotate
-    domains      : np.ndarray of domain numbers present in the figure
-    show_labels  : if False, draw bands/lines but suppress all text.
-                   Use False for the bottom panel to avoid collision
-                   with the panel's own set_title() label.
-    """
     d_min, d_max = int(domains.min()), int(domains.max())
 
     # 1. Wimble Shoals shading (draw first so town spans layer on top)
@@ -687,10 +543,9 @@ def draw_annotations(ax, domains, show_labels: bool = True):
                 )
 
 
-# ============================================================
-# SINGLE-PERIOD FIGURE
-# ============================================================
+# Single-period figure
 
+# Two-panel figure for one period and interval size
 def plot_interval_lines(
         lrr_df:          pd.DataFrame,
         bins:            list,
@@ -706,13 +561,6 @@ def plot_interval_lines(
         out_path:        str,
         dpi:             int = 150,
 ):
-    """
-    Two-panel figure for one period and interval size.
-
-    Top    : LRR (m/yr) by domain, one line per time bin. Legend shows
-             the date range of each bin (e.g. "1989-1994").
-    Bottom : Overall LRR across the full period as a reference bar chart.
-    """
     if lrr_df.empty or np.all(np.isnan(lrr_df.values)):
         print(f"    -> SKIP (no data): {os.path.basename(out_path)}")
         return
@@ -721,8 +569,7 @@ def plot_interval_lines(
     n_bins  = len(bins)
     colors  = build_color_list(palette, n_bins)
 
-    # Auto Y-limit: use the TRUE data range (not percentile clipping)
-    # so all values are visible. A small padding keeps lines off the edges.
+    # Y-limit from the true data range, lightly padded
     all_vals = lrr_df.values.flatten()
     valid_vals = all_vals[~np.isnan(all_vals)]
     if ylim_lrr is None:
@@ -751,7 +598,7 @@ def plot_interval_lines(
     # Bottom panel: shading/lines only — no text, so it can't clash with the panel title
     draw_annotations(ax_overall, domains, show_labels=False)
 
-    # ---- Top panel: one line per bin ----
+    # Top panel: one line per bin
     legend_handles = []
     n_plotted = 0
     for i, (bs, be, label) in enumerate(bins):
@@ -762,10 +609,9 @@ def plot_interval_lines(
 
         color = colors[i]
 
-        # --- Raw line ---
-        # When LOWESS_ONLY is active, draw the raw line at a much reduced alpha
-        # so the smoothed signal reads as the primary trace.  Setting
-        # RAW_ALPHA_SCALE = 0.0 hides the raw line entirely.
+        # Raw line
+
+        # With LOWESS_ONLY the raw line fades (RAW_ALPHA_SCALE 0 hides it)
         raw_alpha = (line_alpha * RAW_ALPHA_SCALE
                      if (LOWESS_ONLY and _LOWESS_OK) else line_alpha)
         raw_lw    = (line_width * 0.7
@@ -777,7 +623,7 @@ def plot_interval_lines(
                 zorder=3, solid_capstyle="round",
             )
 
-        # --- LOWESS smoothed overlay ---
+        # LOWESS smoothed overlay
         if LOWESS_OVERLAY and _LOWESS_OK:
             smoothed = lowess_smooth(domains.astype(float), lrr_vals, LOWESS_FRAC)
             ax_lrr.plot(
@@ -821,7 +667,7 @@ def plot_interval_lines(
         edgecolor="#CCCCCC",
     )
 
-    # ---- Bottom panel: overall period LRR ----
+    # Bottom panel: overall period LRR
     bar_colors = [
         "#CCCCCC" if np.isnan(v) else ("#1a6faf" if v >= 0 else "#c0392b")
         for v in overall_lrr
@@ -864,15 +710,9 @@ def plot_interval_lines(
     print(f"    -> Saved: {os.path.relpath(out_path, OUTPUT_DIR)}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: every window and bin size, the per-domain tables
 def main():
-    # One folder per window, overwritten in place (deterministic); no
-    # timestamped run folders and NO FIGURES since 2026-09-18 -- 3-rates holds
-    # data only. The figure is drawn in the house style by
-    # coastsat_5yr_bins_figure.py into 4-comparisons/coastsat_5yr_bins/.
+    # One folder per window, overwritten in place (deterministic)
     run_dir = OUTPUT_DIR
     os.makedirs(run_dir, exist_ok=True)
     print(f"\nOutput directory: {run_dir}\n{'='*65}\n")
@@ -949,6 +789,5 @@ def main():
     print(f"{'='*65}")
 
 
-# ============================================================
 if __name__ == "__main__":
     main()

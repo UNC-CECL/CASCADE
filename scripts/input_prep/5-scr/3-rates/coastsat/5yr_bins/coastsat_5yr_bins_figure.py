@@ -1,28 +1,9 @@
 """
-coastsat_5yr_bins_figure.py
-==============================================================================
-When, inside a window, did the shoreline change? The CoastSat LRR in
-successive 5-year bins, one panel per bin, per GIS domain, in the house style.
-Written 2026-09-18 when the bins were rebuilt on the 1996 -> 2010 -> 2024
-chain; it writes beside the table, as every 3-rates product does.
+When inside a window did the shoreline change? The CoastSat LRR in successive 5-year bins, one panel per bin.
 
-READS    3-rates/coastsat/5yr_bins/<window>/lrr_bins_5yr.csv
-         (coastsat_5yr_bins.py: per transect an OLS over the bin's
-         positions, domain MEAN, |rate| > 50 m/yr dropped, bins under 3.75 yr
-         dropped)
-DRAWS    one stacked panel per bin, filled blue where the shoreline moved
-         seaward and red where it moved landward (the coastsat_lrr_windows
-         panel drawing, imported); ONE y axis for all three figures, the largest
-         |rate| over GIS 2-90 plus 1 m rounded up, with GIS 1 clipped and
-         labelled where it runs past (Hannah, 2026-09-18). Village bands, the groin and
-         piers, the offshore shoals as faint hatched boxes; a model-input
-         beach fill is marked above the panel of the bin it falls in.
-WRITES   3-rates/coastsat/5yr_bins/<window>/lrr_5yr_bins_<window>.png
-         (+ PDF and CAPTIONS.md under supporting/)
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/5yr_bins/coastsat_5yr_bins_figure.py
-==============================================================================
+
+One figure per window beside its bin tables, on a shared y cap. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -57,15 +38,16 @@ from site_layer.hat_figure_style import (  # noqa: E402
 from site_layer.hat_observed_rates import TIMESERIES_LRR  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 WINDOWS = ["1996_2010", "2010_2024", "1996_2024"]
-# Beside its table since 2026-09-18 (every 3-rates product carries its own
-# figure; Hannah). It sat in 4-comparisons/coastsat_5yr_bins/ for an hour.
+# Beside its table since 2026-09-18 (every 3-rates product carries its own figure
 OUT_ROOT = TIMESERIES_LRR
 N = cw.N_DOMAINS
+# -----------------------------------------------------------------------------
 
 
+# [(label, first_year, last_year, frame), ...] oldest first
 def load(window):
-    """[(label, first_year, last_year, frame), ...] oldest first."""
     df = pd.read_csv(TIMESERIES_LRR / window / "lrr_bins_5yr.csv", index_col=0)
     out = []
     for label, row in df.iterrows():
@@ -78,29 +60,24 @@ def load(window):
     return out
 
 
+# A tick every 2, 5 or 10 m/yr, so a panel carries at most ~8 labels
 def tick_step(half):
-    """A tick every 2, 5 or 10 m/yr, so a panel carries at most ~8 labels."""
     return 2.0 if half <= 8 else 5.0 if half <= 20 else 10.0
 
 
-# THE AXIS IS CAPPED (Hannah, 2026-09-18). Cape Point (GIS 1) reaches about
-# +35 m/yr in the 2020s bins -- the shoal attaching -- and at full scale that
-# one domain set a +/-36 axis that flattened every other bin, all of which stay
-# within +/-13. The bound is taken over GIS 2-90 of EVERY window, so the three
-# figures share it; a value beyond it is clipped at the edge, marked with a
-# triangle and labelled with its value, never dropped.
+# THE AXIS IS CAPPED (Hannah, 2026-09-18)
 CAP_EXCLUDES = (1,)
 
 
+# The |LRR| cap shared by every window's figure
 def shared_cap():
     vals = [np.nanmax(np.abs(f.loc[~f["domain_number"].isin(CAP_EXCLUDES), "mean_lrr"]))
             for w in WINDOWS for *_, f in load(w)]
     return float(math.ceil(max(vals) + cw.Y_PAD_M))
 
 
+# A triangle at the axis edge for every domain beyond it, labelled with the domain and its value
 def mark_clipped(ax, frame, half):
-    """A triangle at the axis edge for every domain beyond it, labelled with
-    the domain and its value. Returns [(gis, value), ...]."""
     out = []
     for g, v in zip(frame["domain_number"], frame["mean_lrr"]):
         if np.isfinite(v) and abs(v) > half:
@@ -115,6 +92,7 @@ def mark_clipped(ax, frame, half):
     return out
 
 
+# One window's figure, one panel per bin
 def figure(window, half):
     bins = load(window)
     clipped = []
@@ -131,8 +109,7 @@ def figure(window, half):
         if fills:
             cw.draw_fills(ax, fills, half)
         _title(ax, i, label)
-        # draw_panel ticks every 2 m/yr, which is unreadable once one bin's
-        # spike (Cape Point, GIS 1, 2020-2024) sets a +/-36 axis
+        # Draw_panel ticks every 2 m/yr, which is unreadable once one bin's spike (Cape Point, GIS 1
         ax.yaxis.set_major_locator(MultipleLocator(tick_step(half)))
     axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
     fig.supylabel(cw.Y_LABEL, fontsize=9)
@@ -168,6 +145,7 @@ def figure(window, half):
     return out, half, [b[0] for b in bins]
 
 
+# Run: one figure per window
 def main() -> int:
     apply_style()
     cap = shared_cap()

@@ -1,41 +1,10 @@
 """
-duneline_endpoint.py
-==============================================================================
-The stored dune-line observation: net change between the two dune lines that
-bound a window, per 100 m transect and per GIS domain, in METRES and in
-m/yr. Replaced the dune-line LRR product (3-rates/duneline_lrr/, an OLS
-through every line inside a window) on 2026-09-18 (Hannah: "these should not
-be lrr, they would just be endpoint, we are tracking net change").
+Net dune-line change between the two dune lines that bound a window, per transect and per GIS domain.
 
-WHAT IS MEASURED
-    A window <start>_<end> reads one line per period year through
-    hat_topo_version.DUNE_LINE_FOR_YEAR (1996 -> the 1997 line, 2010 -> 2009,
-    2024 -> 2023). Each line's per-transect station is ORIG_LEN from
-    2-brie-offset/raw_offsets/<vintage>_duneline_offset_raw.csv, the first row
-    per transect, exactly as the hindcast's end-year target loader reads it:
-    distance from a fixed offshore datum, growing LANDWARD. So per transect
-        change_m  = start station - end station       (SEAWARD POSITIVE)
-        rate_m_yr = change_m / interval_yr
-    and per domain the mean over its ~5 transects (every domain has the same
-    transects in both lines, so the mean of the transect changes IS the
-    change of the domain means).
-
-    change_m needs no dates. rate_m_yr divides by the interval between the
-    two SURVEY DATES (coastsat_vs_duneline.KNOWN_SURVEY_DATES); a vintage
-    with no known date is centred on 1 July of its year and flagged in the
-    date_assumed columns and the PROVENANCE -- today that is the 2023 line.
-
-OUTPUT   data/hatteras_init/5-scr/3-rates/duneline/endpoint/<start>_<end>/
-    transect_endpoint.csv         per transect: positions, change_m, rate_m_yr
-    domain_endpoint_summary.csv   per domain: n, mean/std/min/max of both
-    PROVENANCE.md                 lines, raw files, dates, island summary
-    Read through hat_observed_rates.dune_endpoint_csv(start, end, level).
-    rate_windows.py draws the dune line from here and nowhere else.
-
-USAGE
-    python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py          # every window
+    python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py
     python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py --windows 1996_2010
-==============================================================================
+
+In metres and m/yr; replaced the dune-line LRR product. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -65,27 +34,30 @@ from site_layer.hat_observed_rates import (  # noqa: E402
 )
 from site_layer.hat_topo_version import dune_line_for_year, dune_raw_file  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 # The four model windows and the long context window.
 WINDOWS = [(1984, 2004), (1996, 2010), (2004, 2024), (2010, 2024), (1996, 2024)]
 ASSUMED_MONTH_DAY = "07-01"
 N_DOMAINS = 90
+# -----------------------------------------------------------------------------
 
 
+# (date, assumed) for one line vintage
 def survey_date(vintage: int):
-    """(date, assumed) for one line vintage."""
     known = KNOWN_SURVEY_DATES.get(vintage)
     if known:
         return dt.date.fromisoformat(known), False
     return dt.date.fromisoformat(f"{vintage}-{ASSUMED_MONTH_DAY}"), True
 
 
+# First row per transect, as the hindcast loader reads it
 def stations(vintage: int) -> pd.DataFrame:
-    """First row per transect, as the hindcast loader reads it."""
     raw = pd.read_csv(dune_raw_file(vintage), encoding="utf-8-sig")
     return (raw.drop_duplicates(subset=["domain_id", "LineID"])
                [["domain_id", "LineID", "ORIG_LEN"]])
 
 
+# One window's per-transect and per-domain tables
 def build(start: int, end: int) -> dict:
     v0, v1 = dune_line_for_year(start), dune_line_for_year(end)
     d0, a0 = survey_date(v0)
@@ -168,6 +140,7 @@ def build(start: int, end: int) -> dict:
                 landward=int((dom["mean_change_m"] < 0).sum()))
 
 
+# Run: every window, or those given
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Net dune-line change per window.")
     ap.add_argument("--windows", nargs="+", metavar="START_END")

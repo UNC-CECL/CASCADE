@@ -1,43 +1,9 @@
 """
-rates_figures.py
-==============================================================================
-One house-style figure per window for every product under 5-scr/3-rates/,
-written beside its tables (Hannah, 2026-09-18: "I wanted all of these to have
-figures"). This replaces the autoscaled quick-looks the LRR fit used to draw
-(archived in 5-scr/archive/coastsat_lrr_quicklooks_20260918/).
+One house-style figure per window for every product under 5-scr/3-rates/, written beside its tables.
 
-WHAT EACH FIGURE SHOWS
-    The per-domain value as the sign-coloured line and fill of the
-    coastsat_lrr_windows panel (blue seaward, red landward; the drawing is
-    imported), the individual transects behind it as small dots coloured by
-    their OWN sign (the same blue / red; Hannah, 2026-09-18), and the
-    village bands, groin and piers, the offshore shoals as faint hatched boxes,
-    and the model-input beach fills inside the window as bars above the panel.
-
-        coastsat/lrr/<w>/lrr_<w>.png                    m/yr, +/-1 std dotted
-        coastsat/endpoint/<w>/coastsat_endpoint_<w>.png m
-        duneline/endpoint/<w>/duneline_endpoint_<w>.png m
-        coastsat/5yr_bins/<w>/lrr_5yr_bins_<w>.png      m/yr, one panel per bin
-                                                        (coastsat_5yr_bins_figure.py)
-
-    and per MODEL CHAIN (1984-2004-2024, 1996-2010-2024) the chain's two
-    windows stacked, earlier above, on the same axis (2026-09-18):
-        <product root>/chains/<stem>_chain_<y0>_<y1>_<y2>.png
-    for lrr, coastsat endpoint and duneline endpoint. 5yr_bins has no chain
-    figure: it covers only the 1996 chain, and its 1996_2024 figure is it.
-
-Y AXES
-    lrr        the bound the window figures use: the largest |domain mean|
-               over every window plus 1 m, rounded up (+/-8 m/yr today)
-    endpoint   ONE bound for both endpoint products, the smallest multiple of
-               10 m holding every domain mean of every window, so a shoreline
-               figure reads against its dune-line figure directly
-    The transect dots are NOT in the bound; a dot outside it is drawn at the
-    edge as an open marker and counted in the caption.
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/rates_figures.py
-==============================================================================
+
+LRR, endpoint and the chain figures, on shared axes. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -83,47 +49,39 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS as DOM,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 N = cw.N_DOMAINS
-# Each transect dot takes the colour of its own sign, the line's blue / red
-# (the model_vs_observed per-domain dots use the same pair). Grey until 2026-09-18.
+# Each transect dot takes the colour of its own sign
 DOT_ALPHA = 0.4
 DOT_S = 3.0
 Y_STEP_M = 10.0
-# The curve the runs are actually graded against, laid over the domain means
-# it is built from (Hannah, 2026-09-22: the observation figure and the model
-# figure should not show different observed curves). Same darkest blue as the
-# graded curve on smoothing_windows_<w>.png, so the two read as one series.
+# The curve the runs are actually graded against, laid over the domain means it is built from (Hannah
 TARGET_WINDOW = max(DEFAULT_LOWESS.window_domains)
 TARGET_C = SMOOTH_RAMP[-1]
 TARGET_LW = 1.3
 BINS_SCRIPT = (_REPO / "scripts" / "input_prep" / "5-scr" / "3-rates"
                / "coastsat" / "5yr_bins" / "coastsat_5yr_bins_figure.py")
+# -----------------------------------------------------------------------------
 
 
+# Model windows under a product root (<start>_<end> only)
 def _windows(root):
-    # <start>_<end> only: lrr/1984_2025_obx/ (the all-OBX hand-off, 09-27)
-    # starts with a year but is not a model window and has no domain table.
+    # <start>_<end> only: the all-OBX hand-off folder is not a model window
     return sorted(p.name for p in root.iterdir()
                   if p.is_dir() and all(s.isdigit() for s in p.name.split("_"))
                   and p.name.count("_") == 1)
 
 
+# x for each transect
 def _along(t):
-    """x for each transect: its domain plus an even spread inside it."""
     t = t.sort_values(["domain_number"]).reset_index(drop=True)
     rank = t.groupby("domain_number").cumcount()
     n = t.groupby("domain_number")["domain_number"].transform("count")
     return t, (t["domain_number"] - 0.5 + (rank + 0.5) / n).to_numpy(float)
 
 
+# The scoring curve for one window's transect table
 def _target(t):
-    """The scoring curve for one window's transect table: a LOWESS at
-    TARGET_WINDOW north of the splice, the raw domain means at and below it.
-
-    Built through cascade_pipeline.coastsat_lowess, the module the run's own
-    target is built through, so this figure cannot drift from what the model
-    is graded against.
-    """
     t = t.sort_values(["domain_number", "transect_id"]).reset_index(drop=True)
     rank = t.groupby("domain_number").cumcount()
     n = t.groupby("domain_number")["domain_number"].transform("count")
@@ -135,6 +93,7 @@ def _target(t):
     return series
 
 
+# Per-transect dots, coloured by sign
 def _dots(ax, x, y, half):
     ok = np.isfinite(y)
     inside = ok & (np.abs(y) <= half)
@@ -148,6 +107,7 @@ def _dots(ax, x, y, half):
     return int(out.sum())
 
 
+# A 1-90 domain frame for one value column
 def _frame(domain_df, value, std=None):
     df = pd.DataFrame({"domain_number": np.arange(1, N + 1)})
     d = domain_df.set_index("domain_number")
@@ -156,6 +116,7 @@ def _frame(domain_df, value, std=None):
     return df
 
 
+# The caption clause naming fills and shoals
 def _marks_clause(start, end):
     fills = cw.fills_in(start, end)
     shoals = "; ".join(f"{n} GIS {lo}–{hi}" for n, (lo, hi)
@@ -169,6 +130,7 @@ def _marks_clause(start, end):
             "the dotted hairlines are the Avon and Rodanthe piers.")
 
 
+# One window's figure
 def _draw(frame, x, y, half, y_label, tick, fills, std, target=None):
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
@@ -186,17 +148,15 @@ def _draw(frame, x, y, half, y_label, tick, fills, std, target=None):
     return fig, ax, n_out
 
 
+# The shared legend handles
 def _legend(fig, what, std, target=False):
     h = [(Line2D([], [], color=cw.C_ACCRETE, lw=1.0), Line2D([], [], color=cw.C_ERODE, lw=1.0)),
          (Line2D([], [], color=cw.C_ACCRETE, marker="o", ms=2.2, lw=0),
           Line2D([], [], color=cw.C_ERODE, marker="o", ms=2.2, lw=0))]
-    # Sentence case, the quantity named by its method; "domain mean" and the
-    # seaward / landward colours are stated in each caption (Hannah, 2026-09-19).
+    # Sentence case, the quantity named by its method
     labels = [what, "Individual transects"]
     if target:
-        # Short on purpose: which smoothing width, and that it is the scoring
-        # curve, are caption matters -- a fourth long entry runs past the edge
-        # (lrr_smoothing_windows.win_label learned this the same way).
+        # Short on purpose: the caption carries the details
         h.append(Line2D([], [], color=TARGET_C, lw=TARGET_LW))
         labels.append("Graded target")
     if std:
@@ -207,7 +167,7 @@ def _legend(fig, what, std, target=False):
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
 
 
-# -----------------------------------------------------------------------------
+# Every LRR window's figure
 def lrr_figures():
     wins = windows()
     frames = {w: pd.read_csv(COASTSAT_LRR_ROOT / f"{w[0]}_{w[1]}" / "domain_lrr_summary.csv")
@@ -253,6 +213,7 @@ def lrr_figures():
     return out, half
 
 
+# Every endpoint window's figure, shoreline and dune line
 def endpoint_figures():
     products = [("coastsat", COASTSAT_ENDPOINT_ROOT, "shoreline"),
                 ("duneline", DUNELINE_ENDPOINT_ROOT, "dune-line")]
@@ -307,14 +268,13 @@ def endpoint_figures():
     return out, half
 
 
-# -----------------------------------------------------------------------------
-# the two model chains, one figure each per product (Hannah, 2026-09-18)
-# -----------------------------------------------------------------------------
+# The two model chains, one figure each per product (Hannah, 2026-09-18)
+
 CHAINS = [((1984, 2004), (2004, 2024)), ((1996, 2010), (2010, 2024))]
 
 
+# (frame, x, y, fills, vintages) for one product and window
 def _load(product, s, e):
-    """(frame, x, y, fills, vintages) for one product and window."""
     if product == "lrr":
         root = COASTSAT_LRR_ROOT / f"{s}_{e}"
         dom = pd.read_csv(root / "domain_lrr_summary.csv")
@@ -335,10 +295,8 @@ def _load(product, s, e):
             cw.fills_in(v0, v1), (v0, v1), None)
 
 
+# One figure per chain per product
 def chain_figures(half_lrr, half_end):
-    """One figure per chain per product: the chain's two windows stacked,
-    earlier above, on the product's shared axis (the same bound as its
-    single-window figures). Written to <product root>/chains/."""
     from site_layer.hat_figure_style import _title
     products = [
         ("lrr", COASTSAT_LRR_ROOT, half_lrr, cw.Y_LABEL, cw.Y_TICK_M, True,
@@ -415,6 +373,7 @@ def chain_figures(half_lrr, half_end):
     return out
 
 
+# Run: every product's figures
 def main() -> int:
     apply_style()
     written, half = lrr_figures()

@@ -1,51 +1,9 @@
 """
-coastsat_obx_lrr.py
-==============================================================================
-Full-record CoastSat LRR for every transect from Cape Point to the Virginia
-line: the table handed to the Murray lab (2026-09-27) for their diffusivity
-work, plus a README and one figure.
+Full-record CoastSat LRR for every transect from Cape Point to the Virginia line: the Murray lab hand-off.
 
-WHY A SIBLING OF coastsat_domain_lrr.py
-    That script is driven by transect_domain_lookup.csv, so it only sees the
-    transects inside the 90 GIS domains. This hand-off covers 153 km of coast,
-    ~90 km of it north of the model domain where no domain exists, so it is driven by the CoastSat
-    transect layer instead. The FIT is the same one -- coastsat_lrr.compute_lrr
-    on the calendar window, every point, no filter, no weights, >= 3 points --
-    so a transect inside the domain gets the number the model target uses.
-
-THE SPEC (decided 2026-09-27)
-    window    1984-01-01 -> 2025-12-31 (whole record, last full calendar year)
-    extent    usa_NC_0032_0021 (south end of the model domain, GIS 1) through
-              usa_NC_0049_0230 (ends at the NC/VA line, 36.550 N)
-    columns   the hand-off CSV is what was asked for: transect ID, alongshore
-              km, origin lon/lat, LRR, its 95% CI, flag. Every other fit stat
-              and CoastSat's beach slope go in supporting/..._full.csv
-    flags     flagged, never withheld: fewer than 50 positions, under 20 yr
-              between first and last position, within 2 km of Oregon Inlet or
-              of the south end at Cape Point (only the two location flags
-              fire on this record)
-
-ALONGSHORE DISTANCE
-    km from the origin of usa_NC_0032_0021, accumulated transect to transect
-    along the coast. Each step between neighbouring origins is projected onto
-    the local shore-parallel direction (perpendicular to the two transects'
-    mean bearing), because the origins wander cross-shore by up to ~300 m on
-    the Currituck Banks and a straight point-to-point sum would add that
-    wander as length. Oregon Inlet is the one real gap (~1.1 km).
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr.py
 
-OUTPUT  data/hatteras_init/5-scr/3-rates/coastsat/lrr/1984_2025_obx/
-    coastsat_lrr_obx_1984_2025.csv        the hand-off table (7 columns)
-    README.md                             written for the recipients
-    lrr_obx_1984_2025.png                 rate vs alongshore km, place names,
-                                          1 km median line (a guide only)
-    supporting/coastsat_lrr_obx_1984_2025_full.csv   all 19 columns
-    supporting/ PDF and CAPTIONS.md
-    The maps are drawn from the full table by coastsat_obx_lrr_maps.py; a
-    one-file version of the fit for others is coastsat_lrr_standalone.py.
-==============================================================================
+Writes the table, a README and one figure under lrr/1984_2025_obx/. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -68,9 +26,7 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 from coastsat_lrr import load_timeseries, filter_dates, compute_lrr, _empty_lrr  # noqa: E402
 from site_layer import hat_observed_rates as obs  # noqa: E402
 
-# ============================================================
-# CONFIG
-# ============================================================
+# --- CONFIG ------------------------------------------------------------------
 START_YEAR, END_YEAR = 1984, 2025
 START_DATE = "{0}-01-01".format(START_YEAR)
 END_DATE = "{0}-12-31".format(END_YEAR)
@@ -88,8 +44,7 @@ UTM = 32618                     # UTM 18N, metres
 TRANSECT_LAYER = obs.TRANSECT_DOMAINS / "CoastSat_transect_layer.geojson"
 OUT_DIR = obs.COASTSAT_LRR_ROOT / "{0}_{1}_obx".format(START_YEAR, END_YEAR)
 TABLE_NAME = "coastsat_lrr_obx_{0}_{1}.csv".format(START_YEAR, END_YEAR)
-# The hand-off table is the short one (what was asked for: rate by transect
-# ID); every fit and CoastSat field is kept in supporting/ (Hannah, 09-27).
+# The hand-off table is the short one (what was asked for
 FULL_NAME = "coastsat_lrr_obx_{0}_{1}_full.csv".format(START_YEAR, END_YEAR)
 MAIN_COLS = ["transect_id", "alongshore_km", "origin_lon", "origin_lat",
              "lrr_m_yr", "unc_m_yr", "flag"]
@@ -97,8 +52,7 @@ FIG_NAME = "lrr_obx_{0}_{1}.png".format(START_YEAR, END_YEAR)
 Y_HALF = 8.0                    # m/yr, the lrr tree's fixed axis
 V_HALF = 3.0                    # m/yr, colour scale; the maps use the same one
 
-# Places named along the coast, by latitude. The one list for both this
-# script's profile and coastsat_obx_lrr_maps.py, which imports it.
+# Places named along the coast, by latitude
 PLACES = {
     "Cape Point": 35.231,          # the south-end transect, just north of the tip
     "Buxton": 35.267, "Avon": 35.352, "Salvo": 35.542, "Waves": 35.566, "Rodanthe": 35.594,
@@ -106,22 +60,17 @@ PLACES = {
     "Kitty Hawk": 36.064, "Southern Shores": 36.130, "Duck": 36.163,
     "Corolla": 36.377, "Carova": 36.520,
 }
+# -----------------------------------------------------------------------------
 
 
-# ============================================================
-# TRANSECTS
-# ============================================================
+# Transects
 
+# The CoastSat layer's transects for SITES, south to north, from FIRST_ID
 def load_transects():
-    """The CoastSat layer's transects for SITES, south to north, from FIRST_ID.
-
-    Order is site then transect number; both run south to north here (checked
-    2026-09-27: four steps go <= 31 m south, all local wiggles)."""
     g = gpd.read_file(TRANSECT_LAYER)
     g = g[g["site_id"].isin(SITES)].copy()
     g["transect_id"] = g["id"].str.replace("-", "_")
-    # CoastSat's own per-transect beach slope, the one its tidal correction
-    # used, carried through as given (added 2026-09-27 at the recipients' use).
+    # CoastSat's own per-transect beach slope, the one its tidal correction used
     g = g.rename(columns={"cil": "beach_slope_ci_lower", "ciu": "beach_slope_ci_upper"})
     g["num"] = g["transect_id"].str[-4:].astype(int)
     g = g.sort_values(["site_id", "num"]).reset_index(drop=True)
@@ -146,10 +95,9 @@ def load_transects():
     return g
 
 
-# ============================================================
-# FIT AND FLAGS
-# ============================================================
+# Fit and flags
 
+# Every transect's full-record fit and flags
 def fit_all(g):
     csv_root = obs.COASTSAT_TIMESERIES
     rows = []
@@ -163,8 +111,7 @@ def fit_all(g):
             rows.append(_empty_lrr(len(df)))
             continue
         r = compute_lrr(df)
-        # compute_lrr rounds p to 6 dp, which printed 2,436 of them as 0.0.
-        # Same x and y as its fit (years since the first position), unrounded.
+        # Compute_lrr rounds p to 6 dp, which printed 2,436 of them as 0.0
         yrs = (df["date"] - df["date"].min()).dt.total_seconds() / 86400.0 / 365.25
         r["p_value"] = float(stats.linregress(yrs.values, df["chainage_m"].values).pvalue)
         rows.append(r)
@@ -174,8 +121,8 @@ def fit_all(g):
     return fit
 
 
+# Semicolon-joined reasons, empty when none
 def flags(t):
-    """Semicolon-joined reasons, empty when none. Nothing is withheld."""
     gaps = t.index[t["_gap_m"] > INLET_GAP_M]
     if len(gaps) != 1:
         raise RuntimeError("expected one inlet gap (Oregon Inlet), found {0}".format(len(gaps)))
@@ -198,10 +145,9 @@ def flags(t):
     return out, inlet_km
 
 
-# ============================================================
-# FIGURE
-# ============================================================
+# Figure
 
+# The rate along the whole coast
 def draw(t, inlet_km, path):
     import matplotlib.pyplot as plt
     import matplotlib.colors as mcolors
@@ -211,13 +157,10 @@ def draw(t, inlet_km, path):
         INK, INK_MUTED, GRID_C)
     apply_style()
 
-    # Flagged transects are drawn like the rest (Hannah, 2026-09-27: the hollow
-    # markers came off the figures); the flag lives in the table.
+    # Flagged transects are drawn like the rest (Hannah, 2026-09-27
     x = t["alongshore_km"].to_numpy()
     y = t["lrr_m_yr"].to_numpy()
-    # Running median over +/-0.5 km of coast, each side of the inlet on its
-    # own. A count window (21 transects) was tried first: it spans well over
-    # 1 km where transects are sparse and reached across the inlet.
+    # Running median over +/-0.5 km of coast, each side of the inlet on its own
     side = x > inlet_km
     med = np.full_like(y, np.nan)
     for i in range(len(x)):
@@ -227,27 +170,23 @@ def draw(t, inlet_km, path):
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.52), constrained_layout=True)
     ax.axhline(0, color=INK, lw=0.6, zorder=2)
-    # Place names along the top edge, at the transect nearest each latitude;
-    # Oregon Inlet at the gap itself, and the two ends of the reach.
+    # Place names along the top edge, at the transect nearest each latitude
     marks = {"Cape Point": 0.0}
     for name, lat in PLACES.items():
         marks[name] = (inlet_km if name == "Oregon Inlet" else
                        float(t["alongshore_km"].iloc[(t["origin_lat"] - lat).abs().argmin()]))
     marks["NC/VA line"] = float(x.max())
-    # every named place gets the same faint dashed line (Oregon Inlet was the
-    # only one until 09-27); the ends of the reach are the axis limits
+    # Every named place gets the same faint dashed line (Oregon Inlet was the only one until 09-27)
     for name, km in marks.items():
         if name not in ("Cape Point", "NC/VA line"):
             ax.axvline(km, color=INK_MUTED, lw=0.5, ls=(0, (3, 2)), alpha=0.6, zorder=1)
     top = ax.secondary_xaxis("top")
     top.set_xticks(list(marks.values()), labels=list(marks.keys()))
-    # vertical: at 40 degrees the pairs 4 km apart (Cape Point/Buxton,
-    # Carova/NC-VA line) ran into each other
+    # Vertical labels: at 40 degrees the close pairs collided
     top.tick_params(axis="x", labelsize=7, length=3, width=0.5, colors=INK_MUTED,
                     labelcolor=INK, labelrotation=90)
     top.spines["top"].set_visible(False)
-    # Coloured by rate on the maps' scale (Hannah, 2026-09-27: erosion red,
-    # accretion blue, deeper with severity); saturates at +/-V_HALF.
+    # Coloured by rate on the maps' scale (Hannah, 2026-09-27
     cmap = plt.get_cmap("RdBu")
     norm = mcolors.Normalize(-V_HALF, V_HALF)
     # thin grey edge so rates near zero (near-white) stay visible (09-27)
@@ -299,10 +238,9 @@ def draw(t, inlet_km, path):
     return off
 
 
-# ============================================================
-# README
-# ============================================================
+# Readme
 
+# The README handed over with the table
 def write_readme(t, inlet_km, off, path):
     v = t["lrr_m_yr"]
     n_fit = int(v.notna().sum())
@@ -499,10 +437,7 @@ transect geometry is the CoastSat global transect layer.
     path.write_text(text, encoding="utf-8")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: fit, write the table, README and figure
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     g = load_transects()

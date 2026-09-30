@@ -1,41 +1,9 @@
 """
-coastsat_obx_lrr_maps.py
-==============================================================================
-Maps of the full-record CoastSat LRR, Cape Point to the Virginia line: one
-overview and four regional zooms. Reads the table coastsat_obx_lrr.py wrote;
-fits nothing.
+Maps of the full-record CoastSat LRR, Cape Point to the Virginia line: an overview and four regional zooms.
 
-EACH FIGURE IS TWO PANELS ON ONE NORTHING AXIS
-    (a) the map: every transect drawn at its true position and length,
-        coloured by rate on a fixed diverging scale (RdBu, +/-3 m/yr), over
-        Esri World Shaded Relief recoloured to light grey (contextily, so it
-        needs the internet). That basemap carries no labels: every name on
-        a map is placed here from PLACES (coastsat_obx_lrr.py) and
-        MAP_AREAS. Latitude ticks on the left edge, exact at the coast; the
-        NC/VA state line drawn where it is in view; north arrow top right.
-    (b) the same rates against northing, sharing (a)'s y axis, so a colour on
-        the map reads straight across to its value; the black line is the
-        1 km median of the transects, a guide drawn over the points.
-    The coast here runs within ~25 degrees of north, which is what makes a
-    shared northing axis honest. Cape Point, where it turns, is flagged in
-    the table anyway.
-
-THE REGIONS  split at towns, ~35-40 km each, 1 km overlap
-    A  Cape Point to Salvo
-    B  Rodanthe to South Nags Head (Oregon Inlet in the middle)
-    C  Nags Head to Duck
-    D  Corolla to the Virginia line
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr_maps.py
 
-OUTPUT  beside the table in 5-scr/3-rates/coastsat/lrr/1984_2025_obx/
-    lrr_obx_1984_2025_map_overview.png
-    lrr_obx_1984_2025_map_<A-D>_<region>.png
-    (+ supporting/ PDFs and CAPTIONS.md entries)
-    Reads supporting/coastsat_lrr_obx_1984_2025_full.csv (it needs the
-    seaward ends), so run coastsat_obx_lrr.py first.
-==============================================================================
+Reads the table coastsat_obx_lrr.py wrote; fits nothing. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -62,47 +30,34 @@ import matplotlib.pyplot as plt  # noqa: E402
 import matplotlib.colors as mcolors  # noqa: E402
 import contextily as ctx  # noqa: E402
 
-# ============================================================
-# CONFIG
-# ============================================================
+# --- CONFIG ------------------------------------------------------------------
 TAG = "1984_2025"
 DIR = obs.COASTSAT_LRR_ROOT / "{0}_obx".format(TAG)
 TABLE = DIR / "supporting" / "coastsat_lrr_obx_{0}_full.csv".format(TAG)   # needs the seaward ends
 UTM = 32618
-# Label-free (09-27): Esri's Gray Canvas printed "BODIE ISLAND" beside Kitty
-# Hawk, its historical name for the whole Nags Head-Duck barrier, which read
-# as a clash with the Bodie Island spit at Oregon Inlet. Every name on the
-# maps is now one this script places. Esri's shaded relief carries no labels;
-# it is turned to light grey in draw_map (its blue water fought the blue
-# accretion colours). CARTO's no-label tiles were tried and now need an API
-# key -- they come back watermarked.
+# Label-free relief basemap: every name on the maps is placed here
 BASEMAP = ctx.providers.Esri.WorldShadedRelief
 
 V_HALF = 3.0          # m/yr, colour scale; beyond it saturates (arrows on the bar)
 X_HALF = 4.0          # m/yr, profile axis; beyond it a triangle at the edge
 OVERLAP_KM = 1.0
 
-# Latitudes of the places named on the maps and used to split the regions.
-# Towns are placed at the transect nearest their latitude; labels go landward.
+# Latitudes of the places named on the maps and used to split the regions
 from coastsat_obx_lrr import PLACES  # noqa: E402  (one list for both scripts)
-# Stretches rather than towns, named on the maps only (italic): the reviewer
-# asked for them in map B, where the flagged inlet transects are.
+# Stretches rather than towns, named on the maps only (italic)
 MAP_AREAS = {"Pea Island": 35.700, "Bodie Island spit": 35.800}
 # (letter, stem, title, south place or None = start, north place or None = end)
 REGIONS = [
     ("A", "cape_point_to_salvo", "Cape Point to Salvo", None, 35.560),
-    # B runs ~15 km past Oregon Inlet, so not "to Oregon Inlet"; and not "to
-    # Bodie Island", which also names the Nags Head-Duck barrier (09-27)
+    # B runs ~15 km past Oregon Inlet, so not "to Oregon Inlet"
     ("B", "rodanthe_to_south_nags_head", "Rodanthe to South Nags Head", 35.560, 35.900),
     ("C", "nags_head_to_duck", "Nags Head to Duck", 35.900, 36.200),
     ("D", "corolla_to_virginia", "Corolla to the Virginia line", 36.200, None),
 ]
+# -----------------------------------------------------------------------------
 
 
-# ============================================================
-# DATA
-# ============================================================
-
+# The table, with each transect as a line
 def load():
     t = pd.read_csv(TABLE, keep_default_na=False, na_values=[""])
     t["flag"] = t["flag"].fillna("")
@@ -115,10 +70,12 @@ def load():
     return g
 
 
+# Alongshore km at a latitude
 def km_at_lat(g, lat):
     return float(g["alongshore_km"].iloc[(g["origin_lat"] - lat).abs().argmin()])
 
 
+# A 1 km running median along one side
 def running_median(x, y, side):
     med = np.full_like(y, np.nan, dtype=float)
     for i in range(len(x)):
@@ -128,25 +85,20 @@ def running_median(x, y, side):
     return med
 
 
-# ============================================================
-# DRAWING
-# ============================================================
+# Drawing
 
 NORM = mcolors.Normalize(-V_HALF, V_HALF)
 CMAP = plt.get_cmap("RdBu")      # red erosion (negative), blue accretion
 
 
+# Transects coloured by rate, the basemap, places, scale and arrow
 def draw_map(ax, g, lw, places, state_y, label_pt=7):
-    """Transects coloured by rate, the basemap, places, scale and arrow."""
     for (x0, y0), (x1, y1), v in zip(
             [ls.coords[0] for ls in g.geometry],
             [ls.coords[1] for ls in g.geometry], g["lrr_m_yr"]):
         ax.plot([x0, x1], [y0, y1], color=CMAP(NORM(np.clip(v, -V_HALF, V_HALF))),
                 lw=lw, solid_capstyle="butt", zorder=3)
-    # Equal aspect by widening x to fill the panel ("datalim"), so the map
-    # keeps the profile's full height and northing lines up across the two.
-    # "box" shrank a diagonal region (C) vertically and broke that. The
-    # limits only settle on a draw, so draw, then fetch tiles for them.
+    # Equal aspect by widening x to fill the panel ("datalim")
     ax.set_aspect("equal", adjustable="datalim")
     ax.figure.canvas.draw()
     ax.set_xlim(*ax.get_xlim())
@@ -170,8 +122,7 @@ def draw_map(ax, g, lw, places, state_y, label_pt=7):
     if y_lo < state_y < y_hi:
         ax.axhline(state_y, color=INK, lw=0.6, ls=(0, (4, 2)), zorder=4)
         x_l = ax.get_xlim()[0] + 0.03 * (ax.get_xlim()[1] - ax.get_xlim()[0])
-        # above the line: the overview's box D has its top edge on the line
-        # itself, and a label below it was cut by that edge (09-27)
+        # Above the line, clear of box D's edge
         ax.text(x_l, state_y, "North Carolina / Virginia state line", ha="left", va="bottom",
                 fontsize=label_pt, color=INK, zorder=5,
                 bbox=dict(fc="white", ec="none", pad=1.0, alpha=0.8))
@@ -180,10 +131,8 @@ def draw_map(ax, g, lw, places, state_y, label_pt=7):
     latitude_ticks(ax, g)
 
 
+# Recolour the basemap tiles to light grey
 def greyscale_basemap(ax, lo=0.80, hi=0.96):
-    """Recolour the basemap tiles to light grey: luminance stretched to
-    [lo, hi], so water sits a shade below land and nothing competes with the
-    rate colours."""
     im = ax.images[-1]
     a = np.asarray(im.get_array(), dtype=float)
     rgb = a[..., :3] / (255.0 if a.max() > 1 else 1.0)
@@ -195,11 +144,8 @@ def greyscale_basemap(ax, lo=0.80, hi=0.96):
     im.set_data(out)
 
 
+# Latitude on the map's left edge (the reviewer
 def latitude_ticks(ax, g):
-    """Latitude on the map's left edge (the reviewer: "neither panel shows
-    coordinates"). The axis is UTM northing, so each tick is the northing of
-    that latitude at the panel's median coastline longitude: exact at the
-    coast, which is where the transects are."""
     from pyproj import Transformer
     to_utm = Transformer.from_crs(4326, UTM, always_xy=True)
     lon = float(g["origin_lon"].median())
@@ -216,6 +162,7 @@ def latitude_ticks(ax, g):
                    labelsize=7, colors=INK)
 
 
+# The rate profile beside a map
 def draw_profile(ax, g, inlet_km):
     x = g["alongshore_km"].to_numpy()
     y = g["lrr_m_yr"].to_numpy()
@@ -223,17 +170,14 @@ def draw_profile(ax, g, inlet_km):
     side = x > inlet_km
     med = running_median(x, y, side)
     ax.axvline(0, color=INK, lw=0.6, zorder=2)
-    # every transect drawn alike; the flags are in the table only (09-27)
-    # thin grey edge so rates near zero (near-white) stay visible (09-27)
-    # s=14: at s=3-4 the points hid under the median line (Hannah, 09-27)
+    # Every transect drawn alike; flags stay in the table
     ax.scatter(np.clip(y, -X_HALF, X_HALF), n, s=14, edgecolors="0.55", linewidths=0.25,
                c=CMAP(NORM(np.clip(np.nan_to_num(y), -V_HALF, V_HALF))), zorder=3)
     for s_ in (~side, side):
         ax.plot(np.clip(med[s_], -X_HALF, X_HALF), n[s_], color=INK, lw=0.7, zorder=4)
     out = np.isfinite(y) & (np.abs(y) > X_HALF)
     if out.any():
-        # small and in the scale's end colour: at Oregon Inlet ~40 of them
-        # stack, and full-size black triangles merged into one heavy bar
+        # Small and in the scale's end colour
         for sign, marker, colour in ((-1, "<", CMAP(0.0)), (1, ">", CMAP(1.0))):
             s_ = out & (np.sign(y) == sign)
             ax.scatter(np.full(s_.sum(), sign * X_HALF), n[s_], marker=marker,
@@ -248,14 +192,8 @@ def draw_profile(ax, g, inlet_km):
     return off
 
 
+# A cartographic north arrow
 def north_arrow(ax, inset_in=0.12, height_in=0.46, width_in=0.18, n_pt=11):
-    """A cartographic north arrow: a solid black notched arrowhead with N
-    above the tip, on a white box with a hairline border, in the map's
-    top-right corner. Sized and inset in inches from that corner, so it is
-    identical in every map whatever the panel's shape. Local to these maps
-    (Hannah, 2026-09-27: "more academic", "all black and in the upper
-    right", then "a little larger" with "a white box behind it"); the
-    house-style _north_arrow used elsewhere is unchanged."""
     from matplotlib.patches import Polygon, Rectangle
     from matplotlib.transforms import ScaledTranslation
     fig = ax.figure
@@ -276,6 +214,7 @@ def north_arrow(ax, inset_in=0.12, height_in=0.46, width_in=0.18, n_pt=11):
             fontsize=n_pt, fontweight="bold", color="black", zorder=9)
 
 
+# The shared horizontal colourbar
 def colourbar(fig, axes):
     sm = plt.cm.ScalarMappable(norm=NORM, cmap=CMAP)
     cb = fig.colorbar(sm, ax=axes, orientation="horizontal", location="bottom",
@@ -290,10 +229,9 @@ CHROME_W = 0.5        # in, margins between and around the panels
 CHROME_H = 1.6        # in, titles, x labels and colour bar
 
 
+# One region: map and profile, sized from the region's shape
 def figure(g, inlet_km, title_a, lw, places, state_y, boxes=None, height=9.0):
-    # Size the map panel from the region's own shape. With a fixed panel the
-    # equal-aspect map of a diagonal stretch (C) could only fit by trimming
-    # x, which clipped transects at the edge.
+    # Size the map panel from the region's own shape
     pad = 0.02 * (g["y0"].max() - g["y0"].min())
     y_lo, y_hi = g["y0"].min() - pad, g["y0"].max() + pad
     ends = np.array([ls.coords[1][0] for ls in g.geometry])
@@ -325,6 +263,7 @@ def figure(g, inlet_km, title_a, lw, places, state_y, boxes=None, height=9.0):
     return fig, off
 
 
+# The caption clause for rates off the scale
 def off_clause(off):
     if not off:
         return ""
@@ -348,10 +287,7 @@ COMMON = (
     "in this folder.").format(v=V_HALF)
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: the overview and every region
 def main():
     apply_style()
     g = load()

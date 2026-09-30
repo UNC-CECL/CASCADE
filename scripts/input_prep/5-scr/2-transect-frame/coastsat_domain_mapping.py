@@ -1,32 +1,9 @@
 """
-CoastSat Transect → CASCADE Domain Spatial Mapping
-===================================================
-Step 1 of 2 in the domain-level LRR workflow.
+Step 1 of 2: join CoastSat transects to the CASCADE domains, the lookup every rate script uses.
 
-This script spatially joins CoastSat transect geometry to your CASCADE
-domain geometry, producing a lookup table:
+    python scripts/input_prep/5-scr/2-transect-frame/coastsat_domain_mapping.py
 
-    transect_id  |  domain_number  |  distance_to_domain_m  |  match_method
-
-That lookup table is then used by coastsat_domain_lrr.py to compute
-domain-level LRR summaries.
-
-Note: nearest-feature snapping is disabled. Only point-in-polygon matches
-are kept. Transects outside all domain polygons are excluded.
-
-Inputs
-------
-  - CoastSat transects GeoJSON (downloaded from coastsat.space)
-  - CASCADE domain polygons GeoJSON or shapefile (exported from ArcGIS)
-
-Outputs
--------
-  transect_domain_lookup.csv  –  saved to OUTPUT_DIR
-  transect_domain_map.png     –  quick-look map to verify the join
-
-Dependencies
-------------
-  pip install geopandas pandas numpy matplotlib shapely pyproj
+Writes transect_domain_lookup.csv and a map of the join. Details: scripts/input_prep/5-scr/2-transect-frame/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -34,18 +11,10 @@ Contact: hahenry@unc.edu
 Version: 2026-09-22
 """
 
-# ============================================================
-# CONFIG  –  edit these paths and column names before running
-# ============================================================
+# --- CONFIG ------------------------------------------------------------------
+# CoastSat transect geometry
 
-# --- CoastSat transect geometry ---
-# GeoJSON downloaded from coastsat.space → "transects" button
-# the script will automatically
-# clip it to your study area using the domain bounding box.
-# Anchored on this file 2026-09-12. The literals here were
-# drive-rooted and had never resolved; the data they name also
-# moved out of the scripts tree on that date.
-# Resolved through hat_observed_rates.py since 2026-09-18.
+# Downloaded from coastsat.space; clipped to the study area automatically
 import sys as _sys
 from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
@@ -53,39 +22,32 @@ _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 TRANSECT_GEOM_PATH = str(_obs.TRANSECT_LAYER)
 
-# Column in the transect file that holds the transect ID
-# From the global CoastSat GeoJSON this is typically "id"
+# Column in the transect file that holds the transect ID From the global CoastSat GeoJSON this is typically "id"
 TRANSECT_ID_COL = "id"
 
-# --- CASCADE domain geometry ---
-# GeoJSON exported from ArcGIS
+# CASCADE domain geometry
+
+# Exported from ArcGIS
 DOMAIN_GEOM_PATH = str(_obs.DOMAIN_BOXES)
 
-# Column in the domain file that holds the domain number
-# From your attribute table this is "domain_id"
+# Column in the domain file that holds the domain number From your attribute table this is "domain_id"
 DOMAIN_ID_COL = "domain_id"
 
-# --- Output ---
+# Output
 OUTPUT_DIR = str(_obs.TRANSECT_DOMAINS)
 LOOKUP_CSV = "transect_domain_lookup.csv"
 MAP_PNG    = "transect_domain_map.png"
 
-# Coordinate Reference System for distance calculations.
-# UTM Zone 18N is correct for the NC Outer Banks.
+# Coordinate Reference System for distance calculations
 PROJECTED_CRS = "EPSG:32618"
 
-# Buffer (in degrees) added around the domain bounding box when
-# pre-filtering the global transect file. 0.1 deg ~ 10 km.
+# Buffer (in degrees) added around the domain bounding box when pre-filtering the global transect file
 BBOX_BUFFER_DEG = 0.1
 
-# Nearest-feature snapping is disabled — Hatteras Island's curvature
-# causes cross-curve mismatches. Only point-in-polygon matches are kept.
-# MAX_SNAP_DISTANCE_M is retained for reference but not used.
+# Nearest-feature snapping is disabled — Hatteras Island's curvature causes cross-curve mismatches
 MAX_SNAP_DISTANCE_M = None  # disabled
+# -----------------------------------------------------------------------------
 
-# ============================================================
-# IMPORTS
-# ============================================================
 import os
 import warnings
 import numpy as np
@@ -96,19 +58,8 @@ import matplotlib.pyplot as plt
 warnings.filterwarnings("ignore")
 
 
-# ============================================================
-# FUNCTIONS
-# ============================================================
-
+# Validate the CRS of a GeoDataFrame
 def fix_crs(gdf: gpd.GeoDataFrame, fallback_crs: str = "EPSG:32618") -> gpd.GeoDataFrame:
-    """
-    Validate the CRS of a GeoDataFrame. If the CRS is missing or
-    unrecognised (e.g. EPSG:3725 which is not a real EPSG code),
-    replace it with fallback_crs and warn the user.
-
-    This commonly happens when ArcGIS exports GeoJSON with a non-standard
-    CRS code stored internally that geopandas cannot resolve.
-    """
     try:
         if gdf.crs is None:
             raise ValueError("No CRS defined")
@@ -122,13 +73,8 @@ def fix_crs(gdf: gpd.GeoDataFrame, fallback_crs: str = "EPSG:32618") -> gpd.GeoD
         return gdf.set_crs(fallback_crs, allow_override=True)
 
 
+# Load CoastSat transect geometry
 def load_transects(path: str, id_col: str) -> gpd.GeoDataFrame:
-    """
-    Load CoastSat transect geometry.
-    If geometries are LineStrings, extracts the first point (transect origin)
-    and sets it as the active geometry for point-in-polygon joining.
-    The original LineString geometry column is dropped to avoid confusion.
-    """
     gdf = gpd.read_file(path)
     print(f"Loaded {len(gdf):,} transects from: {os.path.basename(path)}")
     print(f"  Columns   : {list(gdf.columns)}")
@@ -143,8 +89,7 @@ def load_transects(path: str, id_col: str) -> gpd.GeoDataFrame:
             f"Available columns: {list(gdf.columns)}"
         )
 
-    # Extract transect origin point from LineString and make it the
-    # ONLY geometry column (avoids the 'active geometry not present' error)
+    # The transect origin as the only geometry column
     if gdf.geom_type.isin(["LineString", "MultiLineString"]).any():
         print("  → LineString detected; extracting origin point as active geometry.")
         origin_pts = gdf.geometry.apply(
@@ -161,16 +106,15 @@ def load_transects(path: str, id_col: str) -> gpd.GeoDataFrame:
     return gdf
 
 
+# Load CASCADE domain geometry from GeoJSON or shapefile
 def load_domains(path: str, id_col: str) -> gpd.GeoDataFrame:
-    """Load CASCADE domain geometry from GeoJSON or shapefile."""
     gdf = gpd.read_file(path)
     print(f"Loaded {len(gdf)} domains from: {os.path.basename(path)}")
     print(f"  Columns   : {list(gdf.columns)}")
     print(f"  CRS       : {gdf.crs}")
     print(f"  Geom types: {gdf.geom_type.value_counts().to_dict()}")
 
-    # Fix invalid CRS — EPSG:3725 is not a real code; domains exported
-    # from ArcGIS in UTM 18N should be EPSG:32618
+    # Replace the invalid EPSG:3725 with UTM 18N (EPSG:32618)
     gdf = fix_crs(gdf, fallback_crs=PROJECTED_CRS)
 
     if id_col not in gdf.columns:
@@ -182,16 +126,10 @@ def load_domains(path: str, id_col: str) -> gpd.GeoDataFrame:
     return gdf
 
 
+# Pre-filter the global transect dataset to only those within a buffered bounding box around the ...
 def clip_transects_to_study_area(transects: gpd.GeoDataFrame,
                                   domains: gpd.GeoDataFrame,
                                   buffer_deg: float) -> gpd.GeoDataFrame:
-    """
-    Pre-filter the global transect dataset to only those within a
-    buffered bounding box around the domain extent.
-
-    Essential when working with the full global CoastSat GeoJSON
-    (230,000+ transects) — without this the spatial join is very slow.
-    """
     domains_wgs84 = domains.to_crs("EPSG:4326")
     minx, miny, maxx, maxy = domains_wgs84.total_bounds
     study_bbox = box(minx - buffer_deg, miny - buffer_deg,
@@ -213,21 +151,13 @@ def clip_transects_to_study_area(transects: gpd.GeoDataFrame,
     return clipped
 
 
+# Join transect origin points to domain polygons — point-in-polygon only
 def spatial_join_polygon(transects: gpd.GeoDataFrame,
                           domains: gpd.GeoDataFrame,
                           t_id_col: str,
                           d_id_col: str,
                           proj_crs: str,
                           max_snap_m: float = None) -> pd.DataFrame:
-    """
-    Join transect origin points to domain polygons — point-in-polygon only.
-
-    Nearest-feature snapping is intentionally disabled: Hatteras Island's
-    shoreline curvature means that snapping unmatched transects to the nearest
-    domain frequently assigns them to the wrong domain across the curve.
-    Transects that do not fall within any domain polygon are left as NaN
-    and excluded from downstream LRR calculations.
-    """
     # Reproject to projected CRS for accurate geometry operations
     t_proj = gpd.GeoDataFrame(
         {t_id_col: transects[t_id_col]},
@@ -263,17 +193,13 @@ def spatial_join_polygon(transects: gpd.GeoDataFrame,
     return lookup.rename(columns={t_id_col: "transect_id"})
 
 
+# Quick-look map
 def make_verification_map(transects: gpd.GeoDataFrame,
                            domains: gpd.GeoDataFrame,
                            lookup: pd.DataFrame,
                            t_id_col: str,
                            d_id_col: str,
                            out_path: str):
-    """
-    Quick-look map: transect origins coloured by match method,
-    domain polygons shown in light yellow with domain ID labels.
-    Inspect this carefully before using the lookup table.
-    """
     fig, ax = plt.subplots(1, 1, figsize=(12, 10))
 
     # Domain polygons
@@ -317,14 +243,11 @@ def make_verification_map(transects: gpd.GeoDataFrame,
     print(f"Verification map saved: {out_path}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: load both layers, join, write the lookup and the map
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ---- Load ----
+    # Load
     print("=" * 55)
     print("Loading CoastSat transects...")
     transects = load_transects(TRANSECT_GEOM_PATH, TRANSECT_ID_COL)
@@ -332,17 +255,17 @@ def main():
     print("Loading CASCADE domains...")
     domains = load_domains(DOMAIN_GEOM_PATH, DOMAIN_ID_COL)
 
-    # ---- Clip global file to study area ----
+    # Clip global file to study area
     print("Clipping transects to study area bounding box...")
     transects = clip_transects_to_study_area(transects, domains, BBOX_BUFFER_DEG)
 
-    # ---- Spatial join ----
+    # Spatial join
     print("Running spatial join...")
     lookup = spatial_join_polygon(transects, domains,
                                   TRANSECT_ID_COL, DOMAIN_ID_COL,
                                   PROJECTED_CRS, MAX_SNAP_DISTANCE_M)
 
-    # ---- Summary ----
+    # Summary
     print(f"\n{'='*55}")
     print(f"  Total transects    : {len(lookup):,}")
     print(f"  Matched            : {lookup['domain_number'].notna().sum():,}")
@@ -355,12 +278,12 @@ def main():
     print(counts.to_string())
     print(f"{'='*55}\n")
 
-    # ---- Save ----
+    # Save
     out_csv = os.path.join(OUTPUT_DIR, LOOKUP_CSV)
     lookup.to_csv(out_csv, index=False)
     print(f"Lookup table saved: {out_csv}")
 
-    # ---- Verification map ----
+    # Verification map
     out_map = os.path.join(OUTPUT_DIR, MAP_PNG)
     make_verification_map(transects, domains, lookup,
                           TRANSECT_ID_COL, DOMAIN_ID_COL, out_map)

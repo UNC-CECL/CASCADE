@@ -1,22 +1,10 @@
 """
-CoastSat Domain-Level LRR Summary
-===================================
-Step 2 of 2 in the domain-level LRR workflow.
+Step 2 of 2: per-domain CoastSat LRR for one window, from the transect-to-domain lookup.
 
-Requires:
-  1. transect_domain_lookup.csv   – from coastsat_domain_mapping.py
-  2. CoastSat time-series CSVs    – one per transect
-  3. coastsat_lrr.py     – in the same directory (or on PYTHONPATH)
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_domain_lrr.py --start-year 1996 --end-year 2010
 
-Outputs (tables only since 2026-09-18; the window's figure is drawn beside
-them by scripts/input_prep/5-scr/3-rates/rates_figures.py):
-  domain_lrr_summary.csv  –  one row per domain with aggregated LRR stats
-  transect_lrr_full.csv   –  full transect-level results with domain assignments
-
-Usage
------
-Edit the CONFIG section below, then run:
-    python coastsat_domain_lrr.py
+Needs transect_domain_lookup.csv (coastsat_domain_mapping.py) and the
+CoastSat time series; writes the transect and domain tables (no figures). Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -24,17 +12,8 @@ Contact: hahenry@unc.edu
 Version: 2026-09-22
 """
 
-# ============================================================
-# CONFIG
-# ============================================================
-
-# Path to the lookup table produced by coastsat_domain_mapping.py
-# THE WINDOW IS GIVEN AS A PERIOD, and every path is anchored on this file
-# (2026-09-11). The three literals here were a machine-specific absolute
-# path into "input_preperation", a tree that no longer exists, plus two
-# drive-rooted paths from before the 5-scr rename -- none of them resolved.
-#
-#     python coastsat_domain_lrr_fixed.py --start-year 1996 --end-year 2010
+# --- CONFIG ------------------------------------------------------------------
+# Path to the lookup table produced by coastsat_domain_mapping.py THE WINDOW IS GIVEN AS A PERIOD
 import argparse as _argparse
 from pathlib import Path as _Path
 
@@ -58,13 +37,10 @@ _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 LOOKUP_CSV = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
 
-# Root folder containing all site subfolders (e.g. usa_NC_0032_timeseries, usa_NC_0033_timeseries, ...)
-# The script will automatically find every CSV in every subfolder one level down.
-# Example: r"C:/Users/hahenry/Downloads"
+# Root folder containing all site subfolders (e.g
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 
-# Optional: only include subfolders whose names contain this string.
-# Set to "" to include ALL subfolders under ROOT_DATA_DIR.
+# Only subfolders whose names contain this ('' for all)
 SITE_FILTER = "usa_NC"    # e.g. "usa_NC" to match usa_NC_0032_timeseries, usa_NC_0033_timeseries, etc.
 
 # Date range for LRR calculation
@@ -77,14 +53,10 @@ MIN_OBS = 3
 # Output directory
 OUTPUT_DIR = str(_obs.COASTSAT_LRR_ROOT / _PERIOD_TAG)
 
-# CASCADE buffer domains to EXCLUDE from summaries
-# (e.g., the 15 buffer domains on each end of your 90+30 setup)
-# Set to an empty list [] to include all domains
+# CASCADE buffer domains to EXCLUDE from summaries (e.g.
 BUFFER_DOMAINS = []   # all 90 real domains included; CoastSat transects won't match buffer domains anyway
+# -----------------------------------------------------------------------------
 
-# ============================================================
-# IMPORTS
-# ============================================================
 import os
 import sys
 import glob
@@ -96,8 +68,7 @@ import matplotlib.cm as cm
 import warnings
 warnings.filterwarnings("ignore")
 
-# Import LRR functions from the companion script
-# (assumes both scripts are in the same directory)
+# Import LRR functions from the companion script (assumes both scripts are in the same directory)
 sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                             if (_q / "pyproject.toml").exists())
                        / "scripts" / "input_prep" / "5-scr" / "lib"))
@@ -107,22 +78,8 @@ from coastsat_lrr import (
 )
 
 
-# ============================================================
-# FUNCTIONS
-# ============================================================
-
+# Auto-discover all time-series CSVs under root_dir
 def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
-    """
-    Auto-discover all time-series CSVs under root_dir.
-
-    Walks one level of subfolders (e.g. usa_NC_0032_timeseries/) and
-    collects every CSV inside them. Optionally filters to subfolders
-    whose names contain site_filter.
-
-    Returns:
-        { transect_id_stem : full_filepath }
-        e.g. { 'usa_NC_0032_0011' : 'C:/Downloads/usa_NC_0032_timeseries/usa_NC_0032_0011.csv' }
-    """
     csv_map = {}
     if not os.path.isdir(root_dir):
         print(f"⚠️  ROOT_DATA_DIR not found: {root_dir}")
@@ -146,12 +103,9 @@ def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
     return csv_map
 
 
+# For every transect in the lookup table, find its CSV, compute LRR, and return a merged DataFrame ...
 def compute_all_lrr(lookup: pd.DataFrame, csv_map: dict,
                     start: str, end: str, min_obs: int) -> pd.DataFrame:
-    """
-    For every transect in the lookup table, find its CSV, compute LRR,
-    and return a merged DataFrame with domain assignments.
-    """
     records = []
     missing = []
 
@@ -187,21 +141,9 @@ def compute_all_lrr(lookup: pd.DataFrame, csv_map: dict,
     return pd.DataFrame(records)
 
 
+# Aggregate transect-level LRR results to domain level
 def domain_summary(transect_df: pd.DataFrame,
                    buffer_domains: list) -> pd.DataFrame:
-    """
-    Aggregate transect-level LRR results to domain level.
-
-    Returns one row per domain with:
-      n_transects    – total transects in domain
-      n_valid        – transects with valid LRR
-      mean_lrr       – mean LRR across transects (m/yr)
-      median_lrr     – median LRR
-      std_lrr        – standard deviation
-      min_lrr        – most erosional transect
-      max_lrr        – most accretionary transect
-      pct_eroding    – % of transects with negative LRR
-    """
     df = transect_df.copy()
     if buffer_domains:
         df = df[~df["domain_number"].isin(buffer_domains)]
@@ -241,12 +183,9 @@ def domain_summary(transect_df: pd.DataFrame,
     return summary.sort_values("domain_number").reset_index(drop=True)
 
 
+# Bar chart of domain-level LRR coloured by magnitude
 def plot_domain_lrr(summary: pd.DataFrame, start: str, end: str,
                     out_path: str, metric: str = "mean_lrr"):
-    """
-    Bar chart of domain-level LRR coloured by magnitude.
-    metric: 'mean_lrr' or 'median_lrr'
-    """
     df = summary.dropna(subset=[metric]).sort_values("domain_number")
 
     # Diverging colourmap centred on zero
@@ -259,7 +198,7 @@ def plot_domain_lrr(summary: pd.DataFrame, start: str, end: str,
     fig, axes = plt.subplots(2, 1, figsize=(14, 9),
                               gridspec_kw={"height_ratios": [3, 1]})
 
-    # --- Top: bar chart ---
+    # Top: bar chart
     ax = axes[0]
     bars = ax.bar(df["domain_number"].astype(str), df[metric],
                   color=colors, edgecolor="none", width=0.8)
@@ -286,7 +225,7 @@ def plot_domain_lrr(summary: pd.DataFrame, start: str, end: str,
     cbar = plt.colorbar(sm, ax=ax, orientation="vertical", fraction=0.02, pad=0.02)
     cbar.set_label("LRR (m/yr)", fontsize=9)
 
-    # --- Bottom: n_valid per domain ---
+    # Bottom: n_valid per domain
     ax2 = axes[1]
     ax2.bar(df["domain_number"].astype(str), df["n_valid"],
             color="steelblue", edgecolor="none", width=0.8, alpha=0.7)
@@ -302,12 +241,9 @@ def plot_domain_lrr(summary: pd.DataFrame, start: str, end: str,
     print(f"Domain LRR plot saved: {out_path}")
 
 
+# Scatter of individual transect LRRs coloured by domain, sorted by domain number
 def plot_transect_scatter(transect_df: pd.DataFrame,
                           buffer_domains: list, out_path: str):
-    """
-    Scatter of individual transect LRRs coloured by domain,
-    sorted by domain number.  Good for seeing within-domain spread.
-    """
     df = transect_df.copy()
     if buffer_domains:
         df = df[~df["domain_number"].isin(buffer_domains)]
@@ -340,23 +276,20 @@ def plot_transect_scatter(transect_df: pd.DataFrame,
     plt.show()
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: fit every transect, average per domain, write the tables
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ---- Load lookup table ----
+    # Load lookup table
     print(f"Loading lookup table: {LOOKUP_CSV}")
     lookup = pd.read_csv(LOOKUP_CSV)
     print(f"  {len(lookup)} transects, {lookup['domain_number'].nunique()} unique domains\n")
 
-    # ---- Map CSVs ----
+    # Map CSVs
     csv_map = collect_csv_map(ROOT_DATA_DIR, SITE_FILTER)
     print(f"Found {len(csv_map)} time-series CSVs in data folders.\n")
 
-    # ---- Compute LRR for all transects ----
+    # Compute LRR for all transects
     print(f"Computing LRR for period: {START_DATE} → {END_DATE}")
     print("-" * 55)
     transect_df = compute_all_lrr(lookup, csv_map, START_DATE, END_DATE, MIN_OBS)
@@ -364,7 +297,7 @@ def main():
     valid = transect_df["lrr_m_yr"].notna().sum()
     print(f"\nTransect LRR complete: {valid}/{len(transect_df)} with valid results.")
 
-    # ---- Domain summary ----
+    # Domain summary
     summary = domain_summary(transect_df, BUFFER_DOMAINS)
 
     print(f"\n{'='*55}")
@@ -373,13 +306,13 @@ def main():
     print(summary.to_string(index=False))
     print(f"{'='*55}")
 
-    # ---- Overall stats ----
+    # Overall stats
     valid_s = summary.dropna(subset=["mean_lrr"])
     print(f"\nStudy-area mean LRR : {valid_s['mean_lrr'].mean():+.3f} m/yr")
     print(f"Eroding domains     : {(valid_s['mean_lrr'] < 0).sum()} / {len(valid_s)}")
     print(f"Accreting domains   : {(valid_s['mean_lrr'] > 0).sum()} / {len(valid_s)}")
 
-    # ---- Save outputs ----
+    # Save outputs
     transect_out = os.path.join(OUTPUT_DIR, "transect_lrr_full.csv")
     summary_out  = os.path.join(OUTPUT_DIR, "domain_lrr_summary.csv")
     transect_df.to_csv(transect_out, index=False)
@@ -387,19 +320,12 @@ def main():
     print(f"\nSaved: {transect_out}")
     print(f"Saved: {summary_out}")
 
-    # ---- No figures here (2026-09-18) ----
-    # The figure is drawn by scripts/input_prep/5-scr/3-rates/rates_figures.py. The
-    # domain_lrr_bar.png / transect_lrr_scatter.png quick-looks this used to
-    # draw were autoscaled, titled and coloured by magnitude, a second picture
-    # of the numbers that clashed with the house-style figures; they are in
-    # 5-scr/archive/coastsat_lrr_quicklooks_20260918/. The window's figure is
-    #     python scripts/input_prep/5-scr/3-rates/rates_figures.py
-    # -> 3-rates/coastsat/lrr/<window>/lrr_<window>.png (since 2026-09-19). plot_domain_lrr and
-    # plot_transect_scatter are kept, unused, for a one-off look.
+    # No figures here (2026-09-18)
+
+    # No figures here since 2026-09-18: rates_figures.py draws them
 
     return summary, transect_df
 
 
-# ============================================================
 if __name__ == "__main__":
     summary, transect_df = main()

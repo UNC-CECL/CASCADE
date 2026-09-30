@@ -1,43 +1,11 @@
 """
-coastsat_endpoint.py
-==============================================================================
-The stored CoastSat net shoreline change: for each CoastSat transect, the mean
-shoreline position in a +/-6-month window about the window's END dune-line
-survey date minus the mean about its START survey date, in METRES and m/yr,
-per transect and per GIS domain. Built 2026-09-18 (Hannah, by interview) as
-the counterpart of 3-rates/duneline/endpoint/, so the shoreline and the dune
-line difference like for like: same windows, same survey dates, same sign.
+CoastSat net shoreline change per window: the mean position around the end survey minus that around the start.
 
-WHY THE DUNE DATES
-    A dune line is a survey at a moment. Centring the CoastSat windows on the
-    same moments (1997-10-12, 2009-05-30, 2023-07-01 assumed; the 1984 and
-    2004 lines for the older windows) means a gap between the two changes is
-    beach-width change, not a date mismatch. Each end averages one full
-    seasonal cycle of satellite positions. The window means are the ones
-    coastsat_vs_duneline.py uses (window_mean / endpoint_by_transect,
-    imported, not copied), so its CoastSat endpoint and this agree.
-
-    change_m = end mean - start mean. CoastSat chainage grows SEAWARD, so
-    SEAWARD IS POSITIVE, as in the dune product. rate_m_yr divides by the
-    survey interval and inherits any assumed date; change_m does not depend on
-    the interval (the windows are still centred on the assumed date).
-
-OUTPUT   data/hatteras_init/5-scr/3-rates/coastsat/endpoint/<start>_<end>/
-    transect_endpoint.csv         per CoastSat transect: both window means,
-                                  how many positions fell in each, the first
-                                  and last date inside each, change_m,
-                                  rate_m_yr, the survey dates
-    domain_endpoint_summary.csv   per domain: n, mean/std/min/max change_m,
-                                  mean rate, pct_landward, the median
-                                  positions per end window, and how many of
-                                  its transects had an empty end window
-    PROVENANCE.md
-    Read through hat_observed_rates.coastsat_endpoint_csv(start, end, level).
-
-USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/endpoint/coastsat_endpoint.py
     python scripts/input_prep/5-scr/3-rates/coastsat/endpoint/coastsat_endpoint.py --windows 1996_2024
-==============================================================================
+
+Per transect and per GIS domain, in metres and m/yr, dated by the dune-line
+surveys that bound the window. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -70,9 +38,12 @@ from site_layer.hat_observed_rates import (  # noqa: E402
 )
 from site_layer.hat_topo_version import dune_line_for_year  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 N_DOMAINS = 90
+# -----------------------------------------------------------------------------
 
 
+# One window's per-transect and per-domain tables
 def build(start: int, end: int, cache: dict) -> dict:
     v0, v1 = dune_line_for_year(start), dune_line_for_year(end)
     d0, a0 = survey_date(v0)
@@ -158,6 +129,7 @@ def build(start: int, end: int, cache: dict) -> dict:
                 n0=ep["n_start"].median(), n1=ep["n_end"].median())
 
 
+# Run: every window, or those given
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Net CoastSat shoreline change per window.")
     ap.add_argument("--windows", nargs="+", metavar="START_END")

@@ -1,121 +1,11 @@
 """
-coastsat_window_convergence.py
-==============================================================================
-WHICH WINDOWS RECOVER THE LONG-TERM RATE, AND WHICH ARE TOO SHORT?
+Which windows recover the long-term rate, and which are too short?
 
-The model is graded on the LRR over 1996-2010. Is that enough record for the
-rate to represent the shoreline, or is it still an artefact of where the record
-happens to stop? And if it is not, what window would be?
+    python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_window_convergence.py
+    python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_window_convergence.py --direction forward --scale sites
 
-A NOTE ON COUNTING YEARS. A window here is counted in CALENDAR YEARS OF
-RECORD, both ends included, because that is what the fit consumes: 1996-2010
-is fifteen years of satellite positions. Rule 2 of ORGANIZATION.md counts the
-same window as fourteen SIMULATED years, because the model spends 1996..2009
-and the end year is a boundary. Both are right about different things; the
-tables and figures here are always the fit's count.
-
-TWO SWEEPS, ONE FROM EACH END (Hannah, 2026-09-23). Both fit the same OLS the
-target uses (`coastsat_lrr.compute_lrr`) on a family of NESTED windows, and
-both converge on the same reference, the 1996-2024 rate -- but they approach
-it from opposite sides, and each answers a different question:
-
-    forward_from_1996/   the START is pinned at 1996 and the END walks out:
-                         1996-2000, 1996-2001 ... 1996-2024.
-                         HOW MUCH RECORD DO YOU NEED from the start of the
-                         chain before the rate settles?
-
-    backward_from_2024/  the END is pinned at 2024 and the START walks back:
-                         2020-2024, 2019-2024 ... 1996-2024.
-                         HOW LATE CAN A WINDOW BEGIN and still recover the
-                         long-term rate?
-
-The pair brackets the answer. Forward gives a window 1996-YYYY; backward gives
-a window YYYY-2024. In both the reference is the LONGEST window of that sweep,
-which is 1996-2024 either way, fitted in the same loop as every other window
-so it cannot drift from a stored product.
-
-The moving year 2010 is marked in both, and in both it is a real model window:
-forward that is 1996-2010, the graded window, and backward it is 2010-2024,
-the second leg of the canonical chain.
-
-TWO SCALES, in two folders under each direction:
-
-    a-eight_sites/  one transect at the middle of each of eight evenly spaced
-                    domains. The readable case: every position, every fit, one
-                    panel per site. Eight transects cannot speak for an
-                    island, but they show WHAT is happening.
-    b-every_transect/  every CoastSat transect on the island, ~906 of them, the
-                    same sweep. Answers whether the eight were representative:
-                    the convergence year as an alongshore profile, and the
-                    spread within each domain.
-
-WHAT THIS CAN AND CANNOT SAY
-    The windows are NESTED, so a curve converges on the reference BECAUSE the
-    reference is its endpoint. "Does 1996-2010 match 1996-2024" therefore has
-    no yes/no answer, and it does not need one -- what the sweep gives is the
-    shape of the approach and the window at which the rate stops leaving a
-    tolerance. Read it as "this window recovers the long-term rate", never as
-    a match test.
-
-    It also cannot separate a rate that was WRONG from one that was merely
-    EARLY. A site whose shoreline genuinely changed behaviour in 2010 and a
-    site that simply needed more observations draw the same curve. Disjoint
-    windows are what separate those -- 3-rates/coastsat/5yr_bins/ is the
-    product that asks when the change happened. Running BOTH directions is
-    the cheapest partial answer: a real change of behaviour shows as a
-    forward sweep and a backward sweep that disagree about where the good
-    window is.
-
-THREE TOLERANCES, reported side by side rather than chosen, so the sensitivity
-to the choice is visible in the table:
-
-    ci    within the 1996-2024 fit's own 95% confidence half-width. Scales
-          with how well constrained each site is; nothing arbitrary to defend.
-    abs   within +/-0.25 m/yr. The same band everywhere, so sites compare;
-          ~7 m of shoreline over 28 yr, small against rates of 2-3 m/yr.
-    rel   within +/-20% of the reference. Sensible where the rate is fast,
-          unreachable where it is near zero -- which the table will show.
-
-And two readings of each, because they differ exactly where the answer is
-interesting:
-
-    first entry    the shortest window inside the band. May be a crossing the
-                   curve then leaves again.
-    stable entry   the shortest window after which every LONGER window is
-                   also inside. This is the convergence window; the gap
-                   between the two is a site that wandered back out.
-
-Inputs
-------
-    transect_domain_lookup.csv      2-transect-frame/, via hat_observed_rates
-    CoastSat time-series CSVs       1-observations/coastsat_timeseries/
-    coastsat_lrr.compute_lrr        5-scr/lib/, via scr_paths
-
-Outputs  (hat_observed_rates.window_convergence_dir(direction, anchor))
------------------------------------------------------------------------
-    2-settling_window/<direction>_from_<anchor>/
-        a-eight_sites/
-            shoreline_position_window_fits_*.png   the record: positions, the
-                                                   annual median, six fits
-            window_convergence_*.png               the sweep as an ERROR
-            window_convergence_transects.csv       a row per site per window
-            convergence_summary.csv                a row per site
-        b-every_transect/
-            convergence_alongshore_*.png           the island profile
-            domain_convergence_summary.csv         a row per GIS domain
-            convergence_summary_all_transects.csv  a row per transect
-            window_convergence_transects_all.csv   the full sweep
-        c-domain_means/
-            the transect sweep grouped to the 90 domains (no refit)
-    README.md beside each, supporting/ for PDFs and CAPTIONS.md
-    A record other than 1996-2024 files under experiments/record_cut_<end>/.
-
-Usage
------
-    python .../coastsat_window_convergence.py                 both, both scales
-    python .../coastsat_window_convergence.py --direction forward --scale sites
-    (--abs-tol, --rel-tol, --domains to vary it)
-==============================================================================
+Grows windows forward from 1996 and back from 2024, per transect and per
+site, against tolerances; writes the sweeps, the convergence years and figures. Details: scripts/input_prep/5-scr/3-rates/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -147,76 +37,24 @@ import matplotlib.pyplot as plt                       # noqa: E402
 from matplotlib.lines import Line2D                   # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
-# ============================================================
-# CONFIG
-# ============================================================
 
-# THE RECORD THE SWEEP MAY SEE, and the two pins. The longest window of either
-# sweep is this one, so both directions converge on the same number, and every
-# error in the product is measured against it.
-#
-# TRUNCATING IT IS AN EXPERIMENT, NOT A SETTING. The island-wide detrended
-# position anomaly steps +17 m between 2020 and 2021 and holds there, in the
-# same year the satellite record goes from 12.8 to 30.4 observations per
-# transect per year. Those four years sit at the highest-leverage end of the
-# 1996-2024 fit, so if the step is an artefact of the sensor mix rather than
-# the shoreline, the reference itself is biased -- and the reference is the
-# model's grading target. `--ref-end 2020` refits everything on the record
-# before the step, and the two record spans file side by side under
-# `experiments/record_cut_<end>/`, apart from the main result in
-# `2-settling_window/`, so they can be differenced rather than confused.
+# --- CONFIG ------------------------------------------------------------------
+# THE RECORD THE SWEEP MAY SEE, and the two pins
 REF_START, REF_END = 1996, 2024
 
-# The shortest window either sweep fits. Below five years an OLS through ~90
-# positions is describing a storm cycle, not a trend.
+# The shortest window either sweep fits
 MIN_WINDOW_YEARS = 5
 
-# EIGHT EVENLY SPACED DOMAINS (Hannah, 2026-09-23). The 90 domains run south
-# (1, Cape Point) to north (90, Pea Island); these are every 12th or 13th,
-# both ends included. Not chosen for behaviour -- an even spread has no
-# selection argument to defend, and the alongshore gradient is covered.
+# EIGHT EVENLY SPACED DOMAINS (Hannah, 2026-09-23)
 SITE_DOMAINS = [1, 13, 26, 38, 51, 64, 77, 90]
 
-# ONE LITERAL TRANSECT PER SITE, not the domain mean (Hannah, 2026-09-23):
-# the noisiest case, and so an upper bound on how long convergence takes. The
-# transect is the MIDDLE one of its domain by alongshore order -- a centroid
-# proxy that needs no geometry, and each domain holds 9-13 transects.
+# ONE LITERAL TRANSECT PER SITE, not the domain mean (Hannah, 2026-09-23)
 MIN_OBS = 10                # a window with fewer positions gets no fit
 
 ABS_TOL_M_YR = 0.25         # the "abs" band
 REL_TOL = 0.20              # the "rel" band, as a fraction of the reference
 
-# SEVEN TOLERANCES, AND NONE OF THEM IS THE ANSWER (Hannah, 2026-09-23, on
-# being shown how strict the first three were: "would it be possible to make it
-# more forgiving so it is not an exact match but is close?").
-#
-# The first three ask a window to land inside a band set by the REFERENCE, and
-# the reference is the most precise fit in the record -- a median 95% half-width
-# of 0.151 m/yr over 906 transects. A 15-year window is itself uncertain to
-# about 0.44 m/yr, so those three judge an imprecise estimate as though it were
-# as precise as the thing it is being compared to. That asymmetry, not the
-# shoreline, is why almost nothing passed them.
-#
-# `overlap` is the principled loosening and the one to reach for first: a window
-# passes when its OWN 95% interval reaches the reference's, i.e. when the two
-# fits are not statistically distinguishable. It is a FUNNEL, not a band -- wide
-# where the record is short and narrowing onto the reference -- which is exactly
-# the shape the question deserves and the reason it cannot be expressed as a
-# number. The rest are arbitrary widths, stated openly as such so the answer's
-# sensitivity to the choice is on the page rather than in a decision no one
-# wrote down.
-#
-# ONE THAT WAS TRIED AND REJECTED: the nested-sample standard error,
-# sqrt(u_window^2 - u_ref^2), the Hausman variance of the difference between an
-# efficient estimator and a less efficient one. It is correct for nested windows
-# and more forgiving where the record is short -- but its band COLLAPSES TO ZERO
-# as the window approaches the full record, and "stable entry" is decided at the
-# long end, so it comes out STRICTER than everything here (1996-2024 in both
-# directions). Kept in this comment because a plausible-sounding statistic that
-# fails for a structural reason is worth one paragraph.
-#
-# Each entry: (tag, label for figures and prose, test(diff, unc_window,
-# unc_ref, ref_lrr) -> bool array).
+# SEVEN TOLERANCES, AND NONE OF THEM IS THE ANSWER (Hannah, 2026-09-23
 CRITERIA = [
     ("ci", "the reference fit's 95% band",
      lambda d, uw, ur, ref: np.abs(d) <= ur),
@@ -238,57 +76,23 @@ CRITERION_LABEL = dict((tag, label) for tag, label, _ in CRITERIA)
 # The five Hannah asked to see side by side, in the order they loosen.
 HEADLINE_TAGS = ["ci", "ci3x", "abs50", "overlap", "abs100"]
 
-# THE ONE THE PRODUCT ANSWERS WITH (Hannah, 2026-09-23). Every other tolerance
-# is still scored and tabled; this is the one the figures draw, the panel
-# titles name and the READMEs lead with.
-#
-# CI overlap, because it is the only criterion here that is not a number
-# somebody chose. It asks whether a window's rate is STATISTICALLY
-# DISTINGUISHABLE from the long-term rate -- the two 95% intervals meet -- so a
-# five-year fit is judged against what a five-year fit can actually resolve
-# (+/-1.8 m/yr) and a twenty-five-year fit against what that can (+/-0.2). The
-# strict bands ask both to land inside +/-0.15, which is the reference's own
-# precision and no one else's.
-#
-# It is worth knowing it barely changes the answer: the island median moves
-# from 27 to 26 years forward and 25 to 22 backward. That is the finding, not a
-# disappointment -- the windows disagree because the shoreline changed, not
-# because the fits were noisy, so no defensible loosening rescues a 15-year
-# window. The strict bands stay in the tables so that claim can be checked.
+# THE ONE THE PRODUCT ANSWERS WITH (Hannah, 2026-09-23)
 HEADLINE_TAG = "overlap"
 HEADLINE_LABEL = "CI overlap"
 
-# THE MARKED YEAR, and it is the same number in both directions because in
-# both it names a real model window: forward it is the end of 1996-2010, the
-# window the model is graded on; backward it is the start of 2010-2024, the
-# second leg of the canonical chain. See [[cascade-canonical-periods]].
+# THE MARKED YEAR, and it is the same number in both directions because in both it names a real model window
 MARKED_YEAR = 2010
 
-# THE FIGURES DO NOT SINGLE OUT THE MODEL WINDOW for now (Hannah, 2026-09-29):
-# she is choosing which window to use, so nothing is drawn in amber -- no
-# 15-year line on the years-needed figure, no amber fit or dashed continuation
-# on the eight-site figure; the marked window is drawn like any other. The
-# tables and README text still score it. Set True to bring the highlight back.
+# THE FIGURES DO NOT SINGLE OUT THE MODEL WINDOW for now (Hannah, 2026-09-29)
 HIGHLIGHT_MODEL_WINDOW = False
 
-# SIX WINDOWS ARE DRAWN, NOT TWENTY-FIVE (Hannah, 2026-09-23: "too many lines
-# to distinguish anything"). The sweep still FITS every window -- the tables
-# carry all of them -- but a panel that draws them all is a smear in which the
-# two that matter, the marked window and the reference, are lost among
-# twenty-three that differ from their neighbour by one year of record.
+# SIX WINDOWS ARE DRAWN, NOT TWENTY-FIVE (Hannah, 2026-09-23
 DRAWN_YEARS = [2000, 2005, 2010, 2015, 2020, 2024]
+# -----------------------------------------------------------------------------
 
 
+# The nested family, SHORTEST FIRST, so the reference is always last
 def windows_for(direction):
-    """The nested family, SHORTEST FIRST, so the reference is always last.
-
-    Sorting by length rather than by year is what lets one convergence walk
-    serve both directions: "stable entry" always means "the shortest window
-    after which every longer one is also inside the band".
-
-    Returns [(start, end, moving_year), ...]. The moving year is the end that
-    is not pinned -- the end year going forward, the start year going back.
-    """
     if direction == "forward":
         years = range(REF_START + MIN_WINDOW_YEARS - 1, REF_END + 1)
         return [(REF_START, y, y) for y in years]
@@ -298,40 +102,35 @@ def windows_for(direction):
     raise ValueError("direction is 'forward' or 'backward', not {0!r}".format(direction))
 
 
+# The fixed end of the windows in a direction
 def pinned_year(direction):
     return REF_START if direction == "forward" else REF_END
 
 
+# `1996-2010` going forward, `2010-2024` going back
 def window_label(direction, moving_year):
-    """`1996-2010` going forward, `2010-2024` going back.
-
-    The year is rounded because callers pass medians as well as single
-    windows, and a median over 906 transects arrives as 2022.0 -- which then
-    printed "1996-2022.0" into a README (found 2026-09-23).
-    """
     year = int(round(float(moving_year)))
     if direction == "forward":
         return "{0}–{1}".format(REF_START, year)
     return "{0}–{1}".format(year, REF_END)
 
 
+# The x-axis label for a direction
 def moving_axis_label(direction):
     if direction == "forward":
         return "window END year  (every window starts {0})".format(REF_START)
     return "window START year  (every window ends {0})".format(REF_END)
 
 
-# ============================================================
-# THE SWEEP
-# ============================================================
+# The sweep
 
+# The transect-to-domain table, from the 2-transect-frame resolver
 def load_lookup():
-    """The transect-to-domain table, from the 2-transect-frame resolver."""
     return pd.read_csv(obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
 
 
+# The middle transect of each domain, by alongshore (sorted id) order
 def pick_transects(domains):
-    """The middle transect of each domain, by alongshore (sorted id) order."""
     lookup = load_lookup()
     picks = []
     for d in domains:
@@ -345,16 +144,16 @@ def pick_transects(domains):
     return picks
 
 
+# Every transect in the lookup that has a domain, alongshore order
 def all_transects():
-    """Every transect in the lookup that has a domain, alongshore order."""
     lookup = load_lookup().dropna(subset=["domain_number"])
     lookup = lookup.sort_values(["domain_number", "transect_id"])
     return [(int(r.domain_number), r.transect_id)
             for r in lookup.itertuples(index=False)]
 
 
+# `usa_NC_0034_0054` -> its CSV under coastsat_timeseries/
 def timeseries_path(transect_id):
-    """`usa_NC_0034_0054` -> its CSV under coastsat_timeseries/."""
     site = transect_id.rsplit("_", 1)[0]
     path = obs.COASTSAT_TIMESERIES / "{0}_timeseries".format(site) / "{0}.csv".format(transect_id)
     if not path.is_file():
@@ -363,20 +162,10 @@ def timeseries_path(transect_id):
     return path
 
 
+# Every window of one family for one transect, as a list of row dicts
 def sweep_one(transect_id, domain, windows):
-    """Every window of one family for one transect, as a list of row dicts.
-
-    The series is loaded and sorted once and each window is a SLICE of it, so
-    a 906-transect run is a couple of minutes rather than an afternoon.
-    `compute_lrr` still does every fit, so the estimator is the target's.
-
-    The reference row (the longest window) is fitted in the same loop as the
-    rest, so it cannot disagree with them.
-    """
     df = cl.load_timeseries(str(timeseries_path(transect_id)))
-    # Dropped to naive UTC purely so searchsorted has a datetime64 array to
-    # bisect: a tz-aware column comes back as objects and compares against
-    # nothing. The column itself, which compute_lrr reads, stays tz-aware.
+    # Dropped to naive UTC purely so searchsorted has a datetime64 array to bisect
     dates = df["date"].dt.tz_localize(None).to_numpy()
     rows = []
     for start, end, moving in windows:
@@ -390,19 +179,14 @@ def sweep_one(transect_id, domain, windows):
             intercept = np.nan
         else:
             res = cl.compute_lrr(clipped)
-            # The intercept the slope implies, so the straight line can be
-            # DRAWN without a second fit disagreeing with the stored one. x is
-            # years since the window's FIRST observation, as compute_lrr sets it.
+            # The intercept the slope implies, so the drawn line matches the stored fit
             t0 = clipped["date"].min()
             x = (clipped["date"] - t0).dt.total_seconds().to_numpy() / (86400.0 * 365.25)
             intercept = float(clipped["chainage_m"].to_numpy().mean()
                               - res["lrr_m_yr"] * x.mean())
         rows.append({
             "domain_number": domain,
-            # The UNIT the sweep is about. A transect names itself; a domain
-            # mean names its domain. Everything downstream -- scoring, the
-            # convergence walk, the figures -- keys on this, so the same code
-            # serves a transect and a 10-transect mean without a branch.
+            # The unit the sweep is about: a transect or a domain mean
             "unit_id": transect_id,
             "transect_id": transect_id,
             "start_year": start,
@@ -422,12 +206,8 @@ def sweep_one(transect_id, domain, windows):
     return rows
 
 
+# Add the reference, the difference and the three in-band flags in place
 def score(rows):
-    """Add the reference, the difference and the three in-band flags in place.
-
-    The reference is the LAST row -- the longest window of the family, which
-    is 1996-2024 in either direction.
-    """
     ref = rows[-1]
     ref_lrr, ref_unc = ref["lrr_m_yr"], ref["unc_m_yr"]
     for r in rows:
@@ -444,15 +224,8 @@ def score(rows):
     return rows
 
 
+# (first entry, stable entry) for one transect under one flag
 def convergence_entry(sub, flag):
-    """(first entry, stable entry) for one transect under one flag.
-
-    `sub` is ordered SHORTEST WINDOW FIRST. First entry is the shortest window
-    inside the band. Stable entry is the shortest window after which every
-    longer one is also inside -- the convergence window. Both are reported as
-    the MOVING year, so forward gives an end year and backward a start year.
-    The longest window is always inside (it IS the reference), so both exist.
-    """
     moving = sub["moving_year"].to_numpy()
     inside = sub[flag].to_numpy(dtype=bool)
     first = int(moving[inside][0]) if inside.any() else None
@@ -464,8 +237,8 @@ def convergence_entry(sub, flag):
     return first, stable
 
 
+# One row per transect
 def summarise(sweep, direction):
-    """One row per transect: reference, the marked window, the entries."""
     out = []
     for (domain, tid), sub in sweep.groupby(["domain_number", "unit_id"], sort=False):
         sub = sub.sort_values("n_years")
@@ -502,12 +275,8 @@ def summarise(sweep, direction):
     return pd.DataFrame(out)
 
 
+# One row per GIS domain
 def summarise_domains(summary):
-    """One row per GIS domain: the median and spread across its transects.
-
-    The median, not the mean: a single transect that never settles would drag
-    a mean to the end of the record and say the whole domain did.
-    """
     g = summary.groupby("domain_number")
     out = pd.DataFrame({
         "n_transects": g.size(),
@@ -525,8 +294,8 @@ def summarise_domains(summary):
     return out.reset_index()
 
 
+# The sweep over a list of (domain, transect_id), as one DataFrame
 def run_sweep(picks, windows, announce=False):
-    """The sweep over a list of (domain, transect_id), as one DataFrame."""
     rows = []
     for i, (domain, tid) in enumerate(picks, start=1):
         site_rows = score(sweep_one(tid, domain, windows))
@@ -541,29 +310,8 @@ def run_sweep(picks, windows, announce=False):
     return pd.DataFrame(rows)
 
 
+# The transect sweep aggregated to the model's own unit
 def domain_mean_sweep(sweep):
-    """The transect sweep aggregated to the model's own unit: the domain MEAN.
-
-    WHY A MEAN OF SLOPES, NOT A FIT THROUGH POOLED POSITIONS. This has to be
-    the same construction as the grading target, and `coastsat_domain_lrr.py`
-    builds that by fitting each transect and averaging the slopes. Pooling the
-    positions first would be a different number, because each transect's
-    chainage sits on its own arbitrary origin.
-
-    No refitting happens here. Every window of every transect is already in
-    `sweep`; this is a groupby.
-
-    TWO UNCERTAINTIES, and the honest one is the wider. `unc_m_yr` is the MEAN
-    of the transects' 95% half-widths -- the typical fit uncertainty in the
-    domain. `unc_if_independent_m_yr` is what the half-width of the mean would
-    be if the ~10 transects were independent samples, which they are not:
-    they are 10-metre-spaced views of the same shoreline and move together.
-    Propagating as if they were would divide the band by about sqrt(10) and
-    manufacture a much later convergence window out of an assumption. The
-    scoring uses the mean, which is conservative -- it makes convergence look
-    EARLIER, not later -- and the independent figure is carried as a column so
-    the size of that choice is visible rather than buried.
-    """
     keys = ["domain_number", "start_year", "end_year", "moving_year",
             "n_years", "window"]
     g = sweep.groupby(keys, sort=True)
@@ -587,41 +335,24 @@ def domain_mean_sweep(sweep):
     return out.sort_values(["domain_number", "n_years"]).reset_index(drop=True)
 
 
+# Score every unit of a frame, unit by unit, shortest window first
 def score_units(frame):
-    """Score every unit of a frame, unit by unit, shortest window first."""
     rows = []
     for _, sub in frame.groupby("unit_id", sort=False):
         rows.extend(score(sub.sort_values("n_years").to_dict("records")))
     return pd.DataFrame(rows)
 
 
-# ============================================================
-# THE FIGURES -- the eight sites
-# ============================================================
+# The figures -- the eight sites
 
+# The year-by-year median position
 def _annual_median(series):
-    """The year-by-year median position: the trajectory under the scatter.
-
-    A CoastSat transect gets ~18 positions a year and their spread is tens of
-    metres, so the raw cloud hides the very shape the fits are arguing about.
-    The median is per CALENDAR year, matching the window convention.
-    """
     by_year = series.groupby(series["date"].dt.year)["chainage_m"].median()
     return by_year.index.to_numpy(), by_year.to_numpy()
 
 
+# The record itself
 def draw_fits(sweep, summary, out_dir, direction):
-    """The record itself: position against time, with six windows' fits.
-
-    The companion to the error figure, and the thing it is derived FROM. y is
-    shoreline position in metres, x is time across the whole record; each
-    straight line is one nested window's OLS drawn over the span it was fitted
-    on, so the spread between them IS the disagreement the sweep measures.
-
-    Going forward the marked window is also continued as a DASHED line to the
-    end of the record: not a claim about the future, but the plainest way to
-    see what the marked window's record would have had you believe about 2024.
-    """
     fs.apply_style()
     sites = list(summary.itertuples(index=False))
     nrow, ncol = 4, 2
@@ -630,9 +361,7 @@ def draw_fits(sweep, summary, out_dir, direction):
     flat = axes.ravel()
     ramp = LinearSegmentedColormap.from_list("windows", list(fs.SMOOTH_RAMP))
     moving_all = sorted(sweep["moving_year"].unique())
-    # The reference is always drawn. Its moving year is REF_END going forward
-    # but REF_START going back, which DRAWN_YEARS does not hold, so until
-    # 2026-09-29 the backward figure listed the reference and never drew it.
+    # The reference is always drawn, in either direction
     ref_moving = REF_END if direction == "forward" else REF_START
     drawn = sorted(set(y for y in DRAWN_YEARS if y in moving_all) | {ref_moving})
     x0 = pd.Timestamp("{0}-01-01".format(REF_START), tz="UTC")
@@ -773,10 +502,8 @@ def draw_fits(sweep, summary, out_dir, direction):
     return paths[0]
 
 
+# Each transect's x on the domain axis
 def alongshore_x(picks):
-    """Each transect's x on the domain axis: its domain, with the domain's
-    transects spread evenly across [d - 0.5, d + 0.5] in alongshore order, so
-    906 transects and the village bands share one axis."""
     frame = pd.DataFrame(picks, columns=["domain_number", "transect_id"])
     rank = frame.groupby("domain_number").cumcount()
     n = frame.groupby("domain_number")["transect_id"].transform("size")
@@ -784,12 +511,7 @@ def alongshore_x(picks):
     return frame
 
 
-# THREE PLAIN THRESHOLDS, NOT SEVEN TOLERANCES (Hannah, 2026-09-29, on the old
-# figures: too many of them, an abstract "rate minus reference" axis, and
-# tolerance jargon). The figure asks one thing -- how many years of record does
-# each transect need before its rate stays within X m/yr of the 1996-2024 rate
-# -- at three values of X, in m/yr and nothing else. All seven tolerances are
-# still scored in the tables. Strictest last, so it stacks on top.
+# THREE PLAIN THRESHOLDS, NOT SEVEN TOLERANCES (Hannah, 2026-09-29, on the old figures
 YEARS_NEEDED_THRESHOLDS = [
     ("abs100", "±1.0 m/yr", "#6baed6"),
     ("abs50", "±0.5 m/yr", "#9ecae1"),
@@ -798,20 +520,10 @@ YEARS_NEEDED_THRESHOLDS = [
 YEARS_NEEDED_STEM = "years_needed_alongshore"
 
 
+# THE figure of the settling sweep
 def draw_years_needed(ref_start, ref_end):
-    """THE figure of the settling sweep: years needed, per transect, alongshore.
-
-    One panel per direction, read from the stored every-transect summaries, so
-    it can be redrawn without refitting. The three thresholds are NESTED -- a
-    rate that stays within 0.25 m/yr also stays within 0.5 -- so they stack as
-    shaded bands rather than crossing as lines. The model's 15-year window is
-    the amber line: wherever a band reaches above it, 15 years was not enough
-    at that threshold.
-    """
     fs.apply_style()
-    # x IS THE TRANSECT COUNT, 1-906 south to north (Hannah, 2026-09-29): every
-    # transect one unit wide, nothing stretched to fit a domain. The domains
-    # are only labels, on a second axis under panel (b).
+    # X IS THE TRANSECT COUNT, 1-906 south to north (Hannah, 2026-09-29)
     order = pd.DataFrame(all_transects(), columns=["domain_number", "transect_id"])
     order["x"] = np.arange(1, len(order) + 1)
     xmap = order.set_index("transect_id")["x"]
@@ -875,8 +587,7 @@ def draw_years_needed(ref_start, ref_end):
                   else "Windows ending {0} (the start moves earlier)".format(ref_end))
     axes[-1].set_xlabel("transect (1–{0}, south → north)".format(n_tr))
     axes[-1].set_xticks([1] + list(range(100, n_tr + 1, 100)))
-    # GIS domain labels under the transect axis: piecewise-linear between the
-    # domains' centre transects, so each label sits over its own transects.
+    # GIS domain labels under the transect axis
     dom = axes[-1].secondary_xaxis(
         -0.28, functions=(
             lambda x: np.interp(x, centre.to_numpy(), centre.index.to_numpy(float)),
@@ -947,9 +658,7 @@ size of the choice is visible.
 """
 
 
-# ============================================================
 # READMEs
-# ============================================================
 
 DIRECTION_README = """# {folder} — {headline}
 
@@ -1097,8 +806,8 @@ report that the whole domain behaved that way.
 """
 
 
+# The bullets a README carries, written from the run's own numbers
 def findings_text(summary, direction, scale="sites"):
-    """The bullets a README carries, written from the run's own numbers."""
     lines = []
     med_ci = summary["years_needed_" + HEADLINE_TAG].median()
     lo = summary["years_needed_" + HEADLINE_TAG].min()
@@ -1133,8 +842,7 @@ def findings_text(summary, direction, scale="sites"):
         .format(flips, n, unit, 100.0 * flips / n,
                 window_label(direction, MARKED_YEAR)))
     worst = summary.loc[summary["diff_marked_m_yr"].abs().idxmax()]
-    # The transect id only adds something when the unit IS a transect: at the
-    # domain scale it is "GIS 36 mean" beside "GIS 36", which reads as a typo.
+    # The transect id only adds something when the unit IS a transect
     named = ("GIS {0:.0f}".format(worst["domain_number"]) if scale == "domains"
              else "GIS {0:.0f} ({1})".format(worst["domain_number"],
                                              worst["transect_id"]))
@@ -1162,16 +870,8 @@ DIRECTION_TEXT = {
 }
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run and write one direction at whatever scales were asked for
 def one_direction(direction, domains_for_sites, scale, today):
-    """Run and write one direction at whatever scales were asked for.
-
-    The transect sweep is run ONCE and serves both the all_transects product
-    and the domain means, which are a groupby of it rather than a refit.
-    """
     windows = windows_for(direction)
     root = obs.window_convergence_dir(direction, pinned_year(direction),
                                       REF_START, REF_END)
@@ -1275,6 +975,7 @@ def one_direction(direction, domains_for_sites, scale, today):
     return headline
 
 
+# Run: the sweeps, the convergence walk, the figures
 def main(argv=None):
     global ABS_TOL_M_YR, REL_TOL, REF_START, REF_END
 
