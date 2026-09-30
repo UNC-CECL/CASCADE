@@ -344,7 +344,7 @@ They size the declined fit; they are not a current score.
 
 # Run: build the table, check the figures, write the export
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--check", action="store_true",
                         help="report what would be written, write nothing")
     parser.add_argument("--allow-stale", action="store_true",
