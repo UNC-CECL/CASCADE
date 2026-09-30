@@ -1,22 +1,11 @@
-"""Adds lrr_m_yr / lrr_r2 to run rate CSVs written before the LRR estimator.
+"""
+Add lrr_m_yr and lrr_r2 to run rate CSVs written before the LRR estimator existed.
 
-WHY THIS EXISTS RATHER THAN A RE-RUN. Every finished run already carries the
-whole trajectory it was scored from: `*_shoreline_matrix.npy` is the
-[state x padded domain] array that `compute_change_rate` reduced to a single
-column. The LRR is a second reduction of that same array, so it can be
-recovered exactly -- bit for bit identical to what the run would have written
-had the estimator existed at the time -- without re-simulating anything.
+    python scripts/input_prep/7-source-sink/1-prepare/backfill_run_lrr.py
+    python scripts/input_prep/7-source-sink/1-prepare/backfill_run_lrr.py --check
 
-It is a backfill and not a fix: `change_rate_m_yr` is left exactly as the run
-wrote it, and this script refuses to touch a CSV whose endpoint column does
-not reproduce from the matrix. If those two disagree, the CSV and the matrix
-came from different runs, and guessing which one is authoritative is not this
-script's job.
-
-Usage:
-    python scripts/input_prep/7-source-sink/1-prepare/backfill_run_lrr.py [--check]
-
-    --check  report what would change and write nothing.
+Recomputes from each finished run's saved trajectory; --check reports
+without writing. Details: scripts/input_prep/7-source-sink/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -39,31 +28,16 @@ from cascade_pipeline.run_layout import resolve  # noqa: E402
 from cascade_pipeline.shoreline import compute_change_rate, compute_lrr  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = _REPO_ROOT / "output" / "raw_runs"
 
-# The endpoint column must reproduce from the matrix to this tolerance for the
-# pair to count as the same run. Both sides are float64 reductions of the same
-# array, so the only expected difference is CSV round-tripping.
+# The endpoint column must reproduce from the matrix to this tolerance for the pair to count as the same run
 ENDPOINT_TOLERANCE_M_YR = 1e-9
+# -----------------------------------------------------------------------------
 
 
+# Every (rate_csv, shoreline_matrix) pair under a raw-runs tree
 def find_pairs(root=RAW_RUNS):
-    """Every (rate_csv, shoreline_matrix) pair under a raw-runs tree.
-
-    Runs are DISCOVERED by their metadata file, not by the rate CSV. The rate
-    CSV moved into the run folder's tables/ subfolder and dropped the run-name
-    prefix, so a `*_shoreline_change_rate.csv` glob no longer finds a migrated
-    run; the metadata file stays at the run root with its prefix, and
-    run_layout.resolve then finds the CSV and the matrix in whichever layout
-    the folder is in.
-
-    Args:
-        root: Directory to walk. Period and preset nesting is not assumed --
-            the files are matched by belonging to the same run folder.
-
-    Returns:
-        A list of (csv_path, npy_path) tuples, sorted by run directory.
-    """
     pairs = []
     for meta_path in sorted(root.rglob("*_run_metadata.json")):
         run_dir = meta_path.parent
@@ -79,19 +53,8 @@ def find_pairs(root=RAW_RUNS):
     return pairs
 
 
+# Recomputes one run's LRR columns from its shoreline matrix
 def backfill_one(csv_path, npy_path, geometry=HATTERAS_DOMAINS, check=False):
-    """Recomputes one run's LRR columns from its shoreline matrix.
-
-    Args:
-        csv_path: The run's `*_shoreline_change_rate.csv`.
-        npy_path: The run's `*_shoreline_matrix.npy`.
-        geometry: DomainGeometry, for the real-domain slice.
-        check: Report only; do not write.
-
-    Returns:
-        A status string: "written", "would write", "already", or a reason the
-        run was left alone.
-    """
     frame = pd.read_csv(csv_path)
     matrix = np.load(npy_path)
     span = matrix.shape[0] - 1
@@ -120,6 +83,7 @@ def backfill_one(csv_path, npy_path, geometry=HATTERAS_DOMAINS, check=False):
     return "written"
 
 
+# Run: every run missing the columns, or report with --check
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
@@ -136,8 +100,7 @@ def main():
         status = backfill_one(csv_path, npy_path, check=args.check)
         tally[status.split()[0]] = tally.get(status.split()[0], 0) + 1
         flag = "  " if status in ("written", "would write", "already") else "! "
-        # The matrix stays at the run root in both layouts, so its parent is
-        # the run folder; the CSV's parent is tables/ once migrated.
+        # The matrix stays at the run root in both layouts, so its parent is the run folder
         print(f"{flag}{npy_path.parent.name:58s} {status}")
 
     print("\n" + "  ".join(f"{k}={v}" for k, v in sorted(tally.items())))

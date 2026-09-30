@@ -1,59 +1,10 @@
 #!/usr/bin/env python3
-"""Did the source/sink calibration converge, and was its zone set fixed in advance?
+"""
+Did the source/sink calibration converge, and was its zone set fixed in advance?
 
-Those are the two questions a reader has to be able to answer, because the
-calibration is a FIXED-POINT SOLVE rather than a closed-form one. Where it
-stopped is a scientific claim -- "this is the model's limit" -- and a stopping
-point is only meaningful if the sequence was contracting and the target was not
-moving while it ran.
+    python scripts/input_prep/7-source-sink/3-figures/plot_be_convergence.py
 
-WHY ITERATE AT ALL
-    The ordinary calibration measures the residual of a base run and imposes it
-    as the background-erosion field, which assumes that giving a domain X m/yr
-    moves that domain's shoreline rate by X m/yr. It does not: BRIE diffuses an
-    imposed rate alongshore and the domain keeps only a fraction of it. Measured
-    here, one pass closes 42% of the misfit in period 1 and 57% in period 2 --
-    so a one-shot residual mixes "the model cannot reproduce this" with "the
-    correction was only half applied", and no reader can separate them.
-    Iterating removes the second, leaving a residual that means one thing.
-
-    Iterating also needs no estimate of the surviving fraction g, which matters
-    because g is not a constant: a contiguous same-signed block of corrections
-    passes at ~0.8-1.2 while a pattern alternating at the grid scale is damped
-    to ~0.1. Dividing by g instead would amplify narrow features roughly tenfold
-    into rates that are indefensible read as sediment fluxes.
-
-WHY THE ZONES ARE FROZEN, AND WHY THE LEFT PANEL SHOWS THE RUN THAT SCORED
-BETTER
-    Zone membership is the scientific step: it says this stretch of coast has a
-    real sediment-budget deficit and here is the process. Magnitude is
-    arithmetic. Iterating both lets the arithmetic rewrite the science, because
-    each pass re-derives zones from a NEW residual -- so as coherent features
-    are satisfied, less coherent ones cross the threshold. And since adding BE
-    at a domain pushes sediment into its neighbours, later passes partly correct
-    the spillover of earlier ones, which never terminates.
-
-    The unmasked run is drawn because it scored BETTER (dashed, right of the
-    converged points). Hiding it would be the wrong kind of tidy: the gap is the
-    fit available only by correcting outside justifiable zones, and the argument
-    for this calibration is that the gap was declined deliberately, which the
-    reader can only weigh by seeing its size.
-
-WHAT THE RIGHT PANEL IS FOR
-    To show the zone set was fixed BEFORE the iteration ran, not grown to fit.
-    D5-D7 are marked separately: they are the groin's own footprint, reserved so
-    the source/sink field cannot absorb the groin's shortfall and double-count
-    against the M/f fit. D6 carries the largest residual in both periods and is
-    deliberately never corrected.
-
-Usage:
-    python 3-figures/plot_be_convergence.py
-
-Reads  2-calibrate/1984_2004__2004_2024/convergence_history.json, and the live FROZEN_ZONE_DOMAINS /
-       GROIN_RESERVED_DOMAINS / HATTERAS_BE_RATES_CALIBRATED, so the figure
-       cannot drift from the calibration it documents.
-Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/2-method/fig_be_convergence.png (and the
-       PDF beside it); the caption is written to CAPTIONS.md in that folder.
+The residual per pass for both periods, from the calibration history. Details: scripts/input_prep/7-source-sink/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -75,12 +26,11 @@ PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exist
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 from site_layer import hat_source_sink as _be  # noqa: E402
 
-# Reads and writes the data tree, where the fit now puts its products: the
-# default pair's folder (resolved by hat_source_sink.py since 2026-09-18).
+# --- CONFIG ------------------------------------------------------------------
+# Reads and writes the data tree, where the fit now puts its products
 OUTPUT_DIR = _be.calibrate_dir()
 HISTORY = OUTPUT_DIR / "convergence_history.json"
-# The figure belongs with the rest of the section 7 figures, in the data tree;
-# the iteration's own record stays beside the calibration that wrote it.
+# The figure belongs with the rest of the section 7 figures, in the data tree
 FIG_DIR = _be.figures_dir()
 
 from site_layer.hat_figure_style import (                                   # noqa: E402
@@ -91,15 +41,11 @@ PERIOD_LABEL = {"1984_2004": "1984–2004", "2004_2024": "2004–2024"}
 PERIOD_KEY = {"1984_2004": 1984, "2004_2024": 2004}
 # The earlier period is the red of the house vintage pair, the later the blue.
 COLOUR = {"1984_2004": C_1984, "2004_2024": C_1997}
+# -----------------------------------------------------------------------------
 
 
+# The live constants, imported rather than copied
 def load_calibration():
-    """The live constants, imported rather than copied.
-
-    A figure that hardcodes the zone set would keep rendering happily after
-    someone edited the calibration, which is the failure mode this exists to
-    guard against.
-    """
     spec = importlib.util.spec_from_file_location(
         "_lowess_analysis",
         _HERE.parent.parent / "2-calibrate" / "be_zone_residual_fit.py")
@@ -109,6 +55,7 @@ def load_calibration():
     return module.FROZEN_ZONE_DOMAINS, module.GROIN_RESERVED_DOMAINS, rates
 
 
+# Run: the convergence figure
 def main():
     import matplotlib
     matplotlib.use("Agg")
@@ -126,7 +73,7 @@ def main():
         1, 2, figsize=figsize("double", aspect=0.46),
         constrained_layout=True, gridspec_kw=dict(width_ratios=[1, 1.45]))
 
-    # ---- LEFT: the convergence sequence ---------------------------------
+    # Left: the convergence sequence
     for period in periods:
         colour = COLOUR[period]
         passes = history["passes"][period]
@@ -135,14 +82,11 @@ def main():
 
         left.plot(x, y, marker="o", markersize=4.5, color=colour, linewidth=1.6,
                   zorder=5, label=PERIOD_LABEL[period])
-        # Labels sit at SEGMENT MIDPOINTS, not on the markers. A gain belongs to
-        # the step, not the endpoint, and at the markers the two periods' labels
-        # collided with each other and with the lines.
+        # Labels sit at SEGMENT MIDPOINTS, not on the markers
         for step in range(1, len(x)):
             xm = (x[step - 1] + x[step]) / 2.0
             ym = (y[step - 1] + y[step]) / 2.0
-            # The earlier period runs BELOW its line and the later one above,
-            # so the two sets of gains cannot meet in the middle.
+            # The earlier period runs BELOW its line and the later one above
             dy = -15 if period == periods[0] else 11
             left.annotate(f"{passes[step]['gain_pct']:.1f}%",
                           xy=(xm, ym), xytext=(0, dy),
@@ -163,9 +107,7 @@ def main():
     left.set_ylabel("shoreline-rate RMSE against the\nCoastSat target, D2\u2013D89 (m/yr)")
     left.set_xticks(sorted({p["pass"] for pp in history["passes"].values()
                             for p in pp}))
-    # Scaled to the SEQUENCE. edgeBE and zeroBE are 2-4x these values and drawing
-    # them as lines squashed the whole iteration into the bottom fifth of the
-    # panel, which defeats the point of the figure; they are in the caption.
+    # Scaled to the sequence; edgeBE and zeroBE are in the caption
     left.set_ylim(0.44, 0.82)
     left.grid(axis="y")
     open_frame(left)
@@ -177,7 +119,7 @@ def main():
                markeredgewidth=1.6, label="zone set not imposed")]
     left.legend(handles=handles, loc="upper right", frameon=False, fontsize=7)
 
-    # ---- RIGHT: the frozen zone set --------------------------------------
+    # Right: the frozen zone set
     for row, period in enumerate(periods):
         gis = PERIOD_KEY[period]
         members = set(frozen[gis])

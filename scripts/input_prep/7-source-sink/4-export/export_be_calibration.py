@@ -1,47 +1,12 @@
 #!/usr/bin/env python3
-"""Export the converged source/sink field to data/hatteras_init/7-source-sink.
+"""
+Export the converged source/sink field to data/hatteras_init/7-source-sink, with a README.
 
-WHY THIS EXISTS
-    `hatteras_site_config.py` is the source of truth -- it is what the runs
-    import -- but it is a Python module in the scripts tree, which is a poor
-    place to look for "what were the calibrated values". The data directory
-    already held per-period copies, and they had drifted: written 2026-06-15,
-    they carry GIS 1 = -40 against the current -41.8, zeros across D2-D11 that
-    are now +1.4 to +2.6, and the 2004 file was truncated mid-dict. The config
-    itself carries a comment warning readers not to trust them.
+    python scripts/input_prep/7-source-sink/4-export/export_be_calibration.py
+    python scripts/input_prep/7-source-sink/4-export/export_be_calibration.py --check
 
-    So this regenerates them FROM the config rather than alongside it, and adds
-    the context a bare dict cannot carry: which domains were eligible to be
-    corrected at all, which were withheld and why, and how much of each final
-    value came from the one-shot solve versus the iteration.
-
-WHAT IT WRITES (paths from site_layer/hat_source_sink.py since 2026-09-18)
-    4-export/be_rates_<period>.py        the dict, same shape as the files
-                                         it replaces
-    4-export/be_calibration_domains.csv  one row per domain: zone,
-                                         eligibility, the pass-0 and final
-                                         rate, what the iteration added,
-                                         and the residual still standing
-    README.md                            at the top of 7-source-sink/:
-                                         provenance, and the caveats that
-                                         matter
-
-    It READS the default pair's 2-calibrate/1984_2004__2004_2024/ and
-    3-figures/1984_2004__2004_2024/. The figures are written straight there
-    by stage 3, so the data directory is self-contained -- someone handed
-    just this folder can see what was done, not only what came out.
-
-    convergence_history.json is NOT copied up. It lives once, in the pair's
-    2-calibrate/ folder, beside the calibration that wrote it -- a second
-    byte-identical copy at the top level gave one fact two owners, and the
-    two would drift the first time a pass was re-run without re-exporting.
-
-    The superseded 2026-06-15 files are MOVED to archive/superseded_<date>/
-    rather than deleted -- they are what earlier runs were built against, so
-    they are history, not clutter.
-
-Usage:
-    python scripts/input_prep/7-source-sink/4-export/export_be_calibration.py [--check]
+The field per period, pass-0 and iteration columns, and a staleness check
+of the figures; --check reports without writing. Details: scripts/input_prep/7-source-sink/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -60,16 +25,8 @@ import shutil
 import sys
 
 
+# Stop a console encoding from killing a finished export
 def _never_die_on_a_print():
-    """Stop a console encoding from killing a finished export.
-
-    This file prints en- and em-dashes, which a Windows cp1252 console cannot
-    encode, so `print` raises UnicodeEncodeError. Its sibling
-    be_zone_residual_fit.py lost a completed calibration to exactly that
-    on 2026-08-28 -- the crash landed between computing the numbers and
-    writing them out. Reconfigure rather than ASCII-ify, so the next dash
-    someone types cannot reintroduce it.
-    """
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")
@@ -93,36 +50,20 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 
 from site_layer import hat_source_sink as _be  # noqa: E402
 
-# Resolved by hat_source_sink.py since 2026-09-18. The README stays at the
-# top of 7-source-sink/; the exported field goes to 4-export/, the step that
-# writes it; the calibration and figures read are the DEFAULT pair's folders.
+# --- CONFIG ------------------------------------------------------------------
+# Resolved by hat_source_sink.py since 2026-09-18
 DATA_DIR = _be.BE_ROOT
 EXPORT_DIR = _be.EXPORT_DIR
 FIGURE_DIR = _be.figures_dir()
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-# The calibration products moved into the data tree 2026-09-12, so this
-# reads them from there rather than from beside the script that made them.
+# The calibration products moved into the data tree 2026-09-12
 CALIB_OUT = _be.calibrate_dir()
 CONFIG = PROJECT_BASE_DIR / "scripts" / "site_layer" / "hatteras_site_config.py"
 
-# WHERE THE FIGURES COME FROM (corrected 2026-09-12). This used to read them
-# out of the calibration OUTPUT directory and copy them into 3-figures/ --
-# but be_zone_residual_fit.py writes its figures straight there, and
-# the copies in the output directory were older. So the export overwrote the
-# CURRENT figures with SUPERSEDED ones, quietly, every time it ran.
-#
-# 3-figures/ is the record now, and the staleness check below reads the same
-# place. The superseded copies were moved under superseded_20260825/.
+# WHERE THE FIGURES COME FROM (corrected 2026-09-12)
 FIGURE_SOURCE_IS_THE_RECORD = True
 
-# Paths RELATIVE TO the pair's figure folder (FIGURE_DIR,
-# 3-figures/1984_2004__2004_2024/), which is why each carries its subfolder.
-# The figures were grouped on 2026-09-14 by the question each answers:
-# 1-field is what the calibration produced and what it was fitted against,
-# 2-method is the evidence that the way it was produced holds up, and
-# 3-limits is what it deliberately does not do. A flat folder gave those
-# three equal weight, and the limits figure is the one most often read as a
-# calibration failure rather than a stated boundary.
+# Paths RELATIVE TO the pair's figure folder (FIGURE_DIR, 3-figures/1984_2004__2004_2024/)
 FIGURES = (
     ("2-method/fig_be_zones_and_corrections.png",
      "which domains qualified, and the correction each received"),
@@ -136,28 +77,16 @@ FIGURES = (
      "why the D5-D7 residual is left uncorrected"),
 )
 
-# The masked-iteration lineage. The unmasked attempt (backups 214732, 220039)
-# is deliberately NOT here: it was abandoned for correcting outside the
-# geomorphological zone set, and mixing its values into the record would
-# misrepresent what was shipped.
-# The one-shot solve, for the be_pass0_* / iteration_added_* split. The apply
-# step backs up BEFORE it writes, so the pass-0 field is the backup taken before
-# PASS 1 -- the file before pass 0 holds the superseded field, not this lineage.
-# Re-pointed 2026-09-14 with the corrected iteration, whose backups were kept;
-# the previous target was the retired lineage's pass-0 file and was never
-# committed, which is why these two columns exported empty.
-# This pointed at scripts/, where the backup has not been since it was filed
-# under 2-calibrate/prebe/, so the next export would have written the pass-0
-# columns empty. One definition now, shared with plot_be_zones.py
-# (2026-09-18).
+# The masked-iteration lineage: pass 0 is the backup taken before pass 1 (README)
 PASS0_BACKUP = _be.PASS0_BACKUP
 
 _ROW = re.compile(r"^\s*(\d+):\s*([+-]?\d+\.?\d*),\s*(?:#\s*(.*))?$", re.M)
 NL = chr(10)
+# -----------------------------------------------------------------------------
 
 
+# {gis
 def rates_from(path, period):
-    """{gis: (rate, label)} for one period out of a site-config file."""
     text = pathlib.Path(path).read_text(encoding="utf-8")
     block = text.split("HATTERAS_BE_RATES_CALIBRATED")[1]
     segment = block.split(f"{period}:")[1]
@@ -166,29 +95,9 @@ def rates_from(path, period):
             for m in _ROW.finditer(segment)}
 
 
+# Which of `paths` predate the newest calibBE run output
 def stale_against_runs(paths):
-    """Which of `paths` predate the newest calibBE run output.
-
-    The exporter COPIES whatever is on disk; it does not regenerate. So a
-    figure left over from before the last hindcast would be published into the
-    data directory looking exactly as authoritative as a current one. This is
-    the check that catches that -- it is the failure mode that actually
-    happened on 2026-08-25, when fig_be_convergence.png was three minutes older
-    than the run that had just been rebuilt.
-    """
-    # Depth-agnostic on purpose. This was a fixed-depth
-    # "*/calibBE/*/*_shoreline_change_rate.csv" glob, which reaches
-    # <period>/calibBE/<run>/ but NOT the <arm>/<period>/calibBE/<run>/ a run
-    # forced off the calibration wave climate is filed under. A missed run can
-    # only ever make `newest` OLDER, so the failure is the staleness check
-    # passing a figure it should have caught -- silently, and in the direction
-    # that publishes the stale file.
-    #
-    # Runs are found by their metadata file, which stays at the run folder's
-    # root under its full name; the rate CSV itself has moved into tables/ and
-    # dropped the prefix, so globbing for it would miss a migrated run -- again
-    # in the direction that publishes the stale file. run_layout.resolve reads
-    # either layout.
+    # Runs found by their metadata file, at any depth (README)
     runs = []
     for meta in RAW_RUNS.rglob("*_run_metadata.json"):
         if meta.parent.parent.name != "calibBE":
@@ -203,6 +112,7 @@ def stale_against_runs(paths):
     return [p for p in paths if p.exists() and p.stat().st_mtime < newest], newest
 
 
+# be_zone_residual_fit.py, loaded as a module for its LOWESS helpers
 def analysis_module():
     spec = importlib.util.spec_from_file_location(
         "_lowess",
@@ -212,8 +122,8 @@ def analysis_module():
     return module
 
 
+# The dict file, in the shape of the files it replaces
 def render_dict(period, rates, module):
-    """The dict file, in the shape of the files it replaces."""
     lines = [
         f"# Converged source/sink field, {period}-{period + 20}.",
         "#",
@@ -243,8 +153,8 @@ def render_dict(period, rates, module):
     return "\n".join(lines) + "\n"
 
 
+# One row per domain
 def build_table(module, final, pass0, metrics):
-    """One row per domain: eligibility, rates, what iteration added, residual."""
     rows = []
     for gis in range(1, 91):
         row = {"domain": gis,
@@ -279,14 +189,8 @@ def build_table(module, final, pass0, metrics):
     return pd.DataFrame(rows)
 
 
+# What this export could NOT carry, and why
 def caveats_block():
-    """What this export could NOT carry, and why.
-
-    Generated rather than hand-written into the README, because the README is
-    rewritten on every export and a hand-added note would vanish on the next
-    run -- which is how the file came to disagree with the config in the first
-    place.
-    """
     lines = []
     if not PASS0_BACKUP.exists():
         lines.append(
@@ -317,16 +221,14 @@ def caveats_block():
     return body + (chr(10) + chr(10)).join(lines) + chr(10)
 
 
+# The export's README
 def readme(module, table, history):
     figure_rows = "; ".join(f"`{name}` - {what}"
                             for name, what in FIGURES)
     caveats = caveats_block()
     p1 = history["passes"]["1984_2004"]
     p2 = history["passes"]["2004_2024"]
-    # Computed, not typed: these read 42/57 for the lineage retired on
-    # 2026-09-14 and were still saying so after the field had been re-derived.
-    # A number stated in prose beside the table it contradicts is worse than no
-    # number at all.
+    # Computed, not typed: a number beside the table must match it
     _edge = history["baselines"]["edgeBE"]
     closed_p1 = 100.0 * (_edge["1984_2004"] - p1[0]["rmse"]) / _edge["1984_2004"]
     closed_p2 = 100.0 * (_edge["2004_2024"] - p2[0]["rmse"]) / _edge["2004_2024"]
@@ -440,6 +342,7 @@ They size the declined fit; they are not a current score.
 {caveats}"""
 
 
+# Run: build the table, check the figures, write the export
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--check", action="store_true",
@@ -452,13 +355,7 @@ def main():
 
     module = analysis_module()
     final = {p: rates_from(CONFIG, p) for p in (1984, 2004)}
-    # THE PASS-0 FIELD IS OPTIONAL NOW (2026-09-12). It used to be required,
-    # which made this exporter unrunnable: the backup it names was never
-    # committed and is not on disk, so the two columns it feeds cannot be
-    # reconstructed. Refusing to export at all meant the VALUES stayed stale
-    # for the sake of a provenance column -- and stale values are the failure
-    # this file exists to prevent. Absent, the pass-0 and iteration-added
-    # columns are written empty and the README says why.
+    # The missing backup this file guards against: pass-0 columns then empty, README says why
     pass0 = ({p: rates_from(PASS0_BACKUP, p) for p in (1984, 2004)}
              if PASS0_BACKUP.exists() else None)
     if pass0 is None:
@@ -484,9 +381,7 @@ def main():
                   f"{moved[f'iteration_added_{tag}'].abs().mean():.3f}, "
                   f"max {moved[f'iteration_added_{tag}'].abs().max():.2f} m/yr")
 
-    # BEFORE anything is written, and before --check returns, so a dry run
-    # reports the same refusal a real one would. Checking it later left a
-    # half-finished export on disk: values written, figures not.
+    # BEFORE anything is written, and before --check returns, so a dry run reports the same refusal a real one would
     stale, newest = (([], None) if args.allow_stale
                      else stale_against_runs([FIGURE_DIR / name
                                               for name, _ in FIGURES]))
@@ -531,9 +426,7 @@ def main():
                         encoding="utf-8")
         print(f"  wrote {path.name}")
 
-    # 3-figures/ IS the record, so there is nothing to copy into it -- the
-    # analysis scripts write here directly. This block now only reports what
-    # is present, which is what the README claims.
+    # 3-figures/ is the record: this block only reports what is present
     figure_dir = FIGURE_DIR
     figure_dir.mkdir(parents=True, exist_ok=True)
     missing = [name for name, _ in FIGURES
@@ -541,19 +434,13 @@ def main():
     print(f"  3-figures/{_be.DEFAULT_PAIR_TAG}/ holds {len(FIGURES) - len(missing)} of "
           f"{len(FIGURES)} record figures")
     if missing:
-        # Named rather than skipped silently: a figure absent from the record
-        # is indistinguishable from one that was never made.
+        # Named rather than skipped silently
         print(f"    MISSING, not copied: {', '.join(missing)}")
 
     table.to_csv(EXPORT_DIR / "be_calibration_domains.csv", index=False)
     print("  wrote be_calibration_domains.csv")
 
-    # convergence_history.json is NOT copied up (dropped 2026-09-14). It lives
-    # once, in 2-calibrate/, beside the calibration that wrote it. The copy
-    # that used to sit here was byte-identical the day it was made and would
-    # have diverged the first time a pass ran without a re-export -- at which
-    # point a reader has two files with one name and no way to tell which the
-    # figures were drawn from. The README points at the one copy instead.
+    # Convergence_history.json is NOT copied up (dropped 2026-09-14)
     (DATA_DIR / "README.md").write_text(readme(module, table, history),
                                         encoding="utf-8")
     print("  wrote README.md")

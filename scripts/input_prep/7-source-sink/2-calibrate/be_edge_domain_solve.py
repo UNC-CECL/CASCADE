@@ -1,83 +1,17 @@
-# ==============================================================================
-# be_edge_domain_solve.py
-#
-# What background-erosion rate should the two LOCKED END DOMAINS carry, for one
-# hindcast period?
-#
-# WHAT THE END VALUES ARE FOR
-#   GIS 1 and GIS 90 sit on the open boundaries of the modelled reach and
-#   absorb the artefact there. They are boundary-artefact absorbers, not a
-#   sediment budget -- see the end-domain note in hatteras_site_config.py,
-#   which this script does not restate and must not contradict.
-#
-# WHY A SCRIPT
-#   The solve is a Newton iteration: run, read the residual at the two ends,
-#   step, run again. It was done by hand for 1984 and 2004, and the arithmetic
-#   between runs -- which target column, which estimator, which secant -- was
-#   carried in a person's head. Two periods were added on 2026-09-11 and both
-#   need the same solve, so the arithmetic is written down here.
-#
-#   It does NOT run the model. It reads runs that have already happened and
-#   prints the next probe, so every step stays a deliberate act.
-#
-# THE TWO TARGETS ARE DIFFERENT ESTIMATORS, DELIBERATELY
-#   GIS 1  the raw per-domain transect mean. LowessConfig.skip_southern_domains
-#          is 10, so D1-D10 are drawn raw rather than smoothed.
-#   GIS 90 the LOWESS value (TARGET_WINDOW, 7 since 2026-09-28; 10 before),
-#          which is what is drawn everywhere north of D10.
-#   That splice is what the rate-comparison figure draws, so fitting against
-#   the same table means fit and figure cannot disagree. Both come out of
-#   build_target_table, so neither is computed here.
-#
-# THE GAIN IS SMALL AND NOT CONSTANT
-#   d(LRR)/d(BE) ran 0.092 to 0.123 across the four solved cases: only about a
-#   tenth of an imposed edge rate survives in that domain's own shoreline, the
-#   rest being diffused alongshore by BRIE. So each value is roughly ten times
-#   the misfit it closes, and a single global slope should not be assumed --
-#   which is why the second step uses the LOCAL secant through two real runs
-#   rather than the nominal gain again.
-#
-# AN EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
-#   The ends are wherever HATTERAS_DOMAINS puts them -- GIS 1 and 115 under
-#   HAT_GEOMETRY=n115 -- and the target for a
-#   domain beyond GIS 90 comes from the window's extension rate table
-#   (coastsat_lrr/<window>/ext/transect_lrr_with_base.csv, the surveyed
-#   transects plus the extension's, one LOWESS over the whole reach), which is
-#   exactly the table the runner grades that geometry's ends against. Run
-#   this script with the SAME HAT_GEOMETRY as the runs it reads. A run that
-#   imposed nothing at an end (a zeroBE probe) reads as 0.0 there.
-#
-# THE DUNE LINE AS THE TARGET (2026-09-16, Hannah: "what if we used the dune
-# line change" to set the ends)
-#   --target duneline reads the observation from the two digitised dune lines
-#   of the window instead of CoastSat: the end vintage's line minus the start
-#   vintage's, per domain, over the survey interval (coastsat_vs_duneline
-#   .KNOWN_SURVEY_DATES; a missing date is mid-year), seaward positive --
-#   exactly what rate_windows.py draws under vs_duneline/endpoint_net_change. Two readings of
-#   it at an end domain, --dune-smooth raw (the domain's own value) and mean3
-#   (the mean of it and its two inward neighbours, GIS 1-3 / 88-90). A dune
-#   line is two surveys, so --estimator endpoint reads change_rate_m_yr on
-#   the model side; the default lrr keeps the CoastSat protocol. The runs of
-#   that solve are under output/raw_runs/experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/.
-#
-# USAGE
-#   One run -- report the residual and a first step at the nominal gain:
-#       python 2-calibrate/be_edge_domain_solve.py --period 1996 --run <run_name>
-#
-#   Two or more -- local secant through the last two, and the next step:
-#       python 2-calibrate/be_edge_domain_solve.py --period 1996 --run <first> --run <second>
-#
-#   Runs are named as they appear in run_index.csv and located through
-#   run_registry.find_run_dir: --kind and --tag say where (the matrix by
-#   default; an experiment's runs need --kind experiment --tag <set>/<member>,
-#   one --tag per --run when the members differ). The rate each was run
-#   under is read from the index, not retyped.
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-30
-# ==============================================================================
+"""
+Solve the background-erosion rate the two locked end domains (GIS 1 and 90) carry, for one period.
+
+    python scripts/input_prep/7-source-sink/2-calibrate/be_edge_domain_solve.py --period 1996 --run <run_name>
+    python scripts/input_prep/7-source-sink/2-calibrate/be_edge_domain_solve.py --period 1996 --run <first> --run <second>
+
+One run gives the residual and a first step at the nominal gain; two or more
+a secant step. Targets CoastSat or the dune line (--target duneline). Details: scripts/input_prep/7-source-sink/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
+"""
 from __future__ import annotations
 
 import argparse
@@ -103,38 +37,32 @@ from cascade_pipeline.run_registry import (              # noqa: E402
     MATRIX_KIND, find_run_dir, load_run_index)
 from site_layer.hat_observed_rates import lrr_csv, lrr_csv_ext      # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
 RUN_INDEX = RUN_ROOT / "run_index.csv"
 # Resolved through hat_observed_rates, which owns the location.
 
-# Section 8 of the runner builds the target this way. Kept identical rather
-# than imported from it, because importing that file RUNS a hindcast.
+# Section 8 of the runner builds the target this way
 LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
 
-# The model side of the residual. Must be the OLS slope, matching the
-# observed side; change_rate_m_yr is the endpoint difference and every preset
-# fitted against it before 2026-08-22 is not reproducible from this pipeline.
+# The model side of the residual
 RATE_COLUMN = "lrr_m_yr"
 
-# d(LRR)/d(BE), used ONLY for the first step, when there is nothing to take a
-# secant through. Mid-range of the four solved cases.
+# d(LRR)/d(BE) for the first step only, before a secant exists (mid-range of four solves)
 NOMINAL_GAIN = 0.105
 
-# The index column holding the rate each run imposed, per end domain. The
-# runner writes be_rate_gis<N>_m_yr for each of HATTERAS_BE_EDGE_DOMAINS.
+# The index column holding the rate each run imposed, per end domain
 INDEX_RATE_COLUMN = {gis: "be_rate_gis{0}_m_yr".format(gis)
                      for gis in HATTERAS_BE_EDGE_DOMAINS}
+# -----------------------------------------------------------------------------
 
 
+# The target table the runner grades against, as {gis
 def load_target(start_year, end_year, window=None):
-    """The target table the runner grades against, as {gis: rate}. `window`
-    (start, end) grades against another CoastSat LRR window instead, e.g.
-    the full 1996-2024 rate for a 1996-2010 run (2026-09-19, Hannah)."""
     if window is not None:
         start_year, end_year = window
-    # raises, listing windows, if absent; the extension table if the
-    # geometry reaches beyond GIS 90, as the runner's section 8 does
+    # Raises, listing windows, if absent
     csv_path = (lrr_csv_ext(start_year, end_year) if HATTERAS_GEOMETRY_EXTENDED
                 else lrr_csv(start_year, end_year))
     series = build_coastsat_series(
@@ -147,13 +75,8 @@ def load_target(start_year, end_year, window=None):
                     [float(r) for r in table["target_lrr_m_yr"]]))
 
 
+# The dune-line endpoint rate per domain, seaward positive, read at each end domain raw or as a ...
 def load_dune_target(start_year, end_year, smooth):
-    """The dune-line endpoint rate per domain, seaward positive, read at each
-    end domain raw or as a three-domain mean. Returns ({gis: rate}, note).
-
-    READ FROM the stored product 5-scr/3-rates/duneline/endpoint/<window>/
-    (2026-09-18), the same numbers rate_windows.py draws, rather than
-    recomputed here from the raw offsets."""
     from site_layer.hat_observed_rates import dune_endpoint_csv
     dom = pd.read_csv(dune_endpoint_csv(start_year, end_year, "domain"))
     meta = pd.read_csv(dune_endpoint_csv(start_year, end_year, "transect")).iloc[0]
@@ -180,15 +103,15 @@ def load_dune_target(start_year, end_year, smooth):
     return out, note
 
 
+# The rate CSV of one run, located the way every other reader does
 def find_run(run_name, start_year, end_year, preset, kind, tag):
-    """The rate CSV of one run, located the way every other reader does."""
     run_dir = find_run_dir(RUN_ROOT, run_name, (start_year, end_year), preset,
                            kind=kind, tag=tag)
     return Path(resolve_run_file(run_dir, "rate_csv", run_name))
 
 
+# The run's row in run_index.csv, by its full identity
 def index_row(run_name, kind, tag):
-    """The run's row in run_index.csv, by its full identity."""
     index = load_run_index(RUN_INDEX)
     rows = index[(index["run_name"] == run_name) & (index["kind"] == kind)
                  & (index["tag"] == tag)]
@@ -198,13 +121,8 @@ def index_row(run_name, kind, tag):
     return rows.iloc[-1]
 
 
+# What this run imposed at each end domain, from its index row
 def imposed_rates(row):
-    """What this run imposed at each end domain, from its index row.
-
-    A run from a preset that names no rate at an end (zeroBE, or an edgeBE
-    whose column predates this end) reads as 0.0 there, which is what it
-    imposed.
-    """
     out = {}
     for gis, column in INDEX_RATE_COLUMN.items():
         value = row.get(column, "")
@@ -215,6 +133,7 @@ def imposed_rates(row):
 ESTIMATOR_COLUMN = {"lrr": RATE_COLUMN, "endpoint": "change_rate_m_yr"}
 
 
+# One run's modelled rate column per domain
 def read_model(csv_path, column=RATE_COLUMN):
     frame = pd.read_csv(csv_path)
     if column not in frame.columns:
@@ -225,6 +144,7 @@ def read_model(csv_path, column=RATE_COLUMN):
     return frame.set_index("gis_domain")[column].to_dict()
 
 
+# The ends' residuals and the next step for a set of runs
 def report(period, runs, preset, kinds, tags, target_source="coastsat",
            dune_smooth="raw", estimator="lrr", coastsat_window=None):
     start_year = period
@@ -240,9 +160,7 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
     states = []
     for run_name, kind, tag in zip(runs, kinds, tags):
         row = index_row(run_name, kind, tag)
-        # The preset folder the run sits under is the preset it ran, which
-        # the index knows: a zeroBE stage-0 run and the edgeBE probes after
-        # it belong to one solve and are read together.
+        # The preset folder the run sits under is the preset it ran, which the index knows
         folder = preset or str(row["source_sink_preset"])
         model = read_model(find_run(run_name, start_year, end_year, folder, kind, tag),
                            column)
@@ -307,6 +225,7 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
     return suggestion
 
 
+# Run: read the runs, report the residual and the next step
 def main():
     parser = argparse.ArgumentParser(
         description="solve the two locked end domains for one period")

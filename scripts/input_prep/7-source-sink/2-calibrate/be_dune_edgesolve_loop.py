@@ -1,45 +1,10 @@
 """
-be_dune_edgesolve_loop.py
-==============================================================================
-Drive the dune-line end-domain solve to convergence: for each (window,
-reading) chain, ask be_edge_domain_solve.py for the next probe, run it,
-and repeat until both ends sit within --tol of the dune-line target. Written
-2026-09-18 for the re-solve after the 1997, 2009 and 2023 dune lines were
-re-digitized; the 09-16 solve was stepped by hand.
+Drive the dune-line end-domain solve to convergence: ask for the next probe, run it, repeat.
 
-WHAT IT DOES NOT CHANGE
-    The arithmetic is be_edge_domain_solve.py's (target from the stored
-    5-scr/3-rates/duneline/endpoint product, the local secant through the last
-    two runs, --estimator endpoint). This only runs the probes it prints.
+    python scripts/input_prep/7-source-sink/2-calibrate/be_dune_edgesolve_loop.py --exp <experiment>
 
-LOCKSTEP
-    Every live chain runs its next probe AT THE SAME TIME (one runner process
-    each), then all are waited for, then every solver is read. The solver
-    reads each run's imposed rates from run_index.csv, so reading only after a
-    whole step has finished keeps it from reading an index a still-finishing
-    run is rewriting.
-
-BRACKETS (step 0, not re-run)
-    1996, 2010   the current matrix zeroBE and edgeBE full-management runs
-    2004         the 09-16 brackets (experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/
-                 brackets): the 2004-start inputs did not change on 09-18
-
-OUTPUT   output/raw_runs/experiments/<exp>/<reading>/step<k>/<window>/edgeBE/<run>/
-         output/raw_runs/experiments/<exp>/logs/<reading>_step<k>_<start>.log
-         output/raw_runs/experiments/<exp>/loop_log.csv   one row per step
-                                                          per chain
-
-COASTSAT TARGET (2026-09-19)
-    --target coastsat runs the same loop against the CoastSat target, as the
-    matrix end values were solved (model lrr_m_yr against target_lrr_m_yr,
-    GIS 1 raw, GIS 90 LOWESS-10). One chain per window, filed under the
-    reading name "coastsat"; --smooth is ignored. E.g. --exp
-    end-domain-boundaries/2026-09-19-end-domains-2010-recheck --windows 2010 --target coastsat.
-
-USAGE
-    python be_dune_edgesolve_loop.py --exp end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline \\
-        --windows 1996 2004 2010 --smooth raw mean3
-==============================================================================
+For each (window, reading) chain until both ends converge; runs land
+under the experiment's folder. Details: scripts/input_prep/7-source-sink/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -59,6 +24,7 @@ from pathlib import Path
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
+# --- CONFIG ------------------------------------------------------------------
 SOLVER = Path(__file__).with_name("be_edge_domain_solve.py")
 RUNNER = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
@@ -68,14 +34,13 @@ END = {1996: 2010, 2004: 2024, 2010: 2024}
 SUFFIX = {1996: "road_bdm", 2004: "road_bdm_nourish", 2010: "road_bdm_nourish"}
 
 
-# The matrix run names carry the offset token since the metres offset became
-# the default (2026-09-24; the option A matrix, 2026-09-27). The /10 brackets
-# the 09-16 to 09-19 solves started from are in raw_runs/archive/2026-09-24-pre-metres/.
+# The matrix run names carry the offset token since the metres offset became the default (2026-09-24
 OFFSET_TOKEN = "offsetmetres"
+# -----------------------------------------------------------------------------
 
 
+# [(run_name, kind, tag), ...] for zeroBE then edgeBE, full management
 def brackets(start):
-    """[(run_name, kind, tag), ...] for zeroBE then edgeBE, full management."""
     name = lambda p: f"HAT_{start}_{END[start]}_{p}_{OFFSET_TOKEN}_{SUFFIX[start]}_nogroin"  # noqa: E731
     if start == 2004:
         tag = f"{BRACKET_EXP}/brackets"
@@ -86,9 +51,8 @@ def brackets(start):
 COASTSAT_WINDOW = None   # set by --coastsat-window
 
 
+# Run the solver over `runs`
 def solve(start, smooth, runs):
-    """Run the solver over `runs`; return (residual GIS 1, residual GIS 90,
-    override string, full text). smooth == "coastsat" is the CoastSat target."""
     if smooth == "coastsat":
         cmd = [sys.executable, str(SOLVER), "--period", str(start),
                "--target", "coastsat", "--estimator", "lrr"]
@@ -114,9 +78,8 @@ def solve(start, smooth, runs):
     return resid[0], resid[1], (m.group(1) if m else None), text
 
 
+# {gis
 def imposed(run_dir):
-    """{gis: rate} a finished run imposed at the two ends, from its log line
-    'GIS <n>  <preset> -> <imposed> m/yr' or, when not overridden, the preset."""
     import json
     meta = next(Path(run_dir).glob("*_run_metadata.json"))
     text = meta.read_text(encoding="utf-8")
@@ -127,11 +90,8 @@ def imposed(run_dir):
     return out
 
 
+# The solver prints only the ends it wants MOVED
 def merge_override(override, last):
-    """The solver prints only the ends it wants MOVED; an end it leaves out
-    keeps the value the chain's last run imposed. Passing the solver's string
-    through as-is (the first version of this driver, 2026-09-18) reset such an
-    end to the edgeBE PRESET -- +32.2 at GIS 1 for 1996 -- for one probe."""
     pairs = dict(p.split("=") for p in (override or "").split(",") if p)
     for gis, val in last.items():
         if str(gis) not in pairs and val is not None:
@@ -139,9 +99,8 @@ def merge_override(override, last):
     return ",".join(f"{g}={pairs[g]}" for g in sorted(pairs, key=int))
 
 
+# [(run_name, 'experiment', tag, run_dir), ...] for every FINISHED step already on disk, oldest ...
 def existing_steps(exp, start, smooth):
-    """[(run_name, 'experiment', tag, run_dir), ...] for every FINISHED step
-    already on disk, oldest first, stopping at the first gap."""
     out, k = [], 1
     while True:
         tag = f"{exp}/{smooth}/step{k}"
@@ -153,6 +112,7 @@ def existing_steps(exp, start, smooth):
         k += 1
 
 
+# Run one probe of the hindcast with the solved end rates
 def launch(start, smooth, step, override, exp):
     tag = f"{exp}/{smooth}/step{step}"
     env = dict(os.environ,
@@ -170,6 +130,7 @@ def launch(start, smooth, step, override, exp):
     return proc, log, tag
 
 
+# Run: every chain until both ends converge
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--exp", required=True)

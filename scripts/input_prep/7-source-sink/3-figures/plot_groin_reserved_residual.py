@@ -1,48 +1,10 @@
 #!/usr/bin/env python3
-"""Why the largest residual in the hindcast is deliberately left uncorrected.
+"""
+Why the largest residual in the hindcast, at D6, is deliberately left uncorrected.
 
-At convergence the source/sink calibration leaves its biggest misfit at D6 --
-2.00 m/yr in period 1 and 2.59 m/yr in period 2, roughly twice the next worst
-domain in either. That looks like a calibration failure and is not one. D5-D7
-are the Buxton groin's footprint, held in GROIN_RESERVED_DOMAINS, and the
-residual there is the GROIN's shortfall rather than a background-erosion term.
+    python scripts/input_prep/7-source-sink/3-figures/plot_groin_reserved_residual.py
 
-WHY IT WOULD BE WRONG TO CORRECT IT
-    The groin's trapping rate M and deterioration floor f were fitted against
-    the observed shoreline, and the source/sink field is then derived from what
-    the modules could NOT explain -- which is why the calibration runs against a
-    groin-ON base run in the first place (GROIN_AWARE_BASE_RUN). Letting BE
-    absorb the residual at D5-D7 would close the same gap twice: the groin would
-    score as well-calibrated because a source term was quietly doing its work,
-    and the M/f fit could never be falsified by the hindcast.
-
-    So the number stays visible. It is the honest statement of what the groin
-    module cannot do.
-
-WHAT THE TWO SIGNS MEAN, AND WHY THEY ARE OPPOSITE
-    period 1   residual POSITIVE -- observed is more seaward than modelled.
-               The model does not build enough fillet. M = 60 m/yr is the most
-               the sediment budget will support (719,000 m3/yr against a
-               5-7e5 littoral drift), so this is a bound, not a missed fit.
-
-    period 2   residual NEGATIVE -- modelled is more seaward than observed.
-               The real fillet RELEASED after the 2003 storm damage; the module
-               cannot, because trapping is bounded at >= 0, so it can stop
-               adding sand but never remove it. This is outside the
-               parameterisation at any (M, f), not a badly chosen one.
-
-    The opposite signs are the point. A source/sink term fitted to close both
-    would have to change sign between periods at the same domain, which is a
-    fitted constant standing in for a structure that was built, damaged and
-    left -- exactly the kind of thing the zone rules exist to keep out.
-
-Usage:
-    python 3-figures/plot_groin_reserved_residual.py
-
-Reads  the converged calibBE full_management runs, groin on and off, plus the
-       live GROIN_RESERVED_DOMAINS.
-Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/3-limits/fig_groin_reserved_residual.png
-       (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
+The residual around the Buxton groin in both periods, from the calibBE runs. Details: scripts/input_prep/7-source-sink/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -61,6 +23,7 @@ import pandas as pd
 
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 # The figure lives with the rest of the section 7 figures, in the data tree.
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
@@ -80,8 +43,10 @@ PERIODS = {
     "2004_2024": dict(label="2004–2024", start=2004, scenario="road_bdm_nourish",
                       colour=C_1997),
 }
+# -----------------------------------------------------------------------------
 
 
+# be_zone_residual_fit.py, loaded as a module for its LOWESS helpers
 def analysis_module():
     spec = importlib.util.spec_from_file_location(
         "_lowess_analysis",
@@ -91,11 +56,10 @@ def analysis_module():
     return module
 
 
+# One run's per-domain LRR, or None when the run is absent
 def run_rates(period, scenario, groin):
-    """One run's per-domain LRR, or None when the run is absent."""
     name = f"HAT_{period}_calibBE_{scenario}_{'groin' if groin else 'nogroin'}"
-    # RESOLVED, NOT JOINED: the rate CSV is tables/shoreline_change_rate.csv in
-    # the new run layout and {run}_shoreline_change_rate.csv in the old one.
+    # Resolved, not joined: the rate CSV's path depends on the run layout
     path = resolve_run_file(RAW_RUNS / period / "calibBE" / name,
                             "rate_csv", name)
     if not path.exists():
@@ -103,6 +67,7 @@ def run_rates(period, scenario, groin):
     return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"]
 
 
+# Run: the figure
 def main():
     import matplotlib
     matplotlib.use("Agg")
@@ -131,7 +96,7 @@ def main():
     axes = [figure.add_subplot(grid[0, 0]), figure.add_subplot(grid[1, 0])]
     bars = figure.add_subplot(grid[:, 1])
 
-    # ---- LEFT: observed against the model, groin on and off ---------------
+    # Left: observed against the model, groin on and off
     for i, (axis, (key, d)) in enumerate(zip(axes, data.items())):
         x = np.array(SHOW, dtype=float)
         tgt = np.array([d["target"].get(g, np.nan) for g in SHOW])
@@ -147,8 +112,7 @@ def main():
                   label="modelled, groin absent")
 
         worst = int(np.nanargmax(np.abs(tgt - on)))
-        # The gap itself is drawn; its size is a number, and numbers belong in
-        # the caption and on the bars at the right, not floating over a curve.
+        # The gap is drawn; its size goes in the caption and on the bars
         axis.annotate("", xy=(x[worst], tgt[worst]),
                       xytext=(x[worst], on[worst]),
                       arrowprops=dict(arrowstyle="<->", color=d["colour"],
@@ -161,10 +125,7 @@ def main():
         axis.axhline(0.0, color=INK, lw=0.7, zorder=2)
         axis.grid(axis="y")
         open_frame(axis)
-        # The reserved reach is the groin module's own footprint, so it takes
-        # the accent tint rather than a grey: the villages already occupy the
-        # grey strip along the top, and two greys on one panel cannot be told
-        # apart. Named once, on the upper panel only.
+        # The reserved reach is the groin module's own footprint, so it takes the accent tint rather than a grey
         axis.axvspan(min(reserved) - 0.5, max(reserved) + 0.5,
                      color=C["ACCENT_FILL"], alpha=0.40, lw=0, zorder=0)
         if i == 0:
@@ -176,7 +137,7 @@ def main():
         axis.legend(loc="upper right", frameon=False, fontsize=7)
     axes[1].set_xlabel(DOMAIN_AXIS_LABEL)
 
-    # ---- RIGHT: the residual at the reserved domains ----------------------
+    # Right: the residual at the reserved domains
     width = 0.36
     idx = np.arange(len(reserved), dtype=float)
     for offset, (key, d) in zip((-width / 2, width / 2), data.items()):
@@ -186,9 +147,7 @@ def main():
                      for g in reserved]
         bars.bar(idx + offset, resid_on, width, color=d["colour"], zorder=4,
                  label=f"{d['label']}, groin present")
-        # groin-off as an outline behind: the gap between the two IS the groin.
-        # One legend entry only: the two periods' outlines are visually
-        # identical, so labelling both just doubles the legend.
+        # Groin-off as an outline behind
         bars.bar(idx + offset, resid_off, width, facecolor="none",
                  edgecolor=C["BASE"], linewidth=0.9, linestyle=(0, (3, 2)),
                  zorder=5,
@@ -201,8 +160,7 @@ def main():
                           path_effects=halo(2.0))
 
     bars.axhline(0.0, color=INK, linewidth=0.7, zorder=3)
-    # Room under the bars for their value labels, and a clear band above them
-    # for the key: at "lower right" the key landed on the D6 label.
+    # Room under the bars for their labels, and a band above them for the key
     lo, hi = bars.get_ylim()
     bars.set_ylim(lo - 0.10 * (hi - lo), hi + 0.38 * (hi - lo))
     bars.set_xticks(idx)
