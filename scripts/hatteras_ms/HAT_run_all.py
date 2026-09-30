@@ -556,7 +556,7 @@ def stage_joint_fit(args):
 
 # Run: every stage asked for, in order
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--workers", type=int, default=8,
                         help="sweep pool width (default 8; RAM-capped)")
     parser.add_argument("--dry-run", action="store_true",
