@@ -147,7 +147,8 @@ def cmd_score(_=None):
     return 0
 
 
-def house_figures(panels, fig_dir, legend_title, note, suffix):
+def house_figures(panels, fig_dir, legend_title, note, suffix,
+                  shoreline_window="over 1995-1997 for 1996, 2009-2011 for 2010"):
     """The four island-offset figures, in ONE form for every study that asks the
     dune-line-or-shoreline question (Hannah, 2026-09-28: "ensure the figures
     among these experiments are consistent ... so it is easier to compare").
@@ -158,6 +159,8 @@ def house_figures(panels, fig_dir, legend_title, note, suffix):
                gis_domain, or None where that arm has no run
     note     the study's own sentence for every caption (waves, offset, ends)
     suffix   the stem ending, e.g. "1996_2010" or "full_management"
+    shoreline_window  the mean-shoreline windows the shoreline offset was built
+             on, for the captions; the default is the v1 (calendar) builds
 
     Net change in metres; observations smoothed with LOESS over LOESS_DOMAINS
     (southern SKIP_SOUTHERN raw), the model unsmoothed; the model's ENABLED
@@ -265,7 +268,7 @@ def house_figures(panels, fig_dir, legend_title, note, suffix):
              model_label="Model: started from the shoreline (its LRR × 14 yr)",
              stem="shoreline_offset_vs_coastsat_total_change",
              caption=("The model started from the SHORELINE island offset (mean CoastSat "
-                      "shoreline over 1995-1997 for 1996, 2009-2011 for 2010), against total "
+                      f"shoreline {shoreline_window}), against total "
                       "shoreline change: each period's OWN CoastSat LRR, LOESS over 7 domains, "
                       "x 14 yr (black), not the 1996-2024 rate carried onto it; the model "
                       "(purple) is its own LRR x 14 yr.")),
