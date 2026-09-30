@@ -1,165 +1,18 @@
 """
-rate_windows.py
-==============================================================================
-The four hindcast windows, the model against an observation: the CoastSat
-waterline and the digitised dune line, each with the run whose end domains
-were solved on it drawn over it. edgeBE, full management, groin OFF.
+Model against observation, every hindcast window: CoastSat shoreline and dune line, each with its end-solved run.
 
-ONE FOLDER, ONE SCRIPT (Hannah, 2026-09-17: "more organized and clear, and
-potentially condensed, especially with the naming")
-    Until 2026-09-17 this was two scripts and two output trees,
-    observed_vs_modeled_windows/ (CoastSat, 09-15) and
-    duneline_vs_modeled_windows/ (the dune line, 09-16), with two
-    vocabularies for one axis (domain_means / lowess_target beside
-    endpoint/raw / endpoint/lowess), five stems that all said "model", and the
-    dune tree carrying four copies of its own layout under sensitivity/.
-    Now: one tree under output/comparisons/model_vs_observed/ (named
-    rate_windows/ until 2026-09-18), organised by OBSERVATION and then
-    READING, one naming rule for every file, and each sensitivity drawn once.
-
-WHY IT IS HERE AND NOT IN 5-scr
-    The observed-only figure lives with the observations
-    (data/hatteras_init/5-scr/3-rates/coastsat/lrr/, drawn with the panel code of
-    scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_windows.py). Once a run's
-    curve is on the panel the figure spans runs, and every cross-run figure
-    is filed under output/comparisons/ (output/README.md). This script
-    IMPORTS the observed drawing from the 5-scr producer rather than copying
-    it, so the two cannot drift apart in how the observation is drawn.
-
-THE RUNS, SINCE 2026-09-27: the option A metres matrix, 1996 and 2010 only
-    (MATRIX_RUNS says which), every figure on the CoastSat-solved run
-    (DUNE_SOLVE_CURRENT). The list below is the /10-offset set this script
-    drew until then, kept for the record; those figures are in
-    output/archive/2026-09-27_model-vs-observed-div10/.
-
-THE RUNS (Hannah, 2026-09-15)
-    1984-2004   HAT_1984_2004_edgeBE_road_bdm_nogroin, the version-pair/v2 arm
-                (topography v2, as asked; the calibration arm is on v1)
-    1996-2010   HAT_1996_2010_edgeBE_road_bdm_nogroin, calibration arm
-                (offsets v1: the re-digitized 1997 line)
-    2004-2024   HAT_2004_2024_edgeBE_road_bdm_nourish_nogroin, calibration arm
-                (full management in this period includes the nourishment)
-    2010-2024   HAT_2010_2024_edgeBE_road_bdm_nourish_nogroin, calibration arm
-                (run 2026-09-16 once the 2009 dune line gave a 2010 offset
-                and the end domains were solved; nourishment on, as in
-                2004-2024)
-    Run folders are resolved through cascade_pipeline.run_registry with the
-    arm named explicitly; the registry raises, listing the arms a run IS
-    under, rather than guessing.
-
-    Those are the MATRIX runs: two end domains solved against CoastSat, so
-    against the CoastSat target the model meets the observation at GIS 1 and
-    90 by construction. A dune-line target deserves the same (Hannah,
-    2026-09-17: "a fair comparison"), so the dune-line figures draw the runs
-    whose ends were solved on the DUNE LINE (experiments/2026-09-16-dune-
-    edgesolve/solved.csv, the three-domain-mean reading). Three model sets,
-    named for where their ends were solved:
-        coastsat     the matrix
-        dune-mean3   the dune solve, mean of the end domain and its two
-                     inward neighbours (the main dune-line set)
-        dune-raw     the dune solve, the end domain's own value (sensitivity)
-
-THE OBSERVATIONS
-    coastsat    the CoastSat transect LRR, an OLS slope through ~250
-                satellite dates per transect. Two readings:
-        means        the per-domain means as the 5-scr figure draws them
-                     (sign-coloured line, fill, +/-1 std)
-        lowess        the SCORING TARGET as the fill: a TARGET_WINDOW-domain (7; 10 until
-                     2026-09-28) LOWESS of the
-                     transect rates north of D10 and the raw means over
-                     D1-10, as cascade_pipeline.hindcast.build_target_table
-                     makes it for the runner; the means as dots over it
-    duneline    the digitised dune line, the feature CASCADE's shoreline
-                actually is (a dune line behind a fixed berm). Vintages from
-                hat_topo_version.DUNE_LINE_FOR_YEAR (1996 reads the 1997
-                line, 2010 the 2009, 2024 the 2023); stations from
-                2-brie-offset/raw_offsets/<vintage>_duneline_offset_raw.csv
-                read as the hindcast's end-year target loader reads them;
-                seaward positive. Survey dates from
-                coastsat_vs_duneline.KNOWN_SURVEY_DATES; 2023 has no known
-                flight date and is centred on 2023-07-01, flagged in every
-                caption that uses it. READ FROM the stored product
-                5-scr/3-rates/duneline/endpoint/<window>/ (2026-09-18), not
-                computed here, so this figure and the stored numbers cannot
-                disagree. Two readings:
-        endpoint        two surveys differenced, per domain, over the interval
-        endpoint-lowess  the same per transect, then the scoring target's
-                        treatment (LOWESS frac 0.111 vs CoastSat's 0.110)
-    A third reading, lrr (an OLS through every dune line in the window), was
-    RETIRED 2026-09-18 with 3-rates/duneline_lrr (Hannah: "these should not be
-    lrr, they would just be endpoint, we are tracking net change").
-    both        the two observations as lines on one panel, no fill, BOTH
-                AS NET CHANGE between the same two dune-line dates (2026-09-18,
-                Hannah): CoastSat blue (3-rates/coastsat/endpoint, the mean
-                position within +/-6 months of each date, differenced) and the
-                dune line red, each given the scoring target's LOWESS treatment;
-                a model line per solve, all as the endpoint rate. The CoastSat
-                LRR, the model's actual scoring target, is in vs_shoreline/.
-                Drawn twice since 2026-09-29 (Hannah: "subfolder showing these
-                plots as change rate and also net position change"):
-        both            m/yr, as above                       change_rate/
-        both-netchange  metres: every line x the window's    net_change/
-                        calendar span (14 or 20 yr). The model's is its own
-                        last-minus-first displacement exactly; the two
-                        observations are measured over the dune-line survey
-                        interval (11.6 / 14.1 yr) and scaled to the window,
-                        as target_comparison.py scales them ("measured,
-                        scaled to 14 yr"); the interval stays in the caption.
-
-THE MODEL LINE
-    lrr_m_yr           the OLS slope over the run's annual shorelines, the
-                       estimator CoastSat and the run index use
-    change_rate_m_yr   the endpoint rate, last annual shoreline minus first,
-                       the like-for-like estimator for a two-survey reading
-    Each reading is paired with its own estimator; the one pairing that
-    mixes them (endpoint observation, OLS model) is kept as a sensitivity.
-
-NAMING   model_vs_<feature>_<reading>_<start>_<end>.png, and _grid for the
-    2 x 2 by period (1984-start left, 1996-start right, earlier window above).
-    The feature is shoreline (CoastSat) or duneline, the reading means,
-    smoothed or netchange (2026-09-18, Hannah: the old coastsat_ / duneline_
-    endpoint_ / both_ stems never said a model was being compared). The
-    internal variant keys (coastsat/means, ...) are unchanged; OUTPUT_FOLDER
-    maps them to the folders below.
-    Every figure folder keeps its PDFs and CAPTIONS.md under supporting/,
-    as hat_figure_style.save() and caption() put them.
-
-OUTPUT   output/comparisons/model_vs_observed/
-    vs_shoreline/domain_means/   model_vs_shoreline_means_<w>.png     ends solved
-    vs_shoreline/smoothed/       model_vs_shoreline_smoothed_<w>.png  on CoastSat
-    vs_duneline/endpoint_net_change/      model_vs_duneline_netchange_<w>.png  ends solved
-    vs_duneline/net_change_smoothed/
-                        model_vs_duneline_netchange_smoothed_<w>.png  on the dune
-                                                                      line (mean3)
-    vs_shoreline_and_duneline/   both targets, both solves
-        change_rate/    model_vs_shoreline_and_duneline_rate_<w>.png       m/yr
-        net_change/     model_vs_shoreline_and_duneline_netchange_<w>.png  metres
-    tables/             domain_rates_<w>.csv   every reading, every model set,
-                                               the residual against each
-                        skill.csv              bias and RMSE, GIS 2-89, per
-                                               window x model set x estimator
-                                               x target
-    runs_used.csv       one row per window per model set: run, arm, folder,
-                        timestamp, commit, topography, offsets, and the dune
-                        line's vintages, dates and interval
-    y_bounds.txt        the shared y range and the rule behind it
-    sensitivity/
-        ends-swapped/       vs_shoreline/* on the dune-solved runs,
-                            vs_duneline/* on the CoastSat-solved runs: each
-                            target against the OTHER solve
-        dune-raw-solve/     vs_duneline/* on the raw-reading dune solve
-        mixed-estimator/    model_ols_vs_duneline_netchange_<w>.png: the
-                            net-change observation against the model's OLS rate
-
-USAGE
     python scripts/analyze_output/compare_runs/rate_windows.py
     python ... --no-sensitivity        # the main level only
+
+Draws the observation in each reading with the model over it, edgeBE, full
+management, groin off; writes output/comparisons/model_vs_observed/.
+target_comparison.py, smoothing_scale.py and smoothed_lowess7_with_cascade.py
+import its loaders. Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-30
-==============================================================================
 """
 from __future__ import annotations
 
@@ -196,46 +49,20 @@ from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, apply_style, caption, figsize, save,
     _title,
 )
-
-
-def _import_by_path(name, path):
-    """A script in the input-prep tree, not a package; its drawing or its
-    readers are what is reused."""
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-# The 5-scr producers: the panel drawing, colours, chains and CoastSat reader
-# from coastsat_lrr_windows, and the survey dates and per-domain position from
-# coastsat_vs_duneline. Both are resolved by scr_paths, which is the one place
-# that knows where a 5-scr module lives -- these were two hand-built paths
-# naming folders that the 2026-09-22 reorganisation removed, and a stale one
-# does not fail here: spec_from_file_location builds a spec from a path that
-# no longer exists and the error arrives at exec_module.
+# The 5-scr producers (panel drawing, survey dates), found through scr_paths
 sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
 import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
-
 import coastsat_lrr_windows as obs  # noqa: E402
 import coastsat_vs_duneline as dune  # noqa: E402
+from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = _REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
-from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
 OUT_DIR = COMPARISONS_ROOT / "model_vs_observed"
-
 PRESET = "edgeBE"
-# window -> (run_name, arm): the matrix, ends solved on CoastSat.
-#
-# OPTION A MATRIX (2026-09-27, Hannah: "make the model vs observed figures for
-# the new matrix runs"). The metres-offset matrix at the option A wave climate
-# (Hs 2.0 / Tp 7.5 / asym 0.6 / high-angle 0.5) with the ends solved for it,
-# 1996 and 2010 only. 1984-2004 and 2004-2024 have no metres run, so their
-# panels carry NO_RUN_NOTE. The /10-offset runs these names pointed to until
-# then (HAT_<w>_edgeBE_road_bdm[_nourish]_nogroin, 1984 on version-pair/v2)
-# are in raw_runs/archive/2026-09-24-pre-metres/, and the figures drawn from
-# them in output/archive/2026-09-27_model-vs-observed-div10/.
+# window -> (run, arm): the option A matrix, ends solved on CoastSat; no metres run for 1984 or 2004
 MATRIX_RUNS = {
     (1984, 2004): None,
     (1996, 2010): ("HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin", "calibration"),
@@ -243,69 +70,32 @@ MATRIX_RUNS = {
     (2010, 2024): ("HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
 }
 WINDOWS = list(MATRIX_RUNS)
-# The dune-line end-domain solve. 2026-09-18: re-solved on the re-digitized
-# lines (1984-2004 carried over from the 09-16 solve, whose lines did not
-# change); each row of solved.csv names its own run tag, so a carried-over
-# row points back into the 09-16 experiment.
-# Re-solved under option A on 2026-09-27; the /10 solve was
-# end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline.
-# The adopted model (2026-09-28): Barrier3D hatteras/adopted, storms v3_trim24;
-# storms v3_split12_trim24 since 2026-09-29.
-# Was end-domain-boundaries/2026-09-27-ends-solved-on-duneline-option-a (pre-adoption).
-# 2026-09-29: re-solved after the dune-cap fix; the adopted-model solve before it was
-# end-domain-boundaries/2026-09-28-ends-solved-on-duneline-adopted.
-# 2026-09-29 (later): re-solved after the storms changed to v3_split12_trim24;
-# the solve before it was end-domain-boundaries/2026-09-29-ends-solved-on-duneline-dunecap.
+# The dune-line end-domain solve on the current setup (history in README)
 DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-duneline-split12"
+# Where each model set's ends were solved
 MODEL_SETS = ("coastsat", "dune-mean3", "dune-raw")   # where the ends were solved
 MAIN_DUNE = "dune-mean3"
-# THE DUNE-SOLVED SETS ARE /10-OFFSET RUNS (2026-09-27). No end domains have
-# been solved on the dune line under the metres offset, so drawing them beside
-# the option A matrix would put two different models on one panel. Until that
-# solve exists, every figure draws the matrix (ends solved on CoastSat), the
-# dune-line figures included, and the sensitivity level that exists only to
-# swap or vary the dune solve is not drawn. MODEL_SETS and MAIN_DUNE stay
-# defined: target_comparison, smoothing_scale and smoothed_lowess7_with_cascade
-# import them and read the dune solve on their own terms.
+# True: the dune solve is current (option A, 2026-09-27), so its sets are drawn
 DUNE_SOLVE_CURRENT = True   # re-solved under option A, 2026-09-27
 DRAWN_SETS = MODEL_SETS if DUNE_SOLVE_CURRENT else ("coastsat",)
 DUNE_FIG_SET = MAIN_DUNE if DUNE_SOLVE_CURRENT else "coastsat"
-
 INTERIOR = (2, 89)          # the domains the index scores, GIS 2-89
 N = obs.N_DOMAINS
 Y_LABEL = "Change rate (m/yr)"
-
-# Black, not the site config's model orange (Hannah, 2026-09-15): the observed
-# line already carries two hues and a fill, and a third hue on top read as
-# noise. Black sits over both fills and survives greyscale.
+# Black: the observation already carries two hues and a fill
 C_MODEL = INK
 C_CS_TARGET = "#2166ac"     # the house shoreline blue (coastsat_vs_duneline C_LRR)
 C_DUNE_TARGET = "#b2182b"   # the house dune red (coastsat_vs_duneline C_DUNE)
 LS_SECOND = (0, (4, 2))     # the second model line where two share a panel
 NO_RUN_NOTE = "model not yet run for this window"
-
-# The scoring target, as the runner builds it (HAT_hindcast_1984_2024.py
-# section 8): one LOWESS window, raw means over D1-D10.
-# 7 since 2026-09-28 (Hannah: "redo the target comparison with LOWESS 7"),
-# following the runner's TARGET_WINDOW; 10 until then. The CoastSat-solved
-# end rates the figures draw were re-solved against the LOWESS-7 value at GIS 90
-# the same day (end-domain-boundaries/2026-09-28-ends-resolved-lowess7).
+# The scoring target's LOWESS width, as the runner builds it (10 until 2026-09-28)
 TARGET_WINDOW = 7
 LOWESS_CONFIG = LowessConfig(window_domains=(TARGET_WINDOW,),
                            skip_southern_domains=10)
 SKIP = LOWESS_CONFIG.skip_southern_domains
 TARGET_OUTLINE_LW = 0.8    # the edge of the target's fill
 RAW_DOT_PT2 = 4.0          # the per-domain means as dots: marker area, ~2 pt across
-
-# variant -> (observation, reading, model column, file stem). The variant is
-# the internal key; OUTPUT_FOLDER says where it is written. Folder and stem
-# name the comparison in words (Hannah, 2026-09-18): the feature, not the
-# data source, and "netchange", not "endpoint".
-#   coastsat  means           line + std + fill        lrr_m_yr
-#             lowess           target fill + dots       lrr_m_yr
-#   duneline  endpoint        line + fill              change_rate_m_yr
-#             endpoint-lowess  target fill + dots       change_rate_m_yr
-#   both      both            two target lines         per solve (BOTH_COLS)
+# variant -> (observation, reading, model column, file stem); OUTPUT_FOLDER says where
 VARIANTS = {
     "coastsat/means":             ("coastsat", "means",          "lrr_m_yr",         "model_vs_shoreline_means"),
     "coastsat/lowess":             ("coastsat", "lowess",          "lrr_m_yr",         "model_vs_shoreline_smoothed"),
@@ -324,35 +114,17 @@ OUTPUT_FOLDER = {
     "both-netchange":              "vs_shoreline_and_duneline/net_change",
     "sensitivity/mixed-estimator": "sensitivity/mixed-estimator",
 }
-# Variants drawn in metres: each line x the window's calendar span (2026-09-29).
+# Variants drawn in metres: each line x the window's calendar span
 NET_CHANGE_VARIANTS = ("both-netchange",)
 Y_LABEL_NET = "Net change in position (m)"
 NET_PAD_M = 5.0            # the metres bound: largest |change| + this, up to NET_STEP_M
 NET_STEP_M = 5.0
-
-
-def _span(window):
-    """The window's calendar span in years: the model's run years."""
-    return window[1] - window[0]
-
-
-def _scale(variant, window):
-    """Rate -> the drawn quantity: 1 for a rate, the span for net change."""
-    return float(_span(window)) if variant in NET_CHANGE_VARIANTS else 1.0
-
-
-def _y_label(variant):
-    return Y_LABEL_NET if variant in NET_CHANGE_VARIANTS else Y_LABEL
 COASTSAT_VARIANTS = ("coastsat/means", "coastsat/lowess")
 DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-lowess")
-# The "both" panel draws each solve in its own target's estimator.
-# Since 2026-09-18 both observations in both/ are NET CHANGE between the same
-# two dates (Hannah), so every model line there is the endpoint rate too.
+# Both-panel model lines use the endpoint rate, like both observations
 BOTH_COLS = {"coastsat": "change_rate_m_yr", "dune-mean3": "change_rate_m_yr",
              "dune-raw": "change_rate_m_yr"}
-
-# What is drawn: (root under OUT_DIR, variant, model sets in drawing order).
-# The main level pairs each target with the runs solved on it.
+# What is drawn: (root under OUT_DIR, variant, model sets in drawing order)
 MAIN_PLAN = (
     [("", v, ["coastsat"]) for v in COASTSAT_VARIANTS]
     + [("", v, [DUNE_FIG_SET]) for v in DUNELINE_VARIANTS]
@@ -365,39 +137,33 @@ SENSITIVITY_PLAN = (
     + [("sensitivity/ends-swapped", v, ["coastsat"]) for v in DUNELINE_VARIANTS]
     + [("sensitivity/dune-raw-solve", v, ["dune-raw"]) for v in DUNELINE_VARIANTS]
 ) if DUNE_SOLVE_CURRENT else []
+TARGET_LABEL = (f"{TARGET_WINDOW}-domain LOWESS (raw means D1–{SKIP})")
+TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOWESS of the transect rates north of "
+                 f"domain {SKIP}, and the raw domain means over domains 1–{SKIP} "
+                 "where the Oregon Inlet boundary dominates")
+# -----------------------------------------------------------------------------
 
 
+# Import a script from the input-prep tree by path
+def _import_by_path(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# An empty frame of GIS 1-90
 def _full():
     return pd.DataFrame({"domain_number": np.arange(1, N + 1)})
 
 
+# The dune solve's reading ('mean3', 'raw') from a model-set name, or None
 def _smooth_of(model_set):
     return model_set.split("-", 1)[1] if model_set.startswith("dune-") else None
 
 
-def ends_text(model_set):
-    """The legend clause naming where a model line's ends were solved."""
-    sm = _smooth_of(model_set)
-    return ", ends solved on CoastSat" if sm is None else \
-        f", ends solved on the dune line ({sm})"
-
-
-def _ends_clause(model_set):
-    """The caption clause for the same."""
-    sm = _smooth_of(model_set)
-    if sm is None:
-        return " with the two end domains solved against the CoastSat target"
-    return (" with the two end domains solved against the dune-line change "
-            f"({sm} reading, endpoint estimator; experiments/2026-09-16-dune-"
-            "edgesolve) instead of CoastSat")
-
-
-# -----------------------------------------------------------------------------
-# the runs
-# -----------------------------------------------------------------------------
+# window -> (run, arm) from the dune solve's solved.csv
 def dune_solved_runs(smooth):
-    """window -> (run_name, arm) from the dune solve's solved.csv, where the
-    arm is the experiment tag the registry translates."""
     table = pd.read_csv(DUNE_SOLVE_DIR / "solved.csv")
     table = table[table["smooth"] == smooth]
     runs = {}
@@ -411,6 +177,7 @@ def dune_solved_runs(smooth):
     return runs
 
 
+# window -> (run, arm) for one model set
 def runs_for(model_set):
     if model_set not in MODEL_SETS:
         raise ValueError(f"model set {model_set!r}; have {MODEL_SETS}")
@@ -419,14 +186,8 @@ def runs_for(model_set):
     return dune_solved_runs(_smooth_of(model_set))
 
 
+# Both per-domain estimators for one run, and its runs_used.csv row
 def load_model(window, spec, model_set, preset=None):
-    """Both per-domain estimators for one run, and the provenance row for
-    runs_used.csv. (None, row) where no run exists.
-
-    preset names the source/sink preset the run was filed under; it defaults
-    to PRESET (edgeBE), the only one this module's own figures draw. It is a
-    parameter so a caller can read the zeroBE arm of the same matrix cell
-    (target_comparison's ends_unsolved set, 2026-09-21)."""
     period = "{}_{}".format(*window)
     if spec is None:
         return None, {"window": period, "model_ends": model_set, "run_name": "",
@@ -440,8 +201,7 @@ def load_model(window, spec, model_set, preset=None):
     row = {"window": period, "model_ends": model_set, "run_name": run_name,
            "arm": arm, "run_dir": str(run_dir.relative_to(_REPO)), "note": ""}
     if RUN_INDEX.is_file():
-        # The index is keyed on (run_name, kind, tag) since 2026-09-16; the
-        # arm named above is the legacy spelling and is translated.
+        # The index is keyed on (run_name, kind, tag); translate the legacy arm name
         idx = load_run_index(RUN_INDEX)
         kind, tag = legacy_arm_to_kind_tag(arm)
         hit = idx[(idx["run_name"] == run_name) & (idx["kind"] == kind)
@@ -459,16 +219,14 @@ def load_model(window, spec, model_set, preset=None):
     return df, row
 
 
+# Every window's run for one model set
 def load_models(model_set):
-    """[frame or None per window], [provenance row per window]."""
     runs = runs_for(model_set)
     loaded = [load_model(w, runs[w], model_set) for w in WINDOWS]
     return [m for m, _ in loaded], [r for _, r in loaded]
 
 
-# -----------------------------------------------------------------------------
-# the observations
-# -----------------------------------------------------------------------------
+# A LOWESS target table as a GIS 1-90 frame
 def _target_frame(series):
     table = build_target_table(series, LOWESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
     table = table.rename(columns={"gis_domain": "domain_number"})
@@ -476,9 +234,8 @@ def _target_frame(series):
                          on="domain_number", how="left")
 
 
+# The CoastSat scoring target: raw means D1-10, TARGET_WINDOW LOWESS beyond
 def load_coastsat_target(window):
-    """The per-domain scoring target: raw means D1-10, the TARGET_WINDOW LOWESS
-    beyond, from build_target_table on the window's transect_lrr_full.csv."""
     start, end = window
     series = build_coastsat_series(
         [CoastSatDataset(label=f"CoastSat {start}-{end}", period_start=start,
@@ -488,12 +245,8 @@ def load_coastsat_target(window):
     return _target_frame(series[0])
 
 
+# The stored dune-line endpoint (rate per domain) and its survey metadata
 def load_dune_endpoint(window):
-    """Two surveys differenced per domain, seaward positive, from the stored
-    product 3-rates/duneline/endpoint/<window>/ (duneline_endpoint.py builds
-    it; 2026-09-18). Returns a frame (domain_number / mean_lrr / std_lrr, the
-    columns obs.draw_panel expects, holding the RATE in m/yr) and the
-    vintages, dates and interval it was built from."""
     start, end = window
     dom = pd.read_csv(dune_endpoint_csv(start, end, "domain"))
     tr = pd.read_csv(dune_endpoint_csv(start, end, "transect"))
@@ -513,11 +266,8 @@ def load_dune_endpoint(window):
     return df, meta
 
 
+# CoastSat net change at the dune-line dates, raw and as a target
 def load_coastsat_endpoint(window):
-    """CoastSat NET CHANGE at the dune-line dates (3-rates/coastsat/endpoint,
-    the rate over the survey interval): (domain frame, target frame). The
-    target goes through the SAME builder as the LRR target, only reading the
-    endpoint rate column, so the two differ in the estimator alone."""
     start, end = window
     dom = pd.read_csv(coastsat_endpoint_csv(start, end, "domain"))
     ddf = _full().merge(dom[["domain_number", "mean_rate_m_yr"]]
@@ -533,10 +283,8 @@ def load_coastsat_endpoint(window):
     return ddf, _target_frame(series[0])
 
 
+# The dune-line endpoint per transect, given the scoring target's treatment
 def load_dune_endpoint_target(window, meta):
-    """The two-survey rate per transect (from the stored product), then the
-    scoring target's treatment. Returns domain_number / target_lrr_m_yr /
-    source."""
     start, end = window
     t = (pd.read_csv(dune_endpoint_csv(start, end, "transect"))
          .rename(columns={"domain_number": "domain_id", "rate_m_yr": "rate"})
@@ -561,9 +309,8 @@ def load_dune_endpoint_target(window, meta):
     return pd.DataFrame(rows, columns=["domain_number", "target_lrr_m_yr", "source"])
 
 
+# Everything observed for one window
 class Observation:
-    """Everything observed for one window: the CoastSat means and target,
-    the dune line in its three readings."""
 
     def __init__(self, window):
         self.window = window
@@ -590,10 +337,23 @@ class Observation:
                ("cs_endpoint_lowess", lambda o: o.cs_endpoint_target["target_lrr_m_yr"]))
 
 
+# The window's calendar span in years
+def _span(window):
+    return window[1] - window[0]
+
+
+# Rate -> drawn quantity: 1 for a rate, the span for net change
+def _scale(variant, window):
+    return float(_span(window)) if variant in NET_CHANGE_VARIANTS else 1.0
+
+
+# The y-axis label for a variant
+def _y_label(variant):
+    return Y_LABEL_NET if variant in NET_CHANGE_VARIANTS else Y_LABEL
+
+
+# One rate half-range for every panel (largest |rate| + 1, rounded up)
 def shared_bounds(observations, model_sets):
-    """One half-range for every panel: the 5-scr rule (largest |rate| plus
-    1 m, rounded up) over every observed reading and both estimators of
-    every model set drawn."""
     frames = [f for o in observations for f in (o.coastsat, o.endpoint, o.cs_endpoint)]
     half = obs.shared_bounds(frames)
     for mdfs, _ in model_sets.values():
@@ -605,10 +365,8 @@ def shared_bounds(observations, model_sets):
     return half
 
 
+# The metres half-range for the net-change panels
 def shared_bounds_net(observations, model_sets):
-    """The metres half-range for the net-change panels: the largest |rate x
-    span| over both endpoint observations and every model set's endpoint
-    rate, every window, plus NET_PAD_M, rounded up to NET_STEP_M."""
     extreme = 0.0
     for i, o in enumerate(observations):
         span = _span(o.window)
@@ -621,16 +379,16 @@ def shared_bounds_net(observations, model_sets):
     return float(math.ceil((extreme + NET_PAD_M) / NET_STEP_M) * NET_STEP_M)
 
 
+# A y tick giving four to eight intervals across +/-half
 def _net_tick(half):
-    """A major y tick giving four to eight intervals across +/-half."""
     for step in (5, 10, 20, 25, 50, 100):
         if 2 * half / step <= 8:
             return step
     return 200
 
 
+# Bias and RMSE of model minus observation over GIS 2-89
 def skill(obs_series, mdf, col):
-    """bias and RMSE of model - observation over GIS 2-89."""
     if mdf is None:
         return np.nan, np.nan, 0
     lo, hi = INTERIOR
@@ -640,30 +398,27 @@ def skill(obs_series, mdf, col):
     return float(r.mean()), float(np.sqrt((r ** 2).mean())), int(len(r))
 
 
-# -----------------------------------------------------------------------------
-# drawing
-# -----------------------------------------------------------------------------
+# The model line
 def draw_model(ax, df, col, ls="-", scale=1.0):
     ax.plot(df["domain_number"], df[col] * scale, color=C_MODEL, lw=1.3, ls=ls, zorder=8)
 
 
+# Per-domain means as sign-coloured dots over the target fill
 def draw_raw_dots(ax, odf):
-    """The per-domain means as sign-coloured dots over the target's fill."""
     x = odf["domain_number"].to_numpy(dtype=float)
     y = odf["mean_lrr"].to_numpy(dtype=float)
     cols = np.where(y < 0, obs.C_ERODE, obs.C_ACCRETE)
     ax.scatter(x, y, s=RAW_DOT_PT2, c=cols, linewidths=0, zorder=6)
 
 
+# The 'no run yet' note on an empty panel
 def note_no_run(ax, pt):
     ax.text(0.5, 0.93, NO_RUN_NOTE, transform=ax.transAxes, ha="center",
             va="top", fontsize=pt, color=INK_MUTED, style="italic", zorder=9)
 
 
+# The observation in one reading: line and fill, or target fill and dots
 def _draw_observed(ax, reading, ddf, tdf, half, **panel_kw):
-    """The observation: the 5-scr panel as it draws itself (means, with the
-    std lines), a line with its fill (endpoint), or with a target frame the
-    target as the fill and the per-domain values as dots over it."""
     if tdf is None:
         obs.draw_panel(ax, ddf, half, std=(reading == "means"), **panel_kw)
     else:
@@ -673,10 +428,8 @@ def _draw_observed(ax, reading, ddf, tdf, half, **panel_kw):
         draw_raw_dots(ax, ddf)
 
 
+# The empty frame, then both targets as lines (scaled for net change)
 def _draw_both(ax, o: Observation, half, scale=1.0, **panel_kw):
-    """Axes, bands and structures from the observed panel drawn empty, then
-    the two targets as lines, x scale (1 for rates, the span for net change).
-    The model lines go on afterwards."""
     blank = _full().assign(mean_lrr=np.nan, std_lrr=0.0)
     obs.draw_panel(ax, blank, half, std=False, line_lw=0.0, **panel_kw)
     ax.plot(o.cs_endpoint_target["domain_number"],
@@ -689,9 +442,8 @@ def _draw_both(ax, o: Observation, half, scale=1.0, **panel_kw):
         ax.yaxis.set_major_locator(MultipleLocator(_net_tick(half)))
 
 
+# One window on one axes: observation, then model line(s); True if any model drawn
 def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
-    """One window on one axes: the observation in the variant's reading and
-    the model line(s) over it. Returns whether any model line was drawn."""
     observation, reading, col, _ = VARIANTS[variant]
     scale = _scale(variant, o.window)
     if observation == "both":
@@ -710,9 +462,24 @@ def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
     return drawn
 
 
-# -----------------------------------------------------------------------------
-# legends
-# -----------------------------------------------------------------------------
+# Legend clause naming where a model line's ends were solved
+def ends_text(model_set):
+    sm = _smooth_of(model_set)
+    return ", ends solved on CoastSat" if sm is None else \
+        f", ends solved on the dune line ({sm})"
+
+
+# Caption clause naming where a model line's ends were solved
+def _ends_clause(model_set):
+    sm = _smooth_of(model_set)
+    if sm is None:
+        return " with the two end domains solved against the CoastSat target"
+    return (" with the two end domains solved against the dune-line change "
+            f"({sm} reading, endpoint estimator; experiments/2026-09-16-dune-"
+            "edgesolve) instead of CoastSat")
+
+
+# The model estimator in legend words
 def _estimator_label(variant):
     if variant in NET_CHANGE_VARIANTS:
         return "net change (last annual shoreline minus first)"
@@ -721,12 +488,8 @@ def _estimator_label(variant):
     return "OLS rate" if VARIANTS[variant][2] == "lrr_m_yr" else "endpoint rate"
 
 
-TARGET_LABEL = (f"{TARGET_WINDOW}-domain LOWESS (raw means D1–{SKIP})")
-
-
+# One legend entry per row
 def add_legend(fig, variant, model_keys):
-    """One entry per row: the model label carries the estimator and the
-    solve, and two abreast ran past the page edge at 190 mm (2026-09-16)."""
     observation, reading, _, _ = VARIANTS[variant]
     base = f"modelled shoreline, {_estimator_label(variant)}: edgeBE, full management, no groin"
     dot_pair = (Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=2.3, lw=0),
@@ -771,9 +534,7 @@ def add_legend(fig, variant, model_keys):
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
 
 
-# -----------------------------------------------------------------------------
-# captions
-# -----------------------------------------------------------------------------
+# Caption clause with each window's dune-line vintages, dates and interval
 def _dates_clause(metas):
     parts = []
     for m in metas:
@@ -790,16 +551,13 @@ def _dates_clause(metas):
     return "; ".join(parts)
 
 
+# Caption clause naming each window's run
 def _runs_clause(rows):
     return "; ".join(f"{r['window'].replace('_', '–')}: {r['run_name']} "
                      f"({r['arm']} arm)" for r in rows if r["run_name"])
 
 
-TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOWESS of the transect rates north of "
-                 f"domain {SKIP}, and the raw domain means over domains 1–{SKIP} "
-                 "where the Oregon Inlet boundary dominates")
-
-
+# Caption text describing the observation in one reading
 def _observed_clause(observation, reading, metas):
     if reading == "both-netchange":
         return (
@@ -861,6 +619,7 @@ def _observed_clause(observation, reading, metas):
         f"where it moved landward. Vintages and dates: {_dates_clause(metas)}.")
 
 
+# The full caption for one figure
 def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     observation, reading, col, _ = VARIANTS[variant]
     wins = ", ".join(f"{a}–{b}" for a, b in windows)
@@ -927,33 +686,26 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     return head + body
 
 
-# -----------------------------------------------------------------------------
-# figures
-# -----------------------------------------------------------------------------
+# The sensitivity arm as a filename token, '' for the main level
 def _stem_tag(root):
-    """The sensitivity arm as a filename token, "" for the main level.
-
-    Hannah, 2026-09-21: the arm lived only in the folder path, so
-    `model_vs_shoreline_means_1996_2010.png` existed under the main level AND
-    under each sensitivity, and the three were indistinguishable once moved.
-    `sensitivity/ends-swapped` -> `ends-swapped`.
-    """
     return root.rsplit("/", 1)[-1] if root else ""
 
 
+# The file stem for a variant on a level
 def _stem(variant, root):
-    """The file stem for this variant on this level, arm included."""
     stem = VARIANTS[variant][3]
     tag = _stem_tag(root)
     return f"{stem}_{tag}" if tag else stem
 
 
+# Save and close
 def _save(fig, folder, stem):
     out = save(fig, folder / stem, vector=True)
     plt.close(fig)
     return out
 
 
+# One window, one variant
 def single_figure(o: Observation, variant, models, model_keys, half, folder, root=""):
     start, end = o.window
     stem = _stem(variant, root)
@@ -972,6 +724,7 @@ def single_figure(o: Observation, variant, models, model_keys, half, folder, roo
     return _save(fig, folder, f"{stem}_{start}_{end}")
 
 
+# All four windows in a 2 x 2 grid, one variant
 def grid_figure(observations, variant, models, model_keys, half, folder, root=""):
     stem = _stem(variant, root)
     chains = obs._chains(WINDOWS)
@@ -1000,17 +753,13 @@ def grid_figure(observations, variant, models, model_keys, half, folder, root=""
     return _save(fig, folder, f"{stem}_grid")
 
 
-# -----------------------------------------------------------------------------
-# tables
-# -----------------------------------------------------------------------------
+# Model-set name as a column token
 def _tag(model_set):
     return model_set.replace("-", "")     # coastsat, dunemean3, duneraw
 
 
+# domain_rates_<w>.csv and skill.csv
 def write_tables(observations, models, tables_dir):
-    """domain_rates_<w>.csv: every reading of the observation, both
-    estimators of every model set, the residual against each. skill.csv:
-    bias and RMSE over GIS 2-89 per window x model set x estimator x target."""
     tables_dir.mkdir(parents=True, exist_ok=True)
     skill_rows = []
     for i, o in enumerate(observations):
@@ -1041,9 +790,8 @@ def write_tables(observations, models, tables_dir):
     return skill_df
 
 
+# Each target against the runs solved on it, in its own estimator
 def fair_rows(skill_df):
-    """Each target scored against the runs solved on it, with its own
-    estimator: the three columns of the README's skill table."""
     s = skill_df
     return s[((s.model_ends == "coastsat") & (s.target == "coastsat_lowess")
               & (s.model_estimator == "lrr"))
@@ -1051,7 +799,7 @@ def fair_rows(skill_df):
                 & (s.model_estimator == "endpoint"))]
 
 
-# -----------------------------------------------------------------------------
+# Run: load observations and runs, fix the y ranges, write tables, draw every figure
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--no-sensitivity", action="store_true",
@@ -1067,8 +815,7 @@ def main(argv=None):
     half = shared_bounds(observations, models)
     half_net = shared_bounds_net(observations, models)
 
-    # provenance: one row per window per model set, with the dune line's
-    # vintages, dates and interval beside the run
+    # runs_used.csv: one row per window per model set, with the dune line's dates
     prov = []
     for key, (_, rows) in models.items():
         for o, r in zip(observations, rows):
@@ -1085,6 +832,7 @@ def main(argv=None):
         f"{NET_PAD_M:g}) over both endpoint observations and every model set's "
         "endpoint rate\n", encoding="utf-8")
 
+    # Tables, then every figure in the plan
     skill_df = write_tables(observations, models, OUT_DIR / "tables")
 
     written = []

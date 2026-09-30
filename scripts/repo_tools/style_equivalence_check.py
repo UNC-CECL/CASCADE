@@ -119,6 +119,7 @@ def compare(old_src: str, new_src: str) -> list[str]:
         return out
 
     seen_old, seen_new = seen(old), seen(new)
+    reach = reach_factory(old, module_names)
     for s in new:
         d = dump(s)
         (r_old, all_old), (r_new, all_new) = seen_old[d][0], seen_new[d][0]
@@ -127,9 +128,41 @@ def compare(old_src: str, new_src: str) -> list[str]:
             problems.append(f"line {s.lineno}: resolves {sorted(r_old ^ r_new)} differently")
         calls = not isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) \
             and any(isinstance(n, ast.Call) for n in ast.walk(s))
-        if calls and not all_new >= all_old:
-            problems.append(f"line {s.lineno}: a call now runs before {sorted(all_old - all_new)} exist")
+        need = reach(s) & all_old
+        if calls and not all_new >= need:
+            problems.append(f"line {s.lineno}: a call now runs before {sorted(need - all_new)} exist")
     return problems
+
+
+# Module globals a statement can touch when it runs: what it reads directly,
+# plus everything read by this module's functions it reaches (transitively),
+# plus what earlier results it reads were built from
+def reach_factory(stmts, module_names):
+    defs = {s.name: s for s in stmts
+            if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+    body_reads = {n: {x.id for x in ast.walk(d) if isinstance(x, ast.Name)
+                      and isinstance(x.ctx, ast.Load)} & module_names for n, d in defs.items()}
+    carried: dict[str, set[str]] = {}
+    for s in stmts:
+        if not isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            got = _close(reads(s) & module_names, defs, body_reads, carried)
+            for b in binds(s):
+                carried[b] = got
+
+    def reach(stmt):
+        return _close(reads(stmt) & module_names, defs, body_reads, carried)
+    return reach
+
+
+def _close(names, defs, body_reads, carried):
+    seen, todo = set(), list(names)
+    while todo:
+        n = todo.pop()
+        if n in seen:
+            continue
+        seen.add(n)
+        todo += list(body_reads.get(n, ())) + list(carried.get(n, ()))
+    return seen
 
 
 # The file's text at a git ref, or None if it did not exist there
