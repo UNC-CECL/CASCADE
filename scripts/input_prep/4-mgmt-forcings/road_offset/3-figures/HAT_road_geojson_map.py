@@ -227,7 +227,7 @@ def draw_strip(ax, group, bounds, roads):
             continue
         first = year == YEARS[0]
         gpd.GeoSeries(clipped).plot(
-            ax=ax, color=P.C_YEAR[year],
+            ax=ax, color=P.C_YEAR[{1978: 1984, 2008: 2004}[year]],   # the period each line stands for
             linewidth=LW_1984 if first else LW_2004,
             linestyle="-" if first else (0, (3.2, 1.8)),
             zorder=7 if first else 8)
