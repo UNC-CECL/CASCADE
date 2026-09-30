@@ -605,7 +605,7 @@ def figures_for(period, preset, top_n):
 
 # Run: every swept cell's figures
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--period", type=int, choices=PERIODS, action="append",
                         help="repeatable; default every period")
     parser.add_argument("--preset", choices=PRESETS, action="append",

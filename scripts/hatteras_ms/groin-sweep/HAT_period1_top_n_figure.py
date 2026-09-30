@@ -80,7 +80,7 @@ def load():
 
 # Run: the figure
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--top-n", type=int, default=5)
     args = parser.parse_args()
 

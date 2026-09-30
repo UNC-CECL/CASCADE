@@ -89,7 +89,7 @@ def model_fillet_series(period, preset, combo):
 
 # Run: the figure for the chosen pair
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--M", type=float, default=60.0)
     parser.add_argument("--fraction", type=float, default=0.6)
     args = parser.parse_args()

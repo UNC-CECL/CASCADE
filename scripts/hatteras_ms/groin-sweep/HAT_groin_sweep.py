@@ -378,7 +378,7 @@ def attach_extents(frame, out_root):
 
 # Run: build the grid, run the cells, rank and write
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--period", type=int, required=True, choices=PERIODS)
     parser.add_argument("--preset", required=True, choices=PRESETS)
     parser.add_argument("--workers", type=int, default=8,

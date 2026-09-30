@@ -335,7 +335,7 @@ def fig_profiles(surfaces):
 
 # Run: every comparison figure
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.parse_args()
 
     surfaces = collect()

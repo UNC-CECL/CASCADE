@@ -164,7 +164,7 @@ def collate(observed):
 
 # Run: the chosen stage's cells, then the results table
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--be1", type=float, default=None,
                         help="solved edge value for the continuous window")

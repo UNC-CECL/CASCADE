@@ -324,7 +324,7 @@ def draw(preset, chainage):
 
 # Run: one figure per period and preset
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--preset", choices=PRESETS, action="append",
                         help="repeatable; default every preset")
     args = parser.parse_args()

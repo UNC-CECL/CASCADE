@@ -300,7 +300,7 @@ def _write_fits(fits, force=False):
 
 # Run: load both periods' sweeps, rank, write the fit and figures
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--preset", choices=PRESETS, action="append",
                         help="restrict to one preset (repeatable)")
     parser.add_argument("--no-figures", action="store_true")
