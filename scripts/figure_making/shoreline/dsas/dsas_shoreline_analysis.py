@@ -1,17 +1,18 @@
 """
-Complete Shoreline Change Rate Analysis - All-in-One
-Analyzes DSAS data and creates publication-quality visualizations
-Run this once and get everything!
+DSAS shoreline change rates, all in one: domain table and four figures.
+
+    python scripts/figure_making/shoreline/dsas/dsas_shoreline_analysis.py
+
+Reads the DSAS transect intersections; writes its CSV and figures into the
+folder it is run from. Details: scripts/figure_making/shoreline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-09-30
 """
 
-# The DSAS tables moved into the data tree 2026-09-13 (rule 1). These
-# were read by bare filename, so they only resolved when you happened
-# to run from this folder.
+# The DSAS tables moved into the data tree 2026-09-13 (rule 1)
 from pathlib import Path as _Path
 _REPO = next(_p for _p in _Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
@@ -22,10 +23,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# HOUSE STYLE
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -33,9 +31,6 @@ _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
 from site_layer.hat_figure_style import apply_style, figsize  # noqa: E402
 apply_style()
 
-# ============================================================================
-# PART 1: LOAD AND CALCULATE RATES
-# ============================================================================
 
 print("="*70)
 print("SHORELINE CHANGE RATE ANALYSIS - HATTERAS ISLAND")
@@ -47,10 +42,12 @@ print("-"*70)
 df = pd.read_csv(str(_DSAS / "All_Shoreline_Transect_Intersections.csv"))
 
 # Define column names
+# --- CONFIG ------------------------------------------------------------------
 TRANSECT_ID_COL = 'Transects_100m_LineID'
 DOMAIN_ID_COL = 'Transects_100m_AddSpatialJoin_domain_id'
 YEAR_COL = 'Year'
 DISTANCE_COL = 'NEAR_DIST'
+# -----------------------------------------------------------------------------
 
 print(f"Total intersection points: {len(df)}")
 print(f"Available years: {sorted(df[YEAR_COL].unique())}")
@@ -120,9 +117,6 @@ domain_rates['Domain'] = domain_rates.index
 domain_rates.to_csv('domain_shoreline_change_rates.csv', index=False)
 print(f"\n✓ Saved: domain_shoreline_change_rates.csv")
 
-# ============================================================================
-# PART 2: CREATE PUBLICATION-QUALITY VISUALIZATIONS
-# ============================================================================
 
 print("\n" + "="*70)
 print("PART 2: Creating publication-quality visualizations...")
@@ -135,9 +129,6 @@ period_names = {
     'EPR_2009_2019': '2009_v1-2019'
 }
 
-# ============================================================================
-# OPTION 1: Sequential color scheme
-# ============================================================================
 
 fig, ax = plt.subplots(figsize=figsize("double", height=3.32))
 
@@ -165,9 +156,6 @@ plt.savefig('v1_sequential_colors.png', dpi=300, bbox_inches='tight')
 print("✓ Saved: v1_sequential_colors.png")
 plt.close()
 
-# ============================================================================
-# OPTION 2: Faceted panels
-# ============================================================================
 
 fig, axes = plt.subplots(4, 1, figsize=figsize("double", height=5.61), sharex=True)
 
@@ -195,9 +183,6 @@ plt.savefig('v2_faceted.png', dpi=300, bbox_inches='tight')
 print("✓ Saved: v2_faceted.png")
 plt.close()
 
-# ============================================================================
-# OPTION 3: Early vs Recent comparison
-# ============================================================================
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize("double", height=2.49), sharey=True)
 
@@ -239,9 +224,6 @@ plt.savefig('v3_early_vs_recent.png', dpi=300, bbox_inches='tight')
 print("✓ Saved: v3_early_vs_recent.png")
 plt.close()
 
-# ============================================================================
-# OPTION 4: Calibration periods only (cleanest for CASCADE comparison)
-# ============================================================================
 
 if 'EPR_1978_1997' in domain_rates.columns and 'EPR_1997_2019' in domain_rates.columns:
     fig, ax = plt.subplots(figsize=figsize("double", height=3.32))
@@ -272,9 +254,6 @@ if 'EPR_1978_1997' in domain_rates.columns and 'EPR_1997_2019' in domain_rates.c
     print("✓ Saved: v4_calibration_periods.png")
     plt.close()
 
-# ============================================================================
-# SUMMARY STATISTICS
-# ============================================================================
 
 print("\n" + "="*70)
 print("SUMMARY STATISTICS")

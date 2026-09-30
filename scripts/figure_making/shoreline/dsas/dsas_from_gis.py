@@ -1,43 +1,35 @@
 """
-Format DSAS shoreline change data for Python scripts
-Uses domain-level statistics already calculated in GIS
+Format the DSAS domain statistics already calculated in GIS for the Python scripts.
 
-This script formats pre-calculated domain means from GIS for use in Python analysis.
-No transect-level filtering or aggregation needed - just clean formatting.
+    python scripts/figure_making/shoreline/dsas/dsas_from_gis.py
+
+Reads the DSAS 1997-2019 rate table; writes the domain CSVs. Details: scripts/figure_making/shoreline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-09-30
 """
 
 import pandas as pd
 import numpy as np
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-# Anchored 2026-09-22. These were drive-rooted into a home directory, naming
-# data/hatteras_init/shoreline_change/ -- a folder that has not existed since
-# the DSAS tables moved into the 5-scr tree. Both FILENAMES survived the move
-# unchanged, so this is a resolved relocation, not a guess: the resolver owns
-# the folder (rule 6) and the repo is found by searching upward (rule 5).
+# Anchored 2026-09-22
 import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer.hat_observed_rates import DSAS_ROOT  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW_DSAS_CSV = str(DSAS_ROOT / "dsas_1997_2019_rates.csv")
 OUTPUT_DOMAIN_CSV = str(DSAS_ROOT / "dsas_1997_2019_domain_means.csv")
 
 # Domain range for your study area
 MIN_DOMAIN = 1
 MAX_DOMAIN = 90
+# -----------------------------------------------------------------------------
 
-# ============================================================================
-# LOAD AND FORMAT DATA
-# ============================================================================
 print("="*70)
 print("DSAS DATA FORMATTING - GIS-CALCULATED DOMAIN MEANS")
 print("="*70)
@@ -67,9 +59,6 @@ if missing_domains:
 else:
     print(f"\n✓ All {len(expected_domains)} domains present")
 
-# ============================================================================
-# EXTRACT RELEVANT COLUMNS
-# ============================================================================
 # Select columns of interest (you already have domain-level stats from GIS)
 output_df = df[[
     'domain_id',
@@ -92,9 +81,6 @@ output_df = output_df.rename(columns={
 # Sort by domain
 output_df = output_df.sort_values('domain_id').reset_index(drop=True)
 
-# ============================================================================
-# SUMMARY STATISTICS
-# ============================================================================
 print("\n" + "="*70)
 print("DOMAIN-LEVEL STATISTICS")
 print("="*70)
@@ -123,9 +109,6 @@ print(f"  Median: {output_df['n_transects'].median():>5.0f}")
 print(f"  Min:    {output_df['n_transects'].min():>5.0f}")
 print(f"  Max:    {output_df['n_transects'].max():>5.0f}")
 
-# ============================================================================
-# SAVE OUTPUT
-# ============================================================================
 # Save full version with all statistics
 output_df.to_csv(OUTPUT_DOMAIN_CSV, index=False)
 print(f"\n✓ Saved full comparison: {OUTPUT_DOMAIN_CSV}")
@@ -135,9 +118,6 @@ simple_output = OUTPUT_DOMAIN_CSV.replace('.csv', '_SIMPLE.csv')
 output_df[['domain_id', 'annual_rate_m_per_yr']].to_csv(simple_output, index=False)
 print(f"✓ Saved simple comparison: {simple_output}")
 
-# ============================================================================
-# PREVIEW OUTPUT
-# ============================================================================
 print("\n" + "="*70)
 print("SAMPLE OUTPUT (first 10 and last 10 domains):")
 print("="*70)
@@ -146,9 +126,6 @@ print(output_df.head(10).to_string(index=False))
 print("\nLast 10 domains:")
 print(output_df.tail(10).to_string(index=False))
 
-# ============================================================================
-# SPATIAL PATTERN ANALYSIS
-# ============================================================================
 print("\n" + "="*70)
 print("SPATIAL PATTERNS")
 print("="*70)

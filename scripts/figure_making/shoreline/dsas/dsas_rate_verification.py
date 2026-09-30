@@ -1,16 +1,17 @@
 """
-Verification: Compare Calculated Rates to Known Values
-Checks if your calculated shoreline change rates make sense
+Check the calculated DSAS shoreline change rates against known values.
+
+    python scripts/figure_making/shoreline/dsas/dsas_rate_verification.py
+
+Reads the DSAS tables; writes dsas_verification.png under supporting/. Details: scripts/figure_making/shoreline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 
-# The DSAS tables moved into the data tree 2026-09-13 (rule 1). These
-# were read by bare filename, so they only resolved when you happened
-# to run from this folder.
+# The DSAS tables moved into the data tree 2026-09-13 (rule 1)
 from pathlib import Path as _Path
 _REPO = next(_p for _p in _Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
@@ -19,9 +20,7 @@ _dsys.path.insert(0, str(_REPO / "scripts"))
 from site_layer.hat_observed_rates import DSAS_ROOT as _DSAS  # noqa: E402
 import pandas as pd
 
-# HOUSE STYLE. Like the poster script, this imported record_caption at the
-# BOTTOM and never called apply_style(), so it was not in the project
-# typeface at all (2026-09-17).
+# HOUSE STYLE
 import sys as _sys
 _sys.path.insert(0, str(_REPO / "scripts"))
 from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
@@ -38,16 +37,15 @@ print("="*70)
 print("VERIFICATION ANALYSIS")
 print("="*70)
 
-# ============================================================================
-# CHECK 1: Compare to your CASCADE background erosion rate
-# ============================================================================
 
 print("\nCHECK 1: Comparison to CASCADE Background Erosion Rate")
 print("-"*70)
 
 # Your CASCADE background erosion rate (from your 1978-1997 calibration)
+# --- CONFIG ------------------------------------------------------------------
 CASCADE_BG_EROSION = -1.091  # dam/yr
 CASCADE_BG_EROSION_M = CASCADE_BG_EROSION * 10  # Convert to m/yr
+# -----------------------------------------------------------------------------
 
 print(f"CASCADE background erosion rate: {CASCADE_BG_EROSION_M:.2f} m/yr")
 
@@ -62,9 +60,6 @@ if 'EPR_1978_1997' in domain_rates.columns:
     else:
         print("! DISCREPANCY - May need investigation")
 
-# ============================================================================
-# CHECK 2: Sign convention validation
-# ============================================================================
 
 print("\n" + "="*70)
 print("CHECK 2: Sign Convention Verification")
@@ -86,9 +81,6 @@ for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
         
         print(f"{col}: {mean_rate:+.2f} m/yr  |  {pct_erosional:.0f}% domains eroding  |  {status}")
 
-# ============================================================================
-# CHECK 3: Magnitude sanity check
-# ============================================================================
 
 print("\n" + "="*70)
 print("CHECK 3: Magnitude Sanity Check")
@@ -116,9 +108,6 @@ for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
         
         print(f"{col}: {min_val:+.2f} to {max_val:+.2f} m/yr (mean: {mean_val:+.2f})  |  {flag}")
 
-# ============================================================================
-# CHECK 4: Spatial pattern validation
-# ============================================================================
 
 print("\n" + "="*70)
 print("CHECK 4: Known Spatial Patterns")
@@ -160,9 +149,6 @@ if len(rodanthe) > 0 and 'EPR_1978_1997' in rodanthe.columns:
     else:
         print("  X WRONG - Should be erosional!")
 
-# ============================================================================
-# CHECK 5: Temporal trends
-# ============================================================================
 
 print("\n" + "="*70)
 print("CHECK 5: Temporal Trends")
@@ -184,9 +170,6 @@ if len(rodanthe_trends) >= 2:
     else:
         print("  -> Erosion slowing (less negative over time)")
 
-# ============================================================================
-# CREATE VERIFICATION PLOT
-# ============================================================================
 
 print("\n" + "="*70)
 print("Creating validation plot...")

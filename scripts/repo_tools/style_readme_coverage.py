@@ -44,6 +44,10 @@ def prose(src: str) -> list[str]:
             d = ast.get_docstring(node, clean=True)
             if d:
                 out += d.splitlines()
+    for node in ast.parse(src).body[1:]:          # a header stranded below an inserted line
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) \
+                and isinstance(node.value.value, str):
+            out += node.value.value.splitlines()
     for tok in tokenize.generate_tokens(io.StringIO(src).readline):
         if tok.type == tokenize.COMMENT:
             out.append(tok.string.lstrip("#").strip())

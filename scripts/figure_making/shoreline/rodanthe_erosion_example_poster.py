@@ -1,30 +1,17 @@
 """
+CoastSat shoreline erosion around Rodanthe: annual positions and LRR trends per domain, for a poster.
+
+    python scripts/figure_making/shoreline/rodanthe_erosion_example_poster.py
+
+Reads the CoastSat time series; writes one square figure to output/figures/. Details: scripts/figure_making/shoreline/README.md.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 
 from pathlib import Path
-"""
-CoastSat Shoreline Erosion Trends — Rodanthe Area
-Hatteras Island, NC
-
-Produces a single square publication-quality figure for poster use showing:
-  - Annual mean shoreline position per domain (thin lines) — shows the raw signal
-  - LRR trend line per domain (bold, full-period) — shows the erosion rate
-
-Two messages conveyed:
-  1. Rodanthe has been eroding consistently over the full record
-  2. Different parts of Rodanthe erode at different rates
-
-Data source: CoastSat satellite-derived shorelines
-
-Usage
------
-  1. Edit the CONFIG section below.
-  2. Run: python plot_coastsat_rodanthe_erosion.py
-"""
 
 import os
 import glob
@@ -36,22 +23,19 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 
-# Anchored 2026-09-14. These named a home directory or a tree renamed
-# twice over, so none resolved. Rule 5 of ORGANIZATION.md.
+# Anchored 2026-09-14
 _FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
                  if (_p / "pyproject.toml").exists())
 
 warnings.filterwarnings("ignore")
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
 
 import sys as _sys
 from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 LOOKUP_CSV    = str(_obs.transect_lookup())
 
@@ -62,9 +46,7 @@ START_DATE  = "1984-01-01"
 END_DATE    = "2024-12-31"
 MIN_OBS     = 5
 
-# A poster figure, so it goes to output/figures/ with the others (2026-09-18);
-# it used to be written in among the rate fits, 5-scr/coastsat_lrr/rodanthe_plots
-# (those older copies are in 5-scr/archive/rodanthe_plots/).
+# A poster figure, so it goes to output/figures/ with the others (2026-09-18)
 from site_layer import hat_figure_style as _hs  # noqa: E402
 OUTPUT_DIR  = str(_hs.figure_dir("observations", "shoreline", "rodanthe_plots"))
 OUTPUT_FILE = "rodanthe_erosion_trends.png"
@@ -80,11 +62,10 @@ DOMAIN_COLORS = {
     82: '#d4622a',
     83: '#c0392b',
 }
+# -----------------------------------------------------------------------------
 
-# ============================================================================
-# DATA LOADING
-# ============================================================================
 
+# transect id -> CSV path for every CoastSat time series
 def collect_csv_map(root_dir, site_filter=""):
     csv_map = {}
     if not os.path.isdir(root_dir):
@@ -100,6 +81,7 @@ def collect_csv_map(root_dir, site_filter=""):
     return csv_map
 
 
+# One transect's time series
 def load_timeseries(filepath):
     df = pd.read_csv(filepath, header=0)
     df.columns = [c.strip() for c in df.columns]
@@ -109,6 +91,7 @@ def load_timeseries(filepath):
     return df.dropna(subset=["date", "chainage_m"]).sort_values("date").reset_index(drop=True)
 
 
+# Keep observations inside a date window
 def filter_dates(df, start, end):
     if start:
         df = df[df["date"] >= pd.Timestamp(start, tz="UTC")]
@@ -117,6 +100,7 @@ def filter_dates(df, start, end):
     return df.reset_index(drop=True)
 
 
+# The Rodanthe domains' transect series
 def load_data(root_dir, lookup_csv, domain_min, domain_max,
               site_filter, start_date, end_date, min_obs):
     lookup = pd.read_csv(lookup_csv)
@@ -154,10 +138,7 @@ def load_data(root_dir, lookup_csv, domain_min, domain_max,
     return df_all
 
 
-# ============================================================================
-# COMPUTE DOMAIN ANNUAL MEANS AND LRR TREND LINES
-# ============================================================================
-
+# Annual mean position and LRR trend per domain
 def compute_domain_stats(df_all):
     domain_year = (
         df_all.groupby(["domain_number", "year"])["chainage_m"]
@@ -193,10 +174,7 @@ def compute_domain_stats(df_all):
     return domain_year, lrr_stats
 
 
-# ============================================================================
-# PLOT
-# ============================================================================
-
+# The square poster figure
 def make_figure(domain_year, lrr_stats, domain_colors, domain_min, domain_max,
                 start_date, end_date, output_path, fig_size):
 
@@ -289,10 +267,7 @@ def make_figure(domain_year, lrr_stats, domain_colors, domain_min, domain_max,
     plt.close()
 
 
-# ============================================================================
-# MAIN
-# ============================================================================
-
+# Run: load, compute, draw
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     print("=" * 60)

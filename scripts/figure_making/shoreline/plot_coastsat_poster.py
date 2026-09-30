@@ -1,35 +1,11 @@
 #!/usr/bin/env python3
 """
-plot_coastsat_poster.py
-==============================================================================
-The LOWESS-SMOOTHED companion to coastsat_calibration_periods.png: the same
-CoastSat rates over the same two run periods, smoothed over a 7-domain (3.5 km)
-window so the alongshore pattern reads without the domain-to-domain scatter.
+The LOWESS-smoothed companion to the CoastSat calibration-periods figure (7 domains, 3.5 km).
 
-Drawn in exactly the style of the primary, so the two can be laid side by side
-and only the smoothing differs.
+    python scripts/figure_making/shoreline/plot_coastsat_poster.py
 
-WHAT CHANGED 2026-09-17
-  * THE PERIODS ARE THE CANONICAL CHAIN, 1996 -> 2010 -> 2024, read from
-    HATTERAS_PERIODS, and each curve comes from that window's own LRR product.
-    It drew 1984-2004 / 2004-2024 before.
-  * IT WAS 13 INCHES WIDE, a poster size, saved with a tight bbox so the
-    labels rather than figsize() decided the width. At that size its 12 pt
-    bold axis labels reduce to about 5 pt on a page. It is 190 mm now, with
-    explicit margins and no tight bbox. Render it at a poster width
-    deliberately if a poster copy is wanted.
-  * THE HOUSE STYLE WAS NEVER APPLIED. The file imported record_caption at the
-    BOTTOM and never called apply_style(), so it was not in the project
-    typeface at all despite sitting beside figures that are.
-  * OFF THE CANVAS: a two-line bold title, the S/N end labels, the place names
-    (Buxton / Avon / Tri-Village / Salvo / Waves / Rodanthe), the
-    Accretion/Erosion markers and a footnote paragraph. All caption material
-    under figure_making/STYLE.md, and the caption carries it now.
-  * THE COLOURS ARE THE VINTAGE PAIR. It used a dark blue and a brown of its
-    own; the earlier period is C_1984 red and the later C_1997 blue here, as
-    in every other figure that draws two periods.
-  * THE LEGEND IS OUT OF THE PANEL. It was boxed and sat on the data.
-==============================================================================
+Same periods and style as the primary, only the smoothing differs. Writes to
+output/figures/2-observations/shoreline/. Details: scripts/figure_making/shoreline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -42,10 +18,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5), so this block is
-# independent of whatever this script calls its own repository variable.
+# HOUSE STYLE
 import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
@@ -70,6 +43,7 @@ _REPO = next(_p for _p in _P(__file__).resolve().parents
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as LRR_DIR  # noqa: E402
 from site_layer import hat_figure_style as _hs  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 PERIOD_STARTS = (1996, 2010)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 DOMAIN_COL, LRR_COL = "domain_number", "mean_lrr"
@@ -78,8 +52,10 @@ WINDOW_DOMAINS = 7                       # 3.5 km at the 500 m domain spacing; 1
 # named for its window: two_periods_10_domains until 2026-09-28
 OUT = _hs.figure_dir("observations", "shoreline", f"two_periods_{WINDOW_DOMAINS}_domains")
 PERIOD_COLOURS = ((C_1984, C_1984_FILL), (C_1997, C_1997_FILL))
+# -----------------------------------------------------------------------------
 
 
+# Domain-mean LRR for one window, from its own product
 def load_period(start, end):
     path = LRR_DIR / f"{start}_{end}" / "domain_lrr_summary.csv"
     if not path.is_file():
@@ -89,6 +65,7 @@ def load_period(start, end):
     return frame.sort_values(DOMAIN_COL).reset_index(drop=True)
 
 
+# Run: load and smooth each period, draw, record the caption
 def main():
     frac = WINDOW_DOMAINS / (DOMAIN_MAX - DOMAIN_MIN + 1)
     km = WINDOW_DOMAINS * 0.5
@@ -96,25 +73,16 @@ def main():
     fig, ax = plt.subplots(figsize=figsize("double", height=3.6))
     fig.subplots_adjust(left=0.085, right=0.985, bottom=0.235, top=0.96)
 
-    # THE LIMITS GO FIRST. town_bands() skips any span outside the current
-    # view and clamps a label to the visible part of its span, so calling it
-    # before set_xlim silently dropped Buxton (GIS 7-8): the axes had
-    # autoscaled to the shoal spans and 6.5-8.5 fell outside them. Band and
-    # label both vanished, with no error (2026-09-17).
+    # THE LIMITS GO FIRST
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
 
     for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
         ax.axvspan(lo - 0.5, hi + 0.5, facecolor=C["ADDED"], alpha=0.13,
                    lw=0, zorder=0.5)
-        # a second row, clear of the village names at 0.985: Avon Shoals
-        # spans Avon and Wimble Shoals spans Tri-Village, so the two sets
-        # of labels overlap in x and must differ in y
+        # A second row, clear of the village names at 0.985
         ax.text((lo + hi) / 2, 0.925, name, transform=ax.get_xaxis_transform(),
                 ha="center", va="top", fontsize=7, color="#8a620e", zorder=7)
-    # NAMED, like the shoals and the structures: if a band is worth
-    # drawing it is worth naming (Hannah, 2026-09-17). town_bands puts
-    # these at the top of the panel, and structures() already knows to
-    # tuck its own labels under them.
+    # NAMED, like the shoals and the structures
     town_bands(ax, shade="0.93")
     ax.axhline(0, color=INK_MUTED, lw=0.7, ls=(0, (4, 3)), zorder=2)
 

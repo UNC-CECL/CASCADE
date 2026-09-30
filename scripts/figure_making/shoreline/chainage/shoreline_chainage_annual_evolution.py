@@ -1,31 +1,15 @@
 """
-shoreline_chainage_alldata_evolution.py
-====================================
-Visualises CoastSat shoreline chainage across Hatteras Island over 40 years.
+CoastSat shoreline chainage over 40 years, annual medians: decade panels and a seasonal GIF.
 
-Outputs
--------
-1.  Four 10-year panel figures (one PNG each):
-        1984–1994, 1994–2004, 2004–2014, 2014–2024
-    Each shows annual median chainage deviation from the period-start baseline
-    for every individual transect.  Lines coloured light→dark as years pass.
+    python scripts/figure_making/shoreline/chainage/shoreline_chainage_annual_evolution.py
 
-2.  A GIF animating spring (Apr–May) and fall (Oct–Nov) seasonal median
-    shoreline profiles year by year, 1984–2024.
-
-Usage
------
-    Edit the CONFIG section, then run:
-        python shoreline_chainage_alldata_evolution.py
-
-Dependencies
-------------
-    pip install pandas numpy matplotlib scipy imageio tqdm
+Four decade panels of annual median deviation, and a GIF of spring and fall
+median profiles year by year; reads the per-transect CoastSat time series. Details: scripts/figure_making/shoreline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-09-30
 """
 
 import os
@@ -38,17 +22,12 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# HOUSE STYLE
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
-# Typeface only: this script writes ANIMATION frames, and the printed-width
-# rule does not apply to something that is never printed. Its figsize is
-# the frame size and is left as it is.
+# Typeface only
 from site_layer.hat_figure_style import apply_style  # noqa: E402
 apply_style()
 import matplotlib.cm as cm
@@ -59,22 +38,14 @@ from tqdm import tqdm
 _REPO = next(_p for _p in Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 
-# ============================================================
-# CONFIG
-# ============================================================
 
-# The per-transect CoastSat timeseries live in the data tree, not under
-# scripts/; the old value was a driveless path that never existed (2026-09-10).
+# The per-transect CoastSat timeseries live in the data tree, not under scripts/
 from site_layer import hat_observed_rates as _obs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
-# "input_preperation" is the pre-2026 folder name; the lookup now lives
-# under data/hatteras_init/5-scr/2-transect-frame/transect_domains/ (moved out of the
-# scripts tree 2026-09-12; hat_observed_rates.py resolves it).
+# "input_preperation" is the pre-2026 folder name
 LOOKUP_CSV    = str(_obs.transect_lookup())
-# Products go to output/, not beside the script (2026-09-13). These were
-# absolute paths into a home directory, so they resolved on one machine
-# and dumped 1212 files into the code tree. Rule 1 and rule 5 of
-# ORGANIZATION.md.
+# Products go to output/, not beside the script (2026-09-13)
 from site_layer import hat_figure_style as _hs  # noqa: E402
 OUTPUT_DIR    = str(_hs.OBSERVATIONS_OUT / "raw_shoreline_change" / "annual_output")
 SITE_FILTER   = "usa_NC"
@@ -102,7 +73,7 @@ BG_COLOR           = "white"
 
 NUM_REAL_DOMAINS = 90
 
-# ── Geographic annotation (matches publication figure style) ──────────────────
+# Geographic annotation (matches publication figure style)
 
 ANN_TOWN_SPANS = {
     "Buxton":      (7,  8),
@@ -122,11 +93,10 @@ ANN_C_WIMBLE       = "#E0A800"   # amber     — Wimble Shoals fill
 ANN_C_VILLAGE_LINE = "0.40"      # mid-grey  — Salvo/Waves/Rodanthe lines
 ANN_C_PIER         = "#1565C0"   # dark blue — pier lines
 ANN_C_GROIN        = "#B71C1C"   # dark red  — groin lines
+# -----------------------------------------------------------------------------
 
-# ============================================================
-# HELPERS
-# ============================================================
 
+# Every per-transect CoastSat CSV under the data folder
 def find_csvs(root_dir, site_filter):
     csv_map = {}
     for folder in os.listdir(root_dir):
@@ -141,6 +111,7 @@ def find_csvs(root_dir, site_filter):
     return csv_map
 
 
+# One transect's time series (dates, chainage)
 def load_transect(csv_path):
     try:
         df = pd.read_csv(csv_path)
@@ -157,6 +128,7 @@ def load_transect(csv_path):
         return None
 
 
+# Gaussian smoothing of a 1-D series
 def gaussian_smooth_1d(arr, sigma):
     if sigma <= 0:
         return arr
@@ -169,6 +141,7 @@ def gaussian_smooth_1d(arr, sigma):
         return np.where(wt > 0.05, sm / wt, np.nan)
 
 
+# Annual median chainage per transect
 def build_annual_matrix(ts_dict, transect_order, start, end, min_obs=2):
     p_start = pd.Timestamp(start)
     p_end   = pd.Timestamp(end)
@@ -188,20 +161,17 @@ def build_annual_matrix(ts_dict, transect_order, start, end, min_obs=2):
     return df, np.array(years)
 
 
+# Return the transect array index nearest to a given domain number
 def transect_index(domain_per_transect, domain):
-    """Return the transect array index nearest to a given domain number."""
     return int(np.searchsorted(domain_per_transect, domain))
 
 
+# Apply the full publication annotation suite to ax
 def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5):
-    """
-    Apply the full publication annotation suite to ax.
-    ylim must be the (ymin, ymax) already set on ax so labels are placed correctly.
-    """
     ymin, ymax = ylim
     yspan = ymax - ymin
 
-    # ── Wimble Shoals zone ────────────────────────────────────────────────────
+    # Wimble Shoals zone
     ws0 = transect_index(domain_per_transect, ANN_WIMBLE_SHOALS[0])
     ws1 = transect_index(domain_per_transect, ANN_WIMBLE_SHOALS[1])
     ax.axvspan(ws0, ws1, color=ANN_C_WIMBLE, alpha=0.18, zorder=0)
@@ -209,7 +179,7 @@ def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5
             "Wimble Shoals", ha="center", va="top",
             fontsize=6.5, color=ANN_C_WIMBLE, style="italic", zorder=3)
 
-    # ── Community spans ───────────────────────────────────────────────────────
+    # Community spans
     for name, (d0, d1) in ANN_TOWN_SPANS.items():
         i0 = transect_index(domain_per_transect, d0)
         i1 = transect_index(domain_per_transect, d1)
@@ -218,12 +188,12 @@ def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5
                 name, ha="center", va="top",
                 fontsize=7, color=ANN_C_TOWN_SPAN, fontweight="bold", zorder=3)
 
-    # ── Village centre lines (Salvo, Waves, Rodanthe) ─────────────────────────
+    # Village centre lines (Salvo, Waves, Rodanthe)
     for vname, vdom in ANN_VILLAGE_LINES.items():
         ix = transect_index(domain_per_transect, vdom)
         ax.axvline(ix, color=ANN_C_VILLAGE_LINE, lw=0.7, ls=(0, (3, 4)), zorder=2)
 
-    # ── Piers ─────────────────────────────────────────────────────────────────
+    # Piers
     for pname, pdom in ANN_PIERS.items():
         ix = transect_index(domain_per_transect, pdom)
         ax.axvline(ix, color=ANN_C_PIER, lw=1.0, ls="--", zorder=2)
@@ -232,7 +202,7 @@ def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5
                 rotation=90, va="bottom", ha="left",
                 fontsize=6.5, color=ANN_C_PIER, zorder=3)
 
-    # ── Groins ────────────────────────────────────────────────────────────────
+    # Groins
     for gname, gdom in ANN_GROINS.items():
         ix = transect_index(domain_per_transect, gdom)
         ax.axvline(ix, color=ANN_C_GROIN, lw=1.0, ls="--", zorder=2)
@@ -241,15 +211,14 @@ def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5
                 rotation=90, va="bottom", ha="left",
                 fontsize=6.5, color=ANN_C_GROIN, zorder=3)
 
-    # ── Top x-axis: transect index numbers ────────────────────────────────────
+    # Top x-axis: transect index numbers
     transect_ticks = np.arange(0, len(domain_per_transect), 100)
     ax2 = ax.secondary_xaxis("top")
     ax2.set_xticks(transect_ticks)
     ax2.set_xticklabels([str(t) for t in transect_ticks], fontsize=6)
     ax2.set_xlabel("Transect index", fontsize=7)
 
-    # ── Bottom x-axis: replace generic label with domain tick marks ───────────
-    # Place domain number ticks on the primary axis
+    # Domain-number ticks on the bottom axis
     domain_ticks = np.arange(1, NUM_REAL_DOMAINS + 1, domain_tick_every)
     tick_pos     = [transect_index(domain_per_transect, d) for d in domain_ticks]
     ax.set_xticks(tick_pos)
@@ -257,16 +226,13 @@ def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5
     ax.set_xlabel("GIS domain (south → north)", fontsize=7)
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: load every transect, draw the decade panels and the seasonal GIF
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     gif_dir = os.path.join(OUTPUT_DIR, "gif_frames")
     os.makedirs(gif_dir, exist_ok=True)
 
-    # ── 1. Lookup table ──────────────────────────────────────────────────────
+    # 1. Lookup table
     print("Loading lookup table …")
     lookup = pd.read_csv(LOOKUP_CSV)
     lookup["transect_id"]   = lookup["transect_id"].astype(str)
@@ -280,7 +246,7 @@ def main():
     n_transects         = len(transect_order)
     print(f"  {n_transects} transects across {lookup['domain_number'].nunique()} domains.\n")
 
-    # ── 2. Load CSVs ─────────────────────────────────────────────────────────
+    # 2. Load CSVs
     print("Discovering CSV files …")
     csv_map = find_csvs(ROOT_DATA_DIR, SITE_FILTER)
     print(f"  Found {len(csv_map)} CSVs on disk.\n")
@@ -296,16 +262,12 @@ def main():
 
     x = np.arange(n_transects)
 
-    # ============================================================
-    # PART A — Four 10-year panel figures (shared 1984 baseline)
-    # ============================================================
+    # Part A: four 10-year panel figures on a shared 1984 baseline
     print("=" * 60)
     print("Building 10-year panel figures …")
     print("=" * 60)
 
-    # ── Compute 1984 baseline ONCE — reused by all panels and GIF ────────────
-    # Use full-year 1984 median (not spring-only) for panels so early Landsat
-    # years with sparse seasonal coverage still get a valid baseline.
+    # 1984 baseline, computed once: the full-year median, so early sparse years count
     print("  Computing 1984 annual baseline for panels …")
     panel_baseline_1984 = {}
     for tid in transect_order:
@@ -317,8 +279,7 @@ def main():
             panel_baseline_1984[tid] = np.nan
     panel_baseline_ser = pd.Series(panel_baseline_1984, name=1984)
 
-    # ── Pre-compute all annual deviations from 1984 baseline across full record
-    # so we can set a shared y-axis range before drawing any panel.
+    # Pre-compute every annual deviation, for one shared y range
     print("  Pre-computing full-record deviations for shared y-axis …")
     full_ann_df, full_years = build_annual_matrix(
         ts_dict, transect_order, FULL_START, FULL_END, MIN_OBS_PER_YEAR
@@ -409,12 +370,11 @@ def main():
         plt.close(fig)
         print(f"    Saved → {out_path}")
 
-    # ── Decadal GIF: cycle through the four panel PNGs slowly ─────────────────
+    # Decadal GIF: cycle through the four panel PNGs slowly
     if panel_frame_paths:
         print("\n  Assembling decadal GIF …")
         decadal_gif_path = os.path.join(OUTPUT_DIR, "HAT_shoreline_decadal.gif")
-        # Use PIL directly — imageio duration is unreliable across versions/viewers.
-        # PIL duration is always milliseconds, consistent across all GIF viewers.
+        # Use PIL directly — imageio duration is unreliable across versions/viewers
         from PIL import Image
         pil_frames = [Image.open(fp).convert("RGBA") for fp in panel_frame_paths]
         pil_frames[0].save(
@@ -426,9 +386,7 @@ def main():
         )
         print(f"  Decadal GIF saved → {decadal_gif_path}")
 
-    # ============================================================
-    # PART B — GIF: spring (Apr–May) and fall (Oct–Nov) per year
-    # ============================================================
+    # Part B: GIF of spring (Apr-May) and fall (Oct-Nov) profiles per year
     print("\n" + "=" * 60)
     print("Building GIF frames (spring + fall per year, 1984–2024) …")
     print("=" * 60)
@@ -488,9 +446,7 @@ def main():
     print(f"  Colour scale: ±{clim:.0f} m")
     print(f"  Rendering up to {len(frame_labels)} frames …\n")
 
-    # Custom diverging colormap: saturated red (erosion/negative) → mid-grey
-    # → saturated blue (accretion/positive). Stays visible near zero unlike
-    # RdBu which passes through white. Negative = erosion = red, Positive = accretion = blue.
+    # Custom diverging colormap
     from matplotlib.colors import LinearSegmentedColormap
     gif_cmap = LinearSegmentedColormap.from_list(
         "erosion_accretion",

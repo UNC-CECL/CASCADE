@@ -29,7 +29,7 @@ from pathlib import Path
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 
 
-# Remove every docstring so trimming one is not a code change
+# Remove every docstring, and bare module-level strings (no-ops), so trimming one is not a code change
 def strip_docstrings(tree: ast.AST) -> ast.AST:
     for node in ast.walk(tree):
         if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -37,6 +37,8 @@ def strip_docstrings(tree: ast.AST) -> ast.AST:
             if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) \
                     and isinstance(body[0].value.value, str):
                 node.body = body[1:] or [ast.Pass()]
+    tree.body = [s for s in tree.body if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant)
+                                              and isinstance(s.value.value, str))]
     return tree
 
 

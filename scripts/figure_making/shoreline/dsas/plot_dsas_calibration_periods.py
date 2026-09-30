@@ -1,46 +1,22 @@
 #!/usr/bin/env python3
 """
-plot_dsas_calibration_periods.py
-==============================================================================
-Observed shoreline change rate per domain from the DSAS transect record --
-the INDEPENDENT CHECK on the CoastSat figure, not the target.
+Observed DSAS shoreline change rate per domain for the run periods: the independent check on CoastSat.
 
-CoastSat is what the model is graded against (see
-coastsat_calibration_periods.png, and hat_observed_rates), so this one lives
-under supporting/ and is drawn in exactly the same style, so the two can be
-laid side by side and only the data differs (Hannah, 2026-09-17).
+    python scripts/figure_making/shoreline/dsas/plot_dsas_calibration_periods.py
 
-TWO THINGS THIS FIGURE CANNOT MATCH EXACTLY, and both are stated in the
-caption rather than smoothed over:
-
-  THE WINDOWS. DSAS has five digitised shorelines -- 1978, 1987, 1997, 2009,
-  2019 -- so it cannot be cut to the run periods. The nearest pairs are used:
-  1997-2009 stands in for 1996-2010 (one year in at each end) and 2009-2019
-  for 2010-2024 (one year late, five years short). Until 2026-09-17 it drew
-  1978-1997 and 1997-2019, which straddle the run periods rather than
-  approximating them.
-
-  THE ESTIMATOR. This is an END-POINT RATE: the first and last shoreline of
-  the window, over the elapsed years. CoastSat is an OLS slope through every
-  transect observation in the window, which is what the model is scored with
-  (see hat_observed_rates and the LRR note in HAT_hindcast_methods). With two
-  shorelines an OLS slope IS the end-point rate, so the two agree in form
-  here; they would not if a third DSAS vintage fell inside a window.
-==============================================================================
+Nearest DSAS pairs stand in for each run period (1997-2009, 2009-2019); drawn
+exactly like the CoastSat figure, under supporting/. Details: scripts/figure_making/shoreline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 import matplotlib
 matplotlib.use("Agg")
 import pandas as pd
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5), so this block is
-# independent of whatever this script calls its own repository variable.
+# HOUSE STYLE
 import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
@@ -60,12 +36,12 @@ from site_layer.hatteras_site_config import HATTERAS_PERIODS, HATTERAS_ANNOTATIO
 _REPO = next(_p for _p in _P(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 from site_layer.hat_observed_rates import DSAS_ROOT  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 INPUT_CSV = DSAS_ROOT / "All_Shoreline_Transect_Intersections.csv"
 from site_layer import hat_figure_style as _hs  # noqa: E402
 FIG_DIR = _hs.figure_dir("observations", "shoreline")
 
-# The run periods this is checking, and the DSAS pair that stands in for each.
-# Both are stated so a reader never has to infer the offset.
+# The run periods this is checking, and the DSAS pair that stands in for each
 PERIOD_STARTS = (1996, 2010)
 RUN_PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 DSAS_WINDOWS = ((1997, 2009), (2009, 2019))
@@ -75,10 +51,11 @@ DOMAIN_ID_COL = "Transects_100m_AddSpatialJoin_domain_id"
 YEAR_COL, DISTANCE_COL = "Year", "NEAR_DIST"
 DOMAIN_MIN, DOMAIN_MAX = 1, 90
 PERIOD_COLOURS = ((C_1984, C_1984_FILL), (C_1997, C_1997_FILL))
+# -----------------------------------------------------------------------------
 
 
+# Domain-mean end-point rate for each DSAS window, positive seaward
 def domain_rates():
-    """Domain-mean end-point rate for each DSAS window, positive seaward."""
     frame = pd.read_csv(INPUT_CSV)
     frame = frame[[TRANSECT_ID_COL, DOMAIN_ID_COL, YEAR_COL, DISTANCE_COL]].dropna()
     domain_map = frame[[TRANSECT_ID_COL, DOMAIN_ID_COL]].drop_duplicates()
@@ -105,31 +82,23 @@ def domain_rates():
     return out.sort_values("domain").reset_index(drop=True)
 
 
+# Run: domain rates per window, draw, record the caption
 def main():
     rates = domain_rates()
     fig, ax = plt.subplots(figsize=figsize("double", height=3.6))
     fig.subplots_adjust(left=0.085, right=0.985, bottom=0.235, top=0.96)
 
-    # THE LIMITS GO FIRST. town_bands() skips any span outside the current
-    # view and clamps a label to the visible part of its span, so calling it
-    # before set_xlim silently dropped Buxton (GIS 7-8): the axes had
-    # autoscaled to the shoal spans and 6.5-8.5 fell outside them. Band and
-    # label both vanished, with no error (2026-09-17).
+    # THE LIMITS GO FIRST
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
 
     for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
         ax.axvspan(lo - 0.5, hi + 0.5, facecolor=C["ADDED"], alpha=0.13,
                    lw=0, zorder=0.5)
-        # a second row, clear of the village names at 0.985: Avon Shoals
-        # spans Avon and Wimble Shoals spans Tri-Village, so the two sets
-        # of labels overlap in x and must differ in y
+        # A second row, clear of the village names at 0.985
         ax.text((lo + hi) / 2, 0.925, name, transform=ax.get_xaxis_transform(),
                 ha="center", va="top", fontsize=7, color="#8a620e", zorder=7)
 
-    # NAMED, like the shoals and the structures: if a band is worth
-    # drawing it is worth naming (Hannah, 2026-09-17). town_bands puts
-    # these at the top of the panel, and structures() already knows to
-    # tuck its own labels under them.
+    # NAMED, like the shoals and the structures
     town_bands(ax, shade="0.93")
     ax.axhline(0, color=INK_MUTED, lw=0.7, ls=(0, (4, 3)), zorder=2)
 
@@ -139,9 +108,7 @@ def main():
             zip(PERIOD_COLOURS, DSAS_WINDOWS), 1):
         col = rates[f"P{i}"]
         y = col.values
-        # A domain is NaN where no transect in it carries BOTH of the window's
-        # shorelines; matplotlib breaks the line and the fill there rather than
-        # bridging a gap that has no data behind it.
+        # A domain is NaN where no transect in it carries BOTH of the window's shorelines
         ax.fill_between(x, 0, y, color=fill_c, alpha=0.55, lw=0, zorder=3)
         ax.plot(x, y, color=line_c, lw=1.4, zorder=4)
         coverage[i] = (int(col.notna().sum()), len(col))
@@ -167,8 +134,7 @@ def main():
                ncol=4, frameon=False, fontsize=8, handlelength=1.8,
                columnspacing=1.6)
 
-    # A CHECK, SO IT LIVES UNDER supporting/. The caption is keyed to the
-    # figure's name in the folder's one CAPTIONS.md, beside the primary's.
+    # A CHECK, SO IT LIVES UNDER supporting/
     out_dir = support_dir(FIG_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
     png = out_dir / "dsas_calibration_periods.png"

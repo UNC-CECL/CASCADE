@@ -1,4 +1,11 @@
 """
+Shoreline change from saved CASCADE runs: yearly relative and absolute GIFs, and the rate figure.
+
+    python scripts/figure_making/shoreline/plot_shoreline_from_npz.py
+
+Set NPZ_PATHS_BY_LABEL and START_YEAR / END_YEAR first; compares against the
+CoastSat LOWESS as the old hindcast script drew it. Details: scripts/figure_making/shoreline/README.md.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
@@ -6,24 +13,6 @@ Version: 2026-09-30
 """
 
 from pathlib import Path
-#!/usr/bin/env python3
-"""
-HATTERAS ISLAND: Shoreline Change Analysis from CASCADE NPZ Output
-==================================================================
-Loads pre-saved CASCADE NPZ comparison and produces:
-  1. Yearly relative shoreline change + BN bar panel → GIF
-  2. Yearly absolute shoreline position + BN bar panel → GIF
-  3. Publication-quality rate profile vs CoastSat LOWESS
-
-Annotation system, color palette, LOWESS CoastSat pipeline, and geographic
-annotation data all match HAT_hindcast_1984_2024_old version.py exactly.
-
-Usage:
-  1. Set NPZ_PATHS_BY_LABEL  (Section 2) — one entry per run to compare.
-  2. Set START_YEAR / END_YEAR            — must match the loaded run period.
-  3. Set SOURCE_SINK_PRESET and Hs labels as needed for plot titles.
-  4. Run from PyCharm or command line.
-"""
 
 import os
 import sys
@@ -31,10 +20,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# HOUSE STYLE
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -48,16 +34,12 @@ from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
-# Anchored 2026-09-14. These named a home directory or a tree renamed
-# twice over, so none resolved. Rule 5 of ORGANIZATION.md.
+# Anchored 2026-09-14
 _FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
                  if (_p / "pyproject.toml").exists())
 
 
-# =============================================================================
-# SECTION 1: DOMAIN CONFIGURATION  (matches HAT_hindcast_1984_2024_old version.py)
-# =============================================================================
-
+# --- CONFIG ------------------------------------------------------------------
 NUM_REAL_DOMAINS   = 90
 NUM_BUFFER_DOMAINS = 15
 
@@ -80,21 +62,17 @@ print(f"Padded range:   [{START_REAL_INDEX}..{END_REAL_INDEX - 1}]")
 print("=" * 80 + "\n")
 
 
+# 1-based GIS domain ID → CASCADE padded array index
 def _gis_to_pad(gis_id):
-    """1-based GIS domain ID → CASCADE padded array index."""
     return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
 
 
+# Padded index → GIS domain 1–90, or None if outside real range
 def _pad_to_gis(pad_idx):
-    """Padded index → GIS domain 1–90, or None if outside real range."""
     if START_REAL_INDEX <= pad_idx < END_REAL_INDEX:
         return FIRST_FILE_NUMBER + (pad_idx - START_REAL_INDEX)
     return None
 
-
-# =============================================================================
-# SECTION 2: FILE PATHS
-# =============================================================================
 
 PROJECT_BASE_DIR  = str(_FIG_REPO)
 OUTPUT_BASE_DIR   = os.path.join(PROJECT_BASE_DIR, "scripts", "figure_making", "position_plot", "comparison")
@@ -102,16 +80,11 @@ COASTSAT_BASE_DIR = os.path.join(
     PROJECT_BASE_DIR, "scripts", "input_prep", "CoastSat"
 )
 
-# ---------------------------------------------------------------------------
-# NPZ paths — one entry per run you want to compare.
-# Keys are used as legend labels in every plot.
-# ---------------------------------------------------------------------------
 NPZ_PATHS_BY_LABEL = {
     "Hindcast 1984–2004": (
         r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_2004_2024_base_newbufferv3\HAT_2004_2024_base_newbufferv3.npz"
     ),
-    # "Hindcast 2004–2024": (
-    #     r"...\HAT_2004_2024_base_newbufferv3\cascade.npz"
+    # Legend labels for the runs
     # ),
 }
 
@@ -139,10 +112,6 @@ COASTSAT_DATASETS = [
 
 os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
 
-
-# =============================================================================
-# SECTION 3: PLOT PARAMETERS
-# =============================================================================
 
 # ← Flip to 1984 or 2004 to match the period(s) in NPZ_PATHS_BY_LABEL
 START_YEAR = 2004
@@ -173,12 +142,7 @@ GIF_DURATION_SECONDS  = 4
 DOMAIN_TICK_STEP      = 5
 
 
-# =============================================================================
-# SECTION 4: BEACH NOURISHMENT DISPLAY ARRAYS
-# =============================================================================
-# Matches Section 6b of HAT_hindcast_1984_2024_old version.py exactly.
-# Used only for BN bar panels in yearly plots; actual nourishment was applied
-# during the hindcast run, not here.
+# Matches Section 6b of HAT_hindcast_1984_2024_old version.py exactly
 
 _CY_TO_M3 = 0.764555
 
@@ -209,10 +173,6 @@ HAT_BN_VOLUME_BY_DOMAIN = {
 }
 
 
-# =============================================================================
-# SECTION 5: COLOUR PALETTE  (matches run script exactly)
-# =============================================================================
-
 # Model line
 ANN_MODEL_COLOR = "#FF8C00"   # warm orange
 
@@ -233,10 +193,6 @@ CS_WINDOW_COLOR_DEFAULT = "#4A7C8E"
 CS_RAW_COLOR = "#5BA3C9"   # individual transect scatter
 
 
-# =============================================================================
-# SECTION 6: GEOGRAPHIC ANNOTATION DATA  (matches run script exactly)
-# =============================================================================
-
 ANN_TOWN_SPANS    = {
     "Buxton":      (7,  8),
     "Avon":        (21, 31),
@@ -256,19 +212,11 @@ ANN_WIMBLE_SHOALS = (60, 74)
 
 LABEL_ACCRETION_Y = None   # None = auto-computed mid-point of positive side
 LABEL_EROSION_Y   = None   # None = auto-computed mid-point of negative side
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
-
+# Load a saved CASCADE object from an NPZ file
 def load_cascade_from_npz(npz_path):
-    """
-    Load a saved CASCADE object from an NPZ file.
-
-    Standard CASCADE save format:
-        np.load(path, allow_pickle=True)["cascade.npy"].item()
-    """
     if not os.path.exists(npz_path):
         raise FileNotFoundError(f"NPZ not found: {npz_path}")
 
@@ -289,8 +237,8 @@ def load_cascade_from_npz(npz_path):
     return cascade
 
 
+# Extract shoreline time series from a Barrier3D object
 def get_x_s_TS(b3d):
-    """Extract shoreline time series from a Barrier3D object."""
     if hasattr(b3d, "x_s_TS"):
         return np.asarray(b3d.x_s_TS, dtype=float)
     if hasattr(b3d, "_x_s_TS"):
@@ -300,8 +248,8 @@ def get_x_s_TS(b3d):
     )
 
 
+# Build [time × domain] shoreline matrix (matches run script exactly)
 def build_shoreline_matrix(cascade, to_meters=True):
-    """Build [time × domain] shoreline matrix (matches run script exactly)."""
     try:
         b3d_list = cascade.barrier3d
     except AttributeError:
@@ -317,11 +265,8 @@ def build_shoreline_matrix(cascade, to_meters=True):
     return shoreline
 
 
+# [time × domain] relative shoreline change from t=0
 def build_relative_shoreline_change_matrix(cascade, to_meters=True, flip_sign=True):
-    """
-    [time × domain] relative shoreline change from t=0.
-    flip_sign=True: positive = accretion, negative = erosion.
-    """
     sl_m = build_shoreline_matrix(cascade, to_meters=to_meters)
     change = sl_m - sl_m[0, :]
     if flip_sign:
@@ -329,11 +274,8 @@ def build_relative_shoreline_change_matrix(cascade, to_meters=True, flip_sign=Tr
     return change
 
 
+# Build year-keyed nourishment on/volume dicts for BN bar panels
 def build_nourishment_arrays():
-    """
-    Build year-keyed nourishment on/volume dicts for BN bar panels.
-    Any event year outside [START_YEAR, END_YEAR] is silently skipped.
-    """
     on_by_year  = {yr: np.zeros(TOTAL_DOMAINS)  for yr in range(START_YEAR, END_YEAR + 1)}
     vol_by_year = {yr: [0.0] * TOTAL_DOMAINS    for yr in range(START_YEAR, END_YEAR + 1)}
 
@@ -359,26 +301,8 @@ def build_nourishment_arrays():
     return on_by_year, vol_by_year
 
 
+# Group consecutive nourished GIS domains
 def _bn_group_labels(active_gis, bn_real):
-    """
-    Group consecutive nourished GIS domains; return one label descriptor per group.
-
-    Instead of a cramped label above every individual bar (which overlaps badly
-    when 10 Buxton or 4 Avon domains are all adjacent), this detects runs of
-    consecutive nourished domains and returns a single centered annotation per run.
-
-    Parameters
-    ----------
-    active_gis : list[int]   GIS domain IDs with non-zero BN this year (sorted)
-    bn_real    : array[90]   BN volume (m³) per real domain (index = gis_d - 1)
-
-    Returns
-    -------
-    list of dicts with keys:
-        x_center  float   — GIS domain x position to center the label over
-        top_vol   float   — max volume in group (drives the label's y position)
-        label     str     — e.g. "D6–15\n91.7k/dom" or "D85\n309.6k"
-    """
     if not active_gis:
         return []
 
@@ -411,26 +335,16 @@ def _bn_group_labels(active_gis, bn_real):
     return result
 
 
-# =============================================================================
-# COASTSAT LOWESS PIPELINE  (copied from HAT_hindcast_1984_2024_old version.py)
-# =============================================================================
-
+# Median spacing between consecutive transects in metres (positive diffs only)
 def estimate_transect_spacing(along_coast_m):
-    """Median spacing between consecutive transects in metres (positive diffs only)."""
     arr   = np.sort(along_coast_m)
     diffs = np.diff(arr)
     pos   = diffs[diffs > 0]
     return float(np.median(pos)) if len(pos) else 50.0
 
 
+# Load individual transect LRR values from transect_lrr_full.csv
 def load_transect_data(ds):
-    """
-    Load individual transect LRR values from transect_lrr_full.csv.
-    Derives along-coast distance by spreading each domain's transects evenly
-    across its 500 m band.
-
-    Returns domain_ids, lrr_values, along_coast_m — all None on load failure.
-    """
     csv_path   = ds["csv"]
     domain_col = ds["domain_col"]
     rate_col   = ds["rate_col"]
@@ -473,13 +387,8 @@ def load_transect_data(ds):
     return domain_ids, lrr_values, along_coast_m
 
 
+# Apply LOWESS at transect resolution using physical along-coast distance (m), then aggregate ...
 def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
-    """
-    Apply LOWESS at transect resolution using physical along-coast distance (m),
-    then aggregate smoothed values to GIS domain resolution.
-
-    Returns gis_x, smoothed, frac — all None on failure.
-    """
     window_km = window_domains * DOMAIN_SPACING_M / 1000.0
     spacing_m = estimate_transect_spacing(along_coast_m)
     n         = len(along_coast_m)
@@ -501,16 +410,11 @@ def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_dom
     return dom_agg.index.values.astype(int), dom_agg.values, frac
 
 
+# Return (plot_x, plot_y) for a LOWESS window with optional southern splice
 def splice_lowess_with_raw_south(win_gis_x, win_smoothed,
                                 transect_domain_ids, transect_lrr_values,
                                 skip_n=LOWESS_SKIP_SOUTHERN_DOMAINS,
                                 is_widest_window=False):
-    """
-    Return (plot_x, plot_y) for a LOWESS window with optional southern splice.
-
-    Widest window + skip_n > 0: domains 1–skip_n use raw per-domain means.
-    All other windows: line simply starts at domain skip_n+1.
-    """
     if skip_n == 0:
         return win_gis_x, win_smoothed
 
@@ -520,13 +424,8 @@ def splice_lowess_with_raw_south(win_gis_x, win_smoothed,
     return lx, ly
 
 
+# Load all COASTSAT_DATASETS, apply LOWESS at transect resolution
 def load_all_coastsat(active_start_year):
-    """
-    Load all COASTSAT_DATASETS, apply LOWESS at transect resolution.
-
-    Returns a list of cs_series dicts matching the run-script structure.
-    active_start_year controls which dataset gets full-opacity 'active' styling.
-    """
     print("\nLoading CoastSat transect data...")
     cs_series = []
     for ds in COASTSAT_DATASETS:
@@ -556,24 +455,8 @@ def load_all_coastsat(active_start_year):
     return cs_series
 
 
-# =============================================================================
-# GEOGRAPHIC ANNOTATION FUNCTIONS  (matches run script exactly)
-# =============================================================================
-
+# Add all geographic reference annotations to an axis
 def add_geographic_annotations(ax):
-    """
-    Add all geographic reference annotations to an axis.
-
-    Layer order (bottom → top):
-      1. Wimble Shoals influence zone  (hatched amber fill, bottom label)
-      2. Community shaded spans        (steel-blue fill, top labels)
-      3. Village center lines          (dashed gray,    y=0.84)
-      4. Pier lines                    (dash-dot blue,  y=ANN_PIER_LABEL_Y)
-      5. Groin lines                   (dotted red,     y=ANN_GROIN_LABEL_Y)
-
-    X-axis must be in GIS domain IDs (1–90).
-    Y-axis label positions use blended axes-fraction coordinates (data x, axes y).
-    """
     trans = blended_transform_factory(ax.transData, ax.transAxes)
 
     # 1. Wimble Shoals influence zone
@@ -617,8 +500,8 @@ def add_geographic_annotations(ax):
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))
 
 
+# Return proxy legend artists for the geographic annotation layers
 def annotation_legend_handles():
-    """Return proxy legend artists for the geographic annotation layers."""
     return [
         Patch(fc=ANN_C_TOWN_SPAN, alpha=0.30, label="Community"),
         Patch(fc=ANN_C_WIMBLE, alpha=0.25, hatch="///",
@@ -629,10 +512,7 @@ def annotation_legend_handles():
     ]
 
 
-# =============================================================================
-# YEARLY RELATIVE SHORELINE CHANGE + BN BAR  (GIF)
-# =============================================================================
-
+# One PNG per year
 def plot_yearly_relative_shoreline_and_bn(
     cascades_by_label,
     hist_nourish_volume_by_year,
@@ -643,11 +523,6 @@ def plot_yearly_relative_shoreline_and_bn(
     make_gif=True,
     gif_duration_seconds=4,
 ):
-    """
-    One PNG per year: relative shoreline change from t=0 (upper panel)
-    + historical BN volume bar (lower panel).
-    X-axis: GIS domain IDs 1–90.
-    """
     yearly_dir = os.path.join(output_dir, filename_prefix)
     os.makedirs(yearly_dir, exist_ok=True)
 
@@ -789,10 +664,7 @@ def plot_yearly_relative_shoreline_and_bn(
     return png_files
 
 
-# =============================================================================
-# YEARLY ABSOLUTE SHORELINE POSITION + BN BAR  (GIF)
-# =============================================================================
-
+# One PNG per year
 def plot_yearly_absolute_shoreline_and_bn(
     cascades_by_label,
     hist_nourish_volume_by_year,
@@ -801,16 +673,6 @@ def plot_yearly_absolute_shoreline_and_bn(
     make_gif=True,
     gif_duration_seconds=4,
 ):
-    """
-    One PNG per year: raw x_s position with ocean fill (upper panel)
-    + historical BN volume bar (lower panel).
-    X-axis: GIS domain IDs 1–90.
-
-    Sign convention:
-        lower x_s  = seaward / ocean side
-        higher x_s = landward / back-barrier side
-    Ocean fill drawn from y_min up to shoreline curve.
-    """
     yearly_dir = os.path.join(output_dir, filename_prefix)
     os.makedirs(yearly_dir, exist_ok=True)
 
@@ -956,8 +818,8 @@ def plot_yearly_absolute_shoreline_and_bn(
     return png_files
 
 
+# Assemble list of PNGs into an animated GIF
 def _save_gif(png_files, output_dir, filename_prefix, gif_duration_seconds):
-    """Assemble list of PNGs into an animated GIF."""
     try:
         import imageio.v2 as imageio
         images  = [imageio.imread(f) for f in png_files]
@@ -968,24 +830,13 @@ def _save_gif(png_files, output_dir, filename_prefix, gif_duration_seconds):
         print("imageio not installed — GIF skipped.  (pip install imageio)")
 
 
-# =============================================================================
-# PUBLICATION FIGURE  (matches run-script annotated figure exactly)
-# =============================================================================
-
+# Publication-quality rate comparison figure
 def plot_publication_rate_figure(
     rate_profiles_by_label,
     cs_series,
     run_name,
     output_dir,
 ):
-    """
-    Publication-quality rate comparison figure.
-
-    Matches the annotated figure produced at the end of main() in the run
-    script: model line (warm orange) + CoastSat scatter + multi-window LOWESS
-    + full geographic annotation layer.
-    X-axis: GIS domain IDs 1–90.
-    """
     gis_ids     = np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1)
     widest_win  = max(LOWESS_WINDOW_DOMAINS)
     data_handles = []
@@ -1142,10 +993,7 @@ def plot_publication_rate_figure(
     return fig_out
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: load runs and CoastSat, draw the GIFs and the rate figure
 def main():
     print("\n" + "=" * 80)
     print("LOADING CASCADE NPZ OUTPUT(S)")
@@ -1166,14 +1014,14 @@ def main():
         print("\nNo CASCADE runs loaded. Check NPZ_PATHS_BY_LABEL paths.")
         sys.exit(1)
 
-    # ── CoastSat LOWESS ────────────────────────────────────────────────────────
+    # CoastSat LOWESS
     cs_series = load_all_coastsat(active_start_year=START_YEAR)
 
-    # ── Nourishment arrays for BN bar panels ──────────────────────────────────
+    # Nourishment arrays for BN bar panels
     print("\nBuilding nourishment display arrays...")
     HIST_NOURISH_ON, HIST_NOURISH_VOLUME = build_nourishment_arrays()
 
-    # ── Shoreline change rates ─────────────────────────────────────────────────
+    # Shoreline change rates
     time_span_years = END_YEAR - START_YEAR
     rate_profiles   = {}
 
@@ -1188,7 +1036,7 @@ def main():
     # Run name for file naming
     run_name = f"HAT_{START_YEAR}_{END_YEAR}_npz_analysis"
 
-    # ── Yearly relative shoreline + BN GIF ────────────────────────────────────
+    # Yearly relative shoreline + BN GIF
     rel_prefix = f"HAT_{START_YEAR}_{END_YEAR}_yearly_relative_shoreline_BN"
     plot_yearly_relative_shoreline_and_bn(
         cascades_by_label      = cascades_by_label,
@@ -1201,7 +1049,7 @@ def main():
         gif_duration_seconds   = GIF_DURATION_SECONDS,
     )
 
-    # ── Yearly absolute shoreline + BN GIF ────────────────────────────────────
+    # Yearly absolute shoreline + BN GIF
     abs_prefix = f"HAT_{START_YEAR}_{END_YEAR}_yearly_absolute_shoreline_BN"
     plot_yearly_absolute_shoreline_and_bn(
         cascades_by_label      = cascades_by_label,
@@ -1212,7 +1060,7 @@ def main():
         gif_duration_seconds   = GIF_DURATION_SECONDS,
     )
 
-    # ── Publication rate figure ────────────────────────────────────────────────
+    # Publication rate figure
     plot_publication_rate_figure(
         rate_profiles_by_label = rate_profiles,
         cs_series              = cs_series,
