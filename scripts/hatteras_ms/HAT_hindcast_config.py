@@ -202,6 +202,13 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # which were placeholders and f = 0.9 was never fitted at all.
     ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 60.0),
     ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.6),
+    # WHICH GROIN, 2026-09-29: "dipole" (GroinCallback, +/-M a year) or
+    # "blocking" (BlockingGroinCallback, intercepts a fraction b of the
+    # alongshore transport at the face). b = 0.6 is the option A emulator's
+    # best joint fit with f = 0.3 under the instant 2004 failure, not yet
+    # confirmed in the full model.
+    ("groin_kind",                   ("groin", "kind"),            _as_str,   "dipole"),
+    ("groin_blocking_fraction",      ("groin", "blocking_b"),      _as_float, 0.6),
 
     # WAVE CLIMATE. All four are forcing, not management: they change what is
     # simulated, so a run that moves any of them off the value below earns a
@@ -421,6 +428,9 @@ class RunConfig:
         groin_trapping_rate_m_yr: M, the groin amplitude knob.
         groin_deterioration_fraction: f, the post-deterioration floor as a
             fraction of M.
+        groin_kind: "dipole" or "blocking" -- which groin form is attached.
+        groin_blocking_fraction: b, the blocking groin's intercepted fraction
+            of alongshore transport; f applies to it as it does to M.
         hs: Significant wave height, m.
         wave_period_s: Peak wave period, s.
         wave_asymmetry: Fraction of waves from the left of shore-normal.

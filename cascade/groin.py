@@ -69,7 +69,8 @@ from typing import Dict, List
 
 import numpy as np
 
-__all__ = ["GroinCallback", "predict_fillet", "ACCRETION", "EROSION"]
+__all__ = ["GroinCallback", "BlockingGroinCallback", "predict_fillet",
+           "ACCRETION", "EROSION"]
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +78,77 @@ __all__ = ["GroinCallback", "predict_fillet", "ACCRETION", "EROSION"]
 # ---------------------------------------------------------------------------
 ACCRETION: float = -1.0   # seaward advance  -> x_s decreases
 EROSION:   float = +1.0   # landward retreat -> x_s increases
+
+
+# ===========================================================================
+# Deterioration schedule, shared by both groin forms
+# ===========================================================================
+def _validate_deterioration(deterioration_mode, deterioration_ramp_years,
+                            deterioration_delay_years, deterioration_fraction):
+    """Raise ValueError on an inconsistent deterioration configuration.
+
+    Two explicit, mutually exclusive modes -- no silent parameter-collapsing
+    between them:
+      "instant"     -> strength steps to strength * deterioration_fraction the
+                       year the delay elapses (e.g. a specific storm).
+      "linear_ramp" -> strength declines linearly to that floor over
+                       deterioration_ramp_years (gradual structural failure).
+    """
+    if deterioration_mode not in ("instant", "linear_ramp"):
+        raise ValueError(
+            f"deterioration_mode must be 'instant' or 'linear_ramp', "
+            f"got {deterioration_mode!r}."
+        )
+    if deterioration_mode == "instant" and deterioration_ramp_years != 0.0:
+        raise ValueError(
+            "deterioration_ramp_years must be 0 when deterioration_mode "
+            "is 'instant' -- pass deterioration_mode='linear_ramp' for a "
+            "gradual decline instead."
+        )
+    if deterioration_mode == "linear_ramp" and deterioration_ramp_years <= 0:
+        raise ValueError(
+            "deterioration_ramp_years must be > 0 when deterioration_mode "
+            "is 'linear_ramp'."
+        )
+    if deterioration_delay_years is not None and deterioration_delay_years < 0:
+        raise ValueError("deterioration_delay_years must be >= 0.")
+    if not (0.0 <= deterioration_fraction <= 1.0):
+        raise ValueError("deterioration_fraction must be in [0, 1].")
+
+
+def _scheduled_strength(value, year, deterioration_year, deterioration_mode,
+                        deterioration_fraction, deterioration_ramp_years):
+    """Return ``value`` for ``year`` after the deterioration schedule.
+
+    Full value before ``deterioration_year`` (or always, if None). From then
+    on: "instant" steps to value * fraction; "linear_ramp" ramps linearly to
+    that floor over the ramp years, then holds. The arithmetic is the one
+    GroinCallback has always used, so dipole runs are bit-for-bit unchanged.
+    """
+    if deterioration_year is None or year < deterioration_year:
+        return value
+
+    floor = value * deterioration_fraction
+    if deterioration_mode == "instant":
+        return floor
+
+    years_since = year - deterioration_year
+    taper = min(1.0, years_since / deterioration_ramp_years)
+    return value - taper * (value - floor)
+
+
+def _check_pads(updrift_pad, downdrift_pad, n_domains):
+    """Raise ValueError unless the two pads are adjacent and in range."""
+    if abs(updrift_pad - downdrift_pad) != 1:
+        raise ValueError(
+            "groin domains must be adjacent (share the blocked boundary); "
+            f"got updrift_pad={updrift_pad}, downdrift_pad={downdrift_pad}."
+        )
+    if not (0 <= updrift_pad < n_domains and 0 <= downdrift_pad < n_domains):
+        raise ValueError(
+            f"groin pads out of range for n_domains={n_domains}: "
+            f"updrift_pad={updrift_pad}, downdrift_pad={downdrift_pad}."
+        )
 
 
 # ===========================================================================
@@ -127,6 +199,7 @@ class GroinCallback:
         If the two domains are not adjacent, or if either index is out of range
         for ``n_domains``.
     """
+    kind: str = "dipole"
 
     def __init__(
         self,
@@ -142,16 +215,7 @@ class GroinCallback:
         deterioration_ramp_years: float = 0.0,
         sink_fraction: float = 1.0,
     ) -> None:
-        if abs(updrift_pad - downdrift_pad) != 1:
-            raise ValueError(
-                "groin domains must be adjacent (share the blocked boundary); "
-                f"got updrift_pad={updrift_pad}, downdrift_pad={downdrift_pad}."
-            )
-        if not (0 <= updrift_pad < n_domains and 0 <= downdrift_pad < n_domains):
-            raise ValueError(
-                f"groin pads out of range for n_domains={n_domains}: "
-                f"updrift_pad={updrift_pad}, downdrift_pad={downdrift_pad}."
-            )
+        _check_pads(updrift_pad, downdrift_pad, n_domains)
 
         # Configuration
         self.updrift_pad: int = int(updrift_pad)
@@ -163,33 +227,10 @@ class GroinCallback:
 
         # Deterioration (optional): onset is specified as a delay relative to
         # install_year (structure age), so the same config generalizes across
-        # runs with different install years. Two explicit, mutually exclusive
-        # modes -- no silent parameter-collapsing between them:
-        #   "instant"     -> M steps to M*deterioration_fraction the year the
-        #                    delay elapses (e.g. a specific storm/abandonment).
-        #   "linear_ramp" -> M declines linearly to M*deterioration_fraction
-        #                    over deterioration_ramp_years (gradual bypass
-        #                    increase / slow structural failure).
-        if deterioration_mode not in ("instant", "linear_ramp"):
-            raise ValueError(
-                f"deterioration_mode must be 'instant' or 'linear_ramp', "
-                f"got {deterioration_mode!r}."
-            )
-        if deterioration_mode == "instant" and deterioration_ramp_years != 0.0:
-            raise ValueError(
-                "deterioration_ramp_years must be 0 when deterioration_mode "
-                "is 'instant' -- pass deterioration_mode='linear_ramp' for a "
-                "gradual decline instead."
-            )
-        if deterioration_mode == "linear_ramp" and deterioration_ramp_years <= 0:
-            raise ValueError(
-                "deterioration_ramp_years must be > 0 when deterioration_mode "
-                "is 'linear_ramp'."
-            )
-        if deterioration_delay_years is not None and deterioration_delay_years < 0:
-            raise ValueError("deterioration_delay_years must be >= 0.")
-        if not (0.0 <= deterioration_fraction <= 1.0):
-            raise ValueError("deterioration_fraction must be in [0, 1].")
+        # runs with different install years. See _validate_deterioration for
+        # the two modes.
+        _validate_deterioration(deterioration_mode, deterioration_ramp_years,
+                                deterioration_delay_years, deterioration_fraction)
 
         self.deterioration_delay_years = (
             None if deterioration_delay_years is None else float(deterioration_delay_years)
@@ -279,16 +320,9 @@ class GroinCallback:
           "linear_ramp" -- ramps linearly to M * deterioration_fraction over
                            deterioration_ramp_years, then holds.
         """
-        if self.deterioration_year is None or year < self.deterioration_year:
-            return self.M
-
-        floor = self.M * self.deterioration_fraction
-        if self.deterioration_mode == "instant":
-            return floor
-
-        years_since = year - self.deterioration_year
-        taper = min(1.0, years_since / self.deterioration_ramp_years)
-        return self.M - taper * (self.M - floor)
+        return _scheduled_strength(
+            self.M, year, self.deterioration_year, self.deterioration_mode,
+            self.deterioration_fraction, self.deterioration_ramp_years)
 
     # -- diagnostics --------------------------------------------------------
     def summary(self) -> Dict[str, object]:
@@ -341,6 +375,228 @@ class GroinCallback:
                 applied_dx_downdrift_m=self.applied_dx_downdrift_TS[i],
                 cumulative_updrift_m=float(cum_up[i]),
                 cumulative_downdrift_m=float(cum_down[i]),
+            ))
+        return rows
+
+
+# ===========================================================================
+# Blocking groin callback
+# ===========================================================================
+class BlockingGroinCallback:
+    """A groin that blocks a fraction ``b`` of alongshore transport at its face.
+
+    Where :class:`GroinCallback` imposes a fixed ``-M`` / ``+M`` every year,
+    this one intercepts transport that actually arrives. Each year it reads
+    BRIE's current shoreline, estimates the shoreline change BRIE's
+    alongshore solve is about to move across the face between the two
+    domains, and cancels a fraction ``b`` of it through ``x_s_dt``:
+
+        x_s_dt[lo] -= b * 2 * r_lo * (x_s[hi] - x_s[lo])
+        x_s_dt[hi] -= b * 2 * r_hi * (x_s[lo] - x_s[hi])
+
+    where ``lo < hi`` are the two pads and ``r_i`` is BRIE's diffusion number
+    for cell ``i``, computed exactly as ``brie.py`` does (forward-difference
+    shoreline angle, ``_coast_diff`` lookup, clipped at zero). BRIE's step is
+    Crank-Nicolson and row-scaled, so each cell's coupling to the face is
+    ``r_i`` in the explicit half and ``r_i`` in the implicit half; the
+    explicit term doubled stands in for both. That is an approximation --
+    the implicit half uses next year's shoreline -- and was measured against
+    scaling the face coupling inside the solve itself at under ~1 m over 14
+    years at Buxton (hard-structures/groin/groin-module-test/0-solver-audit/
+    2026-09-29-option-a-real-planform/blocking_groin_emulator.py).
+
+    Why this form. ``b`` is a trapping fraction, 0 (no structure) to 1 (a
+    wall), comparable with published groin trapping efficiencies; the
+    trapped volume is emergent and bounded by the transport arriving, so the
+    structure cannot overshoot, run away, or exceed the sediment budget the
+    way a fixed M can. It needs no change to BRIE: it uses the same pre-AST
+    hook as the dipole.
+
+    The equivalent trapping rate each year (the |shoreline change| applied at
+    the updrift flank) is recorded as ``trapping_rate_applied_TS`` so budget
+    and comparison with the dipole's M are read after the run.
+
+    Parameters
+    ----------
+    updrift_pad, downdrift_pad : int
+        Padded indices of the two domains sharing the blocked face. Adjacent,
+        and not the periodic wrap (0 and n_domains - 1).
+    blocking_fraction : float
+        b, the fraction of the face's transport intercepted, in [0, 1].
+    start_year, install_year, n_domains
+        As :class:`GroinCallback`.
+    deterioration_delay_years, deterioration_mode, deterioration_fraction,
+    deterioration_ramp_years
+        As :class:`GroinCallback`, applied to b instead of M.
+    """
+    kind: str = "blocking"
+
+    def __init__(
+        self,
+        updrift_pad: int,
+        downdrift_pad: int,
+        blocking_fraction: float,
+        start_year: int,
+        install_year: int,
+        n_domains: int,
+        deterioration_delay_years: float = None,
+        deterioration_mode: str = "instant",
+        deterioration_fraction: float = 1.0,
+        deterioration_ramp_years: float = 0.0,
+    ) -> None:
+        _check_pads(updrift_pad, downdrift_pad, n_domains)
+        if not (0.0 <= blocking_fraction <= 1.0):
+            raise ValueError("blocking_fraction must be in [0, 1].")
+        _validate_deterioration(deterioration_mode, deterioration_ramp_years,
+                                deterioration_delay_years, deterioration_fraction)
+
+        self.updrift_pad: int = int(updrift_pad)
+        self.downdrift_pad: int = int(downdrift_pad)
+        self.blocking_fraction: float = float(blocking_fraction)
+        self.start_year: int = int(start_year)
+        self.install_year: int = int(install_year)
+        self.n_domains: int = int(n_domains)
+        self.deterioration_delay_years = (
+            None if deterioration_delay_years is None else float(deterioration_delay_years)
+        )
+        self.deterioration_year = (
+            None if self.deterioration_delay_years is None
+            else self.install_year + self.deterioration_delay_years
+        )
+        self.deterioration_mode: str = deterioration_mode
+        self.deterioration_fraction: float = float(deterioration_fraction)
+        self.deterioration_ramp_years: float = float(deterioration_ramp_years)
+
+        self._lo: int = min(self.updrift_pad, self.downdrift_pad)
+        self._hi: int = max(self.updrift_pad, self.downdrift_pad)
+
+        # Per-year diagnostics, named as GroinCallback's where they mean the
+        # same thing so the runner's CSV writer handles both.
+        self.year_TS: List[int] = []
+        self.active_TS: List[bool] = []
+        self.blocking_applied_TS: List[float] = []
+        self.applied_dx_updrift_TS: List[float] = []
+        self.applied_dx_downdrift_TS: List[float] = []
+        self.trapping_rate_applied_TS: List[float] = []
+        self.face_offset_m_TS: List[float] = []
+        self.r_ipl_updrift_TS: List[float] = []
+        self.r_ipl_downdrift_TS: List[float] = []
+        self._call_count: int = 0
+
+    def _effective_trapping_rate(self, year: int) -> float:
+        """Return b for ``year`` after the deterioration schedule.
+
+        Named as GroinCallback's so schedule reporting reads either form; for
+        this class the value is the blocking fraction, not a rate.
+        """
+        return _scheduled_strength(
+            self.blocking_fraction, year, self.deterioration_year,
+            self.deterioration_mode, self.deterioration_fraction,
+            self.deterioration_ramp_years)
+
+    @staticmethod
+    def _r_ipl(brie, x_s, i):
+        """BRIE's diffusion number for cell ``i``, as brie.py computes it."""
+        ny = len(x_s)
+        theta = 180.0 * np.arctan2(x_s[(i + 1) % ny] - x_s[i], brie._dy) / np.pi
+        index = int(np.maximum(1, np.minimum(brie._wave_climl,
+                                             np.round(90 - theta).astype(int))))
+        return max(0.0, float(brie._coast_diff[index] * brie._dt / 2 / brie._dy ** 2))
+
+    def __call__(self, cascade, x_s_dt):
+        """Cancel a fraction b of this year's transport across the face.
+
+        Parameters
+        ----------
+        cascade : Cascade
+            The calling CASCADE instance; BRIE's shoreline and diffusivity are
+            read from ``cascade._brie_coupler._brie``.
+        x_s_dt : sequence of float
+            Per-domain shoreline change (metres) before the alongshore solve.
+            Modified in place and returned.
+
+        Returns
+        -------
+        x_s_dt : sequence of float
+        """
+        year = self.start_year + self._call_count
+        self._call_count += 1
+
+        active = year >= self.install_year
+        b = self._effective_trapping_rate(year) if active else 0.0
+
+        brie = cascade._brie_coupler._brie
+        x_s = np.asarray(brie.x_s, dtype=float)
+        lo, hi = self._lo, self._hi
+        r_lo = self._r_ipl(brie, x_s, lo)
+        r_hi = self._r_ipl(brie, x_s, hi)
+        offset = float(x_s[hi] - x_s[lo])
+
+        dx_lo = -b * 2.0 * r_lo * offset
+        dx_hi = b * 2.0 * r_hi * offset
+        if active and b > 0.0:
+            x_s_dt[lo] += dx_lo
+            x_s_dt[hi] += dx_hi
+        else:
+            dx_lo = dx_hi = 0.0
+
+        dx_up, dx_down = ((dx_lo, dx_hi) if self.updrift_pad == lo
+                          else (dx_hi, dx_lo))
+        self.year_TS.append(year)
+        self.active_TS.append(bool(active))
+        self.blocking_applied_TS.append(b)
+        self.applied_dx_updrift_TS.append(dx_up)
+        self.applied_dx_downdrift_TS.append(dx_down)
+        self.trapping_rate_applied_TS.append(abs(dx_up))
+        self.face_offset_m_TS.append(offset)
+        self.r_ipl_updrift_TS.append(r_hi if self.updrift_pad == hi else r_lo)
+        self.r_ipl_downdrift_TS.append(r_lo if self.updrift_pad == hi else r_hi)
+        return x_s_dt
+
+    @property
+    def mean_trapping_rate_m_yr(self) -> float:
+        """Mean equivalent trapping rate over the active years, m/yr."""
+        active = [m for m, a in zip(self.trapping_rate_applied_TS, self.active_TS) if a]
+        return float(np.mean(active)) if active else float("nan")
+
+    def summary(self) -> Dict[str, object]:
+        """Return a compact run-metadata dictionary for logging."""
+        return dict(
+            kind=self.kind,
+            updrift_pad=self.updrift_pad,
+            downdrift_pad=self.downdrift_pad,
+            blocking_fraction=self.blocking_fraction,
+            install_year=self.install_year,
+            deterioration_delay_years=self.deterioration_delay_years,
+            deterioration_year=self.deterioration_year,
+            deterioration_mode=self.deterioration_mode,
+            deterioration_fraction=self.deterioration_fraction,
+            deterioration_ramp_years=self.deterioration_ramp_years,
+            start_year=self.start_year,
+            years_active=int(np.sum(self.active_TS)),
+            mean_trapping_rate_m_yr=self.mean_trapping_rate_m_yr,
+            cumulative_updrift_m=float(np.sum(self.applied_dx_updrift_TS)),
+            cumulative_downdrift_m=float(np.sum(self.applied_dx_downdrift_TS)),
+        )
+
+    def diagnostics_frame(self) -> List[Dict[str, object]]:
+        """Return the per-year record, GroinCallback's columns plus b and r."""
+        cum_up = np.cumsum(self.applied_dx_updrift_TS) if self.applied_dx_updrift_TS else []
+        cum_down = np.cumsum(self.applied_dx_downdrift_TS) if self.applied_dx_downdrift_TS else []
+        rows: List[Dict[str, object]] = []
+        for i, year in enumerate(self.year_TS):
+            rows.append(dict(
+                model_year=year,
+                groin_active=self.active_TS[i],
+                blocking_fraction_applied=self.blocking_applied_TS[i],
+                trapping_rate_applied_m_yr=self.trapping_rate_applied_TS[i],
+                applied_dx_updrift_m=self.applied_dx_updrift_TS[i],
+                applied_dx_downdrift_m=self.applied_dx_downdrift_TS[i],
+                cumulative_updrift_m=float(cum_up[i]),
+                cumulative_downdrift_m=float(cum_down[i]),
+                face_offset_m=self.face_offset_m_TS[i],
+                r_ipl_updrift=self.r_ipl_updrift_TS[i],
+                r_ipl_downdrift=self.r_ipl_downdrift_TS[i],
             ))
         return rows
 

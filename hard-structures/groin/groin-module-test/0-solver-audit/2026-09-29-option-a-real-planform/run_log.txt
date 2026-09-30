@@ -1,0 +1,140 @@
+
+1996 optionA: groin cell angles up -11.6 / down -25.4 deg, D 10498 / 28590 m2/yr; real-reach median D 7970
+
+1996 old_div10: groin cell angles up -1.2 / down -2.7 deg, D 512763 / 489879 m2/yr; real-reach median D 512763
+
+2010 optionA: groin cell angles up -9.2 / down -24.8 deg, D 6771 / 28590 m2/yr; real-reach median D 7970
+
+2010 old_div10: groin cell angles up -0.9 / down -2.6 deg, D 512763 / 489879 m2/yr; real-reach median D 512763
+
+=== hindcast ===
+ start   climate   M    f  fillet_end_m  first_shutdown_yr  max_new_real_shut  theta_down_end  fillet_still_growing_m_yr
+  1996   optionA   1 0.60          6.92                NaN                  0          -18.26                       0.21
+  1996   optionA   1 1.00         10.34                NaN                  0          -18.60                       0.30
+  1996   optionA   2 0.60         14.03                NaN                  0          -19.01                       0.06
+  1996   optionA   2 1.00         21.10                NaN                  0          -19.67                       0.59
+  1996   optionA   3 0.60         20.53                NaN                  0          -19.64                       0.31
+  1996   optionA   3 1.00         32.18                NaN                  0          -20.76                       0.87
+  1996   optionA   5 0.60         34.00                NaN                  0          -20.97                       0.62
+  1996   optionA   5 1.00         54.25                NaN                  0          -22.85                       1.78
+  1996   optionA  10 0.60         76.33                NaN                  0          -24.92                       2.29
+  1996   optionA  10 1.00        120.55                NaN                  0          -28.66                       5.53
+  1996   optionA  20 0.60        136.65                NaN                  0          -30.99                      -5.36
+  1996   optionA  20 1.00        161.18                NaN                  0          -32.95                      -4.68
+  1996   optionA  40 0.60        173.63                NaN                  0          -33.60                      -0.29
+  1996   optionA  40 1.00        227.50               4.00                  1          -37.52                       1.86
+  1996   optionA  60 0.60        216.03               3.00                  1          -36.90                      -1.13
+  1996   optionA  60 1.00        285.33               3.00                  1          -41.11                       7.23
+  1996   optionA  80 0.60        256.20                NaN                  0          -39.09                       8.25
+  1996   optionA  80 1.00        342.45                NaN                  0          -44.71                       5.67
+  1996   optionA 120 0.60        322.44                NaN                  0          -43.94                      -1.08
+  1996   optionA 120 1.00        435.76               5.00                  1          -49.81                       2.19
+  1996 old_div10   1 0.60          0.28                NaN                  0           -0.75                      -0.00
+  1996 old_div10   1 1.00          0.46                NaN                  0           -0.77                       0.00
+  1996 old_div10   2 0.60          0.56                NaN                  0           -0.78                      -0.00
+  1996 old_div10   2 1.00          0.92                NaN                  0           -0.82                       0.00
+  1996 old_div10   3 0.60          0.84                NaN                  0           -0.82                      -0.00
+  1996 old_div10   3 1.00          1.39                NaN                  0           -0.88                       0.00
+  1996 old_div10   5 0.60          1.40                NaN                  0           -0.88                      -0.00
+  1996 old_div10   5 1.00          2.31                NaN                  0           -0.98                       0.00
+  1996 old_div10  10 0.60          2.79                NaN                  0           -1.04                      -0.00
+  1996 old_div10  10 1.00          4.62                NaN                  0           -1.25                       0.00
+  1996 old_div10  20 0.60          5.58                NaN                  0           -1.36                      -0.00
+  1996 old_div10  20 1.00          9.34                NaN                  0           -1.79                       0.01
+  1996 old_div10  40 0.60         11.29                NaN                  0           -2.01                      -0.01
+  1996 old_div10  40 1.00         18.91                NaN                  0           -2.88                       0.03
+  1996 old_div10  60 0.60         17.14                NaN                  0           -2.68                      -0.02
+  1996 old_div10  60 1.00         28.74                NaN                  0           -4.00                       0.05
+  1996 old_div10  80 0.60         22.88                NaN                  0           -3.34                       0.01
+  1996 old_div10  80 1.00         38.88                NaN                  0           -5.15                       0.07
+  1996 old_div10 120 0.60         35.26                NaN                  0           -4.75                      -0.04
+  1996 old_div10 120 1.00         61.37                NaN                  0           -7.69                       0.12
+  2010   optionA   1 0.60          7.30                NaN                  0          -18.58                       0.30
+  2010   optionA   1 1.00         12.12                NaN                  0          -19.07                       0.34
+  2010   optionA   2 0.60         14.76                NaN                  0          -19.34                       0.33
+  2010   optionA   2 1.00         24.25                NaN                  0          -20.26                       0.76
+  2010   optionA   3 0.60         21.76                NaN                  0          -20.01                       0.74
+  2010   optionA   3 1.00         38.79                NaN                  0          -21.66                       1.28
+  2010   optionA   5 0.60         38.79                NaN                  0          -21.66                       1.28
+  2010   optionA   5 1.00         63.61                NaN                  0          -23.95                       2.54
+  2010   optionA  10 0.60         77.20                NaN                  0          -25.18                       3.21
+  2010   optionA  10 1.00        131.74              12.00                  1          -29.99                       4.25
+  2010   optionA  20 0.60        135.53              10.00                  1          -30.55                       1.48
+  2010   optionA  20 1.00        161.32               6.00                  1          -32.55                       3.23
+  2010   optionA  40 0.60        168.99               5.00                  1          -33.34                       1.10
+  2010   optionA  40 1.00        217.06                NaN                  0          -37.53                      -6.02
+  2010   optionA  60 0.60        215.75                NaN                  0          -36.30                       9.45
+  2010   optionA  60 1.00        285.68                NaN                  0          -41.39                       6.01
+  2010   optionA  80 0.60        252.31                NaN                  0          -39.01                       8.35
+  2010   optionA  80 1.00        335.86                NaN                  0          -44.30                       8.93
+  2010   optionA 120 0.60        314.41                NaN                  0          -43.39                       2.80
+  2010   optionA 120 1.00        443.53               5.00                  1          -49.68                      15.40
+  2010 old_div10   1 0.60          0.28                NaN                  0           -0.64                       0.00
+  2010 old_div10   1 1.00          0.46                NaN                  0           -0.66                       0.00
+  2010 old_div10   2 0.60          0.55                NaN                  0           -0.67                       0.00
+  2010 old_div10   2 1.00          0.92                NaN                  0           -0.71                      -0.00
+  2010 old_div10   3 0.60          0.83                NaN                  0           -0.70                      -0.00
+  2010 old_div10   3 1.00          1.38                NaN                  0           -0.77                      -0.00
+  2010 old_div10   5 0.60          1.38                NaN                  0           -0.77                      -0.00
+  2010 old_div10   5 1.00          2.30                NaN                  0           -0.87                      -0.00
+  2010 old_div10  10 0.60          2.77                NaN                  0           -0.93                      -0.00
+  2010 old_div10  10 1.00          4.61                NaN                  0           -1.14                       0.00
+  2010 old_div10  20 0.60          5.54                NaN                  0           -1.24                       0.00
+  2010 old_div10  20 1.00          9.34                NaN                  0           -1.68                       0.02
+  2010 old_div10  40 0.60         11.21                NaN                  0           -1.89                       0.02
+  2010 old_div10  40 1.00         18.92                NaN                  0           -2.77                       0.03
+  2010 old_div10  60 0.60         17.03                NaN                  0           -2.56                       0.03
+  2010 old_div10  60 1.00         28.75                NaN                  0           -3.89                       0.05
+  2010 old_div10  80 0.60         22.70                NaN                  0           -3.20                       0.04
+  2010 old_div10  80 1.00         38.89                NaN                  0           -5.05                       0.07
+  2010 old_div10 120 0.60         35.01                NaN                  0           -4.60                       0.06
+  2010 old_div10 120 1.00         61.38                NaN                  0           -7.58                       0.12
+
+=== long_constant ===
+ start   climate   M   f  fillet_end_m  first_shutdown_yr  max_new_real_shut  theta_down_end  fillet_still_growing_m_yr
+  1996   optionA   1 NaN         20.42                NaN                  0          -13.80                       0.01
+  1996   optionA   2 NaN         43.06                NaN                  0          -16.21                       0.07
+  1996   optionA   3 NaN         89.03             153.00                  1          -20.85                       0.96
+  1996   optionA   5 NaN         94.61              49.00                  1          -21.56                      -0.52
+  1996   optionA  10 NaN        125.41              17.00                  1          -24.64                      -1.53
+  1996   optionA  20 NaN        182.11                NaN                  0          -29.16                       5.48
+  1996   optionA  40 NaN        265.65               4.00                  1          -36.16                       2.60
+  1996   optionA  60 NaN        342.25               3.00                  1          -41.41                       3.63
+  1996   optionA  80 NaN        419.05                NaN                  0          -45.31                      16.07
+  1996   optionA 120 NaN        545.90               5.00                  1          -52.04                       7.46
+  1996 old_div10   1 NaN          0.47                NaN                  0            0.01                       0.00
+  1996 old_div10   2 NaN          0.94                NaN                  0           -0.05                       0.00
+  1996 old_div10   3 NaN          1.41                NaN                  0           -0.10                       0.00
+  1996 old_div10   5 NaN          2.36                NaN                  0           -0.21                       0.00
+  1996 old_div10  10 NaN          4.71                NaN                  0           -0.48                       0.00
+  1996 old_div10  20 NaN          9.52                NaN                  0           -1.03                       0.00
+  1996 old_div10  40 NaN         19.26                NaN                  0           -2.15                       0.00
+  1996 old_div10  60 NaN         29.24                NaN                  0           -3.29                       0.00
+  1996 old_div10  80 NaN         40.08                NaN                  0           -4.52                       0.00
+  1996 old_div10 120 NaN         61.83                NaN                  0           -7.13                      -1.21
+  2010   optionA   1 NaN         22.43                NaN                  0          -13.49                       0.05
+  2010   optionA   2 NaN         46.88                NaN                  0          -16.10                       0.07
+  2010   optionA   3 NaN         82.39             111.00                  1          -19.66                       1.24
+  2010   optionA   5 NaN         92.56              34.00                  1          -20.85                      -0.32
+  2010   optionA  10 NaN        124.28              12.00                  1          -24.05                      -1.29
+  2010   optionA  20 NaN        175.36               6.00                  1          -28.67                      -0.48
+  2010   optionA  40 NaN        262.60                NaN                  0          -35.40                       4.78
+  2010   optionA  60 NaN        338.09                NaN                  0          -40.69                       5.65
+  2010   optionA  80 NaN        410.83                NaN                  0          -45.29                       3.33
+  2010   optionA 120 NaN        541.30               5.00                  1          -51.57                       8.54
+  2010 old_div10   1 NaN          0.47                NaN                  0            0.02                       0.00
+  2010 old_div10   2 NaN          0.94                NaN                  0           -0.04                       0.00
+  2010 old_div10   3 NaN          1.41                NaN                  0           -0.09                       0.00
+  2010 old_div10   5 NaN          2.36                NaN                  0           -0.20                       0.00
+  2010 old_div10  10 NaN          4.71                NaN                  0           -0.47                       0.00
+  2010 old_div10  20 NaN          9.52                NaN                  0           -1.02                       0.00
+  2010 old_div10  40 NaN         19.26                NaN                  0           -2.13                       0.00
+  2010 old_div10  60 NaN         29.24                NaN                  0           -3.27                       0.00
+  2010 old_div10  80 NaN         39.51                NaN                  0           -4.45                       0.00
+  2010 old_div10 120 NaN         63.04                NaN                  0           -6.98                       1.22
+
+M giving a 22.11 m fillet over 14 yr at f = 0.6 (linear interpolation, stable cells only):
+  1996 old_div10  M ~ 77.3
+  1996 optionA    M ~ 3.2
+  2010 old_div10  M ~ 77.9
+  2010 optionA    M ~ 3.0

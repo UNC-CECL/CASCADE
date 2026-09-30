@@ -1,0 +1,28 @@
+
+== 1996_2010
+edgeBE_offsetmetres_noroad_bdm_nogroin           gap0  +256.4  total  -73.9  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.2 D7  +14.4
+edgeBE_offsetmetres_noroad_nobdm_nogroin         gap0  +256.4  total  -74.0  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.2 D7  +15.0
+edgeBE_offsetmetres_road_bdm_nogroin             gap0  +256.4  total  -73.9  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.2 D7  +14.4
+edgeBE_offsetmetres_road_nobdm_nogroin           gap0  +256.4  total  -74.0  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.2 D7  +15.0
+edgeBE_offsetmetres_road_reloc_bdm_nogroin       gap0  +256.4  total  -73.9  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.2 D7  +14.4
+edgeBE_offsetmetres_road_reloc_nobdm_nogroin     gap0  +256.4  total  -74.0  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.2 D7  +15.0
+zeroBE_offsetmetres_noroad_bdm_nogroin           gap0  +256.4  total  -73.9  endpt  -86.0 | dx D5  -34.8 D6  +51.3 D4  -25.1 D7  +14.4
+zeroBE_offsetmetres_noroad_nobdm_nogroin         gap0  +256.4  total  -73.9  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.1 D7  +15.0
+zeroBE_offsetmetres_road_bdm_nogroin             gap0  +256.4  total  -73.9  endpt  -86.0 | dx D5  -34.8 D6  +51.3 D4  -25.1 D7  +14.4
+zeroBE_offsetmetres_road_nobdm_nogroin           gap0  +256.4  total  -73.9  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.1 D7  +15.0
+zeroBE_offsetmetres_road_reloc_bdm_nogroin       gap0  +256.4  total  -73.9  endpt  -86.0 | dx D5  -34.8 D6  +51.3 D4  -25.1 D7  +14.4
+zeroBE_offsetmetres_road_reloc_nobdm_nogroin     gap0  +256.4  total  -73.9  endpt  -86.1 | dx D5  -34.8 D6  +51.3 D4  -25.1 D7  +15.0
+
+== 2010_2024
+edgeBE_offsetmetres_noroad_bdm_nourish_nogroin   gap0  +245.3  total  -58.8  endpt  -62.6 | dx D5  -24.9 D6  +37.8 D4  -18.3 D7   -3.5
+edgeBE_offsetmetres_noroad_nobdm_nogroin         gap0  +245.3  total  -76.2  endpt  -84.4 | dx D5  -21.6 D6  +62.8 D4  -18.1 D7  +14.5
+edgeBE_offsetmetres_road_bdm_nonourish_nogroin   gap0  +245.3  total  -69.1  endpt  -76.9 | dx D5  -23.3 D6  +53.6 D4  -18.3 D7  +13.0
+edgeBE_offsetmetres_road_bdm_nourish_nogroin     gap0  +245.3  total  -58.8  endpt  -62.6 | dx D5  -24.9 D6  +37.7 D4  -18.3 D7   -3.5
+edgeBE_offsetmetres_road_nobdm_nogroin           gap0  +245.3  total  -76.2  endpt  -84.4 | dx D5  -21.6 D6  +62.8 D4  -18.1 D7  +14.5
+zeroBE_offsetmetres_noroad_bdm_nourish_nogroin   gap0  +245.3  total  -58.7  endpt  -62.5 | dx D5  -24.7 D6  +37.8 D4  -17.5 D7   -3.5
+zeroBE_offsetmetres_noroad_nobdm_nogroin         gap0  +245.3  total  -76.1  endpt  -84.3 | dx D5  -21.5 D6  +62.8 D4  -17.2 D7  +14.5
+zeroBE_offsetmetres_road_bdm_nonourish_nogroin   gap0  +245.3  total  -68.9  endpt  -76.8 | dx D5  -23.2 D6  +53.6 D4  -17.5 D7  +13.0
+zeroBE_offsetmetres_road_bdm_nourish_nogroin     gap0  +245.3  total  -58.7  endpt  -62.5 | dx D5  -24.7 D6  +37.8 D4  -17.5 D7   -3.5
+zeroBE_offsetmetres_road_nobdm_nogroin           gap0  +245.3  total  -76.1  endpt  -84.3 | dx D5  -21.5 D6  +62.8 D4  -17.2 D7  +14.5
+1996 emulator alongshore-only: gap0 237.0  gap14 156.0  change -81.0 | D5 -39.1 D6 +41.9
+2010 emulator alongshore-only: gap0 231.0  gap14 158.6  change -72.4 | D5 -29.3 D6 +43.1

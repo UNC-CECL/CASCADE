@@ -1,5 +1,10 @@
 # `output/calibration/groin` — what is in here, and what it concluded
 
+> **SUPERSEDED UNDER OPTION A (2026-09-29).** M = 60 / f = 0.6 below was fitted on the ÷10 offset at
+> the old waves and is ~10× too strong on the adopted setup. The groin was re-fitted in the full model
+> with an instant 2004 failure and a new blocking form; nothing is pinned yet. Start at
+> `hard-structures/groin/groin-module-test/0-solver-audit/2026-09-29-option-a-real-planform/WHERE_WE_LEFT_OFF.md`.
+
 This was `output/groin_sweep/` until 2026-09-18. Every script builds its path from
 `HAT_groin_sweep_config.GROIN_SWEEP_ROOT`, so the next move is a one-line change.
 

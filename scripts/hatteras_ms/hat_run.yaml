@@ -149,6 +149,11 @@ groin:
   trapping_M: 60.0
   # f, the post-deterioration floor as a fraction of M. From the 1967 rig.
   deterioration_f: 0.6
+  # "dipole" (fixed +/-M a year) or "blocking" (intercepts a fraction b of the
+  # alongshore transport at the groin face). Since 2026-09-29.
+  kind: dipole
+  # b, the blocking groin's intercepted fraction; read only when kind: blocking.
+  blocking_b: 0.6
 
 
 # --- physics ----------------------------------------------------------------
