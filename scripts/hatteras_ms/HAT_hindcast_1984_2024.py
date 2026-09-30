@@ -1,63 +1,11 @@
 #!/usr/bin/env python3
-"""HATTERAS ISLAND -- CASCADE hindcast runner (1984-2004 / 2004-2024).
+"""
+Hatteras Island CASCADE hindcast runner: the headless twin of HAT_hindcast_1984_2024.ipynb.
 
-Headless twin of `HAT_hindcast_1984_2024.ipynb`. The notebook is the source of
-truth: this file mirrors it section for section, in the same order, calling the
-same `cascade_pipeline` / `hatteras_site_config` code with the same values, so
-the two produce the same run.
+    python scripts/hatteras_ms/HAT_hindcast_1984_2024.py   # settings from hat_run.yaml, or HAT_* variables
 
-WHAT THAT MEANS IN PRACTICE
-
-  - Nothing is duplicated that the packages already own. The background-erosion
-    presets, road events, nourishment projects, community zones and annotations
-    all come from `hatteras_site_config`; the loaders, audits, verifiers and
-    plotting come from `cascade_pipeline`. An earlier version of this file kept
-    its own copies of all of it, and they drifted.
-  - The functions the notebook defines in its own cells (`build_cascade`,
-    `run_cascade_simulation`, `build_target_table`, `brie_r_ipl`,
-    `measure_groin_extent`, ...) are copied here verbatim. Edit one, edit both.
-  - Executed top to bottom at module level, which is what a notebook does.
-    Nothing imports this file.
-
-THE TWO DELIBERATE DIFFERENCES FROM THE NOTEBOOK
-
-  - The notebook's QC plots are not here: island orientation, initialization
-    plan view, RSLR, storms, source/sink, roadway plan view, beach/dune
-    footprints, groin setting, CoastSat target. They display, they do not feed
-    the run. Every *check* that sits beside them is kept -- the Barrier3D units
-    contract, the setback audit, the nourishment audit, the annotation guard.
-  - `SHOW_FIGURES` (below) defaults to False. The notebook renders its final
-    figures inline with `show=True`; a headless run cannot. The files written
-    to disk are identical either way.
-
-WHERE THE SWITCHES LIVE
-
-  `hat_run.yaml`, beside this file. Edit it, save it, run. That file is the
-  interface; the sections below only read it, through HAT_hindcast_config:
-
-    section 1   output.show_figures -- read at import, because it selects a
-                matplotlib backend
-    section 3   start_year, source_sink, scenario, relocations, offset_mode
-                (scenario expands to ENABLE_ROADWAY_MANAGEMENT,
-                ENABLE_BEACH_DUNE_MANAGEMENT, ENABLE_NOURISHMENT_FILLS and
-                ENABLE_HISTORICAL_ROAD_RELOCATIONS; commented override lines
-                sit directly below the table)
-    section 7   groin.enabled, groin.trapping_M, groin.deterioration_f
-    section 9   output.make_gifs
-    section 11  physics.wave_height_Hs, sandbags, output.overwrite,
-                output.save_model_state
-
-  An environment variable beats the file, so `HAT_run_all.py` can drive a
-  matrix without editing anything; it also sets HAT_IGNORE_SETTINGS=1, so a
-  half-finished experiment left in the yaml cannot reach a batch run.
-
-  STILL TYPED IN THIS FILE, because they are properties of the study rather
-  than of a run: dune thresholds and datums (section 11), FLIP_SIGN_MODEL and
-  PLOT_REAL_DOMAINS_ONLY (section 9), the groin's geometry and deterioration
-  schedule (section 7), NUM_CORES (section 11).
-
-RUN_NAME is derived from those switches in section 7.5 -- it is not typed by
-hand, so the output directory cannot disagree with what was simulated.
+Same sections, same order and same code as the notebook (the source of truth),
+minus its display-only QC plots; the run is chosen in hat_run.yaml. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -65,9 +13,7 @@ Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
 
-# =============================================================================
-# 1. IMPORTS
-# =============================================================================
+# 1. Imports
 
 import datetime
 import os
@@ -76,16 +22,12 @@ import sys
 import time
 from pathlib import Path
 
-# cascade_pipeline and hatteras_site_config live in scripts/, which isn't
-# installed. The notebook walks up from cwd to find pyproject.toml; a script
-# knows where it is.
+# The packages live in scripts/, which is not installed: found from this file's location
 _HERE = Path(__file__).resolve()
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
                         if (_p / "pyproject.toml").exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
-# HAT_hindcast_config sits beside this file. Running the .py puts that
-# directory on sys.path automatically; importing it from the notebook does
-# not, so it is added explicitly and both files reach the module the same way.
+# HAT_hindcast_config sits beside this file; added explicitly so the notebook reaches it the same way
 HATTERAS_MS_DIR = _HERE.parent
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
@@ -95,24 +37,9 @@ for _path in (SCRIPTS_DIR, HATTERAS_MS_DIR):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-# --- the settings file, read before anything it selects ----------------------
-# `hat_run.yaml` is where a run is chosen; see HAT_hindcast_config for the
-# precedence rules. It is read HERE rather than in section 3 because two of
-# its values are settled at import time and cannot be changed afterwards:
-#
-#   use_sandbox_cascade  decides which Cascade class cascade_pipeline.hindcast
-#                        binds, which happens the moment it is imported below.
-#                        It is pinned True and has no line in the yaml -- see
-#                        the "not settable here" block at the foot of that
-#                        file for why it must not follow groin.enabled.
-#   show_figures         decides the matplotlib backend, which is fixed by the
-#                        first figure created.
-#
-# Everything else is re-read in section 3, so an interactive edit to the yaml
-# applies on a re-run of that cell without restarting the kernel. Section 3
-# also checks these two against the file as it stands then, and raises if they
-# have changed -- a stale sandbox flag is the failure where the groin silently
-# does nothing.
+# The settings file, read before anything it selects
+
+# Read before the imports it selects: use_sandbox_cascade and show_figures are settled at import
 from HAT_hindcast_config import load_run_config          # noqa: E402
 
 _BOOT_CONFIG = load_run_config()
@@ -207,13 +134,7 @@ from site_layer.hatteras_site_config import (
 from site_layer.hat_topo_version import DEFAULT_OFFSET_SOURCE  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # the surveyed reach, GIS 1-90
 
-# The notebook draws its final figures inline. A headless run cannot, so the
-# figures are saved and not shown. This is the only behavioural difference in
-# the output path; the files on disk are identical.
-#
-# `output.show_figures: null` in hat_run.yaml means "whichever file is being
-# run decides", which here is False. Setting it true in the yaml forces
-# figures open in a headless run, which is why it is not the default.
+# Saved, not shown: a headless run cannot display (show_figures: null means False here)
 SHOW_FIGURES = (False if _BOOT_CONFIG.show_figures is None
                 else _BOOT_CONFIG.show_figures)
 if not SHOW_FIGURES:
@@ -231,51 +152,19 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}  "
       f"to {HATTERAS_DOMAINS.last_gis_id})")
 
 
-# =============================================================================
-# 2. DUNE/TOPO -- PER PERIOD
-# =============================================================================
-# NO LONGER period-independent (changed 2026-08-25). Until then both periods
-# read one topography and this section said so. They now start from different
-# DEMs, so the product is selected from HATTERAS_PERIODS:
-#
-#     1984  ->  1984-start   from DEM 2009-2014-1996
-#     1996  ->  1984-start   from DEM 2009-2014-1996
-#     2004  ->  2004-start   from DEM 2009-2014
-#     2010  ->  2004-start   from DEM 2009-2014
-#
-# Two products, four periods (2026-09-11): each new period reads the surface
-# whose survey is nearest its own start, which is a product that already
-# exists. The mapping is YEAR_PRODUCT's, not this comment's -- ask it.
-#
-# The VERSION within a product is still resolved, never pinned.
+# 2. Dune/topo -- per period
 
-# --- 2.1 project paths -------------------------------------------------------
+# The topography product is per period (HATTERAS_PERIODS); its version is resolved, never pinned
 
-# There is no TOPO_DUNE_INIT_YEAR any more. The arrays carry no year - the
-# period is the PRODUCT DIRECTORY - and this runner no longer builds their
-# names at all; build_domain_file_paths() delegates to the resolver. See the
-# note at the top of hat_topo_version.py for why a per-period tag was tried
-# and reverted.
+# 2.1 Project paths
 
-# WHICH EXTRACTION -- resolved, not pinned. topo_dirs() reads VERSION out of
-# HAT_dune_topo_extractor.py, so the runner, the dune-start road setbacks and
-# the audits always describe the same extraction, and a version missing from
-# disk is a loud error rather than a silently stale read.
-#
-# Pinning it by hand is what let this runner sit on 2009_v3 while the setbacks
-# were rebuilt on v4 (2026-08-19) and then v5 (2026-08-20). The setback is
-# measured from interior row 0, so that combination places the road against a
-# row that does not exist on the grid being run.
-#
-# To reproduce an older run deliberately:
-#     topo_dirs("2004-start", override="v3").
+# No per-period array names here: build_domain_file_paths() delegates to the resolver
+
+# Which extraction: resolved by topo_dirs(); an old one only by override, e.g. topo_dirs("2004-start", override="v3")
 from site_layer.hat_topo_version import topo_dirs, current_topo_versions  # scripts/, on sys.path above
 from site_layer.hat_topo_version import BUFFER_DIR as _BUFFER_DIR
 
-# _BOOT_CONFIG, not RUN_CONFIG: the period must be known HERE, and RUN_CONFIG is
-# not loaded until section 3. The two are compared a few lines below section 3's
-# reload, and section 3.0 re-asserts that this product matches the period that
-# actually ran, so a boot/run divergence cannot silently pick the wrong barrier.
+# _BOOT_CONFIG, not RUN_CONFIG: the period is needed before section 3; checked again there
 TOPO_PRODUCT = HATTERAS_PERIODS[_BOOT_CONFIG.start_year]["topo_product"]
 
 _TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs(TOPO_PRODUCT)
@@ -285,23 +174,17 @@ print(f"topography            {TOPO_PRODUCT} / {TOPO_DUNE_VERSION}  "
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs"
-# The rate fits are DATA and the model reads them; where they live is
-# hat_observed_rates.py's to say (2026-09-18), not this file's.
+# Where the rate fits live is hat_observed_rates' to say
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"  # resolved by CASCADE
 
 from site_layer.hat_topo_version import DOMAIN_ROOT as BARRIER3D_DIR  # noqa: E402
-# Taken from what topo_dirs() RETURNED rather than re-joined from parts. The
-# old line rebuilt the path independently, which is how a resolver gets bypassed
-# without anyone noticing - the same failure mode as HAT_road_elevation.py.
+# Taken from what topo_dirs() returned, never re-joined from parts
 DUNE_TOPO_DIR = _TOPO_DIR.parent
 BUFFER_DIR = _BUFFER_DIR
 
 os.chdir(PROJECT_BASE_DIR)
-# Runs are filed per period: section 3 builds OUTPUT_BASE_DIR =
-# OUTPUT_ROOT / "<start>_<end>" once START_YEAR is expanded, so a
-# 1984-2004 run and a 2004-2024 run of one scenario cannot land beside
-# each other. run_index.csv stays at the root, covering both periods.
+# Runs are filed per period (OUTPUT_BASE_DIR, section 3); run_index.csv stays at the root
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
 reports.path_inventory([
@@ -314,12 +197,10 @@ reports.path_inventory([
 ])
 
 
-# --- 2.2 build the padded file lists -----------------------------------------
+# 2.2 Build the padded file lists
 
 
-# The PRODUCT is passed, not the directories: build_domain_file_paths now
-# delegates to hat_topo_version.domain_arrays(), which resolves the directory
-# and the filename together. Nothing here spells an array name.
+# The product is passed; hat_topo_version resolves directory and filename together
 ELEVATION_FILE_PATHS, DUNE_FILE_PATHS = build_domain_file_paths(
     HATTERAS_DOMAINS, TOPO_PRODUCT)
 
@@ -327,9 +208,9 @@ print(f"\n{len(ELEVATION_FILE_PATHS)} elevation + {len(DUNE_FILE_PATHS)} dune "
       f"paths (expect {HATTERAS_DOMAINS.total_domains} each)")
 
 
-# --- 2.3 verify every file exists --------------------------------------------
-# A stale TOPO_DUNE_VERSION or a moved data folder fails here with a count and
-# the first offender, rather than as an opaque traceback inside Barrier3D.
+# 2.3 Verify every file exists
+
+# A stale version or a moved data folder fails here, with a count and the first offender
 
 _expected_files = 2 * HATTERAS_DOMAINS.total_domains
 _missing = [path for path in ELEVATION_FILE_PATHS + DUNE_FILE_PATHS
@@ -344,11 +225,9 @@ if _missing:
 print(f"All {_expected_files} init files present.")
 
 
-# --- 2.4 units check against Barrier3D's input contract ----------------------
-# load_input.py converts the SCALAR yaml parameters but loads the elevation and
-# dune .npy files verbatim, so the arrays on disk must already be in decameters
-# relative to MHW. A file written in metres would run without error and model an
-# island 10x too tall. Checked on the RAW arrays, before any DAM_TO_M scaling.
+# 2.4 Units check against Barrier3D's input contract
+
+# The .npy arrays must already be decameters MHW (a metres file runs 10x too tall); checked raw
 
 
 BARRIER3D_CONTRACT = load_barrier3d_contract(HATTERAS_DATA_BASE / PARAMETER_FILE)
@@ -364,23 +243,9 @@ reports.run_units_check(ELEVATION_FILE_PATHS, DUNE_FILE_PATHS,
                         BARRIER3D_CONTRACT, HATTERAS_DOMAINS)
 
 
-# =============================================================================
-# 3. ISLAND ORIENTATION -- SET START_YEAR
-# =============================================================================
-# START_YEAR is the one flip. It selects a period from HATTERAS_PERIODS and
-# everything in section 4 follows from it: run length, RSLR rate, storm series,
-# background-erosion preset, road-setback file, nourishment settings.
-#
-# The run-selecting values in this section come from `hat_run.yaml`, read
-# through HAT_hindcast_config: edit that file, save it, run. A driver can also
-# set them through the environment without editing anything, and
-# interactively you can still type over any assignment below -- the loaded
-# value is only the default, and the assignment is still the last word.
-#
-# load_run_config() RE-READS the yaml on every call rather than reusing the
-# object section 1 built. In a notebook the module is cached by the import
-# system, so a fresh read is the only way an edit to the yaml applies without
-# restarting the kernel.
+# 3. Island orientation -- set START_YEAR
+
+# START_YEAR selects the period; values come from hat_run.yaml, re-read here, and can be typed over
 
 from HAT_hindcast_config import (                     # noqa: E402
     load_run_config, describe as _describe_run_config, preflight as _preflight,
@@ -388,11 +253,7 @@ from HAT_hindcast_config import (                     # noqa: E402
 
 RUN_CONFIG = load_run_config()
 
-# The two values section 1 already spent. They select an import and a
-# matplotlib backend, so a yaml edited after section 1 ran would be reported
-# in the block below while the process is still running the old choice --
-# and for the sandbox flag that means a groin-on run whose groin silently
-# does nothing. Raised, not warned.
+# The two values section 1 already spent: a yaml edited since then raises
 _BOOT_DRIFT = {
     name: (getattr(_BOOT_CONFIG, name), getattr(RUN_CONFIG, name))
     for name in ("use_sandbox_cascade", "show_figures")
@@ -406,62 +267,15 @@ if _BOOT_DRIFT:
         + "\nThese are settled at import. Re-run section 1 (in a notebook, "
           "restart the kernel and Run All).")
 
+# --- CONFIG ------------------------------------------------------------------
 START_YEAR = RUN_CONFIG.start_year   # 1984, 1996, 2004 or 2010
 
-# The source/sink axis of the run matrix. Each name states a hypothesis about
-# where the alongshore sediment budget is unresolved:
-#   "zeroBE"   nothing imposed anywhere
-#   "edgeBE"   only the two end domains, absorbing the open-boundary artifact
-#   "calibBE"  the full per-domain fit against the CoastSat LRR
+# Source/sink preset: "zeroBE" nothing, "edgeBE" the two end domains, "calibBE" the full fit
 SOURCE_SINK_PRESET = RUN_CONFIG.source_sink_preset
 
-# The management axis of the run matrix. Every switch that decides whether a
-# CASCADE management module runs at all lives here, in one block, because a
-# switch kept beside the section that uses it is how a run ends up half-managed
-# and named for a scenario it did not simulate. Sections 5 and 6 read these;
-# they do not define their own.
-#
-#   ENABLE_ROADWAY_MANAGEMENT     roadway_manager: bulldozing, dune rebuild to
-#                                 the design elevation, setback tracking, road
-#                                 drowning. Off leaves the road as forcing that
-#                                 nothing acts on.
-#   ENABLE_BEACH_DUNE_MANAGEMENT  beach_dune_manager, module and all: overwash
-#                                 filtering, the fixed dune line
-#                                 (dune_migration_on = False), the 50 m
-#                                 community-width drowning check, and fills.
-#                                 Off is the only way to get natural shoreline
-#                                 behaviour in the village domains.
-#   ENABLE_NOURISHMENT_FILLS      Within an enabled beach_dune_manager, whether
-#                                 historical fill is actually spent. False
-#                                 leaves the module and its footprint exactly
-#                                 as they were, so a fills-on / fills-off pair
-#                                 differs in the fill and nothing else.
-#
-# Both modules off is the natural-dynamics run. The groin is deliberately not
-# in this block: it is a structure, not a management module, and keeps its own
-# switch in 7.1 so groin-only scenarios stay reachable.
-# =============================================================================
-# SCENARIO -- the management combination this run simulates
-# =============================================================================
-# The management axis of the run matrix, named rather than typed as four
-# booleans, so a scenario is chosen in one word and cannot be assembled wrong
-# by accident. What each switch controls:
-#
-#   roadway      roadway_manager: bulldozing, dune rebuild to the design
-#                elevation, setback tracking, road drowning. Off leaves NC-12
-#                as forcing that nothing acts on -- still loaded, still
-#                audited in 5.1, never handed to a RoadwayManager.
-#   beach_dune   beach_dune_manager, module and all: overwash filtering, the
-#                fixed dune line (dune_migration_on = False), the 50 m
-#                community-width drowning check, and fills. Off is the ONLY
-#                way to get natural shoreline behaviour in the village
-#                domains -- see the section 6 markdown on what is always-on.
-#   fills        Within an enabled beach_dune_manager, whether the historical
-#                fill is actually spent. False leaves the module and its
-#                footprint exactly as they are, so a fills-on / fills-off pair
-#                differs in the fill and nothing else.
-#   relocations  Historical NC-12 relocation events. False in every named
-#                scenario; read 5.1 before overriding it on.
+# Scenario -- the management combination this run simulates
+
+# Named scenarios: each sets the roadway, beach_dune, fills and relocations switches
 SCENARIOS = {
     # nothing human acts on the island: the counterfactual
     "natural": dict(roadway=False, beach_dune=False,
@@ -482,16 +296,10 @@ SCENARIOS = {
 
 SCENARIO = RUN_CONFIG.scenario
 
-# Read here rather than beside the offset load in section 4: the run-name
-# preview below needs it, and a value the name depends on must be settled
-# before the name is predicted.
+# Read here: the run-name preview below depends on it
 OFFSET_MODE = RUN_CONFIG.offset_mode
 
-# THE REACH (2026-09-16, the Pea Island extension experiment).
-# hatteras_site_config built HATTERAS_DOMAINS from HAT_GEOMETRY in the
-# environment at import, before this config was read; the config carries
-# the same name so a yaml `geometry:` cannot silently disagree with the
-# arrays already in memory. "base" is GIS 1-90, every matrix run.
+# The reach: must match the HAT_GEOMETRY hatteras_site_config was built from ("base" = GIS 1-90)
 GEOMETRY = RUN_CONFIG.geometry
 if GEOMETRY != HATTERAS_GEOMETRY:
     raise SystemExit(
@@ -501,49 +309,23 @@ if GEOMETRY != HATTERAS_GEOMETRY:
         f"(the yaml alone cannot select a reach).\n")
 
 
-
-# The groin is NOT part of the scenario, deliberately. 12.3 measures its effect
-# against a paired no-groin baseline identical in every other token, so every
-# scenario is run twice -- False first to create the baseline, then True.
-# Folding it into the table would double the table to say the same thing.
+# The groin is not part of the scenario: every scenario runs with and without it (12.3)
 GROIN_ENABLED = RUN_CONFIG.groin_enabled
 
-# WHICH GROIN (2026-09-29). "dipole" is GroinCallback's fixed +/-M a year;
-# "blocking" is BlockingGroinCallback, which cancels a fraction b of the
-# alongshore transport crossing the groin face. They are different models, so a
-# blocking run earns its own name token and can never take a dipole run's name.
+# Which groin: "dipole" (+/-M a year) or "blocking" (a fraction b of the transport); own name tokens
 GROIN_KIND = RUN_CONFIG.groin_kind
 if GROIN_KIND not in ("dipole", "blocking"):
     raise ValueError(f"groin kind {GROIN_KIND!r} must be 'dipole' or 'blocking'")
 GROIN_TOKEN = (("groin" if GROIN_KIND == "dipole" else "groinblock")
                if GROIN_ENABLED else "nogroin")
 
-# Where a RELOCATED roadway is rebuilt, in metres behind the dune line. This is
-# the relocation target only: the road's position at t = 0 always comes from the
-# period's measured RoadSetback_<year>_dunestart.csv, and build_cascade applies
-# this after construction so that measured geometry is untouched.
-#
-# CASCADE itself has no separate parameter -- cascade_groin.py:689 re-assigns the
-# relocation target from the initial setback every year -- so without this every
-# domain relocates to wherever its road happened to sit in 1984/2004. That is
-# observed geometry, not a design standard, and at GIS 85 and 86 it is 0 m, which
-# returns a relocated road to the dune line with no clearance and re-fires on the
-# next 10 m of retreat. `measured` in hat_run.yaml restores that behaviour.
+# Where a relocated road is rebuilt, metres behind the dune line; "measured" = the t=0 setback
 RELOCATION_SETBACK_M = RUN_CONFIG.relocation_setback_m
+# -----------------------------------------------------------------------------
 
-# --- sensitivity tokens ------------------------------------------------------
-# The wave climate and the relocation target are FORCING, not management: they
-# change what is simulated without changing which modules get built, so nothing
-# in SCENARIO_SWITCHES sees them. A sensitivity cell that moves one of them
-# would therefore derive the matrix run's exact name and overwrite it. These
-# two tokens are what keep a cell in its own directory, and they are None at
-# the calibration values, so no existing run is renamed.
-#
-# Read from RUN_CONFIG here rather than from section 11's constants because 7.5
-# needs them and 7.5 runs first. Unlike the management switches there is no
-# built module for these to disagree with -- they are numbers handed straight
-# to build_cascade -- so the 7.5 preview check is an identity for them, and
-# section 11 asserts it is still handing over the values named here.
+# Sensitivity tokens
+
+# Forcing tokens keep a sensitivity cell out of the matrix run's name; None at the calibration values
 _WAVE_VALUES = {
     "hs": RUN_CONFIG.hs,
     "wave_period_s": RUN_CONFIG.wave_period_s,
@@ -551,16 +333,14 @@ _WAVE_VALUES = {
     "wave_angle_high_fraction": RUN_CONFIG.wave_angle_high_fraction,
 }
 _WAVE_DEFAULTS = {name: _field_default(name) for name in _WAVE_VALUES}
-# Emitted into the run NAME again since 2026-09-16 (it scoped the directory
-# between 09-01 and 09-16): a sensitivity cell is its baseline's name plus
-# this token, filed under sensitivity/<axis>/ by run_registry.
+# A sensitivity cell is its baseline's name plus this token (filed under sensitivity/<axis>/)
 WAVE_TOKEN = wave_climate_token(_WAVE_VALUES, _WAVE_DEFAULTS)
 RELOCATION_SETBACK_TOKEN = relocation_setback_token(
     RELOCATION_SETBACK_M, _field_default("relocation_setback_m"))
 
 print("\n" + _describe_run_config())
 
-# --- expand ------------------------------------------------------------------
+# Expand
 if SCENARIO not in SCENARIOS:
     raise ValueError(f"SCENARIO must be one of {sorted(SCENARIOS)}, "
                      f"got {SCENARIO!r}")
@@ -568,18 +348,14 @@ _SCENARIO_PRESET = SCENARIOS[SCENARIO]
 ENABLE_ROADWAY_MANAGEMENT = _SCENARIO_PRESET["roadway"]
 ENABLE_BEACH_DUNE_MANAGEMENT = _SCENARIO_PRESET["beach_dune"]
 ENABLE_NOURISHMENT_FILLS = _SCENARIO_PRESET["fills"]
-# HAT_RELOCATIONS overrides the scenario when set; None leaves the preset
-# in charge. Either way the departure is detected just below and the
-# `reloc` token still comes from the switch, not from SCENARIO.
+# HAT_RELOCATIONS overrides the scenario when set; None leaves the preset in charge
 ENABLE_HISTORICAL_ROAD_RELOCATIONS = (
     _SCENARIO_PRESET["relocations"] if RUN_CONFIG.relocations is None
     else RUN_CONFIG.relocations)
 
-# --- one-off overrides -------------------------------------------------------
-# Uncomment to depart from the named scenario for a single run. The departure
-# is detected and printed below, and the run name is still derived from the
-# switches rather than from SCENARIO, so an overridden run cannot be filed
-# under the scenario label it departed from.
+# One-off overrides
+
+# Uncomment to depart from the named scenario for one run; the departure is detected and named below
 # ENABLE_ROADWAY_MANAGEMENT = False
 # ENABLE_BEACH_DUNE_MANAGEMENT = False
 # ENABLE_NOURISHMENT_FILLS = False
@@ -599,16 +375,12 @@ if START_YEAR not in HATTERAS_PERIODS:
     raise ValueError(f"START_YEAR must be one of {sorted(HATTERAS_PERIODS)}, "
                      f"got {START_YEAR}")
 
-# Normalised to the canonical key. The deprecated aliases ("base",
-# "calibrated") still run, but it is the canonical name that reaches RUN_NAME
-# in 7.5 -- an alias can never put a stale token in a directory name.
+# Normalised to the canonical preset name, so an alias never reaches RUN_NAME
 SOURCE_SINK_PRESET, _PRESET_BY_PERIOD = resolve_be_preset(SOURCE_SINK_PRESET)
 
 PERIOD = HATTERAS_PERIODS[START_YEAR]
 
-# Section 2 picked the topography from _BOOT_CONFIG.start_year, before
-# RUN_CONFIG existed. If those disagree the run would model the wrong barrier
-# entirely, so it is checked rather than assumed.
+# Section 2 chose the topography from the boot config: checked against the period that runs
 if PERIOD["topo_product"] != TOPO_PRODUCT:
     raise SystemExit(
         f"\n[stop] topography product mismatch.\n"
@@ -630,11 +402,9 @@ ISLAND_OFFSET_VERSION = island_offset_version(START_YEAR)
 STORM_FILE = HATTERAS_DATA_BASE / PERIOD["storm_file"]
 ROAD_SETBACK_FILE = HATTERAS_DATA_BASE / PERIOD["road_setback_file"]
 
-# --- resolve the combinations that cannot both be true -----------------------
-# A fill cannot land in a domain with no BeachDuneManager: 6.3 would report it
-# as dropped and the run would nourish nothing. A relocation event cannot move
-# a setback nothing reads. Both are resolved here and announced below, rather
-# than left as a contradiction for a later section to trip over.
+# Resolve the combinations that cannot both be true
+
+# Contradictory switches (fill without a manager, relocation without a road) are resolved and announced
 _FILLS_FORCED_OFF = (ENABLE_NOURISHMENT_FILLS
                      and not ENABLE_BEACH_DUNE_MANAGEMENT)
 if _FILLS_FORCED_OFF:
@@ -644,51 +414,27 @@ _RELOCATIONS_FORCED_OFF = (ENABLE_HISTORICAL_ROAD_RELOCATIONS
 if _RELOCATIONS_FORCED_OFF:
     ENABLE_HISTORICAL_ROAD_RELOCATIONS = False
 
-# Run name: the period stem only. The scenario suffix is derived from the active
-# management switches in 7.5 -- a hand-typed label is how a groin-off run ends
-# up in a directory named for a groin-on one.
+# Run name: the period stem; the scenario suffix is derived from the switches in 7.5
 RUN_NAME_STEM = f"HAT_{START_YEAR}_{END_YEAR}"
 
-# Run directories are filed by period. Resolved here, not in section 1,
-# because the period is not known until START_YEAR is expanded above.
-# Every later section derives its paths from OUTPUT_BASE_DIR -- RUN_DIR
-# in 9, the paired groin baseline in 12.3 -- so scoping it here scopes
-# all of them, and the baseline lookup can no longer resolve to a run
-# from the other period.
+# Run directories are filed by period, so every later path (RUN_DIR, the 12.3 baseline) is too
 PERIOD_TAG = f"{START_YEAR}_{END_YEAR}"
-# Filed by period, then by source/sink preset. The preset directory is
-# redundant with the preset token in RUN_NAME on purpose: the token is what
-# run_index.csv, the logs and the figure captions all key on, and the
-# directory is only there so the three presets of one period can be read
-# side by side instead of interleaved in one listing of thirty-odd runs.
-# Filed by PURPOSE (2026-09-16): matrix/, sensitivity/<axis>/,
-# experiments/<tag>/, versions/<tag>/ -- see run_registry. The KIND says what
-# the run is for and the TAG names the experiment or version; a matrix run has
-# no tag, and a sensitivity cell's tag is the axis its name token belongs to.
-# Before this a forcing value, an input version and an experiment label were
-# all "arms", and nothing said which was which.
+# Filed by purpose: matrix/, sensitivity/<axis>/, experiments/<tag>/, versions/<tag>/ (run_registry)
 RUN_KIND = RUN_CONFIG.run_kind
 RUN_TAG = RUN_CONFIG.run_tag
-# HAT_ARM_TAG is the pre-09-16 spelling. Read as an experiment tag so an old
-# driver still files somewhere sensible, and say so in the log.
+# HAT_ARM_TAG, the pre-09-16 spelling, is read as an experiment tag
 _LEGACY_ARM = os.environ.get("HAT_ARM_TAG", "").strip()
 if _LEGACY_ARM and not RUN_TAG:
     print(f"HAT_ARM_TAG={_LEGACY_ARM!r} is the pre-2026-09-16 spelling; read as "
           f"HAT_RUN_KIND=experiment HAT_RUN_TAG={_LEGACY_ARM!r}")
     RUN_KIND, RUN_TAG = "experiment", _LEGACY_ARM
-# A run forced off the calibration wave climate is NOT a matrix run, whatever
-# the environment says: filing it in matrix/ under a token-bearing name would
-# put an experiment beside the production runs. Refused, not re-filed.
+# A run off the calibration waves cannot be filed in matrix/: refused
 if RUN_KIND == "matrix" and WAVE_TOKEN:
     raise ValueError(
         f"wave climate is off calibration ({WAVE_TOKEN}) but HAT_RUN_KIND is "
         f"matrix. A forced run is a sensitivity cell (HAT_RUN_KIND=sensitivity) "
         f"or an experiment (HAT_RUN_KIND=experiment HAT_RUN_TAG=<name>).")
-# Same rule for the island offset SOURCE (2026-09-22). A run built from the
-# CoastSat shoreline instead of the dune line derives exactly the same name as
-# the matrix run it is being compared against -- nothing in the name carries
-# the source -- so filing it in matrix/ would overwrite that run's outputs with
-# a different model input behind them. Refused, not re-filed.
+# Nor can a run on a non-default offset source (its name would collide): refused
 if RUN_KIND == "matrix" and HATTERAS_OFFSET_SOURCE != DEFAULT_OFFSET_SOURCE:
     raise ValueError(
         f"island offset source is {HATTERAS_OFFSET_SOURCE!r} (not "
@@ -702,16 +448,12 @@ if RUN_KIND == "sensitivity" and not (WAVE_TOKEN or RELOCATION_SETBACK_TOKEN):
         "this cell would be the matrix run under another name.")
 if RUN_KIND == "sensitivity" and not RUN_TAG:
     RUN_TAG = sweep_family(f"x_{WAVE_TOKEN or RELOCATION_SETBACK_TOKEN}")
-# The model state (~99% of a run's size) is kept for MATRIX runs only unless
-# output.save_model_state was set explicitly: a sweep cell or an experiment
-# is re-runnable in minutes and its product is a figure, not the pickle.
+# Model state (~99% of a run's size) kept for matrix runs unless output.save_model_state says otherwise
 SAVE_MODEL_STATE = (RUN_CONFIG.save_model_state
                     if (RUN_KIND == "matrix"
                         or RUN_CONFIG.origins["save_model_state"] != "default")
                     else False)
-# Built by run_registry, not joined here. The reader that resolves a finished
-# run and the writer that files one have to agree about the layout, and the
-# only way they cannot drift is to be the same code.
+# Built by run_registry, so the writer and the readers agree on the layout
 OUTPUT_BASE_DIR = preset_dir_for(OUTPUT_ROOT, PERIOD_TAG, SOURCE_SINK_PRESET,
                                  kind=RUN_KIND, tag=RUN_TAG)
 OUTPUT_BASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -724,13 +466,7 @@ print(f"SOURCE_SINK_PRESET = {SOURCE_SINK_PRESET!r}")
 print(f"OUTPUT_BASE_DIR = {OUTPUT_BASE_DIR}")
 print(f"RUN_KIND = {RUN_KIND!r}   RUN_TAG = {RUN_TAG!r}   SAVE_MODEL_STATE = {SAVE_MODEL_STATE}")
 
-# WHICH BARRIER3D (2026-09-24). Barrier3D is installed editable, so the branch
-# checked out in its repository is the model. Since 2026-09-24 that must be
-# fix/route-overwash-axis-swap, which corrects the route_overwash indexing
-# bug (experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md); `git checkout master`
-# there would silently put runs back on it. Recorded in the metadata and the
-# index; warned about here, not refused, so a deliberate unfixed run (to
-# reproduce an old one) is still possible.
+# Which Barrier3D: its checked-out branch is the model; recorded, warned about if not the fix branch
 _B3D = barrier3d_provenance()
 import cascade.beach_dune_manager as _bdm_module  # noqa: E402  (dune-cap provenance)
 print(f"BARRIER3D = {_B3D['branch']}@{str(_B3D['commit'])[:7]}   "
@@ -738,14 +474,7 @@ print(f"BARRIER3D = {_B3D['branch']}@{str(_B3D['commit'])[:7]}   "
       + ("   (tree dirty)" if _B3D["dirty"] else ""))
 print(f"            overwash gap/momentum fixes: {_B3D.get('gap_momentum_fix')}   "
       f"per-cell dune ceilings: {_B3D.get('per_cell_ceiling')}")
-# THE ADOPTED MODEL (2026-09-28, Hannah). The parameter template switches on
-# per-cell dune ceilings (DuneCeilingFromStart). A Barrier3D without them
-# ignores that setting and grows every dune toward the 3.4 m NAVD88 default,
-# the fault that made the model overwash far more than the imagery -- so a
-# run on one is refused, not warned about. To reproduce a run made before
-# 2026-09-28, check out fix/route-overwash-axis-swap in the Barrier3D
-# repository and use the parameter template and storm variant (v3_72) of
-# that date. experiments/storms-and-overwash/ holds the record.
+# The adopted model needs per-cell dune ceilings: a Barrier3D without them is refused
 if _B3D.get("per_cell_ceiling") is not True:
     raise RuntimeError(
         f"Barrier3D {_B3D['branch']}@{str(_B3D['commit'])[:7]} has no per-cell dune "
@@ -760,13 +489,9 @@ if _B3D["route_overwash_fix"] is not True:
           "fix/route-overwash-axis-swap in the Barrier3D repository unless this run "
           "reproduces an old one on purpose.")
 
-# --- the name this scenario will produce, predicted from the switches --------
-# Advisory only. 7.5 derives the authoritative RUN_NAME_BASE from what sections
-# 5 and 6 actually built and raises if the two disagree, so this preview can
-# never quietly become the thing that names the directory. Token order matches
-# SCENARIO_SWITCHES in 7.5 exactly -- that is what makes the comparison valid.
-# The period's fill is resolved with build_schedule, the same call 6 makes,
-# rather than by re-implementing the date filter here.
+# The name this scenario will produce, predicted from the switches
+
+# Advisory preview of the run name; 7.5 derives the real one and raises if they differ
 _PERIOD_HAS_FILL = bool(nourishment.build_schedule(
     HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS,
     START_YEAR, END_YEAR).projects)
@@ -786,11 +511,7 @@ _PREVIEW_TOKENS = [
 RUN_NAME_PREVIEW = (f"{RUN_NAME_STEM}_"
                     + "_".join(t for t in _PREVIEW_TOKENS if t))
 
-# What this run will be called, where it will land, whether something already
-# lives there, and roughly how long it will take -- reported HERE rather than
-# at the section 11 guard so a name collision is visible before sections 4-10
-# do their work. Advisory: `guard_run_dir` in 11 is still the authority on
-# what a collision does, and this does not duplicate that decision.
+# Name, destination, collision and rough run time, reported before sections 4-10 run
 print("\n" + _preflight(RUN_NAME_PREVIEW,
                         OUTPUT_BASE_DIR / RUN_NAME_PREVIEW,
                         config=RUN_CONFIG))
@@ -809,24 +530,18 @@ reports.scenario_report(
                  ("road setback", ROAD_SETBACK_FILE)])
 
 
-# --- 3.1 island offsets ------------------------------------------------------
-# One value per padded domain giving that domain's cross-shore starting
-# position. Becomes `shoreline_offset` on the Cascade() call.
+# 3.1 Island offsets
+
+# Each padded domain's cross-shore starting position: shoreline_offset on the Cascade() call
 
 
-# OFFSET_MODE selects which shoreline_offset variant is built; see
-# cascade_pipeline.hindcast.build_island_offset. The default since
-# 2026-09-24 is "metres": the file is metres and Cascade wants metres, so it
-# goes in as it is. "asrun" reproduces the old units error (offset / 10) for
-# the runs made before that date.
+# OFFSET_MODE picks the variant: "metres" (default since 2026-09-24) or "asrun" (the old /10)
 island_offset = build_island_offset(
     ISLAND_OFFSET_FILE, HATTERAS_DOMAINS, mode=OFFSET_MODE)
 OFFSET_TILTS = island_offset_tilts(island_offset, HATTERAS_DOMAINS)
 
 _real = slice(HATTERAS_DOMAINS.start_real_index, HATTERAS_DOMAINS.end_real_index)
-# island_offset is what Cascade is handed: metres, except in asrun, where
-# it is the file / 10. Multiplying by DAM_TO_M unconditionally printed the
-# asrun span right and every metres span ten times too large ("0-62186 m").
+# Metres, except asrun (the file / 10)
 _offset_m = island_offset * (DAM_TO_M if OFFSET_MODE == "asrun" else 1.0)
 print(f"\n{START_YEAR} offsets ({OFFSET_MODE}): {island_offset.size} padded domains | "
       f"file span {_offset_m[_real].min():.0f}-{_offset_m[_real].max():.0f} m | "
@@ -834,21 +549,20 @@ print(f"\n{START_YEAR} offsets ({OFFSET_MODE}): {island_offset.size} padded doma
       f"{island_offset[_real].max():.0f} m")
 
 
-# =============================================================================
-# 4. PERIOD FORCINGS -- RSLR, STORMS, SOURCE/SINK
-# =============================================================================
+# 4. Period forcings -- RSLR, storms, SOURCE/SINK
+
 # Everything here is resolved by the START_YEAR set in section 3.
 
-# --- 4.1 relative sea level rise ---------------------------------------------
+# 4.1 Relative sea level rise
 
 print(f"\nSEA_LEVEL_RISE_RATE = {SEA_LEVEL_RISE_RATE} m/yr")
 print(f"  over {RUN_YEARS} years -> "
       f"{SEA_LEVEL_RISE_RATE * RUN_YEARS:.3f} m total rise")
 
 
-# --- 4.2 storm series --------------------------------------------------------
-# One row per storm: time (1-based model step), Rhigh, Rlow (decameters),
-# period, duration (hours).
+# 4.2 Storm series
+
+# One row per storm: time step, Rhigh, Rlow (dam), period, duration (h)
 
 
 STORM_SERIES = load_storm_series(STORM_FILE)
@@ -857,23 +571,12 @@ reports.storm_report(storms=STORM_SERIES, storm_file=STORM_FILE,
                      run_years=RUN_YEARS)
 
 
-# --- 4.3 source/sink (background erosion) ------------------------------------
-# Per-domain rate in m/yr, passed to Barrier3D as `Rat`. Sign convention from
-# cascade/brie_coupler.py: (-) = erosion, (+) = accretion. Presets are sparse --
-# a domain absent from a preset gets 0.0 m/yr.
+# 4.3 Source/sink (background erosion)
+
+# Per-domain rate, m/yr, as Barrier3D's Rat: (-) erosion, (+) accretion; absent domains 0.0
 
 
-# be_rates() rather than a dict lookup: since 2026-09-11 not every wired
-# period is calibrated, and it says which fit is missing instead of
-# raising a bare KeyError on the year.
-#
-# THE FIRST EDGE PROBE OF AN UNSOLVED PERIOD (2026-09-16, the 2010 solve).
-# An edgeBE run on a period with no edge entry yet has nothing to look up,
-# but that is exactly the run a Newton step is: HAT_BE_OVERRIDE below
-# supplies both ends. So an unsolved period starts from an empty mapping
-# WHEN an override is present, and the guard after the override block
-# still refuses the run if either end is left without a nonzero rate.
-# Without an override the refusal stands, naming the missing fit.
+# Names the missing fit; an unsolved period's first edge probe starts empty when HAT_BE_OVERRIDE is set
 try:
     DOMAIN_BE_RATES = be_rates(SOURCE_SINK_PRESET, START_YEAR)
 except ValueError:
@@ -883,29 +586,10 @@ except ValueError:
     else:
         raise
 
-# HAT_BE_OVERRIDE -- per-domain rates for THIS run only, "gis=rate" pairs, e.g.
-# HAT_BE_OVERRIDE="1=-45.2,90=11.8". Unset, nothing below runs and the preset
-# is used exactly as it comes out of the config.
-#
-# WHY THIS EXISTS. Solving the two locked end domains is a Newton iteration:
-# run, read the residual at GIS 1 and 90, step, run again. Without an override
-# every step means editing hatteras_site_config.py, and the config is GLOBAL --
-# so a solve for one forcing arm silently redefines what every other run on the
-# machine means, and an interrupted solve leaves the production preset holding
-# a probe value with nothing on disk saying so. That is the exact failure this
-# file has hit before with a stale topography pin.
-#
-# It does not weaken provenance. `values_digest(DOMAIN_BE_RATES)` fingerprints
-# the mapping AFTER this block, so an overridden run gets a different
-# be_values_digest from the preset it started from, and section 12.4 writes
-# that digest into run_index.csv. A run forced this way cannot be mistaken for
-# a config run; it is separated by the same column that separates two edits of
-# the config from each other.
+# HAT_BE_OVERRIDE: a solve step without editing the config; the BE digest still tells it apart
 _BE_OVERRIDE_RAW = os.environ.get("HAT_BE_OVERRIDE", "").strip()
 if _BE_OVERRIDE_RAW:
-    # Copied before mutating: HATTERAS_BE_PRESETS hands back the config's own
-    # dict, so writing into it would edit the preset in memory for anything
-    # else importing it in this process.
+    # Copied: the preset dict is the config's own
     DOMAIN_BE_RATES = dict(DOMAIN_BE_RATES)
     _BE_OVERRIDES = {}
     for _pair in _BE_OVERRIDE_RAW.split(","):
@@ -934,11 +618,7 @@ if _BE_OVERRIDE_RAW:
         print(f"  GIS {_gis:<3}           {_was:+.4f} -> {_rate:+.4f} m/yr")
         DOMAIN_BE_RATES[_gis] = _rate
 
-# An edgeBE run imposes a value at BOTH ends. The config guarantees that
-# for the base geometry; in an extended geometry (2026-09-16) the new
-# end has no solved value until the Newton steps are done, and each step
-# supplies its probe through HAT_BE_OVERRIDE. Refused here rather than
-# run as a zeroBE in edgeBE clothing.
+# An edgeBE end with no solved value and no override is refused
 if SOURCE_SINK_PRESET == "edgeBE":
     _no_edge = [g for g in HATTERAS_BE_EDGE_DOMAINS
                 if not DOMAIN_BE_RATES.get(g)]
@@ -952,8 +632,7 @@ BACKGROUND_EROSION_RATES = build_background_erosion(
     DOMAIN_BE_RATES, HATTERAS_DOMAINS)
 USE_BACKGROUND_EROSION = any(rate != 0.0 for rate in BACKGROUND_EROSION_RATES)
 
-# A derived fact, not a switch: the preset decides it. Checked because the two
-# used to be separate knobs that could disagree, and the run name carried both.
+# Derived from the preset, and checked against it
 _EXPECT_BE_ON = SOURCE_SINK_PRESET != "zeroBE"
 if USE_BACKGROUND_EROSION != _EXPECT_BE_ON:
     raise ValueError(
@@ -969,38 +648,25 @@ reports.background_erosion_report(
     rates_2004_are_placeholder=HATTERAS_BE_RATES_2004_IS_PLACEHOLDER)
 
 
-# =============================================================================
-# 5. roadway_manager -- SETBACKS, PER-DOMAIN ELEVATION, HISTORICAL EVENTS
-# =============================================================================
-# NC-12's forcing is three things: where the road sits (setback, by period), how
-# high it is (elevation, period-independent), and which domains are managed.
-#
-# Two conventions, both Barrier3D's:
-#   - road_ele is metres MHW-relative, not NAVD88 -- bulldoze writes it straight
-#     into the interior grid, which the extractor stores MHW-relative.
-#   - relocation events carry a DISPLACEMENT, not an absolute setback. CASCADE
-#     already decrements the setback by dune migration each year, so adding the
-#     measured displacement counts the retreat once; an absolute setback
-#     referenced to an older dune line counts it twice.
+# 5. roadway_manager -- setbacks, per-domain elevation, historical events
 
-# ENABLE_ROADWAY_MANAGEMENT and ENABLE_HISTORICAL_ROAD_RELOCATIONS are set in
-# section 3, with the other management switches. The forcing below is loaded
-# either way: with management off the setbacks and elevations are still read
-# and audited in 5.1, they simply never reach a RoadwayManager.
+# NC-12 forcing: setback (per period), elevation (m MHW), managed domains; events carry displacements
+
+# Loaded and audited even with management off; it just never reaches a RoadwayManager
 
 ROADWAY = roadway.RoadwayConfig()
 _road_span = (HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN)
 
-# --- setback: by period ------------------------------------------------------
+# Setback: by period
 road_setbacks_full, _missing_setbacks = roadway.load_road_setbacks(
     ROAD_SETBACK_FILE, HATTERAS_DOMAINS, *_road_span)
 
-# --- elevation: one set for every period -------------------------------------
+# Elevation: one set for every period
 ROAD_ELEVATION_FILE = HATTERAS_DATA_BASE / HATTERAS_ROAD_ELEVATION_FILE
 road_elevation_full, _missing_elevations = roadway.load_road_elevations(
     ROAD_ELEVATION_FILE, HATTERAS_DOMAINS, *_road_span, config=ROADWAY)
 
-# --- which domains CASCADE actually manages ----------------------------------
+# Which domains CASCADE actually manages
 ROADWAY_MANAGEMENT_ON = roadway.build_roadway_management_on(
     HATTERAS_DOMAINS, *_road_span,
     community_zones=HATTERAS_COMMUNITY_ZONES,
@@ -1022,11 +688,9 @@ reports.roadway_report(
     relocations_enabled=ENABLE_HISTORICAL_ROAD_RELOCATIONS)
 
 
-# --- 5.1 pre-flight audit: which road_offset will not survive year one -------------
-# bulldoze tests the two rows FLANKING the road -- never the road's own cells --
-# and drowns it when either flank is more than 20% water. A drowned road is not
-# a warning: roadway_manager sets _drown_break and returns immediately on every
-# later year, so the domain becomes an unmanaged barrier wearing a road label.
+# 5.1 Pre-flight audit: which road_offset will not survive year one
+
+# A road whose flanking rows are >20% water drowns, and the domain is unmanaged from then on
 
 road_audit = roadway.audit_setbacks(
     ELEVATION_FILE_PATHS, road_setbacks_full, HATTERAS_DOMAINS, *_road_span,
@@ -1036,55 +700,25 @@ audit_summary = roadway.summarise_audit(road_audit)
 reports.road_audit_report(audit=road_audit, summary=audit_summary)
 
 
-# =============================================================================
-# 6. beach_dune_manager -- NOURISHMENT SCHEDULE + OVERWASH FILTER
-# =============================================================================
-# Two different things arrive bundled in one CASCADE module.
-#
-# ALWAYS-ON wherever the module is enabled, every year: a percentage of overwash
-# deposition is removed from the interior and returned to the shoreface, the
-# dune line is held fixed (dune_migration_on = False), and the community is
-# abandoned if the average interior width falls below 50 m.
-#
-# EVENT-DRIVEN, only where and when nourish_now says so: sand is added to the
-# shoreface. There is no way to get the second without the first.
-#
-# Three conventions, all places this pipeline has been wrong before:
-#   - overwash_filter is a PERCENT, not a fraction. filter_overwash divides by
-#     100. A value of 0.4 filters 0.4% of overwash, which is indistinguishable
-#     from no filtering. BeachDuneConfig now refuses the fraction scale.
-#   - The per-year volume goes to cascade.nourishment_volume, which is where
-#     CASCADE reads it from. A volume written onto the BeachDuneManager instance
-#     lands on the attribute CASCADE overwrites one line before the manager
-#     reads it, and the fill quietly spends the Cascade() init default.
-#   - The manager's time series are offset by one; NourishmentSchedule.time_index
-#     is the single place that conversion lives.
-#
-# The module footprint is the UNION of the permanent community zones and every
-# domain that receives fill. Where that overlaps the roadway footprint, both
-# managers run on the same domain -- reported here, verified in section 12.
+# 6. beach_dune_manager -- nourishment schedule + overwash filter
 
-# --- schedule: one project list, period-filtered ------------------------------
-# Every Hatteras project falls in 2004-2024, so a 1984 run builds an empty
-# schedule from this same list rather than needing a period-keyed one.
+# beach_dune_manager: always-on filter + fixed dune line, event-driven fills; overwash_filter is a PERCENT
+
+# Schedule: one project list, period-filtered
+
+# Every Hatteras project is in 2004-2024, so a 1984 run builds an empty schedule from this list
 BN_SCHEDULE = nourishment.build_schedule(
     HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS, START_YEAR, END_YEAR)
 
-# --- the schedule the model is actually driven by -----------------------------
-# ENABLE_NOURISHMENT_FILLS (section 3). Suppressing fills builds an EMPTY
-# schedule for the same period rather than skipping apply_to_cascade: the loop
-# still rewrites nourish_now and nourishment_volume to zero every year, and the
-# audit below and the verification in 12.2 both check against what was driven
-# rather than what was intended. BN_SCHEDULE itself is left intact and still
-# defines the module footprint below, so turning fills off changes the fill and
-# not the footprint.
+# The schedule the model is actually driven by
+
+# Fills off = an empty schedule, not a skipped call; the footprint is unchanged
 BN_SCHEDULE_APPLIED = BN_SCHEDULE if ENABLE_NOURISHMENT_FILLS else (
     nourishment.build_schedule([], HATTERAS_DOMAINS, START_YEAR, END_YEAR))
 
-# --- what CASCADE is handed ---------------------------------------------------
-# The filter is inert with the module off -- only BeachDuneManager applies it --
-# so it is built as zeros there rather than left at its community values. The
-# array handed to CASCADE should state what the run does, not what it would do.
+# What CASCADE is handed
+
+# Zeros with the module off: the array states what the run does
 OVERWASH_FILTER = (
     nourishment.build_overwash_filter(
         HATTERAS_DOMAINS, HATTERAS_COMMUNITY_ZONES, config=HATTERAS_BEACH_DUNE)
@@ -1095,10 +729,7 @@ BEACH_DUNE_MANAGEMENT_ON = nourishment.build_beach_dune_management_on(
     HATTERAS_DOMAINS, HATTERAS_COMMUNITY_ZONES, BN_SCHEDULE.nourished_gis,
     enabled=ENABLE_BEACH_DUNE_MANAGEMENT)
 
-# Placeholder for the Cascade() call. Every value is rewritten each model year
-# by BN_SCHEDULE.apply_to_cascade(), so this is 0 rather than
-# PERIOD["nourishment_volume"]: if the schedule ever fails to reach the model, a
-# year should nourish nothing rather than quietly nourish the default.
+# Placeholder: rewritten every year by the schedule, so a missed schedule nourishes nothing
 NOURISHMENT_VOLUME_INIT = [0.0] * HATTERAS_DOMAINS.total_domains
 
 DOUBLE_MANAGED_GIS = nourishment.find_double_managed(
@@ -1119,34 +750,15 @@ reports.beach_dune_report(
     geometry=HATTERAS_DOMAINS)
 
 
-# =============================================================================
-# 7. hard-structures / GROIN -- BUXTON GROIN FIELD
-# =============================================================================
-# cascade/groin.py attaches through cascade._groin_callback and is called once
-# per model year from inside Cascade.update(), immediately before the alongshore
-# transport solve. Each active year it adds -M to the updrift domain and +M to
-# the downdrift domain of x_s_dt. BRIE's implicit diffusion solve spreads that
-# dipole in the same step, so the fillet's taper and extent are EMERGENT -- only
-# its amplitude is imposed.
-#
-# It is a forcing, not a barrier: nothing here blocks alongshore transport. The
-# pair is volume-neutral by construction, trapping never saturates on state, and
-# install_year is inert (1969 precedes both periods).
-#
-# Two independent estimates of M disagree by an order of magnitude -- the
-# shoreline-position fit says 50 m/yr, the sediment budget says that is
-# unaffordable. Configured at the sweep's value; the breach is REPORTED, not
-# corrected. Section 12 reports the resulting misfit.
+# 7. Hard structures / groin -- Buxton groin field
 
-# --- 7.1 switches, structure, sediment-budget reference ----------------------
+# The groin callback adds -M updrift, +M downdrift each year before the transport solve; the fillet is emergent
 
-# GROIN_ENABLED is set in section 3, beside the scenario, so one cell decides
-# what a run simulates. The guard below stays here: this is where a wrongly
-# configured groin would silently do nothing.
+# 7.1 Switches, structure, sediment-budget reference
 
-# The pre-AST hook exists ONLY in cascade/cascade_groin.py. Attaching a callback
-# to a Cascade built from the real package is a silent no-op: the run succeeds,
-# the groin does nothing, and the output looks like a valid groin-on run.
+# GROIN_ENABLED is set in section 3; the guard stays here
+
+# Only the sandbox Cascade has the pre-AST hook; elsewhere the groin silently does nothing
 if GROIN_ENABLED and not USE_SANDBOX_CASCADE:
     raise RuntimeError(
         "GROIN_ENABLED=True requires USE_SANDBOX_CASCADE=True (section 1). "
@@ -1156,42 +768,30 @@ if GROIN_ENABLED and not USE_SANDBOX_CASCADE:
         "so reaching this means HAT_USE_SANDBOX_CASCADE=0 is set in the "
         "environment. Unset it, or turn the groin off.")
 
-# Net alongshore transport on Hatteras is southward, so updrift = north. The two
-# domains must be adjacent -- they share the blocked boundary at GIS 5.5.
+# Net transport is southward, so updrift = north; the two domains share the boundary at GIS 5.5
 GROIN_UPDRIFT_GIS = 6       # source: accretes
 GROIN_DOWNDRIFT_GIS = 5     # sink:   erodes
 GROIN_INSTALL_YEAR = 1969   # confirmed construction date
 
-# --- amplitude and deterioration floor: the two tunable knobs ----------------
-# Both come from HAT_hindcast_config so the sweep driver can set them per run.
-# They are fit JOINTLY across the two periods, not independently: over
-# 1984-2004 the cumulative trapping is M*(16 + 4f), so f barely separates from
-# M there, while over 2004-2024 the run sits entirely past the 2003 ramp and
-# only the product M*f is identifiable. Neither window pins both on its own.
+# Amplitude and deterioration floor: the two tunable knobs
+
+# M and f come from the config (the sweep sets them per run); fit jointly across both periods
 GROIN_TRAPPING_RATE_M_YR = RUN_CONFIG.groin_trapping_rate_m_yr
-# b, the blocking groin's intercepted fraction; read only when GROIN_KIND
-# is "blocking". f applies to b the same way it applies to M.
+# b, the blocking fraction: read only when GROIN_KIND is "blocking"; f scales it as it scales M
 GROIN_BLOCKING_FRACTION = RUN_CONFIG.groin_blocking_fraction
 GROIN_M_PROVENANCE = ("joint two-period fit against the CoastSat D6-D5 "
                       "differential; see output/calibration/groin/ for the M-f "
                       "ridge and which grid bounds the solution touches")
 
-# --- deterioration: intact until the 2003 storm, failed from 2004 -----------
-# INSTANT SINCE 2026-09-29 (Hannah); a linear ramp from the 1996 repair to the
-# 2003 storm before that. The observed D5-D6 gap (wet/dry table, 24 dates) does
-# not wear down from 1996: it holds at 134-155 m through 2004 and falls after
-# (125 m in 2008, 104 m in 2016, 63-74 m in 2019-23) -- an intact structure
-# that failed in the September 2003 storm. The ramp put a decline inside the
-# 1996-2010 window the data do not show, and no groin strength then fitted both
-# windows. Strength drops from the 2004 step, the first full year after the
-# storm (2004 fitted better than 2003). Study: hard-structures/groin/
-# groin-module-test/0-solver-audit/2026-09-29-option-a-real-planform/.
+# Deterioration: intact until the 2003 storm, failed from 2004
+
+# Instant failure at the 2003 storm (from the 2004 step), as the observed D5-D6 gap shows
 GROIN_DETERIORATION_DELAY_YEARS = 2004 - GROIN_INSTALL_YEAR   # = 35
 GROIN_DETERIORATION_MODE = "instant"
 GROIN_DETERIORATION_RAMP_YEARS = 0.0
 GROIN_DETERIORATION_FRACTION = RUN_CONFIG.groin_deterioration_fraction
 
-# --- sediment-budget reference -----------------------------------------------
+# Sediment-budget reference
 REACH_TRANSPORT_LOSS_M3_YR = 5.9e5
 REACH_TRANSPORT_CITATION = ("Inman & Dolan (1989), via Moore et al. (2010), "
                             "doi:10.1029/2009JF001299")
@@ -1200,15 +800,13 @@ REACH_TRANSPORT_CAVEAT = (
     "(~60 km) -- a divergence, not a gross flux at Buxton, so this bounds "
     "order of magnitude only")
 
-# Active profile height, converting shoreline displacement to volume. Both
-# candidates print here rather than one being asserted; section 11 resolves it
-# from the constructed model.
+# Active profile height: both candidates printed; section 11 resolves it from the model
 GROIN_PROFILE_HEIGHT_CANDIDATES_M = (12.0, 24.0)
 
 
-# --- 7.2 build the callback ---------------------------------------------------
-# GROIN_CB is built unconditionally so 7.4's report renders either way.
-# GROIN_CALLBACK is the one attached to the model in section 11.
+# 7.2 Build the callback
+
+# GROIN_CB is built either way for the 7.4 report; GROIN_CALLBACK is the one attached
 
 _GROIN_COMMON = dict(
     updrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS),
@@ -1230,7 +828,7 @@ else:
 GROIN_CALLBACK = GROIN_CB if GROIN_ENABLED else None
 
 
-# --- 7.4 report ---------------------------------------------------------------
+# 7.4 Report
 
 reports.groin_report(
     enabled=GROIN_ENABLED, callback=GROIN_CB,
@@ -1251,21 +849,17 @@ reports.groin_report(
     source_sink_preset=SOURCE_SINK_PRESET, domain_be_rates=DOMAIN_BE_RATES)
 
 
-# --- 7.5 scenario summary, and the run name derived from it ------------------
-# RUN_NAME_SUFFIX used to be typed by hand: run with the groin off, forget to
-# retype the label, and the output lands in a directory named for a different
-# experiment. It is now derived from the switches themselves.
+# 7.5 Scenario summary, and the run name derived from it
+
+# The run-name suffix is derived from the switches, never typed
 
 SCENARIO_SWITCHES = [
     ("period", f"{START_YEAR}-{END_YEAR} ({RUN_YEARS} yr)", None),
     ("source/sink preset", SOURCE_SINK_PRESET, SOURCE_SINK_PRESET),
-    # No token when "asrun": every run predating the shoreline_offset
-    # unit finding used it, and adding a token would rename them all.
+    # No token for "asrun", so the older runs keep their names
     ("shoreline offset", OFFSET_MODE,
      None if OFFSET_MODE == "asrun" else f"offset{OFFSET_MODE}"),
-    # No token of its own: it is implied by the preset, and checked against it
-    # in 4.3. Emitting both produced names like "..._base_noBE_..." that said
-    # the same thing twice without saying which zero it was.
+    # No token of its own: implied by the preset, and checked against it in 4.3
     ("background erosion", USE_BACKGROUND_EROSION, None),
     ("roadway management", f"{sum(ROADWAY_MANAGEMENT_ON)} domains"
      if ENABLE_ROADWAY_MANAGEMENT else "off",
@@ -1275,11 +869,7 @@ SCENARIO_SWITCHES = [
     ("beach/dune manager", f"{sum(BEACH_DUNE_MANAGEMENT_ON)} domains"
      if ENABLE_BEACH_DUNE_MANAGEMENT else "off",
      "bdm" if ENABLE_BEACH_DUNE_MANAGEMENT else "nobdm"),
-    # "nonourish" only when there was fill to withhold and a module to
-    # withhold it in: with beach_dune_manager off, "nobdm" already says no
-    # fill, and 1984 has no project to suppress. The project count is
-    # deliberately not in the name -- it is a property of the period, not of
-    # the scenario, and run_index.csv carries it as nourishment_projects.
+    # "nonourish" only when there was fill to withhold and a module to withhold it in
     ("nourishment fills", f"{len(BN_SCHEDULE_APPLIED.projects)} applied"
      if ENABLE_NOURISHMENT_FILLS
      else ("suppressed" if BN_SCHEDULE.projects else "none in period"),
@@ -1292,9 +882,7 @@ SCENARIO_SWITCHES = [
      "each domain's measured offset" if RELOCATION_SETBACK_M is None
      else f"{RELOCATION_SETBACK_M:g} m behind the dune line",
      RELOCATION_SETBACK_TOKEN),
-    # Forcing, tokened only when off the calibration value -- see section 3.
-    # LAST, so a sensitivity cell's trailing token is the wave one and
-    # run_registry.sweep_family reads the axis off it.
+    # Tokened only off the calibration value; last, so sweep_family reads the axis off it
     ("wave climate",
      f"Hs {RUN_CONFIG.hs} m, Tp {RUN_CONFIG.wave_period_s} s, "
      f"asym {RUN_CONFIG.wave_asymmetry}, "
@@ -1307,10 +895,7 @@ RUN_NAME_SUFFIX = "_".join(
     token for _, _, token in SCENARIO_SWITCHES if token)
 RUN_NAME_BASE = f"{RUN_NAME_STEM}_{RUN_NAME_SUFFIX}"
 
-# The section 3 preview was predicted from the switches; this name is derived
-# from what sections 5 and 6 actually built. A difference means a switch did
-# not reach the module it names -- the failure that produces a run filed under
-# a scenario it did not simulate. Raised, not warned.
+# A switch that did not reach its module is raised, not warned
 if RUN_NAME_BASE != RUN_NAME_PREVIEW:
     raise AssertionError(
         f"run name disagrees with the section 3 preview\n"
@@ -1327,29 +912,13 @@ reports.scenario_summary_report(
         HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS)])
 
 
-# =============================================================================
-# 8. COASTSAT TARGET RATES -- LOWESS WINDOWS
-# =============================================================================
-# The observational target. The "calibBE" source/sink preset was fit against
-# the curve produced here, and section 12 draws the model against it.
-#
-# LOWESS runs at TRANSECT resolution using along-coast distance as x, then
-# averages to domain resolution. The widest window is the target, implicitly:
-# rate_comparison picks max(window_domains). TARGET_WINDOW names that choice.
-#
-# skip_southern_domains = 10 suppresses LOWESS across GIS 1-10. That is
-# DISPLAY-ONLY -- LOWESS still fits over all transects and only the result is
-# truncated, so the southern transects still pull the values just north of the
-# cut. Left as built, because the calibrated preset was fit against this curve.
-#
-# The Buxton groin sits at GIS 5.5, so both its flanking domains fall in the
-# unsmoothed zone: the groin's observational target is a raw mean over a handful
-# of transects, not a point on the reference curve.
+# 8. CoastSat target rates -- LOWESS windows
 
-# --- 8.1 load both periods ----------------------------------------------------
-# Both periods always load. This is observational data, not simulation forcing,
-# and section 12 needs the non-active period for reference styling -- so it is
-# deliberately NOT folded into HATTERAS_PERIODS.
+# The CoastSat target: LOWESS at transect resolution, averaged to domains; GIS 1-10 unsmoothed (display only)
+
+# 8.1 Load both periods
+
+# Both periods always load: section 12 draws the other as reference
 
 COASTSAT_DATASETS = [
     CoastSatDataset(
@@ -1362,9 +931,7 @@ COASTSAT_DATASETS = [
         period_start=2004,
         csv_path=str(COASTSAT_BASE_DIR / "2004_2024" / "transect_lrr_full.csv"),
     ),
-    # The two periods added 2026-09-11. Every dataset loads on every run --
-    # section 12 styles the non-active ones as reference curves -- so all four
-    # windows are drawn whichever one is being simulated.
+    # Every window loads on every run
     CoastSatDataset(
         label="CoastSat LRR (1996-2010)",
         period_start=1996,
@@ -1377,17 +944,10 @@ COASTSAT_DATASETS = [
     ),
 ]
 
-# The 7-domain smoothing ALONE (Hannah, 2026-09-28: "the smoothing rate for
-# everything in this project should be 7 domains, that is what our group chose
-# as the range"). Every skill target is built at TARGET_WINDOW = 7, asserted
-# just below. From 2026-09-10 to 09-28 this was 10 alone; runs made before
-# 09-28 were scored against the LOWESS-10 target, and the end-domain rates in
-# HATTERAS_BE_EDGE_ONLY were re-solved for LOWESS-7 the same day.
+# 7-domain smoothing, the group's range (2026-09-28)
 LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 
-# Named here rather than left implicit. rate_comparison resolves the reference
-# window as max(window_domains); this makes that choice visible, and the
-# assertion below catches a window list whose maximum is not what was intended.
+# The reference window, named: rate_comparison uses max(window_domains)
 TARGET_WINDOW = 7
 if TARGET_WINDOW != max(LOWESS_CONFIG.window_domains):
     raise ValueError(
@@ -1396,11 +956,7 @@ if TARGET_WINDOW != max(LOWESS_CONFIG.window_domains):
         f"reference curve -- section 12 would compare against a different "
         f"curve than the one reported here.")
 
-# AN EXTENDED GEOMETRY (2026-09-16) has CoastSat rows beyond GIS 90 of its
-# own (coastsat_extension_lrr.py). Its active window loads the surveyed
-# table WITH those rows appended, so one LOWESS runs over the whole reach
-# and the new end domain has a target. The surveyed table stays the
-# interior score's target (COASTSAT_TARGET_BASE, below) in every geometry.
+# An extended geometry appends its own CoastSat rows beyond GIS 90
 if HATTERAS_GEOMETRY_EXTENDED:
     COASTSAT_DATASETS = [
         CoastSatDataset(label=ds.label + " + extension",
@@ -1421,16 +977,13 @@ if CS_ACTIVE is None:
         f"loaded: {[cs['period_start'] for cs in cs_series]}")
 
 
-# --- 8.2 the target, as a table ----------------------------------------------
+# 8.2 The target, as a table
 
 
 COASTSAT_TARGET = build_target_table(
     CS_ACTIVE, LOWESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
 
-# The surveyed reach's own target: what the interior score is graded
-# against in every geometry (2026-09-16). The same object as
-# COASTSAT_TARGET in the base geometry; in an extended one, the surveyed
-# table smoothed over GIS 1-90 alone, exactly as the baseline run saw it.
+# The surveyed reach's own target: what the interior score is graded against in every geometry
 COASTSAT_TARGET_BASE = COASTSAT_TARGET
 if HATTERAS_GEOMETRY_EXTENDED:
     _cs_base = build_coastsat_series(
@@ -1445,7 +998,7 @@ if HATTERAS_GEOMETRY_EXTENDED:
         _cs_base[0], LOWESS_CONFIG, DEFAULT_DOMAINS, TARGET_WINDOW)
 
 
-# --- 8.4 report ---------------------------------------------------------------
+# 8.4 Report
 
 reports.coastsat_report(
     target=COASTSAT_TARGET, active=CS_ACTIVE, target_window=TARGET_WINDOW,
@@ -1453,19 +1006,11 @@ reports.coastsat_report(
     updrift_gis=GROIN_UPDRIFT_GIS, downdrift_gis=GROIN_DOWNDRIFT_GIS)
 
 
-# =============================================================================
-# 9. FIGURE CONFIGURATION
-# =============================================================================
-# Not the plotting functions -- the configuration they need, gathered before
-# section 12 calls them.
-#
-# Every plotting entry point defaults to the PACKAGE defaults, and
-# DEFAULT_ANNOTATIONS is an AnnotationConfig() with every field empty. Omit
-# `annotations=HATTERAS_ANNOTATIONS` at any one call site and that figure comes
-# out with no villages, no piers, no groin line and no shoal zones -- nothing
-# raises. Hence the keyword bundles below, splatted into every call.
+# 9. Figure configuration
 
-# --- 9.1 site config every figure needs --------------------------------------
+# Keyword bundles for every figure call: omit the annotations and a figure loses its geography silently
+
+# 9.1 Site config every figure needs
 
 RATE_FIG_KWARGS = dict(
     domains=HATTERAS_DOMAINS,
@@ -1496,36 +1041,21 @@ GIF_KWARGS = dict(
 FLIP_SIGN_MODEL = True          # x_s_TS increases landward; flip so up = seaward
 PLOT_REAL_DOMAINS_ONLY = True   # GIS 1-90 axis; False adds the buffer domains
 
-# WHICH ESTIMATOR THE FIGURES DRAW. "lrr" is the OLS slope through every
-# annual state; "endpoint" is (x[-1] - x[0]) / RUN_YEARS. The observational
-# target is an LRR -- CoastSat's transect_lrr_full.csv is a per-transect OLS
-# slope with r_squared and unc_m_yr beside it -- so "lrr" is the only setting
-# that puts the same quantity on both sides of the comparison. "endpoint"
-# exists to redraw a pre-2026-08-22 figure, not as an alternative.
+# The estimator the figures draw: "lrr" matches the CoastSat target; "endpoint" only redraws old figures
 RATE_ESTIMATOR = "lrr"
 if RATE_ESTIMATOR not in ("lrr", "endpoint"):
     raise ValueError(f"RATE_ESTIMATOR must be 'lrr' or 'endpoint', "
                      f"got {RATE_ESTIMATOR!r}")
 
-# Below this, a domain's LRR is reported as a poor summary of its trajectory
-# rather than passed over. 0.50 is a reporting threshold and nothing else --
-# no value is dropped, filtered, or flagged in the CSV on account of it.
+# Reporting threshold only: nothing is dropped or flagged below it
 LRR_R2_FLOOR = 0.50
 
 
-# --- 9.2 animation jobs -------------------------------------------------------
-# range: "real" | "all" | "groin" | "groin_span" | (gis_lo, gis_hi)
-# mode:  "position" | "displacement" | "difference"
-# pad:   half-width in domains, read only by "groin" / "groin_span"
-#
-# "groin" fans out into one GIF per structure in annotations.groins, so new
-# structures are picked up without editing this list.
+# 9.2 Animation jobs
 
-# `output.make_gifs: false` in hat_run.yaml empties this list rather than
-# skipping the section 12 call. The shoreline matrix .npy is written by that
-# same call, OUTSIDE the job loop, and section 12.3's paired groin baseline
-# and scenario_grid.py both read it -- so short-circuiting the call would
-# cost the run its matrix, while an empty job list costs only the animations.
+# range: "real" | "all" | "groin" | "groin_span" | (lo, hi); mode: position | displacement | difference
+
+# make_gifs false empties the job list; the call still writes the shoreline matrix
 GIF_JOBS = [
     dict(range="real", mode="displacement"),
     dict(range="real", mode="position"),
@@ -1534,7 +1064,7 @@ GIF_JOBS = [
 ] if RUN_CONFIG.make_gifs else []
 
 
-# --- 9.3 baseline for difference jobs ----------------------------------------
+# 9.3 Baseline for difference jobs
 
 
 GIF_BASELINE_NAME = None
@@ -1547,18 +1077,15 @@ if GROIN_ENABLED:
     GIF_BASELINE_NPY = str(_baseline) if _baseline.exists() else None
 
 
-# --- 9.4 validation target -- the surveyed island position in the end year ----
-# Read from the RAW transect CSVs, not the padded offset files: the padded files
-# are each zeroed on their own most-seaward domain, so differencing two years
-# subtracts a constant and flips the sign of the mean, which would put the
-# target on the wrong side of the model. The raw CSVs share a fixed offshore
-# datum, so differencing them is a real shoreline change.
+# 9.4 Validation target -- the surveyed island position in the end year
+
+# From the raw transect CSVs (fixed datum), not the padded offsets
 from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402  (2026-09-18)
 
 
-# --- 9.5 report, and the annotation guard ------------------------------------
-# A swapped-in empty AnnotationConfig would strip every figure's geography
-# silently; fail here instead, where the cause is one line away.
+# 9.5 Report, and the annotation guard
+
+# An empty AnnotationConfig would strip every figure's geography: fail here
 
 _ann_populated = any([HATTERAS_ANNOTATIONS.town_spans,
                       HATTERAS_ANNOTATIONS.village_lines,
@@ -1579,19 +1106,9 @@ reports.figure_config_report(
     baseline_name=GIF_BASELINE_NAME, output_base_dir=OUTPUT_BASE_DIR)
 
 
-# =============================================================================
 # 10. build_cascade + run_cascade_simulation
-# =============================================================================
-# Both live in cascade_pipeline/hindcast.py, imported in section 1, and are
-# shared with HAT_groin_sweep_worker.py -- which used to carry its own copy.
-#
-# The split is what lets section 11 hold a built-but-unstepped Cascade: BRIE's
-# diffusivity and the groin's fillet prediction are only meaningful as initial
-# conditions, and a prediction printed after the run is not one.
-#
-# `run_years` is TRANSITIONS, not states. See the module comment there for the
-# off-by-one this replaced, which ran 19 updates for a 20-year period while
-# dividing by 20.
+
+# Both live in cascade_pipeline/hindcast.py; run_years counts transitions, not states
 
 
 print("\nbuild_cascade + run_cascade_simulation defined")
@@ -1603,91 +1120,64 @@ print("  nourishment via BN_SCHEDULE.apply_to_cascade -> "
 print("  road events via cascade_pipeline.roadway.apply_historical_event")
 
 
-# =============================================================================
-# 11. INITIALIZE CASCADE -- SINGLE CONFIG, NO SWEEP
-# =============================================================================
+# 11. Initialize CASCADE -- single config, no sweep
 
-# --- 11.1 parameters sections 2-9 do not produce -----------------------------
+# 11.1 Parameters sections 2-9 do not produce
 
 NUM_CORES = 1        # >1 has crashed on this configuration; leave at 1
 
-# --- dune growth (Barrier3D logistic growth bounds) --------------------------
+# Dune growth (Barrier3D logistic growth bounds)
 RMIN = [0.55] * HATTERAS_DOMAINS.total_domains
 RMAX = [0.95] * HATTERAS_DOMAINS.total_domains
 
-# --- dune rebuild thresholds, m MHW ------------------------------------------
-# Both are floored by roadway_manager on the first step:
-#   dune_design_elevation  = max(passed, BermEl * 10 + 1.0)
-#   dune_minimum_elevation = max(passed, BermEl * 10 + 0.3)
-# Stated in the documented unit rather than the original's 0.01 "# dam", which
-# was the wrong unit for the argument and far below the floor anyway.
+# Dune rebuild thresholds, m MHW
+
+# In metres, the documented unit
 DUNE_DESIGN_ELEVATION_M = 3.0    # rebuild target
-DUNE_MINIMUM_ELEVATION_M = 0.0   # rebuild trigger: let CASCADE's berm floor
-                                 # govern, explicitly rather than by accident
+DUNE_MINIMUM_ELEVATION_M = 0.0   # rebuild trigger: CASCADE's berm floor governs, explicitly
 DUNE_DESIGN_ELEVATION = [DUNE_DESIGN_ELEVATION_M] * HATTERAS_DOMAINS.total_domains
 DUNE_MINIMUM_ELEVATION = [DUNE_MINIMUM_ELEVATION_M] * HATTERAS_DOMAINS.total_domains
 
-# --- roadway ------------------------------------------------------------------
+# Roadway
 ROAD_ELEVATION = road_elevation_full   # per-domain, m MHW, from section 5
 ROAD_WIDTH = 20.0
 
-# --- wave climate: one configuration, no sweep -------------------------------
-# A sweep over these is a separate script (scripts/sensitivity_analysis), which
-# drives this file once per cell through the environment. All four were
-# literals here until 2026-09-01; they read hat_run.yaml's `physics` block now
-# so that sweep never has to edit this source between cells.
-#
-# FIXED_ is kept in the three names: they are still fixed FOR A RUN. Hs reaches
-# run_index.csv as Hs_m and the other three reach the run metadata, so a
-# changed value is recoverable from the index rather than only from the file.
+# Wave climate: one configuration, no sweep
+
+# From hat_run.yaml's physics block, so a sweep never edits this file
 Hs = RUN_CONFIG.hs                                       # m, calibration 2.5
 FIXED_WAVE_PERIOD = RUN_CONFIG.wave_period_s             # s, calibration 8
 FIXED_WAVE_ASYMMETRY = RUN_CONFIG.wave_asymmetry         # calibration 0.7
 FIXED_WAVE_ANGLE_HIGH_FRACTION = RUN_CONFIG.wave_angle_high_fraction  # 0.1
 
-# The run is named for these in 7.5, before they are read here. If the two ever
-# came apart, the directory would describe a wave climate the model was not
-# forced with -- the one failure the name token exists to prevent.
+# The run was named for these in 7.5: they must still match
 assert _WAVE_VALUES == {
     "hs": Hs, "wave_period_s": FIXED_WAVE_PERIOD,
     "wave_asymmetry": FIXED_WAVE_ASYMMETRY,
     "wave_angle_high_fraction": FIXED_WAVE_ANGLE_HIGH_FRACTION,
 }, "section 11's wave climate is not the one section 3 named the run for"
 
-# --- datums -------------------------------------------------------------------
+# Datums
 BERM_ELEVATION = 1.7    # m NAVD88, Hatteras Island, NCDOT-derived via NC State
 MHW_ELEVATION = 0.36    # m NAVD88, Duck NC gauge (NOAA 8651370)
 
-# --- sandbags: off for the hindcast ------------------------------------------
-# From hat_run.yaml (top-level `sandbags`: a management decision, not a
-# property of the coast); reaches run_index.csv as sandbags_on.
+# Sandbags: off for the hindcast
+
+# From hat_run.yaml (top-level sandbags); reaches run_index.csv as sandbags_on
 ENABLE_SANDBAG_PLACEMENT = RUN_CONFIG.sandbags
 SANDBAG_MANAGEMENT_ON = [ENABLE_SANDBAG_PLACEMENT] * HATTERAS_DOMAINS.total_domains
 SANDBAG_ELEVATION = 0
 
 SEA_LEVEL_CONSTANT = True
 
-# --- run identity, from section 7.5's derived name ----------------------------
-# OVERWRITE is checked here, before the model is built, so a name collision
-# costs nothing either way.
-#
-#   False  the matrix default. A directory that already holds a result
-#          stops the run. 12.3 resolves the groin baseline by directory
-#          name, so replacing one run's output silently redefines the
-#          paired run's answer -- which is why this refuses rather than
-#          asks.
-#   True   iterating on one scenario: tweak a value, re-run, read the
-#          figures, tweak again. The directory is EMPTIED and reused, so
-#          it never mixes two trials' files, and run_index.csv's row for
-#          this name is replaced. The previous trial is gone. Set it back
-#          to False before running the matrix.
+# Run identity, from section 7.5's derived name
+
+# OVERWRITE: False stops on an existing result; True empties the directory and reuses it
 OVERWRITE = RUN_CONFIG.overwrite
 
 RUN_NAME = RUN_NAME_BASE
 RUN_DIR = str(OUTPUT_BASE_DIR / RUN_NAME)
-# Read before the guard runs: with OVERWRITE=True the guard empties the
-# directory, and a silent wipe is how a trial gets mistaken for the run it
-# replaced.
+# Read before the guard, which empties the directory when OVERWRITE is set
 _replacing = run_dir_contents(RUN_DIR)
 guard_run_dir(RUN_DIR, overwrite=OVERWRITE)
 print(f"\nRUN_DIR               {RUN_DIR}"
@@ -1696,17 +1186,9 @@ if _replacing:
     print(f"  replaced            {len(_replacing)} file(s) from the previous run")
 
 
-# --- 11.2 build ---------------------------------------------------------------
+# 11.2 Build
 
-# CASCADE REWRITES THE PARAMETER FILE while it constructs (brie_coupler's
-# set_yaml writes the shoreface, RSLR and file paths into it), so the tracked
-# copy in data/hatteras_init used to be a shared scratch file: two runs at
-# once corrupted each other's, and a run killed mid-write left it empty
-# (2026-09-16). Each run now gets its own copy in its directory and hands
-# CASCADE that path; the tracked file is a read-only template and the tree no
-# longer goes dirty on every run. Absolute on purpose: brie_coupler joins it
-# onto datadir with pathlib, which yields the absolute path unchanged, and
-# Barrier3D opens "<prefix>-parameters.yaml" by that prefix.
+# Each run gets its own parameter file (CASCADE rewrites it while it builds); the template stays read-only
 RUN_PARAMETER_FILE = Path(RUN_DIR) / f"{RUN_NAME}-parameters.yaml"
 shutil.copyfile(HATTERAS_DATA_BASE / PARAMETER_FILE, RUN_PARAMETER_FILE)
 
@@ -1749,21 +1231,12 @@ cascade = build_cascade(
 )
 
 
-# --- 11.3 pre-run diagnostics, and the groin prediction ----------------------
-# Reads the constructed model rather than the yaml, which resolves the active
-# profile height section 7 had to leave open. The predicted fillet amplitude and
-# extent are written down BEFORE the run; section 12 checks the emergent extent
-# against them. Amplitude was tuned, extent was not.
+# 11.3 Pre-run diagnostics, and the groin prediction
+
+# Read off the built model; the fillet prediction is written down before the run
 
 
-# r_ipl is read at the groin cell's own starting angle when a groin is attached,
-# not shore-normal. Under option A BRIE's diffusivity at 0 deg is negative
-# (-119 m2/yr), which predict_fillet rightly refuses, while the real coast at
-# GIS 6 sits near -12 deg where it is positive. x_s is a uniform base plus
-# island_offset, so the offset alone gives the angle BRIE's first solve reads
-# (forward difference, as brie.py). No groin: shore-normal, as before.
-# Found 2026-09-29: hard-structures/groin/groin-module-test/0-solver-audit/
-# 2026-09-29-option-a-real-planform/.
+# r_ipl at the groin cell's starting angle (shore-normal is negative under option A)
 if GROIN_ENABLED:
     _up = HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS)
     R_IPL_THETA_DEG = float(np.degrees(np.arctan2(
@@ -1778,8 +1251,7 @@ _h_b_m = float(cascade.barrier3d[0].h_b_TS[0]) * DAM_TO_M
 _profile_height_m = _d_sf_m + _h_b_m
 _berm_floor_m = float(cascade.barrier3d[0].BermEl) * DAM_TO_M
 
-# The M / (4 r_ipl) prediction is the dipole's; a blocking groin's trapped
-# volume depends on the transport arriving, so it has no a-priori amplitude.
+# The M / (4 r_ipl) prediction is the dipole's; a blocking groin has no a-priori amplitude
 if GROIN_CALLBACK is not None and GROIN_KIND == "dipole":
     (GROIN_PREDICTED_AMPLITUDE_M,
      GROIN_PREDICTED_EXTENT_DOMAINS,
@@ -1809,21 +1281,15 @@ reports.pre_run_report(
     reach_transport_loss_m3_yr=REACH_TRANSPORT_LOSS_M3_YR)
 
 
-# =============================================================================
-# 12. RUN THE LOOP, VERIFY, THEN FIGURES
-# =============================================================================
-# Verification comes before figures, deliberately, and the nourishment check
-# ASSERTS. A fill that never reached the model invalidates the run, and that
-# exact failure went unnoticed for a long time precisely because it produced
-# plausible-looking output. Nothing is lost when it fires --
-# run_cascade_simulation saves the model and its logs before returning.
+# 12. Run the loop, verify, then figures
+
+# Verification before figures, and the nourishment check asserts
 
 GROIN_EXTENT_THRESHOLD_FRAC = 0.10   # fraction of peak effect defining "extent"
 
-# --- 12.1 run ----------------------------------------------------------------
-# Barrier3D seeds x_s_TS with one entry and appends one per update, so a model
-# that has already been stepped has more than one. Stepping it again would run
-# past TMAX and raise from deep inside Barrier3D.
+# 12.1 Run
+
+# A model already stepped would run past TMAX
 
 if len(cascade.barrier3d[0].x_s_TS) > 1:
     raise RuntimeError(
@@ -1857,69 +1323,47 @@ print(f"\nruntime               {RUN_SECONDS / 60:.1f} min "
       f"({RUN_SECONDS / RUN_YEARS:.1f} s per model year)")
 
 
-# --- 12.2 verify --------------------------------------------------------------
+# 12.2 Verify
 
 shoreline_m = build_shoreline_matrix(cascade)
 _states, _ = shoreline_m.shape
 
 reports.run_length_report(states=_states, run_years=RUN_YEARS)
 
-# The denominator that produced a 5% bias in every earlier run. Checked, not
-# trusted -- see the run_years comment in cascade_pipeline/hindcast.py.
+# The denominator behind the old 5% bias: checked, not trusted
 assert _states - 1 == RUN_YEARS, (
     f"span mismatch: {_states} states implies {_states - 1} years elapsed, "
     f"but RUN_YEARS is {RUN_YEARS}")
-# TWO ESTIMATORS OF THE SAME THING, and they are not interchangeable.
-#
-#   change_rate  (x[-1] - x[0]) / RUN_YEARS. A net displacement over a span.
-#                Reads two of the RUN_YEARS+1 states, so a single-year
-#                excursion still present in the final state arrives at full
-#                amplitude. Kept because it is the only column that exactly
-#                conserves the period's net shoreline movement, and because
-#                every run before 2026-08-22 was scored on it.
-#   model_lrr    OLS slope through every state. This is what section 8's
-#                target IS -- CoastSat's transect_lrr_full.csv holds a
-#                per-transect OLS slope -- so this is the column the figures
-#                and the skill metrics use.
-#
-# The distinction is not cosmetic here. A nourishment fill enters as an
-# instantaneous step in x_s, and BRIE's Crank-Nicolson alongshore solve
-# answers a step with a grid-scale mode that alternates sign along the coast
-# and decays only ~39%/yr (see compute_lrr). The 2022 Avon and Buxton fills
-# are two years from the end of the 2004-2024 run, so an endpoint rate
-# reports that ringing as a +-1.7 m/yr sawtooth through GIS 6-15 and 22-28.
-# The LRR reports about a quarter of it, and the residue is the real fill
-# edge rather than the solver.
+# Two estimators: change_rate (endpoint, conserves net movement) and model_lrr (OLS, matches the target)
 change_rate = compute_change_rate(
     shoreline_m, span_years=RUN_YEARS, flip_sign=FLIP_SIGN_MODEL)
 model_lrr, model_lrr_r2 = compute_lrr(
     shoreline_m, span_years=RUN_YEARS, flip_sign=FLIP_SIGN_MODEL)
 
-# One name for whichever estimator section 12.5 draws, resolved once here so
-# no figure call picks its own.
+# The estimator section 12.5 draws, resolved once
 PLOTTED_RATE = model_lrr if RATE_ESTIMATOR == "lrr" else change_rate
 
-# --- nourishment: the model's own record, not the schedule's intent ---------
+# Nourishment: the model's own record, not the schedule's intent
 BN_REPORT = nourishment.verify_nourishment(
     cascade, BN_SCHEDULE_APPLIED, BEACH_DUNE_MANAGEMENT_ON)
 reports.nourishment_report(report=BN_REPORT, run_years=RUN_YEARS)
 assert BN_REPORT["ok"], "nourishment did not reach the model as scheduled"
 
-# --- the double-management consequence section 6 predicted ------------------
+# The double-management consequence section 6 predicted
 reports.frozen_setbacks_report(
     double_managed=DOUBLE_MANAGED_GIS,
     rows=(nourishment.verify_setbacks_frozen(
               cascade, DOUBLE_MANAGED_GIS, HATTERAS_DOMAINS)
           if DOUBLE_MANAGED_GIS else ()))
 
-# --- which road_offset survived ---------------------------------------------
+# Which road_offset survived
 ROAD_SUMMARY = roadway.summarise_road_management(
     cascade, HATTERAS_DOMAINS, HATTERAS_FIRST_ROAD_DOMAIN,
     HATTERAS_LAST_ROAD_DOMAIN)
 _drowned, _blocked = reports.roadway_outcome_report(summary=ROAD_SUMMARY)
 
 
-# --- 12.3 groin: the pre-registered extent check -----------------------------
+# 12.3 Groin: the pre-registered extent check
 
 
 GROIN_EXTENT = None
@@ -1941,7 +1385,7 @@ else:
         predicted_extent_m=GROIN_PREDICTED_EXTENT_M)
 
 
-# --- 12.4 write ---------------------------------------------------------------
+# 12.4 Write
 
 _shoreface_depth_m = float(cascade._brie_coupler._brie.d_sf)
 
@@ -1953,11 +1397,7 @@ run = RunInfo(
 )
 
 _rate_csv = str(write_path(RUN_DIR, "rate_csv", RUN_NAME))
-# Both estimators ship, so a consumer states which one it wants rather than
-# inheriting whichever the pipeline happened to write. lrr_r2 rides along
-# because a slope through a domain that stepped rather than trended is a
-# summary worth flagging at the point of use -- the nourished domains come
-# out near 0.00.
+# Both estimators ship, with lrr_r2 beside them
 pd.DataFrame({
     "gis_domain": np.arange(HATTERAS_DOMAINS.first_gis_id,
                             HATTERAS_DOMAINS.last_gis_id + 1),
@@ -1972,28 +1412,13 @@ if ROAD_SUMMARY:
     pd.DataFrame(ROAD_SUMMARY).to_csv(_road_csv, index=False)
     print(f"                      {os.path.basename(_road_csv)}")
 
-# --- skill against the section 8 target --------------------------------------
-# Both spans are reported. The end domains carry the locked source/sink values
-# (tens of m/yr), so an island-wide RMSE for a calibBE or edgeBE run is
-# dominated by two domains that were pinned rather than predicted -- and a
-# zeroBE run has no such term. Ranking the presets on the island-wide number
-# alone would mostly rank their boundary treatment.
-# SKILL is the LRR one: the target is an LRR, so this is the only pairing
-# that compares like with like. SKILL_ENDPOINT is kept beside it because
-# calibBE and the groin M were fit before this distinction was drawn, and a
-# preset's provenance is unreadable once the metric it was fit on stops being
-# recorded. Expect SKILL to be slightly WORSE than SKILL_ENDPOINT on most
-# runs -- modelled erosion decelerates across a period, so an all-years slope
-# is more erosive than an endpoint difference. That is the estimator changing,
-# not the model.
+# Skill against the section 8 target
+
+# Island-wide and interior spans both reported; SKILL is the LRR one, SKILL_ENDPOINT kept beside it
 SKILL = skill_vs_target(model_lrr, COASTSAT_TARGET, HATTERAS_DOMAINS)
 SKILL_ENDPOINT = skill_vs_target(change_rate, COASTSAT_TARGET,
                                  HATTERAS_DOMAINS)
-# The interior number is GIS 2-89 against the SURVEYED target in every
-# geometry (2026-09-16), so an extended run and its 90-domain baseline are
-# graded alike; in the base geometry that is exactly the margin-1 interior
-# and nothing changes. The extended reach's own interior, its two ends
-# dropped, is kept beside it as the "reach" interior.
+# Interior = GIS 2-89 against the surveyed target in every geometry
 for _skill, _rate in ((SKILL, model_lrr), (SKILL_ENDPOINT, change_rate)):
     _skill["mean_bias_reach_interior_m_yr"] = _skill["mean_bias_interior_m_yr"]
     _skill["rmse_reach_interior_m_yr"] = _skill["rmse_interior_m_yr"]
@@ -2013,11 +1438,7 @@ print(f"  endpoint estimator  bias "
       f"RMSE {SKILL_ENDPOINT['rmse_interior_m_yr']:.3f}   "
       f"(interior; the pre-LRR metric)")
 
-# Where a straight line is a poor summary of the modelled trajectory, so the
-# LRR is read with that in mind rather than silently. A nourished domain sits
-# flat for most of the period and then steps, which no slope describes well.
-# r2 is a variance ratio, so a domain that barely moved lands here too -- the
-# two cases are told apart by whether the domain took a fill.
+# Where a straight line summarises the trajectory poorly (nourished or barely moving domains)
 _lrr_r2_real = model_lrr_r2[_real]
 _poor_fit = [int(_gis) for _gis, _r2 in zip(
     range(HATTERAS_DOMAINS.first_gis_id, HATTERAS_DOMAINS.last_gis_id + 1),
@@ -2031,20 +1452,16 @@ if _poor_fit:
           f"{', '.join(str(_g) for _g in _poor_fit[:12])}"
           f"{' ...' if len(_poor_fit) > 12 else ''}")
 
-# --- run metadata: the scenario, plus what distinguishes this run -----------
-# One structure renders both files: the .txt to read, the .json to parse.
-# Built together so they cannot disagree -- the earlier version emitted only
-# prose, so anything downstream had to re-parse it.
+# Run metadata: the scenario, plus what distinguishes this run
+
+# One structure renders both the .txt and the .json
 _GIT = git_provenance(PROJECT_BASE_DIR)
 _TIMESTAMP = timestamp()
 GENERATED_BY = "HAT_hindcast_1984_2024.py"
 
-# --- what the source/sink preset actually was -------------------------
-# The preset's name and its numbers are separate facts.
-# HATTERAS_BE_RATES_EDGE is a slice of HATTERAS_BE_RATES_CALIBRATED at
-# the end domains, so editing an end domain to test edgeBE changes
-# calibBE too -- and both keep their names. Recording the values is what
-# makes two trials of one preset tell themselves apart afterwards.
+# What the source/sink preset actually was
+
+# The preset's name and its numbers are recorded separately
 _BE_NONZERO = sum(1 for _rate in DOMAIN_BE_RATES.values() if _rate)
 _BE_DIGEST = values_digest(DOMAIN_BE_RATES)
 _BE_EDGE_RATES = {f"rate_gis{_gis}_m_yr": DOMAIN_BE_RATES.get(_gis, 0.0)
@@ -2056,23 +1473,15 @@ _META = {
         "timestamp": _TIMESTAMP,
         "generated_by": GENERATED_BY,
         "runtime_min": f"{RUN_SECONDS / 60:.1f}",
-        # The three that drift silently across a multi-day batch: which
-        # Cascade class ran, which extractor version built the init surface,
-        # and which commit produced both.
+        # The three that drift across a batch: Cascade class, extractor version, commit
         "use_sandbox_cascade": (USE_SANDBOX_CASCADE,
                                 "cascade.cascade_groin, not cascade.cascade"),
-        # BOTH are recorded, and the product is not optional. Version numbers
-        # restart at v1 per product (2026-08-26), so "v1" alone no longer
-        # identifies a topography - 1984-start/v1 and 2004-start/v1 are
-        # different surfaces. A run that logs only the version cannot be traced
-        # back to the arrays it read.
+        # Product and version both: version numbers restart per product
         "topo_product": TOPO_PRODUCT,
         "topo_dune_version": TOPO_DUNE_VERSION,
-        # The island offset is versioned too (2026-09-15) and the run name
-        # does not say which one was read, so it is recorded here.
+        # The island offset version, which the run name does not carry
         "island_offset_version": ISLAND_OFFSET_VERSION,
-        # The reach (2026-09-16): "base" is GIS 1-90; an extended geometry
-        # is not a matrix run and its rows must say so.
+        # The reach: "base" is GIS 1-90; an extended one is not a matrix run
         "geometry": (HATTERAS_GEOMETRY,
                      f"GIS {HATTERAS_DOMAINS.first_gis_id} to "
                      f"{HATTERAS_DOMAINS.last_gis_id}"),
@@ -2086,8 +1495,7 @@ _META = {
         "git_branch": _GIT["branch"],
         "git_dirty": (_GIT["dirty"],
                       "True: the commit alone does not reproduce this run"),
-        # Barrier3D is a separate repository, installed editable: its branch
-        # is part of the model (2026-09-24, the route_overwash fix).
+        # Barrier3D's branch is part of the model
         "barrier3d_branch": _B3D["branch"],
         "barrier3d_commit": _B3D["commit"],
         "barrier3d_dirty": _B3D["dirty"],
@@ -2098,8 +1506,7 @@ _META = {
                                        "True: DuneGaps, gap discharge slice and "
                                        "inundation momentum fixed (2026-09-28)"),
         "barrier3d_per_cell_ceiling": _B3D.get("per_cell_ceiling"),
-        # What the model was actually built with, read off the constructed
-        # model rather than the template (2026-09-28).
+        # Read off the constructed model, not the template
         "dune_ceiling": ("per-cell, from the starting dunes"
                          if getattr(cascade.barrier3d[0], "_DuneCeilingFromStart", False)
                          else f"uniform Dmaxel {cascade.barrier3d[0].Dmaxel * 10 + MHW_ELEVATION:.2f} m NAVD88"),
@@ -2196,12 +1603,9 @@ if GROIN_CALLBACK is not None:
             f"{GROIN_EXTENT['updrift_m']:.0f} updrift / "
             f"{GROIN_EXTENT['downdrift_m']:.0f} downdrift")
 
-# --- cross-run index: one row per run, for comparing the matrix --------------
-# One row per run; a re-run replaces its row because the rebuild reads disk.
-# This is what makes 12 runs comparable without opening 12 metadata files.
-# At OUTPUT_ROOT rather than the period directory: run_name already
-# carries the period stem, so one file covers the whole matrix and the
-# two periods stay comparable in a single table.
+# Cross-run index: one row per run, for comparing the matrix
+
+# One row per run, rebuilt from disk; at OUTPUT_ROOT so one table covers both periods
 RUN_INDEX_PATH = OUTPUT_ROOT / RUN_INDEX_FILENAME
 _index_row = {
     "run_name": RUN_NAME,
@@ -2223,12 +1627,7 @@ _index_row = {
     "groin_blocking_b": (GROIN_CALLBACK.blocking_fraction
                          if GROIN_CALLBACK is not None and GROIN_KIND == "blocking"
                          else np.nan),
-    # f was absent from this index until 2026-08-31, so no groin run before
-    # that date records which deterioration fraction it used -- and the pair
-    # is quoted as (M, f), not as M alone. The seed runs turned out to be
-    # f = 0.9, recoverable only from a comment in
-    # be_zone_residual_fit.py. be1 needs no column: it is already here
-    # as be_rate_gis1_m_yr.
+    # f, recorded since 2026-08-31 (the seed runs used 0.9); be1 is be_rate_gis1_m_yr
     "groin_deterioration_f": (GROIN_CALLBACK.deterioration_fraction
                               if GROIN_CALLBACK is not None else np.nan),
     "roadway_management": ENABLE_ROADWAY_MANAGEMENT,
@@ -2238,8 +1637,7 @@ _index_row = {
     "bdm_domains": int(sum(BEACH_DUNE_MANAGEMENT_ON)),
     "nourishment_projects": len(BN_SCHEDULE_APPLIED.projects),
     "Hs_m": Hs,
-    # Where the run is filed, spelled out rather than inferred from the
-    # path, so a row and a directory match without reconstructing either.
+    # Where the run is filed, spelled out
     "kind": RUN_KIND,
     "tag": RUN_TAG,
     "sandbags_on": ENABLE_SANDBAG_PLACEMENT,
@@ -2280,11 +1678,7 @@ _index_row = {
     "bdm_dune_cap": getattr(_bdm_module, "DUNE_CAP_APPLIES_TO", "whole dune cell"),
     "barrier3d_route_overwash_fix": _B3D["route_overwash_fix"],
 }
-# The row goes INTO the metadata, under "index row", and run_index.csv is
-# REBUILT from every run's metadata rather than appended to (2026-09-16).
-# Appending was the one shared write that forced runs to be serial, and a
-# rebuild after a move produced skeleton rows; a derived file has neither
-# problem, and two runs finishing together both write the same table.
+# The row goes into the metadata; run_index.csv is rebuilt from every run's metadata
 _META[INDEX_SECTION] = _index_row
 _meta_txt, _meta_json = write_run_metadata(
     RUN_DIR, RUN_NAME, _META,
@@ -2299,9 +1693,9 @@ print(f"                      {RUN_INDEX_FILENAME}  "
       f"({len(RUN_INDEX)} runs indexed; rebuilt from every run's metadata)")
 
 
-# --- 12.5 figures -------------------------------------------------------------
-# Site config arrives via section 9's bundles; omitting them would silently
-# strip the geographic layer (DEFAULT_ANNOTATIONS is empty).
+# 12.5 Figures
+
+# Section 9's bundles, or the figures lose their geography
 
 plot_rate_comparison(
     PLOTTED_RATE, cs_series, run,
@@ -2320,8 +1714,7 @@ plot_annotated_rate_comparison(
     save_path=str(write_path(RUN_DIR, "figure_rate_buffers", RUN_NAME)),
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
 
-# Section 9.4's validation target, resolved now that the run has a year 0.
-# Buffers are NaN, so the comparison below is over the real domains only.
+# Section 9.4's target, now that the run has a year 0; buffers are NaN
 SHORELINE_TARGET_M, OBSERVED_CHANGE_M = build_shoreline_target(
     shoreline_m[0], START_YEAR, END_YEAR, HATTERAS_DOMAINS, RAW_OFFSET_DIR)
 
@@ -2330,18 +1723,13 @@ reports.target_misfit_report(
     shoreline_m=shoreline_m, end_year=END_YEAR, geometry=HATTERAS_DOMAINS,
     raw_offset_dir=RAW_OFFSET_DIR)
 
-# Roadway relocations, so the shoreline GIFs mark the year the road moved.
-# Assembled here rather than inside the plotting module: the module takes an
-# array and should not know that a relocation lives on a RoadwayManager.
-# None when the run has no roadways, which draws no markers and leaves the
-# GIFs byte-for-byte as they were.
+# Road relocations, so the GIFs mark the year the road moved; None draws no markers
 _RELOCATION_EVENTS = None
 if getattr(cascade, "_roadways", None):
     _RELOCATION_EVENTS = np.zeros(
         (shoreline_m.shape[0], HATTERAS_DOMAINS.total_domains), dtype=bool)
     for _pad, _roadway in enumerate(cascade._roadways):
-        # NOT `getattr(...) or []`: the attribute is a numpy array and
-        # `array or []` raises "truth value of an array is ambiguous".
+        # Not `getattr(...) or []`: the attribute is a numpy array
         _raw = getattr(_roadway, "_road_relocated_TS", None)
         _series = (np.asarray([], dtype=float) if _raw is None
                    else np.asarray(_raw, dtype=float))
