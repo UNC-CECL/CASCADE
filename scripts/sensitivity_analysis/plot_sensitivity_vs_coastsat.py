@@ -7,7 +7,7 @@ Post-processing script for HAT_waveSensitivity_1984_2004.py comparison.
 Reads the shoreline change rate CSVs saved during a sensitivity session
 (no CASCADE re-run required) and plots each parameter sweep against:
   - Raw CoastSat LRR (faded period colour, ±1 std envelope)
-  - LOESS-smoothed CoastSat for each window size in COMPARE_WINDOWS_DOMAINS
+  - LOWESS-smoothed CoastSat for each window size in COMPARE_WINDOWS_DOMAINS
 
 Outputs (written to OUTPUT_DIR)
 --------------------------------
@@ -299,12 +299,12 @@ def load_coastsat(path, period_label):
 
 
 def domains_to_frac(n_domains):
-    """Convert a window size in CASCADE domains to a LOESS frac value."""
+    """Convert a window size in CASCADE domains to a LOWESS frac value."""
     return n_domains / (DOMAIN_MAX - DOMAIN_MIN + 1)
 
 
-def apply_loess(domains, values, frac):
-    """Apply LOESS smoothing; returns smoothed values at the same positions."""
+def apply_lowess(domains, values, frac):
+    """Apply LOWESS smoothing; returns smoothed values at the same positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -316,13 +316,13 @@ def apply_loess(domains, values, frac):
 
 def compute_all_smoothed(cs_df):
     """
-    Compute LOESS-smoothed CoastSat LRR for every window in
+    Compute LOWESS-smoothed CoastSat LRR for every window in
     COMPARE_WINDOWS_DOMAINS.  Returns {n_domains: smoothed_array}.
     """
     d = cs_df["domain"].values.astype(float)
     v = cs_df["cs_lrr"].values
     return {
-        n: apply_loess(d, v, frac=domains_to_frac(n))
+        n: apply_lowess(d, v, frac=domains_to_frac(n))
         for n in COMPARE_WINDOWS_DOMAINS
     }
 
@@ -424,7 +424,7 @@ def plot_param_vs_coastsat(
 
     Layout (all on one panel):
       - Raw CoastSat (faded period colour, ±1 std envelope)
-      - LOESS-smoothed CoastSat for each window in COMPARE_WINDOWS_DOMAINS
+      - LOWESS-smoothed CoastSat for each window in COMPARE_WINDOWS_DOMAINS
       - Cascade model lines (viridis, one per parameter value)
       - Geographic annotation layer
       - Grouped legend
@@ -472,14 +472,14 @@ def plot_param_vs_coastsat(
                 ls="--", zorder=2,
                 label=f"CoastSat raw (ref period, faded)")
 
-    # -- LOESS-smoothed CoastSat (one line per window) ------------------------
+    # -- LOWESS-smoothed CoastSat (one line per window) ------------------------
     for n_dom, win_col in zip(COMPARE_WINDOWS_DOMAINS, C_WINDOWS):
         smoothed = smoothed_dict[n_dom]
         km       = n_dom * 0.5
         frac     = domains_to_frac(n_dom)
         ax.plot(d_cs, smoothed,
                 color=win_col, lw=2.2, alpha=0.90, zorder=4,
-                label=f"LOESS {n_dom}-domain ({km:.1f} km,  frac={frac:.3f})")
+                label=f"LOWESS {n_dom}-domain ({km:.1f} km,  frac={frac:.3f})")
 
     # -- Cascade model lines (viridis, one per parameter value) ---------------
     for k, val in enumerate(values):
@@ -541,7 +541,7 @@ def plot_param_vs_coastsat(
         frac = domains_to_frac(n_dom)
         observed_handles.append(
             Line2D([0], [0], color=win_col, lw=2.2,
-                   label=f"LOESS {n_dom}-domain ({km:.1f} km)")
+                   label=f"LOWESS {n_dom}-domain ({km:.1f} km)")
         )
 
     model_handles = [
@@ -576,7 +576,7 @@ def plot_param_vs_coastsat(
     )
     fig.text(
         0.012, 0.002,
-        f"LOESS windows: {window_str}.  "
+        f"LOWESS windows: {window_str}.  "
         f"Raw CoastSat shown faded for reference.  "
         f"Model: CASCADE  |  Observed: CoastSat LRR per 500-m domain.",
         fontsize=7.5, color="#666666", ha="left", va="bottom", style="italic",
@@ -637,7 +637,7 @@ def plot_overview_2x2(all_runs, cs_active, cs_period_color, all_smoothed, out_pa
             frac = domains_to_frac(n_dom)
             ax.plot(d_cs, all_smoothed[n_dom],
                     color=win_col, lw=1.8, alpha=0.90, zorder=4,
-                    label=f"LOESS {n_dom}-dom ({km:.1f} km)")
+                    label=f"LOWESS {n_dom}-dom ({km:.1f} km)")
 
         # Model lines
         for k, val in enumerate(values):
@@ -671,7 +671,7 @@ def plot_overview_2x2(all_runs, cs_active, cs_period_color, all_smoothed, out_pa
         for n_dom, win_col in zip(COMPARE_WINDOWS_DOMAINS, C_WINDOWS):
             handles.append(
                 Line2D([0], [0], color=win_col, lw=1.8,
-                       label=f"LOESS {n_dom}-dom")
+                       label=f"LOWESS {n_dom}-dom")
             )
         # Model proxies
         for k, val in enumerate(values):
@@ -732,7 +732,7 @@ def main():
         return
 
     # ── Compute smoothed CoastSat (once, reused for every parameter figure) ──
-    print("\nComputing LOESS smoothed CoastSat...")
+    print("\nComputing LOWESS smoothed CoastSat...")
     all_smoothed = compute_all_smoothed(cs_active)
     for n_dom in COMPARE_WINDOWS_DOMAINS:
         km   = n_dom * 0.5

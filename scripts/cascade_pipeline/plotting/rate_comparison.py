@@ -6,7 +6,7 @@ Two entry points:
   plot_annotated_rate_comparison the publication/poster figure with the
                                   full geographic annotation layer
 
-Both consume cs_series from cascade_pipeline.coastsat_loess.build_coastsat_series
+Both consume cs_series from cascade_pipeline.coastsat_lowess.build_coastsat_series
 -- this module only renders, it doesn't load or smooth CoastSat data itself.
 
 STYLE. Drawn under the house standard (scripts/site_layer/hat_figure_style.py): printed
@@ -35,10 +35,10 @@ from cascade_pipeline.annotations import (
     add_geographic_annotations,
     annotation_legend_handles,
 )
-from cascade_pipeline.coastsat_loess import (
-    DEFAULT_LOESS,
+from cascade_pipeline.coastsat_lowess import (
+    DEFAULT_LOWESS,
     compute_domain_means,
-    splice_loess_with_raw_south,
+    splice_lowess_with_raw_south,
 )
 from cascade_pipeline.domains import DEFAULT_DOMAINS
 
@@ -65,7 +65,7 @@ apply_style()
 # config's -- HATTERAS_ANNOTATIONS.model_color -- and this module reads it off
 # the `annotations` object every call site already passes, so the hex is
 # defined in exactly one place and stays there. The blues below are the
-# observed layer: the darker for the widest LOESS window, the lighter for a
+# observed layer: the darker for the widest LOWESS window, the lighter for a
 # narrower one, and a muted blue for the per-transect cloud underneath.
 # The red/blue VINTAGE pair is a different case -- two periods drawn together
 # -- and deliberately does not appear here.
@@ -76,27 +76,27 @@ class RateComparisonConfig:
     """Styling for the modeled-vs-CoastSat shoreline-change-rate figures.
 
     Attributes:
-        window_colors: {window_domains: color} for each LOESS window.
+        window_colors: {window_domains: color} for each LOWESS window.
         window_color_default: Fallback color for an unlisted window size.
         window_styles: [(linewidth, linestyle, alpha_factor), ...] matched
-            to loess_config.window_domains by position; extra windows fall
+            to lowess_config.window_domains by position; extra windows fall
             back to (1.5, "-", 0.80).
         raw_color: Color for the individual-transect scatter.
             The modelled curve's colour is NOT here: it is the site config's
             `AnnotationConfig.model_color` (HATTERAS_ANNOTATIONS defines the
             orange), which is the single authority for it.
         plot_domain_means: Draw the UNSMOOTHED per-domain mean of the
-            transect rates under the LOESS curve, the whole island (Hannah,
+            transect rates under the LOWESS curve, the whole island (Hannah,
             2026-09-22). Without it the only observed curve on a model figure
             is the smoothed one, and a reader cannot tell a real alongshore
             feature from one the 5 km window flattened -- the observation
             figures beside these (rates_figures.lrr_figures) draw the same
             two curves, so the two products no longer disagree.
         domain_mean_lw, domain_mean_alpha: Its weight; thinner and fainter
-            than the LOESS it underlies, in the same colour as that window.
+            than the LOWESS it underlies, in the same colour as that window.
         plot_raw_lrr: Show the transect scatter at all.
         raw_lrr_southern_only: True -> scatter only for the domains where
-            LOESS is suppressed (D1-loess_config.skip_southern_domains).
+            LOWESS is suppressed (D1-lowess_config.skip_southern_domains).
             False -> scatter for every real domain. Read by
             plot_annotated_rate_comparison always, and by
             plot_coastsat_overlay only when overlay_raw_southern_only is set.
@@ -105,12 +105,12 @@ class RateComparisonConfig:
             raw_lrr_southern_only too. Off by default so the matrix figures
             keep the whole-island scatter; the sensitivity cells turn it on
             with plot_domain_means=False (Hannah, 2026-09-29: "only keeping
-            the 7 domain LOESS, just use the dots for domains 1-10").
+            the 7 domain LOWESS, just use the dots for domains 1-10").
         south_mean_line: Draw the unsmoothed per-domain mean over
             D1..skip_southern_domains as a DASHED line, so the observed curve
-            runs the whole island but the stretch that is NOT a LOESS looks
+            runs the whole island but the stretch that is NOT a LOWESS looks
             different from the stretch that is (Hannah, 2026-09-29: "add the
-            line through D1-10 ... but ensure it isnt LOESS").
+            line through D1-10 ... but ensure it isnt LOWESS").
         show_features: Draw the shoal zones, piers and groin on the
             real-domains figure (the annotated figure always has them).
         model_label_plain: Legend the model as just run.model_name
@@ -119,10 +119,10 @@ class RateComparisonConfig:
         quantity: "rate" (m/yr, the default) or "position" -- the caller
             passes the model's end-minus-start change (m) as `change_rate`
             and a CoastSat series already scaled to metres
-            (coastsat_loess.scale_coastsat_series). Only the publication
+            (coastsat_lowess.scale_coastsat_series). Only the publication
             labels and caption read it.
-        observed_label: Legend text for the observed LOESS curve in the
-            publication style; None keeps "CoastSat LRR (7-domain LOESS)".
+        observed_label: Legend text for the observed LOWESS curve in the
+            publication style; None keeps "CoastSat LRR (7-domain LOWESS)".
         observed_description: Caption phrase for the observed quantity in
             position mode, e.g. "total change: the per-transect LRR fitted on
             1996-2010 x 14 yr".
@@ -133,7 +133,7 @@ class RateComparisonConfig:
             Both the real-domains and the annotated (with-buffers) figure;
             the annotated one also drops its S/N compass text, which the
             x label already says and which sat where the tag goes.
-        These four are off by default; rerender_run_figures.py --loess-only
+        These four are off by default; rerender_run_figures.py --lowess-only
         turns them on together (the sensitivity style).
         plot_reference_period: Also show the CoastSat period that doesn't
             match the run's start year (faded).
@@ -188,7 +188,7 @@ def coastsat_domain_mean(cs):
 
     The plain mean of the transect LRRs in each 500 m domain -- what
     domain_lrr_summary.csv holds -- recomputed from the same transect arrays
-    the LOESS is fitted to so the two curves on a figure are the same data
+    the LOWESS is fitted to so the two curves on a figure are the same data
     two ways, not two files.
     """
     dom = cs["transect_domains"]
@@ -196,15 +196,15 @@ def coastsat_domain_mean(cs):
                                 int(np.min(dom)), int(np.max(dom)))
 
 
-def south_domain_mean_line(ax, cs, loess_config, config, gis_x_transform=None,
+def south_domain_mean_line(ax, cs, lowess_config, config, gis_x_transform=None,
                            zorder=4):
     """The raw domain means over D1..skip, dashed, for one CoastSat series.
 
-    Not a LOESS: south of skip the target IS the unsmoothed domain mean, and
-    the dashes say so against the solid LOESS line north of it. Returns the
+    Not a LOWESS: south of skip the target IS the unsmoothed domain mean, and
+    the dashes say so against the solid LOWESS line north of it. Returns the
     label drawn, or None when there is nothing to draw.
     """
-    skip = loess_config.skip_southern_domains
+    skip = lowess_config.skip_southern_domains
     if skip <= 0:
         return None
     if gis_x_transform is None:
@@ -213,7 +213,7 @@ def south_domain_mean_line(ax, cs, loess_config, config, gis_x_transform=None,
     keep = np.asarray(mean_x) <= skip
     if not keep.any():
         return None
-    widest = max(loess_config.window_domains)
+    widest = max(lowess_config.window_domains)
     lbl = f"{cs['label']} — domain mean, D1–{skip} (not smoothed)"
     ax.plot(gis_x_transform(np.asarray(mean_x)[keep]), np.asarray(mean_y)[keep],
             color=config.window_colors.get(widest, config.window_color_default),
@@ -241,8 +241,8 @@ def _features_only(annotations):
                                groin_label_y=0.03, groin_label_side="left")
 
 
-def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_x_transform=None):
-    """Draw CoastSat raw-transect scatter + LOESS lines for one axis.
+def plot_coastsat_overlay(ax, cs_series, lowess_config, config, x_transform, gis_x_transform=None):
+    """Draw CoastSat raw-transect scatter + LOWESS lines for one axis.
 
     Public because the sensitivity figures draw many model curves on one axis
     and need the SAME observed layer underneath them; a second implementation
@@ -255,18 +255,18 @@ def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_
     Args:
         ax: Axes to draw on.
         cs_series: Output of build_coastsat_series.
-        loess_config: LoessConfig (only window_domains is read here, to
+        lowess_config: LowessConfig (only window_domains is read here, to
             find the widest window).
         config: RateComparisonConfig.
         x_transform: along_coast_m array -> x-axis coordinate array, for
             the raw scatter.
         gis_x_transform: gis-domain-ID array -> x-axis coordinate array,
-            for the LOESS lines. Defaults to identity (GIS-ID x-axis).
+            for the LOWESS lines. Defaults to identity (GIS-ID x-axis).
     """
     if gis_x_transform is None:
         gis_x_transform = lambda gis_x: gis_x
 
-    widest_win = max(loess_config.window_domains)
+    widest_win = max(lowess_config.window_domains)
     for cs in cs_series:
         is_active = cs["active"]
         if not is_active and not config.plot_reference_period:
@@ -275,7 +275,7 @@ def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_
             x = x_transform(cs["transect_along_coast"])
             y = cs["transect_rates"]
             if config.overlay_raw_southern_only and config.raw_lrr_southern_only:
-                south = np.asarray(cs["transect_domains"]) <= loess_config.skip_southern_domains
+                south = np.asarray(cs["transect_domains"]) <= lowess_config.skip_southern_domains
                 x, y = np.asarray(x)[south], np.asarray(y)[south]
             raw_alpha = config.raw_scatter_alpha if is_active else config.raw_scatter_alpha * 0.35
             ax.scatter(x, y, color=config.raw_color,
@@ -289,7 +289,7 @@ def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_
                         lw=config.domain_mean_lw, zorder=2,
                         alpha=config.domain_mean_alpha * (1.0 if is_active else 0.40))
         if config.south_mean_line and is_active:
-            south_domain_mean_line(ax, cs, loess_config, config,
+            south_domain_mean_line(ax, cs, lowess_config, config,
                                    gis_x_transform=gis_x_transform)
         for idx, win in enumerate(cs["windows"]):
             cs_color = config.window_colors.get(win["window"], config.window_color_default)
@@ -297,12 +297,12 @@ def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_
                 config.window_styles[idx] if idx < len(config.window_styles) else (1.5, "-", 0.80)
             )
             is_widest = (win["window"] == widest_win)
-            plot_gis_x, plot_y = splice_loess_with_raw_south(
+            plot_gis_x, plot_y = splice_lowess_with_raw_south(
                 win["gis_x"], win["smoothed"], cs["transect_domains"], cs["transect_rates"],
-                skip_n=loess_config.skip_southern_domains, is_widest_window=is_widest,
+                skip_n=lowess_config.skip_southern_domains, is_widest_window=is_widest,
             )
             plot_x = gis_x_transform(plot_gis_x)
-            lbl = f"{cs['label']} — {win['window']}-domain LOESS"
+            lbl = f"{cs['label']} — {win['window']}-domain LOWESS"
             if is_active:
                 ax.plot(plot_x, plot_y, color=cs_color, lw=lw_base, ls=ls,
                         alpha=alpha_factor, zorder=4, label=lbl)
@@ -434,12 +434,12 @@ def _publication_axes(ax, run, config=DEFAULT_RATE_COMPARISON):
     ax.set_title(tag, loc="left", fontsize=9, color=INK, pad=6)
 
 
-def _publication_legend(fig, config, annotations, loess_config, extra=(),
+def _publication_legend(fig, config, annotations, lowess_config, extra=(),
                         ncol=None):
     """The legend in house wording (STYLE.md, 2026-09-19): short noun
     phrases, no period or dataset repeats -- those are in the caption."""
-    skip = loess_config.skip_southern_domains
-    widest = max(loess_config.window_domains)
+    skip = lowess_config.skip_southern_domains
+    widest = max(lowess_config.window_domains)
     blue = config.window_colors.get(widest, config.window_color_default)
     lw = config.window_styles[0][0]
     handles = [
@@ -447,7 +447,7 @@ def _publication_legend(fig, config, annotations, loess_config, extra=(),
                label="CASCADE"),
         Line2D([0], [0], color=blue, lw=lw,
                label=config.observed_label
-               or f"CoastSat LRR ({widest}-domain LOESS)"),
+               or f"CoastSat LRR ({widest}-domain LOWESS)"),
     ]
     if config.south_mean_line and skip > 0:
         handles.append(Line2D([0], [0], color=blue, lw=lw, ls=SOUTH_MEAN_DASH,
@@ -462,13 +462,13 @@ def _publication_legend(fig, config, annotations, loess_config, extra=(),
                columnspacing=1.8)
 
 
-def _publication_caption(run, config, annotations, loess_config, domains,
+def _publication_caption(run, config, annotations, lowess_config, domains,
                          annotated=False):
     """What the title and the three provenance lines used to say, as a
     caption for CAPTIONS.md (house rule: nothing on the canvas that belongs
     in a caption)."""
-    skip = loess_config.skip_southern_domains
-    widest = max(loess_config.window_domains)
+    skip = lowess_config.skip_southern_domains
+    widest = max(lowess_config.window_domains)
     if config.quantity == "position":
         parts = [
             f"Shoreline position change along {annotations.region_name}, "
@@ -478,8 +478,8 @@ def _publication_caption(run, config, annotations, loess_config, domains,
             f"(CASCADE, orange): shoreline position at the end of the run "
             f"minus the start. Observed ({annotations.obs_source_name}, "
             f"blue): {config.observed_description}.",
-            f"The observed line is smoothed with a {widest}-domain LOESS "
-            f"north of domain {skip}; south of it LOESS is not applied and "
+            f"The observed line is smoothed with a {widest}-domain LOWESS "
+            f"north of domain {skip}; south of it LOWESS is not applied and "
             f"the line is the unsmoothed domain mean (dashed), with the "
             f"individual transects shown as dots.",
         ]
@@ -491,8 +491,8 @@ def _publication_caption(run, config, annotations, loess_config, domains,
         f"(Cape Point) to {domains.last_gis_id} (Pea Island); positive is "
         f"seaward (accretion).",
         f"Observed rate is the linear regression rate (LRR) per transect, "
-        f"smoothed with a {widest}-domain LOESS north of domain {skip}; south "
-        f"of it LOESS is not applied and the line is the unsmoothed domain "
+        f"smoothed with a {widest}-domain LOWESS north of domain {skip}; south "
+        f"of it LOWESS is not applied and the line is the unsmoothed domain "
         f"mean (dashed), with the individual transects shown as dots.",
     ]
     return _caption_tail(parts, run, config, annotated, skip, widest)
@@ -502,9 +502,9 @@ def _caption_tail(parts, run, config, annotated, skip, widest):
     """The legend key, wave climate and run identity every caption ends with."""
     what = "change" if config.quantity == "position" else "rate"
     if annotated:
-        parts.append(f"Blue shading: the {widest}-domain LOESS {what} against "
+        parts.append(f"Blue shading: the {widest}-domain LOWESS {what} against "
                      f"zero. Grey dashed line at domain {skip}.5: where the "
-                     f"LOESS begins. Shaded bands: communities; grey dashed "
+                     f"LOWESS begins. Shaded bands: communities; grey dashed "
                      f"lines: village centres. Hatched: shoal zones. "
                      f"Dash-dot: piers. Dotted: Buxton groin.")
     elif config.show_features:
@@ -523,7 +523,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
                           estimator=None,
                           domains=DEFAULT_DOMAINS,
                           annotations=DEFAULT_ANNOTATIONS,
-                          loess_config=DEFAULT_LOESS,
+                          lowess_config=DEFAULT_LOWESS,
                           config=DEFAULT_RATE_COMPARISON,
                           sea_level_rise_rate_m_yr=None,
                           save_path=None, show=False):
@@ -573,7 +573,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
                 linewidth=1.8, label=model_label, zorder=6)
 
         plot_coastsat_overlay(
-            ax, cs_series, loess_config, config,
+            ax, cs_series, lowess_config, config,
             x_transform=lambda along_m: along_m / domains.domain_spacing_m + domains.first_gis_id,
         )
 
@@ -602,7 +602,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         open_frame(ax)
         ax.set_axisbelow(True)
         if config.publication_text:
-            _publication_legend(fig, config, annotations, loess_config)
+            _publication_legend(fig, config, annotations, lowess_config)
         else:
             fig.legend(loc="outside lower center", ncol=3, frameon=False)
 
@@ -622,7 +622,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
                 linewidth=1.8, label=model_label, zorder=6)
 
         plot_coastsat_overlay(
-            ax, cs_series, loess_config, config,
+            ax, cs_series, lowess_config, config,
             x_transform=lambda along_m: along_m / domains.domain_spacing_m + domains.start_real_index,
             gis_x_transform=lambda gis_x: gis_x - domains.first_gis_id + domains.start_real_index,
         )
@@ -675,7 +675,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         print(f"  Saved plot: {save_path}")
         if config.publication_text and real_domains_only:
             record_caption(Path(save_path), _publication_caption(
-                run, config, annotations, loess_config, domains))
+                run, config, annotations, lowess_config, domains))
     if show:
         plt.show()
 
@@ -686,7 +686,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                                     estimator=None,
                                     domains=DEFAULT_DOMAINS,
                                     annotations=DEFAULT_ANNOTATIONS,
-                                    loess_config=DEFAULT_LOESS,
+                                    lowess_config=DEFAULT_LOWESS,
                                     config=DEFAULT_RATE_COMPARISON,
                                     sea_level_rise_rate_m_yr=None,
                                     save_path=None, show=False):
@@ -727,7 +727,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         if config.publication_text else annotations)
 
     data_handles = []
-    widest_win = max(loess_config.window_domains)
+    widest_win = max(lowess_config.window_domains)
     for cs in cs_series:
         is_active = cs["active"]
         if not is_active and not config.plot_reference_period:
@@ -736,11 +736,11 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         scatter_x = cs["transect_along_coast"] / domains.domain_spacing_m + domains.first_gis_id
         if config.plot_raw_lrr:
             if config.raw_lrr_southern_only:
-                south_mask = cs["transect_domains"] <= loess_config.skip_southern_domains
+                south_mask = cs["transect_domains"] <= lowess_config.skip_southern_domains
                 scatter_x_plot = scatter_x[south_mask]
                 scatter_y_plot = cs["transect_rates"][south_mask]
                 raw_lbl = (f"{cs['label']} — transect LRR "
-                           f"(D{domains.first_gis_id}-{loess_config.skip_southern_domains})"
+                           f"(D{domains.first_gis_id}-{lowess_config.skip_southern_domains})"
                            if is_active else None)
             else:
                 scatter_x_plot = scatter_x
@@ -777,11 +777,11 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                 config.window_styles[idx] if idx < len(config.window_styles) else (1.5, "-", 0.80)
             )
             is_widest = (win["window"] == widest_win)
-            gis_x, rate = splice_loess_with_raw_south(
+            gis_x, rate = splice_lowess_with_raw_south(
                 win["gis_x"], win["smoothed"], cs["transect_domains"], cs["transect_rates"],
-                skip_n=loess_config.skip_southern_domains, is_widest_window=is_widest,
+                skip_n=lowess_config.skip_southern_domains, is_widest_window=is_widest,
             )
-            lbl = f"{cs['label']} — {win['window']}-domain LOESS"
+            lbl = f"{cs['label']} — {win['window']}-domain LOWESS"
             if is_active:
                 if is_widest:
                     ax.fill_between(gis_x, rate, 0, where=(rate < 0), alpha=0.14,
@@ -806,7 +806,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         for cs in cs_series:
             if not cs["active"]:
                 continue
-            lbl = south_domain_mean_line(ax, cs, loess_config, config, zorder=5)
+            lbl = south_domain_mean_line(ax, cs, lowess_config, config, zorder=5)
             if lbl:
                 data_handles.append(Line2D(
                     [0], [0], color=config.window_colors.get(
@@ -825,10 +825,10 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     ax.axhline(0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
                zorder=3)
 
-    # Scatter/LOESS transition marker -- only when southern domains show
-    # raw scatter only; marks where dots end and LOESS lines begin.
-    if config.plot_raw_lrr and config.raw_lrr_southern_only and loess_config.skip_southern_domains > 0:
-        ax.axvline(loess_config.skip_southern_domains + 0.5, color=INK_MUTED,
+    # Scatter/LOWESS transition marker -- only when southern domains show
+    # raw scatter only; marks where dots end and LOWESS lines begin.
+    if config.plot_raw_lrr and config.raw_lrr_southern_only and lowess_config.skip_southern_domains > 0:
+        ax.axvline(lowess_config.skip_southern_domains + 0.5, color=INK_MUTED,
                    lw=0.8, ls=(0, (4, 4)), zorder=2)
 
     ax.set_xlim(domains.first_gis_id - 0.5, domains.last_gis_id + 0.5)
@@ -847,7 +847,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     all_vals = np.concatenate(
         [real_rate] + [w["smoothed"][np.isfinite(w["smoothed"])]
                        for cs in cs_series for w in cs["windows"]]
-        # The unsmoothed means swing wider than the LOESS at every peak
+        # The unsmoothed means swing wider than the LOWESS at every peak
         # (GIS 68, 1996-2010: +5.1 against +0.1), so a bound locked to the
         # smoothed curves alone would cut the new line off (2026-09-22).
         + ([coastsat_domain_mean(cs)[1] for cs in cs_series]
@@ -856,7 +856,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         # every curve (2010-2024 D1: +9.1 against a +7.2 bound), so a bound
         # without them clipped the top transects off (2026-09-29).
         + ([cs["transect_rates"][cs["transect_domains"]
-                                 <= loess_config.skip_southern_domains]
+                                 <= lowess_config.skip_southern_domains]
             for cs in cs_series if cs["active"]]
            if config.plot_raw_lrr and config.raw_lrr_southern_only else [])
     )
@@ -881,13 +881,13 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
 
     if config.publication_text:
         _publication_axes(ax, run, config)
-        _publication_legend(fig, config, annotations, loess_config,
+        _publication_legend(fig, config, annotations, lowess_config,
                             extra=annotation_legend_handles(annotations), ncol=5)
         if save_path:
             fig.savefig(save_path, dpi=300, bbox_inches="tight",
                         facecolor="white")
             record_caption(Path(save_path), _publication_caption(
-                run, config, annotations, loess_config, domains,
+                run, config, annotations, lowess_config, domains,
                 annotated=True))
             print(f"  Saved annotated plot: {save_path}")
         if show:

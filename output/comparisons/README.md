@@ -28,7 +28,7 @@ offset_source/          dune line vs shoreline as BRIE's island offset: how much
 
 | folder | script | runs |
 |---|---|---|
-| `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
+| `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_lowess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
 | `model_vs_observed/` | `scripts/analyze_output/compare_runs/rate_windows.py` | the option A edgeBE nogroin matrix and the option A dune-line end solve, 1996 and 2010 (since 09-27), `runs_used.csv` |
 | `matrix_vs_observed/` | `scripts/analyze_output/compare_runs/matrix_vs_observed.py` | all 22 option A nogroin matrix runs, `scores.csv` |
 | `target_comparison/` | `scripts/analyze_output/compare_runs/target_comparison.py` | option A since 09-27: the edgeBE and zeroBE matrix and the dune-line and 1996-2024 LRR end solves, 1996 and 2010, `runs_used.csv` |
@@ -58,7 +58,7 @@ came from.
 Three sets were deleted rather than archived because nothing outside the
 folder read them and none could be regenerated:
 
-- `smoothing_vs_cascade/` (2026-04-06): LOESS smoothing of the CoastSat
+- `smoothing_vs_cascade/` (2026-04-06): LOWESS smoothing of the CoastSat
   rates against a run named `HAT_1984_2004_SQ_BE_Hs2p0`, a pre-archive
   name with no run behind it. The smoothing itself is now the scoring
   target's treatment (`cascade_pipeline.hindcast.build_target_table`) and is

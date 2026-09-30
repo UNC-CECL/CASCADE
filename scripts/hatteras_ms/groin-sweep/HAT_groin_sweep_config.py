@@ -91,7 +91,7 @@ GROIN_SWEEP_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "groin"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from cascade_pipeline.coastsat_loess import compute_domain_means  # noqa: E402
+from cascade_pipeline.coastsat_lowess import compute_domain_means  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_RATES_EDGE,
     HATTERAS_PERIODS,
@@ -270,8 +270,8 @@ def be_gis1_default(period):
 # =============================================================================
 # THE OBSERVATIONAL TARGET
 # =============================================================================
-# Raw per-domain transect means over D1-D12, not the LOESS-smoothed table:
-# LoessConfig's skip_southern_domains is 10, so D1-D10 are raw in
+# Raw per-domain transect means over D1-D12, not the LOWESS-smoothed table:
+# LowessConfig's skip_southern_domains is 10, so D1-D10 are raw in
 # COASTSAT_TARGET anyway, and taking D11-D12 raw as well makes the whole
 # window one construction instead of two. Sign: + is seaward/accreting.
 FIT_GIS_MIN, FIT_GIS_MAX = 1, 12

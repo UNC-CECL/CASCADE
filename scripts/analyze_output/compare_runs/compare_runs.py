@@ -4,7 +4,7 @@ HATTERAS ISLAND — CASCADE Run Comparison Plot
 =============================================
 Loads up to 4 pre-computed CASCADE runs from their saved shoreline change
 rate CSVs and overlays them on one figure for visual comparison.  Adds
-LOESS-smoothed CoastSat LRR for reference.
+LOWESS-smoothed CoastSat LRR for reference.
 
 Each run must have already been executed by the hindcast runner, which saves
 a rate CSV automatically inside the run directory:
@@ -203,12 +203,12 @@ COMPARISON_NAME = "source_sink_zones"   # <-- EDIT THIS to name your comparison 
 # SECTION 4: COASTSAT DATASETS
 # =============================================================================
 # Each entry points to a transect_lrr_full.csv — one row per CoastSat transect
-# (~50 m spacing, hundreds of transects total).  LOESS is applied at transect
+# (~50 m spacing, hundreds of transects total).  LOWESS is applied at transect
 # resolution then aggregated to domain resolution for the CASCADE comparison.
 #
 # period_start controls "active vs reference" styling:
-#   active period  → full opacity scatter + solid LOESS lines
-#   reference period → faded scatter + faded LOESS lines
+#   active period  → full opacity scatter + solid LOWESS lines
+#   reference period → faded scatter + faded LOWESS lines
 #
 # The active period is inferred from the majority of RUNS_TO_COMPARE start years.
 # Override ACTIVE_PERIOD_START manually if your runs span different periods.
@@ -271,25 +271,25 @@ TRANSECT_DATASETS = [
 # Which CoastSat period is drawn solid.  Inferred from runs if None.
 ACTIVE_PERIOD_START = None   # 1984 or 2004, or None for auto
 
-# --- LOESS smoothing applied to CoastSat overlay ---
+# --- LOWESS smoothing applied to CoastSat overlay ---
 # List one or two window sizes (domain units; 1 domain ≈ 500 m).
 # Two windows are drawn with distinct line styles so you can compare
 # smoothing bandwidth side-by-side.  Set to a single-element list to
 # revert to the original single-curve behaviour.
 #   10 domains → frac ≈ 0.111 → ~5 km  ← recommended primary
 #    7 domains → frac ≈ 0.078 → ~3.5 km ← narrower reference
-LOESS_WINDOW_DOMAINS = [7]   # list of 1 or 2 window sizes (domains); [7, 10] until 2026-09-28
+LOWESS_WINDOW_DOMAINS = [7]   # list of 1 or 2 window sizes (domains); [7, 10] until 2026-09-28
 
-# Styling for each entry in LOESS_WINDOW_DOMAINS (matched by list position).
+# Styling for each entry in LOWESS_WINDOW_DOMAINS (matched by list position).
 # Tuple: (linewidth, linestyle, alpha_factor_for_active_period)
 # The fill in plot_annotated is drawn only for windows with linestyle "-".
-LOESS_WINDOW_STYLES = [
+LOWESS_WINDOW_STYLES = [
     (2.0, "-",  1.00),   # the 7-domain window: solid, full opacity, primary reference
 ]
 
-# Which LOESS window (domain count) to use as the reference curve in the
-# residuals plot.  Must be one of the values in LOESS_WINDOW_DOMAINS.
-RESIDUALS_LOESS_WINDOW = 7
+# Which LOWESS window (domain count) to use as the reference curve in the
+# residuals plot.  Must be one of the values in LOWESS_WINDOW_DOMAINS.
+RESIDUALS_LOWESS_WINDOW = 7
 
 # =============================================================================
 # SECTION 5: PLOT OPTIONS
@@ -337,8 +337,8 @@ LABEL_EROSION_Y   = None   # e.g. 0.15 to pin near the bottom
 # CoastSat — cool blue family.  Four layers, light → dark = less → more processed:
 #   transect scatter  #9ECAE1   very light blue    individual ~50 m transect LRR (dots)
 #   domain avg. line  #9ECAE1   very light blue    domain-averaged LRR (dotted line)
-#    7-domain LOESS   #6BAED6   medium sky blue    LOESS narrow window, solid
-#   10-domain LOESS   #08519C   deep ocean blue    LOESS primary reference, solid + fill
+#    7-domain LOWESS   #6BAED6   medium sky blue    LOWESS narrow window, solid
+#   10-domain LOWESS   #08519C   deep ocean blue    LOWESS primary reference, solid + fill
 #
 # CASCADE runs — warm orange-red gradient (light → dark = low → high parameter),
 # generated automatically from RUN_COLORMAP below rather than hardcoded hex
@@ -365,11 +365,11 @@ RUN_COLORMAP = "YlOrRd"
 # against a white background and the darkest run distinguishable from black text.
 RUN_COLORMAP_RANGE = (0.35, 0.95)
 
-# CoastSat LOESS colors keyed by window size (domain count).
-# Add entries here if you add new window sizes to LOESS_WINDOW_DOMAINS.
+# CoastSat LOWESS colors keyed by window size (domain count).
+# Add entries here if you add new window sizes to LOWESS_WINDOW_DOMAINS.
 CS_WINDOW_COLORS = {
-     7: "#6BAED6",   # medium sky blue  — 7-domain LOESS
-    10: "#08519C",   # deep ocean blue  — 10-domain LOESS
+     7: "#6BAED6",   # medium sky blue  — 7-domain LOWESS
+    10: "#08519C",   # deep ocean blue  — 10-domain LOWESS
 }
 CS_WINDOW_COLOR_DEFAULT = "#4A7C8E"   # fallback for any unlisted window size
 
@@ -378,8 +378,8 @@ CS_WINDOW_COLOR_DEFAULT = "#4A7C8E"   # fallback for any unlisted window size
 # the two scripts.
 CS_RAW_COLOR            = "#5BA3C9"    # medium blue
 PLOT_RAW_LRR            = True         # set False to hide transect scatter from all figures
-RAW_LRR_SOUTHERN_ONLY   = True         # True  -> scatter only D1-LOESS_SKIP_SOUTHERN_DOMAINS
-                                        #          (the zone where LOESS is suppressed)
+RAW_LRR_SOUTHERN_ONLY   = True         # True  -> scatter only D1-LOWESS_SKIP_SOUTHERN_DOMAINS
+                                        #          (the zone where LOWESS is suppressed)
                                         # False -> scatter for all domains D1-90
 RAW_LRR_SCATTER_SIZE    = 6            # marker area in points²
 RAW_LRR_SCATTER_ALPHA   = 0.60         # opacity for active period; ×0.35 for reference period
@@ -403,11 +403,11 @@ ANN_C_PIER         = "#1565C0"
 ANN_C_GROIN        = "#B71C1C"
 
 # Southernmost domains (1 through this value) for which raw per-domain scatter
-# is shown instead of LOESS smoothing - Oregon Inlet boundary effects dominate
-# this zone and LOESS smoothing there can obscure the sharp gradient. The raw
+# is shown instead of LOWESS smoothing - Oregon Inlet boundary effects dominate
+# this zone and LOWESS smoothing there can obscure the sharp gradient. The raw
 # scatter toggle below restricts dots to just this zone so domain 11+ is
-# represented only by the LOESS lines (matches HAT_hindcast_1984_2024_old version.py).
-LOESS_SKIP_SOUTHERN_DOMAINS = 10
+# represented only by the LOWESS lines (matches HAT_hindcast_1984_2024_old version.py).
+LOWESS_SKIP_SOUTHERN_DOMAINS = 10
 
 # =============================================================================
 # HELPER FUNCTIONS — domain utilities
@@ -564,7 +564,7 @@ def load_transect_data(ds):
     """
     Load individual transect LRR values from transect_lrr_full.csv and derive
     along-coast distance by spreading each domain's transects evenly across its
-    500 m band (mirrors 6-scr-smooth/loess_method_comparison.py: load_transect_csv).
+    500 m band (mirrors 6-scr-smooth/lowess_method_comparison.py: load_transect_csv).
 
     Returns
     -------
@@ -598,7 +598,7 @@ def load_transect_data(ds):
     df = df.sort_values(sort_cols).reset_index(drop=True)
 
     # Spread each domain's transects evenly across its 500 m band so that
-    # physical spacing can be estimated correctly for the LOESS frac.
+    # physical spacing can be estimated correctly for the LOWESS frac.
     def _spread(grp):
         n         = len(grp)
         base      = (grp[domain_col].iloc[0] - 1) * DOMAIN_SPACING_M
@@ -620,12 +620,12 @@ def load_transect_data(ds):
     return domain_ids, lrr_values, along_coast_m
 
 
-def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
+def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
     """
-    Apply LOESS at transect resolution using physical along-coast distance (m) as x,
+    Apply LOWESS at transect resolution using physical along-coast distance (m) as x,
     then aggregate smoothed values to CASCADE domain resolution by averaging within
     each domain.  Mirrors smooth_transect_df() + aggregate_to_domains() from
-    6-scr-smooth/loess_method_comparison.py.
+    6-scr-smooth/lowess_method_comparison.py.
 
     window_domains is converted to km (× DOMAIN_SPACING_M) so the physical window
     is consistent regardless of transect density.
@@ -634,7 +634,7 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
     -------
     gis_x    : int array   — domain IDs that have at least one transect
     smoothed : float array — domain-averaged smoothed LRR (m/yr), same length as gis_x
-    frac     : float       — LOESS frac used (for logging)
+    frac     : float       — LOWESS frac used (for logging)
     """
     window_km = window_domains * DOMAIN_SPACING_M / 1000.0
     spacing_m = estimate_transect_spacing(along_coast_m)
@@ -643,7 +643,7 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
 
     valid = np.isfinite(lrr)
     if valid.sum() < 5:
-        print(f"  ⚠️  Too few valid transects ({valid.sum()}) for LOESS — skipping")
+        print(f"  ⚠️  Too few valid transects ({valid.sum()}) for LOWESS — skipping")
         return None, None, frac
 
     result            = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
@@ -658,32 +658,32 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
     return dom_agg.index.values.astype(int), dom_agg.values, frac
 
 
-def splice_loess_with_raw_south(win_gis_x, win_smoothed, skip_n=None):
+def splice_lowess_with_raw_south(win_gis_x, win_smoothed, skip_n=None):
     """
-    Trim a LOESS curve so it starts north of the southernmost `skip_n`
+    Trim a LOWESS curve so it starts north of the southernmost `skip_n`
     domains, leaving that southern zone to show raw transect scatter only.
 
     Ported from HAT_hindcast_1984_2024_old version.py's function of the same name for
     visual consistency between the two scripts - domains 1-skip_n are
-    boundary-affected (Oregon Inlet dynamics) and LOESS smoothing there can
-    obscure the sharp gradient rather than clarify it, so the LOESS line is
+    boundary-affected (Oregon Inlet dynamics) and LOWESS smoothing there can
+    obscure the sharp gradient rather than clarify it, so the LOWESS line is
     simply not drawn there; the raw scatter (already restricted to this same
     zone via RAW_LRR_SOUTHERN_ONLY) carries the signal instead.
 
     Parameters
     ----------
-    win_gis_x    : int array   - GIS domain IDs from the LOESS result
-    win_smoothed : float array - LOESS-smoothed LRR (m/yr)
+    win_gis_x    : int array   - GIS domain IDs from the LOWESS result
+    win_smoothed : float array - LOWESS-smoothed LRR (m/yr)
     skip_n       : int         - domains 1..skip_n are excluded from the
                                   returned line. Defaults to
-                                  LOESS_SKIP_SOUTHERN_DOMAINS.
+                                  LOWESS_SKIP_SOUTHERN_DOMAINS.
 
     Returns
     -------
-    plot_x, plot_y : arrays - the LOESS curve restricted to domains > skip_n
+    plot_x, plot_y : arrays - the LOWESS curve restricted to domains > skip_n
     """
     if skip_n is None:
-        skip_n = LOESS_SKIP_SOUTHERN_DOMAINS
+        skip_n = LOWESS_SKIP_SOUTHERN_DOMAINS
     if skip_n <= 0:
         return win_gis_x, win_smoothed
     mask = win_gis_x > skip_n
@@ -849,7 +849,7 @@ def _draw_comparison_panel(ax, run_data, cs_series, active_period,
     add_geographic_annotations(ax)
 
     cs_handles = []
-    widest_window = max(LOESS_WINDOW_DOMAINS)   # fill drawn only for the widest window
+    widest_window = max(LOWESS_WINDOW_DOMAINS)   # fill drawn only for the widest window
     for cs in cs_series:
         is_active = cs["period_start"] == active_period
         if not is_active and not show_reference_period:
@@ -858,10 +858,10 @@ def _draw_comparison_panel(ax, run_data, cs_series, active_period,
         scatter_x = cs["transect_along_coast"] / DOMAIN_SPACING_M + FIRST_FILE_NUMBER
         if PLOT_RAW_LRR:
             if RAW_LRR_SOUTHERN_ONLY:
-                south_mask     = cs["transect_domains"] <= LOESS_SKIP_SOUTHERN_DOMAINS
+                south_mask     = cs["transect_domains"] <= LOWESS_SKIP_SOUTHERN_DOMAINS
                 scatter_x_plot = scatter_x[south_mask]
                 scatter_y_plot = cs["transect_rates"][south_mask]
-                raw_lbl = (f"{cs['label']} — transect LRR (D1-{LOESS_SKIP_SOUTHERN_DOMAINS})"
+                raw_lbl = (f"{cs['label']} — transect LRR (D1-{LOWESS_SKIP_SOUTHERN_DOMAINS})"
                            if is_active else None)
             else:
                 scatter_x_plot = scatter_x
@@ -876,22 +876,22 @@ def _draw_comparison_panel(ax, run_data, cs_series, active_period,
                     Line2D([0], [0], color=CS_RAW_COLOR, marker=".", ms=5,
                            ls="none", alpha=RAW_LRR_SCATTER_ALPHA, label=raw_lbl)
                 )
-        # --- LOESS smoothed curves (transect-based, aggregated to domain resolution) ---
+        # --- LOWESS smoothed curves (transect-based, aggregated to domain resolution) ---
         for idx, win in enumerate(cs["windows"]):
             cs_color  = CS_WINDOW_COLORS.get(win["window"], CS_WINDOW_COLOR_DEFAULT)
             lw_base, ls, alpha_factor = (
-                LOESS_WINDOW_STYLES[idx] if idx < len(LOESS_WINDOW_STYLES)
+                LOWESS_WINDOW_STYLES[idx] if idx < len(LOWESS_WINDOW_STYLES)
                 else (1.5, "--", 0.80)
             )
-            # Trim the LOESS line to start north of LOESS_SKIP_SOUTHERN_DOMAINS
+            # Trim the LOWESS line to start north of LOWESS_SKIP_SOUTHERN_DOMAINS
             # when RAW_LRR_SOUTHERN_ONLY is on, leaving D1-10 to show only the
             # raw transect scatter (matches HAT_hindcast_1984_2024_old version.py styling).
             if RAW_LRR_SOUTHERN_ONLY:
-                w_gis_x, rate = splice_loess_with_raw_south(win["gis_x"], win["smoothed"])
+                w_gis_x, rate = splice_lowess_with_raw_south(win["gis_x"], win["smoothed"])
             else:
                 w_gis_x = win["gis_x"]
                 rate     = win["smoothed"]
-            w_lbl    = f"LOESS {win['window']}-dom"
+            w_lbl    = f"LOWESS {win['window']}-dom"
             lbl      = f"{cs['label']} — {w_lbl}"
             if is_active:
                 if win["window"] == widest_window:
@@ -999,7 +999,7 @@ def plot_annotated(run_data, cs_series, active_period, out_path, comparison_name
     fig.text(
         0.5, 0.01,
         f"Model: CASCADE  |  Observed: CoastSat LRR "
-        f"(LOESS {'/'.join(str(w) for w in LOESS_WINDOW_DOMAINS)}-domain windows)  |  "
+        f"(LOWESS {'/'.join(str(w) for w in LOWESS_WINDOW_DOMAINS)}-domain windows)  |  "
         f"Comparison: {comparison_name}",
         fontsize=7.5, color="#666666", ha="center", va="bottom", style="italic",
     )
@@ -1053,7 +1053,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
         )
         all_model_handles.extend(model_handles)
         # Keep cs_handles per-period so duplicate "active" labels across
-        # panels (e.g. both panels showing their own active LOESS curve)
+        # panels (e.g. both panels showing their own active LOWESS curve)
         # don't collide - keyed by period so panel 2's handles don't get
         # silently dropped as "duplicates" of panel 1's.
         all_cs_handles_by_period[period_start] = cs_handles
@@ -1124,14 +1124,14 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
     # De-duplicate CoastSat legend entries by VISUAL STYLE rather than label
     # text. Both panels draw their own period's CoastSat in the same colors
     # (CS_WINDOW_COLORS is keyed by window size only, not by period; CS_RAW_COLOR
-    # is a single global color) - so "CoastSat (1984-2004) - LOESS 7-dom" and
-    # "CoastSat (2004-2024) - LOESS 7-dom" render as the literal same line
+    # is a single global color) - so "CoastSat (1984-2004) - LOWESS 7-dom" and
+    # "CoastSat (2004-2024) - LOWESS 7-dom" render as the literal same line
     # style. Previously the legend listed both anyway since they were
     # deduplicated by exact label text, which never matched (different period
     # in the label). Since each panel's title already says which period it
     # is, one shared legend entry per visual style is enough here - relabeled
-    # to be period-agnostic ("LOESS 7-dom" instead of "CoastSat (1984-2004)
-    # - LOESS 7-dom").
+    # to be period-agnostic ("LOWESS 7-dom" instead of "CoastSat (1984-2004)
+    # - LOWESS 7-dom").
     def _style_key(h):
         return (h.get_color(), h.get_linestyle(), round(h.get_linewidth(), 2),
                 h.get_marker(), round(h.get_alpha() or 1.0, 2))
@@ -1162,7 +1162,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
     fig.text(
         0.5, 0.005,
         f"Model: CASCADE  |  Observed: CoastSat LRR "
-        f"(LOESS {'/'.join(str(w) for w in LOESS_WINDOW_DOMAINS)}-domain windows)  |  "
+        f"(LOWESS {'/'.join(str(w) for w in LOWESS_WINDOW_DOMAINS)}-domain windows)  |  "
         f"Comparison: {comparison_name}  |  Left/right panels each show their own active period",
         fontsize=7.5, color="#666666", ha="center", va="bottom", style="italic",
     )
@@ -1177,7 +1177,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
 
 def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name):
     """
-    Residual panel — each model run minus the active CoastSat LOESS curve.
+    Residual panel — each model run minus the active CoastSat LOWESS curve.
     Helps identify where each run over- or under-predicts relative to observations.
     Only produced if PLOT_RESIDUALS = True.
     """
@@ -1191,7 +1191,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
 
     # Select the configured residuals window; fall back to the last (widest) if missing
     active_win = next(
-        (w for w in active_cs["windows"] if w["window"] == RESIDUALS_LOESS_WINDOW),
+        (w for w in active_cs["windows"] if w["window"] == RESIDUALS_LOWESS_WINDOW),
         active_cs["windows"][-1],
     )
     cs_gis_x    = active_win["gis_x"]
@@ -1239,7 +1239,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
                           label=f"{r['label']}  (MAE={mae:.2f}, RMSE={rmse:.2f})")
                    for r, _, mae, rmse in run_stats]
     cs_label_handle = Line2D([0], [0], color="gray", lw=1.0, ls="--",
-                              label=f"Reference: {active_cs['label']} LOESS {active_win['window']}-dom")
+                              label=f"Reference: {active_cs['label']} LOWESS {active_win['window']}-dom")
 
     # Reserve bottom margin BEFORE placing the legend so it stays in
     # on-canvas figure-fraction coordinates (see plot_annotated for the
@@ -1323,7 +1323,7 @@ def main():
 
     print(f"\n  {len(run_data)} run(s) loaded successfully.")
 
-    # ── Load CoastSat transects + apply LOESS at transect resolution ─────────
+    # ── Load CoastSat transects + apply LOWESS at transect resolution ─────────
     print("\nLoading CoastSat transect data...")
     cs_series = []
     for ds in COASTSAT_DATASETS:
@@ -1331,13 +1331,13 @@ def main():
         if domain_ids is None:
             continue
         windows = []
-        for w in LOESS_WINDOW_DOMAINS:
-            gis_x, smoothed, frac = loess_smooth_transect_to_domains(
+        for w in LOWESS_WINDOW_DOMAINS:
+            gis_x, smoothed, frac = lowess_smooth_transect_to_domains(
                 along_coast_m, lrr_values, domain_ids, w
             )
             if gis_x is None:
                 continue
-            print(f"  ✓ LOESS applied: window={w} domains "
+            print(f"  ✓ LOWESS applied: window={w} domains "
                   f"({w * DOMAIN_SPACING_M / 1000.0:.1f} km)  "
                   f"frac={frac:.3f}  ({ds['label']})")
             windows.append(dict(window=w, gis_x=gis_x, smoothed=smoothed, frac=frac))
@@ -1347,7 +1347,7 @@ def main():
             transect_domains      = domain_ids,       # one entry per transect (domain ID)
             transect_rates        = lrr_values,        # one entry per transect (LRR y)
             transect_along_coast  = along_coast_m,    # one entry per transect (physical x)
-            windows               = windows,           # LOESS curves at domain resolution
+            windows               = windows,           # LOWESS curves at domain resolution
         ))
 
     if not cs_series:

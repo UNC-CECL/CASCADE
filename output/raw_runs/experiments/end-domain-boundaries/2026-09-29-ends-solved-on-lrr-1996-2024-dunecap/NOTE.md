@@ -7,7 +7,7 @@
 **Method.** Unchanged from 09-28:
 
 - `be_dune_edgesolve_loop.py --exp end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-dunecap --windows 1996 2010 --target coastsat --coastsat-window 1996_2024 --tol 0.02 --max-steps 8`.
-- The target is the 1996–2024 table, with GIS 1 against the raw mean and GIS 90 against the LOESS-7 value.
+- The target is the 1996–2024 table, with GIS 1 against the raw mean and GIS 90 against the LOWESS-7 value.
 - It starts from the fixed matrix runs.
 
 **Answer** (`loop_log.csv`; `target_comparison.py` reads the last step, 6):

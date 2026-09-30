@@ -56,7 +56,7 @@ fit. So the mid-island correction is **not** standing in for wave transport.
 
 **The shoreline skill difference is inside the noise.** Interior RMSE gains at
 Hs 3.0 are 0.84 standard errors (period 1) and 0.11 (period 2); 2.5 sits within
-one SE of the minimum in both. Those SEs are optimistic — the LOESS-10 target
+one SE of the minimum in both. Those SEs are optimistic — the LOWESS-10 target
 correlates neighbouring domains, so effective *n* is far below 88.
 
 **It was already tested higher and rejected.** `GROIN_PLAN.md`: at Hs 3.5 the

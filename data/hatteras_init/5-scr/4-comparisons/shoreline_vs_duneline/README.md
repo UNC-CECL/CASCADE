@@ -40,7 +40,7 @@ coastsat_projected_vs_duneline_endpoint/    shoreline = the LONG-TERM trend,
                                                   outcomes
 
 smoothing_test/                          BOTH sheets above with both
-                                         curves LOESS-smoothed at 7
+                                         curves LOWESS-smoothed at 7
                                          domains; a test, not a product
 
 superseded_20260921/                     the pre-rename build; see its README

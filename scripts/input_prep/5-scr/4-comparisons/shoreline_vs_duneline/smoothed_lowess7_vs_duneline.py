@@ -1,8 +1,8 @@
 """
-smoothed_loess7_vs_duneline.py
+smoothed_lowess7_vs_duneline.py
 ==============================================================================
 The two halves-overlay sheets again, with BOTH curves passed through the
-model target's alongshore LOESS at a 7-domain (3.5 km) window. Built
+model target's alongshore LOWESS at a 7-domain (3.5 km) window. Built
 2026-09-22 (Hannah, by interview) as a place to see what the smoother does to
 the shoreline-vs-dune-line comparison, in the two readings of the shoreline
 side side by side.
@@ -29,7 +29,7 @@ THE SMOOTHING (Hannah's choices, 2026-09-22)
                   exactly 5; `rates_figures._along` gives both an even spread
                   inside their domain, so the two are handled identically.
     GIS 1-10      kept at their RAW domain means, the Oregon Inlet boundary
-                  treatment (`coastsat_loess.LoessConfig.skip_southern_domains`).
+                  treatment (`coastsat_lowess.LowessConfig.skip_southern_domains`).
                   Hannah chose to keep it so the figure shows the target the
                   way the model actually sees it. The cost, stated here so it
                   is not read as a result: those ten domains are IDENTICAL to
@@ -45,17 +45,17 @@ scale the model resolves. The unsmoothed sheets it is paired with are
 `coastsat_{projected,total_change}_vs_duneline_endpoint/all_windows_stacked/
 *_halves_overlay.png`.
 
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7/
-    loess7_projected_vs_duneline_1996_2010_2024_halves_overlay.png
-    loess7_total_change_vs_duneline_1996_2010_2024_halves_overlay.png
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7/
+    lowess7_projected_vs_duneline_1996_2010_2024_halves_overlay.png
+    lowess7_total_change_vs_duneline_1996_2010_2024_halves_overlay.png
     domain_smoothed.csv     per domain per window per product: both sides raw
                             and smoothed, and the beach-width gap of each
     PROVENANCE.md           what changed, per window and per product
     README.md, supporting/  (PDFs, CAPTIONS.md)
 
 USAGE
-    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py
-    python ... --window 7          # LOESS width in domain units
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py
+    python ... --window 7          # LOWESS width in domain units
 ==============================================================================
 """
 
@@ -81,7 +81,7 @@ from rates_figures import cw, plt  # noqa: E402
 from coastsat_vs_duneline import beach_width_handles, shade_beach_width  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
-from cascade_pipeline.coastsat_loess import spliced_loess_series  # noqa: E402
+from cascade_pipeline.coastsat_lowess import spliced_lowess_series  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style, caption,
@@ -91,7 +91,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     DUNELINE_ENDPOINT_ROOT, ENDPOINT_TRANSECT_FILE, SHORELINE_VS_DUNELINE,
 )
 
-OUT_ROOT = SHORELINE_VS_DUNELINE / "smoothed_loess7"
+OUT_ROOT = SHORELINE_VS_DUNELINE / "smoothed_lowess7"
 WINDOW = 7                      # domain units; 7 x 500 m = 3.5 km
 SPLICE = 10                     # GIS 1..SPLICE keep their raw domain means
 HALVES = [(1996, 2010), (2010, 2024)]
@@ -100,15 +100,15 @@ RAW_DOT_S = 3.0                 # the faint raw domain means behind each curve
 RAW_ALPHA = 0.45
 # Which shoreline readings to draw, and how each is said in one line.
 SHEETS = [
-    ("projected", "loess7_projected_vs_duneline",
+    ("projected", "lowess7_projected_vs_duneline",
      "shoreline is the SAME CoastSat LRR 1996–2024 × 14 yr in both panels"),
-    ("total", "loess7_total_change_vs_duneline",
+    ("total", "lowess7_total_change_vs_duneline",
      "shoreline is each panel's OWN CoastSat LRR × its own 14 yr"),
 ]
 
 
 def smooth_side(frame, value_col, window):
-    """One alongshore LOESS pass at TRANSECT resolution, averaged to domains.
+    """One alongshore LOWESS pass at TRANSECT resolution, averaged to domains.
 
     The same two steps the scoring target is built through, so the curve here
     is the quantity the model is graded against rather than a different
@@ -116,7 +116,7 @@ def smooth_side(frame, value_col, window):
     """
     t, x_dom = rf._along(frame)
     along_m = x_dom * DEFAULT_DOMAINS.domain_spacing_m
-    series, _ = spliced_loess_series(
+    series, _ = spliced_lowess_series(
         t["domain_number"].to_numpy(int), along_m,
         t[value_col].to_numpy(float), window, skip=SPLICE)
     return series.reindex(pd.RangeIndex(1, N + 1, name="domain_number"))
@@ -197,10 +197,10 @@ def figure(product, stem, what, data, window, out_dir):
          Line2D([], [], color=cw.C_ERODE, marker="o", ms=2.2, lw=0)),
         Line2D([], [], color=INK, lw=tcd.LW),
         Line2D([], [], color=INK_MUTED, marker="o", ms=2.2, lw=0),
-    ], [f"Shoreline, LOESS {km:g} km", "Shoreline, raw domain means",
-        f"Dune line, LOESS {km:g} km", "Dune line, raw domain means"], ncol=4)
+    ], [f"Shoreline, LOWESS {km:g} km", "Shoreline, raw domain means",
+        f"Dune line, LOWESS {km:g} km", "Dune line, raw domain means"], ncol=4)
     compare_header(fig, [
-        f"BOTH curves LOESS-smoothed at {window} domains ({km:g} km); "
+        f"BOTH curves LOWESS-smoothed at {window} domains ({km:g} km); "
         f"GIS 1–{SPLICE} kept raw",
         f"{what}   ·   dune line always the sub-period's own measured change"])
 
@@ -213,7 +213,7 @@ def figure(product, stem, what, data, window, out_dir):
     caption(fig, (
         f"Shoreline against dune line by GIS domain (1 at Cape Point, 90 at Pea "
         f"Island), 1996–2010 above 2010–2024, with **both** curves passed through "
-        f"the model target's alongshore LOESS at {window} domains ({km:g} km). "
+        f"the model target's alongshore LOWESS at {window} domains ({km:g} km). "
         f"{what[0].upper() + what[1:]}; the dune line is always that half's own "
         "measured net change between its two digitized lines. The coloured line "
         "and fill are the smoothed shoreline (blue seaward, red landward), the "
@@ -240,7 +240,7 @@ def _r(a, b):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--window", type=int, default=WINDOW,
-                    help="LOESS width in domain units (1 = 500 m)")
+                    help="LOWESS width in domain units (1 = 500 m)")
     a = ap.parse_args(argv)
     apply_style()
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
@@ -253,7 +253,7 @@ def main(argv=None) -> int:
         for w, r in rows:
             long.append(pd.DataFrame({
                 "product": product, "window": f"{w[0]}_{w[1]}",
-                "loess_domains": a.window,
+                "lowess_domains": a.window,
                 "domain_number": np.asarray(r["sm_shore"].index, dtype=int),
                 "shoreline_raw_m": r["raw_shore"].to_numpy(float),
                 "shoreline_smoothed_m": r["sm_shore"].to_numpy(float),
@@ -281,10 +281,10 @@ def main(argv=None) -> int:
                    f"| {x.r_smoothed:.2f} | {x.beach_width_raw_m:+.1f} "
                    f"| {x.beach_width_smoothed_m:+.1f} |")
     (OUT_ROOT / "PROVENANCE.md").write_text("\n".join([
-        "# smoothed_loess7 — provenance", "",
+        "# smoothed_lowess7 — provenance", "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py`.", "",
-        f"Both curves LOESS-smoothed at **{a.window} domains "
+        "`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py`.", "",
+        f"Both curves LOWESS-smoothed at **{a.window} domains "
         f"({a.window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0:g} km)**, at "
         f"transect resolution, with GIS 1–{SPLICE} kept at their raw domain "
         "means (the scoring target's Oregon Inlet treatment, Hannah's choice "

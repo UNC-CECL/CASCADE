@@ -10,7 +10,7 @@ The relocation arms are left out: in both windows they score the same as their
 non-relocation twins.
 
     adoption_scorecard.png                     every score, before -> after, per scenario
-    adoption_shoreline_alongshore              model LRR vs CoastSat LOESS-7, managed + natural
+    adoption_shoreline_alongshore              model LRR vs CoastSat LOWESS-7, managed + natural
     adoption_overwash_map_<scenario>           image x domain: hit / miss / false alarm
     adoption_overwash_by_image                 domains overwashed per image, grouped bars
     adoption_dune_crest_2010                   1996-2010 runs' 2010 crest vs the 2009 lidar
@@ -203,10 +203,10 @@ def shoreline_alongshore():
             _title(ax, i, f"{WLABEL[w]}, {lab}")
             ax.grid(axis="y", color=C["GRID"], lw=0.4)
             i += 1
-    side_legend(fig, [Line2D([], [], color=OBS_C, lw=2.4, label="CoastSat LRR, 7-domain LOESS")])
+    side_legend(fig, [Line2D([], [], color=OBS_C, lw=2.4, label="CoastSat LRR, 7-domain LOWESS")])
     caption(fig, "Model shoreline change rate (OLS slope of the annual shoreline position) alongshore, "
                  "before (grey) and after (purple) the adoption, against the CoastSat target (blue; LRR, "
-                 "LOESS over 7 domains, raw for GIS 1-10). edgeBE; the ends at GIS 1 and 90 are solved "
+                 "LOWESS over 7 domains, raw for GIS 1-10). edgeBE; the ends at GIS 1 and 90 are solved "
                  "for each side (before 1996 +4.84/+18.25, 2010 +18.87/+24.24; after 1996 +4.35/+19.09, "
                  "2010 +8.00/+21.26 m/yr). Interior RMSE, before -> after: (a) 1.19 -> 1.17, "
                  "(b) 1.14 -> 1.14, (c) 2.31 -> 2.07, (d) 4.18 -> 2.72 m/yr. GIS 1 is Cape Point, "

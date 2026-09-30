@@ -48,7 +48,7 @@ A cross-run figure that is finished for the manuscript is ALSO written to
 `5-results/`, in the house style, by the same run of the same script, so the
 two copies cannot drift: `scenario_grid.py` writes
 `output/figures/5-results/scenario_grid.png` beside its `comparisons/` copy;
-`hindcast_final_figure_loess.py` writes `5-results/hindcast_<preset>.png`, and
+`hindcast_final_figure_lowess.py` writes `5-results/hindcast_<preset>.png`, and
 `gis11_relocation_drown_figure.py` writes `5-results/gis11_relocation_drown.png`.
 Each has a `PUBLISH` switch to hold a figure back while its layout is broken.
 

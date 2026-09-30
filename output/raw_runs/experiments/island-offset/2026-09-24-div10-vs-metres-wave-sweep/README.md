@@ -110,7 +110,7 @@ on disk (or a re-run: every setting is in the table and the log name).
 ## Results
 
 The score is the interior RMSE and mean bias (GIS 2–89) of the modelled LRR
-rate against the CoastSat LRR target (LOESS, 10 domains). **Bias is the score
+rate against the CoastSat LRR target (LOWESS, 10 domains). **Bias is the score
 to read, not r.** Every tuned value here is fitted on the window it is scored
 on, so read the best settings as a band, not a calibrated value.
 

@@ -434,7 +434,7 @@ def cmd_score(a):
     for p, t in targets.items():
         i = common.interior(t)
         obs.append(dict(period=window(p).replace("_", "-"),
-                        target=f"CoastSat LRR, LOESS {common.SMOOTH_DOMAINS} domains", domains="GIS 2-89",
+                        target=f"CoastSat LRR, LOWESS {common.SMOOTH_DOMAINS} domains", domains="GIS 2-89",
                         mean_m_yr=i.mean(), sd_m_yr=i.std(ddof=0),
                         flat_line_rmse_m_yr=i.std(ddof=0)))
     pd.DataFrame(obs).to_csv(TABLES_DIR / "observed_targets.csv", index=False)
@@ -450,7 +450,7 @@ def cmd_score(a):
 # +17 m step into 2021, which no model run can make. The model's rate over
 # the window is the same OLS estimator the runner uses (shoreline.compute_lrr)
 # on the first (end - start + 1) annual states; the observed one is
-# 5-scr/3-rates/coastsat/lrr/<start>_<end>/, LOESS at the runner's window (7 since 2026-09-28).
+# 5-scr/3-rates/coastsat/lrr/<start>_<end>/, LOWESS at the runner's window (7 since 2026-09-28).
 
 def cmd_score_window(a):
     import pandas as pd

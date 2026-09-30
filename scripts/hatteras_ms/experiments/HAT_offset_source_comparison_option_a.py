@@ -62,7 +62,7 @@ OWN_SCENARIO = "full_management"
 # The research group's alongshore smoothing range is 7 domains (Hannah,
 # 2026-09-28), for the CoastSat target and the dune line alike. The runner and
 # the 09-25 helpers still smooth at 10; this study sets 7 here and leaves them.
-LOESS_DOMAINS = 7
+LOWESS_DOMAINS = 7
 SKIP_SOUTHERN = 10
 LONG_WINDOW = "1996_2024"
 
@@ -74,21 +74,21 @@ def coastsat_target7(start, window=None):
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
     from cascade_pipeline.hindcast import build_target_table
-    from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
     window = window or period_label(start)
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
                          csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
-    cfg = LoessConfig(window_domains=(LOESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
-    cs = build_coastsat_series([ds], active_period_start=start, loess_config=cfg,
+    cfg = LowessConfig(window_domains=(LOWESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
+    cs = build_coastsat_series([ds], active_period_start=start, lowess_config=cfg,
                                domains=HATTERAS_DOMAINS)[0]
-    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOESS_DOMAINS).set_index(
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOWESS_DOMAINS).set_index(
         "gis_domain")["target_lrr_m_yr"]
 
 
 def smooth7(series):
-    """A per-domain series smoothed as the target is: LOESS over 7 domains,
+    """A per-domain series smoothed as the target is: LOWESS over 7 domains,
     the southern 10 left raw (common.smooth_like_target, at 7)."""
     import numpy as np
     import pandas as pd
@@ -97,7 +97,7 @@ def smooth7(series):
     y = series.to_numpy(dtype=float)
     ok = np.isfinite(y)
     out = pd.Series(np.nan, index=series.index)
-    out[ok] = lowess(y[ok], x[ok], frac=LOESS_DOMAINS / len(x), return_sorted=False)
+    out[ok] = lowess(y[ok], x[ok], frac=LOWESS_DOMAINS / len(x), return_sorted=False)
     raw = series.index <= SKIP_SOUTHERN
     out[raw] = series[raw]
     return out
@@ -187,7 +187,7 @@ def own_profiles():
             d = own_run_dir(src, start)
             rt = pd.read_csv(d / "tables" / "shoreline_change_rate.csv").set_index("gis_domain")
             if src == "duneline":
-                # smoothed as the CoastSat target is: LOESS over 7 domains, the
+                # smoothed as the CoastSat target is: LOWESS over 7 domains, the
                 # southern 10 raw (Hannah, 2026-09-28); the model stays raw
                 out[(src, start)] = (smooth7(duneline_change(start)),
                                      rt.change_rate_m_yr * YEARS, d)
@@ -209,11 +209,11 @@ def cmd_grade(_=None):
         rows.append(dict(source=src.split("_")[0], period=period_label(start),
                          scenario=OWN_SCENARIO,
                          graded_on={
-                             "duneline": "dune-line net change (m), LOESS 7 domains",
+                             "duneline": "dune-line net change (m), LOWESS 7 domains",
                              "shoreline": "total shoreline change (m): CoastSat LRR of the "
-                                          "same period x 14 yr, LOESS 7 domains",
+                                          "same period x 14 yr, LOWESS 7 domains",
                              "shoreline_projected": "projected shoreline change (m): CoastSat "
-                                                    "LRR 1996-2024 x 14 yr, LOESS 7 domains",
+                                                    "LRR 1996-2024 x 14 yr, LOWESS 7 domains",
                          }[src],
                          variance_explained=s["variance_explained"], r=s["r_alongshore"],
                          bias=float((mi - oi).mean()),

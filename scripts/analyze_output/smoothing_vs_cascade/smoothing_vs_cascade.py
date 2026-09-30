@@ -1,19 +1,19 @@
 """
 CoastSat LRR Smoothing — Hatteras Island
 =========================================
-Applies LOESS smoothing to CoastSat shoreline change rates across two
+Applies LOWESS smoothing to CoastSat shoreline change rates across two
 time periods and produces publication-ready figures.
 
 Outputs (saved to OUTPUT_DIR)
 ------------------------------
-  overview_smoothed.png          – 2-panel both periods, raw + LOESS overlay
+  overview_smoothed.png          – 2-panel both periods, raw + LOWESS overlay
   smoothed_only_comparison.png   – 2-panel both periods, smoothed lines only
   combined_periods.png           – single panel combining both periods (smoothed)
   smoothing_sensitivity_*.png    – 3-panel bandwidth sensitivity per period
   window_comparison.png          – NEW: raw + 3 smoothing windows overlaid,
                                     both periods, for window selection
 
-Smoothing method: LOESS (locally weighted scatterplot smoothing)
+Smoothing method: LOWESS (locally weighted scatterplot smoothing)
   - Applied independently to each period's CoastSat series
   - Preserves large-scale spatial patterns while removing per-domain noise
 """
@@ -65,18 +65,18 @@ CS_STD_COL    = "std_lrr"
 DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
-# --- LOESS bandwidth (fraction of data used per local fit) ---
+# --- LOWESS bandwidth (fraction of data used per local fit) ---
 # 0.10 = ~9 domains  → more local, preserves more variation
 # 0.167 = ~15 domains → recommended default (1.5km smoothing window)
 # 0.20 = ~18 domains → smoother, loses finer spatial patterns
-LOESS_FRAC = 0.167
+LOWESS_FRAC = 0.167
 
 # --- Window comparison: domain counts to test in window_comparison.png ---
 # Each value is the number of CASCADE domains (~500 m each) used in the
-# local LOESS fit.  Fracs are computed as n / (DOMAIN_MAX - DOMAIN_MIN + 1).
+# local LOWESS fit.  Fracs are computed as n / (DOMAIN_MAX - DOMAIN_MIN + 1).
 #   5  domains → frac ≈ 0.056  (2.5 km window)
 #  10  domains → frac ≈ 0.111  (5.0 km window)
-#  15  domains → frac ≈ 0.167  (7.5 km window) ← matches LOESS_FRAC default
+#  15  domains → frac ≈ 0.167  (7.5 km window) ← matches LOWESS_FRAC default
 COMPARE_WINDOWS_DOMAINS = [5, 10, 15]   # ← edit here (in domains)
 
 # --- Geographic annotations ---
@@ -281,8 +281,8 @@ def load_cascade_rate(run_dict):
           f"range {df['model_rate'].min():+.2f} to {df['model_rate'].max():+.2f} m/yr")
     return df
 
-def apply_loess(domains, values, frac=LOESS_FRAC):
-    """Apply LOESS smoothing. Returns smoothed values at same domain positions."""
+def apply_lowess(domains, values, frac=LOWESS_FRAC):
+    """Apply LOWESS smoothing. Returns smoothed values at same domain positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -292,24 +292,24 @@ def apply_loess(domains, values, frac=LOESS_FRAC):
     return smoothed
 
 
-def add_smoothed_columns(df, frac=LOESS_FRAC):
-    """Add LOESS-smoothed LRR column to a CoastSat dataframe."""
+def add_smoothed_columns(df, frac=LOWESS_FRAC):
+    """Add LOWESS-smoothed LRR column to a CoastSat dataframe."""
     df = df.copy()
     d = df["domain"].values.astype(float)
-    df["cs_lrr_smooth"] = apply_loess(d, df["cs_lrr"].values, frac)
+    df["cs_lrr_smooth"] = apply_lowess(d, df["cs_lrr"].values, frac)
     return df
 
 
 def domains_to_frac(n_domains):
     """
-    Convert a window size in CASCADE domains to a LOESS frac value.
+    Convert a window size in CASCADE domains to a LOWESS frac value.
 
     Always divides by the total island domain range (DOMAIN_MAX - DOMAIN_MIN + 1)
     so that fracs are consistent regardless of how many domains have valid data
     in a given CSV.  This ensures:
       5  domains → frac ≈ 0.056
       10 domains → frac ≈ 0.111
-      15 domains → frac ≈ 0.167  (matches the LOESS_FRAC default)
+      15 domains → frac ≈ 0.167  (matches the LOWESS_FRAC default)
     """
     return n_domains / (DOMAIN_MAX - DOMAIN_MIN + 1)
 
@@ -436,16 +436,16 @@ def style_domain_axis(ax):
 
 
 # ============================================================
-# FIGURE 1 — PRIMARY: Raw + LOESS overlay, both periods
+# FIGURE 1 — PRIMARY: Raw + LOWESS overlay, both periods
 # ============================================================
 
 def plot_overview_smoothed(cs_1984, cs_2004, out_path):
     """
-    2-panel figure: raw CoastSat points (faded) + LOESS overlay (bold).
+    2-panel figure: raw CoastSat points (faded) + LOWESS overlay (bold).
     """
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle("CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
-                 "Raw (faded) + LOESS smoothed (bold)",
+                 "Raw (faded) + LOWESS smoothed (bold)",
                  fontsize=14, fontweight="bold", y=1.01)
 
     configs = [
@@ -474,9 +474,9 @@ def plot_overview_smoothed(cs_1984, cs_2004, out_path):
                         m["cs_lrr"] + m["cs_std"],
                         color=color, alpha=0.08, zorder=1)
 
-        # LOESS smoothed (bold)
+        # LOWESS smoothed (bold)
         ax.plot(d, m["cs_lrr_smooth"], color=color, lw=2.8,
-                label=f"LOESS smoothed (frac={LOESS_FRAC})", zorder=4)
+                label=f"LOWESS smoothed (frac={LOWESS_FRAC})", zorder=4)
 
         ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=11, fontweight="bold")
         ax.set_title(label, fontsize=12, fontweight="bold", loc="left", pad=6)
@@ -502,12 +502,12 @@ def plot_overview_smoothed(cs_1984, cs_2004, out_path):
 
 def plot_smoothed_only(cs_1984, cs_2004, out_path):
     """
-    2-panel: LOESS smoothed lines only, no raw data.
+    2-panel: LOWESS smoothed lines only, no raw data.
     Cleanest version for presentations or dissertation figures.
     """
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=4.68), sharex=True)
     fig.suptitle("CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
-                 f"LOESS smoothed (frac={LOESS_FRAC})",
+                 f"LOWESS smoothed (frac={LOWESS_FRAC})",
                  fontsize=14, fontweight="bold", y=1.01)
 
     configs = [
@@ -576,7 +576,7 @@ def plot_combined_periods(cs_1984, cs_2004, out_path):
                         color=color, alpha=0.10)
 
     ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=12, fontweight="bold")
-    ax.set_title("CoastSat Shoreline Change Rates — Both Periods (LOESS smoothed)",
+    ax.set_title("CoastSat Shoreline Change Rates — Both Periods (LOWESS smoothed)",
                  fontsize=13, fontweight="bold", pad=12)
     style_domain_axis(ax)
     add_annotations(ax)
@@ -586,7 +586,7 @@ def plot_combined_periods(cs_1984, cs_2004, out_path):
               fontsize=9, framealpha=0.95, ncol=2)
 
     fig.text(0.5, -0.04,
-             f"Domain-averaged LRR smoothed with LOESS (frac={LOESS_FRAC}). "
+             f"Domain-averaged LRR smoothed with LOWESS (frac={LOWESS_FRAC}). "
              f"Shading = ±0.5 std of CoastSat transects per domain.",
              ha="center", fontsize=8, color="0.4", style="italic")
 
@@ -603,7 +603,7 @@ def plot_combined_periods(cs_1984, cs_2004, out_path):
 def plot_smoothing_sensitivity(df, period_label, out_path,
                                window_domains=COMPARE_WINDOWS_DOMAINS):
     """
-    3-panel showing the effect of each LOESS window on CoastSat data.
+    3-panel showing the effect of each LOWESS window on CoastSat data.
     One smoothed line per panel so individual window behavior is clear.
     Fracs are derived from COMPARE_WINDOWS_DOMAINS / 90 domains, matching
     exactly what plot_window_comparison uses.
@@ -614,16 +614,16 @@ def plot_smoothing_sensitivity(df, period_label, out_path,
         f"frac={f:.3f}  ({n} domains, {n*0.5:.1f} km window)"
         for n, f in zip(window_domains, fracs)
     ]
-    # Mark whichever window matches LOESS_FRAC as the current default
+    # Mark whichever window matches LOWESS_FRAC as the current default
     panel_labels = [
-        lbl + "  ← current default" if abs(f - LOESS_FRAC) < 1e-4 else lbl
+        lbl + "  ← current default" if abs(f - LOWESS_FRAC) < 1e-4 else lbl
         for lbl, f in zip(panel_labels, fracs)
     ]
 
     color = C_CS_1984 if "1984" in period_label else C_CS_2004
 
     fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=6.08), sharex=True, sharey=True)
-    fig.suptitle(f"LOESS Smoothing Sensitivity — CoastSat {period_label}\n"
+    fig.suptitle(f"LOWESS Smoothing Sensitivity — CoastSat {period_label}\n"
                  f"Effect of bandwidth choice",
                  fontsize=13, fontweight="bold", y=1.01)
 
@@ -639,7 +639,7 @@ def plot_smoothing_sensitivity(df, period_label, out_path,
 
         # Smoothed
         ax.plot(d, m["cs_lrr_smooth"], color=color, lw=2.5,
-                label="LOESS smoothed", zorder=3)
+                label="LOWESS smoothed", zorder=3)
 
         ax.text(0.01, 0.97, plabel,
                 transform=ax.transAxes, fontsize=8.5, va="top",
@@ -671,11 +671,11 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
                            window_domains=COMPARE_WINDOWS_DOMAINS):
     """
     2-panel figure (one per period) showing the raw CoastSat LRR (faded)
-    overlaid by LOESS-smoothed lines for each window size in
+    overlaid by LOWESS-smoothed lines for each window size in
     COMPARE_WINDOWS_DOMAINS.  All smoothed lines share one panel so spatial
     patterns and differences between window choices are directly visible.
 
-    Window sizes are specified in CASCADE domains and converted to LOESS fracs
+    Window sizes are specified in CASCADE domains and converted to LOWESS fracs
     using the actual number of valid domains in each dataset.
 
     Parameters
@@ -696,7 +696,7 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
     # Build figure — 2 rows (periods), 1 column; shared x-axis
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle(
-        "CoastSat Shoreline Change Rate — LOESS Window Comparison\n"
+        "CoastSat Shoreline Change Rate — LOWESS Window Comparison\n"
         "Hatteras Island, NC",
         fontsize=14, fontweight="bold", y=1.01,
     )
@@ -726,7 +726,7 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
         # --- One smoothed line per window size ---
         for n_dom, win_color in zip(window_domains, C_WINDOWS):
             frac = domains_to_frac(n_dom)
-            smoothed = apply_loess(d.values.astype(float),
+            smoothed = apply_lowess(d.values.astype(float),
                                    df["cs_lrr"].values, frac=frac)
             km = n_dom * 0.5   # 500 m domains → km
             ax.plot(d, smoothed,
@@ -753,7 +753,7 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
     )
     fig.text(
         0.5, -0.03,
-        f"LOESS windows tested: {window_str}.  "
+        f"LOWESS windows tested: {window_str}.  "
         "Raw CoastSat LRR shown faded for reference.",
         ha="center", fontsize=8, color="0.4", style="italic",
     )
@@ -765,17 +765,17 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
 
 
 # ============================================================
-# FIGURE 6 — CASCADE vs LOESS-SMOOTHED CoastSat
+# FIGURE 6 — CASCADE vs LOWESS-SMOOTHED CoastSat
 # ============================================================
 
-def plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs, out_path,
+def plot_cascade_vs_lowess(cs_1984, cs_2004, cascade_runs, out_path,
                           window_domains=COMPARE_WINDOWS_DOMAINS):
     """
     One panel per CoastSat period (1984–2004, 2004–2024).
 
     Each panel shows:
       • Raw CoastSat LRR (faded, period color)
-      • Three LOESS-smoothed CoastSat curves (green / orange / purple)
+      • Three LOWESS-smoothed CoastSat curves (green / orange / purple)
       • CASCADE modeled change rate(s) for that period (thick black line)
 
     CASCADE runs are matched to panels by their 'period' key in CASCADE_RUNS.
@@ -792,7 +792,7 @@ def plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs, out_path,
     out_path : str
         Full path for the comparison PNG.
     window_domains : list of int
-        LOESS window sizes in CASCADE domains (from COMPARE_WINDOWS_DOMAINS).
+        LOWESS window sizes in CASCADE domains (from COMPARE_WINDOWS_DOMAINS).
     """
     period_configs = [
         ("1984–2004", cs_1984, C_CS_1984),
@@ -802,7 +802,7 @@ def plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs, out_path,
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle(
         "CASCADE Modeled vs CoastSat Shoreline Change Rate\n"
-        "Hatteras Island, NC — LOESS smoothed reference curves",
+        "Hatteras Island, NC — LOWESS smoothed reference curves",
         fontsize=14, fontweight="bold", y=1.01,
     )
 
@@ -831,15 +831,15 @@ def plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs, out_path,
                         cs_df["cs_lrr"] + cs_df["cs_std"],
                         color=period_color, alpha=0.06, zorder=1)
 
-        # --- Three LOESS-smoothed CoastSat curves ---
+        # --- Three LOWESS-smoothed CoastSat curves ---
         for n_dom, win_color in zip(window_domains, C_WINDOWS):
             frac = domains_to_frac(n_dom)
-            smoothed = apply_loess(d.values.astype(float),
+            smoothed = apply_lowess(d.values.astype(float),
                                    cs_df["cs_lrr"].values, frac=frac)
             km = n_dom * 0.5
             ax.plot(d, smoothed,
                     color=win_color, lw=1.8, ls="--", zorder=4, alpha=0.85,
-                    label=f"CoastSat LOESS {n_dom}-dom ({km:.1f} km)")
+                    label=f"CoastSat LOWESS {n_dom}-dom ({km:.1f} km)")
 
         # --- CASCADE modeled rate(s) for this period ---
         period_runs = [r for r in cascade_runs if r["period"] == period_label]
@@ -873,17 +873,17 @@ def plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs, out_path,
 
 
 # ============================================================
-# FIGURE 7 — CASCADE vs CoastSat, ONE PANEL PER LOESS WINDOW
+# FIGURE 7 — CASCADE vs CoastSat, ONE PANEL PER LOWESS WINDOW
 # ============================================================
 
 def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
                            window_domains=COMPARE_WINDOWS_DOMAINS):
     """
-    3-panel figure (one per LOESS window) for a single CoastSat period.
+    3-panel figure (one per LOWESS window) for a single CoastSat period.
 
     Each panel shows:
       • Raw CoastSat LRR (faded, period color)
-      • ONE LOESS-smoothed CoastSat curve (bold, period color)
+      • ONE LOWESS-smoothed CoastSat curve (bold, period color)
       • CASCADE modeled rate (thick black)
 
     This isolates the model-vs-observation comparison for each smoothing
@@ -905,7 +905,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
     out_path : str
         Full path for the comparison PNG.
     window_domains : list of int
-        LOESS window sizes in CASCADE domains.
+        LOWESS window sizes in CASCADE domains.
     """
     if cs_df is None:
         print(f"  cascade_by_window ({period_label}): SKIPPED — no CoastSat data")
@@ -924,7 +924,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
 
     fig.suptitle(
         f"CASCADE Model vs CoastSat — {period_label}\n"
-        "One panel per LOESS smoothing window",
+        "One panel per LOWESS smoothing window",
         fontsize=14, fontweight="bold", y=1.01,
     )
 
@@ -947,16 +947,16 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
                         cs_df["cs_lrr"] + cs_df["cs_std"],
                         color=period_color, alpha=0.05, zorder=1)
 
-        # --- Single LOESS-smoothed CoastSat curve ---
+        # --- Single LOWESS-smoothed CoastSat curve ---
         # Use the C_WINDOWS color for this window index so it matches
         # window_comparison.png, making cross-figure reading easier.
         win_idx = list(window_domains).index(n_dom) if n_dom in window_domains else 0
-        loess_color = C_WINDOWS[win_idx % len(C_WINDOWS)]
-        smoothed = apply_loess(d.values.astype(float),
+        lowess_color = C_WINDOWS[win_idx % len(C_WINDOWS)]
+        smoothed = apply_lowess(d.values.astype(float),
                                cs_df["cs_lrr"].values, frac=frac)
         ax.plot(d, smoothed,
-                color=loess_color, lw=3.0, zorder=4,
-                label=f"CoastSat LOESS  {n_dom}-domain  ({km:.1f} km,  frac={frac:.3f})")
+                color=lowess_color, lw=3.0, zorder=4,
+                label=f"CoastSat LOWESS  {n_dom}-domain  ({km:.1f} km,  frac={frac:.3f})")
 
         # --- CASCADE modeled rate(s) ---
         for k, run in enumerate(period_runs):
@@ -968,7 +968,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
 
         # --- Panel label (top-left, below frac box) ---
         ax.text(0.01, 0.97,
-                f"LOESS window: {n_dom} domains  |  {km:.1f} km  |  frac={frac:.3f}",
+                f"LOWESS window: {n_dom} domains  |  {km:.1f} km  |  frac={frac:.3f}",
                 transform=ax.transAxes, fontsize=8.5, va="top",
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
@@ -996,7 +996,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
 def main():
     print("=" * 65)
     print("CoastSat LRR Smoothing — Hatteras Island")
-    print(f"LOESS bandwidth: frac={LOESS_FRAC}")
+    print(f"LOWESS bandwidth: frac={LOWESS_FRAC}")
     print(f"Window comparison: {COMPARE_WINDOWS_DOMAINS} domains")
     print("=" * 65)
 
@@ -1037,10 +1037,10 @@ def main():
     plot_window_comparison(cs_1984, cs_2004,
         os.path.join(OUTPUT_DIR, "window_comparison.png"))
 
-    plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs_loaded,
-        os.path.join(OUTPUT_DIR, "cascade_vs_loess.png"))
+    plot_cascade_vs_lowess(cs_1984, cs_2004, cascade_runs_loaded,
+        os.path.join(OUTPUT_DIR, "cascade_vs_lowess.png"))
 
-    # NEW: one panel per LOESS window, per period with CASCADE data
+    # NEW: one panel per LOWESS window, per period with CASCADE data
     for cs_df, period_label in [(cs_1984, "1984–2004"), (cs_2004, "2004–2024")]:
         period_has_cascade = any(
             r["period"] == period_label and r.get("df") is not None
@@ -1079,7 +1079,7 @@ def main():
     print("  combined_periods.png           ← both periods on one panel")
     print("  smoothing_sensitivity_*.png    ← effect of bandwidth choice")
     print("  window_comparison.png          ← all 3 windows overlaid")
-    print("  cascade_vs_loess.png           ← CASCADE vs all 3 windows (2-panel)")
+    print("  cascade_vs_lowess.png           ← CASCADE vs all 3 windows (2-panel)")
     print("  cascade_by_window_*.png        ← CASCADE vs one window per panel ← NEW")
     print("=" * 65)
 

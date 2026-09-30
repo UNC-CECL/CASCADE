@@ -77,6 +77,6 @@
       "2004": false
     },
     "provenance": "inherited from edgeBE",
-    "pinned_note": "PINNED 2026-08-31, INHERITED from edgeBE rather than fitted. calibBE is DERIVED FROM the edgeBE groin fit: HAT_be_zone_LOESS_analysis.py with GROIN_AWARE_BASE_RUN=True builds the source/sink field from a base run already carrying M=60/f=0.6, so the field is what the groin could NOT explain. Re-fitting a groin against that field would be circular -- it would be fitting to a residual constructed by removing this exact groin. M was fitted against edgeBE precisely because edgeBE imposes nothing at D5/D6. Without this entry HAT_run_all.py stage 6 prints 'skipping its groin runs' and calibBE gets no groin arm at all."
+    "pinned_note": "PINNED 2026-08-31, INHERITED from edgeBE rather than fitted. calibBE is DERIVED FROM the edgeBE groin fit: HAT_be_zone_LOWESS_analysis.py with GROIN_AWARE_BASE_RUN=True builds the source/sink field from a base run already carrying M=60/f=0.6, so the field is what the groin could NOT explain. Re-fitting a groin against that field would be circular -- it would be fitting to a residual constructed by removing this exact groin. M was fitted against edgeBE precisely because edgeBE imposes nothing at D5/D6. Without this entry HAT_run_all.py stage 6 prints 'skipping its groin runs' and calibBE gets no groin arm at all."
   }
 }

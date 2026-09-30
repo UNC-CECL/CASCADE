@@ -10,7 +10,7 @@ CoastSat misfit on offsets 2010/v1?
 
 **Method.** `be_dune_edgesolve_loop.py --target coastsat --windows 2010`
 (the `--target coastsat` mode was added for this): the same Newton solve as
-09-16 (model lrr_m_yr against target_lrr_m_yr, GIS 1 raw, GIS 90 LOESS-10),
+09-16 (model lrr_m_yr against target_lrr_m_yr, GIS 1 raw, GIS 90 LOWESS-10),
 bracketed by the re-run 09-18 matrix zeroBE and edgeBE full-management runs.
 full_management, nourishment on, no groin, relocations off, Hs 2.5.
 

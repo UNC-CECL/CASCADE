@@ -9,7 +9,7 @@
 **Method.**
 
 - Driver: `be_dune_edgesolve_loop.py --exp end-domain-boundaries/2026-09-28-ends-solved-on-lrr-1996-2024-adopted --windows 1996 2010 --target coastsat --coastsat-window 1996_2024 --tol 0.02 --max-steps 8`.
-- The solve works as the matrix ends do: the model's OLS rate against the target table, GIS 1 against the raw domain mean, and GIS 90 against the LOESS value. That LOESS is **7 domains** now (`be_edge_domain_solve.py`, switched 2026-09-28); on 09-27 it was 10.
+- The solve works as the matrix ends do: the model's OLS rate against the target table, GIS 1 against the raw domain mean, and GIS 90 against the LOWESS value. That LOWESS is **7 domains** now (`be_edge_domain_solve.py`, switched 2026-09-28); on 09-27 it was 10.
 - The target is the 1996–2024 table, not each window's own.
 - Start: the rebuilt matrix's zeroBE and edgeBE runs, on the adopted model.
 

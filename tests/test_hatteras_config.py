@@ -50,7 +50,7 @@ SYNCED_ASSIGNMENTS = (
     "DOMAIN_BE_RATES = ",
     "COASTSAT_BASE_DIR = ",
     "TOPO_PRODUCT = ",
-    "LOESS_CONFIG = ",
+    "LOWESS_CONFIG = ",
     "TARGET_WINDOW = ",
 )
 
@@ -174,7 +174,7 @@ def _assignments(text, prefix):
 def test_runner_and_notebook_agree(prefix):
     """The .py is a mirror of the notebook; a run-selecting value must match.
 
-    Caught a real drift on 2026-09-12: LOESS_CONFIG was one smoothing window
+    Caught a real drift on 2026-09-12: LOWESS_CONFIG was one smoothing window
     in the script and two in the notebook.
     """
     if not (RUNNER_PY.exists() and RUNNER_NB.exists()):

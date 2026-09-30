@@ -6,8 +6,8 @@
 
 - **Barrier3D:** the local branch `hatteras/adopted`, which has the three overwash fixes plus per-cell dune ceilings. The ceilings are switched on in-process (`DuneCeilingFromStart`, floor 0.5 m).
 - **Storms:** every event kept, trimmed to 12, 24, 48 or 72 h, or full length. The 12 h files come from the builder (`--long-events trim --max-duration 12`) and are stored here; 24 h is the adopted `hindcast_storms/*_v3_trim24`; 48 h, 72 h and full are the storm-length selection's files.
-- **Runs:** managed, both windows, at the site config's LOESS-7 end rates.
-- **Scoring:** as before. Overwash against the imagery is scored under the same Barrier3D, and RMSE is against LOESS-7 via `run_registry.skill_vs_target`.
+- **Runs:** managed, both windows, at the site config's LOWESS-7 end rates.
+- **Scoring:** as before. Overwash against the imagery is scored under the same Barrier3D, and RMSE is against LOWESS-7 via `run_registry.skill_vs_target`.
 - **Interruption:** the 2010–2024 runs were stopped and re-run from scratch at Hannah's request. The partial folders were removed first.
 
 | window | trim | storm-hours | PSS | POD | POFD | timing r | space r | RMSE | bias | overwash total (m³/m) | Irene low / rest |

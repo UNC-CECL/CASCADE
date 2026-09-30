@@ -22,8 +22,8 @@ EVERYTHING OVER THE MODEL PERIOD (14 yr per window)
 
 RAW AND SMOOTHED
     The lines are the raw domain means. tables/skill.csv scores the model
-    against both targets both raw and with the scoring target's LOESS
-    treatment (raw means D1-10, 7-domain LOESS beyond), the form the runs are
+    against both targets both raw and with the scoring target's LOWESS
+    treatment (raw means D1-10, 7-domain LOWESS beyond), the form the runs are
     graded in.
 
 THREE MODEL SETS, ONE SUBFOLDER EACH (Hannah has not chosen the target)
@@ -338,7 +338,7 @@ def _table_names(df):
 
 
 def window_values(o, mdfs):
-    """Per domain, metres over the model period: both targets raw and LOESS,
+    """Per domain, metres over the model period: both targets raw and LOWESS,
     and each model set's net change."""
     s, e = o.window
     years = e - s
@@ -348,11 +348,11 @@ def window_values(o, mdfs):
     cs, cs_t = CS_SOURCE.get(o.window, (o.coastsat, o.coastsat_target))
     df["coastsat_lrr_m_yr"] = cs["mean_lrr"].to_numpy(float)
     df["coastsat_target_m"] = df["coastsat_lrr_m_yr"] * years
-    df["coastsat_target_loess_m"] = cs_t["target_lrr_m_yr"].to_numpy(float) * years
+    df["coastsat_target_lowess_m"] = cs_t["target_lrr_m_yr"].to_numpy(float) * years
     df["dune_rate_m_yr"] = o.endpoint["mean_lrr"].to_numpy(float)
     df["dune_measured_change_m"] = df["dune_rate_m_yr"] * o.meta["interval_yr"]
     df["dune_target_m"] = df["dune_rate_m_yr"] * years
-    df["dune_target_loess_m"] = o.endpoint_target["target_lrr_m_yr"].to_numpy(float) * years
+    df["dune_target_lowess_m"] = o.endpoint_target["target_lrr_m_yr"].to_numpy(float) * years
     df["target_difference_m"] = df["coastsat_target_m"] - df["dune_target_m"]
     for key, mdf in mdfs.items():
         col = f"model_{MODEL_SETS[key]}_m"
@@ -368,9 +368,9 @@ def skill_rows(window, df):
     for key, folder in MODEL_SETS.items():
         m = sel[f"model_{folder}_m"]
         for target, col in (("coastsat", "coastsat_target_m"),
-                            ("coastsat_loess", "coastsat_target_loess_m"),
+                            ("coastsat_lowess", "coastsat_target_lowess_m"),
                             ("duneline", "dune_target_m"),
-                            ("duneline_loess", "dune_target_loess_m")):
+                            ("duneline_lowess", "dune_target_lowess_m")):
             r = (m - sel[col]).dropna()
             ok = m.notna() & sel[col].notna()
             rows.append({"window": "{}_{}".format(*window), "model_ends": folder,
@@ -451,7 +451,7 @@ def figure(observations, frames, key, folder, half, skill_df):
         "full management, groin off. The space between the two targets is the "
         "beach-width change they imply: solid grey where the beach widened, hatched "
         "where it narrowed. Interior GIS 2–89, model minus target: " + stats
-        + " The LOESS-smoothed scores, as the runs are graded, are in "
+        + " The LOWESS-smoothed scores, as the runs are graded, are in "
         f"tables/skill.csv. One y axis, ±{half:g} {_u()}, the same on every figure here."
         + over_note([(frames[o.window], ["coastsat_target_m", "dune_target_m",
                                          f"model_{folder}_m"], "{}–{} ".format(*o.window))
@@ -512,10 +512,10 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
     black line, the misfit the gap between them. Both windows on one y axis.
 
     smoothed=True (2026-09-19, Hannah): the fill is the target AS GRADED (raw
-    domain means over GIS 1-10, the rw.TARGET_WINDOW-domain LOESS beyond, the form the runs
+    domain means over GIS 1-10, the rw.TARGET_WINDOW-domain LOWESS beyond, the form the runs
     and the edge solve are scored against), the raw domain means as dots over
     it; written to paired_smoothed/."""
-    sfx = "_loess" if smoothed else ""
+    sfx = "_lowess" if smoothed else ""
     tgt = {"coastsat": "coastsat" + sfx, rw.MAIN_DUNE: "duneline" + sfx}
     pair_keys = {k for k, *_ in PAIR_KEYS}
     for (key, w), (_, _, n) in ends.items():
@@ -533,7 +533,7 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
         fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, constrained_layout=True,
                                  figsize=figsize("double", height=5.6))
         for i, (ax, (key, col, _, _, _)) in enumerate(zip(axes, PAIR_KEYS)):
-            fill_col = col.replace("_m", "_loess_m") if smoothed else col
+            fill_col = col.replace("_m", "_lowess_m") if smoothed else col
             obs.draw_panel(ax, df.assign(mean_lrr=df[fill_col], std_lrr=0.0), half,
                            label=(i == 0), std=False)
             if smoothed:
@@ -557,7 +557,7 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
         fig.supylabel(y_label(), fontsize=9)
         handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
                     Line2D([], [], color=obs.C_ERODE, lw=1.0))]
-        labels = [("Target as graded (raw GIS 1–10, LOESS beyond)"
+        labels = [("Target as graded (raw GIS 1–10, LOWESS beyond)"
                    if smoothed else _target_legend())]
         if smoothed:
             handles.append((Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=3, lw=0),
@@ -580,7 +580,7 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
             "calibrated to it, as " + _quantity() + " "
             "by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
             + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
-               f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOESS of the transect values beyond, drawn as the "
+               f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOWESS of the transect values beyond, drawn as the "
                "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
             + "(a) The CoastSat target, " + cs_clause() + _x14(" x") + ", "
             "as the fill (blue seaward, red landward), and the edgeBE run whose "
@@ -622,7 +622,7 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
 
     With no end solve the two end domains are the model's own response too,
     so this is the only figure here whose GIS 1 and GIS 90 mean anything."""
-    sfx = "_loess" if smoothed else ""
+    sfx = "_lowess" if smoothed else ""
     col_model = f"model_{MODEL_SETS[UNSOLVED]}_m"
     for w_, (_, _, n) in ((k[1], v) for k, v in ends.items() if k[0] == UNSOLVED):
         if n != 0:
@@ -637,7 +637,7 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
         fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, constrained_layout=True,
                                  figsize=figsize("double", height=5.6))
         for i, (ax, (key, col, _, _, _)) in enumerate(zip(axes, PAIR_KEYS)):
-            fill_col = col.replace("_m", "_loess_m") if smoothed else col
+            fill_col = col.replace("_m", "_lowess_m") if smoothed else col
             obs.draw_panel(ax, df.assign(mean_lrr=df[fill_col], std_lrr=0.0), half,
                            label=(i == 0), std=False)
             if smoothed:
@@ -660,7 +660,7 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
         fig.supylabel(y_label(), fontsize=9)
         handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
                     Line2D([], [], color=obs.C_ERODE, lw=1.0))]
-        labels = [("Target as graded (raw GIS 1–10, LOESS beyond)"
+        labels = [("Target as graded (raw GIS 1–10, LOWESS beyond)"
                    if smoothed else _target_legend())]
         if smoothed:
             handles.append((Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=3, lw=0),
@@ -682,7 +682,7 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
             "candidate targets, as " + _quantity() + " "
             "by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
             + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
-               f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOESS of the transect values beyond, drawn as the "
+               f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOWESS of the transect values beyond, drawn as the "
                "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
             + "(a) The CoastSat target, " + cs_clause() + _x14(" x") + ", as the fill (blue "
             "seaward, red landward). (b) The dune-line target, the measured net change "
@@ -711,7 +711,7 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
     return out
 
 
-CS_SOURCE = {}   # window -> (domain frame, LOESS target frame) when full-period
+CS_SOURCE = {}   # window -> (domain frame, LOWESS target frame) when full-period
 
 
 def load_model_sets():

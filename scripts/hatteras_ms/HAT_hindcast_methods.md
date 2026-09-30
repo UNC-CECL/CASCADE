@@ -484,7 +484,7 @@ reads it off the constructed model and prints the predicted amplitude and
 extent **before** the time loop, so the emergent-extent check is pre-registered
 rather than retrofitted.
 
-## 8. CoastSat target rates -- LOESS windows
+## 8. CoastSat target rates -- LOWESS windows
 
 This section builds the observational target. The `calibBE` source/sink
 preset in section 4.3 was fit against the curve produced here, and section 12
@@ -495,7 +495,7 @@ judged by. It emits `cs_series` for the section 12 figures and
 ### Smooth at transect resolution, then aggregate
 
 `transect_lrr_full.csv` holds one linear-regression rate per CoastSat transect:
-906 transects over GIS 1-90 in each period, roughly ten per domain. LOESS runs
+906 transects over GIS 1-90 in each period, roughly ten per domain. LOWESS runs
 at **transect** resolution using along-coast distance as x, and only then
 averages to domain resolution. The order matters -- averaging to domains first
 would discard the within-domain structure the smoother exists to use.
@@ -504,9 +504,9 @@ Two windows are computed: 7 domains (~3.5 km) and 10 domains (~5.0 km).
 
 ### "Primary reference" is a convention, not a setting
 
-The widest window is the target. That is *implicit*: `LoessConfig` has no field
+The widest window is the target. That is *implicit*: `LowessConfig` has no field
 naming a reference window, and `rate_comparison` picks `max(window_domains)`.
-The old run script had an explicit `RESIDUALS_LOESS_WINDOW = 10`, which agreed
+The old run script had an explicit `RESIDUALS_LOWESS_WINDOW = 10`, which agreed
 only because 10 happened to be the larger of the two. Set `window_domains` to
 `(7, 12)` and the reference silently becomes 12, with nothing raising. The cell
 below names `TARGET_WINDOW` explicitly so the choice is at least visible at the
@@ -514,20 +514,20 @@ point of use.
 
 ### Domains 1-10 carry no smoothed line
 
-`skip_southern_domains = 10` suppresses LOESS across GIS 1-10: boundary effects
+`skip_southern_domains = 10` suppresses LOWESS across GIS 1-10: boundary effects
 near the Cape dominate that zone and smoothing flattens the sharp gradient
 there. Those domains are shown as raw transect scatter only.
 
 Worth being explicit, because an earlier config comment in the run script says
 otherwise: it describes raw per-domain means being *stitched* onto the widest
-LOESS line so the curve stays continuous. That never ran. Both the old script
-and `splice_loess_with_raw_south` drop domains `1..skip_n` for every window;
+LOWESS line so the curve stays continuous. That never ran. Both the old script
+and `splice_lowess_with_raw_south` drop domains `1..skip_n` for every window;
 the function's `transect_domain_ids`, `transect_lrr_values` and
 `is_widest_window` arguments are accepted and ignored.
 
 So the target has two different provenances along its length, and
 `COASTSAT_TARGET` labels each row accordingly: **raw per-domain mean** for GIS
-1-10, **LOESS 7-domain** for GIS 11-90 (10-domain until 2026-09-28).
+1-10, **LOWESS 7-domain** for GIS 11-90 (10-domain until 2026-09-28).
 
 That boundary matters for section 7. The Buxton groin sits at GIS 5.5, so both
 of its flanking domains fall in the unsmoothed zone -- the groin's
@@ -537,7 +537,7 @@ the reference curve.
 ### Suppression is display-only, and it leaks north
 
 `skip_southern_domains` drops GIS 1-10 from the plotted line. It does **not**
-remove them from the fit: LOESS runs over all 906 transects, and only the
+remove them from the fit: LOWESS runs over all 906 transects, and only the
 result is truncated. So the southern transects the skip exists to discount
 still pull the smoothed values immediately north of the cut.
 
@@ -594,7 +594,7 @@ Every plotting entry point defaults to the **package** defaults, not Hatteras':
 
 ```python
 plot_rate_comparison(..., domains=DEFAULT_DOMAINS, annotations=DEFAULT_ANNOTATIONS,
-                     loess_config=DEFAULT_LOESS, config=DEFAULT_RATE_COMPARISON)
+                     lowess_config=DEFAULT_LOWESS, config=DEFAULT_RATE_COMPARISON)
 make_all_shoreline_gifs(..., domains=DEFAULT_DOMAINS, annotations=DEFAULT_ANNOTATIONS,
                         gif_config=DEFAULT_GIF_CONFIG)
 ```
@@ -605,7 +605,7 @@ Forget to pass `annotations=HATTERAS_ANNOTATIONS` at any one of those call sites
 and that figure comes out with no villages, no piers, no groin line and no shoal
 zones. Nothing raises; the figure just quietly loses its geography.
 
-`loess_config` is the same shape of hazard with a subtler failure. `DEFAULT_LOESS`
+`lowess_config` is the same shape of hazard with a subtler failure. `DEFAULT_LOWESS`
 happens to equal what section 8 configures today, so omitting it currently
 changes nothing -- but section 8 owns that setting, and the moment it changes,
 section 12 would keep drawing the package default and the figure would no longer
@@ -910,7 +910,7 @@ interchangeable:
 The observational target is an LRR. `transect_lrr_full.csv` holds a
 per-transect ordinary-least-squares slope fit through the full set of CoastSat
 shoreline positions in the period -- `lrr_m_yr`, with `r_squared`, `p_value`
-and `unc_m_yr` beside it -- and section 8 LOESS-smooths those slopes
+and `unc_m_yr` beside it -- and section 8 LOWESS-smooths those slopes
 alongshore. Plotting an endpoint difference against it compares a net
 displacement to a trend, so `RATE_ESTIMATOR = "lrr"` is what the figures, the
 skill metrics, and the `calibBE` fit all use. `SKILL_ENDPOINT` is reported

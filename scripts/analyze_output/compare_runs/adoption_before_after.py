@@ -5,14 +5,14 @@ Hannah, 2026-09-28: "show me the comparison when the matrix finishes".
 
     before  output/raw_runs/archive/2026-09-28-pre-ceiling/matrix/: Barrier3D
             fix/route-overwash-axis-swap (49fd069), Dmaxel default (3.4 m
-            NAVD88), storms v3_72, the pre-adoption LOESS-7 ends
+            NAVD88), storms v3_72, the pre-adoption LOWESS-7 ends
     after   output/raw_runs/matrix/: Barrier3D hatteras/adopted (overwash
             fixes + per-cell dune ceilings), storms v3_trim24, the ends
             re-solved on it (end-domain-boundaries/2026-09-28-ends-resolved-adopted)
 
 For every matrix run (both windows, both presets, every scenario):
     shoreline  interior (GIS 2-89) RMSE and bias of the model LRR against the
-               CoastSat LOESS-7 target (run_registry.skill_vs_target, as the
+               CoastSat LOWESS-7 target (run_registry.skill_vs_target, as the
                runner scores), and the spatial correlation r
     overwash   against the imagery (8-overwash-analysis), each run dated by its
                own storm file: POD, POFD, PSS, timing r, space r
@@ -69,10 +69,10 @@ def runs(side):
 def target_table(w, _cache={}):
     if w not in _cache:
         from cascade_pipeline.hindcast import build_target_table
-        from cascade_pipeline.coastsat_loess import CoastSatDataset, LoessConfig, build_coastsat_series
+        from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
         from site_layer.hatteras_site_config import HATTERAS_DOMAINS
         from site_layer.hat_observed_rates import lrr_csv
-        cfg = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+        cfg = LowessConfig(window_domains=(7,), skip_southern_domains=10)
         series = build_coastsat_series([CoastSatDataset(label=f"CoastSat {w[0]}", period_start=w[0],
                                                         csv_path=str(lrr_csv(*w)))], w[0], cfg,
                                        domains=HATTERAS_DOMAINS)

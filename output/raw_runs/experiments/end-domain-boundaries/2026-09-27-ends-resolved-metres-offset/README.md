@@ -12,7 +12,7 @@ offset.
 |---|---|
 | reference waves | the step-2 baseline, Hs 1.0 m, Tp 8 s, asymmetry 0.8, high-angle 0.45: neutral, not the winner of either search, so the fixed ends do not pre-favour the sweep |
 | scenario | full management (as the matrix end values always were); the pair is used for natural and managed runs alike |
-| target | each window's CoastSat LRR: GIS 1 against the raw domain mean, GIS 90 against the LOESS-10 value |
+| target | each window's CoastSat LRR: GIS 1 against the raw domain mean, GIS 90 against the LOWESS-10 value |
 | solve | step 0 a fresh zeroBE run, then safeguarded Newton steps (first from the metres response measured 2026-09-26, then secant capped at ±30 m/yr until bracketed, then interpolation inside the bracket); converged at \|residual\| ≤ 0.02 m/yr |
 | output | `tables/ends.json` (read by `HAT_wave_grid_fixed_ends.py`), `tables/ends.csv`, `tables/solve_log.csv` |
 

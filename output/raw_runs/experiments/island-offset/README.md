@@ -18,7 +18,7 @@ same four figures through one function (`house_figures` in
 `scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py`), so they compare
 directly: `duneline_offset_vs_duneline_change_*`, `shoreline_offset_vs_coastsat_total_change_*`,
 `shoreline_offset_vs_coastsat_projected_change_*`, `total_change_difference_shoreline_minus_duneline_*`;
-net change in metres, observations LOESS 7 domains, model unsmoothed, fills marked, no
+net change in metres, observations LOWESS 7 domains, model unsmoothed, fills marked, no
 scores on the figures. `2026-09-24-div10-vs-metres-wave-sweep` asks a different question
 (offset scale against wave tuning) and keeps its sweep figures.
 

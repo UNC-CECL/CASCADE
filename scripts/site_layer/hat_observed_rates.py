@@ -412,7 +412,7 @@ TWO_PERIOD_COMPARISON = COMPARISONS / "two_period_comparison"
 # Archived, but still read, so still resolved.
 COASTSAT_LRR_SUPERSEDED = ARCHIVE / "coastsat_lrr_superseded_20260810"
 
-# 6-scr-smooth: what the LOESS smoothing does to the observed rates. Resolved
+# 6-scr-smooth: what the LOWESS smoothing does to the observed rates. Resolved
 # here too because its outputs are read outside their producers (2026-09-18,
 # when the two folders lost their HAT_*_output names).
 #     method_comparison/   transect-based against domain-averaged smoothing;
@@ -552,7 +552,7 @@ if __name__ == "__main__":
 #     coastsat_lrr/<window>/ext/transect_lrr_with_base.csv  surveyed + extension
 #
 # The with_base file is what an extended-geometry run loads as its active
-# dataset (one LOESS over the whole reach); the surveyed file stays the
+# dataset (one LOWESS over the whole reach); the surveyed file stays the
 # scoring table for GIS 2-89 so extended and base runs are graded alike.
 # Built by scripts/input_prep/5-scr/3-rates/coastsat/extension/coastsat_extension_lrr.py.
 EXT_DIR = "ext"

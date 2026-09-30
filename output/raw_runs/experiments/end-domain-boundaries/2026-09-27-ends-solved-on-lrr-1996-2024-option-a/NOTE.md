@@ -7,7 +7,7 @@
 
 **Method.**
 - Driver: `be_dune_edgesolve_loop.py --windows 1996 2010 --target coastsat --coastsat-window 1996_2024 --tol 0.02`.
-- The same solve as the matrix ends: the model's OLS rate against the target table, GIS 1 against the raw domain mean, GIS 90 against the LOESS-10 value.
+- The same solve as the matrix ends: the model's OLS rate against the target table, GIS 1 against the raw domain mean, GIS 90 against the LOWESS-10 value.
 - The target is the 1996–2024 table rather than each window's own.
 - Start: the option A matrix zeroBE and edgeBE runs.
 

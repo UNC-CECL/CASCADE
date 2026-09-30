@@ -33,7 +33,7 @@ WHAT IT SHOWS
 
     --target adds the scoring curve as a second set of segments, written to
     <stem>_with_target.png so it never overwrites the plain version. It is not
-    an average of anything inside the band: the LOESS reads 5 km either way,
+    an average of anything inside the band: the LOWESS reads 5 km either way,
     so it can sit off the mean, which is the point of drawing it -- but it is
     a third quantity on the panel and needs explaining before it can be read,
     so the teaching version leaves it off.
@@ -79,8 +79,8 @@ import rates_figures as rf  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     GRID_C, INK_MUTED, SMOOTH_RAMP, apply_style, caption, figsize, save,
 )
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    DEFAULT_LOESS, loess_transect_values,
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    DEFAULT_LOWESS, lowess_transect_values,
 )
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
@@ -107,8 +107,8 @@ DOT_S = 11.0
 DOT_S_SLIDE = 9.0
 XTICK = 10
 XTICK_SLIDE = 10
-LOESS_LW = 1.6
-LOESS_WINDOW = max(DEFAULT_LOESS.window_domains)
+LOWESS_LW = 1.6
+LOWESS_WINDOW = max(DEFAULT_LOWESS.window_domains)
 MAX_LABELLED_BANDS = 20  # past this, no domain shading and no numbers
 # The along-coast axis covers anything from a 4 km reach to the whole 45 km
 # island, so neither its unit nor its tick step can be a constant: 1 km ticks
@@ -118,7 +118,7 @@ NICE_STEPS_M = (100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0)
 KM_ABOVE_M = 10000.0     # span past which the axis is drawn in km, not m
 
 
-def load(stem, lo, hi, loess_window=None):
+def load(stem, lo, hi, lowess_window=None):
     """Transect rows inside GIS lo..hi, south to north, with an x position.
 
     x is the transect's ORDER in the reach, not a distance: one unit per
@@ -127,9 +127,9 @@ def load(stem, lo, hi, loess_window=None):
     domain holds an unusual number of them, and the band edges below are drawn
     from the counts rather than assumed.
 
-    With `loess_window`, a `loess` column carries the smoother's value at each
+    With `lowess_window`, a `lowess` column carries the smoother's value at each
     transect. It is fitted over the WHOLE island first and sliced to the reach
-    afterwards, never fitted to the reach alone: a LOESS reads 5 km either
+    afterwards, never fitted to the reach alone: a LOWESS reads 5 km either
     way, so a fit stopping at the reach edge would be a different curve from
     the one the target is built through.
     """
@@ -143,11 +143,11 @@ def load(stem, lo, hi, loess_window=None):
     t["along_m"] = ((t["domain_number"] - DOM.first_gis_id) * sp
                     + (rank + 0.5) * (sp / n))
     frac = None
-    if loess_window:
-        sm, frac = loess_transect_values(t["along_m"].to_numpy(float),
+    if lowess_window:
+        sm, frac = lowess_transect_values(t["along_m"].to_numpy(float),
                                          t["lrr_m_yr"].to_numpy(float),
-                                         loess_window)
-        t["loess"] = sm if sm is not None else np.nan
+                                         lowess_window)
+        t["lowess"] = sm if sm is not None else np.nan
     t = t[t["domain_number"].between(lo, hi)].reset_index(drop=True)
     t["x"] = np.arange(len(t), dtype=float)
     return t, frac
@@ -186,11 +186,11 @@ def bands(t, metres=False):
     return out
 
 
-def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
+def figure(stem, lo, hi, with_target=False, slide=False, with_lowess=False,
            x="transect", domains_shown=True):
     start, end = (int(v) for v in stem.split("_"))
     metres = (x == "metres")
-    t, frac = load(stem, lo, hi, LOESS_WINDOW if with_loess else None)
+    t, frac = load(stem, lo, hi, LOWESS_WINDOW if with_lowess else None)
     if t.empty:
         raise SystemExit(f"no transects in GIS {lo}-{hi} for {stem}")
     xv = t["along_m" if metres else "x"].to_numpy(float)
@@ -230,9 +230,9 @@ def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
                linewidths=0, zorder=4)
 
     # The per-domain values, each flat across the domain it belongs to. The
-    # target takes a mid-ramp blue when the LOESS curve is drawn too, so the
+    # target takes a mid-ramp blue when the LOWESS curve is drawn too, so the
     # curve and the domain-resolution version of it are not one colour.
-    target_c = SMOOTH_RAMP[1] if (with_loess and target is not None) else SMOOTH_RAMP[-1]
+    target_c = SMOOTH_RAMP[1] if (with_lowess and target is not None) else SMOOTH_RAMP[-1]
     for d, x0, x1 in (bs if domains_shown else []):
         m = float(t.loc[t["domain_number"] == d, "lrr_m_yr"].mean())
         ax.plot([x0, x1], [m, m], color=INK_MUTED, lw=MEAN_LW,
@@ -241,9 +241,9 @@ def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
             ax.plot([x0, x1], [target.loc[d]] * 2, color=target_c, lw=TARGET_LW,
                     solid_capstyle="butt", zorder=6)
 
-    if with_loess and "loess" in t:
-        ax.plot(xv, t["loess"].to_numpy(float), color=SMOOTH_RAMP[-1],
-                lw=LOESS_LW, solid_capstyle="round", zorder=7)
+    if with_lowess and "lowess" in t:
+        ax.plot(xv, t["lowess"].to_numpy(float), color=SMOOTH_RAMP[-1],
+                lw=LOWESS_LW, solid_capstyle="round", zorder=7)
 
     if not domains_shown:
         # No bands to align to, so the panel holds the markers and a little
@@ -252,15 +252,15 @@ def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
         ax.set_xlim(float(xv.min()) - pad, float(xv.max()) + pad)
     else:
         ax.set_xlim(*((bs[0][1], bs[-1][2]) if metres else (-1.0, len(t))))
-    # Bounds over EVERY series drawn, not just the markers: the LOESS reads
+    # Bounds over EVERY series drawn, not just the markers: the LOWESS reads
     # 5 km beyond the reach and routinely sits below everything in it, so
     # bounds taken from the markers alone would clip the curve.
     drawn = [y - unc, y + unc]
     if domains_shown:
         drawn.append(np.array([float(t.loc[t["domain_number"] == d, "lrr_m_yr"].mean())
                                for d, _, _ in bs]))
-    if with_loess and "loess" in t:
-        drawn.append(t["loess"].to_numpy(float))
+    if with_lowess and "lowess" in t:
+        drawn.append(t["lowess"].to_numpy(float))
     if target is not None and domains_shown:
         drawn.append(target.reindex([d for d, _, _ in bs]).to_numpy(float))
     ylo = float(np.nanmin(np.concatenate(drawn))) - Y_PAD
@@ -316,9 +316,9 @@ def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
     if target is not None:
         h.append(Line2D([], [], color=target_c, lw=TARGET_LW))
         labels.append("Graded target")
-    if with_loess:
-        h.append(Line2D([], [], color=SMOOTH_RAMP[-1], lw=LOESS_LW))
-        labels.append(f"LOESS, {LOESS_WINDOW * 0.5:g} km")
+    if with_lowess:
+        h.append(Line2D([], [], color=SMOOTH_RAMP[-1], lw=LOWESS_LW))
+        labels.append(f"LOWESS, {LOWESS_WINDOW * 0.5:g} km")
     fig.legend(h, labels, loc="outside lower center",
                ncol=(2 if slide else len(h)), frameon=False,
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
@@ -339,16 +339,16 @@ def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
            " Nothing on the panel is aggregated: no domain bands, no domain "
            "means, only the transects as fitted.")
         + (" The dark blue segment is the target a model run is scored against, a "
-           "5 km alongshore LOESS of these same transect rates; it is not an "
+           "5 km alongshore LOWESS of these same transect rates; it is not an "
            "average of the band it sits in — it reads 5 km in both directions, so "
            "it can fall outside the markers beneath it." if target is not None else "")
-        + (f" The dark blue curve is the LOESS itself, at the resolution it is "
-           f"fitted at: one value per transect, window {LOESS_WINDOW * 0.5:g} km "
+        + (f" The dark blue curve is the LOWESS itself, at the resolution it is "
+           f"fitted at: one value per transect, window {LOWESS_WINDOW * 0.5:g} km "
            f"(frac {frac:.3f} of the island's transects). It is fitted over the "
            "whole island and sliced to this reach, not fitted to the reach, so "
            "near either edge it is reading transects outside the panel."
-           if with_loess else "")
-        + (" The x axis is along-coast distance, the coordinate the LOESS "
+           if with_lowess else "")
+        + (" The x axis is along-coast distance, the coordinate the LOWESS "
            f"actually uses, measured from the south end of the modelled reach "
            f"(GIS {DOM.first_gis_id}); transects sit about 50 m apart, so the "
            "spacing on the page is the spacing on the beach."
@@ -364,7 +364,7 @@ def figure(stem, lo, hi, with_target=False, slide=False, with_loess=False,
     name = (f"lrr_transects_{stem}_gis{lo}-{hi}"
             + ("" if domains_shown else "_no_domains")
             + ("_metres" if metres else "")
-            + ("_with_loess" if with_loess else "")
+            + ("_with_lowess" if with_lowess else "")
             + ("_with_target" if target is not None else "")
             + ("_slide" if slide else ""))
     out = save(fig, folder / name)
@@ -385,8 +385,8 @@ def main(argv=None) -> int:
     ap.add_argument("--slide", action="store_true",
                     help=f"{SLIDE_W_IN:g} in canvas for a slide, "
                          "to <stem>_slide.png")
-    ap.add_argument("--loess", action="store_true",
-                    help="draw the LOESS curve through the transects")
+    ap.add_argument("--lowess", action="store_true",
+                    help="draw the LOWESS curve through the transects")
     ap.add_argument("--x", choices=("transect", "metres"), default="transect",
                     help="x axis: transect order (default) or along-coast metres")
     ap.add_argument("--no-domains", action="store_true",
@@ -396,7 +396,7 @@ def main(argv=None) -> int:
         a.gis = list(SLIDE_GIS if a.slide else DEFAULT_GIS)
     apply_style()
     for p in figure(a.window, a.gis[0], a.gis[1], with_target=a.target,
-                   slide=a.slide, with_loess=a.loess, x=a.x,
+                   slide=a.slide, with_lowess=a.lowess, x=a.x,
                    domains_shown=not a.no_domains):
         print(f"wrote    {p.relative_to(_REPO)}")
     return 0

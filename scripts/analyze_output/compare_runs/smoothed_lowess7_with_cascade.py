@@ -1,5 +1,5 @@
 """
-smoothed_loess7_with_cascade.py
+smoothed_lowess7_with_cascade.py
 ==============================================================================
 The two smoothed halves-overlay sheets with the CASCADE hindcast drawn over
 them in dark green, so the model's alongshore behaviour can be read against
@@ -7,8 +7,8 @@ both candidate targets at the scale the model resolves. Built 2026-09-22
 (Hannah, by interview).
 
 It is the observations-only pair in
-`5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7/` plus one line.
-Everything about the two observed curves -- the 7-domain LOESS, the GIS 1-10
+`5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7/` plus one line.
+Everything about the two observed curves -- the 7-domain LOWESS, the GIS 1-10
 raw splice, both sides smoothed at transect resolution, the faint raw domain
 means behind them -- is imported from that script rather than re-implemented,
 so the sheets differ in exactly one thing: the green line.
@@ -41,17 +41,17 @@ THE MODEL LINE
     between them partly an artefact of the treatment. One asymmetry remains
     and is stated rather than hidden: the observed sides are smoothed at
     TRANSECT resolution (~10 CoastSat and 5 dune transects per domain) while
-    the model exists only per domain, so its LOESS runs over 90 points rather
+    the model exists only per domain, so its LOWESS runs over 90 points rather
     than ~900. At a 3.5 km window the fitted curve barely notices the
     difference in density, but it is not literally the same operation.
 
-OUTPUT   output/comparisons/target_comparison/smoothed_loess7_with_cascade/
-    loess7_projected_vs_duneline_with_cascade_1996_2010_2024.png
-    loess7_total_change_vs_duneline_with_cascade_1996_2010_2024.png
+OUTPUT   output/comparisons/target_comparison/smoothed_lowess7_with_cascade/
+    lowess7_projected_vs_duneline_with_cascade_1996_2010_2024.png
+    lowess7_total_change_vs_duneline_with_cascade_1996_2010_2024.png
     domain_values.csv, runs_used.csv, PROVENANCE.md, README.md, supporting/
 
 USAGE
-    python scripts/analyze_output/compare_runs/smoothed_loess7_with_cascade.py
+    python scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py
     python ... --window 7
 ==============================================================================
 """
@@ -74,14 +74,14 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import rates_figures as rf  # noqa: E402
-import smoothed_loess7_vs_duneline as sl7  # noqa: E402
+import smoothed_lowess7_vs_duneline as sl7  # noqa: E402
 import total_change_vs_duneline as tcd  # noqa: E402
 import rate_windows as rw  # noqa: E402
 import target_comparison as tc  # noqa: E402
 from rates_figures import cw, plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
-from cascade_pipeline.coastsat_loess import spliced_loess_series  # noqa: E402
+from cascade_pipeline.coastsat_lowess import spliced_lowess_series  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     COMPARISONS_ROOT, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
@@ -89,7 +89,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     support_dir,
 )
 
-OUT_ROOT = COMPARISONS_ROOT / "target_comparison" / "smoothed_loess7_with_cascade"
+OUT_ROOT = COMPARISONS_ROOT / "target_comparison" / "smoothed_lowess7_with_cascade"
 # Dark green: distinct from the blue/red sign fill, the black dune line and
 # the grey raw dots, and it reads on both a screen and a greyscale print.
 C_MODEL = "#1b6b3a"
@@ -97,7 +97,7 @@ LW_MODEL = 1.5
 HALVES = sl7.HALVES
 
 
-def model_series(window, years, loess_window):
+def model_series(window, years, lowess_window):
     """The run's net change in metres, raw and smoothed, plus its provenance.
 
     Smoothed at the same width as the observed curves; see the module
@@ -115,14 +115,14 @@ def model_series(window, years, loess_window):
     d = df.set_index("domain_number")["change_rate_m_yr"].reindex(idx) * years
     ids = np.asarray(idx, dtype=int)
     centres = (ids - 0.5) * DEFAULT_DOMAINS.domain_spacing_m
-    sm, _ = spliced_loess_series(ids, centres, d.to_numpy(float),
-                                 loess_window, skip=sl7.SPLICE)
+    sm, _ = spliced_lowess_series(ids, centres, d.to_numpy(float),
+                                 lowess_window, skip=sl7.SPLICE)
     return d, sm.reindex(idx), row
 
 
-def figure(product, stem, what, data, models, loess_window, out_dir):
+def figure(product, stem, what, data, models, lowess_window, out_dir):
     half, tick = tcd.Y_HALF_M, tcd.Y_TICK_M
-    km = loess_window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0
+    km = lowess_window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0
     fig, axes = plt.subplots(2, 1, sharex=True, sharey=True,
                              constrained_layout=True,
                              figsize=figsize("double", height=5.6))
@@ -154,12 +154,12 @@ def figure(product, stem, what, data, models, loess_window, out_dir):
         Line2D([], [], color=INK, lw=tcd.LW),
         Line2D([], [], color=C_MODEL, lw=LW_MODEL),
         Line2D([], [], color=INK_MUTED, marker="o", ms=2.2, lw=0),
-    ], [f"Shoreline target, LOESS {km:g} km",
-        f"Dune line target, LOESS {km:g} km",
+    ], [f"Shoreline target, LOWESS {km:g} km",
+        f"Dune line target, LOWESS {km:g} km",
         "CASCADE (zeroBE, full management, groin off)",
         "Raw domain means (both targets)"], ncol=2)
     compare_header(fig, [
-        f"All three curves LOESS-smoothed at {loess_window} domains ({km:g} km); "
+        f"All three curves LOWESS-smoothed at {lowess_window} domains ({km:g} km); "
         f"GIS 1–{sl7.SPLICE} kept raw",
         f"{what}   ·   dune line always the sub-period's own measured change"])
 
@@ -170,7 +170,7 @@ def figure(product, stem, what, data, models, loess_window, out_dir):
     caption(fig, (
         "The two candidate targets and the CASCADE hindcast by GIS domain (1 at "
         "Cape Point, 90 at Pea Island), 1996–2010 above 2010–2024, all three "
-        f"passed through the same alongshore LOESS at {loess_window} domains "
+        f"passed through the same alongshore LOWESS at {lowess_window} domains "
         f"({km:g} km). {what[0].upper() + what[1:]}; the dune line is always that "
         "half's own measured net change. **Dark green is CASCADE**: the zeroBE "
         "run of the matrix cell — full management, groin off — which carries NO "
@@ -182,7 +182,7 @@ def figure(product, stem, what, data, models, loess_window, out_dir):
         f"GIS 1–{sl7.SPLICE} keep their raw values on every curve — the Oregon "
         "Inlet boundary treatment — so nothing there is the smoother's doing. "
         "The observed targets are smoothed at transect resolution and the model "
-        "only exists per domain, so its LOESS runs over 90 points rather than "
+        "only exists per domain, so its LOWESS runs over 90 points rather than "
         "~900; at 3.5 km that barely changes the fitted curve, but it is not "
         f"literally the same operation. Interior means: {per}. Seaward positive, "
         f"in metres; the y axis is ±{half:g} m. "
@@ -203,7 +203,7 @@ def _bias(model, target):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--window", type=int, default=sl7.WINDOW,
-                    help="LOESS width in domain units (1 = 500 m)")
+                    help="LOWESS width in domain units (1 = 500 m)")
     a = ap.parse_args(argv)
     apply_style()
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
@@ -223,7 +223,7 @@ def main(argv=None) -> int:
         for w, r in rows:
             long.append(pd.DataFrame({
                 "product": product, "window": f"{w[0]}_{w[1]}",
-                "loess_domains": a.window,
+                "lowess_domains": a.window,
                 "domain_number": np.asarray(r["sm_shore"].index, dtype=int),
                 "shoreline_target_smoothed_m": r["sm_shore"].to_numpy(float),
                 "duneline_target_smoothed_m": r["sm_dune"].to_numpy(float),
@@ -246,13 +246,13 @@ def main(argv=None) -> int:
         tbl.append(f"| {x['product']} | {x['window'].replace('_', '–')} "
                    f"| {x.bias_vs_shoreline_m:+.1f} | {x.bias_vs_duneline_m:+.1f} |")
     (OUT_ROOT / "PROVENANCE.md").write_text("\n".join([
-        "# smoothed_loess7_with_cascade — provenance", "",
+        "# smoothed_lowess7_with_cascade — provenance", "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "`scripts/analyze_output/compare_runs/smoothed_loess7_with_cascade.py`.",
+        "`scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py`.",
         "",
         "The observations-only pair in "
         "`data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/"
-        "smoothed_loess7/` with the CASCADE hindcast over it in dark green. "
+        "smoothed_lowess7/` with the CASCADE hindcast over it in dark green. "
         "Every detail of the two observed curves is imported from that script, "
         "so the sheets differ in exactly one thing.", "",
         "## The run", "",
@@ -272,7 +272,7 @@ def main(argv=None) -> int:
         f"({a.window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0:g} km) so no "
         "pair is a smoothed quantity against an unsmoothed one. The observed "
         "sides are smoothed at TRANSECT resolution and the model only exists "
-        "per domain, so its LOESS runs over 90 points rather than ~900 — at "
+        "per domain, so its LOWESS runs over 90 points rather than ~900 — at "
         "this width that barely changes the fitted curve, but the two are not "
         "literally the same operation.", "",
         f"GIS 1–{sl7.SPLICE} are unsmoothed on every curve, so no difference "

@@ -323,12 +323,12 @@ def _target(extended=False):
     """The CoastSat target as the runner builds it: the surveyed GIS 1-90
     table (what the interior score uses), or the extension's table over
     GIS 0-115 (what an extended run's ends are solved against)."""
-    from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
     from cascade_pipeline.domains import DEFAULT_DOMAINS, DomainGeometry
     from cascade_pipeline.hindcast import build_target_table
     from site_layer.hat_observed_rates import lrr_csv, lrr_csv_ext
-    loess = LoessConfig(window_domains=(7,), skip_southern_domains=10)  # 10 until 2026-09-28
+    lowess = LowessConfig(window_domains=(7,), skip_southern_domains=10)  # 10 until 2026-09-28
     if extended:
         first, last = GEOMETRIES["n115"]
         domains = DomainGeometry(num_real_domains=last - first + 1, first_gis_id=first)
@@ -338,8 +338,8 @@ def _target(extended=False):
     series = build_coastsat_series(
         [CoastSatDataset(label="extended" if extended else "surveyed",
                          period_start=PERIOD, csv_path=str(csv_path))],
-        PERIOD, loess, domains=domains)
-    table = build_target_table(series[0], loess, domains, 7)
+        PERIOD, lowess, domains=domains)
+    table = build_target_table(series[0], lowess, domains, 7)
     return table.set_index("gis_domain")["target_lrr_m_yr"]
 
 
@@ -421,7 +421,7 @@ def cmd_score(a):
                 f"| {num(r, 'rmse_interior_m_yr'):.4f} | {num(r, 'mean_bias_interior_m_yr'):+.4f} "
                 f"| {num(r, 'rmse_reach_interior_m_yr'):.4f} | {near_rmse:.4f} "
                 f"| {num(r, f'be_rate_gis{first}_m_yr'):+.1f} | {num(r, f'be_rate_gis{last}_m_yr'):+.1f} |")
-    lines += ["", f"## Rates on GIS {lo}-{hi}, m/yr (model LRR; target is the surveyed LOESS)", "",
+    lines += ["", f"## Rates on GIS {lo}-{hi}, m/yr (model LRR; target is the surveyed LOWESS)", "",
               "| GIS | target | " + " | ".join(f"{m} {p}" for m in order for p in ("zeroBE", "edgeBE")
                                                 if (m, p) in finals) + " |",
               "|---|---|" + "|".join("---" for m in order for p in ("zeroBE", "edgeBE")
@@ -486,7 +486,7 @@ def draw_compare(finals, target):
                  "run: the 90-domain reach with extrapolated buffers and boundary source/sink "
                  "terms of +32.2 at GIS 1 and +10.0 m/yr at GIS 90) and for the Pea Island "
                  "extension (GIS 1-115 on the measured coast, its ends solved to +37.1 "
-                 "and +41.7 m/yr), against the CoastSat target (LOESS-7, raw means on "
+                 "and +41.7 m/yr), against the CoastSat target (LOWESS-7, raw means on "
                  "GIS 1-10); the main approach without boundary terms is dotted. Compressed "
                  "planform, full_management, no groin. The two runs coincide from GIS 13 "
                  "to 78 and part only where the GIS 90 boundary term acted (GIS 80-90), where "
@@ -537,9 +537,9 @@ def draw(finals, target):
     caption(fig, "Modelled 1996-2010 shoreline change rate (OLS slope through the annual "
                  "states, + seaward) along the reach for the 90-domain reach and the "
                  "extended reach, each with its boundary source/sink terms solved against "
-                 "the observed rate at its end domains, against the CoastSat rate (LOESS-7; "
+                 "the observed rate at its end domains, against the CoastSat rate (LOWESS-7; "
                  "raw means on GIS 1-10): solid over the surveyed reach, dashed over the "
-                 "extension, where the LOESS is one-sided at GIS 115 as it is at GIS 90 in "
+                 "extension, where the LOWESS is one-sided at GIS 115 as it is at GIS 90 in "
                  "the 90-domain reach. Shaded: beyond GIS 90. (a) the compressed planform "
                  "every calibrated run uses; (b) the detrended planform at full strength, "
                  "note the axis.")

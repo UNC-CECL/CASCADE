@@ -5,14 +5,14 @@ Hannah, 2026-09-28: "include the overwash fixes, keep option A, go ahead". The m
 - **Barrier3D** `hatteras/adopted`: the three overwash fixes and per-cell dune ceilings.
 - **Storms** `v3_trim24`.
 
-So GIS 1 and GIS 90 were re-solved on it. Protocol as `2026-09-28-ends-resolved-loess7/`:
+So GIS 1 and GIS 90 were re-solved on it. Protocol as `2026-09-28-ends-resolved-lowess7/`:
 
 | | |
 |---|---|
 | waves | option A |
 | scenario | full management, edgeBE, no groin |
-| target | CoastSat LRR (GIS 1 the raw domain mean, GIS 90 the LOESS-7 value) |
-| driver | `HAT_resolve_ends_metres.py --seed` from the LOESS-7 ends |
+| target | CoastSat LRR (GIS 1 the raw domain mean, GIS 90 the LOWESS-7 value) |
+| driver | `HAT_resolve_ends_metres.py --seed` from the LOWESS-7 ends |
 
 ## Adopted in `HATTERAS_BE_EDGE_ONLY`
 
@@ -27,6 +27,6 @@ So GIS 1 and GIS 90 were re-solved on it. Protocol as `2026-09-28-ends-resolved-
 |---|---|---|---|---|---|---|---|---|
 | residual | −13.02 | −9.81 | −5.82 | −1.27 | **+0.002** | +0.27 | +0.50 | +0.52 |
 
-The last LOESS-7 value was +18.8657. A drop to +8.0 means the adopted model needs far less sand imposed at the southern end.
+The last LOWESS-7 value was +18.8657. A drop to +8.0 means the adopted model needs far less sand imposed at the southern end.
 
 `tables/ends.json` is the record (the 2010 GIS 1 entry is the direct-probe value); `tables/solve_log_*.csv` holds the secant probes.

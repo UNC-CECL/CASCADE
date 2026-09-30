@@ -144,9 +144,9 @@ from cascade_pipeline.hindcast import (
     wave_climate_token,
     relocation_setback_token,
 )
-from cascade_pipeline.coastsat_loess import (
+from cascade_pipeline.coastsat_lowess import (
     CoastSatDataset,
-    LoessConfig,
+    LowessConfig,
     build_coastsat_series,
 )
 from cascade_pipeline.plotting.rate_comparison import (
@@ -1295,17 +1295,17 @@ reports.scenario_summary_report(
 
 
 # =============================================================================
-# 8. COASTSAT TARGET RATES -- LOESS WINDOWS
+# 8. COASTSAT TARGET RATES -- LOWESS WINDOWS
 # =============================================================================
 # The observational target. The "calibBE" source/sink preset was fit against
 # the curve produced here, and section 12 draws the model against it.
 #
-# LOESS runs at TRANSECT resolution using along-coast distance as x, then
+# LOWESS runs at TRANSECT resolution using along-coast distance as x, then
 # averages to domain resolution. The widest window is the target, implicitly:
 # rate_comparison picks max(window_domains). TARGET_WINDOW names that choice.
 #
-# skip_southern_domains = 10 suppresses LOESS across GIS 1-10. That is
-# DISPLAY-ONLY -- LOESS still fits over all transects and only the result is
+# skip_southern_domains = 10 suppresses LOWESS across GIS 1-10. That is
+# DISPLAY-ONLY -- LOWESS still fits over all transects and only the result is
 # truncated, so the southern transects still pull the values just north of the
 # cut. Left as built, because the calibrated preset was fit against this curve.
 #
@@ -1348,24 +1348,24 @@ COASTSAT_DATASETS = [
 # everything in this project should be 7 domains, that is what our group chose
 # as the range"). Every skill target is built at TARGET_WINDOW = 7, asserted
 # just below. From 2026-09-10 to 09-28 this was 10 alone; runs made before
-# 09-28 were scored against the LOESS-10 target, and the end-domain rates in
-# HATTERAS_BE_EDGE_ONLY were re-solved for LOESS-7 the same day.
-LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+# 09-28 were scored against the LOWESS-10 target, and the end-domain rates in
+# HATTERAS_BE_EDGE_ONLY were re-solved for LOWESS-7 the same day.
+LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 
 # Named here rather than left implicit. rate_comparison resolves the reference
 # window as max(window_domains); this makes that choice visible, and the
 # assertion below catches a window list whose maximum is not what was intended.
 TARGET_WINDOW = 7
-if TARGET_WINDOW != max(LOESS_CONFIG.window_domains):
+if TARGET_WINDOW != max(LOWESS_CONFIG.window_domains):
     raise ValueError(
         f"TARGET_WINDOW={TARGET_WINDOW} but rate_comparison will use "
-        f"max(window_domains)={max(LOESS_CONFIG.window_domains)} as the "
+        f"max(window_domains)={max(LOWESS_CONFIG.window_domains)} as the "
         f"reference curve -- section 12 would compare against a different "
         f"curve than the one reported here.")
 
 # AN EXTENDED GEOMETRY (2026-09-16) has CoastSat rows beyond GIS 90 of its
 # own (coastsat_extension_lrr.py). Its active window loads the surveyed
-# table WITH those rows appended, so one LOESS runs over the whole reach
+# table WITH those rows appended, so one LOWESS runs over the whole reach
 # and the new end domain has a target. The surveyed table stays the
 # interior score's target (COASTSAT_TARGET_BASE, below) in every geometry.
 if HATTERAS_GEOMETRY_EXTENDED:
@@ -1379,7 +1379,7 @@ if HATTERAS_GEOMETRY_EXTENDED:
 
 cs_series = build_coastsat_series(
     COASTSAT_DATASETS, active_period_start=START_YEAR,
-    loess_config=LOESS_CONFIG, domains=HATTERAS_DOMAINS)
+    lowess_config=LOWESS_CONFIG, domains=HATTERAS_DOMAINS)
 
 CS_ACTIVE = next((cs for cs in cs_series if cs["active"]), None)
 if CS_ACTIVE is None:
@@ -1392,7 +1392,7 @@ if CS_ACTIVE is None:
 
 
 COASTSAT_TARGET = build_target_table(
-    CS_ACTIVE, LOESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
+    CS_ACTIVE, LOWESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
 
 # The surveyed reach's own target: what the interior score is graded
 # against in every geometry (2026-09-16). The same object as
@@ -1406,17 +1406,17 @@ if HATTERAS_GEOMETRY_EXTENDED:
             period_start=START_YEAR,
             csv_path=str(COASTSAT_BASE_DIR / f"{START_YEAR}_{END_YEAR}"
                          / "transect_lrr_full.csv"))],
-        active_period_start=START_YEAR, loess_config=LOESS_CONFIG,
+        active_period_start=START_YEAR, lowess_config=LOWESS_CONFIG,
         domains=DEFAULT_DOMAINS)
     COASTSAT_TARGET_BASE = build_target_table(
-        _cs_base[0], LOESS_CONFIG, DEFAULT_DOMAINS, TARGET_WINDOW)
+        _cs_base[0], LOWESS_CONFIG, DEFAULT_DOMAINS, TARGET_WINDOW)
 
 
 # --- 8.4 report ---------------------------------------------------------------
 
 reports.coastsat_report(
     target=COASTSAT_TARGET, active=CS_ACTIVE, target_window=TARGET_WINDOW,
-    loess_config=LOESS_CONFIG, geometry=HATTERAS_DOMAINS, cs_series=cs_series,
+    lowess_config=LOWESS_CONFIG, geometry=HATTERAS_DOMAINS, cs_series=cs_series,
     updrift_gis=GROIN_UPDRIFT_GIS, downdrift_gis=GROIN_DOWNDRIFT_GIS)
 
 
@@ -1437,7 +1437,7 @@ reports.coastsat_report(
 RATE_FIG_KWARGS = dict(
     domains=HATTERAS_DOMAINS,
     annotations=HATTERAS_ANNOTATIONS,
-    loess_config=LOESS_CONFIG,        # section 8's, not DEFAULT_LOESS
+    lowess_config=LOWESS_CONFIG,        # section 8's, not DEFAULT_LOWESS
     config=DEFAULT_RATE_COMPARISON,
 )
 
@@ -1538,7 +1538,7 @@ if not _ann_populated:
         "geographic layer and no error. Check the import in section 1.")
 
 reports.figure_config_report(
-    annotations=HATTERAS_ANNOTATIONS, loess_config=LOESS_CONFIG,
+    annotations=HATTERAS_ANNOTATIONS, lowess_config=LOWESS_CONFIG,
     gif_config=gif_config, gif_jobs=GIF_JOBS,
     flip_sign_model=FLIP_SIGN_MODEL,
     real_domains_only=PLOT_REAL_DOMAINS_ONLY,
@@ -2096,9 +2096,9 @@ _META = {
     },
     "groin": {"enabled": GROIN_ENABLED},
     "skill": {
-        "target": (f"CoastSat LOESS {TARGET_WINDOW}-domain",
+        "target": (f"CoastSat LOWESS {TARGET_WINDOW}-domain",
                    "raw means over GIS 1-"
-                   f"{LOESS_CONFIG.skip_southern_domains}"),
+                   f"{LOWESS_CONFIG.skip_southern_domains}"),
         "estimator": (RATE_ESTIMATOR,
                       "OLS slope through every annual state, matching the "
                       "target's own definition"),

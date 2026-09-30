@@ -79,21 +79,21 @@ python scripts/hatteras_ms/experiments/HAT_offset_source_comparison_option_a.py 
 `figures/shoreline_offset_vs_coastsat_total_change_full_management.png`
 `figures/shoreline_offset_vs_coastsat_projected_change_full_management.png`
 (third comparison, 2026-09-28: the same shoreline runs against PROJECTED
-shoreline change, the CoastSat LRR fitted on 1996-2024 x 14 yr, LOESS 7 --
+shoreline change, the CoastSat LRR fitted on 1996-2024 x 14 yr, LOWESS 7 --
 one observed profile in both panels; scored in `graded_on_own_feature.csv`)
 `figures/total_change_difference_shoreline_minus_duneline_full_management.png`
 (they replace the 1996 natural/managed rates and difference figures).
 The two starts' total change differs by 3.4 m on average in 1996–2010 (18 m at
 GIS 80) and 3.1 m in 2010–2024 (15 m at GIS 23).
 
-Both observations smoothed at **7 domains** (LOESS, southern 10 raw; the
+Both observations smoothed at **7 domains** (LOWESS, southern 10 raw; the
 group's smoothing range, Hannah 2026-09-28); the model unsmoothed. This
 study sets 7 itself; the runner's own target is still 10.
 
 | offset, graded on | 1996–2010 explained | bias | 2010–2024 explained | bias |
 |---|---|---|---|---|
-| dune line, dune-line net change (LOESS 7) | −38% | +9.6 m | −86% | −10.5 m |
-| shoreline, CoastSat total change (own LRR × 14 yr, LOESS 7) | +21% | +0.7 m | −137% | −24.5 m |
+| dune line, dune-line net change (LOWESS 7) | −38% | +9.6 m | −86% | −10.5 m |
+| shoreline, CoastSat total change (own LRR × 14 yr, LOWESS 7) | +21% | +0.7 m | −137% | −24.5 m |
 
 Smoothing the dune observation LOWERED its scores (−11% → −38%, −46% → −86%
 unsmoothed): the smoothed line has less variance to explain, while the
@@ -123,7 +123,7 @@ unsmoothed model's domain-scale swings still count as error.
 
 **Where they overlap.** The offset study's dune-line, full-management run is effectively the same model as target_comparison's `ends_unsolved` set (option A, zeroBE, dune-line offset). Graded against the dune line in metres, the two agree up to one scaling choice:
 
-| model minus dune line | offset-source study | target_comparison (smoothed_loess7_with_cascade) |
+| model minus dune line | offset-source study | target_comparison (smoothed_lowess7_with_cascade) |
 |---|---|---|
 | 1996–2010 | +9.6 m | +10.7 m |
 | 2010–2024 | −10.5 m | −10.7 m |

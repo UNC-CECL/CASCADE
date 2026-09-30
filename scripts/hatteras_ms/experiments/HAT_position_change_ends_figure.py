@@ -57,7 +57,7 @@ def main():
     with plt.rc_context(W.p2.SCREEN_RC):
         png = W.fig3(runs=runs, ends={p: (e[1], e[90]) for p, e in ends.items()},
                      png=out / "recommended_vs_coastsat_position_change_ends.png",
-                     solved_on="the CoastSat end-minus-start position change (GIS 90 LOESS 7)")
+                     solved_on="the CoastSat end-minus-start position change (GIS 90 LOWESS 7)")
     print(png)
     return 0
 

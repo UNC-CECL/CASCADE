@@ -2,7 +2,7 @@
 
 The background-erosion (BE) calibration: the per-domain source/sink field that
 CASCADE carries as `DOMAIN_BE_RATES`. It is derived from what the modules could
-NOT explain — the residual between the LOESS-smoothed CoastSat rate and the
+NOT explain — the residual between the LOWESS-smoothed CoastSat rate and the
 model's own LRR — so every value has a named physical zone behind it.
 
 `scripts/site_layer/hatteras_site_config.py` is the source of truth for the field; the
@@ -14,7 +14,7 @@ copies under `data/hatteras_init/7-source-sink/` are exported FROM it by stage
 | stage | file | what it does |
 |---|---|---|
 | `1-prepare/` | `backfill_run_lrr.py` | Adds `lrr_m_yr` / `lrr_r2` to run rate CSVs written before the LRR estimator existed, recovering them exactly from each run's own `*_shoreline_matrix.npy`. A precondition, not a fit: stage 2 reads the LRR column and stops if a run lacks it. All 191 current runs already carry it — this is for a restored archive. |
-| `2-calibrate/` | `be_zone_residual_fit.py` | The calibration. LOESS-smooths the observed rate, differences it against the base-run LRR, identifies spatially coherent zones with a named mechanism, and writes `DOMAIN_BE_RATES*.txt` plus the metrics tables. |
+| `2-calibrate/` | `be_zone_residual_fit.py` | The calibration. LOWESS-smooths the observed rate, differences it against the base-run LRR, identifies spatially coherent zones with a named mechanism, and writes `DOMAIN_BE_RATES*.txt` plus the metrics tables. |
 | | `be_apply_fit_to_config.py` | Writes those rates into `hatteras_site_config.py`, preserving the two locked ends and the zone labels that a bare paste would destroy. `--add` accumulates instead of replacing. |
 | | `be_edge_domain_solve.py` | The two locked end domains (GIS 1, 90), which are solved separately by Newton steps on a secant rather than fitted from a residual. Reads finished runs and prints the next probe; it does not run the model. |
 | `3-figures/` | `plot_be_convergence.py` | Did the fixed-point solve converge, and was the zone set fixed before it ran. |

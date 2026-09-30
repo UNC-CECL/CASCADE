@@ -50,11 +50,11 @@ Every alongshore panel carries three things, because the target is a hybrid and
 plotting only half of it would misstate what the reported RMSE means:
 
 - pale blue scatter — individual CoastSat transect LRRs
-- solid blue — LOESS 7-domain and 10-domain smoothings
+- solid blue — LOWESS 7-domain and 10-domain smoothings
 - dashed navy — **the scoring target**: raw per-domain means over GIS 1–10, where
-  LOESS is suppressed near Oregon Inlet, spliced to LOESS-10 over GIS 11–90. It
-  sits on top of the LOESS-10 line over most of the island and separates in the
-  south, which is exactly where it stops being a LOESS curve.
+  LOWESS is suppressed near Oregon Inlet, spliced to LOWESS-10 over GIS 11–90. It
+  sits on top of the LOWESS-10 line over most of the island and separates in the
+  south, which is exactly where it stops being a LOWESS curve.
 
 Skill numbers are interior (GIS 2–89) throughout. The two end domains carry
 imposed rates under both presets, so island-wide skill partly scores the boundary

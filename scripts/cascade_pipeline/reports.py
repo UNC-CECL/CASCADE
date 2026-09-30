@@ -447,20 +447,20 @@ def scenario_summary_report(*, scenario, departures, switches, run_name_base,
 # SECTION 8 -- COASTSAT TARGET
 # =============================================================================
 
-def coastsat_report(*, target, active, target_window, loess_config, geometry,
+def coastsat_report(*, target, active, target_window, lowess_config, geometry,
                     cs_series, updrift_gis, downdrift_gis):
     """Prints the target curve, the unsmoothed southern zone, and the dipole."""
-    n_loess = int((target["source"].str.startswith("LOESS")).sum())
-    n_raw = len(target) - n_loess
+    n_lowess = int((target["source"].str.startswith("LOWESS")).sum())
+    n_raw = len(target) - n_lowess
     missing = target["target_lrr_m_yr"].isna().sum()
 
     print(f"\nactive dataset        {active['label']}")
-    print(f"target window         LOESS {target_window}-domain "
+    print(f"target window         LOWESS {target_window}-domain "
           f"({target_window * geometry.domain_spacing_m / 1000:.1f} km)"
           f"   -- rate_comparison uses max(window_domains), asserted above")
     print(f"COASTSAT_TARGET       {len(target)} domains: "
-          f"{n_raw} raw mean (D1-{loess_config.skip_southern_domains}), "
-          f"{n_loess} LOESS"
+          f"{n_raw} raw mean (D1-{lowess_config.skip_southern_domains}), "
+          f"{n_lowess} LOWESS"
           + (f", {missing} with no transects" if missing else ""))
     print(f"  range               "
           f"{target['target_lrr_m_yr'].min():+.2f} to "
@@ -468,10 +468,10 @@ def coastsat_report(*, target, active, target_window, loess_config, geometry,
     print("  This is the curve the 'calibBE' source/sink preset was fit "
           "against (section 4.3).")
 
-    print(f"\nUNSMOOTHED ZONE       D1-{loess_config.skip_southern_domains}, "
-          f"raw per-domain means -- no LOESS line here")
+    print(f"\nUNSMOOTHED ZONE       D1-{lowess_config.skip_southern_domains}, "
+          f"raw per-domain means -- no LOWESS line here")
     for row in target[target["gis_domain"]
-                      <= loess_config.skip_southern_domains].itertuples():
+                      <= lowess_config.skip_southern_domains].itertuples():
         mark = ""
         if row.gis_domain == updrift_gis:
             mark = "  <- groin updrift"
@@ -498,7 +498,7 @@ def coastsat_report(*, target, active, target_window, loess_config, geometry,
 # SECTION 9 -- FIGURE CONFIGURATION
 # =============================================================================
 
-def figure_config_report(*, annotations, loess_config, gif_config, gif_jobs,
+def figure_config_report(*, annotations, lowess_config, gif_config, gif_jobs,
                          flip_sign_model, real_domains_only, groin_enabled,
                          baseline_npy, baseline_name, output_base_dir):
     """Prints the figure configuration and whether the difference GIFs can run."""
@@ -507,8 +507,8 @@ def figure_config_report(*, annotations, loess_config, gif_config, gif_jobs,
           f"{len(annotations.piers)} piers, "
           f"{len(annotations.groins)} groin(s), "
           f"{len(annotations.shoal_zones)} shoal zones")
-    print(f"loess_config          windows {loess_config.window_domains}, "
-          f"skip D1-{loess_config.skip_southern_domains}   (section 8's)")
+    print(f"lowess_config          windows {lowess_config.window_domains}, "
+          f"skip D1-{lowess_config.skip_southern_domains}   (section 8's)")
     print(f"gif_config            {gif_config.fps} fps, stride "
           f"{gif_config.year_stride}, ocean at "
           f"{'bottom' if gif_config.ocean_at_bottom else 'top'}, "

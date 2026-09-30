@@ -10,7 +10,7 @@ ends do not move linearly and the model does.
     target     the CoastSat total change, mean of the end year's images minus
                mean of the start year's (5-scr/3-rates/coastsat/total_change/
                <window>/smoothed/tables/domain_smoothed.csv): GIS 1 raw, GIS 90
-               LOESS over common.SMOOTH_DOMAINS (7) -- the same treatment the
+               LOWESS over common.SMOOTH_DOMAINS (7) -- the same treatment the
                LRR target gives each end (Hannah: "use the smoothed value at
                GIS 90"; built by HAT_wave_recommendation_figures.
                observed_change_smoothed)
@@ -20,7 +20,7 @@ ends do not move linearly and the model does.
                change) apply as they are
     waves      option A (Hs 2.0, Tp 7.5, asymmetry 0.6, high-angle 0.5),
                full management, as the LRR solve
-    seed       the LOESS-7 LRR-solved ends (2026-09-28-ends-resolved-loess7)
+    seed       the LOWESS-7 LRR-solved ends (2026-09-28-ends-resolved-lowess7)
 
 WHERE: output/raw_runs/experiments/end-domain-boundaries/2026-09-28-ends-solved-on-position-change/
 
@@ -64,7 +64,7 @@ def main():
         if f.is_file():
             j = json.loads(f.read_text(encoding="utf-8"))
             j["target"] = ("CoastSat end-minus-start position change per window "
-                           f"(GIS 1 raw, GIS 90 LOESS {common.SMOOTH_DOMAINS}); residuals in m/yr = m / {YEARS}")
+                           f"(GIS 1 raw, GIS 90 LOWESS {common.SMOOTH_DOMAINS}); residuals in m/yr = m / {YEARS}")
             j["observed_change_m"] = {str(p): {"1": round(float(OBS[p][1]), 3), "90": round(float(OBS[p][90]), 3)}
                                       for p in OBS}
             f.write_text(json.dumps(j, indent=1), encoding="utf-8")

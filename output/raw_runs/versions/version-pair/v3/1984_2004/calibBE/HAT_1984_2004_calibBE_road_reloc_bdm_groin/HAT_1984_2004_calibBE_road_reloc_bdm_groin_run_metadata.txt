@@ -70,7 +70,7 @@ r_ipl_t0                         = 1.0758
 predicted_extent_m               = 3280
 
 [skill]
-target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
+target                           = CoastSat LOWESS 10-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
 mean_bias_m_yr                   = +0.0024
 rmse_m_yr                        = 0.5425

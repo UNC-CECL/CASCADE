@@ -61,7 +61,7 @@ else:
 from site_layer.hat_topo_version import domain_arrays, dune_line_for_year
 
 from cascade_pipeline import roadway as roadway_module
-from cascade_pipeline.coastsat_loess import compute_domain_means
+from cascade_pipeline.coastsat_lowess import compute_domain_means
 from cascade_pipeline.run_layout import write_path
 
 __all__ = [
@@ -494,16 +494,16 @@ def measure_groin_extent(shoreline_m, baseline_m, geometry, updrift_gis,
 # COASTSAT TARGETS AND THE SURVEYED END POSITION
 # =============================================================================
 
-def build_target_table(cs, loess_config, geometry, window):
+def build_target_table(cs, lowess_config, geometry, window):
     """Per-domain target rate, labelled with where each value came from.
 
     The target is not one curve: GIS 1..skip_southern_domains are raw
-    per-domain means (LOESS is suppressed there), and the rest is the
-    LOESS-smoothed reference window. Every row records which.
+    per-domain means (LOWESS is suppressed there), and the rest is the
+    LOWESS-smoothed reference window. Every row records which.
 
     Args:
         cs: One entry from build_coastsat_series.
-        loess_config: LoessConfig used to build it.
+        lowess_config: LowessConfig used to build it.
         geometry: DomainGeometry describing the real-domain span.
         window: Reference window width, in domains.
 
@@ -519,7 +519,7 @@ def build_target_table(cs, loess_config, geometry, window):
             f"window {window} not in {[w['window'] for w in cs['windows']]}")
     smoothed = dict(zip(match[0]["gis_x"], match[0]["smoothed"]))
 
-    skip = loess_config.skip_southern_domains
+    skip = lowess_config.skip_southern_domains
     raw_x, raw_y = compute_domain_means(
         cs["transect_domains"], cs["transect_rates"],
         geometry.first_gis_id, skip)
@@ -531,7 +531,7 @@ def build_target_table(cs, loess_config, geometry, window):
         if gis <= skip:
             value, source = raw.get(gis, np.nan), f"raw mean (D1-{skip})"
         else:
-            value, source = smoothed.get(gis, np.nan), f"LOESS {window}-dom"
+            value, source = smoothed.get(gis, np.nan), f"LOWESS {window}-dom"
         rows.append(dict(gis_domain=gis, target_lrr_m_yr=value, source=source,
                          n_transects=int(counts.get(gis, 0))))
     return pd.DataFrame(rows)

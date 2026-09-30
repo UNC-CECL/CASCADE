@@ -178,24 +178,24 @@ ANN_C_VILLAGE_LINE = "0.40"      # dark gray for village dividers
 ANN_C_PIER         = "#1565C0"   # blue for pier markers
 ANN_C_GROIN        = "#B71C1C"   # red for groin line
 
-# --- LOESS spatial smoothing overlay ---
-# LOESS_OVERLAY = True  : smoothed line drawn on top of the raw line.
-# LOESS_ONLY    = True  : raw line is drawn faintly (alpha * RAW_ALPHA_SCALE)
+# --- LOWESS spatial smoothing overlay ---
+# LOWESS_OVERLAY = True  : smoothed line drawn on top of the raw line.
+# LOWESS_ONLY    = True  : raw line is drawn faintly (alpha * RAW_ALPHA_SCALE)
 #                         so the smoothed signal is the dominant visual.
 #                         Set both True to suppress nearly all raw noise.
-# LOESS_FRAC    : fraction of domains used for each local fit.
+# LOWESS_FRAC    : fraction of domains used for each local fit.
 #                 7-domain window over 90 domains -> frac = 7/90 ≈ 0.078 (10/90 until 2026-09-28).
-#                 Matches the window used in the cross-period LOESS comparison
+#                 Matches the window used in the cross-period LOWESS comparison
 #                 and preserves community-scale signals (Avon, Wimble Shoals)
 #                 while filtering sub-kilometer noise.
 #                 Increase toward 0.20 to smooth more aggressively.
-LOESS_OVERLAY      = True
-LOESS_ONLY         = True    # if True, raw line drawn at reduced alpha
+LOWESS_OVERLAY      = True
+LOWESS_ONLY         = True    # if True, raw line drawn at reduced alpha
 RAW_ALPHA_SCALE    = 0.25    # multiplier applied to LINE_ALPHA for raw line
-                             # when LOESS_ONLY is True (0 = hide raw entirely)
-LOESS_FRAC         = 7 / 90  # 7-domain window, the model target's
-LOESS_LINE_WIDTH   = 3.0
-LOESS_LINE_ALPHA   = 0.95
+                             # when LOWESS_ONLY is True (0 = hide raw entirely)
+LOWESS_FRAC         = 7 / 90  # 7-domain window, the model target's
+LOWESS_LINE_WIDTH   = 3.0
+LOWESS_LINE_ALPHA   = 0.95
 
 # --- Physical plausibility cap (m/yr) ---
 # 20 m/yr passes genuine extreme signals at Oregon Inlet margin (domain 3)
@@ -237,14 +237,14 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 # existed since the tree was renamed, so this script could not run (2026-09-18).
 from coastsat_lrr import load_timeseries, compute_lrr
 
-# Optional LOESS for spatial overlay
-_LOESS_OK = False
-if LOESS_OVERLAY or LOESS_ONLY:
+# Optional LOWESS for spatial overlay
+_LOWESS_OK = False
+if LOWESS_OVERLAY or LOWESS_ONLY:
     try:
         from statsmodels.nonparametric.smoothers_lowess import lowess as sm_lowess
-        _LOESS_OK = True
+        _LOWESS_OK = True
     except ImportError:
-        print("WARNING: statsmodels not found — LOESS overlay disabled.")
+        print("WARNING: statsmodels not found — LOWESS overlay disabled.")
 
 
 # ============================================================
@@ -569,12 +569,12 @@ def compute_overall_lrr(
 
 
 # ============================================================
-# LOESS SPATIAL SMOOTHING HELPER
+# LOWESS SPATIAL SMOOTHING HELPER
 # ============================================================
 
-def loess_smooth(x: np.ndarray, y: np.ndarray, frac: float) -> np.ndarray:
+def lowess_smooth(x: np.ndarray, y: np.ndarray, frac: float) -> np.ndarray:
     """
-    Apply LOESS smoothing along the domain (spatial) axis.
+    Apply LOWESS smoothing along the domain (spatial) axis.
     Only fits on non-NaN points; NaN gaps remain NaN in comparison.
     """
     valid = ~np.isnan(y)
@@ -758,13 +758,13 @@ def plot_interval_lines(
         color = colors[i]
 
         # --- Raw line ---
-        # When LOESS_ONLY is active, draw the raw line at a much reduced alpha
+        # When LOWESS_ONLY is active, draw the raw line at a much reduced alpha
         # so the smoothed signal reads as the primary trace.  Setting
         # RAW_ALPHA_SCALE = 0.0 hides the raw line entirely.
         raw_alpha = (line_alpha * RAW_ALPHA_SCALE
-                     if (LOESS_ONLY and _LOESS_OK) else line_alpha)
+                     if (LOWESS_ONLY and _LOWESS_OK) else line_alpha)
         raw_lw    = (line_width * 0.7
-                     if (LOESS_ONLY and _LOESS_OK) else line_width)
+                     if (LOWESS_ONLY and _LOWESS_OK) else line_width)
         if raw_alpha > 0.0:
             ax_lrr.plot(
                 domains, lrr_vals,
@@ -772,17 +772,17 @@ def plot_interval_lines(
                 zorder=3, solid_capstyle="round",
             )
 
-        # --- LOESS smoothed overlay ---
-        if LOESS_OVERLAY and _LOESS_OK:
-            smoothed = loess_smooth(domains.astype(float), lrr_vals, LOESS_FRAC)
+        # --- LOWESS smoothed overlay ---
+        if LOWESS_OVERLAY and _LOWESS_OK:
+            smoothed = lowess_smooth(domains.astype(float), lrr_vals, LOWESS_FRAC)
             ax_lrr.plot(
                 domains, smoothed,
-                color=color, linewidth=LOESS_LINE_WIDTH, alpha=LOESS_LINE_ALPHA,
+                color=color, linewidth=LOWESS_LINE_WIDTH, alpha=LOWESS_LINE_ALPHA,
                 zorder=4, solid_capstyle="round",
             )
 
         # Legend line weight: use smoothed weight if overlay is active
-        leg_lw = (LOESS_LINE_WIDTH if (LOESS_OVERLAY and _LOESS_OK)
+        leg_lw = (LOWESS_LINE_WIDTH if (LOWESS_OVERLAY and _LOWESS_OK)
                   else line_width + 0.4)
         legend_handles.append(
             mlines.Line2D([], [], color=color, linewidth=leg_lw,
@@ -840,12 +840,12 @@ def plot_interval_lines(
 
     overlay_note = ""
     smoothing_note = ""
-    if LOESS_OVERLAY and _LOESS_OK:
-        overlay_note = f"  |  LOESS frac={LOESS_FRAC:.3f} (7 domains)"
-        if LOESS_ONLY and RAW_ALPHA_SCALE > 0:
+    if LOWESS_OVERLAY and _LOWESS_OK:
+        overlay_note = f"  |  LOWESS frac={LOWESS_FRAC:.3f} (7 domains)"
+        if LOWESS_ONLY and RAW_ALPHA_SCALE > 0:
             smoothing_note = "  |  thick=smoothed, faint=raw"
-        elif LOESS_ONLY and RAW_ALPHA_SCALE == 0:
-            smoothing_note = "  |  LOESS only (raw hidden)"
+        elif LOWESS_ONLY and RAW_ALPHA_SCALE == 0:
+            smoothing_note = "  |  LOWESS only (raw hidden)"
         else:
             smoothing_note = "  |  thin=raw, thick=smoothed"
     fig.suptitle(

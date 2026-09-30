@@ -58,7 +58,7 @@ def main():
     base_name = block.iloc[0].base_name
     cs_series, target = ps.coastsat_layers(args.start_year)
 
-    skip = ps.LOESS_CONFIG.skip_southern_domains
+    skip = ps.LOWESS_CONFIG.skip_southern_domains
     active = next(cs for cs in cs_series if cs["active"])
     south = np.asarray(active["transect_domains"]) <= skip
     dots_x = (np.asarray(active["transect_along_coast"])[south]
@@ -82,7 +82,7 @@ def main():
                    label=f"CoastSat transects, D1–{skip}")
         ax.plot(target.gis_domain, target.target_lrr_m_yr, color="#08306B",
                 lw=1.8, zorder=5,
-                label=f"CoastSat LRR, {ps.TARGET_WINDOW}-domain LOESS "
+                label=f"CoastSat LRR, {ps.TARGET_WINDOW}-domain LOWESS "
                       f"(domain means D1–{skip})")
         ax.plot(rates.gis_domain, rates.lrr_m_yr, color=color, lw=2.0,
                 zorder=6, label=f"Model, {label.lower()} {value:g}")

@@ -21,9 +21,9 @@
 #   prints the next probe, so every step stays a deliberate act.
 #
 # THE TWO TARGETS ARE DIFFERENT ESTIMATORS, DELIBERATELY
-#   GIS 1  the raw per-domain transect mean. LoessConfig.skip_southern_domains
+#   GIS 1  the raw per-domain transect mean. LowessConfig.skip_southern_domains
 #          is 10, so D1-D10 are drawn raw rather than smoothed.
-#   GIS 90 the LOESS value (TARGET_WINDOW, 7 since 2026-09-28; 10 before),
+#   GIS 90 the LOWESS value (TARGET_WINDOW, 7 since 2026-09-28; 10 before),
 #          which is what is drawn everywhere north of D10.
 #   That splice is what the rate-comparison figure draws, so fitting against
 #   the same table means fit and figure cannot disagree. Both come out of
@@ -42,7 +42,7 @@
 #   HAT_GEOMETRY=n115 -- and the target for a
 #   domain beyond GIS 90 comes from the window's extension rate table
 #   (coastsat_lrr/<window>/ext/transect_lrr_with_base.csv, the surveyed
-#   transects plus the extension's, one LOESS over the whole reach), which is
+#   transects plus the extension's, one LOWESS over the whole reach), which is
 #   exactly the table the runner grades that geometry's ends against. Run
 #   this script with the SAME HAT_GEOMETRY as the runs it reads. A run that
 #   imposed nothing at an end (a zeroBE probe) reads as 0.0 there.
@@ -93,8 +93,8 @@ from site_layer.hatteras_site_config import (                       # noqa: E402
     HATTERAS_PERIODS, HATTERAS_DOMAINS, HATTERAS_BE_EDGE_DOMAINS,
     HATTERAS_GEOMETRY, HATTERAS_GEOMETRY_EXTENDED)
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
-from cascade_pipeline.coastsat_loess import (            # noqa: E402
-    CoastSatDataset, LoessConfig, build_coastsat_series)
+from cascade_pipeline.coastsat_lowess import (            # noqa: E402
+    CoastSatDataset, LowessConfig, build_coastsat_series)
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (              # noqa: E402
     MATRIX_KIND, find_run_dir, load_run_index)
@@ -106,7 +106,7 @@ RUN_INDEX = RUN_ROOT / "run_index.csv"
 
 # Section 8 of the runner builds the target this way. Kept identical rather
 # than imported from it, because importing that file RUNS a hindcast.
-LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
 
 # The model side of the residual. Must be the OLS slope, matching the
@@ -137,8 +137,8 @@ def load_target(start_year, end_year, window=None):
     series = build_coastsat_series(
         [CoastSatDataset(label="CoastSat {0}".format(start_year),
                          period_start=start_year, csv_path=str(csv_path))],
-        start_year, LOESS_CONFIG, domains=HATTERAS_DOMAINS)
-    table = build_target_table(series[0], LOESS_CONFIG, HATTERAS_DOMAINS,
+        start_year, LOWESS_CONFIG, domains=HATTERAS_DOMAINS)
+    table = build_target_table(series[0], LOWESS_CONFIG, HATTERAS_DOMAINS,
                                TARGET_WINDOW)
     return dict(zip([int(g) for g in table["gis_domain"]],
                     [float(r) for r in table["target_lrr_m_yr"]]))
@@ -228,7 +228,7 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
     end_year = HATTERAS_PERIODS[period]["end_year"]
     if target_source == "coastsat":
         target = load_target(start_year, end_year, coastsat_window)
-        target_note = "CoastSat LRR{0}: raw mean at GIS 1, LOESS-{1} at GIS 90".format(
+        target_note = "CoastSat LRR{0}: raw mean at GIS 1, LOWESS-{1} at GIS 90".format(
             " {0}-{1}".format(*coastsat_window) if coastsat_window else "", TARGET_WINDOW)
     else:
         target, target_note = load_dune_target(start_year, end_year, dune_smooth)

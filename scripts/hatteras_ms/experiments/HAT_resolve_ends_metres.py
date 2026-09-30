@@ -13,7 +13,7 @@ m/yr) were solved at Hs 2.5 on the /10 offset. Chosen with Hannah:
                relocations, no groin), as the matrix end values always were;
                the pair is then used for natural and managed runs alike
     target     each window's CoastSat LRR: GIS 1 against the raw domain mean,
-               GIS 90 against the LOESS value (10 domains until 2026-09-28,
+               GIS 90 against the LOWESS value (10 domains until 2026-09-28,
                7 since: common.SMOOTH_DOMAINS)
     solve      step 0 a fresh zeroBE run; then HAT_wave_shortlist_ends_solved's
                safeguarded step (secant capped at +-30 m/yr until a probe lies
@@ -30,7 +30,7 @@ WHERE: output/raw_runs/experiments/end-domain-boundaries/2026-09-27-ends-resolve
 
     python scripts/hatteras_ms/experiments/HAT_resolve_ends_metres.py
 
-    --tag   file the solve under another study (2026-09-28: the LOESS-7 re-solve)
+    --tag   file the solve under another study (2026-09-28: the LOWESS-7 re-solve)
     --seed  "1996=4.8394,17.545;2010=18.8,24.535": step 1 probes these ends
             instead of the first-gain guess from zeroBE, so a re-solve near a
             known answer starts there

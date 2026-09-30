@@ -10,8 +10,8 @@ potentially condensed, especially with the naming")
     Until 2026-09-17 this was two scripts and two output trees,
     observed_vs_modeled_windows/ (CoastSat, 09-15) and
     duneline_vs_modeled_windows/ (the dune line, 09-16), with two
-    vocabularies for one axis (domain_means / loess_target beside
-    endpoint/raw / endpoint/loess), five stems that all said "model", and the
+    vocabularies for one axis (domain_means / lowess_target beside
+    endpoint/raw / endpoint/lowess), five stems that all said "model", and the
     dune tree carrying four copies of its own layout under sensitivity/.
     Now: one tree under output/comparisons/model_vs_observed/ (named
     rate_windows/ until 2026-09-18), organised by OBSERVATION and then
@@ -64,8 +64,8 @@ THE OBSERVATIONS
                 satellite dates per transect. Two readings:
         means        the per-domain means as the 5-scr figure draws them
                      (sign-coloured line, fill, +/-1 std)
-        loess        the SCORING TARGET as the fill: a TARGET_WINDOW-domain (7; 10 until
-                     2026-09-28) LOESS of the
+        lowess        the SCORING TARGET as the fill: a TARGET_WINDOW-domain (7; 10 until
+                     2026-09-28) LOWESS of the
                      transect rates north of D10 and the raw means over
                      D1-10, as cascade_pipeline.hindcast.build_target_table
                      makes it for the runner; the means as dots over it
@@ -83,8 +83,8 @@ THE OBSERVATIONS
                 computed here, so this figure and the stored numbers cannot
                 disagree. Two readings:
         endpoint        two surveys differenced, per domain, over the interval
-        endpoint-loess  the same per transect, then the scoring target's
-                        treatment (LOESS frac 0.111 vs CoastSat's 0.110)
+        endpoint-lowess  the same per transect, then the scoring target's
+                        treatment (LOWESS frac 0.111 vs CoastSat's 0.110)
     A third reading, lrr (an OLS through every dune line in the window), was
     RETIRED 2026-09-18 with 3-rates/duneline_lrr (Hannah: "these should not be
     lrr, they would just be endpoint, we are tracking net change").
@@ -92,7 +92,7 @@ THE OBSERVATIONS
                 AS NET CHANGE between the same two dune-line dates (2026-09-18,
                 Hannah): CoastSat blue (3-rates/coastsat/endpoint, the mean
                 position within +/-6 months of each date, differenced) and the
-                dune line red, each given the scoring target's LOESS treatment;
+                dune line red, each given the scoring target's LOWESS treatment;
                 a model line per solve, all as the endpoint rate. The CoastSat
                 LRR, the model's actual scoring target, is in vs_shoreline/.
                 Drawn twice since 2026-09-29 (Hannah: "subfolder showing these
@@ -180,9 +180,9 @@ from matplotlib.legend_handler import HandlerTuple  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    CoastSatDataset, LoessConfig, build_coastsat_series, compute_domain_means,
-    loess_smooth_transect_to_domains)
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    CoastSatDataset, LowessConfig, build_coastsat_series, compute_domain_means,
+    lowess_smooth_transect_to_domains)
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
     find_run_dir, legacy_arm_to_kind_tag, load_run_index)
@@ -259,7 +259,7 @@ MAIN_DUNE = "dune-mean3"
 # solve exists, every figure draws the matrix (ends solved on CoastSat), the
 # dune-line figures included, and the sensitivity level that exists only to
 # swap or vary the dune solve is not drawn. MODEL_SETS and MAIN_DUNE stay
-# defined: target_comparison, smoothing_scale and smoothed_loess7_with_cascade
+# defined: target_comparison, smoothing_scale and smoothed_lowess7_with_cascade
 # import them and read the dune solve on their own terms.
 DUNE_SOLVE_CURRENT = True   # re-solved under option A, 2026-09-27
 DRAWN_SETS = MODEL_SETS if DUNE_SOLVE_CURRENT else ("coastsat",)
@@ -279,15 +279,15 @@ LS_SECOND = (0, (4, 2))     # the second model line where two share a panel
 NO_RUN_NOTE = "model not yet run for this window"
 
 # The scoring target, as the runner builds it (HAT_hindcast_1984_2024.py
-# section 8): one LOESS window, raw means over D1-D10.
-# 7 since 2026-09-28 (Hannah: "redo the target comparison with LOESS 7"),
+# section 8): one LOWESS window, raw means over D1-D10.
+# 7 since 2026-09-28 (Hannah: "redo the target comparison with LOWESS 7"),
 # following the runner's TARGET_WINDOW; 10 until then. The CoastSat-solved
-# end rates the figures draw were re-solved against the LOESS-7 value at GIS 90
-# the same day (end-domain-boundaries/2026-09-28-ends-resolved-loess7).
+# end rates the figures draw were re-solved against the LOWESS-7 value at GIS 90
+# the same day (end-domain-boundaries/2026-09-28-ends-resolved-lowess7).
 TARGET_WINDOW = 7
-LOESS_CONFIG = LoessConfig(window_domains=(TARGET_WINDOW,),
+LOWESS_CONFIG = LowessConfig(window_domains=(TARGET_WINDOW,),
                            skip_southern_domains=10)
-SKIP = LOESS_CONFIG.skip_southern_domains
+SKIP = LOWESS_CONFIG.skip_southern_domains
 TARGET_OUTLINE_LW = 0.8    # the edge of the target's fill
 RAW_DOT_PT2 = 4.0          # the per-domain means as dots: marker area, ~2 pt across
 
@@ -296,24 +296,24 @@ RAW_DOT_PT2 = 4.0          # the per-domain means as dots: marker area, ~2 pt ac
 # name the comparison in words (Hannah, 2026-09-18): the feature, not the
 # data source, and "netchange", not "endpoint".
 #   coastsat  means           line + std + fill        lrr_m_yr
-#             loess           target fill + dots       lrr_m_yr
+#             lowess           target fill + dots       lrr_m_yr
 #   duneline  endpoint        line + fill              change_rate_m_yr
-#             endpoint-loess  target fill + dots       change_rate_m_yr
+#             endpoint-lowess  target fill + dots       change_rate_m_yr
 #   both      both            two target lines         per solve (BOTH_COLS)
 VARIANTS = {
     "coastsat/means":             ("coastsat", "means",          "lrr_m_yr",         "model_vs_shoreline_means"),
-    "coastsat/loess":             ("coastsat", "loess",          "lrr_m_yr",         "model_vs_shoreline_smoothed"),
+    "coastsat/lowess":             ("coastsat", "lowess",          "lrr_m_yr",         "model_vs_shoreline_smoothed"),
     "duneline/endpoint":          ("duneline", "endpoint",       "change_rate_m_yr", "model_vs_duneline_netchange"),
-    "duneline/endpoint-loess":    ("duneline", "endpoint-loess", "change_rate_m_yr", "model_vs_duneline_netchange_smoothed"),
+    "duneline/endpoint-lowess":    ("duneline", "endpoint-lowess", "change_rate_m_yr", "model_vs_duneline_netchange_smoothed"),
     "both":                       ("both",     "both",           "lrr_m_yr",         "model_vs_shoreline_and_duneline_rate"),
     "both-netchange":             ("both",     "both-netchange", "change_rate_m_yr", "model_vs_shoreline_and_duneline_netchange"),
     "sensitivity/mixed-estimator": ("duneline", "endpoint",      "lrr_m_yr",         "model_ols_vs_duneline_netchange"),
 }
 OUTPUT_FOLDER = {
     "coastsat/means":              "vs_shoreline/domain_means",
-    "coastsat/loess":              "vs_shoreline/smoothed",
+    "coastsat/lowess":              "vs_shoreline/smoothed",
     "duneline/endpoint":           "vs_duneline/endpoint_net_change",
-    "duneline/endpoint-loess":     "vs_duneline/net_change_smoothed",
+    "duneline/endpoint-lowess":     "vs_duneline/net_change_smoothed",
     "both":                        "vs_shoreline_and_duneline/change_rate",
     "both-netchange":              "vs_shoreline_and_duneline/net_change",
     "sensitivity/mixed-estimator": "sensitivity/mixed-estimator",
@@ -337,8 +337,8 @@ def _scale(variant, window):
 
 def _y_label(variant):
     return Y_LABEL_NET if variant in NET_CHANGE_VARIANTS else Y_LABEL
-COASTSAT_VARIANTS = ("coastsat/means", "coastsat/loess")
-DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-loess")
+COASTSAT_VARIANTS = ("coastsat/means", "coastsat/lowess")
+DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-lowess")
 # The "both" panel draws each solve in its own target's estimator.
 # Since 2026-09-18 both observations in both/ are NET CHANGE between the same
 # two dates (Hannah), so every model line there is the endpoint rate too.
@@ -464,20 +464,20 @@ def load_models(model_set):
 # the observations
 # -----------------------------------------------------------------------------
 def _target_frame(series):
-    table = build_target_table(series, LOESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
+    table = build_target_table(series, LOWESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
     table = table.rename(columns={"gis_domain": "domain_number"})
     return _full().merge(table[["domain_number", "target_lrr_m_yr", "source"]],
                          on="domain_number", how="left")
 
 
 def load_coastsat_target(window):
-    """The per-domain scoring target: raw means D1-10, the TARGET_WINDOW LOESS
+    """The per-domain scoring target: raw means D1-10, the TARGET_WINDOW LOWESS
     beyond, from build_target_table on the window's transect_lrr_full.csv."""
     start, end = window
     series = build_coastsat_series(
         [CoastSatDataset(label=f"CoastSat {start}-{end}", period_start=start,
                          csv_path=str(lrr_csv(start, end)))],
-        active_period_start=start, loess_config=LOESS_CONFIG,
+        active_period_start=start, lowess_config=LOWESS_CONFIG,
         domains=HATTERAS_DOMAINS)
     return _target_frame(series[0])
 
@@ -522,7 +522,7 @@ def load_coastsat_endpoint(window):
         [CoastSatDataset(label=f"CoastSat endpoint {start}-{end}", period_start=start,
                          csv_path=str(coastsat_endpoint_csv(start, end, "transect")),
                          rate_col="rate_m_yr")],
-        active_period_start=start, loess_config=LOESS_CONFIG,
+        active_period_start=start, lowess_config=LOWESS_CONFIG,
         domains=HATTERAS_DOMAINS)
     return ddf, _target_frame(series[0])
 
@@ -542,15 +542,15 @@ def load_dune_endpoint_target(window, meta):
              + (rank + 0.5) * (sp / n)).to_numpy(dtype=float)
     dom = t["domain_id"].to_numpy(dtype=int)
     rate = t["rate"].to_numpy(dtype=float)
-    gis_x, smoothed, frac = loess_smooth_transect_to_domains(
+    gis_x, smoothed, frac = lowess_smooth_transect_to_domains(
         along, rate, dom, TARGET_WINDOW, domains=HATTERAS_DOMAINS)
-    print(f"  LOESS applied: window={TARGET_WINDOW} domains  frac={frac:.3f}  "
+    print(f"  LOWESS applied: window={TARGET_WINDOW} domains  frac={frac:.3f}  "
           f"(dune line {start}-{end}, {len(t)} transects)")
     smooth = dict(zip(gis_x, smoothed))
     raw_x, raw_y = compute_domain_means(dom, rate, HATTERAS_DOMAINS.first_gis_id, SKIP)
     raw = dict(zip(raw_x, raw_y))
     rows = [(g, raw.get(g, np.nan), f"raw mean (D1-{SKIP})") if g <= SKIP
-            else (g, smooth.get(g, np.nan), f"LOESS {TARGET_WINDOW}-dom")
+            else (g, smooth.get(g, np.nan), f"LOWESS {TARGET_WINDOW}-dom")
             for g in range(1, N + 1)]
     return pd.DataFrame(rows, columns=["domain_number", "target_lrr_m_yr", "source"])
 
@@ -571,17 +571,17 @@ class Observation:
         """(line/dots frame, target frame or None) for one reading."""
         return {
             "means":          (self.coastsat, None),
-            "loess":          (self.coastsat, self.coastsat_target),
+            "lowess":          (self.coastsat, self.coastsat_target),
             "endpoint":       (self.endpoint, None),
-            "endpoint-loess": (self.endpoint, self.endpoint_target),
+            "endpoint-lowess": (self.endpoint, self.endpoint_target),
         }[reading]
 
     # the scoring targets, for tables/skill.csv
-    TARGETS = (("coastsat_loess", lambda o: o.coastsat_target["target_lrr_m_yr"]),
+    TARGETS = (("coastsat_lowess", lambda o: o.coastsat_target["target_lrr_m_yr"]),
                ("endpoint_raw",   lambda o: o.endpoint["mean_lrr"]),
-               ("endpoint_loess", lambda o: o.endpoint_target["target_lrr_m_yr"]),
+               ("endpoint_lowess", lambda o: o.endpoint_target["target_lrr_m_yr"]),
                ("cs_endpoint_raw",   lambda o: o.cs_endpoint["mean_lrr"]),
-               ("cs_endpoint_loess", lambda o: o.cs_endpoint_target["target_lrr_m_yr"]))
+               ("cs_endpoint_lowess", lambda o: o.cs_endpoint_target["target_lrr_m_yr"]))
 
 
 def shared_bounds(observations, model_sets):
@@ -715,7 +715,7 @@ def _estimator_label(variant):
     return "OLS rate" if VARIANTS[variant][2] == "lrr_m_yr" else "endpoint rate"
 
 
-TARGET_LABEL = (f"{TARGET_WINDOW}-domain LOESS (raw means D1–{SKIP})")
+TARGET_LABEL = (f"{TARGET_WINDOW}-domain LOWESS (raw means D1–{SKIP})")
 
 
 def add_legend(fig, variant, model_keys):
@@ -746,14 +746,14 @@ def add_legend(fig, variant, model_keys):
                    Line2D([], [], color=INK_MUTED, lw=0.5, ls=(0, (1, 1.6)))]
         labels = ["observed CoastSat domain mean LRR (accreting / eroding)",
                   "observed ±1 std across the domain's transects"]
-    elif reading == "loess":
+    elif reading == "lowess":
         handles = [dot_pair, fill_pair]
         labels = ["observed CoastSat domain mean LRR (accreting / eroding)",
                   f"scoring target: {TARGET_LABEL}"]
     elif reading == "endpoint":
         handles = [line_pair]
         labels = ["observed dune-line change, two surveys (seaward / landward)"]
-    else:   # endpoint-loess
+    else:   # endpoint-lowess
         handles = [dot_pair, fill_pair]
         labels = ["observed dune-line change, two surveys, per domain (seaward / landward)",
                   f"smoothed as the scoring target: {TARGET_LABEL}"]
@@ -789,7 +789,7 @@ def _runs_clause(rows):
                      f"({r['arm']} arm)" for r in rows if r["run_name"])
 
 
-TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOESS of the transect rates north of "
+TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOWESS of the transect rates north of "
                  f"domain {SKIP}, and the raw domain means over domains 1–{SKIP} "
                  "where the Oregon Inlet boundary dominates")
 
@@ -829,14 +829,14 @@ def _observed_clause(observation, reading, metas):
             "transects inside each 500 m domain, blue and filled where the shoreline "
             "moved seaward, red where it moved landward; the dotted lines are ±1 "
             "standard deviation across those transects.")
-    if reading == "loess":
+    if reading == "lowess":
         return (
             " The filled shape is the scoring target the model is graded against, "
             "blue where the shoreline moved seaward and red where it moved landward: "
             f"{TARGET_CLAUSE}, as built by cascade_pipeline.hindcast.build_target_table. "
             "The dots in the same colours are the unsmoothed mean linear regression "
             "rate of the CoastSat transects inside each 500 m domain, one per domain.")
-    if reading == "endpoint-loess":
+    if reading == "endpoint-lowess":
         return (
             " The filled shape is the dune-line change given the treatment the "
             "CoastSat scoring target gets: the digitised dune line at the window's end "
@@ -1039,9 +1039,9 @@ def fair_rows(skill_df):
     """Each target scored against the runs solved on it, with its own
     estimator: the three columns of the README's skill table."""
     s = skill_df
-    return s[((s.model_ends == "coastsat") & (s.target == "coastsat_loess")
+    return s[((s.model_ends == "coastsat") & (s.target == "coastsat_lowess")
               & (s.model_estimator == "lrr"))
-             | ((s.model_ends == DUNE_FIG_SET) & (s.target == "endpoint_loess")
+             | ((s.model_ends == DUNE_FIG_SET) & (s.target == "endpoint_lowess")
                 & (s.model_estimator == "endpoint"))]
 
 

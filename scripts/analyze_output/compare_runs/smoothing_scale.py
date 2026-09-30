@@ -16,8 +16,8 @@ THE FIGURE IS THE POINT (Hannah, 2026-09-21)
     of the blue family around it is the whole result.
 
     The runs are graded against a target that is NOT the raw rate: raw domain
-    means over GIS 1-10, a 10-domain LOESS of the transect rates beyond
-    (cascade_pipeline.coastsat_loess, via hindcast.build_target_table). The
+    means over GIS 1-10, a 10-domain LOWESS of the transect rates beyond
+    (cascade_pipeline.coastsat_lowess, via hindcast.build_target_table). The
     darkest curve is that grading window; the palest is no smoothing at all.
     Over GIS 1-10 all four curves coincide, because the splice keeps the raw
     domain means there whatever the window.
@@ -30,7 +30,7 @@ THE TABLE, BEHIND THE FIGURE
     tables/skill_by_window.csv scores every combination in two forms:
     as_graded      the target smoothed, the model raw. What the runner
                    actually does, and what the figures draw. It is skill.csv's
-                   coastsat_loess generalised to four widths.
+                   coastsat_lowess generalised to four widths.
     scale_matched  target and model both smoothed at the same width -- the
                    only form in which the two sides are treated alike. Kept
                    for the record; it is not drawn.
@@ -52,7 +52,7 @@ THE NULL, AND WHY IT IS NOT OPTIONAL HERE
     number in the table that a wider window cannot flatter.
 
 ONE ASYMMETRY, ON THE RECORD
-    The target's LOESS is fitted at TRANSECT resolution (~906 points) and then
+    The target's LOWESS is fitted at TRANSECT resolution (~906 points) and then
     averaged to domains. The model exists only at 90 domains, so smoothing it
     means lowess over those 90 values at the same physical width (frac =
     window / n). Same width, coarser resolution. That is why as_graded is
@@ -104,7 +104,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 from statsmodels.nonparametric.smoothers_lowess import lowess  # noqa: E402
 
-from cascade_pipeline.coastsat_loess import spliced_loess_series  # noqa: E402
+from cascade_pipeline.coastsat_lowess import spliced_lowess_series  # noqa: E402
 from site_layer.hat_observed_rates import dune_endpoint_csv, lrr_csv  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
@@ -119,7 +119,7 @@ N_NULL = 1000
 SEED = 20260921
 FORMS = ("as_graded", "scale_matched")
 # Every LRR window on disk, for the structure diagnostic. The target is the
-# full-period 1996-2024; the others are there because the same LOESS removes
+# full-period 1996-2024; the others are there because the same LOWESS removes
 # very different amounts from them, and 1984-2004 is the field the
 # method-comparison figure draws (Hannah, 2026-09-21).
 LRR_WINDOWS = ((1984, 2004), (2004, 2024), (1996, 2024), (1996, 2010), (2010, 2024))
@@ -158,7 +158,7 @@ def duneline_transects(window):
 
 
 def field_structure(window, windows):
-    """How much alongshore structure a LOESS of each width takes out of one
+    """How much alongshore structure a LOWESS of each width takes out of one
     LRR field, and whether there is independent error for it to average.
 
     Reported as the SD removed IN m/yr, not as a share of variance: the
@@ -166,7 +166,7 @@ def field_structure(window, windows):
     wiggle that is plainly visible on the figure reads as a few per cent of it
     and the percentage badly undersells the effect (Hannah caught this
     2026-09-21, comparing against the 1984-2004 panels of
-    input_prep/6-scr-smooth/loess_method_comparison.py).
+    input_prep/6-scr-smooth/lowess_method_comparison.py).
 
     Returns a dict, or None when the window's LRR has not been built.
     """
@@ -196,7 +196,7 @@ def field_structure(window, windows):
     for w in windows:
         if not w:
             continue
-        sm, _ = spliced_loess_series(dom_ids, along, rate, w, skip=rw.SKIP, domains=DOM)
+        sm, _ = spliced_lowess_series(dom_ids, along, rate, w, skip=rw.SKIP, domains=DOM)
         resid = dmean.reindex(sm.index) - sm
         out[f"sd_removed_w{w:02d}_m_yr"] = round(float(resid.std(ddof=1)), 4)
     for k in (1, 2, 3, 5, 10):
@@ -208,7 +208,7 @@ def target_structure(windows, lrr_windows=None):
     """field_structure over every LRR window on disk, so the grading window's
     effect on the TARGET can be read against the other windows -- in
     particular the 1984-2004 field the method-comparison figure draws, where
-    the same LOESS removes roughly twice as much."""
+    the same LOWESS removes roughly twice as much."""
     lrr_windows = lrr_windows or LRR_WINDOWS
     rows = [r for r in (field_structure(w, windows) for w in lrr_windows) if r]
     return pd.DataFrame(rows)
@@ -264,9 +264,9 @@ def build(observations, models, windows, n_null):
         years = o.window[1] - o.window[0]
         du_parts = duneline_transects(o.window)
         for w in windows:
-            cs, _ = spliced_loess_series(*(cs_parts[0], cs_parts[1], cs_parts[2]),
+            cs, _ = spliced_lowess_series(*(cs_parts[0], cs_parts[1], cs_parts[2]),
                                          window=w, skip=rw.SKIP, domains=DOM)
-            du, _ = spliced_loess_series(*(du_parts[0], du_parts[1], du_parts[2]),
+            du, _ = spliced_lowess_series(*(du_parts[0], du_parts[1], du_parts[2]),
                                          window=w, skip=rw.SKIP, domains=DOM)
             targets[(o.window, "coastsat", w)] = cs.reindex(idx) * years
             targets[(o.window, "duneline", w)] = du.reindex(idx) * years
@@ -346,7 +346,7 @@ def figure(values, skill, window, windows, model_key=tc.UNSOLVED):
     # target here is the 1996-2024 LRR carried onto a 14-yr window.
     ax.set_title(f"Projected shoreline change vs CASCADE, {window[0]}–{window[1]} "
                  f"(CoastSat LRR 1996–2024 × {window[1] - window[0]} yr, "
-                 "every LOESS width)")
+                 "every LOWESS width)")
     # mean_lrr all-NaN draws the frame, grid and village bands with no sign
     # fill -- four curves share this panel, so the blue/red fill is not
     # available here (the idiom is target_comparison.draw).
@@ -429,7 +429,7 @@ def structure_section(struct, windows):
         "Decided 2026-09-21 (Hannah): the window stays at 10 domains, but it is not "
         "noise removal and should not be described as such. Moved to "
         f"{rw.TARGET_WINDOW} domains on 2026-09-28 (Hannah), following the runner. "
-        "The CoastSat-solved end rates drawn here were re-solved against the LOESS-7 "
+        "The CoastSat-solved end rates drawn here were re-solved against the LOWESS-7 "
         "value at GIS 90 the same day; nothing is re-solved for this table.",
         "",
         "All figures in m/yr of alongshore structure removed, NOT as a share of "
@@ -443,13 +443,13 @@ def structure_section(struct, windows):
         "",
         "**The 1996-2024 LRR is the smoothest of the five fields**, because it is the "
         "longest fit: each transect's OLS slope is the best constrained and there is "
-        f"least scatter to take out. At 5 domains the LOESS removes "
+        f"least scatter to take out. At 5 domains the LOWESS removes "
         f"{tgt['sd_removed_w05_m_yr']:.3f} m/yr from it against "
         f"{struct[struct.window == '1984_2004'].iloc[0]['sd_removed_w05_m_yr']:.3f} "
         "m/yr from 1984-2004 -- less than half. `projected_vs_model_<window>.png` then "
         "projects over 14 yr rather than 20, which halves the apparent difference "
         "again. So the near-overlapping curves there and the obvious smoothing in "
-        "`input_prep/6-scr-smooth/loess_method_comparison.py` are the SAME LOESS on "
+        "`input_prep/6-scr-smooth/lowess_method_comparison.py` are the SAME LOWESS on "
         "different fields, not a difference in method.",
         "",
         "### It is still not denoising, for this target",
@@ -482,7 +482,7 @@ def structure_section(struct, windows):
         "roughly twice the estimation noise (within-domain SD "
         f"{struct[struct.window == '1996_2010'].iloc[0]['sd_within_domain_m_yr']:.3f} "
         f"m/yr for 1996-2010 against {tgt.sd_within_domain_m_yr:.3f} here), so for "
-        "those targets the LOESS is doing real denoising. Do not carry the statement "
+        "those targets the LOWESS is doing real denoising. Do not carry the statement "
         "across to them. The numbers are in `tables/target_structure.csv`.",
         "",
     ]
@@ -491,7 +491,7 @@ def structure_section(struct, windows):
 def provenance(skill, windows, n_null, runs_used, structure=None):
     def table(form, target):
         s = skill[(skill.form == form) & (skill.target == target)]
-        head = ("| window | model set | LOESS | bias (m) | RMSE (m) | r | null r (p95) "
+        head = ("| window | model set | LOWESS | bias (m) | RMSE (m) | r | null r (p95) "
                 "| clears null |")
         out = [head, "|" + "---|" * 7]
         for _, x in s.sort_values(["window", "model_ends", "smoothing_domains"]).iterrows():
@@ -534,7 +534,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
         *(structure or []),
         "## The question behind it",
         "",
-        f"The runs are graded against a {rw.TARGET_WINDOW}-domain LOESS of the transect rates (raw "
+        f"The runs are graded against a {rw.TARGET_WINDOW}-domain LOWESS of the transect rates (raw "
         f"domain means over GIS 1-{rw.SKIP}). That window has never been examined, and "
         "`../projected/tables/skill.csv` shows it is load-bearing. The "
         "table here sweeps it against the full-period CoastSat target (the 1996-2024 "
@@ -565,7 +565,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
         "- **as_graded** -- target smoothed, model raw: what the runner does, and what "
         "the figures draw.",
         "- **scale_matched** -- both smoothed at the same width, kept for the record "
-        "and not drawn. The target's LOESS is "
+        "and not drawn. The target's LOWESS is "
         "fitted at transect resolution (~906 points) and averaged to domains; the "
         "model exists only at 90 domains, so its pass is lowess over those 90 values "
         "at the same physical width. Same width, coarser grid -- which is why "
@@ -598,7 +598,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Does the grading smoothing window matter?")
     ap.add_argument("--windows", nargs="+", type=int, default=list(SMOOTH_WINDOWS),
-                    metavar="N", help="LOESS widths in domain units; 0 = raw.")
+                    metavar="N", help="LOWESS widths in domain units; 0 = raw.")
     ap.add_argument("--n-null", type=int, default=N_NULL)
     a = ap.parse_args(argv)
     windows = sorted(set(a.windows))

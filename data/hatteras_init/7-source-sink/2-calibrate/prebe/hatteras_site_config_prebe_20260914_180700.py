@@ -274,7 +274,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # from this below, so the two presets cannot disagree about the end domains.
 #
 # FIT AGAINST THE LRR, NOT THE ENDPOINT DIFFERENCE. These rates are the
-# LOESS-smoothed residual of an edgeBE base run against the CoastSat
+# LOWESS-smoothed residual of an edgeBE base run against the CoastSat
 # target, and both sides of that residual are now the same estimator: the
 # target is a per-transect OLS slope (transect_lrr_full.csv, lrr_m_yr) and
 # the model side is read from the run's lrr_m_yr, its own OLS slope
@@ -324,9 +324,9 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 #
 # WHAT THEY WERE FIT TO. The value the rate-comparison figure DRAWS at
 # each end, so fit and figure cannot disagree:
-#   GIS 1   raw per-domain transect mean -- LoessConfig.skip_southern_
+#   GIS 1   raw per-domain transect mean -- LowessConfig.skip_southern_
 #           domains is 10, so D1-D10 are drawn raw, not smoothed.
-#   GIS 90  the LOESS-10 value, the primary window, which is what is
+#   GIS 90  the LOWESS-10 value, the primary window, which is what is
 #           drawn everywhere north of D10.
 # The two ends therefore use different estimators. That is deliberate:
 # it mirrors the splice the figure already makes.
@@ -839,10 +839,10 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 #
 # STOPPING. `convergence_history.json` records the operative rule as "a pass
 # buys less than 5% of the standing RMSE". Interior passes hit that at pass 2->3
-# (3.8% P1, 5.3% P2). Note this is NOT the rule the LOESS script's header
+# (3.8% P1, 5.3% P2). Note this is NOT the rule the LOWESS script's header
 # states ("no zone clears SIGNIFICANCE_THRESHOLD"); that one is unreachable
 # here, because a handful of domains carry residuals of 2-3 m/yr that are
-# narrower than the LOESS window generating the correction and no smooth
+# narrower than the LOWESS window generating the correction and no smooth
 # alongshore field can close them. The 5% rule is the one that was met. The
 # residual it leaves — mean |smoothed residual| ~0.45 m/yr, with 19-28 domains
 # still above the 0.5 m/yr significance threshold — IS the tolerance this field
@@ -873,7 +873,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # as a set.
 #
 # WHAT WAS NOT RE-SOLVED. edgeBE's GIS 90 (HATTERAS_BE_EDGE_D90) measured
-# converged throughout at -0.06 / -0.01 against the LOESS target and was left
+# converged throughout at -0.06 / -0.01 against the LOWESS target and was left
 # alone. GIS 1 in period 2 sits at -0.145 and was shrinking monotonically
 # (-0.231, -0.193, -0.145) but never cleared the threshold; it is a known small
 # residual, not an oversight.
@@ -1096,7 +1096,7 @@ else:
 # GIS 90 sits on that join. In edgeBE it is isolated and the 0.1 gain holds.
 # In calibBE the fit puts a coherent erosive zone at GIS 84-89 (down to
 # -3.0 m/yr in 1984-2004) hard against it, and that zone drags GIS 90 down
-# by more than a metre a year -- an effect the per-domain LOESS residual
+# by more than a metre a year -- an effect the per-domain LOWESS residual
 # never sees, because it fits each domain against a base run in which those
 # neighbours were unforced. So the two presets genuinely need different
 # numbers at GIS 90, and forcing one on them would mean one of them is
@@ -1136,7 +1136,7 @@ HATTERAS_BE_EDGE_ONLY = {
     # Fit exactly as the 1984 and 2004 end values were: model lrr_m_yr against
     # the target table's target_lrr_m_yr, on the edgeBE / road_bdm / groin-off
     # base run, with the same estimator on both sides of the residual. GIS 1 is
-    # graded against the RAW per-domain mean and GIS 90 against the LOESS-10
+    # graded against the RAW per-domain mean and GIS 90 against the LOWESS-10
     # value, because that is the splice the rate figure draws.
     #
     #   step   GIS 1                          GIS 90

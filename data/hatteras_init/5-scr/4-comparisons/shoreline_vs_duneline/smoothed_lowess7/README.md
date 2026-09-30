@@ -10,8 +10,8 @@ fixed ±100 m axis:
 
 | sheet | shoreline side | dune side |
 |---|---|---|
-| `loess7_projected_vs_duneline_...` | the **same** 1996–2024 LRR × 14 yr in both panels | that half's own measured change |
-| `loess7_total_change_vs_duneline_...` | **each panel's own** LRR × its own 14 yr | that half's own measured change |
+| `lowess7_projected_vs_duneline_...` | the **same** 1996–2024 LRR × 14 yr in both panels | that half's own measured change |
+| `lowess7_total_change_vs_duneline_...` | **each panel's own** LRR × its own 14 yr | that half's own measured change |
 
 The dune line always follows the sub-period. Only the shoreline reading
 differs between the two sheets, which is the whole point of having both.
@@ -26,7 +26,7 @@ differs between the two sheets, which is the whole point of having both.
   both are spread evenly inside their domain by `rates_figures._along`, so the
   two are handled identically.
 - **GIS 1–10 keep their raw domain means** — the Oregon Inlet boundary
-  treatment the scoring target uses (`coastsat_loess.skip_southern_domains`).
+  treatment the scoring target uses (`coastsat_lowess.skip_southern_domains`).
   Hannah chose to keep it so the figure shows the target the way the model
   actually sees it. **Those ten domains are therefore identical to the
   unsmoothed sheet by construction**, and any difference there is not the
@@ -59,8 +59,8 @@ rate tracks the dune line closely in 2010–2024 (r 0.85) and poorly in
 ## Files
 
 ```
-loess7_projected_vs_duneline_1996_2010_2024_halves_overlay.png
-loess7_total_change_vs_duneline_1996_2010_2024_halves_overlay.png
+lowess7_projected_vs_duneline_1996_2010_2024_halves_overlay.png
+lowess7_total_change_vs_duneline_1996_2010_2024_halves_overlay.png
 domain_smoothed.csv    per domain per window per product: both sides raw and
                        smoothed, and the beach-width gap of each
 PROVENANCE.md          the table above, with the reading rule
@@ -86,4 +86,4 @@ committed — `git log -- scripts/input_prep/5-scr/smoothing_test/` returns
 nothing on any branch — so it was already absent before the 2026-09-22
 reorganisation, and that reorganisation is not what removed it. The figures it
 produced are the only record of it. What replaced it,
-`4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py`, is committed.
+`4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py`, is committed.

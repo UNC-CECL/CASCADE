@@ -1,4 +1,4 @@
-domain_number,coastsat_loess_m_yr,endpoint_raw_m_yr,endpoint_loess_m_yr,cs_endpoint_raw_m_yr,cs_endpoint_loess_m_yr
+domain_number,coastsat_lowess_m_yr,endpoint_raw_m_yr,endpoint_lowess_m_yr,cs_endpoint_raw_m_yr,cs_endpoint_lowess_m_yr
 1,3.5301888888888886,-1.526,-1.52636,3.139,3.1392666666666664
 2,2.744290909090909,-1.455,-1.45528,2.506,2.5056090909090907
 3,2.86436,-0.809,-0.8093199999999999,2.409,2.40856

@@ -255,7 +255,7 @@ def score():
                 summ = pd.read_csv(S.summary_csv(w, v) if v == "trim24" else summary_csv(w, v))
                 cells = S.overwash_cells(S.load_state(rd), w, summ, obs, ovm)
                 row = dict(window=S.wtag(w), ceiling=c, storms=v, **S.overwash_scores(cells, 0.0),
-                           **P.shoreline_loess7(rd, w))
+                           **P.shoreline_lowess7(rd, w))
                 if w[0] == 2010:
                     ir = cells[cells.obs_id == "OBS-018"].set_index("gis").reindex(range(1, 91))
                     m, o = (ir.model_m3_per_m > 0).values, ir.observed.values

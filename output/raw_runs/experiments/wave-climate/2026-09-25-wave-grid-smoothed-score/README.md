@@ -11,7 +11,7 @@ with Hannah on 2026-09-25.
 
 | | |
 |---|---|
-| score | share of the alongshore variation explained, 1 − SSE/SST, with the **model smoothed like the CoastSat target** (LOESS over 10 domains, the southern 10 raw), interior GIS 2–89, against each window's CoastSat LRR target. Bias, RMSE, correlation and the raw (unsmoothed) score beside it |
+| score | share of the alongshore variation explained, 1 − SSE/SST, with the **model smoothed like the CoastSat target** (LOWESS over 10 domains, the southern 10 raw), interior GIS 2–89, against each window's CoastSat LRR target. Bias, RMSE, correlation and the raw (unsmoothed) score beside it |
 | coarse grid | Hs 0.75, 1, 1.5, 2 × Tp 7, 8, 10 s × asymmetry 0.5, 0.7, 0.9 × high-angle 0.3, 0.45, 0.55 = 108 per window × scenario, 432 runs (Hs 0.65 and Tp 12 left out: they drowned the barrier in step 2) |
 | scope | natural and full management; 1996–2010 first, then 2010–2024 |
 | refine | per window × scenario, a 3×3×3×3 grid around the best setting at half the coarse step (the midpoints to its coarse neighbours), launched automatically |

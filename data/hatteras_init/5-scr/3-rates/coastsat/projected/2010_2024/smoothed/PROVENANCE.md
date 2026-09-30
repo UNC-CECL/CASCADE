@@ -6,13 +6,13 @@ Written 2026-09-22 10:21 by scripts/input_prep/5-scr/3-rates/coastsat/total_chan
 
 ## Why
 
-The rate the model is graded against is not the raw rate: it is the raw domain mean over GIS 1-10 and a 10-domain alongshore LOESS of the transect values beyond (`cascade_pipeline.coastsat_loess`, imported here rather than re-implemented). The raw projected-vs-observed comparison therefore tests a quantity nobody feeds the model. This one tests the target as it is applied.
+The rate the model is graded against is not the raw rate: it is the raw domain mean over GIS 1-10 and a 10-domain alongshore LOWESS of the transect values beyond (`cascade_pipeline.coastsat_lowess`, imported here rather than re-implemented). The raw projected-vs-observed comparison therefore tests a quantity nobody feeds the model. This one tests the target as it is applied.
 
-LOESS commutes with the x years multiply, so smoothing the RATE and smoothing the DISTANCE are the same operation; nothing here turns on the order. What matters is that both sides get the same pass at the same window, including the GIS 1-10 splice, so no residual is a smoothed quantity minus an unsmoothed one.
+LOWESS commutes with the x years multiply, so smoothing the RATE and smoothing the DISTANCE are the same operation; nothing here turns on the order. What matters is that both sides get the same pass at the same window, including the GIS 1-10 splice, so no residual is a smoothed quantity minus an unsmoothed one.
 
 ## The sweep
 
-| LOESS window | n domains | bias (m) | RMS residual (m) | residual range (m) | sd projected (m) | sd observed (m) | sign agreement | r |
+| LOWESS window | n domains | bias (m) | RMS residual (m) | residual range (m) | sd projected (m) | sd observed (m) | sign agreement | r |
 |---|---|---|---|---|---|---|---|---|
 | raw (none) | 90 | +9.3 | 19.4 | -27.5 to +84.9 | 19.4 | 27.6 | 80% | 0.79 |
 | 3 domains / 1.5 km | 90 | +10.0 | 17.9 | -19.1 to +84.9 | 18.3 | 26.0 | 88% | 0.83 |
@@ -27,10 +27,10 @@ A departure that survives the 10-domain window is a place the 1996-2024 rate gen
 
 `projected_smoothed_2010_2024_w<NN>.png` is one panel per window, the rate-derived distance against observed, both through that window's pass -- the per-place question, does the trend hold HERE.
 
-`projected_smoothed_2010_2024_overlay.png` (Hannah, 2026-09-21) puts every LOESS width's curve on one panel and drops the observed side, which answers the other question: what the window does to the target. It is the rate figure `3-rates/coastsat/lrr/1996_2024/smoothing_windows_1996_2024.png` in metres -- the LOESS commutes with the x 14 yr multiply, so the curves have the same shape and only the units differ. It is drawn because metres is the unit the model and the dune line are read in, not because it is a different field.
+`projected_smoothed_2010_2024_overlay.png` (Hannah, 2026-09-21) puts every LOWESS width's curve on one panel and drops the observed side, which answers the other question: what the window does to the target. It is the rate figure `3-rates/coastsat/lrr/1996_2024/smoothing_windows_1996_2024.png` in metres -- the LOWESS commutes with the x 14 yr multiply, so the curves have the same shape and only the units differ. It is drawn because metres is the unit the model and the dune line are read in, not because it is a different field.
 
 ## Caveats
 
-- The observed side is the thinner estimate: the LRR is fitted through a median 582 satellite positions per transect, while the endpoint uses 18 positions in 2010 and 33 in 2024. Most of the noise the LOESS is removing is probably observed-side, which is why both sides are smoothed.
+- The observed side is the thinner estimate: the LRR is fitted through a median 582 satellite positions per transect, while the endpoint uses 18 positions in 2010 and 33 in 2024. Most of the noise the LOWESS is removing is probably observed-side, which is why both sides are smoothed.
 - A 10-domain window is 5 km and the beach fills inside this record are 3-5 km wide (2014 at GIS 84-89, 2022 at GIS 6-15, 2022 at GIS 21-28). The fill signature in the residual is smeared at 10 domains and is clearest in the 3-domain panel; do not read its disappearance at 10 as evidence it was noise.
 - GIS 1-10 are unsmoothed at every window, so the largest positive residual in the raw product (GIS 1) is carried through unchanged by construction.

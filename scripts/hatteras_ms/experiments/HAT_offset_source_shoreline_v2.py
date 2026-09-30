@@ -28,7 +28,7 @@ shoreline arms.
 Every run's metadata is checked for the offset it actually read.
 
 SCORES, as in the option A study
-    vs CoastSat   each period's own CoastSat LRR, LOESS 7 domains: raw and
+    vs CoastSat   each period's own CoastSat LRR, LOWESS 7 domains: raw and
                   smoothed share of the alongshore variation explained,
                   interior GIS 2-89, bias and r (the option A headline)
     own feature   dune-line arm against dune-line net change (m); shoreline

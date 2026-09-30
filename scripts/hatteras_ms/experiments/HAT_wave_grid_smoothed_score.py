@@ -5,7 +5,7 @@ Designed with Hannah on 2026-09-25, after the 2026-09-24 step-2 study
 wave parameters together, and none at all under full management:
 
     score     share of the alongshore variation explained, 1 - SSE/SST, with
-              the MODEL SMOOTHED LIKE THE COASTSAT TARGET (LOESS over 10
+              the MODEL SMOOTHED LIKE THE COASTSAT TARGET (LOWESS over 10
               domains, the southern 10 raw: common.smooth_like_target),
               interior GIS 2-89, against the window's CoastSat LRR target.
               Bias, RMSE, correlation and the raw (unsmoothed) score beside it.

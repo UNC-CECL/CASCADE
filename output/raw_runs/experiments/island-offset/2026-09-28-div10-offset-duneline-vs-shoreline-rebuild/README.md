@@ -19,7 +19,7 @@ metres offset is in `../2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1
 | ends | zeroBE (no source/sink correction); relocations and groins off |
 | scope | natural and full management, 1996–2010; 4 runs |
 | Barrier3D | the current one, with the route_overwash fix. The ÷10-era runs used the unfixed router, which segfaulted on some storms |
-| figures | the same form as the 09-25 and option A studies: net change in metres, observations smoothed with LOESS over 7 domains (the southern 10 raw), model unsmoothed, no scores on the figures |
+| figures | the same form as the 09-25 and option A studies: net change in metres, observations smoothed with LOWESS over 7 domains (the southern 10 raw), model unsmoothed, no scores on the figures |
 
 **Both the offset and the waves differ from the 09-25 study**, so a
 difference between the two folders cannot be put on either alone.

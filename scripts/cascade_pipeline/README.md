@@ -10,7 +10,7 @@ output.
 | `run_registry.py` | where a run lives, and the run index. **Address runs through this**, never by joining paths |
 | `domains.py` | the padded and GIS domain geometry, and the conversions between them |
 | `roadway.py`, `nourishment.py` | the management forcing a period carries |
-| `coastsat_loess.py` | the observed rate series and its smoothing |
+| `coastsat_lowess.py` | the observed rate series and its smoothing |
 | `annotations.py`, `plotting/` | the geography layer and the figure types |
 | `reports.py` | the blocks the runner prints, so a run log states how it was driven |
 

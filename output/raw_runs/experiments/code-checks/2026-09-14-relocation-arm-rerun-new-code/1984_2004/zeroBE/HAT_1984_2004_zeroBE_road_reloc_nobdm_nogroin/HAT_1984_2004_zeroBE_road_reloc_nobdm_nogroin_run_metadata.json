@@ -62,7 +62,7 @@
     "enabled": false
   },
   "skill": {
-    "target": "CoastSat LOESS 10-domain",
+    "target": "CoastSat LOWESS 10-domain",
     "estimator": "lrr",
     "mean_bias_m_yr": "+0.3836",
     "rmse_m_yr": "1.4639",

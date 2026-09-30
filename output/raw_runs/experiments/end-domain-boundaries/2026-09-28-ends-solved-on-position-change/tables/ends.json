@@ -1,6 +1,6 @@
 {
  "scenario": "full_management",
- "target": "CoastSat end-minus-start position change per window (GIS 1 raw, GIS 90 LOESS 7); residuals in m/yr = m / 14",
+ "target": "CoastSat end-minus-start position change per window (GIS 1 raw, GIS 90 LOWESS 7); residuals in m/yr = m / 14",
  "ends_m_yr": {
   "1996": {
    "1": 1.2308,

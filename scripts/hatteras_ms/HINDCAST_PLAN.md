@@ -6,7 +6,7 @@ beach_dune_manager: nourishment schedule + overwash filter — plot
 hard_structures/groin: Buxton groin config — plot deterioration curve
 Forcings: storms + RSLR — plot trend + storm catalog
 Source/sink (BE rates) — plot base vs. calibrated
-CoastSat target rates — plot LOESS windows
+CoastSat target rates — plot LOWESS windows
 Plotting functions (imported from hat_pipeline.plotting, not redefined inline)
 Define run_cascade_simulation()
 Initialize Cascade (single config, no sweep)

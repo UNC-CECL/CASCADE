@@ -116,9 +116,9 @@ for _path in (SCRIPTS_DIR, SCRIPTS_DIR / "hatteras_ms",
 from cascade_pipeline.annotations import (                    # noqa: E402
     add_geographic_annotations,
 )
-from cascade_pipeline.coastsat_loess import (                 # noqa: E402
+from cascade_pipeline.coastsat_lowess import (                 # noqa: E402
     CoastSatDataset,
-    LoessConfig,
+    LowessConfig,
     build_coastsat_series,
 )
 from cascade_pipeline.hindcast import build_target_table      # noqa: E402
@@ -172,7 +172,7 @@ _DROPPED = tuple(p for p in _WANTED if p not in PRESETS)
 
 # Section 8's settings, matching the runner, so the target drawn here is the
 # curve the runs were scored against rather than a second opinion.
-LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 
 # WHICH MODEL COLUMN THESE PANELS DRAW. The observed curve on every panel
 # is a CoastSat LRR -- a per-transect OLS slope through the period -- so
@@ -287,11 +287,11 @@ def load_target(period_start):
     built = build_coastsat_series(
         [CoastSatDataset(label=f"CoastSat {period_start}",
                          period_start=period_start, csv_path=str(csv_path))],
-        period_start, LOESS_CONFIG)
+        period_start, LOWESS_CONFIG)
     if not built:
         raise FileNotFoundError(f"CoastSat transects failed to load: "
                                 f"{csv_path}")
-    table = build_target_table(built[0], LOESS_CONFIG, HATTERAS_DOMAINS,
+    table = build_target_table(built[0], LOWESS_CONFIG, HATTERAS_DOMAINS,
                                TARGET_WINDOW)
     return pd.Series(np.asarray(table["target_lrr_m_yr"], dtype=float),
                      index=np.asarray(table["gis_domain"], dtype=int))
@@ -337,7 +337,7 @@ def main():
             target = targets[start]
             ax.plot(target.index, target.values, color=TARGET_COLOUR,
                     linewidth=2.6, zorder=5,
-                    label=f"CoastSat target (LOESS {TARGET_WINDOW}-domain)")
+                    label=f"CoastSat target (LOWESS {TARGET_WINDOW}-domain)")
             row_values.append(target.values)
 
             for scenario in SCENARIO_ORDER:
@@ -467,7 +467,7 @@ def main():
             f"scenario, {periods}, under each source/sink preset. Periods are "
             f"rows and presets ({', '.join(PRESETS)}) columns, in order of "
             f"increasing correction. Each panel draws one line per scenario "
-            f"against the CoastSat LOESS target in black; scenarios are a "
+            f"against the CoastSat LOWESS target in black; scenarios are a "
             f"single-hue ramp ordered by management intensity, and each "
             f"relocation arm is dashed in its non-relocation twin's colour "
             f"because the two overlap at this scale. The y axis is shared "

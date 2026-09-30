@@ -76,7 +76,7 @@ whatever is sitting in `hat_run.yaml` cannot reach an experiment.
 
 ## figures/ — moved
 
-The five figure scripts that were here (`hindcast_final_figure_loess`,
+The five figure scripts that were here (`hindcast_final_figure_lowess`,
 `scenario_grid`, `rerender_run_figures`, `planview_evolution_gif`,
 `gis11_relocation_drown_figure`) and their `superseded_20260914/` moved to
 `scripts/figure_making/model_output/` on 2026-09-18, so every figure script is

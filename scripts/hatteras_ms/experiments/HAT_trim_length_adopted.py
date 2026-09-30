@@ -15,9 +15,9 @@ setup being adopted:
                here; 24: the adopted hindcast_storms v3_trim24 files; 48, 72,
                full: the storm-length selection's verified files)
     runs       managed (full_management), both windows, the site config's
-               current end rates (the LOESS-7 solve)
+               current end rates (the LOWESS-7 solve)
 SCORES: overwash against the imagery (as before), the 2010 dune crest against
-the lidar, interior RMSE/bias against LOESS-7 (run_registry.skill_vs_target).
+the lidar, interior RMSE/bias against LOWESS-7 (run_registry.skill_vs_target).
 Scoring runs under the same Barrier3D, so the storm sharing uses the fixed
 DuneGaps and the per-cell DuneGrowth.
 
@@ -151,7 +151,7 @@ def score():
             cs = E.crest_series(c, pads)
             npy = np.load(storm_paths(w, v)[0])
             row = dict(window=S.wtag(w), storms=v, storm_hours=int(npy[:, 4].sum()),
-                       **S.overwash_scores(cells, 0.0), **P.shoreline_loess7(rd, w),
+                       **S.overwash_scores(cells, 0.0), **P.shoreline_lowess7(rd, w),
                        overwash_total_m3_per_m=float(np.array([np.asarray(b.QowTS)[1:].sum() for b in c.barrier3d])[pads].sum()))
             if w[0] == 1996:
                 row["crest_2010_minus_lidar_m"] = float(np.median(cs[-1] - lidar))

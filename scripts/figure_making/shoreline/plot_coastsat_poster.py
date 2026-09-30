@@ -2,7 +2,7 @@
 """
 plot_coastsat_poster.py
 ==============================================================================
-The LOESS-SMOOTHED companion to coastsat_calibration_periods.png: the same
+The LOWESS-SMOOTHED companion to coastsat_calibration_periods.png: the same
 CoastSat rates over the same two run periods, smoothed over a 7-domain (3.5 km)
 window so the alongshore pattern reads without the domain-to-domain scatter.
 
@@ -144,10 +144,10 @@ def main():
 
     paths = save(fig, OUT, vector=True, close=True)
     record_caption(paths[0],
-        "The LOESS-smoothed companion to coastsat_calibration_periods.png: the "
+        "The LOWESS-smoothed companion to coastsat_calibration_periods.png: the "
         "same CoastSat domain-mean LRR rates over the same two run periods, "
         f"{PERIODS[0][0]}–{PERIODS[0][1]} in red and {PERIODS[1][0]}–"
-        f"{PERIODS[1][1]} in blue, positive seaward, smoothed with a LOESS "
+        f"{PERIODS[1][1]} in blue, positive seaward, smoothed with a LOWESS "
         f"window of {WINDOW_DOMAINS} domains ({km:.1f} km, frac={frac:.3f}). "
         "The smoothing is for reading the alongshore pattern only; the model "
         "is scored against the unsmoothed rates. Grey bands are the community "

@@ -1,4 +1,4 @@
-domain_number,model_years,dune_interval_yr,coastsat_lrr_m_yr,coastsat_target_m_yr,coastsat_target_loess_m_yr,dune_rate_m_yr,dune_measured_change_m_yr,dune_target_m_yr,dune_target_loess_m_yr,target_difference_m_yr,model_ends_solved_on_coastsat_m_yr,model_ends_solved_on_duneline_m_yr,model_ends_unsolved_m_yr
+domain_number,model_years,dune_interval_yr,coastsat_lrr_m_yr,coastsat_target_m_yr,coastsat_target_lowess_m_yr,dune_rate_m_yr,dune_measured_change_m_yr,dune_target_m_yr,dune_target_lowess_m_yr,target_difference_m_yr,model_ends_solved_on_coastsat_m_yr,model_ends_solved_on_duneline_m_yr,model_ends_unsolved_m_yr
 1,14,11.63,3.23,3.23,3.23,-0.013,-0.011,-0.013,-0.013,3.243,3.528,-2.615,-0.468
 2,14,11.63,2.787,2.787,2.787,-4.757,-3.952,-4.757,-4.757,7.544,-0.534,-1.637,-1.209
 3,14,11.63,2.07,2.07,2.07,-3.069,-2.55,-3.069,-3.069,5.139,0.718,0.536,0.605

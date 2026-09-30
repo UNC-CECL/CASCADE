@@ -14,7 +14,7 @@
 - **Controls.** `uniform3p4` (the current model) and `uniform5p5` (`../2026-09-28-dune-ceiling-and-rebuild/`).
 - **Nothing in the main code changed.** `build_cascade` is wrapped in each run's process to set the ceilings after construction.
 
-**A change made during these runs, and how it is handled.** A parallel session switched the runner's CoastSat target from LOESS-10 to LOESS-7 and re-solved the end rates on 2026-09-28. The matrix was archived to `archive/2026-09-28-loess10-ends/` and is being re-run.
+**A change made during these runs, and how it is handled.** A parallel session switched the runner's CoastSat target from LOWESS-10 to LOWESS-7 and re-solved the end rates on 2026-09-28. The matrix was archived to `archive/2026-09-28-loess10-ends/` and is being re-run.
 
 | runs | end rates (GIS 1 / 90) |
 |---|---|
@@ -23,9 +23,9 @@
 | 3 runs of the uniform experiment (1996) | 1996 4.8394 / 18.2545 |
 
 - **Overwash scores are unaffected.** They use the imagery, not CoastSat, and the ends only change the two end domains.
-- **RMSE and bias are recomputed for EVERY run against one target**, LOESS-7, with `run_registry.skill_vs_target` over GIS 2–89. This reproduces the runner's own values to 1e-4. The controls are read from the archive.
+- **RMSE and bias are recomputed for EVERY run against one target**, LOWESS-7, with `run_registry.skill_vs_target` over GIS 2–89. This reproduces the runner's own values to 1e-4. The controls are read from the archive.
 
-## Results (managed; overwash threshold 0; RMSE vs LOESS-7)
+## Results (managed; overwash threshold 0; RMSE vs LOWESS-7)
 
 | storms | ceiling | PSS 96 | timing r 96 | space r 96 | crest vs lidar r (2010) | RMSE 96 | PSS 10 | POD 10 | POFD 10 | RMSE 10 |
 |---|---|---|---|---|---|---|---|---|---|---|

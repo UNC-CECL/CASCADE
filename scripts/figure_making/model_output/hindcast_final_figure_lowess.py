@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The calibrated hindcast against the LOESS reference curve — presentation figure.
+"""The calibrated hindcast against the LOWESS reference curve — presentation figure.
 
 THE hindcast result figure. It had a companion, HAT_hindcast_final_figure.py,
 which drew the same two runs scored over D2-D89; on 2026-09-14 this figure took
@@ -14,15 +14,15 @@ the two, and are now simply what this figure has.
         which is the post-Isabel recovery and the nourishment era showing up as
         a whole-island shift in the rate, not as a local feature.
 
-    THE LOESS CURVE ONLY, NOT THE SPLICED TARGET
+    THE LOWESS CURVE ONLY, NOT THE SPLICED TARGET
         The calibration target is not one curve: GIS 1-10 are raw per-domain
-        means and D11 north is the 7-domain LOESS. That splice is right for
+        means and D11 north is the 7-domain LOWESS. That splice is right for
         calibrating -- the raw means keep the short-wavelength signal the
         source/sink field has to answer for -- but it makes an awkward figure,
         because the eye reads a change of estimator as a change of coast.
-        Here the LOESS is drawn throughout.
+        Here the LOWESS is drawn throughout.
 
-        D1-D10 IS DRAWN DASHED. The project excludes the LOESS there by
+        D1-D10 IS DRAWN DASHED. The project excludes the LOWESS there by
         convention (`skip_southern_domains = 10`), because the smoother is
         poorly constrained at the end of its range and Cape Point's
         attachment-detachment cycle is exactly the short-wavelength signal a
@@ -30,7 +30,7 @@ the two, and are now simply what this figure has.
         carries the same weight.
 
     BOTH SCORING WINDOWS, PRINTED PER PANEL
-        D11-D89 is where the LOESS curve and the calibration target are the
+        D11-D89 is where the LOWESS curve and the calibration target are the
         SAME numbers, so that statistic is the one for the line actually drawn.
         D2-D89 is the project's canonical skill window -- rmse_interior_m_yr in
         run_index.csv, and what the groin fit and the source/sink convergence
@@ -53,12 +53,12 @@ ALSO ADDED FOR PRESENTATION
     features without a separate map.
 
 Usage:
-    python hindcast_final_figure_loess.py [--preset edgeBE|zeroBE]
+    python hindcast_final_figure_lowess.py [--preset edgeBE|zeroBE]
 
 ON THE 1996 -> 2010 -> 2024 CHAIN since 2026-09-18, nogroin arm, edgeBE by
 default. calibBE is kept in PRESETS but is not solved on this chain.
 
-Writes output/comparisons/hindcast_calibrated/hindcast_<preset>_loess_reference.png
+Writes output/comparisons/hindcast_calibrated/hindcast_<preset>_lowess_reference.png
 and, with PUBLISH, output/figures/5-results/hindcast_<preset>.png with its
 caption in supporting/CAPTIONS.md. Both are the same house-style figure; the
 title and note that were drawn on the canvas are the caption (2026-09-18).
@@ -110,7 +110,7 @@ from cascade_pipeline.run_registry import find_run_dir          # noqa: E402
 from site_layer.hat_observed_rates import lrr_csv                # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS     # noqa: E402
 
-LOESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
+LOWESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
               / "2-calibrate" / "be_zone_residual_fit.py")
 
 # THE CANONICAL CHAIN, 1996 -> 2010 -> 2024 (moved from 1984/2004 on
@@ -127,7 +127,7 @@ for _st, _scen, _panel, _colour in _CHAIN:
                                     start=_st, end=_end, scenario=_scen,
                                     colour=_colour)
 LOCKED = (1, 90)
-SKIP_SOUTH = 10               # matches LOESS_CONFIG.skip_southern_domains
+SKIP_SOUTH = 10               # matches LOWESS_CONFIG.skip_southern_domains
 SCORE_DOMAINS = range(SKIP_SOUTH + 1, 90)
 RESERVED_COLOUR = "#FF8C00"
 
@@ -142,29 +142,29 @@ PLACE_LABELS = [
 
 
 def analysis_module():
-    spec = importlib.util.spec_from_file_location("_loess", LOESS_PATH)
+    spec = importlib.util.spec_from_file_location("_lowess", LOWESS_PATH)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-def loess_and_spread(module, start, csv_path):
-    """(loess_by_domain, sd_by_domain) for one period.
+def lowess_and_spread(module, start, csv_path):
+    """(lowess_by_domain, sd_by_domain) for one period.
 
-    The LOESS is the widest window's smoothed curve across ALL domains --
+    The LOWESS is the widest window's smoothed curve across ALL domains --
     build_target_table would splice raw means over D1-D10, which is what this
     figure is deliberately not doing.
     """
-    from cascade_pipeline.coastsat_loess import (CoastSatDataset,
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset,
                                                  build_coastsat_series)
     series = build_coastsat_series(
         [CoastSatDataset(label=f"CoastSat {start}", period_start=start,
-                         csv_path=csv_path)], start, module.LOESS_CONFIG)
+                         csv_path=csv_path)], start, module.LOWESS_CONFIG)
     cs = series[0]
     match = [w for w in cs["windows"] if w["window"] == module.TARGET_WINDOW]
     if not match:
         raise ValueError(f"window {module.TARGET_WINDOW} not computed")
-    loess = dict(zip(np.asarray(match[0]["gis_x"], dtype=int),
+    lowess = dict(zip(np.asarray(match[0]["gis_x"], dtype=int),
                      np.asarray(match[0]["smoothed"], dtype=float)))
     frame = pd.read_csv(csv_path, usecols=["transect_id", "domain_number",
                                            "lrr_m_yr"])
@@ -185,7 +185,7 @@ def loess_and_spread(module, start, csv_path):
     frame["x"] = frame["domain"] - 0.5 + (rank + 0.5) / count
 
     sd = frame.groupby("domain")["lrr"].std().to_dict()
-    return loess, {int(k): float(v) for k, v in sd.items()}, frame
+    return lowess, {int(k): float(v) for k, v in sd.items()}, frame
 
 
 def run_rates(period, preset, scenario):
@@ -217,7 +217,7 @@ PRESETS = {
     "calibBE": dict(
         stem="hindcast_calibrated",
         published="hindcast_calibrated.png",
-        title="Calibrated CASCADE hindcast against the CoastSat LOESS reference, Cape Hatteras",
+        title="Calibrated CASCADE hindcast against the CoastSat LOWESS reference, Cape Hatteras",
         series="CASCADE, calibrated",
         config="calibrated source/sink field, full management (roadway + beach/dune; "
                "nourishment in 2004–2024), groin active at M = 60 m/yr, f = 0.6.",
@@ -227,7 +227,7 @@ PRESETS = {
     "edgeBE": dict(
         stem="hindcast_edgeBE",
         published="hindcast_edgeBE.png",
-        title="CASCADE hindcast with the source/sink calibration removed, against the CoastSat LOESS reference, Cape Hatteras",
+        title="CASCADE hindcast with the source/sink calibration removed, against the CoastSat LOWESS reference, Cape Hatteras",
         series="CASCADE edgeBE",
         config="edgeBE source/sink: the D1 and D90 edge values only, no interior "
                "correction. Full management (roadway + beach/dune; nourishment "
@@ -239,7 +239,7 @@ PRESETS = {
     "zeroBE": dict(
         stem="hindcast_zeroBE",
         published="hindcast_zeroBE.png",
-        title="CASCADE hindcast with no source/sink field, against the CoastSat LOESS reference, Cape Hatteras",
+        title="CASCADE hindcast with no source/sink field, against the CoastSat LOWESS reference, Cape Hatteras",
         series="CASCADE zeroBE",
         config="zeroBE: no background-erosion field anywhere, the D1/D90 edges included. "
                "Full management (roadway + beach/dune; nourishment in 2010–2024); the "
@@ -295,7 +295,7 @@ def main():
     panels = {}
     for key, meta in PERIODS.items():
         csv = str(lrr_csv(meta["start"], meta["end"]))
-        loess, sd, transects = loess_and_spread(module, meta["start"], csv)
+        lowess, sd, transects = lowess_and_spread(module, meta["start"], csv)
         model, run_name = run_rates(key, args.preset, meta["scenario"])
         # WHAT THE COMPANION FIGURE REPORTS, COMPUTED, NOT REMEMBERED. The
         # footnote quotes the D2-D89 score so a reader can see why it differs
@@ -313,14 +313,14 @@ def main():
                          bias=float(np.mean(wm - wo)),
                          corr=float(np.corrcoef(wm, wo)[0, 1]),
                          n=len(wide))
-        panels[key] = dict(loess=loess, sd=sd, transects=transects,
+        panels[key] = dict(lowess=lowess, sd=sd, transects=transects,
                            model=model, run=run_name, companion=companion,
                            **meta)
 
     gis = np.arange(1, 91)
     lo, hi = np.inf, -np.inf
     for d in panels.values():
-        for source in (d["loess"], d["model"]):
+        for source in (d["lowess"], d["model"]):
             values = np.array([source.get(g, np.nan) for g in gis], dtype=float)
             lo = min(lo, np.nanmin(values))
             hi = max(hi, np.nanmax(values))
@@ -352,7 +352,7 @@ def main():
 
     summary = []
     for i, (axis, (key, d)) in enumerate(zip(axes, panels.items())):
-        obs = np.array([d["loess"].get(g, np.nan) for g in gis], dtype=float)
+        obs = np.array([d["lowess"].get(g, np.nan) for g in gis], dtype=float)
         mod = np.array([d["model"].get(g, np.nan) for g in gis], dtype=float)
         spread = np.array([d["sd"].get(g, np.nan) for g in gis], dtype=float)
 
@@ -375,7 +375,7 @@ def main():
                           alpha=0.22, zorder=2, linewidth=0,
                           label="observed spread (±1 SD of transects)")
 
-        # Individual transects over D1-D10. The LOESS is dashed there because
+        # Individual transects over D1-D10. The LOWESS is dashed there because
         # the smoother is unreliable at the end of its range; the scatter is
         # the actual evidence, and it shows the Cape Point spread the smooth
         # curve cannot represent.
@@ -389,25 +389,25 @@ def main():
 
         south = gis <= SKIP_SOUTH
         axis.plot(gis[~south], obs[~south], color="#1A1A1A", linewidth=1.8,
-                  zorder=7, label="CoastSat LOESS (7-domain)")
+                  zorder=7, label="CoastSat LOWESS (7-domain)")
         axis.plot(gis[south], obs[south], color="#1A1A1A", linewidth=1.3,
                   linestyle=(0, (4, 2)), zorder=7,
-                  label="LOESS, D1–D10 (excluded by convention)")
+                  label="LOWESS, D1–D10 (excluded by convention)")
         axis.plot(gis, mod, color=d["colour"], linewidth=1.6, zorder=6,
                   label=f"{vocab['series']}, {d['label']}")
         axis.axhline(0.0, color="#AAAAAA", linewidth=0.6, zorder=4)
 
         shared = [g for g in SCORE_DOMAINS
-                  if g in d["model"].index and not np.isnan(d["loess"].get(g, np.nan))]
+                  if g in d["model"].index and not np.isnan(d["lowess"].get(g, np.nan))]
         mm = np.array([d["model"][g] for g in shared])
-        oo = np.array([d["loess"][g] for g in shared])
+        oo = np.array([d["lowess"][g] for g in shared])
         rmse = float(np.sqrt(np.mean((mm - oo) ** 2)))
         bias = float(np.mean(mm - oo))
         corr = float(np.corrcoef(mm, oo)[0, 1])
         summary.append((d["label"], d["run"], rmse, bias, corr, len(shared)))
 
         # BOTH SCORING WINDOWS, ON THE FIGURE. Added 2026-09-14. This figure
-        # scores D11-D89, the span where the LOESS curve IS the calibration
+        # scores D11-D89, the span where the LOWESS curve IS the calibration
         # target; the project's canonical skill column (rmse_interior_m_yr,
         # recorded for every run in run_index.csv) is D2-D89, which also takes
         # in D2-D10, where the target is the raw spliced mean and the model is
@@ -436,8 +436,8 @@ def main():
     for axis in axes:
         for h, l in zip(*axis.get_legend_handles_labels()):
             found.setdefault(l, h)
-    order = ["CoastSat LOESS (7-domain)",
-             "LOESS, D1–D10 (excluded by convention)",
+    order = ["CoastSat LOWESS (7-domain)",
+             "LOWESS, D1–D10 (excluded by convention)",
              "CoastSat transect LRR (D1–D10)",
              "observed spread (±1 SD of transects)"]
     for d in panels.values():
@@ -456,15 +456,15 @@ def main():
 
     caption_text = (
         vocab["title"] + ". Configuration: " + vocab["config"]
-        + " The observed curve is the 7-domain LOESS of CoastSat transect "
+        + " The observed curve is the 7-domain LOWESS of CoastSat transect "
         "rates; over D1–D10 (hatched) it is dashed because the project "
-        "excludes the LOESS there (the smoother is poorly constrained at the "
+        "excludes the LOWESS there (the smoother is poorly constrained at the "
         "end of its range, and Cape Point's attachment-detachment cycle is "
         "short-wavelength signal a 3.5 km smoother removes), and the individual "
         "transect rates are drawn instead. The grey band is ±1 SD of the "
         "transect rates within each domain, and the tinted band between the "
         "curves is the misfit. Both scoring windows are printed above each "
-        "panel. D11–D89 is the span where the LOESS curve and the grading "
+        "panel. D11–D89 is the span where the LOWESS curve and the grading "
         "target are identical numbers, so that statistic describes the line "
         "actually drawn. D2–D89 is the project's canonical skill window "
         "(rmse_interior_m_yr in run_index.csv), which also takes in D2–D10, "
@@ -475,7 +475,7 @@ def main():
         + vocab["zone_note"])
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / f"{vocab['stem']}_loess_reference.png"
+    path = OUT_DIR / f"{vocab['stem']}_lowess_reference.png"
     figure.savefig(path)
     print(f"wrote {path}")
     if PUBLISH:

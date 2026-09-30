@@ -167,23 +167,23 @@ def run(workers):
 
 # The matrix controls these experiments compared against were archived on
 # 2026-09-28 (archive/2026-09-28-loess10-ends/, when the runner's target moved
-# to LOESS-7 and the ends were re-solved in a parallel session). Read from there.
+# to LOWESS-7 and the ends were re-solved in a parallel session). Read from there.
 ARCHIVED_MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"
 TARGET_WINDOW = 7            # the runner's target since 2026-09-28
 
 
-def shoreline_loess7(rd, w):
+def shoreline_lowess7(rd, w):
     """Interior RMSE and bias against ONE target for every run (CoastSat LRR,
-    LOESS-7, raw for GIS 1-10, as the runner builds it since 2026-09-28), so
+    LOWESS-7, raw for GIS 1-10, as the runner builds it since 2026-09-28), so
     runs made before and after the target change compare on equal terms."""
     from cascade_pipeline.hindcast import build_target_table
-    from cascade_pipeline.coastsat_loess import CoastSatDataset, LoessConfig, build_coastsat_series
+    from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS, SCORE_INTERIOR_GIS
     from site_layer.hat_observed_rates import lrr_csv
     from cascade_pipeline.run_registry import skill_vs_target
     key = tuple(w)
     if key not in _TARGETS:
-        cfg = LoessConfig(window_domains=(TARGET_WINDOW,), skip_southern_domains=10)
+        cfg = LowessConfig(window_domains=(TARGET_WINDOW,), skip_southern_domains=10)
         series = build_coastsat_series([CoastSatDataset(label=f"CoastSat {w[0]}", period_start=w[0],
                                                         csv_path=str(lrr_csv(*w)))], w[0], cfg,
                                        domains=HATTERAS_DOMAINS)
@@ -231,7 +231,7 @@ def score():
                                crest_start_m=float(np.median(cs[0])), crest_end_m=float(np.median(cs[-1])),
                                be_gis90=float(json.loads(next(rd.glob("*_run_metadata.json")).read_text())
                                               ["index row"]["be_rate_gis90_m_yr"]),
-                               **S.overwash_scores(cells, 0.0), **shoreline_loess7(rd, w))
+                               **S.overwash_scores(cells, 0.0), **shoreline_lowess7(rd, w))
                     if w[0] == 1996:
                         d = cs[-1] - lidar
                         row.update(crest_2010_minus_lidar_m=float(np.median(d)),

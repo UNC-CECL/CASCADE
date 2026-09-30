@@ -12,7 +12,7 @@ depends on the waves, so each setting gets its own solve.
 | | |
 |---|---|
 | shortlist | the top 10 zeroBE settings (smoothed score) per window × scenario: 40 chains (`tables/shortlist.csv`) |
-| ends | solved against each window's CoastSat LRR, as the matrix end values were: GIS 1 against the raw domain mean, GIS 90 against the LOESS-10 value |
+| ends | solved against each window's CoastSat LRR, as the matrix end values were: GIS 1 against the raw domain mean, GIS 90 against the LOWESS-10 value |
 | solve | step 0 = the setting's zeroBE grid run; each end stepped on its own, first by the 2026-09-11 response (≈0.09 m/yr residual per m/yr imposed at GIS 1, 0.13 at GIS 90), then by the secant; all chains in lockstep; converged at \|residual\| ≤ 0.02 m/yr at both ends, at most 5 probes |
 | score | as the grid: share of the alongshore variation explained by the model smoothed like CoastSat, interior GIS 2–89; the zeroBE rank and score beside it (`tables/all_runs.csv`) |
 | fixed | metres offset (dune line v1), edgeBE through `HAT_BE_OVERRIDE`, no groin, no relocations, Barrier3D route_overwash fix |

@@ -12,7 +12,7 @@ wave setting gets its own solve. Chosen with Hannah:
     scenarios  natural and full management, both windows (40 chains)
     ends       solved against each window's CoastSat LRR, as the matrix end
                values were: GIS 1 against the raw domain mean, GIS 90 against
-               the LOESS-10 value (the target table's own splice)
+               the LOWESS-10 value (the target table's own splice)
     solve      step 0 is the setting's zeroBE grid run (ends 0, 0). Each end
                is stepped on its own (they are 89 domains apart): step 1 from
                the 2026-09-11 response (about 0.09 m/yr of residual per m/yr

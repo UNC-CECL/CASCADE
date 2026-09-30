@@ -38,8 +38,8 @@ total_change_vs_duneline.py
 net_change_vs_duneline.py
     The same pairing over 1996-2024 and its two halves.
 
-smoothed_loess7_vs_duneline.py
-    Both curves through the model target's alongshore LOESS at 7 domains
+smoothed_lowess7_vs_duneline.py
+    Both curves through the model target's alongshore LOWESS at 7 domains
     (3.5 km), in the two readings of the shoreline side, so the effect of the
     smoother is visible rather than assumed.
 ```
@@ -54,7 +54,7 @@ dsas_vs_coastsat_raw.py
     Calendar windows, no smoothing: the raw per-domain mean LRR from each
     source. Separate from 6-scr-smooth/dsas_vs_coastsat/ on purpose — that
     folder exists to argue about the smoothing, and every figure in it draws
-    a LOESS.
+    a LOWESS.
 
 dsas_vs_coastsat_datematched.py
     The CoastSat side anchored on the shoreline SURVEY DATES instead: the mean

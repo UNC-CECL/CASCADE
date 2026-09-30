@@ -2,7 +2,7 @@
 
 Written 2026-09-22 09:53 by `scripts/input_prep/5-scr/smoothing_test/smoothing_test.py`.
 
-Both curves LOESS-smoothed at **7 domains (3.5 km)**, at transect resolution, with GIS 1–10 kept at their raw domain means (the scoring target's Oregon Inlet treatment, Hannah's choice 2026-09-22). The dune line always follows the sub-period.
+Both curves LOWESS-smoothed at **7 domains (3.5 km)**, at transect resolution, with GIS 1–10 kept at their raw domain means (the scoring target's Oregon Inlet treatment, Hannah's choice 2026-09-22). The dune line always follows the sub-period.
 
 | shoreline reading | window | r raw | r smoothed | beach width raw (m) | beach width smoothed (m) |
 |---|---|---|---|---|---|
@@ -29,4 +29,4 @@ committed — `git log -- scripts/input_prep/5-scr/smoothing_test/` returns
 nothing on any branch — so it was already absent before the 2026-09-22
 reorganisation, and that reorganisation is not what removed it. The figures it
 produced are the only record of it. What replaced it,
-`4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py`, is committed.
+`4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py`, is committed.

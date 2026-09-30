@@ -11,7 +11,7 @@ the matrix end values were solved on). What do the two locked end domains
 1996_2024 --windows 1996 2010` (the `--coastsat-window` option was added to
 the loop and to `be_edge_domain_solve.py` for this): the same Newton solve
 as the matrix (model lrr_m_yr against the target table, GIS 1 raw, GIS 90
-LOESS-10), with the 1996-2024 table in place of the window's own. Brackets are
+LOWESS-10), with the 1996-2024 table in place of the window's own. Brackets are
 the 09-18 matrix zeroBE and edgeBE full-management runs. Full management, no
 groin, relocations off, Hs 2.5, offsets v1.
 

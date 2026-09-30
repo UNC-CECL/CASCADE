@@ -39,7 +39,7 @@ line is less bad there, by 3–4 points managed and 12–13 natural. Smoothed, t
 are level or the shoreline is ahead by up to 3 points. So the offset source remains a
 small lever and is not the cause of the 2010–2024 failure.
 
-## Scores against CoastSat (each period's own LRR, LOESS 7, interior GIS 2–89)
+## Scores against CoastSat (each period's own LRR, LOWESS 7, interior GIS 2–89)
 
 | arm | scenario | period | raw explained | smoothed | bias (m/yr) | raw r |
 |---|---|---|---|---|---|---|
@@ -60,7 +60,7 @@ Against option A (09-28, before the dune ceilings, cap fix and split storms),
 1996–2010: dune line natural +19.8 → +20.7 raw and managed +18.2 → +18.1; shoreline v1
 natural +22.6 → +23.1 and managed +22.4 → +20.8.
 
-## Each offset on its own feature (metres over 14 yr, LOESS 7)
+## Each offset on its own feature (metres over 14 yr, LOWESS 7)
 
 | arm | scenario | period | graded on | explained | r | bias (m) |
 |---|---|---|---|---|---|---|

@@ -77,7 +77,7 @@ rate_gis90_m_yr                  = 19.0935
 enabled                          = False
 
 [skill]
-target                           = CoastSat LOESS 7-domain   # raw means over GIS 1-10
+target                           = CoastSat LOWESS 7-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
 mean_bias_m_yr                   = -0.0052
 rmse_m_yr                        = 1.1367

@@ -27,7 +27,7 @@ Driver: `scripts/hatteras_ms/experiments/HAT_storm_height_test.py` (`gauges`, `b
   - `slope0p10`: run-up recomputed with slope 0.10 and the events re-found. That gives about twice as many events, with peaks up to 6.9 m in 1996–2010.
   - `plus0p25` and `plus0p50`: Rhigh and Rlow raised 0.25 and 0.5 m, on the same events.
 - **Dunes:** both realistic ceilings, uniform 5.5 m NAVD88 and per-cell.
-- **Runs:** managed, both windows, plus the trim24 controls. RMSE is against LOESS-7 for every run (see the per-domain NOTE).
+- **Runs:** managed, both windows, plus the trim24 controls. RMSE is against LOWESS-7 for every run (see the per-domain NOTE).
 
 | window | ceiling | storms | POD | POFD | PSS | timing r | RMSE | Irene low third (obs 25) | Irene rest (obs 47) |
 |---|---|---|---|---|---|---|---|---|---|

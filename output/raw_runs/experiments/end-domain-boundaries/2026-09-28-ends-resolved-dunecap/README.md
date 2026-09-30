@@ -9,7 +9,7 @@ Hannah, 2026-09-28: "go with option 1, clip only the bulldozed sand". CASCADE's 
 
 GIS 89 was one of the clipped domains in 2010, which is why GIS 90 moved.
 
-The protocol is as `2026-09-28-ends-resolved-adopted/`: option A waves, full management, edgeBE, no groin, CoastSat LRR target (GIS 1 raw, GIS 90 LOESS-7). The driver was:
+The protocol is as `2026-09-28-ends-resolved-adopted/`: option A waves, full management, edgeBE, no groin, CoastSat LRR target (GIS 1 raw, GIS 90 LOWESS-7). The driver was:
 
     HAT_resolve_ends_metres.py --periods 2010 --hs 2.0 --tp 7.5 --asym 0.6 --ahf 0.5
         --accept 0.03 --tag end-domain-boundaries/2026-09-28-ends-resolved-dunecap

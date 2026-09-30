@@ -32,7 +32,7 @@ OUTPUT   output/raw_runs/experiments/<exp>/<reading>/step<k>/<window>/edgeBE/<ru
 COASTSAT TARGET (2026-09-19)
     --target coastsat runs the same loop against the CoastSat target, as the
     matrix end values were solved (model lrr_m_yr against target_lrr_m_yr,
-    GIS 1 raw, GIS 90 LOESS-10). One chain per window, filed under the
+    GIS 1 raw, GIS 90 LOWESS-10). One chain per window, filed under the
     reading name "coastsat"; --smooth is ignored. E.g. --exp
     end-domain-boundaries/2026-09-19-end-domains-2010-recheck --windows 2010 --target coastsat.
 

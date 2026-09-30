@@ -117,7 +117,7 @@ caption and data CSV. PNGs are ignored under `output/raw_runs/` repo-wide.
 ## Scores
 
 The same as the offset-scale study: interior (GIS 2–89) mean bias and RMSE of
-the modelled LRR rate against the window's CoastSat LRR target (LOESS 10
+the modelled LRR rate against the window's CoastSat LRR target (LOWESS 10
 domains), and the share of the observed alongshore variation explained,
 1 − Σ(model − obs)² / Σ(obs − obs mean)², with 0% meaning no better than a
 flat line at the observed mean (`tables/observed_targets.csv` gives each

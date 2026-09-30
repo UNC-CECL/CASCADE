@@ -19,8 +19,8 @@ house-style column. What changed:
   with its caption in `supporting/CAPTIONS.md`
 
 ```
-hindcast_edgeBE_loess_reference.png   edgeBE, both periods, both scoring windows
-hindcast_zeroBE_loess_reference.png   the same, no source/sink field at all
+hindcast_edgeBE_lowess_reference.png   edgeBE, both periods, both scoring windows
+hindcast_zeroBE_lowess_reference.png   the same, no source/sink field at all
 ```
 
 The last calibBE render (1984/2004) was retired to
@@ -28,9 +28,9 @@ The last calibBE render (1984/2004) was retired to
 
 | | 1996-2010 | 2010-2024 |
 |---|---|---|
-| edgeBE, LOESS D11-D89 | RMSE 1.12, bias -0.09, r 0.34 | RMSE 2.34, bias -1.58, r 0.08 |
+| edgeBE, LOWESS D11-D89 | RMSE 1.12, bias -0.09, r 0.34 | RMSE 2.34, bias -1.58, r 0.08 |
 | edgeBE, D2-D89 | RMSE 1.14, bias +0.03, r 0.44 | RMSE 2.31, bias -1.33, r 0.28 |
-| zeroBE, LOESS D11-D89 | RMSE 1.04, bias -0.19, r 0.46 | RMSE 2.44, bias -1.86, r 0.10 |
+| zeroBE, LOWESS D11-D89 | RMSE 1.04, bias -0.19, r 0.46 | RMSE 2.44, bias -1.86, r 0.10 |
 | zeroBE, D2-D89 | RMSE 1.09, bias -0.22, r 0.47 | RMSE 2.61, bias -2.02, r 0.08 |
 
 zeroBE scores better than edgeBE over the interior in 1996-2010, the reverse
@@ -53,18 +53,18 @@ field. `../scenario_grid/scenario_grid_by_preset.png` is where presets and manag
 scenarios are compared properly; these four are a single deliberate contrast.
 
 ```
-hindcast_calibrated_loess_reference.png   THE figure. Modelled rate against the
-                                          CoastSat LOESS reference, with the
+hindcast_calibrated_lowess_reference.png   THE figure. Modelled rate against the
+                                          CoastSat LOWESS reference, with the
                                           geographic annotation layer and BOTH
                                           scoring windows printed per panel
-hindcast_edgeBE_loess_reference.png       the same, calibration removed
+hindcast_edgeBE_lowess_reference.png       the same, calibration removed
 ```
 
 ## There used to be two, and why there is now one
 
 A second figure, `HAT_hindcast_final_figure.py`, drew the same two runs scored
 over D2-D89 instead of D11-D89. The gap between those two numbers is the D2-D10
-strip alone, not the smoothing: north of D10 the LOESS curve and the
+strip alone, not the smoothing: north of D10 the LOWESS curve and the
 calibration target are identical numbers.
 
 Keeping that difference in two files was not free. Each figure quoted the
@@ -87,7 +87,7 @@ stated in the caption instead, and the groin line still marks D5.5. The grey
 frozen-zone band is the one fact now drawn in no live figure -- judged the
 least load-bearing of the three, and recoverable from the retired script.
 
-Written by `scripts/figure_making/model_output/hindcast_final_figure_loess.py`,
+Written by `scripts/figure_making/model_output/hindcast_final_figure_lowess.py`,
 `--preset calibBE` (default) or `--preset edgeBE`. `zeroBE` is wired up but not
 built here. PNG only - it does not write a vector copy.
 
@@ -116,8 +116,8 @@ the source/sink field.
 |---|---|---|
 | calibBE, D2-D89 | RMSE 0.547, bias +0.008, r 0.93 | RMSE 0.580, bias +0.104, r 0.87 |
 | edgeBE, D2-D89 | RMSE 1.235, bias +0.149, r 0.58 | RMSE 1.779, bias -0.994, r 0.23 |
-| calibBE, LOESS D11-D89 | RMSE 0.448, bias +0.077, r 0.95 | RMSE 0.467, bias +0.046, r 0.91 |
-| edgeBE, LOESS D11-D89 | RMSE 1.254, bias +0.221, r 0.43 | RMSE 1.843, bias -1.120, r 0.08 |
+| calibBE, LOWESS D11-D89 | RMSE 0.448, bias +0.077, r 0.95 | RMSE 0.467, bias +0.046, r 0.91 |
+| edgeBE, LOWESS D11-D89 | RMSE 1.254, bias +0.221, r 0.43 | RMSE 1.843, bias -1.120, r 0.08 |
 
 ## The runs behind them
 

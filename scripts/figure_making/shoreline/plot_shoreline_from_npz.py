@@ -6,9 +6,9 @@ HATTERAS ISLAND: Shoreline Change Analysis from CASCADE NPZ Output
 Loads pre-saved CASCADE NPZ comparison and produces:
   1. Yearly relative shoreline change + BN bar panel → GIF
   2. Yearly absolute shoreline position + BN bar panel → GIF
-  3. Publication-quality rate profile vs CoastSat LOESS
+  3. Publication-quality rate profile vs CoastSat LOWESS
 
-Annotation system, color palette, LOESS CoastSat pipeline, and geographic
+Annotation system, color palette, LOWESS CoastSat pipeline, and geographic
 annotation data all match HAT_hindcast_1984_2024_old version.py exactly.
 
 Usage:
@@ -148,13 +148,13 @@ FLIP_SIGN_MODEL     = True    # CASCADE x_s_TS increases with retreat → flip
 SOURCE_SINK_PRESET = "base"   # used in plot title only (no calculation here)
 Hs_LABEL           = 2.5      # used in plot title / legend
 
-# LOESS windows to overlay (domain count) — matches run script
-LOESS_WINDOW_DOMAINS = [7]      # [7, 10] until 2026-09-28
-LOESS_WINDOW_STYLES  = [
+# LOWESS windows to overlay (domain count) — matches run script
+LOWESS_WINDOW_DOMAINS = [7]      # [7, 10] until 2026-09-28
+LOWESS_WINDOW_STYLES  = [
     (2.0, "-", 1.00),   # 7-domain: solid, primary reference
 ]
-RESIDUALS_LOESS_WINDOW      = 7
-LOESS_SKIP_SOUTHERN_DOMAINS = 10   # raw means for domains 1–10; LOESS from 11+
+RESIDUALS_LOWESS_WINDOW      = 7
+LOWESS_SKIP_SOUTHERN_DOMAINS = 10   # raw means for domains 1–10; LOWESS from 11+
 
 PLOT_RAW_LRR          = True
 PLOT_REFERENCE_PERIOD = False
@@ -216,10 +216,10 @@ ANN_C_VILLAGE_LINE = "0.40"
 ANN_C_PIER         = "#1565C0"
 ANN_C_GROIN        = "#B71C1C"
 
-# CoastSat LOESS lines keyed by window size
+# CoastSat LOWESS lines keyed by window size
 CS_WINDOW_COLORS = {
-     7: "#6BAED6",   # medium sky blue  — 7-domain LOESS
-    10: "#08519C",   # deep ocean blue  — 10-domain LOESS
+     7: "#6BAED6",   # medium sky blue  — 7-domain LOWESS
+    10: "#08519C",   # deep ocean blue  — 10-domain LOWESS
 }
 CS_WINDOW_COLOR_DEFAULT = "#4A7C8E"
 
@@ -405,7 +405,7 @@ def _bn_group_labels(active_gis, bn_real):
 
 
 # =============================================================================
-# COASTSAT LOESS PIPELINE  (copied from HAT_hindcast_1984_2024_old version.py)
+# COASTSAT LOWESS PIPELINE  (copied from HAT_hindcast_1984_2024_old version.py)
 # =============================================================================
 
 def estimate_transect_spacing(along_coast_m):
@@ -466,9 +466,9 @@ def load_transect_data(ds):
     return domain_ids, lrr_values, along_coast_m
 
 
-def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
+def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
     """
-    Apply LOESS at transect resolution using physical along-coast distance (m),
+    Apply LOWESS at transect resolution using physical along-coast distance (m),
     then aggregate smoothed values to GIS domain resolution.
 
     Returns gis_x, smoothed, frac — all None on failure.
@@ -480,7 +480,7 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
 
     valid = np.isfinite(lrr)
     if valid.sum() < 5:
-        print(f"  ⚠️  Too few valid transects ({valid.sum()}) — skipping LOESS")
+        print(f"  ⚠️  Too few valid transects ({valid.sum()}) — skipping LOWESS")
         return None, None, frac
 
     result            = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
@@ -494,12 +494,12 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
     return dom_agg.index.values.astype(int), dom_agg.values, frac
 
 
-def splice_loess_with_raw_south(win_gis_x, win_smoothed,
+def splice_lowess_with_raw_south(win_gis_x, win_smoothed,
                                 transect_domain_ids, transect_lrr_values,
-                                skip_n=LOESS_SKIP_SOUTHERN_DOMAINS,
+                                skip_n=LOWESS_SKIP_SOUTHERN_DOMAINS,
                                 is_widest_window=False):
     """
-    Return (plot_x, plot_y) for a LOESS window with optional southern splice.
+    Return (plot_x, plot_y) for a LOWESS window with optional southern splice.
 
     Widest window + skip_n > 0: domains 1–skip_n use raw per-domain means.
     All other windows: line simply starts at domain skip_n+1.
@@ -507,7 +507,7 @@ def splice_loess_with_raw_south(win_gis_x, win_smoothed,
     if skip_n == 0:
         return win_gis_x, win_smoothed
 
-    # LOESS portion: domains strictly north of skip_n
+    # LOWESS portion: domains strictly north of skip_n
     mask   = win_gis_x > skip_n
     lx, ly = win_gis_x[mask], win_smoothed[mask]
     return lx, ly
@@ -515,7 +515,7 @@ def splice_loess_with_raw_south(win_gis_x, win_smoothed,
 
 def load_all_coastsat(active_start_year):
     """
-    Load all COASTSAT_DATASETS, apply LOESS at transect resolution.
+    Load all COASTSAT_DATASETS, apply LOWESS at transect resolution.
 
     Returns a list of cs_series dicts matching the run-script structure.
     active_start_year controls which dataset gets full-opacity 'active' styling.
@@ -527,13 +527,13 @@ def load_all_coastsat(active_start_year):
         if domain_ids is None:
             continue
         windows = []
-        for w in LOESS_WINDOW_DOMAINS:
-            gis_x, smoothed, frac = loess_smooth_transect_to_domains(
+        for w in LOWESS_WINDOW_DOMAINS:
+            gis_x, smoothed, frac = lowess_smooth_transect_to_domains(
                 along_coast_m, lrr_values, domain_ids, w
             )
             if gis_x is None:
                 continue
-            print(f"  ✓ LOESS window={w} dom "
+            print(f"  ✓ LOWESS window={w} dom "
                   f"({w * DOMAIN_SPACING_M / 1000.0:.1f} km)  "
                   f"frac={frac:.3f}  ({ds['label']})")
             windows.append(dict(window=w, gis_x=gis_x, smoothed=smoothed, frac=frac))
@@ -975,12 +975,12 @@ def plot_publication_rate_figure(
     Publication-quality rate comparison figure.
 
     Matches the annotated figure produced at the end of main() in the run
-    script: model line (warm orange) + CoastSat scatter + multi-window LOESS
+    script: model line (warm orange) + CoastSat scatter + multi-window LOWESS
     + full geographic annotation layer.
     X-axis: GIS domain IDs 1–90.
     """
     gis_ids     = np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1)
-    widest_win  = max(LOESS_WINDOW_DOMAINS)
+    widest_win  = max(LOWESS_WINDOW_DOMAINS)
     data_handles = []
 
     fig, ax = plt.subplots(figsize=figsize("double", height=3.45), constrained_layout=True)
@@ -990,7 +990,7 @@ def plot_publication_rate_figure(
     # Geographic annotations first (data renders on top)
     add_geographic_annotations(ax)
 
-    # CoastSat scatter + multi-window LOESS lines
+    # CoastSat scatter + multi-window LOWESS lines
     for cs in cs_series:
         is_active = cs["active"]
         if not is_active and not PLOT_REFERENCE_PERIOD:
@@ -1012,16 +1012,16 @@ def plot_publication_rate_figure(
         for idx, win in enumerate(cs["windows"]):
             cs_color = CS_WINDOW_COLORS.get(win["window"], CS_WINDOW_COLOR_DEFAULT)
             lw_base, ls, alpha_factor = (
-                LOESS_WINDOW_STYLES[idx] if idx < len(LOESS_WINDOW_STYLES)
+                LOWESS_WINDOW_STYLES[idx] if idx < len(LOWESS_WINDOW_STYLES)
                 else (1.5, "-", 0.80)
             )
             is_widest = (win["window"] == widest_win)
-            gis_x, rate_y = splice_loess_with_raw_south(
+            gis_x, rate_y = splice_lowess_with_raw_south(
                 win["gis_x"], win["smoothed"],
                 cs["transect_domains"], cs["transect_rates"],
                 is_widest_window=is_widest,
             )
-            lbl = f"{cs['label']} — LOESS {win['window']}-dom"
+            lbl = f"{cs['label']} — LOWESS {win['window']}-dom"
             if is_active:
                 if is_widest:
                     ax.fill_between(gis_x, rate_y, 0,
@@ -1159,7 +1159,7 @@ def main():
         print("\nNo CASCADE runs loaded. Check NPZ_PATHS_BY_LABEL paths.")
         sys.exit(1)
 
-    # ── CoastSat LOESS ────────────────────────────────────────────────────────
+    # ── CoastSat LOWESS ────────────────────────────────────────────────────────
     cs_series = load_all_coastsat(active_start_year=START_YEAR)
 
     # ── Nourishment arrays for BN bar panels ──────────────────────────────────

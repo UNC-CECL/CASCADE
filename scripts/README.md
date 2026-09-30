@@ -103,7 +103,7 @@ repo_tools/            tools that act on the repository itself rather than on
 
 cascade_pipeline/      the library: post-run analysis and figures.
                        Site-agnostic by contract — geometry, shoreline
-                       extraction, CoastSat/LOESS, plotting/. Consumes a
+                       extraction, CoastSat/LOWESS, plotting/. Consumes a
                        finished run; does not drive the simulation.
 
 input_prep/            builds the model's inputs. Stage folders 0-7 mirror

@@ -224,12 +224,12 @@ def cmd_run(a):
 
 def coastsat_target(start=PERIOD, end=None):
     """The CoastSat LRR target, GIS 1-90, as the runner builds it for a start
-    year (section 8 of the runner: LOESS at 10 domains, the southern 10 raw).
+    year (section 8 of the runner: LOWESS at 10 domains, the southern 10 raw).
     Shared with scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py."""
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS
     from cascade_pipeline.hindcast import build_target_table
-    from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
     # `end` scores a window inside a period (2010-2020 inside 2010-2024,
     # 2026-09-24): the CoastSat table must exist under lrr/<start>_<end>/.
@@ -237,8 +237,8 @@ def coastsat_target(start=PERIOD, end=None):
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
                          csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
-    cfg = LoessConfig(window_domains=(SMOOTH_DOMAINS,), skip_southern_domains=10)
-    cs = build_coastsat_series([ds], active_period_start=start, loess_config=cfg,
+    cfg = LowessConfig(window_domains=(SMOOTH_DOMAINS,), skip_southern_domains=10)
+    cs = build_coastsat_series([ds], active_period_start=start, lowess_config=cfg,
                                domains=HATTERAS_DOMAINS)[0]
     return build_target_table(cs, cfg, HATTERAS_DOMAINS, SMOOTH_DOMAINS).set_index(
         "gis_domain")["target_lrr_m_yr"]
@@ -256,26 +256,26 @@ def run_rates(run_dir):
                        ).set_index("gis_domain")["lrr_m_yr"]
 
 
-SMOOTH_DOMAINS = 7                   # the CoastSat target's LOESS window; 10 until 2026-09-28
+SMOOTH_DOMAINS = 7                   # the CoastSat target's LOWESS window; 10 until 2026-09-28
 
 
 def smooth_like_target(series):
     """A model series (per GIS domain) smoothed as the CoastSat target is:
-    LOESS over a SMOOTH_DOMAINS window (7 since 2026-09-28, 10 before; frac
+    LOWESS over a SMOOTH_DOMAINS window (7 since 2026-09-28, 10 before; frac
     SMOOTH_DOMAINS/90 on the 90 domains, matching the
     target's 0.110), the southern 10 domains left raw as the target leaves
     them. Added 2026-09-25 for the smoothed score (Hannah); shared by the
     step-2 figures and wave-climate/2026-09-25-wave-grid-smoothed-score."""
     import pandas as pd
     from statsmodels.nonparametric.smoothers_lowess import lowess
-    from cascade_pipeline.coastsat_loess import DEFAULT_LOESS
+    from cascade_pipeline.coastsat_lowess import DEFAULT_LOWESS
     x = series.index.to_numpy(dtype=float)
     y = series.to_numpy(dtype=float)
     ok = np.isfinite(y)
     sm = lowess(y[ok], x[ok], frac=SMOOTH_DOMAINS / len(x), return_sorted=False)
     out = pd.Series(np.nan, index=series.index)
     out[ok] = sm
-    raw = series.index <= DEFAULT_LOESS.skip_southern_domains
+    raw = series.index <= DEFAULT_LOWESS.skip_southern_domains
     out[raw] = series[raw]
     return out
 
@@ -401,7 +401,7 @@ def cmd_score(a):
         out[out.sweep == sweep].to_csv(TABLES_DIR / f"{sweep}_sweep.csv", index=False)
     t = interior(target)
     pd.DataFrame([{
-        "target": f"CoastSat LRR 1996-2010, LOESS {SMOOTH_DOMAINS} domains",
+        "target": f"CoastSat LRR 1996-2010, LOWESS {SMOOTH_DOMAINS} domains",
         "domains": "GIS 2-89", "n_domains": len(t),
         "mean_m_yr": t.mean(), "sd_m_yr": t.std(ddof=0),
         "flat_line_rmse_m_yr": t.std(ddof=0),

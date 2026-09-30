@@ -1,14 +1,14 @@
 """
 coastsat_lrr_smoothing_windows.py
 ==============================================================================
-The three LOESS windows overlaid on ONE LRR rate field, in the house style
+The three LOWESS windows overlaid on ONE LRR rate field, in the house style
 (Hannah, 2026-09-21). The rate is the thing smoothed here -- this is the field
 itself, not a projection into metres and not a model comparison.
 
     coastsat/lrr/<w>/smoothing_windows_<w>.png
 
 WHAT IT SHOWS
-    The unsmoothed per-domain mean rate as the palest line, then the LOESS
+    The unsmoothed per-domain mean rate as the palest line, then the LOWESS
     curve at 3, 5 and 10 domains (1.5, 2.5, 5.0 km) on a light-to-dark ramp,
     darkest being the window every run is actually graded at. Village bands,
     groin and piers, the hatched shoal boxes and the model-input beach fills
@@ -24,7 +24,7 @@ WHY THE SIGN FILL IS NOT HERE
 
 THE SPLICE
     Every curve keeps the raw domain means over GIS 1-10 (the Oregon Inlet
-    boundary treatment, cascade_pipeline.coastsat_loess.DEFAULT_LOESS), so all
+    boundary treatment, cascade_pipeline.coastsat_lowess.DEFAULT_LOWESS), so all
     four are identical there by construction -- the same splice the scoring
     target is built through.
 
@@ -58,8 +58,8 @@ from matplotlib.ticker import MultipleLocator  # noqa: E402
 
 import coastsat_lrr_windows as cw  # noqa: E402
 import rates_figures as rf  # noqa: E402
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    DEFAULT_LOESS, spliced_loess_series,
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    DEFAULT_LOWESS, spliced_lowess_series,
 )
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK_MUTED, SMOOTH_RAMP, apply_style, caption, figsize,
@@ -107,7 +107,7 @@ def win_label(w):
     """
     if not w:
         return "Unsmoothed domain means"
-    return f"LOESS {km_of(w):g} km"
+    return f"LOWESS {km_of(w):g} km"
 
 
 def transects(stem):
@@ -155,7 +155,7 @@ def series(stem, smooth_windows=SMOOTH_WINDOWS):
     _, ids, along, rate = transects(stem)
     out, fracs = {}, {}
     for w in smooth_windows:
-        out[w], fracs[w] = spliced_loess_series(ids, along, rate, w)
+        out[w], fracs[w] = spliced_lowess_series(ids, along, rate, w)
     return out, fracs
 
 
@@ -179,7 +179,7 @@ def structure(stem, vals, smooth_windows=SMOOTH_WINDOWS):
     # Does the widest window take its structure out of the shoal-fronted
     # peaks, or evenly along the island? Squared removed signal per domain,
     # peaks against the rest, over the unspliced reach only.
-    free = widest.loc[DEFAULT_LOESS.skip_southern_domains + 1:]
+    free = widest.loc[DEFAULT_LOWESS.skip_southern_domains + 1:]
     peaks = [g for lo, hi in PEAK_SPANS for g in range(lo, hi + 1)]
     ss = free ** 2
     inpk = float(ss[ss.index.isin(peaks)].sum())
@@ -208,7 +208,7 @@ def figure(stem, half=None, smooth_windows=SMOOTH_WINDOWS):
     start, end = (int(v) for v in stem.split("_"))
     half = lrr_half() if half is None else half
     vals, fracs = series(stem, smooth_windows)
-    skip = DEFAULT_LOESS.skip_southern_domains
+    skip = DEFAULT_LOWESS.skip_southern_domains
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
@@ -271,7 +271,7 @@ def figure(stem, half=None, smooth_windows=SMOOTH_WINDOWS):
            if n_dots_out else "")
         + ". The palest line with markers is the mean "
         "of the ~10 transects in each 500 m domain, unsmoothed; the three heavier "
-        f"curves are a LOESS fitted to the transects at {widths} and "
+        f"curves are a LOWESS fitted to the transects at {widths} and "
         f"{km_of(smooth_windows[-1]):g} km ({smooth_windows[-1]} domains), light "
         "to dark, the darkest being the "
         f"{smooth_windows[-1]}-domain window every run is graded at "

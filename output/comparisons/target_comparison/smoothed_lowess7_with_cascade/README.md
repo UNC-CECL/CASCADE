@@ -1,4 +1,4 @@
-# smoothed_loess7_with_cascade — the model against both candidate targets
+# smoothed_lowess7_with_cascade — the model against both candidate targets
 
 > **Redrawn 2026-09-29 after the dune-cap fix** (the zeroBE matrix run, rerun with the fix; see `../README.md`).
 >
@@ -7,7 +7,7 @@
 > **Redrawn 2026-09-27 on option A** (the option A zeroBE matrix run; metres offset, Hs 2.0 / Tp 7.5 / asym 0.6 / high-angle 0.5). The numbers in the text below are the /10-era ones; the current interior means are in `PROVENANCE.md`: model minus dune line +10.7 m (1996-2010) and -10.7 m (2010-2024); model minus shoreline -6.7 / -11.0 m (projected) and +0.7 / -24.7 m (total). The /10 version is in `output/archive/2026-09-27_target-comparison-div10/smoothed_loess7_with_cascade/`.
 
 Built 2026-09-22 (Hannah, by interview). The observations-only pair in
-`data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7/`
+`data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7/`
 with the CASCADE hindcast drawn over it in **dark green**.
 
 Two sheets, 1996–2010 above 2010–2024, one fixed ±100 m axis. They differ from
@@ -17,8 +17,8 @@ than re-implemented.
 
 | sheet | shoreline target |
 |---|---|
-| `loess7_projected_vs_duneline_with_cascade_...` | the **same** 1996–2024 LRR × 14 yr in both panels |
-| `loess7_total_change_vs_duneline_with_cascade_...` | **each panel's own** LRR × its own 14 yr |
+| `lowess7_projected_vs_duneline_with_cascade_...` | the **same** 1996–2024 LRR × 14 yr in both panels |
+| `lowess7_total_change_vs_duneline_with_cascade_...` | **each panel's own** LRR × its own 14 yr |
 
 The dune-line target is the same either way and always follows the sub-period.
 
@@ -70,7 +70,7 @@ quantity against an unsmoothed one. Two things are stated rather than hidden:
   treatment the scoring target uses), so nothing there is the smoother's.
 - The observed targets are smoothed at **transect** resolution (~10 CoastSat
   and 5 dune transects per domain) while the model exists only **per domain**,
-  so its LOESS runs over 90 points rather than ~900. At this width that barely
+  so its LOWESS runs over 90 points rather than ~900. At this width that barely
   changes the fitted curve, but the two are not literally the same operation.
 
 **Correlations are deliberately not quoted.** A symmetric smoother inflates r
@@ -79,5 +79,5 @@ width — `../smoothing_scale/PROVENANCE.md` established that over 96 rows.
 Read the bias.
 
 Rebuild:
-`python scripts/analyze_output/compare_runs/smoothed_loess7_with_cascade.py`
+`python scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py`
 (`--window N` for a different width).

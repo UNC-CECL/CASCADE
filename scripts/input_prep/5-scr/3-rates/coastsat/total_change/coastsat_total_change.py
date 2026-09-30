@@ -41,14 +41,14 @@ FITTED on, never by the arithmetic:
     was never fitted to the window it is being judged over. SEAWARD IS
     POSITIVE throughout, as in every 3-rates product.
 
-SMOOTHED    the same comparison after an alongshore LOESS (Hannah, by
+SMOOTHED    the same comparison after an alongshore LOWESS (Hannah, by
             interview, 2026-09-21). The rate the MODEL is graded against is not
-            the raw rate: it is raw over GIS 1-10 and a 10-domain LOESS of the
-            transect values beyond (cascade_pipeline.coastsat_loess). The raw
+            the raw rate: it is raw over GIS 1-10 and a 10-domain LOWESS of the
+            transect values beyond (cascade_pipeline.coastsat_lowess). The raw
             comparison above therefore tests the fairness of a quantity nobody
             uses; this one tests the target as it is actually applied.
 
-            Note LOESS commutes with the x years multiply -- the weights depend
+            Note LOWESS commutes with the x years multiply -- the weights depend
             only on the transect positions and the robust reweighting is scale
             equivariant -- so smoothing the RATE and smoothing the DISTANCE
             give the same number to machine precision. Nothing here turns on
@@ -85,7 +85,7 @@ OUTPUT   data/hatteras_init/5-scr/3-rates/coastsat/<product>/<start>_<end>/
                                        line; PDF and caption under supporting/
     PROVENANCE.md
     smoothed/<product>_smoothed_<start>_<end>_w<NN>.png
-                                       one per LOESS window, same axis as each
+                                       one per LOWESS window, same axis as each
                                        other so the windows can be read side by
                                        side; PDFs and captions under
                                        smoothed/supporting/
@@ -137,7 +137,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
 )
 # The model target's own smoother, imported rather than re-implemented so the
 # 7-domain figure here IS the treatment the runs are graded under (10 until 2026-09-28).
-from cascade_pipeline.coastsat_loess import spliced_loess_series  # noqa: E402
+from cascade_pipeline.coastsat_lowess import spliced_lowess_series  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 
 N_DOMAINS = 90
@@ -166,7 +166,7 @@ NL = chr(10)          # the provenance writers join on it
 class Product:
     """One of the two named products. The ONLY thing that differs between them
     is which window the rate is read from; everything downstream -- the
-    observed side, the figures, the LOESS sweep -- is identical, which is the
+    observed side, the figures, the LOWESS sweep -- is identical, which is the
     point of building both from one script.
 
     Attributes:
@@ -234,13 +234,13 @@ PROJECTED = Product(
 )
 PRODUCTS = {p.key: p for p in (TOTAL, PROJECTED)}
 
-# LOESS window widths in domain units (1 domain = 500 m). 7 is the model
-# target's window since 2026-09-28 (coastsat_loess.LoessConfig.window_domains;
+# LOWESS window widths in domain units (1 domain = 500 m). 7 is the model
+# target's window since 2026-09-28 (coastsat_lowess.LowessConfig.window_domains;
 # the group's range); 10 was until then and is kept for what still reads it;
 # 3 and 5 are there to show how fast the residual collapses with scale.
 SMOOTH_WINDOWS = (3, 5, 7, 10)
-# GIS 1..SPLICE_DOMAINS keep their raw domain means instead of the LOESS --
-# coastsat_loess.LoessConfig.skip_southern_domains, the boundary treatment at
+# GIS 1..SPLICE_DOMAINS keep their raw domain means instead of the LOWESS --
+# coastsat_lowess.LowessConfig.skip_southern_domains, the boundary treatment at
 # Oregon Inlet. Applied to the OBSERVED side too, so the two never differ in
 # treatment at any domain.
 SPLICE_DOMAINS = 10
@@ -392,7 +392,7 @@ def figure(r) -> list:
 
 
 def _smooth_series(dom_ids, along_m, values, window):
-    """One alongshore LOESS pass at transect resolution, averaged to domains,
+    """One alongshore LOWESS pass at transect resolution, averaged to domains,
     with GIS 1..SPLICE_DOMAINS put back to their raw domain means -- the
     scoring target's own two steps, shared with the smoothing-scale sweep in
     analyze_output/compare_runs/smoothing_scale.py.
@@ -400,18 +400,18 @@ def _smooth_series(dom_ids, along_m, values, window):
     Args:
         dom_ids, along_m, values: per-transect domain id, along-coast distance
             in metres, and the quantity to smooth (projected or observed).
-        window: LOESS window width in domain units.
+        window: LOWESS window width in domain units.
 
     Returns:
         (Series indexed 1..N_DOMAINS, the lowess frac used).
     """
-    return spliced_loess_series(dom_ids, along_m, values, window,
+    return spliced_lowess_series(dom_ids, along_m, values, window,
                                 skip=SPLICE_DOMAINS)
 
 
 def smooth(r, windows=SMOOTH_WINDOWS) -> dict:
     """The rate-vs-observed comparison repeated under the model target's
-    alongshore LOESS, at each window in `windows`. BOTH sides get the same
+    alongshore LOWESS, at each window in `windows`. BOTH sides get the same
     pass and the same splice, so no window compares a smoothed quantity with
     an unsmoothed one. Window 0 in the output is the raw product."""
     t = r["t"].sort_values(["domain_number", "transect_id"]).reset_index(drop=True)
@@ -444,7 +444,7 @@ def smooth(r, windows=SMOOTH_WINDOWS) -> dict:
         d = b - a
         stats.append(dict(
             window_domains=w, window_km=np.nan if w == 0 else w * km,
-            loess_frac=frac, n_domains=int(ok.sum()),
+            lowess_frac=frac, n_domains=int(ok.sum()),
             bias_m=float(d.mean()), rms_residual_m=float(np.sqrt((d ** 2).mean())),
             residual_min_m=float(d.min()), residual_max_m=float(d.max()),
             sd_rate_m=float(a.std(ddof=1)), sd_observed_m=float(b.std(ddof=1)),
@@ -485,7 +485,7 @@ def overlay_bounds(sms):
 
 
 def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
-    """Every LOESS width's distance on ONE panel, no observed side (Hannah,
+    """Every LOWESS width's distance on ONE panel, no observed side (Hannah,
     2026-09-21).
 
     The per-window panels above each answer "does the trend hold HERE"; this
@@ -493,7 +493,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
     curves on top of each other and nothing else competing for the eye.
 
     Note this is the RATE figure of input_prep/5-scr/coastsat_lrr_smoothing_windows.py
-    in metres: LOESS commutes with the x years multiply, so the curves have
+    in metres: LOWESS commutes with the x years multiply, so the curves have
     the same shape and only the units differ. It is drawn because metres is
     the unit the model and the dune line are read in, not because it shows a
     different field."""
@@ -539,14 +539,14 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
     # a fill -- at the default pad it lands on the 2022 labels. The window's
     # ROLE in the 1996-2010-2024 chain used to be the title; it is in the
     # caption now, because the product is the thing a reader cannot recover.
-    ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)}, every LOESS width)",
+    ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)}, every LOWESS width)",
                  pad=20 if fills else 6)
 
     h = [Line2D([], [], color=SMOOTH_RAMP[0], lw=0.8, marker="o", ms=2.2)]
     h += [Line2D([], [], color=SMOOTH_RAMP[i % len(SMOOTH_RAMP)], lw=1.5)
           for i, w in enumerate(windows) if w]
     labels = ["Unsmoothed domain means"] + [
-        f"LOESS {w * km_of:g} km ({w} domains)" for w in windows if w]
+        f"LOWESS {w * km_of:g} km ({w} domains)" for w in windows if w]
     fig.legend(h, labels, loc="outside lower center", ncol=len(h), frameon=False)
 
     # How far apart the windows are, in the unit of the axis.
@@ -558,7 +558,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
     rate_png = (COASTSAT_LRR_ROOT / f"{rs}_{re_}" / f"smoothing_windows_{rs}_{re_}.png")
     rate_ref = (
         f"This is the rate figure `3-rates/coastsat/lrr/{rs}_{re_}/{rate_png.name}` in "
-        f"metres — a LOESS commutes with the × {years} yr multiply, so the curves have "
+        f"metres — a LOWESS commutes with the × {years} yr multiply, so the curves have "
         "the same shape and only the units differ. " if rate_png.exists() else "")
     role_txt = (f"This window is the {role.lower()} of the 1996–2010–2024 chain. "
                 if role else "")
@@ -573,7 +573,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
         + "; the palest line with "
         "markers is the mean of those over the ~10 transects in each 500 m domain, "
         "unsmoothed, and the three heavier curves are the same quantity after the "
-        f"LOESS the model target is built through, at {', '.join(f'{w * km_of:g} km' for w in windows[1:-1])} "
+        f"LOWESS the model target is built through, at {', '.join(f'{w * km_of:g} km' for w in windows[1:-1])} "
         f"and {windows[-1] * km_of:g} km, light to dark, the darkest being the "
         f"{windows[-1]}-domain window every run is graded at. Every curve keeps the "
         f"raw domain means over GIS 1–{SPLICE_DOMAINS} — the boundary treatment at "
@@ -622,14 +622,14 @@ def smooth_figures(r, sm) -> list:
              (Line2D([], [], color=cw.C_ACCRETE, marker="o", ms=2.2, lw=0),
               Line2D([], [], color=cw.C_ERODE, marker="o", ms=2.2, lw=0)),
              Line2D([], [], color=C_OBSERVED, lw=OBS_LW)]
-        labels = [f"{prod.noun}, LOESS {km:g} km ({prod.method(s, e)})",
+        labels = [f"{prod.noun}, LOWESS {km:g} km ({prod.method(s, e)})",
                   f"{prod.noun}, individual transects (raw)",
-                  f"CoastSat observed change, LOESS {km:g} km"]
+                  f"CoastSat observed change, LOWESS {km:g} km"]
         fig.legend(h, labels, loc="outside lower center", ncol=2, frameon=False,
                    handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
         # Quantity, window, method -- plus the smoothing width, which is the
         # only thing that separates these panels from each other.
-        ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)}, LOESS {km:g} km)",
+        ax.set_title(f"{prod.noun}, {s}–{e} ({prod.method(s, e)}, LOWESS {km:g} km)",
                      pad=20 if cw.fills_in(s, e) else 6)
         # Both series here are CoastSat. 4-comparisons is where a CoastSat
         # series meets a dune-line one; this tree never mixes sources, and
@@ -640,9 +640,9 @@ def smooth_figures(r, sm) -> list:
             f"{prod.noun.lower()}: {prod.method(s, e)}   ·   observed: CoastSat mean position, all of {e} minus all of {s}"])
         caption(fig, (
             f"{prod.noun} and observed change, {s}–{e}, both "
-            f"passed through the same alongshore LOESS of {w} domains ({km:g} km). "
+            f"passed through the same alongshore LOWESS of {w} domains ({km:g} km). "
             "The quantity the model is graded against is not the raw rate but this "
-            "one — raw domain means over GIS 1–10 and a LOESS of the transect values "
+            "one — raw domain means over GIS 1–10 and a LOWESS of the transect values "
             f"beyond — so this panel tests the {rs}–{re_} trend as it is actually "
             f"applied, not as it is estimated. {prod.noun.upper()} (coloured line and "
             f"fill, blue seaward and red landward) is each transect's {rs}–{re_} linear "
@@ -681,7 +681,7 @@ def smooth_provenance(r, sm) -> None:
     s, e, years = r["start"], r["end"], r["years"]
     prod, (rs, re_) = r["prod"], r["rate_window"]
     st = sm["stats"]
-    head = (f"| LOESS window | n domains | bias (m) | RMS residual (m) | residual range (m) "
+    head = (f"| LOWESS window | n domains | bias (m) | RMS residual (m) | residual range (m) "
             f"| sd {prod.tok} (m) | sd observed (m) | sign agreement | r |")
     lines = [head, "|" + "---|" * 9]
     for _, x in st.iterrows():
@@ -708,13 +708,13 @@ def smooth_provenance(r, sm) -> None:
         "## Why",
         "",
         "The rate the model is graded against is not the raw rate: it is the raw "
-        f"domain mean over GIS 1-{SPLICE_DOMAINS} and a 10-domain alongshore LOESS of the "
-        "transect values beyond (`cascade_pipeline.coastsat_loess`, imported here "
+        f"domain mean over GIS 1-{SPLICE_DOMAINS} and a 10-domain alongshore LOWESS of the "
+        "transect values beyond (`cascade_pipeline.coastsat_lowess`, imported here "
         "rather than re-implemented). The raw projected-vs-observed comparison "
         "therefore tests a quantity nobody feeds the model. This one tests the target "
         "as it is applied.",
         "",
-        "LOESS commutes with the x years multiply, so smoothing the RATE and smoothing "
+        "LOWESS commutes with the x years multiply, so smoothing the RATE and smoothing "
         "the DISTANCE are the same operation; nothing here turns on the "
         "order. What matters is that both sides get the same pass at the same window, "
         f"including the GIS 1-{SPLICE_DOMAINS} splice, so no residual is a smoothed "
@@ -743,10 +743,10 @@ def smooth_provenance(r, sm) -> None:
         "the per-place question, does the trend hold HERE.",
         "",
         f"`{prod.key}_smoothed_{s}_{e}_overlay.png` (Hannah, 2026-09-21) puts every "
-        "LOESS width's curve on one panel and drops the observed side, which answers "
+        "LOWESS width's curve on one panel and drops the observed side, which answers "
         "the other question: what the window does to the target. It is the rate figure "
         f"`3-rates/coastsat/lrr/{rs}_{re_}/smoothing_windows_{rs}_{re_}.png` in metres -- the "
-        f"LOESS commutes with the x {years} yr multiply, so the curves have the same "
+        f"LOWESS commutes with the x {years} yr multiply, so the curves have the same "
         "shape and only the units differ. It is drawn because metres is the unit the "
         "model and the dune line are read in, not because it is a different field.",
         "",
@@ -755,7 +755,7 @@ def smooth_provenance(r, sm) -> None:
         f"- The observed side is the thinner estimate: the LRR is fitted through a "
         f"median {r['t']['n_obs'].median():.0f} satellite positions per transect, while the "
         f"endpoint uses {r['t']['n_start'].median():.0f} positions in {s} and "
-        f"{r['t']['n_end'].median():.0f} in {e}. Most of the noise the LOESS is "
+        f"{r['t']['n_end'].median():.0f} in {e}. Most of the noise the LOWESS is "
         "removing is probably observed-side, which is why both sides are smoothed.",
         "- A 10-domain window is 5 km and the beach fills inside this record are 3-5 km "
         "wide (2014 at GIS 84-89, 2022 at GIS 6-15, 2022 at GIS 21-28). The fill "
@@ -840,7 +840,7 @@ def main(argv=None) -> int:
                          "projected -> 3-rates/coastsat/projected/.")
     ap.add_argument("--windows", nargs="+", metavar="START_END")
     ap.add_argument("--smooth-windows", nargs="+", type=int, default=list(SMOOTH_WINDOWS),
-                    metavar="N", help="LOESS window widths in domain units (1 = 500 m).")
+                    metavar="N", help="LOWESS window widths in domain units (1 = 500 m).")
     ap.add_argument("--no-smoothed", action="store_true",
                     help="Build the raw comparison only, skipping smoothed/.")
     a = ap.parse_args(argv)
@@ -883,7 +883,7 @@ def main(argv=None) -> int:
             built.append((r, sm))
             for _, x in sm["stats"].iterrows():
                 w = int(x["window_domains"])
-                print(f"    LOESS {'raw   ' if w == 0 else f'{w:>2d} dom':<7}"
+                print(f"    LOWESS {'raw   ' if w == 0 else f'{w:>2d} dom':<7}"
                       f"{'' if w == 0 else f'{x.window_km:>4.1f} km'}  "
                       f"bias {x.bias_m:+6.1f} m  RMS {x.rms_residual_m:5.1f} m  "
                       f"range {x.residual_min_m:+6.1f} to {x.residual_max_m:+6.1f} m  "

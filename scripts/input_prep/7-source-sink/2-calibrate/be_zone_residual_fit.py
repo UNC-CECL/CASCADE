@@ -2,7 +2,7 @@
 be_zone_residual_fit.py
 ===========================
 Derives defensible background erosion (BE) source/sink corrections for CASCADE
-from the residual between a LOESS-smoothed CoastSat observed shoreline change
+from the residual between a LOWESS-smoothed CoastSat observed shoreline change
 rate and the CASCADE base-run LRR.
 
 Philosophy
@@ -21,7 +21,7 @@ Workflow
   1. Load CoastSat domain-averaged LRR (P1 and P2) — the observed shoreline
      change rate
   2. Load CASCADE base-run LRR from NPZ (P1 and P2, management included, BE=0)
-  3. LOESS-smooth the observed shoreline change rate (7-domain window; 10 until 2026-09-28),
+  3. LOWESS-smooth the observed shoreline change rate (7-domain window; 10 until 2026-09-28),
      excluding domains 1-GROIN_EXCLUDE_THROUGH_DOMAIN (Buxton groin influence
      zone) from the fit entirely — those domains pass through with their raw,
      unsmoothed rate
@@ -108,9 +108,9 @@ SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from cascade_pipeline.coastsat_loess import (        # noqa: E402
+from cascade_pipeline.coastsat_lowess import (        # noqa: E402
     CoastSatDataset,
-    LoessConfig,
+    LowessConfig,
     build_coastsat_series,
     compute_domain_means,
 )
@@ -184,7 +184,7 @@ P2_COASTSAT_CSV = str(COASTSAT_BASE / f"{P2_START}_{P2_END}"
 #
 # full_management because the observed CoastSat rate is from a real island
 # that WAS managed. nogroin because domains 1-10 are already excluded from
-# the LOESS fit for groin influence, and running the base with the groin on
+# the LOWESS fit for groin influence, and running the base with the groin on
 # would push its signal into the residual and double-count it against the
 # separate M/f sweep.
 # ITERATION. The calibration is a ONE-SHOT solve: it measures the residual of a
@@ -222,7 +222,7 @@ ARM_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "calibration" / "hs" / "runs"
 
 # The section 8 settings, matching the runner. TARGET_WINDOW is the widest
 # window; `rate_comparison` resolves the reference the same way.
-LOESS_CONFIG  = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+LOWESS_CONFIG  = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
 
 # HAT_BE_OUTPUT_DIR redirects every output -- be_zone_metrics.csv,
@@ -294,33 +294,33 @@ MIN_ZONE_WIDTH = 3   # domains
 # and needs period-specific values + forecast scenarios.
 SHIFT_THRESHOLD = 0.75   # m/yr
 
-# ── LOESS smoothing ───────────────────────────────────────────────────────────
+# ── LOWESS smoothing ───────────────────────────────────────────────────────────
 # Fraction of data used for each local regression (larger = smoother).
-# 7-domain window matches the CoastSat LOESS calibration window used
+# 7-domain window matches the CoastSat LOWESS calibration window used
 # throughout the dissertation (10 until 2026-09-28). As of this version, smoothing is applied to
 # the OBSERVED SHORELINE CHANGE RATE itself (before differencing against
-# CASCADE) — not to the residual. LOESS_FRAC is calibrated for the full
+# CASCADE) — not to the residual. LOWESS_FRAC is calibrated for the full
 # 90-domain array; see smooth_shoreline_rate() for how it's re-derived once
 # the groin zone is excluded from the fit.
-LOESS_FRAC = 7 / 90  # exactly 7 domains at 90 total
-LOESS_WINDOW_DOMAINS = 7  # the actual window width LOESS_FRAC is calibrated to hit
+LOWESS_FRAC = 7 / 90  # exactly 7 domains at 90 total
+LOWESS_WINDOW_DOMAINS = 7  # the actual window width LOWESS_FRAC is calibrated to hit
 
 # Domains 1 through this value are excluded ENTIRELY from the shoreline-rate
-# LOESS fit (Buxton groin influence zone) — the groin's localized signal
+# LOWESS fit (Buxton groin influence zone) — the groin's localized signal
 # would otherwise bleed into the smoothed estimate at neighbouring domains.
 # These domains always keep their raw, unsmoothed CoastSat rate.
 GROIN_EXCLUDE_THROUGH_DOMAIN = 10
 
 # ── Manual overrides ─────────────────────────────────────────────────────────
-# Domain-level corrections that override the LOESS-derived value.
+# Domain-level corrections that override the LOWESS-derived value.
 # Use sparingly — only where the smoothing window demonstrably under/over-corrects
 # and you have a clear physical justification for the different value.
 # Format: domain → (p1_override, p2_override, reason)
-# Set either value to None to keep the LOESS-derived value for that period.
+# Set either value to None to keep the LOWESS-derived value for that period.
 # Forecast scenarios for overridden domains use the same logic as normal:
 #   continue = p2, revert = p1, neutral = mean(p1, p2)
 MANUAL_OVERRIDES = {
-    # No overrides — pure LOESS-derived values against the current baseline.
+    # No overrides — pure LOWESS-derived values against the current baseline.
     # This script is for DISCOVERY: see what the data says before any
     # manual intervention. Once you have chosen final values (informed by
     # this comparison plus your own judgement), enter them in
@@ -754,7 +754,7 @@ def load_observed(period_start, csv_path):
     """(raw_per_domain_mean, target) for one period, m/yr, (+) seaward.
 
     `target` is the curve the runner's section 8 builds and section 12 grades
-    against: LOESS at transect resolution over along-coast distance, averaged
+    against: LOWESS at transect resolution over along-coast distance, averaged
     to domains, with GIS 1..skip_southern_domains spliced in as raw means.
     `raw` is the unsmoothed per-domain mean, kept for the diagnostic residual
     only -- it drives nothing.
@@ -762,12 +762,12 @@ def load_observed(period_start, csv_path):
     series = build_coastsat_series(
         [CoastSatDataset(label=f"CoastSat {period_start}",
                          period_start=period_start, csv_path=csv_path)],
-        period_start, LOESS_CONFIG)
+        period_start, LOWESS_CONFIG)
     if not series:
         raise FileNotFoundError(f"CoastSat transects failed to load: "
                                 f"{csv_path}")
     cs = series[0]
-    table = build_target_table(cs, LOESS_CONFIG, HATTERAS_DOMAINS,
+    table = build_target_table(cs, LOWESS_CONFIG, HATTERAS_DOMAINS,
                                TARGET_WINDOW)
     target = pd.Series(np.asarray(table["target_lrr_m_yr"], dtype=float),
                        index=np.asarray(table["gis_domain"], dtype=int))
@@ -815,8 +815,8 @@ def load_cascade_lrr(npz_path, start_year, end_year):
 # SMOOTHING
 # ============================================================
 
-def loess_smooth(values, frac=LOESS_FRAC):
-    """Apply LOESS smoothing to a domain-indexed array, handling NaNs."""
+def lowess_smooth(values, frac=LOWESS_FRAC):
+    """Apply LOWESS smoothing to a domain-indexed array, handling NaNs."""
     domains = np.arange(1, len(values) + 1, dtype=float)
     mask    = ~np.isnan(values)
     if mask.sum() < 5:
@@ -829,9 +829,9 @@ def loess_smooth(values, frac=LOESS_FRAC):
 
 
 def smooth_shoreline_rate(raw_rate, exclude_through=GROIN_EXCLUDE_THROUGH_DOMAIN,
-                          window_domains=LOESS_WINDOW_DOMAINS):
+                          window_domains=LOWESS_WINDOW_DOMAINS):
     """
-    LOESS-smooth a domain-indexed OBSERVED shoreline change rate, excluding
+    LOWESS-smooth a domain-indexed OBSERVED shoreline change rate, excluding
     domains 1..exclude_through entirely from the fit (Buxton groin influence
     zone) and passing those domains through unchanged with their raw rate.
 
@@ -841,7 +841,7 @@ def smooth_shoreline_rate(raw_rate, exclude_through=GROIN_EXCLUDE_THROUGH_DOMAIN
     boundary (this is stronger than merely overwriting the comparison for
     domains 1..exclude_through after smoothing over the full array).
 
-    frac is re-derived here rather than reusing LOESS_FRAC directly: LOESS_FRAC
+    frac is re-derived here rather than reusing LOWESS_FRAC directly: LOWESS_FRAC
     (7/90) is calibrated to give a 7-domain window when fit over all 90
     domains. Once the groin zone is excluded, only 80 domains remain in the
     fit, so reusing 7/90 unchanged would narrow the window to ~6.2 domains.
@@ -853,7 +853,7 @@ def smooth_shoreline_rate(raw_rate, exclude_through=GROIN_EXCLUDE_THROUGH_DOMAIN
 
     fit_input = raw_rate.copy()
     fit_input[:exclude_through] = np.nan                       # groin zone never enters the fit
-    smoothed  = loess_smooth(fit_input, frac=frac)              # NaN-aware LOESS
+    smoothed  = lowess_smooth(fit_input, frac=frac)              # NaN-aware LOWESS
     smoothed[:exclude_through] = raw_rate[:exclude_through]     # restore raw, unsmoothed values
     return smoothed
 
@@ -1224,7 +1224,7 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
                 zorder=3,
                 label="CoastSat linear regression rate, unsmoothed")
         ax.plot(domains, smooth, "-", lw=1.6, color=C["REF"], zorder=5,
-                label="CoastSat rate, LOESS-smoothed (the target)")
+                label="CoastSat rate, LOWESS-smoothed (the target)")
         ax.plot(domains, model, "-", lw=1.0, color=C["ACCENT"], alpha=0.9,
                 zorder=4, label="model base run, linear regression rate")
         ax.axvline(GROIN_EXCLUDE_THROUGH_DOMAIN + 0.5, color=INK_MUTED,
@@ -1321,7 +1321,7 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
         "Background-erosion zone identification along Hatteras Island; domain 1 "
         "is at Cape Point and domain 90 at Pea Island, 500 m per domain. "
         "(a, b) the CoastSat linear regression rate at each domain, unsmoothed "
-        "and after the LOESS smoothing applied north of domain "
+        "and after the LOWESS smoothing applied north of domain "
         f"{GROIN_EXCLUDE_THROUGH_DOMAIN} (domains 1\u2013"
         f"{GROIN_EXCLUDE_THROUGH_DOMAIN} pass through unsmoothed because the "
         "Buxton groin dominates them), against the CASCADE base run. "
@@ -1592,7 +1592,7 @@ def main():
 
     # The observed curve is already smoothed -- `build_target_table` did it at
     # transect resolution. `smooth_shoreline_rate` is deliberately NOT called
-    # here any more: running it would LOESS an already-LOESSed curve, and the
+    # here any more: running it would LOWESS an already-LOWESSed curve, and the
     # second pass would flatten exactly the coherent zones this script exists
     # to detect. The function is kept for reference by the diagnostic figure.
 

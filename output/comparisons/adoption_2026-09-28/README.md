@@ -1,6 +1,6 @@
 # The matrix before and after the 2026-09-28 adoption
 
-- **Before:** `raw_runs/archive/2026-09-28-pre-ceiling/matrix`. Barrier3D 49fd069, Dmaxel default, `v3_72` storms, LOESS-7 option A ends.
+- **Before:** `raw_runs/archive/2026-09-28-pre-ceiling/matrix`. Barrier3D 49fd069, Dmaxel default, `v3_72` storms, LOWESS-7 option A ends.
 - **After:** `raw_runs/matrix`. Barrier3D `hatteras/adopted` (overwash fixes and per-cell dune ceilings), `v3_trim24` storms, the beach/dune manager's 4 m cap limited to the sand it adds (see below), re-solved ends (1996 +4.3509/+19.0935, 2010 +8.0/+21.2582).
 
 Produced by `scripts/analyze_output/compare_runs/adoption_before_after.py`. Each side was scored under the Barrier3D it ran on.
@@ -14,7 +14,7 @@ Produced by `scripts/analyze_output/compare_runs/adoption_before_after.py`. Each
 | `before_after.csv` | the two sides paired |
 | `supporting_precap/` | the after side as scored before the dune-cap fix |
 
-The shoreline score is the interior (GIS 2-89) RMSE and bias against CoastSat LOESS-7. The overwash score compares each run with the imagery (the date rule in `8-overwash-analysis`).
+The shoreline score is the interior (GIS 2-89) RMSE and bias against CoastSat LOWESS-7. The overwash score compares each run with the imagery (the date rule in `8-overwash-analysis`).
 
 ## Result (edgeBE; zeroBE is the same within 0.1)
 

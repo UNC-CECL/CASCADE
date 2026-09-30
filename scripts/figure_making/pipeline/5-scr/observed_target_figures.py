@@ -16,9 +16,9 @@ THE STEPS DRAWN (the producers' own functions, not re-implemented)
        is checked against transect_lrr_full.csv.
     2. Transects grouped into their GIS domain (transect_domain_lookup.csv)
        and averaged: the raw domain mean.
-    3. LOESS at transect resolution over a 7-domain (3.5 km) window, averaged
+    3. LOWESS at transect resolution over a 7-domain (3.5 km) window, averaged
        back to domains, with GIS 1-10 kept as raw domain means
-       (cascade_pipeline.coastsat_loess.spliced_loess_series, the same two
+       (cascade_pipeline.coastsat_lowess.spliced_lowess_series, the same two
        steps hindcast.build_target_table applies to the scoring target).
 """
 
@@ -43,9 +43,9 @@ from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1997, INK, INK_MUTED, DOMAIN_AXIS_LABEL, figsize, figure_dir, save,
     record_caption, _title, open_frame, town_bands,
 )
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    CoastSatDataset, load_transect_data, loess_transect_values, spliced_loess_series,
-    DEFAULT_LOESS,
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    CoastSatDataset, load_transect_data, lowess_transect_values, spliced_lowess_series,
+    DEFAULT_LOWESS,
 )
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 from coastsat_lrr import load_timeseries, filter_dates, compute_lrr  # noqa: E402
@@ -69,10 +69,10 @@ def fig_target(window):
     full = pd.read_csv(csv)
     ds = CoastSatDataset(label=tag, period_start=y0, csv_path=str(csv))
     dom_ids, lrr, along = load_transect_data(ds)
-    target, frac = spliced_loess_series(dom_ids, along, lrr, TARGET_WINDOW)
-    smooth_t, _ = loess_transect_values(along, lrr, TARGET_WINDOW)
+    target, frac = spliced_lowess_series(dom_ids, along, lrr, TARGET_WINDOW)
+    smooth_t, _ = lowess_transect_values(along, lrr, TARGET_WINDOW)
     raw_means = pd.Series(lrr).groupby(dom_ids).mean()
-    skip = DEFAULT_LOESS.skip_southern_domains
+    skip = DEFAULT_LOWESS.skip_southern_domains
 
     # one transect, the middle of the example domain
     ex = full[full.domain_number == EXAMPLE_GIS].sort_values("transect_id")
@@ -129,10 +129,10 @@ def fig_target(window):
     ax.step(raw_means.index, raw_means.values, where="mid", color="0.45", lw=0.9, label="domain mean", zorder=2)
     order = np.argsort(x_dom)
     ax.plot(x_dom[order], smooth_t[order], color=C_1997, lw=1.0, alpha=0.8,
-            label=f"LOESS, {TARGET_WINDOW} domains, at transect resolution", zorder=3)
+            label=f"LOWESS, {TARGET_WINDOW} domains, at transect resolution", zorder=3)
     tn = target[target.index > skip]
     ts_ = target[target.index <= skip]
-    ax.plot(tn.index, tn.values, "o-", color=INK, lw=1.6, ms=2.5, label="target: LOESS averaged to domains",
+    ax.plot(tn.index, tn.values, "o-", color=INK, lw=1.6, ms=2.5, label="target: LOWESS averaged to domains",
             zorder=4)
     ax.plot(ts_.index, ts_.values, "s", color=C["ACCENT"], ms=4, label=f"target: GIS 1-{skip} raw domain means",
             zorder=5)
@@ -158,11 +158,11 @@ def fig_target(window):
         "transect_lrr_full.csv, recomputed here). (b) The transects of GIS "
         f"{ZOOM[0]}-{ZOOM[1]}, each placed in its domain by transect_domain_lookup.csv, and the domain mean "
         "(black); the circled point is the transect of panel a. (c) The whole reach: every transect's LRR "
-        f"(grey, {n_t} transects), the raw domain means (grey steps), a LOESS through the transects over a "
+        f"(grey, {n_t} transects), the raw domain means (grey steps), a LOWESS through the transects over a "
         f"{TARGET_WINDOW}-domain (5 km) window at transect resolution (blue, lowess frac {frac:.3f}), and the "
-        f"target the hindcast is scored against: that LOESS averaged back to domains for GIS {skip + 1}-90 "
+        f"target the hindcast is scored against: that LOWESS averaged back to domains for GIS {skip + 1}-90 "
         f"(black) and the raw domain means for GIS 1-{skip} (purple squares, shaded), where boundary effects "
-        "near Cape Point dominate the smoother (cascade_pipeline.coastsat_loess.spliced_loess_series, the "
+        "near Cape Point dominate the smoother (cascade_pipeline.coastsat_lowess.spliced_lowess_series, the "
         "steps hindcast.build_target_table applies). GIS 1 is Cape Point, GIS 90 Pea Island.")
     return out
 

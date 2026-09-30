@@ -87,7 +87,7 @@ date-matching name, and should not be cited as evidence of date matching.
 
 ## Not the smoothed version
 
-`6-scr-smooth/dsas_vs_coastsat/` compares the same two sources with a LOESS on
+`6-scr-smooth/dsas_vs_coastsat/` compares the same two sources with a LOWESS on
 each, and exists to argue about the smoothing; its figures date from
 2026-09-02 and predate the current figure style. This folder is the comparison
 without it.

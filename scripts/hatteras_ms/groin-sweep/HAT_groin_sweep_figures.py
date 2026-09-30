@@ -262,7 +262,7 @@ def observed_curve_full(period):
     """
     if period not in _OBSERVED_FULL:
         import pandas as _pd
-        from cascade_pipeline.coastsat_loess import compute_domain_means
+        from cascade_pipeline.coastsat_lowess import compute_domain_means
         path = (COASTSAT_DIR / f"{period}_{END_YEAR[period]}"
                 / "transect_lrr_full.csv")
         frame = _pd.read_csv(path)

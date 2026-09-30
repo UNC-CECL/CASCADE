@@ -1,4 +1,4 @@
-product,window,loess_domains,domain_number,shoreline_target_smoothed_m,duneline_target_smoothed_m,cascade_raw_m,cascade_smoothed_m
+product,window,lowess_domains,domain_number,shoreline_target_smoothed_m,duneline_target_smoothed_m,cascade_raw_m,cascade_smoothed_m
 projected,1996_2010,7,1,39.807,-0.156,-6.549,-6.549
 projected,1996_2010,7,2,35.379,-55.325,-16.922,-16.922
 projected,1996_2010,7,3,34.492,-35.694,8.476,8.476

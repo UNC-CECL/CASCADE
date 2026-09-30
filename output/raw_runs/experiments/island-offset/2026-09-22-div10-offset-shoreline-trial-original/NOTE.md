@@ -45,7 +45,7 @@ mode.
 
 ## Result at one-tenth scale: the dune-derived offset still scores better, barely
 
-Skill against the CoastSat LOESS 10-domain target, interior GIS 2–89, LRR
+Skill against the CoastSat LOWESS 10-domain target, interior GIS 2–89, LRR
 estimator — **bias is the score here, not r²**:
 
 | | bias (m/yr) | RMSE (m/yr) | LRR r² median | r² below floor |
@@ -80,7 +80,7 @@ here. That matches what the 2010 period showed
 ## Figures (house form, 2026-09-28)
 
 `figures/` holds the four island-offset figures in the form every study in
-this folder now shares (net change in metres, observations LOESS 7, no scores),
+this folder now shares (net change in metres, observations LOWESS 7, no scores),
 drawn by `scripts/hatteras_ms/experiments/HAT_offset_source_0922_figures.py`
 from the `road_bdm` shoreline run and its matrix control, archived under
 `output/raw_runs/archive/2026-09-24-pre-metres/matrix/`. (a) full management

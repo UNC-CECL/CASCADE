@@ -1,7 +1,7 @@
-"""CoastSat transect loading and LOESS smoothing for the rate-comparison figures.
+"""CoastSat transect loading and LOWESS smoothing for the rate-comparison figures.
 
 Transect-level LRR (linear regression rate) values are loaded from
-transect_lrr_full.csv, LOESS-smoothed at transect resolution (physical
+transect_lrr_full.csv, LOWESS-smoothed at transect resolution (physical
 along-coast distance as x), then aggregated to GIS-domain resolution for
 comparison against the CASCADE model. This module only computes -- nothing
 here touches matplotlib; see cascade_pipeline.plotting.rate_comparison for the
@@ -43,8 +43,8 @@ class CoastSatDataset:
 
 
 @dataclasses.dataclass(frozen=True)
-class LoessConfig:
-    """LOESS smoothing settings shared by every CoastSat dataset.
+class LowessConfig:
+    """LOWESS smoothing settings shared by every CoastSat dataset.
 
     Attributes:
         window_domains: One or two window widths, in domain units
@@ -54,16 +54,16 @@ class LoessConfig:
             for every smoothed observation in the project. From 2026-09-10
             to 09-28 the default and every skill target were 10 alone.
         skip_southern_domains: Domains 1..N shown as raw per-domain means
-            instead of LOESS-smoothed -- boundary effects near Oregon Inlet
+            instead of LOWESS-smoothed -- boundary effects near Oregon Inlet
             dominate this zone and smoothing can obscure the sharp
-            gradient there. 0 disables the splice (LOESS used everywhere).
+            gradient there. 0 disables the splice (LOWESS used everywhere).
     """
 
     window_domains: tuple = (7,)
     skip_southern_domains: int = 10
 
 
-DEFAULT_LOESS = LoessConfig()
+DEFAULT_LOWESS = LowessConfig()
 
 
 def estimate_transect_spacing(along_coast_m):
@@ -139,12 +139,12 @@ def load_transect_data(dataset, domains=DEFAULT_DOMAINS):
     return domain_ids, lrr_values, along_coast_m
 
 
-def loess_transect_values(along_coast_m, lrr, window_domains,
+def lowess_transect_values(along_coast_m, lrr, window_domains,
                           domains=DEFAULT_DOMAINS):
-    """The LOESS itself: one smoothed value per TRANSECT, before any domain
+    """The LOWESS itself: one smoothed value per TRANSECT, before any domain
     averaging.
 
-    Factored out of loess_smooth_transect_to_domains (2026-09-22) so a figure
+    Factored out of lowess_smooth_transect_to_domains (2026-09-22) so a figure
     can draw the smoother at the resolution it is actually fitted at without a
     second copy of the frac rule. That function now calls this and aggregates
     the result, so there is one implementation and the drawn curve cannot
@@ -152,7 +152,7 @@ def loess_transect_values(along_coast_m, lrr, window_domains,
 
     Args:
         along_coast_m, lrr: Per-transect arrays from load_transect_data.
-        window_domains: LOESS window width, in domain units.
+        window_domains: LOWESS window width, in domain units.
         domains: DomainGeometry; only domain_spacing_m is used.
 
     Returns:
@@ -166,7 +166,7 @@ def loess_transect_values(along_coast_m, lrr, window_domains,
 
     valid = np.isfinite(lrr)
     if valid.sum() < 5:
-        print(f"  WARNING: Too few valid transects ({valid.sum()}) - skipping LOESS")
+        print(f"  WARNING: Too few valid transects ({valid.sum()}) - skipping LOWESS")
         return None, frac
 
     result = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
@@ -175,21 +175,21 @@ def loess_transect_values(along_coast_m, lrr, window_domains,
     return smoothed, frac
 
 
-def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains,
+def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains,
                                       domains=DEFAULT_DOMAINS):
-    """Apply LOESS at transect resolution, then aggregate to domain resolution.
+    """Apply LOWESS at transect resolution, then aggregate to domain resolution.
 
     Args:
         along_coast_m, lrr, domain_ids: Output of load_transect_data.
-        window_domains: LOESS window width, in domain units.
+        window_domains: LOWESS window width, in domain units.
         domains: DomainGeometry; only domain_spacing_m is used.
 
     Returns:
         (gis_x, smoothed, frac): GIS domain IDs with at least one transect,
-        the domain-averaged smoothed LRR (m/yr), and the LOESS frac used
+        the domain-averaged smoothed LRR (m/yr), and the LOWESS frac used
         (for logging). (None, None, frac) if fewer than 5 valid transects.
     """
-    smoothed_t, frac = loess_transect_values(along_coast_m, lrr, window_domains,
+    smoothed_t, frac = lowess_transect_values(along_coast_m, lrr, window_domains,
                                              domains=domains)
     if smoothed_t is None:
         return None, None, frac
@@ -204,7 +204,7 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
 def compute_domain_means(domain_ids, lrr_values, gis_min, gis_max):
     """Mean LRR per GIS domain within [gis_min, gis_max].
 
-    Used to substitute raw per-domain averages for LOESS smoothing in the
+    Used to substitute raw per-domain averages for LOWESS smoothing in the
     southernmost domains, where boundary effects dominate.
 
     Args:
@@ -224,27 +224,27 @@ def compute_domain_means(domain_ids, lrr_values, gis_min, gis_max):
     return agg.index.values.astype(int), agg.values
 
 
-def splice_loess_with_raw_south(win_gis_x, win_smoothed,
+def splice_lowess_with_raw_south(win_gis_x, win_smoothed,
                                  transect_domain_ids, transect_lrr_values,
-                                 skip_n=DEFAULT_LOESS.skip_southern_domains,
+                                 skip_n=DEFAULT_LOWESS.skip_southern_domains,
                                  is_widest_window=False):
-    """Return (plot_x, plot_y) for one LOESS window, LOESS line starting at skip_n+1.
+    """Return (plot_x, plot_y) for one LOWESS window, LOWESS line starting at skip_n+1.
 
     Domains 1..skip_n are omitted from the returned line -- they're shown as
     raw scatter only, no smoothed line, since boundary effects near Oregon
     Inlet dominate that zone.
 
     Args:
-        win_gis_x, win_smoothed: Output of loess_smooth_transect_to_domains.
+        win_gis_x, win_smoothed: Output of lowess_smooth_transect_to_domains.
         transect_domain_ids, transect_lrr_values: Accepted for interface
             stability with callers that pass per-window transect data; not
             read by the current splice.
-        skip_n: Domains 1..skip_n excluded from the LOESS line.
+        skip_n: Domains 1..skip_n excluded from the LOWESS line.
         is_widest_window: Accepted for interface stability; not read by the
             current splice.
 
     Returns:
-        (plot_x, plot_y): arrays to plot, LOESS domains > skip_n only.
+        (plot_x, plot_y): arrays to plot, LOWESS domains > skip_n only.
     """
     if skip_n == 0:
         return win_gis_x, win_smoothed
@@ -252,20 +252,20 @@ def splice_loess_with_raw_south(win_gis_x, win_smoothed,
     return win_gis_x[mask], win_smoothed[mask]
 
 
-def build_coastsat_series(datasets, active_period_start, loess_config=DEFAULT_LOESS,
+def build_coastsat_series(datasets, active_period_start, lowess_config=DEFAULT_LOWESS,
                            domains=DEFAULT_DOMAINS):
-    """Load every CoastSat dataset and LOESS-smooth it at each configured window.
+    """Load every CoastSat dataset and LOWESS-smooth it at each configured window.
 
     Replaces the per-dataset loop previously inlined in main(): loads
-    transects, applies loess_smooth_transect_to_domains at each window in
-    loess_config.window_domains, and tags each dataset active/reference by
+    transects, applies lowess_smooth_transect_to_domains at each window in
+    lowess_config.window_domains, and tags each dataset active/reference by
     comparing its period_start to active_period_start (the run's START_YEAR).
 
     Args:
         datasets: Sequence of CoastSatDataset.
         active_period_start: The run's START_YEAR; datasets with a matching
             period_start are drawn solid/full-opacity downstream.
-        loess_config: LoessConfig.
+        lowess_config: LowessConfig.
         domains: DomainGeometry.
 
     Returns:
@@ -280,13 +280,13 @@ def build_coastsat_series(datasets, active_period_start, loess_config=DEFAULT_LO
         if domain_ids is None:
             continue
         windows = []
-        for w in loess_config.window_domains:
-            gis_x, smoothed, frac = loess_smooth_transect_to_domains(
+        for w in lowess_config.window_domains:
+            gis_x, smoothed, frac = lowess_smooth_transect_to_domains(
                 along_coast_m, lrr_values, domain_ids, w, domains=domains
             )
             if gis_x is None:
                 continue
-            print(f"  LOESS applied: window={w} domains "
+            print(f"  LOWESS applied: window={w} domains "
                   f"({w * domains.domain_spacing_m / 1000.0:.1f} km)  "
                   f"frac={frac:.3f}  ({ds.label})")
             windows.append(dict(window=w, gis_x=gis_x, smoothed=smoothed, frac=frac))
@@ -306,7 +306,7 @@ def scale_coastsat_series(cs_series, factor, label=None, active=None):
     """A copy of build_coastsat_series output with every rate times `factor`.
 
     Turns an LRR series (m/yr) into a distance (m): LRR x span years. EXACT
-    for the LOESS curves as well as the transects, because statsmodels'
+    for the LOWESS curves as well as the transects, because statsmodels'
     lowess -- robustness iterations included -- is equivariant under a
     positive scale (the robustness weights see residual / median |residual|,
     which a constant cancels), so smoothing the scaled transects would return
@@ -334,9 +334,9 @@ def scale_coastsat_series(cs_series, factor, label=None, active=None):
     return out
 
 
-def spliced_loess_series(domain_ids, along_coast_m, values, window,
+def spliced_lowess_series(domain_ids, along_coast_m, values, window,
                          skip=None, domains=DEFAULT_DOMAINS):
-    """Per-domain series: a LOESS of `values` at transect resolution north of
+    """Per-domain series: a LOWESS of `values` at transect resolution north of
     GIS `skip`, the raw domain means at or below it.
 
     The two steps hindcast.build_target_table applies to the scoring target,
@@ -347,10 +347,10 @@ def spliced_loess_series(domain_ids, along_coast_m, values, window,
 
     Args:
         domain_ids, along_coast_m, values: per-transect arrays.
-        window: LOESS window width in domain units. 0 means no smoothing at
+        window: LOWESS window width in domain units. 0 means no smoothing at
             all: raw domain means everywhere, the unsmoothed comparison.
         skip: domains <= skip keep their raw means. Default the shared
-            LoessConfig's skip_southern_domains.
+            LowessConfig's skip_southern_domains.
         domains: DomainGeometry.
 
     Returns:
@@ -358,13 +358,13 @@ def spliced_loess_series(domain_ids, along_coast_m, values, window,
         nan when window is 0).
     """
     if skip is None:
-        skip = DEFAULT_LOESS.skip_southern_domains
+        skip = DEFAULT_LOWESS.skip_southern_domains
     idx = pd.RangeIndex(domains.first_gis_id, domains.last_gis_id + 1,
                         name="domain_number")
     out = pd.Series(np.nan, index=idx, dtype=float)
     frac = float("nan")
     if window:
-        gis, smoothed, frac = loess_smooth_transect_to_domains(
+        gis, smoothed, frac = lowess_smooth_transect_to_domains(
             along_coast_m, values, domain_ids, window, domains=domains)
         if gis is not None:
             out.loc[gis] = smoothed

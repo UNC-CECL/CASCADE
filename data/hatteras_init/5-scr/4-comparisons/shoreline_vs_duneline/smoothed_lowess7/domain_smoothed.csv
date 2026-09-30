@@ -1,4 +1,4 @@
-product,window,loess_domains,domain_number,shoreline_raw_m,shoreline_smoothed_m,duneline_raw_m,duneline_smoothed_m,beach_width_raw_m,beach_width_smoothed_m
+product,window,lowess_domains,domain_number,shoreline_raw_m,shoreline_smoothed_m,duneline_raw_m,duneline_smoothed_m,beach_width_raw_m,beach_width_smoothed_m
 projected,1996_2010,7,1,39.807,39.807,-0.156,-0.156,39.963,39.963
 projected,1996_2010,7,2,35.379,35.379,-55.325,-55.325,90.704,90.703
 projected,1996_2010,7,3,34.492,34.492,-35.694,-35.694,70.186,70.186

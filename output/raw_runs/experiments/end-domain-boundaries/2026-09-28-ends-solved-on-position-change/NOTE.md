@@ -2,12 +2,12 @@
 
 Hannah, 2026-09-28: solve the edge source/sink on the observed end-minus-start
 position change instead of the LRR (option 1: an experiment; solver and config
-unchanged). GIS 90 against the LOESS-7 value (Hannah), GIS 1 raw.
+unchanged). GIS 90 against the LOWESS-7 value (Hannah), GIS 1 raw.
 
 Scripts: `scripts/hatteras_ms/experiments/HAT_resolve_ends_on_position_change.py`
 (solve), `HAT_position_change_ends_figure.py` (natural runs at the ends + figure).
 
-| window | GIS 1 | GIS 90 | LRR-solved (LOESS 7) | residual (m/yr; x14 = m) |
+| window | GIS 1 | GIS 90 | LRR-solved (LOWESS 7) | residual (m/yr; x14 = m) |
 |---|---|---|---|---|
 | 1996-2010 | +1.231 | +16.708 | +4.839 / +18.255 | -0.001 / -0.001, converged in 4 |
 | 2010-2024 | +22.332 | +18.572 | +18.866 / +24.236 | +0.050 / +0.006, not converged |

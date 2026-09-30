@@ -8,7 +8,7 @@ figures/, so neither of these existed for the matrix.
 
 RATE AND POSITION CHANGE   ("Where are these position plots?")
     (a) rate      the model's OLS rate (lrr_m_yr) against the CoastSat LRR
-                  target, 7-domain LOESS with the southern 10 raw, as scored
+                  target, 7-domain LOWESS with the southern 10 raw, as scored
     (b) position  the model's position change over the window, endpoint rate
                   x 14 yr, against the observed CoastSat change: the mean
                   position over the last calendar year minus that over the
@@ -27,7 +27,7 @@ START AND END POSITIONS   ("the starting island position with the end modeled
                         (shoreline_matrix.npy, sign flipped to seaward +)
         CoastSat end    the observed change per domain, unsmoothed (the
                         total_change domain means, window 0), with its
-                        7-domain LOESS as a faint line
+                        7-domain LOWESS as a faint line
         dune-line end   the runner's own end-year target: the dune-line change
                         between the start and end vintages
                         (hindcast.build_shoreline_target; 1997 -> 2009 for
@@ -120,7 +120,7 @@ OPTION_A = ("Option A matrix on the adopted model (re-run 2026-09-28): Barrier3D
             "island offset in metres, Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle fraction 0.5, no groin.")
 RATE_CAPTION = (
     OPTION_A + " (a) Modelled OLS shoreline-change rate against the CoastSat LRR scoring "
-    "target (7-domain LOESS, raw means GIS 1-10). (b) Modelled position change over the "
+    "target (7-domain LOWESS, raw means GIS 1-10). (b) Modelled position change over the "
     "window (endpoint rate x 14 yr) against the observed CoastSat change, mean position over "
     "the last calendar year minus the first, smoothed at 7 domains. Seaward positive; "
     "scores over the interior GIS 2-89.")
@@ -244,7 +244,7 @@ def fig_rate_position(r, target, obs):
     br, er = score(rt.lrr_m_yr, target)
     bp, ep = score(rt.change_rate_m_yr * YEARS, obs)
     fig.legend(handles=[
-        Line2D([], [], label="CoastSat (LOESS, 7 domains)", **OBSERVED),
+        Line2D([], [], label="CoastSat (LOWESS, 7 domains)", **OBSERVED),
         Line2D([], [], label=f"Model: rate bias {br:+.2f} m/yr, RMSE {er:.2f}; "
                              f"position bias {bp:+.1f} m, RMSE {ep:.1f}", **MODEL_ONE)],
         title=run_title(r), loc="outside lower center", ncol=1, frameon=False, fontsize=7)
@@ -282,7 +282,7 @@ def fig_start_end(r, cs_raw, cs_smooth, dune):
         Line2D([], [], color=C_START, lw=2.2, label=f"Start position, {s} (model year 0)"),
         Line2D([], [], color=C_MODEL_END, lw=1.8, label=f"Modelled end position, {e}"),
         Line2D([], [], color=C_COASTSAT, lw=1.3, marker="o", ms=2.2,
-               label=f"CoastSat end, {e} (domain means; faint: 7-domain LOESS); "
+               label=f"CoastSat end, {e} (domain means; faint: 7-domain LOWESS); "
                      f"model bias {bc:+.1f} m, RMSE {ec:.1f}"),
         Line2D([], [], color=C_DUNE, lw=1.3, marker="s", ms=2.0,
                label=f"Dune-line end ({dv0} → {dv1} change); model bias {bd:+.1f} m, RMSE {ed:.1f}"),
@@ -318,7 +318,7 @@ def fig_scenarios(runs, period, preset, target, obs):
     ax_r, ax_p = axes
     ax_r.plot(target.index, target.values, zorder=6, **OBSERVED)
     ax_p.plot(obs.index, obs.values, zorder=6, **OBSERVED)
-    handles = [Line2D([], [], label="CoastSat (LOESS, 7 domains)", **OBSERVED)]
+    handles = [Line2D([], [], label="CoastSat (LOWESS, 7 domains)", **OBSERVED)]
     for scen in SCEN_ORDER:
         hit = sub[sub.scenario == scen]
         if hit.empty:

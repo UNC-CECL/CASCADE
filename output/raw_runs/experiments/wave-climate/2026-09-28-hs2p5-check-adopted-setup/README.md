@@ -14,7 +14,7 @@ storms, which is what Hs acts on, so the check is repeated here.
 | question | does Hs 2.5 beat Hs 2.0 once each has its own end rates, on the adopted setup? |
 | waves | Hs 2.5, Tp 7.5, asymmetry 0.6, high-angle 0.5 (option A with Hs 2.5) |
 | setup | Barrier3D `hatteras/adopted`, storms `v3_trim24`, the dune-cap fix (`bdm_dune_cap_applies_to` = added sand only; every run here has it), full management, edgeBE, no groin |
-| ends | solved by `HAT_resolve_ends_metres.py` exactly as `../../end-domain-boundaries/2026-09-28-ends-resolved-adopted/` (GIS 1 against the raw domain mean, GIS 90 against LOESS 7; \|residual\| ≤ 0.02 m/yr) |
+| ends | solved by `HAT_resolve_ends_metres.py` exactly as `../../end-domain-boundaries/2026-09-28-ends-resolved-adopted/` (GIS 1 against the raw domain mean, GIS 90 against LOWESS 7; \|residual\| ≤ 0.02 m/yr) |
 | seed | 1996 +4.0 / +33.0, 2010 +8.0 / +38.5 m/yr: the adopted Hs-2 ends moved by what Hs 2.5 needed on 09-27 |
 | compared against | the matrix full-management runs, Hs 2.0 on its own ends (1996 +4.3509 / +19.0935, 2010 +8.0 / +21.2582 since the dune-cap fix), re-run with the fix at 22:18 and 22:56. The sweep's Hs-2.5 cells were meant as a third row but predate the fix, so they are left out |
 | scored on | interior (GIS 2–89) RMSE and mean bias, and the raw share of alongshore variation explained, as in the matrix |
@@ -38,7 +38,7 @@ Ends solved at Hs 2.5 (`tables/ends.json`): 1996 +4.0 / +33.1847 (closest probe,
 residuals −0.019 / −0.021; the GIS 90 response is noisy at ±0.05 m/yr and the
 last four probes repeated), 2010 +6.2249 / +34.65 (converged).
 
-Interior GIS 2–89 against the LOESS-7 CoastSat target (`tables/comparison.csv`):
+Interior GIS 2–89 against the LOWESS-7 CoastSat target (`tables/comparison.csv`):
 
 | window | run | ends GIS 1 / 90 | RMSE | bias | share explained, raw | smoothed |
 |---|---|---|---|---|---|---|

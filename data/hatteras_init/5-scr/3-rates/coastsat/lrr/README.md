@@ -23,7 +23,7 @@ reproduces that folder's rates exactly.
     lrr_<window>.png         the window figure (rates_figures.py): domain means
                              with the transects behind them and the graded
                              target over them
-    smoothing_windows_<w>.png  the LOESS widths on one panel
+    smoothing_windows_<w>.png  the LOWESS widths on one panel
                              (coastsat_lrr_smoothing_windows.py). Stays at this level:
                              coastsat_total_change.py and five PROVENANCE.md
                              files cross-reference it by this path.
@@ -39,7 +39,7 @@ reproduces that folder's rates exactly.
 transects and is what the rate figures draw. It is NOT what a model run is
 scored against: that target is rebuilt from `transect_lrr_full.csv` at run
 time by `cascade_pipeline.hindcast.build_target_table` -- a 5 km alongshore
-LOESS of the transect rates, reverting to `mean_lrr` over GIS 1-10. The two
+LOWESS of the transect rates, reverting to `mean_lrr` over GIS 1-10. The two
 coincide only there. Since 2026-09-22 the window figures draw both, so the
 difference is visible rather than inferred.
 

@@ -162,7 +162,7 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
     shoreline_window  the mean-shoreline windows the shoreline offset was built
              on, for the captions; the default is the v1 (calendar) builds
 
-    Net change in metres; observations smoothed with LOESS over LOESS_DOMAINS
+    Net change in metres; observations smoothed with LOWESS over LOWESS_DOMAINS
     (southern SKIP_SOUTHERN raw), the model unsmoothed; the model's ENABLED
     fills marked above each panel; no scores on the figures."""
     import matplotlib
@@ -252,33 +252,33 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
     figs = [
         dict(src="duneline", kind="dune",
              ylab="Dune-line change (m)\n(+ seaward, − landward)",
-             obs_label="Observed: dune-line change (7-domain LOESS)",
+             obs_label="Observed: dune-line change (7-domain LOWESS)",
              model_label="Model: started from the dune line",
              stem="duneline_offset_vs_duneline_change",
              caption=("The model started from the DUNE-LINE island offset, against the dune "
                       "line's own change. Net change per domain, seaward positive: observed "
                       "(black) is the mean change between the digitised dune lines that bound "
                       "each period (1997-10 to 2009-05, 11.6 yr, for 1996-2010; 2009-05 to "
-                      "2023-07, 14.1 yr, for 2010-2024), LOESS over 7 domains (the southern 10 "
+                      "2023-07, 14.1 yr, for 2010-2024), LOWESS over 7 domains (the southern 10 "
                       "raw); the model (green) is unsmoothed, its endpoint change over the 14 "
                       "calendar years. The interval mismatch is not corrected.")),
         dict(src="shoreline", kind="total",
              ylab="Total shoreline change (m)\n(+ seaward, − landward)",
-             obs_label="Observed: CoastSat LRR of the same period × 14 yr (7-domain LOESS)",
+             obs_label="Observed: CoastSat LRR of the same period × 14 yr (7-domain LOWESS)",
              model_label="Model: started from the shoreline (its LRR × 14 yr)",
              stem="shoreline_offset_vs_coastsat_total_change",
              caption=("The model started from the SHORELINE island offset (mean CoastSat "
                       f"shoreline {shoreline_window}), against total "
-                      "shoreline change: each period's OWN CoastSat LRR, LOESS over 7 domains, "
+                      "shoreline change: each period's OWN CoastSat LRR, LOWESS over 7 domains, "
                       "x 14 yr (black), not the 1996-2024 rate carried onto it; the model "
                       "(purple) is its own LRR x 14 yr.")),
         dict(src="shoreline", kind="projected",
              ylab="Projected shoreline change (m)\n(+ seaward, − landward)",
-             obs_label="Observed: CoastSat LRR 1996–2024 × 14 yr (7-domain LOESS)",
+             obs_label="Observed: CoastSat LRR 1996–2024 × 14 yr (7-domain LOWESS)",
              model_label="Model: started from the shoreline (its LRR × 14 yr)",
              stem="shoreline_offset_vs_coastsat_projected_change",
              caption=("The model started from the SHORELINE island offset, against PROJECTED "
-                      "shoreline change: the long-term CoastSat LRR fitted on 1996-2024, LOESS "
+                      "shoreline change: the long-term CoastSat LRR fitted on 1996-2024, LOWESS "
                       "over 7 domains, x 14 yr (black), the same profile in every panel, "
                       "carried onto each period rather than fitted on it; the model (purple) "
                       "is the same run as in the total-change figure.")),
@@ -291,9 +291,9 @@ def house_figures(panels, fig_dir, legend_title, note, suffix,
             a, b = pan["start"], pan["end"]
             years = b - a
             rt = pan["rates"].get(spec["src"])
-            obs = {"dune": lambda: smooth_loess(duneline_change(a, b)),
-                   "total": lambda: coastsat_target_loess(a, f"{a}_{b}") * years,
-                   "projected": lambda: coastsat_target_loess(1996, "1996_2024") * years,
+            obs = {"dune": lambda: smooth_lowess(duneline_change(a, b)),
+                   "total": lambda: coastsat_target_lowess(a, f"{a}_{b}") * years,
+                   "projected": lambda: coastsat_target_lowess(1996, "1996_2024") * years,
                    }[spec["kind"]]()
             m = None
             if rt is not None:
@@ -446,30 +446,30 @@ def cmd_plot(_=None):
 
 # Observations for the house-form figures: smoothed at 7 domains, the research
 # group's range (Hannah, 2026-09-28), the southern 10 domains left raw.
-LOESS_DOMAINS = 7
+LOWESS_DOMAINS = 7
 SKIP_SOUTHERN = 10
 
 
-def coastsat_target_loess(start, window):
-    """The CoastSat LRR target built as the runner builds it, at LOESS_DOMAINS,
+def coastsat_target_lowess(start, window):
+    """The CoastSat LRR target built as the runner builds it, at LOWESS_DOMAINS,
     the rate fitted on `window` ("1996_2010", or "1996_2024" for the long-term rate)."""
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
     from cascade_pipeline.hindcast import build_target_table
-    from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
                          csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
-    cfg = LoessConfig(window_domains=(LOESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
-    cs = build_coastsat_series([ds], active_period_start=start, loess_config=cfg,
+    cfg = LowessConfig(window_domains=(LOWESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
+    cs = build_coastsat_series([ds], active_period_start=start, lowess_config=cfg,
                                domains=HATTERAS_DOMAINS)[0]
-    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOESS_DOMAINS).set_index(
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOWESS_DOMAINS).set_index(
         "gis_domain")["target_lrr_m_yr"]
 
 
-def smooth_loess(series):
-    """A per-domain series smoothed as the target is: LOESS over LOESS_DOMAINS,
+def smooth_lowess(series):
+    """A per-domain series smoothed as the target is: LOWESS over LOWESS_DOMAINS,
     the southern SKIP_SOUTHERN left raw."""
     import pandas as pd
     from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -477,7 +477,7 @@ def smooth_loess(series):
     y = series.to_numpy(dtype=float)
     ok = np.isfinite(y)
     out = pd.Series(np.nan, index=series.index)
-    out[ok] = lowess(y[ok], x[ok], frac=LOESS_DOMAINS / len(x), return_sorted=False)
+    out[ok] = lowess(y[ok], x[ok], frac=LOWESS_DOMAINS / len(x), return_sorted=False)
     raw = series.index <= SKIP_SOUTHERN
     out[raw] = series[raw]
     return out

@@ -9,7 +9,7 @@
 > **Redrawn 2026-09-28 on the adopted model.** Every model set now runs on Barrier3D `hatteras/adopted` (the three overwash fixes and per-cell dune ceilings), storms `v3_trim24` (every event kept, trimmed to 24 h around its peak):
 > - the CoastSat-solved and unsolved sets are the rebuilt matrix (ends +4.3509 / +19.0935 in 1996–2010, +8.0 / +22.4937 in 2010–2024);
 > - the dune-line solve was redone on it (`raw_runs/experiments/end-domain-boundaries/2026-09-28-ends-solved-on-duneline-adopted/`);
-> - so was the 1996–2024 LRR solve (`.../2026-09-28-ends-solved-on-lrr-1996-2024-adopted/`), now against the LOESS-7 value at GIS 90.
+> - so was the 1996–2024 LRR solve (`.../2026-09-28-ends-solved-on-lrr-1996-2024-adopted/`), now against the LOWESS-7 value at GIS 90.
 >
 > What changed: 2010–2024 is 3–5 m less erosive against both targets in every model set; 1996–2010 moves by about 1 m. In `smoothing_scale/`, 6 of the 2010–2024 rows now just clear their null (r 0.25–0.39 against a p95 of 0.24–0.36; five of the six at 10 domains), where none did before; 52 of 60 1996–2010 rows clear. The pre-adoption numbers below are recoverable from git (commit 70f2efb3).
 >
@@ -22,10 +22,10 @@
 >
 > **Where the old version is:** the /10-era tree is in `output/archive/2026-09-27_target-comparison-div10/`. Every number below comes from the redraw.
 >
-> **LOESS 7 since 2026-09-28** (Hannah: "redo the target comparison with LOESS 7").
-> - The smoothed targets, and every `*_loess` score, now use a 7-domain LOESS (raw domain means over GIS 1–10), following the runner's scoring target.
-> - (Superseded by the adopted-model redraw above.) The CoastSat-solved ends (the matrix) were re-solved against the LOESS-7 target later the same day and the edgeBE matrix re-run: GIS 90 +17.545 → +18.2545 (1996) and +24.535 → +24.2358 (2010), GIS 1 in 2010 +18.8 → +18.8657. `total_change/` was redrawn on those runs; its scores moved by 0.02 m in bias and 0.03 m in RMSE. `projected/` and the dune-line-solved set use experiment runs and did not change.
-> - The LOESS-10 option A version is in `output/archive/2026-09-28_option-a-loess10-comparisons/`.
+> **LOWESS 7 since 2026-09-28** (Hannah: "redo the target comparison with LOWESS 7").
+> - The smoothed targets, and every `*_lowess` score, now use a 7-domain LOWESS (raw domain means over GIS 1–10), following the runner's scoring target.
+> - (Superseded by the adopted-model redraw above.) The CoastSat-solved ends (the matrix) were re-solved against the LOWESS-7 target later the same day and the edgeBE matrix re-run: GIS 90 +17.545 → +18.2545 (1996) and +24.535 → +24.2358 (2010), GIS 1 in 2010 +18.8 → +18.8657. `total_change/` was redrawn on those runs; its scores moved by 0.02 m in bias and 0.03 m in RMSE. `projected/` and the dune-line-solved set use experiment runs and did not change.
+> - The LOWESS-10 option A version is in `output/archive/2026-09-28_option-a-loess10-comparisons/`.
 > - The raw-domain-mean numbers below do not depend on the smoothing. The smoothed RMSEs rise by 1–2 m at 7 (projected, ends solved on CoastSat: 1996–2010 14.1 → 15.8 m, 2010–2024 19.7 → 21.4 m). Biases move by 0.1 m or less.
 > - No conclusion changes.
 >
@@ -56,7 +56,7 @@ the ones `model_vs_observed/` draws as rates.
 
 The space between the two targets is the beach-width change they imply
 (solid grey widened, hatched narrowed). Lines are raw domain means;
-`tables/skill.csv` also scores against the LOESS-smoothed targets, the form
+`tables/skill.csv` also scores against the LOWESS-smoothed targets, the form
 the runs are graded in.
 
 **Two versions of the CoastSat target (2026-09-19, Hannah; renamed
@@ -79,24 +79,24 @@ is `.../coastsat/total_change/`.
   +3.9 / +27.7 in 1996–2010, +3.6 / +17.5 in 2010–2024; +3.6 / +18.6 in 2010 before the dune-cap fix; before adoption +4.5 / +27.5 and +4.8 / +20.5;
   /10 era +28.5 / +24.5 and +37.1 / +25.4).
   `projected/paired_smoothed/` is the same pairing with both
-  targets drawn as GRADED (raw domain means over GIS 1–10, 10-domain LOESS
+  targets drawn as GRADED (raw domain means over GIS 1–10, 10-domain LOWESS
   beyond) as the fill and the raw domain means as dots (Hannah, 2026-09-19).
 - `total_change/` — kept for the record: each window's own LRR (what
   the runner grades against), paired with the matrix runs.
 
-**`smoothed_loess7_with_cascade/` (2026-09-22, Hannah, by interview).** The
+**`smoothed_lowess7_with_cascade/` (2026-09-22, Hannah, by interview).** The
 two-panel smoothed sheets from
-`5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7/` with the zeroBE
+`5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7/` with the zeroBE
 run over them in dark green — 1996–2010 above 2010–2024, all three curves
-LOESS-smoothed at 7 domains. The model-vs-dune-line bias is the same in both
+LOWESS-smoothed at 7 domains. The model-vs-dune-line bias is the same in both
 sheets (+10.7 m in 1996–2010, −10.7 m in 2010–2024; /10 era +6.6 and −14.5);
 what changes is the distance to the SHORELINE target, −11.0 m against the
 long-term projection in 2010–2024 but −24.7 m against that window's own rate
 (/10 era −14.8 and −28.6). Numbers in its `PROVENANCE.md`.
 
 **`smoothing_scale/` (2026-09-21, Hannah, by interview).** Does the grading
-window matter? The 10-domain LOESS the target is built with had never been
-examined, and the `coastsat` → `coastsat_loess` rows in `skill.csv` show it is
+window matter? The 10-domain LOWESS the target is built with had never been
+examined, and the `coastsat` → `coastsat_lowess` rows in `skill.csv` show it is
 worth 3–4 m of RMSE. `smoothing_scale.py` sweeps it over raw / 1.5 / 2.5 /
 5.0 km against all three model sets, in two forms (target smoothed and model
 raw, as the runner grades; and both smoothed), each r carried beside the 95th
@@ -158,10 +158,10 @@ paired/                    START HERE: each target with ITS OWN run only (CoastS
     target_and_own_run_1996_2010.png
     target_and_own_run_2010_2024.png
 tables/
-    domain_values_<w>.csv  per domain: both targets raw and LOESS (m), the dune line's
+    domain_values_<w>.csv  per domain: both targets raw and LOWESS (m), the dune line's
                            measured change and interval, both model sets (m)
     skill.csv              model minus target, GIS 2–89: bias, RMSE (m), r; per window,
-                           model set, target (coastsat, coastsat_loess, duneline, duneline_loess)
+                           model set, target (coastsat, coastsat_lowess, duneline, duneline_lowess)
 runs_used.csv              the runs, with their index provenance
 ```
 
@@ -205,7 +205,7 @@ End rates (m/yr, GIS 1 / GIS 90):
 | 1996–2010 | +3.9 / +27.7 | +4.35 / +19.09 | −2.8 / +7.9 |
 | 2010–2024 | +3.6 / +17.5 | +8.0 / +21.26 | +2.1 / +13.6 |
 
-After the dune-cap fix, 2026-09-29; before it the 2010 row was +3.6 / +18.6, +8.0 / +22.49, +2.1 / +14.2 (1996 unchanged). Before adoption (option A, LOESS-7 target): +4.5 / +27.5, +4.84 / +18.25, −3.0 / +7.6 in 1996–2010; +4.8 / +20.5, +18.87 / +24.24, +3.4 / +15.0 in 2010–2024.
+After the dune-cap fix, 2026-09-29; before it the 2010 row was +3.6 / +18.6, +8.0 / +22.49, +2.1 / +14.2 (1996 unchanged). Before adoption (option A, LOWESS-7 target): +4.5 / +27.5, +4.84 / +18.25, −3.0 / +7.6 in 1996–2010; +4.8 / +20.5, +18.87 / +24.24, +3.4 / +15.0 in 2010–2024.
 
 /10 era: CoastSat (window's own) +32.2 / +10.0 and +72.6 / +31.3; dune line −16.0 / −3.3 and +20.1 / +19.2.
 
@@ -225,7 +225,7 @@ After the dune-cap fix, 2026-09-29; before it the 2010 row was +3.6 / +18.6, +8.
 
 **Where they overlap.** The offset study's dune-line, full-management run is effectively the same model as target_comparison's `ends_unsolved` set (option A, zeroBE, dune-line offset). Graded against the dune line in metres, the two agree up to one scaling choice:
 
-| model minus dune line | offset-source study | target_comparison (smoothed_loess7_with_cascade) |
+| model minus dune line | offset-source study | target_comparison (smoothed_lowess7_with_cascade) |
 |---|---|---|
 | 1996–2010 | +9.6 m | +10.7 m |
 | 2010–2024 | −10.5 m | −10.7 m |

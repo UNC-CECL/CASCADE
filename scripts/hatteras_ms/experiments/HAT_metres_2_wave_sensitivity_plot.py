@@ -58,7 +58,7 @@ COMMON_CAPTION = ("Natural scenario (no road, beach or dune management, no fills
                   "relocations, no groin), no imposed background erosion, island offset in "
                   "metres (dune line). Baseline Hs 1.0 m, Tp 8 s, asymmetry 0.8, high-angle "
                   "fraction 0.45. Scores are the modelled LRR shoreline-change rate against "
-                  "each window's CoastSat LRR target (LOESS, 10 domains) over the interior "
+                  "each window's CoastSat LRR target (LOWESS, 10 domains) over the interior "
                   "domains GIS 2-89. Every value is fitted on the window it is scored on, "
                   "so a best value is a band, not a calibrated value.")
 
@@ -193,7 +193,7 @@ def fig_alongshore(t, group, period, target, obs, scenario=study.SCENARIO):
                                      sharex=True, constrained_layout=True)
     ax_r.plot(target.index, target.values, zorder=6, **OBSERVED)
     ax_p.plot(obs.index, obs.values, zorder=6, **OBSERVED)
-    handles = [Line2D([], [], label="CoastSat (LOESS, 10 domains)", **OBSERVED)]
+    handles = [Line2D([], [], label="CoastSat (LOWESS, 10 domains)", **OBSERVED)]
     for _, row in line.iterrows():
         v = row[setting]
         if row.scored:
@@ -475,10 +475,10 @@ def _fig_best(targets, obs, picks, scenario, rule):
                          rmse_m_yr=r.rmse_interior_m_yr, run_dir=r.run_dir))
     axes[0, 0].set_ylabel("Shoreline change rate,\nLRR (m/yr)")
     axes[1, 0].set_ylabel("Shoreline position change,\nend minus start (m)")
-    handles = [Line2D([], [], color=INK, lw=2.6, label="CoastSat (LOESS, 10 domains)"),
+    handles = [Line2D([], [], color=INK, lw=2.6, label="CoastSat (LOWESS, 10 domains)"),
                Line2D([], [], color=col, lw=1.5, label=f"Model, {BEST_NAME[scenario].lower()}"),
                Line2D([], [], color=col, lw=2.4, ls=(0, (5, 3)), alpha=0.5,
-                      label="Model smoothed like CoastSat (LOESS, 10 domains)")]
+                      label="Model smoothed like CoastSat (LOWESS, 10 domains)")]
     what = ("the best wave settings found for each window" if rule == "per_period"
             else "one wave setting for both windows")
     fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False,
@@ -503,7 +503,7 @@ def _fig_best(targets, obs, picks, scenario, rule):
         "against the CoastSat LRR target (black); bottom: the modelled position change, end "
         "minus start of the window, against the observed CoastSat change (mean position over "
         "the last calendar year minus the first, smoothed at 10 domains). Solid colour: the "
-        "model per domain; faint dashed: the model smoothed as the target is (LOESS over 10 "
+        "model per domain; faint dashed: the model smoothed as the target is (LOWESS over 10 "
         "domains, the southern 10 left raw), for comparing like with like. Settings and "
         "scores (interior GIS 2-89) above each column. Offset in metres (dune line), zeroBE, "
         "no groin, no relocations."))
@@ -601,7 +601,7 @@ def _fig_combo(t, period, target, obs):
     axes[0][0].set_ylabel("Shoreline change rate,\nLRR (m/yr)")
     axes[1][0].set_ylabel(f"Shoreline position change,\n{period + 14} minus {period} (m)")
     scores = {(r["scenario"], r["wave_asymmetry"], r["wave_angle_high_fraction"]): r for r in rows}
-    handles = [Line2D([], [], **{**OBSERVED, "lw": 2.6}, label="CoastSat (LOESS, 10 domains)")]
+    handles = [Line2D([], [], **{**OBSERVED, "lw": 2.6}, label="CoastSat (LOWESS, 10 domains)")]
     for a, f, st in CORNERS:
         n = scores.get((study.SCENARIO, a, f)); m = scores.get((study.MANAGED, a, f))
         tail = (f"   natural {100 * n['variance_explained']:+.0f}%, managed "

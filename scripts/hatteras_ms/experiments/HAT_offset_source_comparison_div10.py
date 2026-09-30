@@ -18,7 +18,7 @@ trying to track the changes as I was experimenting".
     Barrier3D the current one, with the route_overwash fix. The ÷10-era runs
               used the unfixed router, which segfaulted on some storms
     figures   the 09-25 driver's house form: metres of net change, observations
-              LOESS 7, no scores on the figures
+              LOWESS 7, no scores on the figures
 
 WHERE: output/raw_runs/experiments/island-offset/2026-09-28-div10-offset-duneline-vs-shoreline-rebuild/
 

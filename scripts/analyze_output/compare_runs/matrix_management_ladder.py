@@ -29,7 +29,7 @@ ONE PANEL PER RUNG, CUMULATIVE
 
 TWO VERSIONS
     rate      the OLS rate (lrr_m_yr) against the CoastSat LRR scoring target
-              (7-domain LOESS, raw means GIS 1-10), as the runner scores it;
+              (7-domain LOWESS, raw means GIS 1-10), as the runner scores it;
               +/-7.5 m/yr, as the runner's own figure
     position  the position change over the window (endpoint rate x 14 yr)
               against the observed CoastSat change (mean position in the last
@@ -93,7 +93,7 @@ VERSIONS = {
         ylim=(-7.5, 7.5), ylabel="Shoreline change rate,\nLRR (m/yr)", unit="m/yr", fmt="{:+.2f}",
         rmse_fmt="{:.2f}", obs_label="CoastSat LRR target",
         model=lambda rt: rt["lrr_m_yr"],
-        obs_text="the CoastSat LRR scoring target (black; 7-domain LOESS, raw domain means GIS 1–10)",
+        obs_text="the CoastSat LRR scoring target (black; 7-domain LOWESS, raw domain means GIS 1–10)",
         what="modelled OLS shoreline-change rate"),
     "position": dict(
         ylim=(-130, 130), ylabel=None, unit="m", fmt="{:+.1f}", rmse_fmt="{:.1f}",

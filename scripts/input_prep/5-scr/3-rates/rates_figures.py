@@ -64,8 +64,8 @@ from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 
 import coastsat_lrr_windows as cw  # noqa: E402
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    DEFAULT_LOESS, spliced_loess_series,
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    DEFAULT_LOWESS, spliced_lowess_series,
 )
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, SMOOTH_RAMP, apply_style, caption, figsize, save,
@@ -88,7 +88,7 @@ Y_STEP_M = 10.0
 # it is built from (Hannah, 2026-09-22: the observation figure and the model
 # figure should not show different observed curves). Same darkest blue as the
 # graded curve on smoothing_windows_<w>.png, so the two read as one series.
-TARGET_WINDOW = max(DEFAULT_LOESS.window_domains)
+TARGET_WINDOW = max(DEFAULT_LOWESS.window_domains)
 TARGET_C = SMOOTH_RAMP[-1]
 TARGET_LW = 1.3
 BINS_SCRIPT = (_REPO / "scripts" / "input_prep" / "5-scr" / "3-rates"
@@ -112,10 +112,10 @@ def _along(t):
 
 
 def _target(t):
-    """The scoring curve for one window's transect table: a LOESS at
+    """The scoring curve for one window's transect table: a LOWESS at
     TARGET_WINDOW north of the splice, the raw domain means at and below it.
 
-    Built through cascade_pipeline.coastsat_loess, the module the run's own
+    Built through cascade_pipeline.coastsat_lowess, the module the run's own
     target is built through, so this figure cannot drift from what the model
     is graded against.
     """
@@ -125,7 +125,7 @@ def _target(t):
     sp = DOM.domain_spacing_m
     along = ((t["domain_number"] - DOM.first_gis_id) * sp
              + (rank + 0.5) * (sp / n)).to_numpy(float)
-    series, _ = spliced_loess_series(t["domain_number"].to_numpy(int), along,
+    series, _ = spliced_lowess_series(t["domain_number"].to_numpy(int), along,
                                      t["lrr_m_yr"].to_numpy(float), TARGET_WINDOW)
     return series
 
@@ -233,9 +233,9 @@ def lrr_figures():
             "red by their own sign"
             + (f" ({n_out} beyond the axis, drawn as open circles at its edge)" if n_out else "")
             + ". The dark blue curve is the target a model run is scored "
-            f"against: the same transect rates smoothed alongshore by a LOESS "
+            f"against: the same transect rates smoothed alongshore by a LOWESS "
             f"{TARGET_WINDOW * 500 / 1000:g} km wide, reverting to the raw domain "
-            f"means over GIS 1–{DEFAULT_LOESS.skip_southern_domains} (the Oregon "
+            f"means over GIS 1–{DEFAULT_LOWESS.skip_southern_domains} (the Oregon "
             "Inlet boundary treatment). Where it departs from the coloured line, "
             "the smoothing is what moved it. "
             + _marks_clause(s, e)
@@ -376,8 +376,8 @@ def chain_figures(half_lrr, half_end):
                         "domain (the line and fill; dotted ±1 standard deviation), "
                         "with the dark blue curve the target a run is scored against "
                         f"-- the same rates under a {TARGET_WINDOW * 500 / 1000:g} km "
-                        "alongshore LOESS, reverting to the raw domain means over "
-                        f"GIS 1–{DEFAULT_LOESS.skip_southern_domains}")
+                        "alongshore LOWESS, reverting to the raw domain means over "
+                        f"GIS 1–{DEFAULT_LOWESS.skip_southern_domains}")
                 unit = f"±{half:g} m/yr, the bound of every window figure"
             elif product == "coastsat":
                 body = ("the mean CoastSat position within six months of the end "

@@ -131,8 +131,8 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
              "the counterpart of the row above. The pair separates what the "
              "long-term trend PREDICTS from what it was FITTED on."),
             ("Does smoothing change any of it?",
-             f"{COMP}/shoreline_vs_duneline/smoothed_loess7/",
-             "both sheets again with BOTH curves LOESS-smoothed at 7 domains "
+             f"{COMP}/shoreline_vs_duneline/smoothed_lowess7/",
+             "both sheets again with BOTH curves LOWESS-smoothed at 7 domains "
              "(3.5 km). Read the beach width, not r — a symmetric smoother "
              "inflates r on both sides."),
             ("The whole period above its two halves",
@@ -163,7 +163,7 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
             ("vs the shoreline, as graded",
              f"{OUT}/model_vs_observed/vs_shoreline/smoothed/"
              "model_vs_shoreline_smoothed_<w>.png",
-             "the LOESS form the runner actually scores."),
+             "the LOWESS form the runner actually scores."),
             ("vs the dune line",
              f"{OUT}/model_vs_observed/vs_duneline/endpoint_net_change/"
              "model_vs_duneline_netchange_<w>.png",
@@ -203,7 +203,7 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
              "**No** — and r was never the number to read. See its "
              "PROVENANCE.md."),
             ("Both targets AND the model, smoothed",
-             f"{OUT}/target_comparison/smoothed_loess7_with_cascade/",
+             f"{OUT}/target_comparison/smoothed_lowess7_with_cascade/",
              "the two smoothed sheets with the zeroBE run over them in dark "
              "green. Nothing in that run was fitted to either target, so all "
              "90 domains are the model's own response."),
@@ -232,11 +232,11 @@ CROSSREF = [
     ("vs_shoreline/domain_means", "CoastSat", "OLS rate (`lrr_m_yr`)",
      "raw domain means"),
     ("vs_shoreline/smoothed", "CoastSat", "OLS rate (`lrr_m_yr`)",
-     "spliced LOESS — the form the runner grades"),
+     "spliced LOWESS — the form the runner grades"),
     ("vs_duneline/endpoint_net_change", "dune line",
      "endpoint rate (`change_rate_m_yr`)", "raw domain means"),
     ("vs_duneline/net_change_smoothed", "dune line",
-     "endpoint rate (`change_rate_m_yr`)", "spliced LOESS"),
+     "endpoint rate (`change_rate_m_yr`)", "spliced LOWESS"),
     ("vs_shoreline_and_duneline/change_rate", "both", "endpoint rate, both solves",
      "raw domain means"),
     ("vs_shoreline_and_duneline/net_change", "both",

@@ -18,7 +18,7 @@ runs), into output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendat
                                 and on 2010-2020 (before the 2021 CoastSat step)
 
 Scores are the RAW share of the alongshore variation explained (the per-domain
-model against the CoastSat LOESS-10 target, interior GIS 2-89), as the runner
+model against the CoastSat LOWESS-10 target, interior GIS 2-89), as the runner
 and the matrix runs are scored.
 """
 from __future__ import annotations
@@ -224,7 +224,7 @@ def fig3():
         ax_p.set_xlabel(DOMAIN_AXIS_LABEL)
     axes[0, 0].set_ylabel("Shoreline change rate, LRR (m/yr)")
     axes[1, 0].set_ylabel("Position change, end minus start (m)")
-    handles = [Line2D([], [], color=INK, lw=2.8, label="CoastSat (LOESS, 10 domains)"),
+    handles = [Line2D([], [], color=INK, lw=2.8, label="CoastSat (LOWESS, 10 domains)"),
                Line2D([], [], color=COLOR["full_management"], lw=1.8, label="Model, full management"),
                Line2D([], [], color=COLOR["natural"], lw=1.8, label="Model, natural")]
     f.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False,
@@ -401,7 +401,7 @@ def fig6():
         ax_p.set_xlabel(DOMAIN_AXIS_LABEL)
     axes[0, 0].set_ylabel("Shoreline change rate, LRR (m/yr)")
     axes[1, 0].set_ylabel("Position change, 2024 minus 2010 (m)")
-    handles = [Line2D([], [], color=INK, lw=2.8, label="CoastSat (LOESS, 10 domains)"),
+    handles = [Line2D([], [], color=INK, lw=2.8, label="CoastSat (LOWESS, 10 domains)"),
                Line2D([], [], color="#9a9a9a", lw=2.2, label="Same setting as 1996–2010 (Hs 2.0; ends +18.8 / +24.5)"),
                Line2D([], [], color="#3a3a3a", lw=2.0, label="Hs raised to 2.5 (ends +8.0 / +40.4)")]
     f.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False,

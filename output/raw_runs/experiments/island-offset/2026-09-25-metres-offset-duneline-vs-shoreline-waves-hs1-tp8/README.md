@@ -8,7 +8,7 @@ from the dune line, rather than the CoastSat shoreline, change the output?
 | offsets | `2-brie-offset/1996/duneline/v1` and `1996/shoreline/v1`: both metres, the wrap-around written in the file (`HAT_ISLAND_OFFSET_SOURCE`) |
 | waves | Hs 1.0 m, Tp 8 s, asymmetry 0.8, the best managed 1996–2010 setting found. **Tuned with the dune-line offset**, so the dune line has a head start at one setting; the shoreline offset gets a fair chance through the high-angle fraction, 0.3 / 0.4 / 0.45 / 0.5 / 0.55, the lever that mattered most |
 | scope | natural and full management, 1996–2010; 20 runs, both offsets run fresh here on the same code and Barrier3D (route_overwash fix) |
-| score | as `wave-climate/2026-09-25-wave-grid-smoothed-score/`: share of the alongshore variation explained by the model smoothed like the CoastSat target (LOESS 10 domains, southern 10 raw), interior GIS 2–89; raw score, bias and correlation beside it |
+| score | as `wave-climate/2026-09-25-wave-grid-smoothed-score/`: share of the alongshore variation explained by the model smoothed like the CoastSat target (LOWESS 10 domains, southern 10 raw), interior GIS 2–89; raw score, bias and correlation beside it |
 
 ## Layout
 
@@ -20,7 +20,7 @@ figures/shoreline_offset_vs_coastsat_projected_change_full_management.png
 figures/total_change_difference_shoreline_minus_duneline_full_management.png
                                (a) full management 1996–2010, (b) 2010–2024, high-angle 0.45;
                                redrawn 2026-09-28 in the option A study's form
-                               (metres, observations LOESS 7, no scores on the
+                               (metres, observations LOWESS 7, no scores on the
                                figures); the two original figures (profiles_,
                                scores_vs_high_angle_) are in git history
 logs/<offset>_<scenario>/<settings>.log

@@ -11,10 +11,10 @@ per-domain mean LRR from DSAS and from CoastSat, on the two DSAS windows
 
 WHY IT IS SEPARATE FROM 6-scr-smooth/dsas_vs_coastsat/
     That folder exists to argue about the SMOOTHING -- every figure in it
-    draws a LOESS, and its own README calls these windows retired. The
+    draws a LOWESS, and its own README calls these windows retired. The
     question here is different and prior to it: before any smoothing, do the
     two sources say the same thing about the same 500 m of beach? So it sits
-    with the other comparisons, and the figure carries no LOESS at all.
+    with the other comparisons, and the figure carries no LOWESS at all.
 
 WHAT THE CoastSat SIDE IS
     REFIT HERE from the current time series (Hannah, 2026-09-22), not read
@@ -214,7 +214,7 @@ def figure(series, stats, slide=False):
         "Observed shoreline change rate by GIS domain (1 at Cape Point, 90 at "
         "Pea Island) from the two sources, UNSMOOTHED: each line is the plain "
         "per-domain mean rate, DSAS from the digitized shoreline transects and "
-        "CoastSat from the satellite transects, seaward positive. No LOESS is "
+        "CoastSat from the satellite transects, seaward positive. No LOWESS is "
         "applied to either — this is the comparison before any smoothing, so "
         "the per-domain disagreement is shown at full amplitude. Agreement, "
         f"CoastSat minus DSAS: {t}. "

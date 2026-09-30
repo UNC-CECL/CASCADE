@@ -68,7 +68,7 @@
     "predicted_extent_m": "3280"
   },
   "skill": {
-    "target": "CoastSat LOESS 10-domain",
+    "target": "CoastSat LOWESS 10-domain",
     "estimator": "lrr",
     "mean_bias_m_yr": "-0.0020",
     "rmse_m_yr": "0.5462",

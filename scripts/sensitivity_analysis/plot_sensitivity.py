@@ -16,11 +16,11 @@ WHY THIS REPLACED plot_sensitivity_vs_coastsat.py
 THE OBSERVED LAYER IS THE TARGET, NOTHING ELSE
     The target table comes from `build_target_table`, the production scoring
     path, so the curve drawn is exactly what the RMSE is computed against. It
-    is a HYBRID: GIS 1..skip_southern_domains are raw per-domain means (LOESS
+    is a HYBRID: GIS 1..skip_southern_domains are raw per-domain means (LOWESS
     is suppressed near Oregon Inlet, where boundary effects dominate and
-    smoothing would hide the gradient), and the rest is the 7-domain LOESS.
+    smoothing would hide the gradient), and the rest is the 7-domain LOWESS.
     The alongshore panels draw that one curve plus the transect dots over
-    D1..skip only, where the target is not a LOESS. The full transect scatter
+    D1..skip only, where the target is not a LOWESS. The full transect scatter
     and the unsmoothed domain-mean line were dropped 2026-09-29: over D11-90
     they duplicated the target at higher noise and buried the model curves.
 
@@ -79,8 +79,8 @@ for _path in (PROJECT_BASE_DIR / "scripts",
         sys.path.insert(0, str(_path))
 
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS  # noqa: E402
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    CoastSatDataset, LoessConfig, build_coastsat_series, scale_coastsat_series)
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    CoastSatDataset, LowessConfig, build_coastsat_series, scale_coastsat_series)
 from cascade_pipeline.shoreline import compute_change_rate  # noqa: E402
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
@@ -120,12 +120,12 @@ FIGURES_ROOT = RAW_RUNS / "sensitivity" / "figures"
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
 
-# Must match section 8.1 of HAT_hindcast_1984_2024.py. These are the LoessConfig
+# Must match section 8.1 of HAT_hindcast_1984_2024.py. These are the LowessConfig
 # defaults, so the two agree by construction rather than by copying -- but the
 # run metadata records the target it actually used, and check_target_matches()
 # below asserts against that rather than trusting this line.
-LOESS_CONFIG = LoessConfig()
-TARGET_WINDOW = max(LOESS_CONFIG.window_domains)
+LOWESS_CONFIG = LowessConfig()
+TARGET_WINDOW = max(LOWESS_CONFIG.window_domains)
 
 
 def period_component(start_year):
@@ -142,7 +142,7 @@ def period_component(start_year):
 # magnitudes, not categories, so one hue light-to-dark is the correct encoding
 # and a categorical cycle would imply the values are unrelated. Warm on purpose
 # -- the observed layer owns the blues (#5BA3C9 scatter, #6BAED6 / #08519C
-# LOESS), so a blue model ramp would collide with the thing it is measured
+# LOWESS), so a blue model ramp would collide with the thing it is measured
 # against.
 MODEL_RAMP = plt.get_cmap("YlOrRd")
 RAMP_LO, RAMP_HI = 0.30, 0.92          # skip the near-white and near-black ends
@@ -346,7 +346,7 @@ def position_layers(start_year, reference):
 
     `reference` "total" is the window's own LRR x span; "projected" is the
     1996-2024 LRR x span (the 09-21 vocabulary: named by the FIT window).
-    Scaling after the LOESS is exact -- see scale_coastsat_series.
+    Scaling after the LOWESS is exact -- see scale_coastsat_series.
     """
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     span = end_year - start_year
@@ -361,18 +361,18 @@ def position_layers(start_year, reference):
                 label=f"CoastSat LRR ({lo}-{hi})", period_start=lo,
                 csv_path=str(COASTSAT_BASE_DIR / f"{lo}_{hi}"
                              / "transect_lrr_full.csv"))],
-            active_period_start=lo, loess_config=LOESS_CONFIG,
+            active_period_start=lo, lowess_config=LOWESS_CONFIG,
             domains=HATTERAS_DOMAINS)
         fit = f"{lo}–{hi}"
         name = "projected change"
     active = next(cs for cs in series if cs["active"])
-    target = build_target_table(active, LOESS_CONFIG, HATTERAS_DOMAINS,
+    target = build_target_table(active, LOWESS_CONFIG, HATTERAS_DOMAINS,
                                 TARGET_WINDOW)
     target = target.assign(target_lrr_m_yr=target.target_lrr_m_yr * span)
     scaled = scale_coastsat_series(series, span, active=True if reference ==
                                    "projected" else None)
     label = (f"CoastSat {name}, LRR {fit} × {span} yr, {TARGET_WINDOW}-domain "
-             f"LOESS (domain means D1–{LOESS_CONFIG.skip_southern_domains})")
+             f"LOWESS (domain means D1–{LOWESS_CONFIG.skip_southern_domains})")
     return scaled, target, label
 
 
@@ -385,7 +385,7 @@ def check_target_matches(index, keys):
     refers to. Each run records its target in run_metadata.json, so this is
     checkable rather than assumed.
     """
-    expected = f"CoastSat LOESS {TARGET_WINDOW}-domain"
+    expected = f"CoastSat LOWESS {TARGET_WINDOW}-domain"
     for name, kind, tag in keys:
         row = index.loc[(name, kind, tag)]
         # RESOLVED, NOT JOINED BY HAND, AND IN THE ARM THE ROW CLAIMS. This
@@ -449,13 +449,13 @@ def coastsat_layers(start_year):
                          / "transect_lrr_full.csv")),
     ]
     series = build_coastsat_series(
-        datasets, active_period_start=start_year, loess_config=LOESS_CONFIG,
+        datasets, active_period_start=start_year, lowess_config=LOWESS_CONFIG,
         domains=HATTERAS_DOMAINS)
     active = next((cs for cs in series if cs["active"]), None)
     if active is None:
         raise RuntimeError(f"no CoastSat dataset starts at {start_year}")
     target = build_target_table(
-        active, LOESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
+        active, LOWESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
     return series, target
 
 
@@ -691,12 +691,12 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     cax = fig.add_subplot(grid[0, 1])
 
     # The observed layer is ONE curve: the scoring target, which is the
-    # 7-domain LOESS over D11-90 and the raw domain means over D1-10. The
+    # 7-domain LOWESS over D11-90 and the raw domain means over D1-10. The
     # full transect scatter and the unsmoothed domain-mean zigzag were drawn
     # too (Hannah, 2026-09-29) and buried the model curves under a second,
     # noisier blue layer; the transect dots stay only over D1-10, where the
-    # target is not a LOESS and the reader needs to see what it is made of.
-    skip = LOESS_CONFIG.skip_southern_domains
+    # target is not a LOWESS and the reader needs to see what it is made of.
+    skip = LOWESS_CONFIG.skip_southern_domains
     load = model_rates if position is None else model_position_change
     active = next(cs for cs in cs_series if cs["active"])
     south = np.asarray(active["transect_domains"]) <= skip
@@ -713,7 +713,7 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     ax.plot(target.gis_domain, target.target_lrr_m_yr, color="#08306B", lw=1.8,
             zorder=5,
             label=(position[1] if position else
-                   f"CoastSat LRR, {TARGET_WINDOW}-domain LOESS "
+                   f"CoastSat LRR, {TARGET_WINDOW}-domain LOWESS "
                    f"(domain means D1–{skip})"))
 
     # NOT the cell's sibling: since 2026-09-10 a sweep cell lives in
@@ -757,7 +757,7 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     # axes, so it cannot cover data at any y-limit.
     handles, labels = ax.get_legend_handles_labels()
     # Observed curve, then the model, then the transect dots.
-    rank = lambda lbl: (0 if "LOESS" in lbl else
+    rank = lambda lbl: (0 if "LOWESS" in lbl else
                         2 if lbl.startswith("CoastSat transects") else 1)
     order = sorted(range(len(labels)), key=lambda i: rank(labels[i]))
     ax.legend([handles[i] for i in order], [labels[i] for i in order],

@@ -153,7 +153,7 @@ def _fig(targets, obs, chosen, scenario, rule, source):
                          run_path=str(r["run_path"])))
     axes[0, 0].set_ylabel("Shoreline change rate,\nLRR (m/yr)")
     axes[1, 0].set_ylabel("Shoreline position change,\nend minus start (m)")
-    handles = [Line2D([], [], color=INK, lw=2.6, label="CoastSat (LOESS, 10 domains)")]
+    handles = [Line2D([], [], color=INK, lw=2.6, label="CoastSat (LOWESS, 10 domains)")]
     if SCORE == "raw":
         handles.append(Line2D([], [], color=DARK[scenario], lw=2.0,
                               label=f"Model, {NAME[scenario].lower()} (per domain, scored)"))
@@ -170,7 +170,7 @@ def _fig(targets, obs, chosen, scenario, rule, source):
     save(f, png, dpi=300, close=True)
     pd.DataFrame(rows).to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
     model = ("unsmoothed (per-domain) model" if SCORE == "raw"
-             else "model smoothed like the CoastSat target (LOESS over 10 domains, the "
+             else "model smoothed like the CoastSat target (LOWESS over 10 domains, the "
                   "southern 10 raw)")
     rule_text = (f"The run with the highest share of alongshore variation explained by the "
                  f"{model}, in each window. " if rule == "per_period" else
@@ -206,7 +206,7 @@ def fig_top(targets, t, source):
                 x["rank_raw"] = x.raw_variance_explained.rank(ascending=False).astype(int)
                 top = x.nlargest(TOP_N, f"{SCORE}_variance_explained")
                 o = targets[period]
-                ax.plot(o.index, o.values, color=INK, lw=3.0, zorder=6, label="CoastSat (LOESS, 10 domains)")
+                ax.plot(o.index, o.values, color=INK, lw=3.0, zorder=6, label="CoastSat (LOWESS, 10 domains)")
                 for k, (_, r) in enumerate(top.iterrows()):
                     rt = pd.read_csv(Path(r.run_path) / "tables" / "shoreline_change_rate.csv"
                                      ).set_index("gis_domain")
@@ -242,7 +242,7 @@ def fig_top(targets, t, source):
     pd.DataFrame(rows).to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
     record_caption(png, (
         f"The top {TOP_N} runs by smoothed score in each window and scenario, from the "
-        f"{SOURCE_NAME[source]}, each drawn as the smoothed profile that was scored (LOESS "
+        f"{SOURCE_NAME[source]}, each drawn as the smoothed profile that was scored (LOWESS "
         "over 10 domains, the southern 10 raw) against the CoastSat LRR target (black). "
         "Legend: settings, smoothed share of alongshore variation explained, the raw "
         "(unsmoothed) score and the run's rank under the raw score. Interior GIS 2-89."))

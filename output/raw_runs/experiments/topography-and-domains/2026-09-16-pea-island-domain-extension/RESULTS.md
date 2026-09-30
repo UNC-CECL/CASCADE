@@ -14,7 +14,7 @@ Interior RMSE is GIS 2-89 against the surveyed CoastSat target in every geometry
 | n115-detrended | n115 | detrended | zeroBE | 0 | 8.8655 | -4.3457 | 8.8334 | 9.8040 | +0.0 | +0.0 |
 | n115-detrended | n115 | detrended | edgeBE | 5 | 8.5888 | -3.7122 | 9.0215 | 9.8053 | +100.0 | -122.7 |
 
-## Rates on GIS 80-90, m/yr (model LRR; target is the surveyed LOESS)
+## Rates on GIS 80-90, m/yr (model LRR; target is the surveyed LOWESS)
 
 | GIS | target | base-asrun zeroBE | base-asrun edgeBE | base-check edgeBE | base-detrended zeroBE | base-detrended edgeBE | n115-asrun zeroBE | n115-asrun edgeBE | n115-detrended zeroBE | n115-detrended edgeBE |
 |---|---|---|---|---|---|---|---|---|---|---|

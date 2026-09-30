@@ -98,7 +98,7 @@ def load_calibration():
     guard against.
     """
     spec = importlib.util.spec_from_file_location(
-        "_loess_analysis",
+        "_lowess_analysis",
         _HERE.parent.parent / "2-calibrate" / "be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

@@ -8,7 +8,7 @@ WHY THIS EXISTS
     The per-run figures are built during a run, so a change to the plotting
     package only reaches a run that is executed again. After the 2026-09-10
     restyle that left 164 run folders holding figures in the previous look --
-    two LOESS curves, the wave height and the SLR rate in the title, a 22 in
+    two LOWESS curves, the wave height and the SLR rate in the title, a 22 in
     canvas. Re-running them would be 5-11 hours of model time and would rewrite
     240 MB of archive per run to change a picture.
 
@@ -44,7 +44,7 @@ USAGE
     python rerender_run_figures.py --match "*calibBE*groin" --gifs
     python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
     python rerender_run_figures.py --arm matrix --ylim=-10,10 --ylim-real=-7.5,7.5
-    python rerender_run_figures.py --arm sensitivity --loess-only
+    python rerender_run_figures.py --arm sensitivity --lowess-only
 ==============================================================================
 """
 from __future__ import annotations
@@ -77,8 +77,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    CoastSatDataset, LoessConfig, build_coastsat_series, scale_coastsat_series)
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    CoastSatDataset, LowessConfig, build_coastsat_series, scale_coastsat_series)
 from cascade_pipeline.hindcast import build_shoreline_target  # noqa: E402
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.run_layout import ANIMATIONS, resolve  # noqa: E402
@@ -99,7 +99,7 @@ from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 # These four MUST match section 8/9 of HAT_hindcast_1984_2024.py. They are
 # restated rather than imported because importing that module runs a hindcast.
 # The assertion in `check_conventions` catches them drifting apart.
-LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 RATE_ESTIMATOR = "lrr"
 FLIP_SIGN_MODEL = True
 PLOT_REAL_DOMAINS_ONLY = True
@@ -144,20 +144,20 @@ def position_change_jobs(run, cs_cache):
     span = run.end_year - run.start_year
     win = f"{run.start_year}–{run.end_year}"
     lt = f"{LONG_TERM_WINDOW[0]}–{LONG_TERM_WINDOW[1]}"
-    widest = max(LOESS_CONFIG.window_domains)
+    widest = max(LOWESS_CONFIG.window_domains)
     if "long_term" not in cs_cache:
         cs_cache["long_term"] = build_coastsat_series(
             [LONG_TERM_DATASET], active_period_start=LONG_TERM_WINDOW[0],
-            loess_config=LOESS_CONFIG, domains=HATTERAS_DOMAINS)
+            lowess_config=LOWESS_CONFIG, domains=HATTERAS_DOMAINS)
     return [
         ("total",
          scale_coastsat_series(cs_cache[run.start_year], span),
-         f"CoastSat total change (LRR {win} × {span} yr, {widest}-domain LOESS)",
+         f"CoastSat total change (LRR {win} × {span} yr, {widest}-domain LOWESS)",
          f"total change, the per-transect LRR fitted on {win} multiplied by "
          f"{span} yr"),
         ("projected",
          scale_coastsat_series(cs_cache["long_term"], span, active=True),
-         f"CoastSat projected change (LRR {lt} × {span} yr, {widest}-domain LOESS)",
+         f"CoastSat projected change (LRR {lt} × {span} yr, {widest}-domain LOWESS)",
          f"projected change, the per-transect LRR fitted on the full "
          f"{lt} record multiplied by {span} yr"),
     ]
@@ -174,7 +174,7 @@ GIF_JOBS = [
 def check_conventions() -> None:
     """Fail loudly if the hindcast's figure conventions have moved.
 
-    A re-render that silently used a different estimator or LOESS window than
+    A re-render that silently used a different estimator or LOWESS window than
     the run would put two incompatible curves in one folder, which is exactly
     the failure this script exists to clean up.
     """
@@ -182,8 +182,8 @@ def check_conventions() -> None:
         encoding="utf-8", errors="replace")
     want = {
         'RATE_ESTIMATOR = "lrr"': RATE_ESTIMATOR == "lrr",
-        "window_domains=(7,)": LOESS_CONFIG.window_domains == (7,),
-        "skip_southern_domains=10": LOESS_CONFIG.skip_southern_domains == 10,
+        "window_domains=(7,)": LOWESS_CONFIG.window_domains == (7,),
+        "skip_southern_domains=10": LOWESS_CONFIG.skip_southern_domains == 10,
         "PLOT_REAL_DOMAINS_ONLY = True": PLOT_REAL_DOMAINS_ONLY is True,
         "FLIP_SIGN_MODEL = True": FLIP_SIGN_MODEL is True,
     }
@@ -317,12 +317,12 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
     if key not in cs_cache:
         cs_cache[key] = build_coastsat_series(
             COASTSAT_DATASETS, active_period_start=key,
-            loess_config=LOESS_CONFIG, domains=HATTERAS_DOMAINS)
+            lowess_config=LOWESS_CONFIG, domains=HATTERAS_DOMAINS)
     cs_series = cs_cache[key]
 
     config = dataclasses.replace(DEFAULT_RATE_COMPARISON, ylim=args.ylim,
                                  ylim_real=args.ylim_real)
-    if args.loess_only:
+    if args.lowess_only:
         config = dataclasses.replace(config, plot_domain_means=False,
                                      raw_lrr_southern_only=True,
                                      overlay_raw_southern_only=True,
@@ -331,7 +331,7 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
                                      show_wave_climate=True,
                                      publication_text=True)
     fig_kwargs = dict(domains=HATTERAS_DOMAINS, annotations=HATTERAS_ANNOTATIONS,
-                      loess_config=LOESS_CONFIG, config=config)
+                      lowess_config=LOWESS_CONFIG, config=config)
     # Resolved, not joined: this OVERWRITES the figure the run already has,
     # so it has to land wherever that figure currently lives -- the new
     # figures/ subfolder, or the old flat name if the run has not moved.
@@ -459,14 +459,14 @@ def main() -> None:
                     type=lambda s: tuple(float(v) for v in s.split(",")),
                     help="LOW,HIGH for the real-domains-only figure alone "
                          "(default: --ylim), e.g. --ylim-real=-7.5,7.5")
-    ap.add_argument("--loess-only", action="store_true",
-                    help="the sensitivity-figure style: LOESS curve, plus "
+    ap.add_argument("--lowess-only", action="store_true",
+                    help="the sensitivity-figure style: LOWESS curve, plus "
                          "transect dots and a dashed unsmoothed domain-mean "
                          "line over the southern domains only; shoals, piers "
                          "and groin drawn; no title -- one tag with the period "
                          "and wave settings, the rest in supporting/CAPTIONS.md")
     ap.add_argument("--position-change", action="store_true",
-                    help="with --loess-only: also draw the run's shoreline "
+                    help="with --lowess-only: also draw the run's shoreline "
                          "position change (end minus start, m) against CoastSat "
                          "total change (the window's own LRR x span) and "
                          "projected change (the 1996-2024 LRR x span), into "

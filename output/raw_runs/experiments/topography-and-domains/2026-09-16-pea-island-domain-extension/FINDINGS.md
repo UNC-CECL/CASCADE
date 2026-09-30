@@ -47,7 +47,7 @@ m/yr; the matrix calls these the locked end-domain values.
 
 3. **The northern boundary term does not get smaller; it gets bigger.** GIS
    115 needs +42.0 m/yr where GIS 90 needed +10.0. Its target is +3.4 m/yr
-   (CoastSat, one-sided LOESS at the end of the extension, accreting toward
+   (CoastSat, one-sided LOWESS at the end of the extension, accreting toward
    the inlet) and the unforced model gives -0.6 there. So the end value was
    never correcting the buffer's shape: it supplies an observed accretion
    the model cannot produce, and that is larger at Pea Island's north end

@@ -62,7 +62,7 @@ coastsat/lrr/coastsat_lrr_windows.py
     figure scripts import for the shoals, fills and structure drawing.
 
 coastsat/lrr/coastsat_lrr_smoothing_windows.py
-    The unsmoothed field plus the LOESS at 3, 5 and 10 domains (1.5, 2.5 and
+    The unsmoothed field plus the LOWESS at 3, 5 and 10 domains (1.5, 2.5 and
     5.0 km) on one axis, darkest being the window runs are graded at.
 
 coastsat/lrr/coastsat_lrr_transect_zoom.py

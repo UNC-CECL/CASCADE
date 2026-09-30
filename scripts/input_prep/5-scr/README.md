@@ -58,7 +58,7 @@ coastsat/
         coastsat_lrr_windows.py            every window on ONE y axis, so a
                                            2 m/yr swing is not drawn as tall
                                            as a 7 m/yr one
-        coastsat_lrr_smoothing_windows.py  the 3 / 5 / 10-domain LOESS on one
+        coastsat_lrr_smoothing_windows.py  the 3 / 5 / 10-domain LOWESS on one
                                            field
         coastsat_lrr_transect_zoom.py      one window at transect resolution,
                                            over a short reach
@@ -102,7 +102,7 @@ shoreline_vs_duneline/   does the dune line move with the shoreline?
     total_change_vs_duneline.py     total shoreline change against the dune
                                     line's measured change, per window
     net_change_vs_duneline.py       the same over 1996-2024 and its halves
-    smoothed_loess7_vs_duneline.py  both curves through a 7-domain LOESS
+    smoothed_lowess7_vs_duneline.py  both curves through a 7-domain LOWESS
 dsas_vs_coastsat/        the two rate sources against each other
     dsas_vs_coastsat_raw.py         no smoothing, on calendar windows
     dsas_vs_coastsat_datematched.py CoastSat anchored on the survey dates
@@ -180,8 +180,8 @@ Three rules fall out of that, and one hard constraint:
 2. **No dates or years in a file name.** A window belongs in an argument, not
    a filename — `net_change_1996_2024.py` had to be renamed the moment it grew
    a second window.
-3. **Name the product, not the method.** `smoothed_loess7_vs_duneline.py` says
-   what it compares; the `loess7` is the variant, and it survives only because
+3. **Name the product, not the method.** `smoothed_lowess7_vs_duneline.py` says
+   what it compares; the `lowess7` is the variant, and it survives only because
    it matches the data folder it writes to.
 
 **The constraint: every file name here is also a Python module name, and they

@@ -37,7 +37,7 @@ Authority: `hard-structures/groin/GROIN_PLAN.md`. The prose reasoning lives in
 | path | what it is | read it for |
 |---|---|---|
 | **`SELECTED_M60_f0.60/`** | **the decision, curated** | the case for the pair, in order, with figures and gifs |
-| `joint_fit.json` | **the file the pipeline reads** | what stage 6 and the LOESS analysis will actually run |
+| `joint_fit.json` | **the file the pipeline reads** | what stage 6 and the LOWESS analysis will actually run |
 | `1984_2004_edgeBE/` | period-1 sweep, 488 cells over (M, be1, f) | **the fit that sets M** |
 | `1984_2004_zeroBE/` | period 1 without edge forcing | the negative control — the groin just absorbs the missing source/sink term and improves to the grid edge |
 | `2004_2024_edgeBE/` | period-2 sweep | that period 2 carries no information: every M scores 14.90 |

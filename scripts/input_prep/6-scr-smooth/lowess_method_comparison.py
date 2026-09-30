@@ -16,11 +16,11 @@ Within "transect" mode, TRANSECT_X_AXIS controls what the smoother uses as x:
 
 along_coast_m is derived automatically from domain number if not present in
 the CSV: each domain's transects are spread evenly across its 500 m band.
-Physical spacing for the LOESS frac is always estimated from along_coast_m.
+Physical spacing for the LOWESS frac is always estimated from along_coast_m.
 
 Outputs — domain-space figures (both modes)
 -------------------------------------------
-  overview_smoothed.png              raw + LOESS overlay, both periods
+  overview_smoothed.png              raw + LOWESS overlay, both periods
   smoothed_only_comparison.png       clean version for presentations
   combined_periods.png               both periods on one panel
   smoothing_sensitivity_*.png        3-panel bandwidth sensitivity
@@ -29,7 +29,7 @@ Outputs — domain-space figures (both modes)
 
 Additional outputs — transect mode only
 ---------------------------------------
-  transect_smoothed_overview.png     raw transect scatter + LOESS in transect space
+  transect_smoothed_overview.png     raw transect scatter + LOWESS in transect space
   transect_window_comparison.png     window sensitivity in transect space
   coastsat_transect_lrr_*.csv        full transect-level table with lrr_smooth
 """
@@ -99,22 +99,22 @@ DOMAIN_MIN       = 1
 DOMAIN_MAX       = 90
 DOMAIN_SPACING_M = 500   # metres per CASCADE domain
 
-# ── LOESS window ─────────────────────────────────────────────
+# ── LOWESS window ─────────────────────────────────────────────
 # Physical window width in km — applies to both modes.
 # Converted to a frac automatically based on data resolution.
 #   2.5 km = 5 domains | 3.5 km = 7 domains | 4.0 km = 8 domains
-LOESS_WINDOW_KM = 3.5   # primary smoothing window (7 domains)
+LOWESS_WINDOW_KM = 3.5   # primary smoothing window (7 domains)
 
 # Window sizes (km) tested in sensitivity / comparison figures
 COMPARE_WINDOWS_KM = [2.5, 3.5, 5.0]   # 5, 7, 10 domains
 
 # ── Southern boundary guard ──────────────────────────────────
-# Domains 1..N are dropped from the SMOOTHED series. LOESS is a local linear
+# Domains 1..N are dropped from the SMOOTHED series. LOWESS is a local linear
 # fit, so at the edge of the reach it extrapolates rather than smooths, and
 # Oregon Inlet dominates that zone anyway.
 #
-# Same guard, same width as the hindcast's cascade_pipeline/coastsat_loess.py:
-# LoessConfig(skip_southern_domains=10). Applied AFTER the fit, never before,
+# Same guard, same width as the hindcast's cascade_pipeline/coastsat_lowess.py:
+# LowessConfig(skip_southern_domains=10). Applied AFTER the fit, never before,
 # so the southern data still pulls the values just north of the cut - only the
 # result is withheld. Raw series are untouched and still cover the whole
 # island. Set to 0 to smooth everywhere.
@@ -140,7 +140,7 @@ SKIP_SOUTHERN_DOMAINS = 10
 # Products live under data/hatteras_init/<stage>/, beside every other
 # input_prep stage's output; only the scripts live under scripts/. Resolved
 # through hat_observed_rates.py since 2026-09-18, when the folder was renamed
-# from loess_method_comparison_output/.
+# from lowess_method_comparison_output/.
 OUTPUT_DIR = str(_obs.SMOOTH_METHOD_COMPARISON)
 
 # ============================================================
@@ -189,13 +189,13 @@ apply_style()
 C_PERIOD_1984 = C_1984
 C_PERIOD_2004 = C_1997
 
-# The band over the domains whose LOESS is withheld, and the shade
+# The band over the domains whose LOWESS is withheld, and the shade
 # town_bands() uses for a village span (repeated here only so the legend can
 # show a patch that matches it).
 C_SKIP_ZONE = C["WATER"]
 TOWN_SHADE = "0.94"
 
-# Three LOESS windows are compared on the sweep figures: grey, purple and
+# Three LOWESS windows are compared on the sweep figures: grey, purple and
 # green from the house palette, three hues that also separate on luminance.
 C_WINDOWS = [C["BASE"], C["ACCENT"], C["REF"]]
 
@@ -204,7 +204,7 @@ C_WINDOWS = [C["BASE"], C["ACCENT"], C["REF"]]
 # ============================================================
 
 def km_to_frac(window_km, n_points, spacing_m):
-    """Convert a physical window width (km) to a LOESS frac for n_points."""
+    """Convert a physical window width (km) to a LOWESS frac for n_points."""
     k = (window_km * 1000.0) / spacing_m
     return float(np.clip(k / n_points, 0.02, 1.0))
 
@@ -217,14 +217,14 @@ def estimate_spacing(x_values):
     return float(np.median(pos)) if len(pos) else 1.0
 
 
-def domain_frac(window_km=LOESS_WINDOW_KM):
-    """LOESS frac for domain-space smoothing at a given physical window width."""
+def domain_frac(window_km=LOWESS_WINDOW_KM):
+    """LOWESS frac for domain-space smoothing at a given physical window width."""
     n = DOMAIN_MAX - DOMAIN_MIN + 1
     return km_to_frac(window_km, n, DOMAIN_SPACING_M)
 
 
-def transect_frac(n_transects, spacing_m, window_km=LOESS_WINDOW_KM):
-    """LOESS frac for transect-space smoothing at a given physical window width."""
+def transect_frac(n_transects, spacing_m, window_km=LOWESS_WINDOW_KM):
+    """LOWESS frac for transect-space smoothing at a given physical window width."""
     return km_to_frac(window_km, n_transects, spacing_m)
 
 # ============================================================
@@ -283,7 +283,7 @@ def load_transect_csv(path, period_label):
         ID string, then replaced with a sequential integer (1, 2, 3 …)
       - Missing along_coast_m — derived by spreading each domain's transects
         evenly across its 500 m band (domain 1 → 0–500 m, domain 2 → 500–1000 m …)
-      - Physical spacing for the LOESS frac always estimated from along_coast_m
+      - Physical spacing for the LOWESS frac always estimated from along_coast_m
     """
     if path is None or not os.path.exists(path):
         print(f"  Transect CSV ({period_label}): SKIPPED — not found: {path}")
@@ -316,7 +316,7 @@ def load_transect_csv(path, period_label):
 
     # Derive along_coast_m from domain position if not present in CSV.
     # Each domain's transects are spread evenly across its 500 m band so that
-    # physical spacing can be estimated for the LOESS frac calculation.
+    # physical spacing can be estimated for the LOWESS frac calculation.
     if T_ALONG_COAST_COL is None or T_ALONG_COAST_COL not in df.columns:
         def _spread_within_domain(grp):
             n         = len(grp)
@@ -346,8 +346,8 @@ def load_transect_csv(path, period_label):
 # SMOOTHING
 # ============================================================
 
-def apply_loess(x, values, frac):
-    """LOESS smoother. Returns smoothed array at the same x positions."""
+def apply_lowess(x, values, frac):
+    """LOWESS smoother. Returns smoothed array at the same x positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -357,11 +357,11 @@ def apply_loess(x, values, frac):
     return smoothed
 
 
-def smooth_domain_df(df, window_km=LOESS_WINDOW_KM):
-    """Apply LOESS in domain space. Returns copy of df with cs_lrr_smooth column."""
+def smooth_domain_df(df, window_km=LOWESS_WINDOW_KM):
+    """Apply LOWESS in domain space. Returns copy of df with cs_lrr_smooth column."""
     df   = df.copy()
     frac = domain_frac(window_km)
-    df["cs_lrr_smooth"] = apply_loess(
+    df["cs_lrr_smooth"] = apply_lowess(
         df["domain"].values.astype(float),
         df["cs_lrr"].values,
         frac,
@@ -371,9 +371,9 @@ def smooth_domain_df(df, window_km=LOESS_WINDOW_KM):
     return df
 
 
-def smooth_transect_df(df, window_km=LOESS_WINDOW_KM):
+def smooth_transect_df(df, window_km=LOWESS_WINDOW_KM):
     """
-    Apply LOESS in transect space. Returns copy of df with lrr_smooth column.
+    Apply LOWESS in transect space. Returns copy of df with lrr_smooth column.
 
     Physical spacing for the frac is always estimated from along_coast_m
     (derived or real), so the window is correct in physical kilometres
@@ -387,7 +387,7 @@ def smooth_transect_df(df, window_km=LOESS_WINDOW_KM):
          if TRANSECT_X_AXIS == "along_coast_m"
          else df["transect_id"].values.astype(float))
 
-    df["lrr_smooth"] = apply_loess(x, df["lrr"].values, frac)
+    df["lrr_smooth"] = apply_lowess(x, df["lrr"].values, frac)
     # Masked on domain, not on along_coast_m: identical cut, and it carries
     # through aggregate_to_domains, whose per-domain mean of an all-NaN group
     # is NaN. So every domain-space figure and the CSV export inherit the
@@ -435,7 +435,7 @@ CAP_ENDPOINTS = ("Domain 1 is at Cape Point in the south and domain 90 at Pea "
 CAP_MARKS = ("Grey bands name the village spans, amber bands the Avon and "
              "Wimble shoal zones, dash-dot lines the Avon and Rodanthe piers "
              "and the dotted line the Buxton groin.")
-CAP_GUARD = ("The LOESS curve is withheld over the southernmost "
+CAP_GUARD = ("The LOWESS curve is withheld over the southernmost "
              f"{SKIP_SOUTHERN_DOMAINS} domains (shaded), where a local linear "
              "fit extrapolates rather than smooths and Oregon Inlet dominates; "
              "the hindcast applies the same guard."
@@ -504,7 +504,7 @@ def annotation_legend_handles():
         Line2D([0], [0], color=ANN.color_pier, lw=1.0, ls="-.", label="pier"),
         Line2D([0], [0], color=ANN.color_groin, lw=1.0, ls=":", label="groin"),
     ] + ([Patch(facecolor=C_SKIP_ZONE, alpha=0.40, edgecolor="none",
-                label="LOESS withheld")]
+                label="LOWESS withheld")]
          if SKIP_SOUTHERN_DOMAINS > 0 else [])
 
 
@@ -516,8 +516,8 @@ def _outside_legend(fig, handles, ncol=4):
 def draw_raw_in_guard_zone(ax, df, color, label=None, col="cs_lrr"):
     """Raw domain means across the withheld zone, so it is not simply blank.
 
-    Matches what the hindcast does there: splice_loess_with_raw_south omits
-    the LOESS line across the southern domains and the raw values are shown
+    Matches what the hindcast does there: splice_lowess_with_raw_south omits
+    the LOWESS line across the southern domains and the raw values are shown
     instead. On figures that already draw raw everywhere this adds nothing, so
     it is called only from the smoothed-only ones.
     """
@@ -592,7 +592,7 @@ def _domain_two_panel(d1984, d2004, show_raw, out_path, cap):
                 label="domain-averaged rate where the curve is withheld")
         ax.plot(df["domain"], df["cs_lrr_smooth"],
                 color=color, lw=1.8, zorder=3,
-                label=f"LOESS, {LOESS_WINDOW_KM:g} km window")
+                label=f"LOWESS, {LOWESS_WINDOW_KM:g} km window")
         ax.set_ylabel("shoreline change rate (m/yr)")
         style_domain_axis(ax, is_bottom)
         add_domain_annotations(ax, label_shoals=is_bottom)
@@ -610,8 +610,8 @@ def plot_domain_overview(d1984, d2004, out_path, method=""):
         cap=("CoastSat shoreline change rate by CASCADE domain, "
              f"{method}. The pale line and band are the unsmoothed "
              "domain mean and its standard deviation over the transects in "
-             "the domain; the heavy line is the LOESS curve at a "
-             f"{LOESS_WINDOW_KM:g} km window. " + CAP_GUARD + " " +
+             "the domain; the heavy line is the LOWESS curve at a "
+             f"{LOWESS_WINDOW_KM:g} km window. " + CAP_GUARD + " " +
              CAP_ENDPOINTS + " " + CAP_MARKS),
     )
 
@@ -620,8 +620,8 @@ def plot_domain_smoothed_only(d1984, d2004, out_path, method=""):
     _domain_two_panel(
         d1984, d2004, show_raw=False, out_path=out_path,
         cap=("The smoothed CoastSat shoreline change rate alone, by CASCADE "
-             f"domain, {method}: the LOESS curve at a "
-             f"{LOESS_WINDOW_KM:g} km window, with the unsmoothed domain means "
+             f"domain, {method}: the LOWESS curve at a "
+             f"{LOWESS_WINDOW_KM:g} km window, with the unsmoothed domain means "
              "shown only where the curve is withheld. " + CAP_GUARD + " " +
              CAP_ENDPOINTS + " " + CAP_MARKS),
     )
@@ -631,7 +631,7 @@ def plot_domain_combined(d1984, d2004, out_path, method=""):
     fig, ax = plt.subplots(figsize=figsize("double", height=3.6),
                            constrained_layout=True)
     caption(fig, "Both hindcast periods on one panel, " + method + ": the "
-                 f"LOESS curve at a {LOESS_WINDOW_KM:g} km window, shaded by "
+                 f"LOWESS curve at a {LOWESS_WINDOW_KM:g} km window, shaded by "
                  "one standard deviation of the transects in each domain. " +
                  CAP_GUARD + " " + CAP_ENDPOINTS + " " + CAP_MARKS)
     labelled_zone = False
@@ -665,10 +665,10 @@ def plot_domain_sensitivity(df, period_label, color, out_path, method=""):
     fig, axes = plt.subplots(len(COMPARE_WINDOWS_KM), 1,
                              figsize=figsize("double", height=7.2),
                              sharex=True, constrained_layout=True)
-    caption(fig, f"LOESS bandwidth sensitivity, {period_label}, {method}. One "
+    caption(fig, f"LOWESS bandwidth sensitivity, {period_label}, {method}. One "
                  "panel per window: the pale line is the unsmoothed "
                  "domain-averaged linear regression rate and the heavy line "
-                 "the LOESS curve at that window. " + CAP_GUARD + " " +
+                 "the LOWESS curve at that window. " + CAP_GUARD + " " +
                  CAP_ENDPOINTS + " " + CAP_MARKS)
     for j, (ax, frac, km) in enumerate(zip(axes, fracs, COMPARE_WINDOWS_KM)):
         is_bottom = (j == len(fracs) - 1)
@@ -678,7 +678,7 @@ def plot_domain_sensitivity(df, period_label, color, out_path, method=""):
                 color=color, lw=0.7, alpha=0.40, marker="o", ms=1.8,
                 label="domain-averaged rate, unsmoothed")
         ax.plot(m["domain"], m["cs_lrr_smooth"],
-                color=color, lw=1.8, label="LOESS")
+                color=color, lw=1.8, label="LOWESS")
         _title(ax, j, f"{km:g} km window · {ndom} domains · frac {frac:.3f}")
         ax.set_ylabel("rate (m/yr)")
         style_domain_axis(ax, is_bottom)
@@ -696,7 +696,7 @@ def plot_domain_window_comparison(d1984, d2004, out_path, method=""):
                  (d2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
                              sharex=True, constrained_layout=True)
-    caption(fig, "The three LOESS windows overlaid, " + method + ", one panel "
+    caption(fig, "The three LOWESS windows overlaid, " + method + ", one panel "
                  "per hindcast period. The pale line is the unsmoothed "
                  "domain-averaged linear regression rate. " + CAP_GUARD + " " +
                  CAP_ENDPOINTS + " " + CAP_MARKS)
@@ -729,7 +729,7 @@ def plot_domain_window_comparison(d1984, d2004, out_path, method=""):
 
 def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
     """
-    Raw transect scatter + LOESS smoothed curve in along-coast space,
+    Raw transect scatter + LOWESS smoothed curve in along-coast space,
     with domain-averaged LRR overlaid as a dashed line with open markers.
     Shows how much variability domain averaging collapses.
     """
@@ -739,8 +739,8 @@ def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
                              sharex=True, constrained_layout=True)
     caption(fig, "CoastSat shoreline change rate at the resolution it is "
                  "measured. Dots are the per-transect linear regression rate, "
-                 "unsmoothed; the heavy line is the LOESS curve fitted to "
-                 f"those transects at a {LOESS_WINDOW_KM:g} km window; the "
+                 "unsmoothed; the heavy line is the LOWESS curve fitted to "
+                 f"those transects at a {LOWESS_WINDOW_KM:g} km window; the "
                  "open markers are the mean of the transects in each 500 m "
                  "CASCADE domain, which is what domain averaging keeps. "
                  "Faint verticals are the domain boundaries. " + CAP_GUARD +
@@ -762,7 +762,7 @@ def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
                    zorder=1,
                    label="per-transect linear regression rate, unsmoothed")
         ax.plot(x, t_df["lrr_smooth"], color=color, lw=1.8, zorder=3,
-                label=f"LOESS on the transects, {LOESS_WINDOW_KM:g} km window")
+                label=f"LOWESS on the transects, {LOWESS_WINDOW_KM:g} km window")
         if d_df is not None:
             x_dom = (d_df["domain"].values - 0.5) * DOMAIN_SPACING_M
             ax.plot(x_dom, d_df["cs_lrr"].values,
@@ -786,7 +786,7 @@ def plot_transect_window_comparison(t1984, t2004, out_path):
                (t2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
                              sharex=True, constrained_layout=True)
-    caption(fig, "The three LOESS windows overlaid at transect resolution, "
+    caption(fig, "The three LOWESS windows overlaid at transect resolution, "
                  "one panel per hindcast period. Dots are the per-transect "
                  "linear regression rate, unsmoothed. " + CAP_GUARD + " " +
                  CAP_ENDPOINTS + " " + CAP_MARKS)
@@ -802,7 +802,7 @@ def plot_transect_window_comparison(t1984, t2004, out_path):
                    label="per-transect rate, unsmoothed")
         for km, wc in zip(COMPARE_WINDOWS_KM, C_WINDOWS):
             frac     = transect_frac(len(df), spacing, km)
-            smoothed = apply_loess(x, df["lrr"].values, frac)
+            smoothed = apply_lowess(x, df["lrr"].values, frac)
             ndom     = int(round(km * 1000 / DOMAIN_SPACING_M))
             ax.plot(x, smoothed, color=wc, lw=1.8,
                     label=f"{km:g} km ({ndom} domains)")
@@ -825,7 +825,7 @@ def plot_transect_window_comparison(t1984, t2004, out_path):
 def plot_transect_windows_domain_space(t1984, t2004, out_path):
     """
     For each window in COMPARE_WINDOWS_KM:
-      1. Apply LOESS at transect resolution
+      1. Apply LOWESS at transect resolution
       2. Aggregate smoothed values to domain means
       3. Plot against CASCADE domain number with geographic annotations
 
@@ -836,7 +836,7 @@ def plot_transect_windows_domain_space(t1984, t2004, out_path):
                  (t2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
                              sharex=True, constrained_layout=True)
-    caption(fig, "The three LOESS windows overlaid, each fitted to the "
+    caption(fig, "The three LOWESS windows overlaid, each fitted to the "
                  "individual transects and then averaged to CASCADE domains, "
                  "one panel per hindcast period. The pale line is the "
                  "unsmoothed mean of the transects in each domain. " +
@@ -892,8 +892,8 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
     fig, axes = plt.subplots(len(COMPARE_WINDOWS_KM), 1,
                              figsize=figsize("double", height=7.2),
                              sharex=True, constrained_layout=True)
-    caption(fig, f"LOESS bandwidth sensitivity, {period_label}, {method}. One "
-                 "panel per window: the LOESS is fitted to the individual "
+    caption(fig, f"LOWESS bandwidth sensitivity, {period_label}, {method}. One "
+                 "panel per window: the LOWESS is fitted to the individual "
                  "transects and then averaged to CASCADE domains, against the "
                  "unsmoothed mean of the transects in each domain. " +
                  CAP_GUARD + " " + CAP_ENDPOINTS + " " + CAP_MARKS)
@@ -910,7 +910,7 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
                 color=color, lw=0.7, alpha=0.40, marker="o", ms=1.8,
                 label="mean of the transects in each domain, unsmoothed")
         ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
-                color=color, lw=1.8, label="LOESS")
+                color=color, lw=1.8, label="LOWESS")
         _title(ax, j, f"{km:g} km window · {ndom} domains · frac {frac:.3f}")
         ax.set_ylabel("rate (m/yr)")
         style_domain_axis(ax, is_bottom)
@@ -924,7 +924,7 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
 
 
 # ============================================================
-# METHOD COMPARISON — transect-based vs domain-averaged LOESS
+# METHOD COMPARISON — transect-based vs domain-averaged LOWESS
 # Both smoothing approaches overlaid for each window size.
 # ============================================================
 # The two methods are the point of these four figures, so they carry the
@@ -933,13 +933,13 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
 # the one under test. The window, where more than one is shown, is the line
 # style.
 M_LS = ["-", "--", (0, (1, 1.4))]
-LBL_TRANSECT = "LOESS on the individual transects, averaged to domains"
-LBL_DOMAIN   = "LOESS on the domain averages"
+LBL_TRANSECT = "LOWESS on the individual transects, averaged to domains"
+LBL_DOMAIN   = "LOWESS on the domain averages"
 LBL_RAW      = "per-transect rates averaged to domains, unsmoothed"
 
-CAP_METHODS = ("Purple is the LOESS fitted to the individual CoastSat "
+CAP_METHODS = ("Purple is the LOWESS fitted to the individual CoastSat "
                "transects and then averaged to CASCADE domains; grey is the "
-               "LOESS fitted to the domain averages directly. Dots are those "
+               "LOWESS fitted to the domain averages directly. Dots are those "
                "domain averages before smoothing.")
 
 
@@ -952,8 +952,8 @@ def _method_raw(ax, t_df):
 def plot_method_comparison(t1984, t2004, da1984, da2004, out_path):
     """
     For each window in COMPARE_WINDOWS_KM, plots both:
-      — purple : transect-based LOESS (smooth transects → aggregate to domains)
-      — grey   : domain-averaged LOESS (smooth domain means directly)
+      — purple : transect-based LOWESS (smooth transects → aggregate to domains)
+      — grey   : domain-averaged LOWESS (smooth domain means directly)
     the window carried by the line style. Both in domain space.
     """
     configs   = [(t1984, da1984, "1984–2004"),
@@ -962,7 +962,7 @@ def plot_method_comparison(t1984, t2004, da1984, da2004, out_path):
                              sharex=True, constrained_layout=True)
     caption(fig, "Do the two ways of smoothing the CoastSat rates differ? "
                  "Each panel is one hindcast period and carries both methods "
-                 "at all three LOESS windows, the window as the line style. " +
+                 "at all three LOWESS windows, the window as the line style. " +
                  CAP_METHODS + " " + CAP_GUARD + " " + CAP_ENDPOINTS + " " +
                  CAP_MARKS)
 
@@ -1009,7 +1009,7 @@ def plot_method_comparison(t1984, t2004, da1984, da2004, out_path):
 def plot_method_comparison_single(t1984, t2004, da1984, da2004,
                                    window_km, out_path):
     """
-    Single-window method comparison: transect-based vs domain-averaged LOESS.
+    Single-window method comparison: transect-based vs domain-averaged LOWESS.
     Shows one window size only so the two curves can be read clearly.
     """
     ndom  = int(round(window_km * 1000 / DOMAIN_SPACING_M))
@@ -1018,7 +1018,7 @@ def plot_method_comparison_single(t1984, t2004, da1984, da2004,
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.8),
                              sharex=True, constrained_layout=True)
     caption(fig, "Do the two ways of smoothing the CoastSat rates differ? "
-                 f"Both are shown at a single {window_km:g} km LOESS window "
+                 f"Both are shown at a single {window_km:g} km LOWESS window "
                  f"({ndom} CASCADE domains), one panel per hindcast period. " +
                  CAP_METHODS + " " + CAP_GUARD + " " + CAP_ENDPOINTS + " " +
                  CAP_MARKS)
@@ -1063,8 +1063,8 @@ def main():
     print("=" * 65)
     print("CoastSat LRR Smoothing — Hatteras Island")
     print(f"  X-axis      : {TRANSECT_X_AXIS}")
-    print(f"  Window      : {LOESS_WINDOW_KM} km  "
-          f"({int(round(LOESS_WINDOW_KM * 1000 / DOMAIN_SPACING_M))} domains)")
+    print(f"  Window      : {LOWESS_WINDOW_KM} km  "
+          f"({int(round(LOWESS_WINDOW_KM * 1000 / DOMAIN_SPACING_M))} domains)")
     print(f"  Compare     : {COMPARE_WINDOWS_KM} km  "
           f"({[int(round(w * 1000 / DOMAIN_SPACING_M)) for w in COMPARE_WINDOWS_KM]} domains)")
     print("  Both methods always run — outputs saved to subfolders.")
@@ -1097,7 +1097,7 @@ def main():
     # ── 01: Transect-based figures ───────────────────────────────
     print("\n[01] Transect-based figures → 01_transect_based/")
 
-    # Transect overview: raw scatter + LOESS + domain averages overlaid
+    # Transect overview: raw scatter + LOWESS + domain averages overlaid
     plot_transect_overview(t1984, t2004, td1984, td2004,
         os.path.join(DIR_T, "transect_overview.png"))
 
