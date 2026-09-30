@@ -1,75 +1,11 @@
 """
-hat_figure_style.py
-==============================================================================
 One typographic and colour standard for every Hatteras figure.
 
-WHY THIS EXISTS
-    Each plotting script had been choosing its own font sizes, its own greys and
-    reds, its own elevation ramp and its own way of labelling panels. Put two of
-    them side by side in a document and they read as coming from different
-    papers. Worse, the same quantity was drawn in different colours in different
-    figures, so "grey" meant "v1" in one and "not applied" in another.
+    from site_layer.hat_figure_style import apply_style, figsize, save
+    python scripts/site_layer/hat_figure_style.py   # writes STYLE.md and the style sheet
 
-    Until 2026-09-10 there were TWO of these: this module (the row-insert era:
-    DejaVu, a grey/dark-red base-accent pair, captions burned onto the canvas)
-    and the STYLE block inside 0-elevation/3-figures/HAT_plot_duneline_offset.py
-    (2026-09-04, Hannah: "more academic/professionally styled": Arial, the
-    ColorBrewer RdBu poles, panel letters, nothing on the canvas that belongs in
-    a caption). Hannah's call that day was that the 09-04 rules win wherever
-    the two disagreed, and that the one module lives here, importable by every
-    script the way hat_topo_version is, with the rules written out in
-    scripts/figure_making/STYLE.md and the style drawn in output/figures/style/
-    (both written by `write_style_sheet()`, or by running this file; they sat
-    together in data/hatteras_init/9-figures/ until 2026-09-18).
-
-THE RULES (the 2026-09-04 house style)
-    typeface        Arial first (Helvetica, Liberation Sans, DejaVu Sans behind
-                    it), 8-10 pt; text and axes in INK, secondary text in
-                    INK_MUTED; thin 0.6 pt axes; hairline grid only when asked
-    panels          a bold letter at the left of each panel title, `_title()`;
-                    inside the corner when the title is wide, `_letter_inside()`
-    maps            a north arrow and a scale bar on any map WITHOUT coordinate
-                    ticks; a labelled UTM frame needs neither
-    legends         frameless, outside the axes where the layout allows
-                    (fig.legend(loc="outside ...") under constrained_layout)
-    vintages        the EARLIER line or surface is C_1984 red, the LATER one
-                    C_1997 blue, everywhere the two are drawn together; the
-                    light fills are the bands between them
-    canvas          NO title sentences, statistics lines or footnote
-                    paragraphs on the image. That text goes in a CAPTIONS.md
-                    beside the figure; `caption()` here does exactly that
-    folders         a figure folder shows FIGURES: PNGs at the top, and the
-                    PDFs, CAPTIONS.md, tables and provenance under
-                    `supporting/` (`save()`, `record_caption()` and
-                    `support_dir()` put them there)
-    elevation       drawn in classes, not a ramp (`elevation_cmap()`); the
-                    terrain colormap of HAT_plot_1984_mosaic is the one
-                    deliberate exception, for the 1984-start DEM panels
-
-COLOUR SEMANTICS -- do not reassign these locally
-    C["BASE"]     the unmodified input (v1 / v2 as extracted)
-    C["ACCENT"]   the modification under test (the insert, the built version)
-    C["ROAD"]     NC-12
-    C["ADDED"]    ground that was fabricated
-    C["WATER"]    cells at or below sea level
-    C["REF"]      a reference value: a median, a target, an observation
-    C_1984 / C_1997 (and the _FILL pair)  the earlier / later vintage
-
-ELEVATION IS DRAWN IN CLASSES, NOT A RAMP
-    A continuous ramp is the wrong tool here. The back-barrier sits a few
-    decimetres below MHW and the dune is five metres above it, so a linear ramp
-    renders the entire island as one flat tone and hides the only distinction
-    that matters -- which cells are land. `elevation_cmap()` returns a discrete
-    scale with a hard break at 0 m.
-
-USAGE
-    from site_layer.hat_figure_style import apply_style, C, C_1984, C_1997, INK, _title
-    apply_style()                       # first, before any figure is made
-    ...
-    caption(fig, "what the reader needs")   # lands in CAPTIONS.md on savefig
-
-    python hat_figure_style.py          # (re)writes STYLE.md and the style sheet
-==============================================================================
+Typeface, palette, column widths, panel letters, captions to CAPTIONS.md and
+figure folders; the rules are written out in scripts/figure_making/STYLE.md. Details: scripts/site_layer/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -90,10 +26,7 @@ import matplotlib.patheffects as pe
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.transforms import offset_copy
 
-# RUN AS A FILE, NOT IMPORTED. `python scripts/site_layer/hat_figure_style.py` puts this
-# file's OWN folder on sys.path, not scripts/, so a `site_layer.` import cannot
-# resolve and the __main__ block below would die on it. Importing the module
-# the normal way never takes this branch -- __package__ is "site_layer" then.
+# Run as a file, scripts/ is not on sys.path: add it so the site_layer imports resolve
 if __package__ in (None, ""):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -102,22 +35,12 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 from site_layer.hat_map_layers import STYLE_DOC, STYLE_SHEET_DIR  # noqa: E402,F401
 
-# WHERE FIGURES GO (2026-09-18). Every script in scripts/figure_making typed
-# output/figures/<subject> itself. The subjects are the ones
-# scripts/figure_making/README.md lists; a name outside them raises rather than
-# quietly starting a new top-level folder, which is how
-# output/figures/management_investigation/ came to sit beside management/.
+# Where figures go: a subject outside FIGURE_SUBJECTS raises rather than starting a new folder
 OUTPUT_ROOT = PROJECT_ROOT / "output"
 FIGURES_ROOT = OUTPUT_ROOT / "figures"
 COMPARISONS_ROOT = OUTPUT_ROOT / "comparisons"       # cross-run figures
 OBSERVATIONS_OUT = OUTPUT_ROOT / "observations"      # the observed record itself
-#
-# THE NUMBERED LAYOUT (2026-09-29, Hannah): top folders follow the paper's
-# order -- where, what was observed, what the model is fed, how it works, what
-# it gives. The old subjects (site, forcing, management, shoreline, model,
-# pipeline, initialization) were retired the same day and now raise, so a
-# script still using one fails loudly instead of rebuilding the old tree. The
-# pre-reorganisation tree is output/archive/2026-09-29_figures-pre-reorg/.
+# The numbered layout, in the paper's order; the retired subjects raise
 FIGURE_SUBJECTS = {
     "site": "1-site",                  # the reach, the 90 domains, one domain
     "observations": "2-observations",  # CoastSat shoreline, dune lines, imagery
@@ -141,30 +64,20 @@ def figure_dir(subject: str, *parts: str) -> Path:
         raise ValueError(f"unknown model-input step {parts[0]!r}; one of {INPUT_STEPS}")
     return FIGURES_ROOT.joinpath(FIGURE_SUBJECTS[subject], *parts)
 
-# =============================================================================
-# TYPE, INK, THE VINTAGE PAIR
-# =============================================================================
+# Type, ink, the vintage pair
+
 FONT_STACK = ["Arial", "Helvetica", "Liberation Sans", "DejaVu Sans"]
 INK = "0.15"            # text, axes, baselines
 INK_MUTED = "0.42"      # secondary labels, rulers, guide lines
 GRID_C = "0.88"         # hairline grid
 
-# The ColorBrewer RdBu poles: a warm/cool pair that stays distinct in
-# greyscale and under red-green colour deficiency. The SAME pair is used
-# wherever two vintages are drawn together, so red always means the earlier
-# line (1984), blue the later one (1997, 2004), and a fill the band between.
+# The ColorBrewer RdBu poles: red the earlier vintage, blue the later, a fill the band between
 C_1984 = "#b2182b"      # RdBu, dark red
 C_1997 = "#2166ac"      # RdBu, dark blue
 C_1984_FILL = "#f4a582"  # RdBu, light red  - the band where 1984 lies seaward
 C_1997_FILL = "#92c5de"  # RdBu, light blue - the band where 1984 lies landward
 
-# Colour-blind safe: the base/accent pair is grey against a dark red, which
-# separates on luminance as well as hue, so it survives greyscale printing.
-# ACCENT was a dark red (#9e2a2b) until 2026-09-10, all but identical to the
-# vintage red C_1984, so "the modification under test" and "the 1984 line"
-# read as one colour across a document. It is now the PRGn purple pole:
-# distinct from the vintage pair, from REF green and from ADDED orange, and
-# still separated from BASE grey on luminance.
+# Colour-blind safe: grey base against a purple accent, distinct from the vintage pair
 C = {
     "BASE": "#7f7f7f",
     "BASE_FILL": "#d9d9d9",
@@ -184,21 +97,12 @@ C = {
     "LATE_FILL": C_1997_FILL,
 }
 
-# An ORDERED variable gets a sequential ramp, not the vintage pair: the
-# alongshore smoothing width, drawn light (unsmoothed) to dark (widest). It is
-# anchored on the shoreline blue C_1997, already the CoastSat target's colour,
-# and stays clear of the amber shoals, the grey village bands and the black
-# model line, while surviving greyscale as a light-to-dark sequence. Added to
-# the style 2026-09-21, when the third script wanted the same four blues.
+# An ordered variable (the smoothing width) gets a light-to-dark blue ramp, not the vintage pair
 SMOOTH_RAMP = ("#9ecae1", "#6baed6", C_1997, "#08306b")
 
 CELL_M = 10.0           # the Barrier3D cell; scale bars under 1 km say it
 
-# COLUMN WIDTHS. A figure is drawn at the width it will be printed, so its
-# 8-9 pt type is 8-9 pt on the page: 90 mm for a single column, 190 mm for a
-# double. Before 2026-09-10 figures were 11-19 in wide and their text shrank to
-# 4 pt when reduced to a page. `figsize()` is the only way a figure should get
-# its size.
+# Column widths: a figure is drawn at its printed width, so its type prints at 8-9 pt
 FIG_W_SINGLE = 3.54     # in, 90 mm
 FIG_W_DOUBLE = 7.48     # in, 190 mm
 FIG_H_MAX = 9.4         # in, a page less its caption
@@ -213,9 +117,7 @@ def figsize(width="double", aspect=0.5, height=None):
     return (w, min(h, FIG_H_MAX))
 
 
-# ONE LABEL FOR THE ALONGSHORE AXIS. Three phrasings were in use ("GIS domain
-# (south -> north)", "CASCADE domain (1 at Cape Point, 90 at Pea Island)",
-# "domain (1 = south, Cape Hatteras)"); the endpoints belong in the caption.
+# One label for the alongshore axis; the endpoints belong in the caption
 DOMAIN_AXIS_LABEL = "GIS domain (south → north)"
 
 
@@ -236,11 +138,7 @@ def town_bands(ax, where="top", label=True, shade="0.94", spans=None,
             spans = HATTERAS_ANNOTATIONS.town_spans
         except ImportError:
             return
-    # Only the spans this panel actually shows, and the label clamped to the
-    # visible part of its span. The label sits at a DATA x, so on a panel
-    # covering 30 of 90 domains an unrestricted label lands far off-axes and a
-    # `bbox_inches="tight"` save then grows the figure to several times its
-    # width (found 2026-09-10 on the footprint grid panels).
+    # Only the spans this panel shows, labels clamped to the visible part
     x_lo, x_hi = sorted(ax.get_xlim())
     for name, (lo, hi) in spans.items():
         if hi + 0.5 < x_lo or lo - 0.5 > x_hi:
@@ -268,8 +166,7 @@ def town_bands(ax, where="top", label=True, shade="0.94", spans=None,
 
 STRUCTURE_LABEL_PT = 6.5
 
-# Where a structure label may sit, tried in order: along the bottom of its
-# line, left of it then right; then along the top, under the village names.
+# Where a structure label may sit, tried in order
 _LABEL_SLOTS = (("bottom", "right"), ("bottom", "left"),
                 ("top", "right"), ("top", "left"))
 
@@ -282,9 +179,7 @@ def _points_under(ax, txt) -> int:
     (x0, y0), (x1, y1) = ax.transData.inverted().transform(
         [[bb.x0, bb.y0], [bb.x1, bb.y1]])
     def inside(x, y):
-        # A line crosses the box BETWEEN its vertices (one vertex per domain,
-        # a label a fraction of a domain wide), so test the segments, not
-        # the vertices: 20 points along each.
+        # Test the line's segments, not its vertices: 20 points along each
         x = np.asarray(x, dtype=float)
         y = np.asarray(y, dtype=float)
         ok = np.isfinite(x) & np.isfinite(y)
@@ -317,8 +212,7 @@ def _place_label(ax, pos, name, label_pt):
     best, best_n = None, None
     for where, ha in _LABEL_SLOTS:
         y, va = (0.03, "bottom") if where == "bottom" else (0.86, "top")
-        # a 2 pt gap between the text and its line, so the halo that keeps
-        # the text legible over data does not white out the line itself
+        # A 2 pt gap between the text and its line, so the halo does not hide the line
         tr = offset_copy(ax.get_xaxis_transform(), fig=ax.figure,
                          x=(-2.0 if ha == "right" else 2.0), units="points")
         txt = ax.text(pos, y, name, transform=tr,
@@ -370,12 +264,7 @@ def structures(ax, label=True, label_pt=STRUCTURE_LABEL_PT, spans=None):
             _place_label(ax, pos, name, label_pt)
 
 
-# A FIGURE FOLDER SHOWS FIGURES. Everything a figure script writes beside the
-# PNG -- the vector copy, CAPTIONS.md, tables, provenance -- goes under this
-# subfolder, so opening the folder shows one image per figure and nothing
-# else (Hannah, 2026-09-15). `save()` and `record_caption()` do it for the PDF
-# and the captions; a script writing its own CSV or PROVENANCE.md uses
-# `support_dir(folder)` for the path.
+# A figure folder shows figures: everything else a script writes goes under supporting/
 SUPPORT_DIR = "supporting"
 
 
@@ -435,9 +324,8 @@ def apply_style() -> None:
     mpl.rcParams.update(STYLE_RC)
 
 
-# =============================================================================
-# ELEVATION CLASSES
-# =============================================================================
+# Elevation classes
+
 # Elevation classes, m MHW. The first edge is the water break.
 ELEV_BOUNDS = [-99.0, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 99.0]
 _ELEV_COLOURS = [
@@ -453,25 +341,9 @@ def elevation_cmap():
     return cmap, BoundaryNorm(ELEV_BOUNDS, cmap.N), ELEV_BOUNDS
 
 
-# =============================================================================
-# ERROR AND COST SURFACES
-# =============================================================================
-# Added 2026-09-11 for the groin-sweep figures, which draw six error surfaces
-# over a parameter grid (the (M, f) heatmaps, the joint-fit surfaces, the
-# preset comparison). Each had chosen its own ramp -- magma_r, viridis,
-# RdYlBu_r -- so the same quantity was a different colour in adjacent figures,
-# and the saturated ramps collided with the annotations laid on top: magma's
-# purple end against the ACCENT marker, viridis's green against REF.
-#
-# The rule is that a scalar error surface is drawn WITHOUT hue. It is the
-# background against which a best cell, a chosen pair, an iso-product curve or
-# a constraint is marked, and those marks are what the reader is meant to find;
-# reserving all colour for them is what makes them findable. Dark is worse,
-# which matches the convention of every error plot in the project.
-#
-# Truncated at both ends: pure white reads as missing data (a sweep grid has
-# real holes, which `pcolormesh` leaves as the axes background) and pure black
-# hides a marker drawn on top of the worst cell.
+# Error and cost surfaces
+
+# Error surfaces are drawn without hue, truncated at both ends, so the marks on them stand out
 _ERROR_LO, _ERROR_HI = 0.08, 0.86
 
 
@@ -495,9 +367,7 @@ def _np_linspace(a, b, n):
     return [a + step * i for i in range(n)]
 
 
-# =============================================================================
-# PANELS, MAPS, FRAMES
-# =============================================================================
+# Panels, maps, frames
 
 def _letter(i: int) -> str:
     return f"({chr(ord('a') + i)})"
@@ -598,16 +468,9 @@ scalebar = _scalebar
 halo = _halo
 
 
-# =============================================================================
-# CAPTIONS: off the canvas, into CAPTIONS.md beside the figure
-# =============================================================================
-# Figures in this project get read months later out of a folder, detached from
-# whatever conversation produced them, so each one needs to state its own
-# method somewhere. Until 2026-09-10 `caption()` wrote that text onto the
-# canvas; the house rule is that nothing on the image belongs in a caption, so
-# it now lands in a CAPTIONS.md next to the PNG, keyed by the file name, when
-# the figure is saved. Callers change nothing: `caption(fig, text)` then
-# `fig.savefig(path)` as before.
+# Captions: off the canvas, into CAPTIONS.md beside the figure
+
+# A figure's method goes to CAPTIONS.md beside the PNG, never onto the canvas
 
 _CAPTION_ATTR = "_hat_caption"
 
@@ -624,9 +487,7 @@ def caption(fig, text: str, y: float = 0.005, size: float = 7.8) -> None:
         def _savefig(fname, *args, **kwargs):
             out = original(fname, *args, **kwargs)
             cap = getattr(fig, _CAPTION_ATTR, None)
-            # Only the PNG gets an entry. `save()` writes a PDF beside it with
-            # the same stem, and recording both put the same paragraph in
-            # CAPTIONS.md twice (found 2026-09-10 during the restyle pass).
+            # Only the PNG gets an entry (the PDF beside it shares the stem)
             if cap and isinstance(fname, (str, Path)) and Path(fname).suffix.lower() == ".png":
                 record_caption(Path(fname), cap)
             return out
@@ -742,10 +603,7 @@ def record_caption(png_path: Path, text: str) -> Path:
             body = pattern.sub(lambda _m: entry.rstrip("\n"), body)
         else:
             body = body.rstrip("\n") + "\n\n" + entry
-        # A replaced entry's match stops at the newline before the next entry,
-        # so the blank line between them was consumed on every re-run and the
-        # file collapsed into one run-on block (found 2026-09-15). Put one
-        # blank line back before every entry.
+        # One blank line back before every entry, which a replaced entry's match consumes
         body = re.sub(r"(?<!\n)\n(\*\*`)", r"\n\n\1", body)
         body = _prune_captions(body, png_path.parent)
     else:
@@ -756,9 +614,7 @@ def record_caption(png_path: Path, text: str) -> Path:
     return md
 
 
-# =============================================================================
-# THE STYLE SHEET: output/figures/style/, and STYLE.md beside the figure code
-# =============================================================================
+# The style sheet: output/figures/style/, and STYLE.md beside the figure code
 
 def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     """A swatch figure and a STYLE.md stating the rules, so the standard can be
@@ -767,17 +623,14 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    # A given out_dir takes both files (a trial); the default splits them: the
-    # sheet is a figure, STYLE.md is documentation for whoever writes one.
+    # A given out_dir takes both files (a trial); by default the sheet and STYLE.md go apart
     md = (Path(out_dir) / "STYLE.md") if out_dir else STYLE_DOC
     out_dir = Path(out_dir) if out_dir else STYLE_SHEET_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     apply_style()
 
     fig = plt.figure(figsize=figsize("double", aspect=0.86), constrained_layout=True)
-    # Three rows since 2026-09-11: the error ramp needs a strip of its own, and
-    # nesting it under the elevation panel collapsed both to zero height under
-    # constrained_layout.
+    # Three rows: the error ramp needs its own strip
     gs = fig.add_gridspec(3, 2, height_ratios=[1.0, 0.30, 1.15])
 
     # (a) the palette

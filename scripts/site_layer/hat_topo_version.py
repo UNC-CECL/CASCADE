@@ -1,100 +1,17 @@
-# ==============================================================================
-# hat_topo_version.py
-#
-# WHICH Barrier3D domains does a script read - which PRODUCT, and which VERSION
-# within it?
-#
-# WHY THIS EXISTS
-#   Four road scripts used to hardcode ".../2009-dune-topo/2009_v3/topography".
-#   When the dune windows were re-picked into 2009_v4 (2026-08-19) they kept
-#   reading v3 interiors while consuming v4 setbacks. Nothing errored. 18
-#   domains had different interiors, 10 of them a different SHAPE - including
-#   D79 and D80, two of the three roadways the relocation logic acts on. Every
-#   drown verdict and placement number for those was computed on the wrong grid.
-#
-#   So the location is resolved ONCE, here, and a name that does not exist on
-#   disk is an immediate, loud error rather than a silently stale read.
-#
-# WHAT CHANGED 2026-08-25 - THERE ARE NOW TWO PRODUCTS
-#   The tree was stage-keyed and held exactly one topography, which BOTH
-#   hindcast periods read:
-#
-#       1-barrier3d-domains/2009-dune-topo/2009_v5/{topography,dunes}
-#
-#   It is now PERIOD-keyed, because the two periods start from different DEMs:
-#
-#       1-barrier3d-domains/
-#           1984-start/    from DEM 2009-2014-1996   dune-topo/<version>/
-#           2004-start/    from DEM 2009-2014        dune-topo/<version>/
-#           forecast/      from a 2025 DEM, later
-#           buffer/        shared
-#           superseded/
-#
-#   2009_v5 became 2004-start/dune-topo/v1 (renamed from v5 on 2026-08-26 so
-#   version numbers restart per product) - it was always built from
-#   the 2009+2014 DEM, which is what the 2004 start uses. v3 and v4 are under
-#   superseded/ (they were picked against the UNFILLED DEM).
-#
-# WHY topo_dirs() STILL DEFAULTS TO A PRODUCT
-#   Every existing caller - the road tree, the groin sweep, the poster script -
-#   calls topo_dirs() with no arguments. Defaulting to DEFAULT_PRODUCT keeps
-#   all of them resolving exactly what they resolved before the restructure, so
-#   this change moves no road number and no published figure. The RUNNER is the
-#   one caller that now passes a product, from HATTERAS_PERIODS[start]
-#   ["topo_product"].
-#
-#   SETTLED 2026-08-26. That note used to read "a live question": the road
-#   scripts measured setbacks against 2004-start for BOTH periods. They no
-#   longer do. Every vintage now resolves its own product through YEAR_PRODUCT
-#   below, and RoadSetback_1984_dunestart.csv was re-measured on 1984-start.
-#   What made it urgent rather than tidy: all 90 domains differ between the two
-#   products and 65 have a different interior SHAPE.
-#
-# HOW THE VERSION IS CHOSEN, in order
-#   1. an explicit override= argument
-#   2. HAT_TOPO_VERSION_<PRODUCT> in the environment, e.g.
-#      HAT_TOPO_VERSION_1984_START=v5. Product-scoped, because
-#      both products have a "v1" and a global override would silently resolve to
-#      a real but wrong directory for the other period.
-#   3. a CURRENT file in the product's dune-topo/ directory
-#   4. the extractor's VERSION, but only if the extractor is currently pointed
-#      at the SAME product
-#   5. the only version present, if there is exactly one
-#   otherwise: raise, listing what is on disk
-#
-#   CURRENT OUTRANKS THE EXTRACTOR LITERAL (swapped 2026-09-04). The extractor's
-#   VERSION says what the extractor WRITES; CURRENT says what everyone READS.
-#   They used to be one literal doing both jobs, which meant the only way to
-#   make a layered version (the 1984-start layers v3-v8 of 2026-09-04 -- built
-#   ON v2, never BY the extractor; DELETED 2026-09-07, only unmodified
-#   extractions are kept) the
-#   default was to edit the extractor to a name it would then overwrite on its
-#   next run. So CURRENT existed, recorded intent, and was inert; the 1984-start
-#   README carried a paragraph explaining that it did nothing. Now a product
-#   with a CURRENT file reads that version, and a product without one still
-#   follows the extractor ("bump VERSION and the tree follows" holds where no
-#   CURRENT has been written - 2004-start today). A fresh extraction with
-#   CURRENT still naming the old one is therefore NOT adopted until CURRENT is changed,
-#   and that is the point: extracting and adopting are two decisions.
-#
-#   THE ENV RULE OUTRANKS THE EXTRACTOR (added 2026-09-02, after it cost a run).
-#   A batch that selected its arm by writing CURRENT was ignored, because rule 3
-#   fired first and the extractor was sitting on the same product. Two arms of a
-#   three-arm experiment silently duplicated the control, exit code 0. CURRENT
-#   is a persistent shared DEFAULT; per-run selection needs something that does
-#   not mutate state every other reader sees.
-#
-# USAGE
-#     from site_layer.hat_topo_version import topo_dirs
-#     TOPO_DIR, DUNE_DIR, RUN_NAME = topo_dirs()                  # 2004-start
-#     TOPO_DIR, DUNE_DIR, RUN_NAME = topo_dirs("1984-start")
-#     TOPO_DIR, DUNE_DIR, RUN_NAME = topo_dirs("2004-start", override="v1")
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-29
+"""
+Which Barrier3D domains does a script read: which product, and which version within it?
+
+    from site_layer.hat_topo_version import topo_dirs, domain_arrays
+    TOPO_DIR, DUNE_DIR, VERSION = topo_dirs("2004-start")
+
+Resolved once (environment, then CURRENT, then the extractor literal), with the
+road, dune-line and offset paths beside it; a name not on disk raises. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
+"""
 
 from __future__ import annotations
 
@@ -108,19 +25,10 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
 
-# Shared across products: the padding domains Barrier3D needs either side of
-# the 90 real ones. Not per-period - the buffer is not a survey of anything.
+# Shared across products: the buffer domains either side of the 90 real ones
 BUFFER_DIR = DOMAIN_ROOT / "buffer"
 
-# The other shared inputs (2026-09-18). About twenty-five scripts typed these,
-# or re-joined the product paths the helpers below already return.
-#   domain-clips-1m/<domain_N>/   clip_domain_N.tif (1 m, native) and
-#                                 resampled_domain_N.tif (10 m, the Barrier3D
-#                                 grid every measurement georeferences against)
-#   control-picks/                window sets kept across a version clear
-#   npy-arrays_2009_unfilled/     the pre-gap-fill arrays; still read by
-#                                 HAT_rasterize_road_to_domains.py as a grid check
-#   domain-geojson/               the 120-domain Pea-Hatteras polygons
+# The other shared inputs under 1-barrier3d-domains/
 DOMAIN_CLIPS_DIR = DOMAIN_ROOT / "domain-clips-1m"
 CONTROL_PICKS_DIR = DOMAIN_ROOT / "control-picks"
 UNFILLED_2009_DIR = DOMAIN_ROOT / "npy-arrays_2009_unfilled"
@@ -134,70 +42,21 @@ def domain_clip_file(domain: int, kind: str = "resampled") -> Path:
         raise ValueError(f"kind must be 'resampled' or 'clip', not {kind!r}")
     return DOMAIN_CLIPS_DIR / f"domain_{d}" / f"{kind}_domain_{d}.tif"
 
-# What topo_dirs() resolves when no product is named. See the note above: this
-# is the pre-restructure behaviour, kept so nothing that was not asked to move
-# moves.
+# What topo_dirs() resolves when no product is named
 DEFAULT_PRODUCT = "2004-start"
 
 PRODUCTS = ("1984-start", "2004-start", "forecast")
 
-# WHICH PRODUCT DOES A HINDCAST PERIOD READ. The single definition (2026-08-26).
-#
-# Keyed by the period's START YEAR, which is also the year that labels every
-# road vintage in 4-mgmt-forcings: RoadSetback_1984_dunestart.csv is measured
-# from row 0 of the 1984-start extraction, RoadSetback_2004_dunestart.csv from
-# row 0 of 2004-start.
-#
-# WHY IT LIVES HERE. It was written out three times and omitted five times.
-# HAT_road_offset_from_dune_start.py carried its own YEAR_PRODUCT literal,
-# HAT_road_setback_audit.py spelled the product per scenario, and
-# hatteras_site_config.py carries it per period as "topo_product" -- while
-# HAT_road_placement_on_domains.py, HAT_road_method_diagnostic.py and
-# HAT_road_domain_views.py looped over BOTH years against a single
-# module-level topo_dirs(), i.e. DEFAULT_PRODUCT for both.
-#
-# That last one is not a cosmetic duplication. Between the two products ALL 90
-# domains differ and 65 have a different interior SHAPE -- GIS 11 is 165 rows
-# on 1984-start and 157 on 2004-start. It is the v3/v4 failure this file was
-# written for, four times larger, and it produced no error: a 1984 setback
-# scored against a 2004-start interior is simply a different island.
-#
-# So the pairing is defined once, here, beside the resolver that consumes it.
-# hatteras_site_config.py imports it rather than repeating it; every road
-# script resolves through it rather than defaulting.
+# Which product a hindcast period reads, by start year: the single definition
 YEAR_PRODUCT = {
     1984: "1984-start",
     2004: "2004-start",
-    # The two periods added 2026-09-11 SHARE these products rather than owning
-    # one each. A product is a DEM composition, not a period label: 1984-start
-    # is the surface carrying the 1996 ALACE graft, which is the survey nearest
-    # a 1996 start, and 2004-start is the 2009-plus-2014 surface, which is the
-    # closest vintage match of any period to a 2010 start.
-    #
-    # So a product name now names the period it was FIRST built for, not the
-    # only one that reads it. Ask this mapping rather than inferring a product
-    # from a year, and ask product_for_year() rather than indexing directly.
+    # The 1996 and 2010 periods share those products; ask product_for_year()
     1996: "1984-start",
     2010: "2004-start",
 }
 
-# WHICH NC-12 LINE A PERIOD'S ROAD IS MEASURED FROM. The single definition
-# (2026-09-15).
-#
-# The two digitised centrelines under 4-mgmt-forcing/road_offset/raw_offset/
-# were exported off 1978 and 2008 imagery. Until 2026-09-15 their folders, the
-# rasterised masks under raster/, and the relocation measurement under
-# road_relocation/ were all named 1984 and 2004 -- the period starts they stand
-# in for -- which put two different axes under one integer: dunestart_offset/
-# 1984 meant "the 1984 START", raw_offset/1984 meant "the 1978 LINE". They are
-# now named by the line's TRUE vintage, and this map is the only place a start
-# year is paired with a line. Ask road_line_for_year() rather than re-spelling
-# the pairing; a period start passed where a line vintage is expected is a
-# loud error (road_line_file), not a missing-file error later.
-#
-# 1996 and 2010 have no line of their own. 1996 is the 1978 line with the 1989
-# Pea Island relocation applied; 2010 is the 2008 line unchanged, because no
-# relocation falls between 2004 and 2010. See ROAD_SETBACK_KIND.
+# Which NC-12 line a period's road is measured from, by true vintage: the single definition
 ROAD_LINE_VINTAGES = (1978, 2008)
 ROAD_LINE_FOR_YEAR = {
     1984: 1978,
@@ -206,18 +65,7 @@ ROAD_LINE_FOR_YEAR = {
     2010: 2008,
 }
 
-# WHICH SETBACK FOLDERS HOLD A MEASUREMENT AND WHICH A DERIVATION. The tree
-# under road_offset/dunestart_offset/ is split the same way (2026-09-15):
-#
-#     dunestart_offset/measured/<year>/   measured on the period's line against
-#                                         row 0 of the period's own extraction
-#                                         (HAT_road_offset_from_dune_start.py)
-#     dunestart_offset/derived/<year>/    built FROM a measured file
-#                                         (HAT_road_setback_derived_vintages.py)
-#
-# so a derived file cannot be mistaken for a measurement by its address alone.
-# Before the split all four sat as flat siblings and only PROVENANCE.md said
-# which two were copies.
+# Which setback folders hold a measurement and which a derivation
 ROAD_SETBACK_KIND = {
     1984: "measured",
     2004: "measured",
@@ -228,23 +76,16 @@ ROAD_SETBACK_KIND = {
 MGMT_ROOT = INIT_ROOT / "4-mgmt-forcing"
 ROADS_ROOT = MGMT_ROOT / "road_offset"
 
-# THE REST OF 4-mgmt-forcing (2026-09-18). About thirty scripts typed these
-# themselves, and four still spelled old_method_offset/, which became a dated
-# superseded folder on 09-11 -- so they failed soft, comparing against nothing.
-# The layout is the one settled on 2026-09-15; this only names it once.
+# The rest of 4-mgmt-forcing
 ROAD_LINE_ROOT = ROADS_ROOT / "raw_offset"            # <vintage>/nc12_<vintage>.geojson
-# Today's NC-12, from the NCDOT route inventory (2026-09-18), standing in for
-# 2023/2024. NOT in ROAD_LINE_FOR_YEAR: no hindcast reads it; the dune-line
-# position figures do. See raw_offset/current/PROVENANCE.md.
+# Today's NC-12 (NCDOT inventory), for the dune-line position figures; no hindcast reads it
 ROAD_LINE_CURRENT = ROAD_LINE_ROOT / "current" / "nc12_current.geojson"
 ROAD_RASTER_ROOT = ROADS_ROOT / "raster"              # <vintage>/masks/
 ROAD_SETBACK_ROOT = ROADS_ROOT / "dunestart_offset"   # measured/ derived/ modifications/
 ROAD_ARCHIVE = ROADS_ROOT / "archive"
-# The old-method setbacks ("old_method_offset/" in older scripts), kept for the
-# method comparison: <year>/RoadSetback_<year>.csv.
+# The old-method setbacks, kept for the method comparison
 LEGACY_SETBACK_ROOT = ROAD_ARCHIVE / "superseded_20260911"
-# The 1984 dune-start setbacks as measured on 1984-start/v1, before the road
-# tree was re-measured on v2 ("dunestart_offset_ARCHIVE_1984start_v1").
+# The 1984 dune-start setbacks as measured on 1984-start/v1
 SETBACK_1984_V1_DIR = ROAD_ARCHIVE / "superseded_20260907" / "1984"
 
 ROAD_ELEVATION_DIR = MGMT_ROOT / "road_elevation"
@@ -342,51 +183,22 @@ def road_setback_relpath(year: int) -> str:
     return road_setback_file(year).relative_to(INIT_ROOT).as_posix()
 
 
-# THE DUNE LINES, BY VINTAGE (2026-09-15). The same rule as the road lines:
-# a raw per-transect file under 2-brie-offset/raw_offsets/ is named for the
-# IMAGERY VINTAGE of the digitised line it came from, and this map is the only
-# place a period year is paired with a vintage. Until 2026-09-15 the 1996
-# start read a byte-identical COPY of the 1997 file filed under the name
-# 1996_...; the copy is gone and the pairing lives here (Hannah: "a
-# DUNE_LINE_FOR_YEAR table, no copies"). When the 2010 and 2024 lines are
-# digitised, add them here under the year of their IMAGERY (2009 or 2023, if
-# that is what they are traced from), never under the period year.
-#
-# A vintage may have more than one digitisation (duneline_1997.geojson and
-# duneline_1997_v2.geojson); the raw file under the vintage's name is the
-# CURRENT one, and each build under 2-brie-offset/<year>/v<n>/ keeps a copy of
-# the raw it was made from, so an older build is always reproducible.
+# The dune lines, paired with a period year by imagery vintage: the only place, no copies
 BRIE_ROOT = INIT_ROOT / "2-brie-offset"
 RAW_OFFSET_DIR = BRIE_ROOT / "raw_offsets"
 DUNELINE_DIR = BRIE_ROOT / "dunelines"
-# The rest of 2-brie-offset (2026-09-18): about fifteen scripts typed these,
-# four of them against layouts that no longer existed (the flat per-start
-# build, hindcast_<year>/ folders, a dunelines/ under 1-barrier3d-domains).
+# The rest of 2-brie-offset
 RAW_OFFSET_EXT_DIR = RAW_OFFSET_DIR / "ext"
 RAW_OFFSET_SUPERSEDED = RAW_OFFSET_DIR / "superseded_20260915_gis_exports"
 TRANSECT_DIR = BRIE_ROOT / "transects"
 TRANSECT_FILE_100M = TRANSECT_DIR / "transects_100m.geojson"
 TRANSECT_EXT_TABLE = TRANSECT_DIR / "transects_100m_ext.csv"
 
-# WHICH FEATURE THE OFFSET WAS MEASURED FROM (2026-09-22). Until then every
-# build came from a digitised DUNE line, so the source was not worth naming.
-# The 1996 start now also has a build from the CoastSat satellite SHORELINE
-# (the 1995-1997 mean position; scripts/input_prep/5-scr/1-observations/
-# mean_shoreline/), which is a different feature, not a newer reading of the
-# same one -- so it is a separate source with its own v1, never a v2 of the
-# dune build (Hannah, 2026-09-22, and the rule in [[feedback-version-numbering-restarts]]).
-#
-# The dune build KEEPS the flat layout it has always had, <year>/v<n>/, so
-# nothing the runner resolves moves. A non-default source nests one level
-# deeper, <year>/<source>/v<n>/, and because "shoreline" does not match the
-# v<n> pattern offset_version() scans for, adding it cannot disturb which
-# build the runner reads.
+# Which feature the offset was measured from: the dune build keeps <year>/v<n>, others nest by source
 OFFSET_SOURCES = ("duneline", "shoreline")
 DEFAULT_OFFSET_SOURCE = "duneline"
 
-# A build's three files share one stem, named for the FEATURE the offset was
-# measured from, so a copy that leaves its folder still says what it is -- the
-# basename is the only thing a file carries with it.
+# A build's three files share one stem, named for the feature measured from
 _OFFSET_STEMS = {
     "duneline": "Island_Dune_Offsets",
     "shoreline": "Island_Shoreline_Offsets",
@@ -458,10 +270,7 @@ def offset_version(year: int, source: str = DEFAULT_OFFSET_SOURCE):
     y = int(year)
     s = _check_offset_source(source)
     base = f"2-brie-offset/{y}/{s}"
-    # The default source keeps the plain env key it has always had, so an
-    # override written before the sources were split still selects the build
-    # it always selected. A non-default source gets its own key, so
-    # overriding the shoreline arm cannot silently move what the runner reads.
+    # The default source keeps its plain env key; a non-default source gets its own
     env_key = (f"HAT_OFFSET_VERSION_{y}" if s == DEFAULT_OFFSET_SOURCE
                else f"HAT_OFFSET_VERSION_{y}_{s.upper()}")
     d = offset_start_dir(y, s)
@@ -506,10 +315,7 @@ def offset_comparison_dir(year: int, name: str) -> Path:
     build and a judgement about it; source comparisons are filed here from the
     start. `name` says what was compared, e.g. "duneline_vs_shoreline".
     """
-    # offset_YEAR_dir, not offset_start_dir: a comparison between two sources
-    # belongs to neither, so it must not inherit one source's folder. It did
-    # for a few minutes on 2026-09-22, when offset_start_dir started nesting
-    # and this quietly followed it down into duneline/.
+    # offset_YEAR_dir, not offset_start_dir: a comparison of two sources belongs to neither
     return offset_year_dir(year) / "comparisons" / name
 
 
@@ -580,28 +386,7 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
     return DUNELINE_DIR / f"duneline_{int(vintage)}{suffix}.geojson"
 
 
-# THE SATELLITE SHORELINE, BY WINDOW (2026-09-22). The dune-line offset is
-# measured from a line digitised on ONE day, so DUNE_LINE_FOR_YEAR pairs a
-# period with a vintage YEAR. A CoastSat shoreline has no such day: a single
-# satellite pass carries metres of tide, wave setup and cloud-edge noise, so
-# the position a period starts from is a MEAN over a window of passes. The
-# pairing is therefore a period year -> a window, and this is the only place
-# it is spelled.
-#
-# SINCE 2026-09-29 each window is +-1 yr of the middle of the lidar flights
-# the start DEM is built on (Hannah, by interview): the offset is a snapshot
-# the model starts from beside that DEM, so it is dated like the DEM.
-#   1996: the 1996 ALACE lidar, flown 1996-10-09..16 -> 1995-10-12..1997-10-12
-#   2010: the 2009 USACE NCMP lidar, flown 2009-08-10..24 -> 2008-08-17..2010-08-17
-# These are the windows of the shoreline v2 builds (CURRENT since the same
-# day). Only the OFFSET reads this table -- island_offset_hybrid's default raw
-# file -- so it departs from [[cascade-period-is-the-calendar-year]] for the
-# offset alone; observed change, rates and scoring keep their calendar windows
-# and never read it. The anchors live in coastsat_mean_shoreline.SURVEY_ANCHORS.
-#
-# Until then: 1996 -> calendar 1995-1997 (2026-09-22), 2010 -> calendar
-# 2009-2011 (2026-09-28); those built shoreline/v1, whose raw files are kept
-# in each v1 folder.
+# The CoastSat shoreline window per period: +/-1 yr of the start DEM's lidar flights
 SHORELINE_WINDOW_FOR_YEAR = {
     1996: ("1995-10-12", "1997-10-12"),
     2010: ("2008-08-17", "2010-08-17"),
@@ -628,8 +413,7 @@ def shoreline_raw_file(window) -> Path:
     stations of one averaging window's mean shoreline, the shoreline
     counterpart of dune_raw_file(). Written by duneline_to_raw_offsets.py from
     the mean-shoreline geojson, which hat_observed_rates owns."""
-    # a window is two calendar years (1995, 1997) or two ISO dates, and the
-    # file is named as the mean_shoreline folder is (mean_shoreline_label)
+    # A window is two calendar years or two ISO dates, named as the mean_shoreline folder is
     a, b = (str(v) if "-" in str(v) else str(int(v)) for v in window)
     return RAW_OFFSET_DIR / f"{a}_{b}_shoreline_offset_raw.csv"
 
@@ -681,46 +465,9 @@ def year_for_product(product: str, strict: bool = True):
         f"Known: {', '.join(sorted(YEAR_PRODUCT.values()))}\n"
         f"Add it to YEAR_PRODUCT in {__file__}.\n")
 
-# THE ARRAYS HAVE NO YEAR TAG (2026-08-26).
-#
-# They are domain_<N>_topography.npy / _dune.npy / _nodata.npy. There is no
-# year in the name, and there should not be one.
-#
-# A tag was tried, briefly, both ways. The name was the literal "2009" for a
-# long time, which was simply false - 2004-start is the 2009+2014 mosaic and
-# 1984-start is 2009+2014+1996, so neither product is a 2009 DEM. Retagging by
-# period ("1984"/"2004") was then tried and reverted the same day, because the
-# tag turned out to be a DISTRIBUTED INVARIANT with no single place to fix and
-# no single grep to audit. Twelve live scripts build these paths, and the tag
-# reached them four different ways:
-#
-#     TOPO_DUNE_INIT_YEAR = "2009" then interpolated      5 scripts
-#     the bare literal inline in the f-string             2 scripts
-#     ext.TAG, imported from the extractor                1 script
-#     globbed away as domain_*_topography_*.npy           2 scripts
-#
-# The retag found the first form, missed the second, and broke both of those
-# scripts - they resolved the right DIRECTORY and then asked for a file that no
-# longer existed. That is the argument in one sentence.
-#
-# WHAT THE TAG COULD NOT DO ANYWAY. It cannot catch a period mix-up. The tag
-# and the directory both derive from the same `product`, so a wrong product
-# gives a wrong directory AND a matching wrong tag - consistent, silent, no
-# error. What guards that is the runner's boot/run product assertion, not the
-# filename. And for the two scripts that glob the tag away, a stray file from
-# the other period would make the glob match twice and pick arbitrarily, which
-# is worse than no tag at all.
-#
-# The period lives in the DIRECTORY, which every caller has to get right
-# regardless, and in each run's RUN_MANIFEST.txt. The buffer arrays have never
-# carried a tag and have never been confused.
-#
-# CALLERS SHOULD NOT BUILD THESE NAMES. Use domain_arrays() or array_path()
-# below, so the directory and the filename come from one place.
+# The arrays carry no year tag: the period lives in the directory; use domain_arrays() or array_path()
 
-# The one that has ALONGSHORE_FLIP = True. Three other copies of this file exist
-# in the repo and all are unflipped -- see the note in
-# HAT_road_offset_from_dune_start.py.
+# The extractor with ALONGSHORE_FLIP = True (the other copies are unflipped)
 EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"
              / "HAT_dune_topo_extractor.py")
 
@@ -756,13 +503,7 @@ def dune_topo_root(product: str) -> Path:
     return product_dir(product) / "dune-topo"
 
 
-# THE TWO HALVES OF STAGE 1 (2026-09-09, Hannah). Under each product,
-# `1-extraction/` holds what the extractor reads and records (npy-arrays,
-# npy-arrays_survey, picks, the aerial review of the holes, the retired
-# experiments) and `2-domain-reconstruction-1984/` the 1984 reconstruction in
-# its six steps; `dune-topo/` stays at the product root because BOTH halves
-# write versions into it and it is what the runner loads. The scripts folder
-# scripts/input_prep/1-barrier3d-domains/ is split the same way.
+# The two halves of stage 1: 1-extraction/ and 2-domain-reconstruction-1984/; dune-topo/ at the root
 EXTRACTION_SUB = "1-extraction"
 
 
@@ -782,20 +523,7 @@ def picks_dir(product: str) -> Path:
     return extraction_dir(product) / "picks"
 
 
-# THE SEAWARD-ROW-INSERT FOLDER, and the paths that hang off it.
-#
-# ONE definition, because eight plotting scripts and two measurement scripts
-# used to build these by hand - and two of them WRITE.
-#
-# THE LAYOUT IS NOT SYMMETRIC BETWEEN PRODUCTS, deliberately. On 2026-09-03
-# everything belonging to the 1984-start seaward-row insert - the measurement of
-# N, the scope report, the fill comparison and every figure - was consolidated
-# under `2-domain-reconstruction-1984/`. 2004-start has no insert work and no such folder,
-# so its dune-line measurements stay at the product root.
-#
-# The asymmetry is the price of that consolidation. It is contained here so a
-# caller cannot get it wrong, and so a future product does not inherit it by
-# accident: anything not listed gets the plain layout.
+# The seaward-row-insert folder: 1984-start only, contained here so callers cannot get it wrong
 _INSERT_SCOPE = {"1984-start": "2-domain-reconstruction-1984"}
 
 
@@ -809,32 +537,9 @@ def insert_scope_dir(product: str) -> Path:
     return product_dir(product) / sub
 
 
-# The four sections of the insert figures folder, in the order the argument
-# runs: where the insert lands, where N came from, what the rows are made of,
-# and what the result looks like. Numbered so a directory listing reads in that
-# order, matching the numbered layout of data/hatteras_init itself.
-#
-# WHY THIS IS HERE AND NOT IN THE PLOTTERS. Thirteen figures in one flat folder
-# is a dump, and a folder a plotter re-scatters on every run cannot be tidied by
-# moving files. Naming the section at the call site - and resolving it here - is
-# what makes the layout survive a re-plot. A section that is not one of these is
-# a typo, and raises rather than silently creating a new folder.
-# Renumbered 2026-09-07 to the order the argument runs: measure the dune-line
-# shift, turn it into a footprint of rows (two placements of the same rows:
-# seaward/, behind-road/; placement-independent figures at the step's root),
-# argue the fill, look at the result. 6-result is reserved: nothing has been
-# built and run on the footprint yet. The record figures of the deleted layers
-# sit in superseded-layers/ and the irreproducible pre-re-pick ones in frozen/;
-# neither is a section a plotter may write to (2026-09-08).
+# The insert figure sections, numbered in the order the argument runs; anything else raises
 INSERT_FIGURE_SECTIONS = ("1-measurement", "2-extent", "3-placement", "4-fill", "5-build", "6-result")
-# Inside a section (2026-09-08, Hannah): island-wide figures go in `island/`
-# (or a named subfolder), and EVERY figure that shows one example domain goes
-# in `rows-added/` or `rows-removed/` by the sign of that domain's N in the
-# footprint table - never at the section root.
-# Six steps since 2026-09-09, in the order the ARGUMENT runs (Hannah): how far
-# the dune line moved, how many rows, WHERE they go (the two candidate
-# placements, the road check, and the imagery review that decides), what they
-# contain, the version built, what the model does. 5-build holds no figures.
+# Inside a section: island/ figures, and example-domain figures by the sign of their N
 SIGN_SUBFOLDERS = ("rows-added", "rows-removed", "unchanged")
 INSERT_FIGURE_SUBFOLDERS = {
     "1-measurement": SIGN_SUBFOLDERS,
@@ -847,12 +552,7 @@ INSERT_FIGURE_SUBFOLDERS = {
     "6-result": ("island", *SIGN_SUBFOLDERS),
 }
 
-# The DATA of the same steps (2026-09-09, Hannah: "organize this under
-# subfolders"): the tables and reports each step writes sit in a subfolder of
-# 2-domain-reconstruction-1984/ named like its figure section, so a listing of the data
-# folder reads in the same order as figures/. Root keeps README.md,
-# DUNE_TOPO_VERSION_GUIDE.md and figures/. Resolved here for the same reason
-# the figure folders are: one definition, no hand-built paths in the scripts.
+# The data of the same steps, in subfolders named like the figure sections
 INSERT_SCOPE_STEPS = INSERT_FIGURE_SECTIONS
 
 
@@ -940,10 +640,7 @@ def duneline_shift_dir(product: str) -> Path:
     return (base / sub / "1-measurement" / "duneline-shift") if sub else (base / "duneline-shift")
 
 
-# "bridged" is written only by nodata_audit/HAT_bridge_dropouts.py: True where
-# an unsurveyed cell was filled by interpolation between measured neighbours.
-# It is a THIRD state, not a replacement for "nodata" - a bridged cell is still
-# a cell no survey saw, and the nodata mask keeps saying so.
+# "bridged" (HAT_bridge_dropouts.py): a third state beside "nodata", not a replacement
 ARRAY_KINDS = ("topography", "dune", "nodata", "bridged")
 
 
@@ -989,9 +686,7 @@ def domain_arrays(product: str | None = None,
     buf_elev = str(BUFFER_DIR / "sample_1_topography.npy")
     buf_dune = str(BUFFER_DIR / "sample_1_dune.npy")
 
-    # A domain outside the surveyed reach (an extended geometry, 2026-09-16)
-    # has no array of its own and runs on the buffer profile, exactly as the
-    # padding does; what makes it different from padding is its offset.
+    # A domain outside the surveyed reach runs on the buffer profile; only its offset differs
     from site_layer.hat_extension_domains import SURVEYED_GIS
     lo, hi = SURVEYED_GIS
     elev = [buf_elev] * n_buffer
@@ -1052,28 +747,13 @@ def resolve_version(product: str, override: str | None = None) -> str:
     if override:
         return override
 
-    # THE ENVIRONMENT OUTRANKS THE EXTRACTOR LITERAL, and it has to.
-    #
-    # Added 2026-09-02, after it cost a run. The crest experiment selected its
-    # arm by writing dune-topo/CURRENT, ran, and reported dune-topo\v1 -- the
-    # baseline -- because rule 2 below reads the extractor's VERSION literal
-    # FIRST and the extractor happened to be sitting on the same product. The
-    # CURRENT file was never consulted. Two arms of a three-arm experiment
-    # were duplicates of the control, exit code 0, no warning.
-    #
-    # That is this module's own failure mode, one level up: a caller that
-    # cannot say "use THIS version" without editing a source file will end up
-    # editing a source file, or will think it said it and be ignored. CURRENT
-    # is not usable for that -- it is a persistent, shared default, and a batch
-    # that sets it per arm is mutating global state for every other reader.
+    # The environment outranks CURRENT and the extractor literal, so a caller can pick a version
     env_name = env_override_name(product)
     from_env = os.environ.get(env_name, "").strip()
     if from_env:
         return from_env
 
-    # CURRENT BEFORE THE EXTRACTOR LITERAL (2026-09-04) - see the header. The
-    # literal is what the extractor writes; CURRENT is what is read. A product
-    # without a CURRENT file behaves exactly as before.
+    # CURRENT before the extractor literal; without a CURRENT file, as before
     current = dune_topo_root(product) / "CURRENT"
     if current.is_file():
         name = current.read_text(encoding="utf-8").strip()

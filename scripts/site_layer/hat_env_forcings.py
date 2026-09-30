@@ -1,43 +1,16 @@
-# ==============================================================================
-# hat_env_forcings.py
-#
-# WHERE ARE THE SEA LEVEL AND STORM FORCINGS, AND THE RECORDS THEY COME FROM?
-#
-# WHY THIS EXISTS
-#   A dozen scripts typed data/hatteras_init/3-env-forcings/... themselves,
-#   and hatteras_site_config spelled every period's storm file out in full.
-#   Same answer as hat_observed_rates.py for 5-scr: resolved ONCE (2026-09-18).
-#
-# THE LAYOUT, grouped by job (2026-09-18). Before that the records sat beside
-# the forcings built from them, the WIS export inside storms/, and the storm
-# validation in two places (storms/storm_check/ -- retired 2026-09-22 -- and a validation/ folder
-# inside a model-input window).
-#
-#     data/hatteras_init/3-env-forcings/
-#         1-records/            what the forcings are built from, as downloaded
-#             water_level/      Duck gauge 8651370, hourly, m NAVD88 (+ cache)
-#             WIS_raw_data/     WIS station 63228 wave export (git-ignored)
-#             storm_record/     the hurricane history this is checked against
-#             wave_climate_duke/  e_phi_0_OBX_yearly.nc; no script reads it
-#         2-rslr/               sea level: record/ fits/ figures/ (09-15 layout)
-#         3-storms/
-#             hindcast_storms/<window>/   the MODEL INPUTS, one per window,
-#                                         plus 1984_2024/ (spliced, not a period)
-#             validation/<window>/        both validators' output
-#             figures/
-#         archive/              retired storm series, and Roya's figure
-#
-# The RSLR record sits in 2-rslr/record/, not 1-records/: rslr/ was laid out as
-# record -> fits -> figures on 2026-09-15 and is kept whole.
-#
-# A WINDOW IS <start>_<end> (the end is a boundary; the model spends
-# start..end-1), the same naming rule as the rest of the init tree.
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-30
+"""
+Where are the sea-level and storm forcings, and the records they come from?
+
+    from site_layer.hat_env_forcings import storm_series_file, DUCK_GAUGE_FILE
+
+Resolves data/hatteras_init/3-env-forcings/ (1-records, 2-rslr, 3-storms) once;
+a window is <start>_<end>. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
+"""
 
 from __future__ import annotations
 
@@ -75,8 +48,7 @@ STORM_FIGURES = STORMS_ROOT / "figures"
 SPLICED_1984_2024 = HINDCAST_STORMS / "1984_2024" / "1984_2024_storms_spliced.npy"
 
 ARCHIVE = ENV_ROOT / "archive"
-# benton_storms/ and testing_storms/, retired 2026-09-14; the storm_check
-# validators still read testing_storms/base_storms/.
+# benton_storms/ and testing_storms/, retired; the storm_check validators still read base_storms/
 SUPERSEDED_STORMS = ARCHIVE / "storms_superseded_20260914"
 
 
@@ -89,19 +61,7 @@ def storm_window_dir(start_year: int, end_year: int) -> Path:
     return HINDCAST_STORMS / window_tag(start_year, end_year)
 
 
-# THE STORM SERIES THE HINDCAST RUNS ON (2026-09-29, Hannah adopted split12).
-# v3_split12_trim24: the builder's 24 h grouping, then each grouped event split
-# where the water stays below the berm >= 12 h (short pieces folded into a
-# neighbour), then every event cut to the 24 h above the berm around its peak.
-# The split puts back storms the grouping had chained to a larger one and the
-# trim then removed -- Fran 1996 (with Edouard), Jose 2017 (with Maria) -- and
-# changed no score (experiments/storms-and-overwash/2026-09-29-event-splitting).
-# Earlier defaults, both still on disk for reproducing older runs:
-#   v3_trim24  2026-09-28 .. 09-29: every event kept, trimmed to 24 h, not split.
-#   v3_72      until 2026-09-28: events over 72 h DROPPED (Isabel 2003, March
-#              2018, Florence, Dennis), a limit that existed only because the
-#              pre-49fd069 Barrier3D crashed on long storms.
-# Record: 3-storms/PROVENANCE.md; experiments/storms-and-overwash/.
+# The hindcast's storm series: 24 h grouping, split at >= 12 h below the berm, each event cut to 24 h
 DEFAULT_STORM_VARIANT = "v3_split12_trim24"
 
 

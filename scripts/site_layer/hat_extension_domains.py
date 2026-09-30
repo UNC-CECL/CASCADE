@@ -1,58 +1,16 @@
-# ==============================================================================
-# hat_extension_domains.py
-#
-# THE ALONGSHORE REACH A RUN MODELS, BY NAME -- and the 500 m bins that give
-# the coast beyond the 90 surveyed domains a domain number.
-#
-# WHY THIS EXISTS (2026-09-16, the Pea Island extension experiment)
-#   The hindcast models GIS 1-90, Cape Point to just north of Rodanthe, and
-#   pads each end with 15 invented buffer domains that extrapolate the local
-#   shoreline slope and then bridge back to close BRIE's periodic ring. The
-#   edgeBE preset pins GIS 1 and 90 to their observed rates with source/sink
-#   values that absorb whatever the buffer gets wrong.
-#
-#   Hannah's question: what if the buffer carried the REAL coast's orientation
-#   instead -- Pea Island north to near Oregon Inlet, and the last kilometre
-#   south to Cape Point -- with the end domains re-solved at the new ends?
-#   The dune lines (every vintage) and the CoastSat record both reach Oregon
-#   Inlet, so the coast is measured; only its domain numbers were missing.
-#
-# THE NUMBERING
-#   Hannah's whole-island domain polygons
-#   (1-barrier3d-domains/domain-geojson/domains_pea_hatteras_120.geojson,
-#   ID 1-121, EPSG:3725, 2000 x 500 m each) continue the surveyed numbering
-#   north to Oregon Inlet; ID 1-90 are the surveyed polygons vertex for
-#   vertex. An extension domain is numbered exactly as a surveyed one was: a
-#   spatial join onto its polygon (join_lines, join_origins below). Nothing
-#   about GIS 1-90 changes. An earlier numbering by northing bin (a 502.56 m
-#   grid continued from GIS 90, the same evening) was removed once the
-#   polygons existed; it had placed 4 dune-line and 40 CoastSat transects one
-#   domain off, because the drawn polygons are not on a regular grid.
-#
-# THE GEOMETRIES
-#   "base"    GIS 1-90, the production reach. Every matrix run.
-#   "n115"    GIS 1-115: 25 domains of Pea Island added, stopping ~3 km short
-#             of Oregon Inlet where the rates turn inlet-dominated (Hannah,
-#             2026-09-16: "lets do 115"). GIS 1 stays the southern end. No
-#             southern extension: no polygon lies south of GIS 1, and the
-#             1997 dune line ends 440 m south of it in any case.
-#
-#   HAT_GEOMETRY in the environment selects one; hatteras_site_config builds
-#   HATTERAS_DOMAINS from it. Extension domains carry the shared buffer
-#   topography (hat_topo_version.domain_arrays), the measured dune-line offset
-#   (2-brie-offset/<year>/ext/<geometry>/), zero background erosion unless
-#   HAT_BE_OVERRIDE names them, and no management of any kind.
-#
-# USAGE
-#     from site_layer.hat_extension_domains import GEOMETRIES, gis_bounds, join_lines
-#     first, last = gis_bounds("n115")          # (1, 115)
-#     join_lines(transects_gdf)                 # -> domain per transect line
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
+"""
+The alongshore reach a run models, by name, and the domain numbers beyond the 90 surveyed ones.
+
+    from site_layer.hat_extension_domains import GEOMETRIES, gis_bounds, join_lines
+
+"base" is GIS 1-90; an extended geometry adds Pea Island domains numbered by
+the whole-island polygons. HAT_GEOMETRY in the environment selects one. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -65,9 +23,7 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
 DOMAIN_CRS = "EPSG:3725"
 
-# The surveyed reach. Topography, management inputs and the committed
-# CoastSat rate table all cover exactly this; anything outside it is an
-# extension domain.
+# The surveyed reach: topography, management inputs and the CoastSat table cover exactly this
 SURVEYED_GIS = (1, 90)
 
 # name -> (first_gis, last_gis), both inclusive.
@@ -105,19 +61,9 @@ def geometry_label(name: str) -> str:
     return f"{name} (GIS {first} to {last})"
 
 
-# =============================================================================
-# THE WHOLE-ISLAND POLYGONS (Hannah, 2026-09-16 evening)
-# =============================================================================
-# TWO JOIN RULES, because two different joins made the surveyed inputs and
-# each is reproduced exactly on GIS 1-90 (checked 2026-09-16):
-#   join_lines    the 100 m dune-line transects: the LINE intersects the
-#                 polygon (450/450). A transect runs due west across the
-#                 island and meets one polygon; one in a sliver between
-#                 polygons meets none and is dropped, as ArcGIS dropped it.
-#   join_origins  the CoastSat transects: the ORIGIN POINT (first vertex)
-#                 within the polygon (906/906), the rule of
-#                 coastsat_domain_mapping.py. (The centroid does not
-#                 reproduce it: 737/906.)
+# The whole-island polygons (Hannah, 2026-09-16 evening)
+
+# Two join rules, each reproducing its surveyed input: join_lines (dune-line), join_origins (CoastSat)
 EXTENDED_DOMAIN_POLYGONS = (INIT_ROOT / "1-barrier3d-domains" / "domain-geojson"
                             / "domains_pea_hatteras_120.geojson")
 EXTENDED_POLYGON_ID = "ID"

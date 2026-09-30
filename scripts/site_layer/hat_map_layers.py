@@ -1,40 +1,16 @@
-# ==============================================================================
-# hat_map_layers.py
-#
-# WHERE ARE THE SHARED MAP LAYERS, AND WHERE DOES THE HOUSE STYLE LIVE?
-#
-# WHY THIS EXISTS
-#   Until 2026-09-18 these sat in data/hatteras_init/9-figures/, numbered like
-#   a model-input stage although it was not one, and mixing three kinds of
-#   thing: GIS layers (data), the written style (documentation for whoever
-#   writes a figure script) and a rendered style sheet (a figure). They are
-#   split by kind now:
-#
-#     data/hatteras_init/map_elements/     the map layers, un-numbered
-#         hatteras_outline/                the island, NC 1:80k (subset)
-#         nc_coast_80k/                    NC 1:80k clipped to the study area
-#         natural_earth/                   the locator-map states
-#         archive/                         the retired 1000 m domain polygons
-#     scripts/figure_making/STYLE.md       the written house style
-#     output/figures/style/                the rendered style sheet
-#
-#   Two of the layers were read straight off the D: GIS drive, so the figures
-#   that drew them could not be made without it: the domain boxes
-#   (D:/Hatteras_GIS/domains.geojson, identical in geometry and every
-#   attribute to 5-scr's HAT_domains.json, which is what DOMAIN_BOXES points at)
-#   and the NC 1:80k coastline (D:/Hatteras_GIS/Outlines/nc_80k/, 6 MB for the
-#   whole state; NC_COAST is the 25 km window around the domains, rebuilt by
-#   scripts/figure_making/tools/clip_nc_coast.py).
-#
-# THE DOMAIN BOXES ARE NOT A MAP LAYER TO COPY. They are the model's frame and
-# are owned by 5-scr/2-transect-frame/; DOMAIN_BOXES re-exports that path so a
-# figure script needs one import, not a second copy that could drift.
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-22
+"""
+Where are the shared map layers, and where does the house style live?
+
+    from site_layer.hat_map_layers import ISLAND_OUTLINE, NC_COAST, DOMAIN_BOXES
+
+The map layers in data/hatteras_init/map_elements/; the domain boxes are
+re-exported from 5-scr/2-transect-frame/, never copied. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
+"""
 
 from __future__ import annotations
 
@@ -52,11 +28,9 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
 MAP_ELEMENTS = INIT_ROOT / "map_elements"
-# Hatteras Island only: the 208 NC 1:80k land polygons it overlaps, merged
-# into 52 (checked 2026-09-18: 88.85 km2 either way, zero difference).
+# Hatteras Island only: the NC 1:80k land polygons it overlaps, merged
 ISLAND_OUTLINE = MAP_ELEMENTS / "hatteras_outline" / "HAT_island_outline.shp"
-# The coast around it -- sound shores, Ocracoke, Pea Island -- for maps whose
-# window reaches past the island (the overwash maps pad 7.2 km west).
+# The coast around it (sound shores, Ocracoke, Pea Island) for maps reaching past the island
 NC_COAST = MAP_ELEMENTS / "nc_coast_80k" / "nc_80k_hatteras_window.geojson"
 NC_COAST_SOURCE = Path("D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp")
 NC_COAST_PAD_M = 25_000.0

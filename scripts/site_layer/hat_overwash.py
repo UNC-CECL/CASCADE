@@ -1,39 +1,16 @@
-# ==============================================================================
-# hat_overwash.py
-#
-# WHERE DOES THE OBSERVED OVERWASH RECORD LIVE, AND ITS FIGURES AND TABLES?
-#
-# WHY THIS EXISTS
-#   overwash_data.py already held the root for its three sibling scripts, but
-#   the two model-comparison scripts in scripts/analyze_output/overwash/ typed
-#   the workbook's path themselves, and both named a location it had left
-#   (scripts/input_prep/8-overwash-analysis/), so neither could run. Same
-#   answer as hat_observed_rates.py for 5-scr: resolved ONCE (2026-09-18).
-#
-# THE LAYOUT, grouped by job (2026-09-18). Before that it was grouped by file
-# type -- figures/ and tables/ -- which split the footprint comparison across
-# figures/vs-footprint/ and a top-level vs-footprint/.
-#
-#     data/hatteras_init/8-overwash-analysis/
-#         README.md
-#         CAPTIONS.md               one entry per figure, headed by its folder
-#         1-observations/           THE RECORD, and its long-form tables
-#             Hatteras_Overwash_Data.xlsx
-#             overwash_observations.csv  storms_by_image.csv
-#         2-record/                 what the record shows
-#             heatmaps/  map/
-#         3-vs-footprint/           the record against the 1984 footprint:
-#                                   figures here, their tables in tables/
-#         4-vs-model/               the record against modelled overwash in
-#                                   the hindcast runs (2026-09-27): figures
-#                                   here, tables in tables/
-#         archive/                  superseded_20260910/
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-29
+"""
+Where does the observed overwash record live, and its figures and tables?
+
+    from site_layer.hat_overwash import OVERWASH_ROOT
+
+Resolves data/hatteras_init/8-overwash-analysis/ once: the record, what it shows,
+and the comparisons against the footprint and the model. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
+"""
 
 from __future__ import annotations
 
@@ -63,9 +40,7 @@ VS_MODEL_TABLES = VS_MODEL / "tables"
 
 ARCHIVE = OVERWASH_ROOT / "archive"
 
-# The label each figure's CAPTIONS.md entry carries, keyed by the short
-# folder name the scripts pass to overwash_data.upsert_caption. Its order is
-# the order the entries are sorted into.
+# The label each figure's CAPTIONS.md entry carries, in the order entries are sorted
 CAPTION_FOLDERS = {
     "heatmaps": "2-record/heatmaps",
     "map": "2-record/map",

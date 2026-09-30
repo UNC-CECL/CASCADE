@@ -1,62 +1,17 @@
-# ==============================================================================
-# hat_elevation_products.py
-#
-# Which elevation product does a script read, and where does it live?
-#
-# WHY THIS EXISTS
-#   Six scripts used to build these paths by hand, each pasting its own copy of
-#       .../0-elevation/{1-gapfill-1m,2-resampled-10m}/<TAG>/
-#   and that is how HAT_road_elevation.py broke. It sets
-#   FILL_SOURCE = "2008_NOAA_IOCM" and builds GAPFILL_1M_ROOT / FILL_SOURCE.
-#   When 2008 was moved under superseded/ on 2026-08-25 the path stopped
-#   resolving - and NOTHING RAISED. The globs simply returned nothing, the
-#   script carried on, and every domain reported "no fill available".
-#
-#   Same failure as the one scripts/site_layer/hat_topo_version.py was written for: a
-#   layout change that a hand-built path absorbs silently. Same fix. The
-#   product is resolved ONCE, here, and a name that does not exist on disk is
-#   an immediate, loud error listing what does.
-#
-# THE LAYOUT IT RESOLVES  (product first, stage second - 2026-08-25)
-#
-#     data/hatteras_init/0-elevation/
-#         2009-2014/                  the baseline DEM
-#             1-gapfill-1m/           gapfill_audit.csv + clip_domain_*.tif
-#             2-resampled-10m/        resample_audit.csv + resampled_domain_*.tif
-#             figures/
-#         2009-2014-1996/             the 1984-start DEM
-#             1-gapfill-1m/           mosaic_1984_audit.csv + clip_domain_*.tif
-#             2-resampled-10m/
-#             figures/
-#         superseded/<attempt>/       same shape, not for use
-#         source-selection/           island-wide, belongs to no product
-#         FIGURES.md                  figure design decisions, shared
-#
-#   BEFORE, it was stage first: 1-gapfill-1m/<TAG>/ and 2-resampled-10m/<TAG>/,
-#   with every product's figures pooled in one figures/. The names were the
-#   FILL SOURCE ("2014_NOAA_PostSandy"), which said what was added but not what
-#   the product contained. Product folders are now named for their COMPOSITION,
-#   deliberately not for a hindcast period: the 2009-2014 DEM currently serves
-#   both the 1984 and 2004 periods, so naming it "2004-start" would assert
-#   something that is not true.
-#
-# USAGE
-#     import sys; sys.path.insert(0, <repo>/scripts)
-#     from site_layer.hat_elevation_products import product, PRODUCTS
-#
-#     p = product("2009-2014")
-#     p.gapfill_1m / "clip_domain_7_filled.tif"
-#     p.resampled_10m, p.figures, p.audit_1m
-#
-#   product() checks the directory exists and raises with the available names
-#   if it does not. Pass check=False only when creating the product for the
-#   first time, which is what the two producer scripts do.
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
+"""
+Which elevation product does a script read, and where does it live?
+
+    from site_layer.hat_elevation_products import product
+    p = product("2009-2014"); p.gapfill_1m, p.resampled_10m, p.figures
+
+Resolves data/hatteras_init/0-elevation/<product>/<stage>/ once; a product not
+on disk raises, listing the ones that are. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 
 from __future__ import annotations
 
@@ -114,10 +69,7 @@ class Product:
         return self.resampled_10m / "resample_audit.csv"
 
 
-# The survey codes a product's clip_domain_*_survey.tif may carry, MOST
-# SPECIFIC FIRST. This is the precedence HAT_dem_resample_clip.downsample_survey
-# resolves a mixed 2 x 2 block with, so the order is a decision. 2009 is the
-# base and 0 is "no survey saw it"; neither appears here.
+# Survey codes a clip_domain_*_survey.tif may carry, most specific first (the resample precedence)
 FILL_CODES = {
     "2009-2014": (2014,),
     "2009-2014-1996": (1996, 2014),
@@ -146,14 +98,7 @@ PRODUCTS: dict[str, Product] = {
     ),
 }
 
-# Nothing is superseded on disk right now. The 2008 NOAA IOCM attempt was
-# registered here until 2026-08-26 with the note "kept so its comparison
-# figures can be regenerated" - but its product folder had already been
-# deleted, so product("2008_NOAA_IOCM") raised rather than resolving. The
-# point-cloud path that built it is gone from HAT_dem_gap_fill.py too, so it
-# is not reproducible from this repo either. The machinery below stays: a
-# future superseded product registers here with superseded=True and lands
-# under 0-elevation/superseded/<name>/.
+# Nothing is superseded on disk now; a future superseded product registers here
 SUPERSEDED: dict[str, Product] = {}
 
 
