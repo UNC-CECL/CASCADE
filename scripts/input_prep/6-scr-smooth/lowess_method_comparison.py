@@ -1,37 +1,10 @@
 """
-CoastSat LRR Smoothing — Hatteras Island
-=========================================
-Always runs both transect-based and domain-averaged smoothing.
+CoastSat LRR smoothing along the island, transect-based and domain-averaged LOWESS side by side.
 
-  "domain"    Smooth pre-averaged domain LRR values (original approach).
-              Input : domain_lrr_summary.csv — one row per CASCADE domain.
+    python scripts/input_prep/6-scr-smooth/lowess_method_comparison.py
 
-  "transect"  Smooth individual transect LRR values first, then aggregate
-              the smoothed signal back to domain resolution for CASCADE.
-              Input : transect_lrr_full.csv  — one row per CoastSat transect.
-
-Within "transect" mode, TRANSECT_X_AXIS controls what the smoother uses as x:
-  "transect_id"   sequential integer derived from sort order
-  "along_coast_m" cumulative along-coast distance derived from domain position
-
-along_coast_m is derived automatically from domain number if not present in
-the CSV: each domain's transects are spread evenly across its 500 m band.
-Physical spacing for the LOWESS frac is always estimated from along_coast_m.
-
-Outputs — domain-space figures (both modes)
--------------------------------------------
-  overview_smoothed.png              raw + LOWESS overlay, both periods
-  smoothed_only_comparison.png       clean version for presentations
-  combined_periods.png               both periods on one panel
-  smoothing_sensitivity_*.png        3-panel bandwidth sensitivity
-  window_comparison.png              all window sizes overlaid
-  coastsat_<mode>_smoothed_table.csv domain-level raw + smoothed values
-
-Additional outputs — transect mode only
----------------------------------------
-  transect_smoothed_overview.png     raw transect scatter + LOWESS in transect space
-  transect_window_comparison.png     window sensitivity in transect space
-  coastsat_transect_lrr_*.csv        full transect-level table with lrr_smooth
+Both methods for every window size, both periods; overview, smoothed-only,
+combined and method-comparison figures. Details: scripts/input_prep/6-scr-smooth/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -39,38 +12,28 @@ Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
 
-# pathlib must be imported before the CONFIG block because every path below is
-# built from PROJECT_BASE_DIR at module level.
+# pathlib first: every path in CONFIG is built from PROJECT_BASE_DIR
 import pathlib
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in pathlib.Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
-# output one had lost its drive (str(_PATH_REPO / "scripts" / "input_prep" / "...")) and so wrote its
-# figures to C:\scripts\ instead of into the repository, and the input ones
-# still spelled the folder "input_preperation" and pointed at a CoastSat tree
-# that has since moved under 5-scr. Anchoring on the pyproject.toml at the repo
-# root makes all of them follow the checkout and survive this file changing
-# depth.
+# Paths anchored on the repo root, never typed (the old literals had broken)
 PROJECT_BASE_DIR = next(
     q for q in pathlib.Path(__file__).resolve().parents
     if (q / "pyproject.toml").exists()
 )
 
 
-# ============================================================
-# CONFIG
-# ============================================================
+# --- CONFIG ------------------------------------------------------------------
+# Smoothing x-axis
 
-# ── Smoothing x-axis ─────────────────────────────────────────
-# "along_coast_m" is recommended — keeps the physical window consistent.
-# "transect_id" is available but causes non-uniform spacing artefacts.
+# 'along_coast_m' keeps the window physical; 'transect_id' spaces unevenly
 TRANSECT_X_AXIS = "along_coast_m"   # "along_coast_m" | "transect_id"
 
-# ── Domain-mode inputs ───────────────────────────────────────
+# Domain-mode inputs
+
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 import sys as _sys
 from pathlib import Path as _RP
@@ -83,7 +46,8 @@ CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
 CS_STD_COL    = "std_lrr"
 
-# ── Transect-mode inputs ─────────────────────────────────────
+# Transect-mode inputs
+
 # Point to your transect_lrr_full.csv files for each period
 TRANSECT_CSV_1984_2004 = str(_obs.lrr_csv(1984, 2004))
 TRANSECT_CSV_2004_2024 = str(_obs.lrr_csv(2004, 2024))
@@ -99,65 +63,38 @@ T_STD_COL         = "unc_m_yr"       # uncertainty column; set to None to skip
 FILTER_POINT_IN_POLYGON = False
 T_MATCH_METHOD_COL      = "match_method"
 
-# ── Domain geometry ──────────────────────────────────────────
+# Domain geometry
 DOMAIN_MIN       = 1
 DOMAIN_MAX       = 90
 DOMAIN_SPACING_M = 500   # metres per CASCADE domain
 
-# ── LOWESS window ─────────────────────────────────────────────
-# Physical window width in km — applies to both modes.
-# Converted to a frac automatically based on data resolution.
-#   2.5 km = 5 domains | 3.5 km = 7 domains | 4.0 km = 8 domains
+# LOWESS window
+
+# Physical window width in km — applies to both modes
 LOWESS_WINDOW_KM = 3.5   # primary smoothing window (7 domains)
 
 # Window sizes (km) tested in sensitivity / comparison figures
 COMPARE_WINDOWS_KM = [2.5, 3.5, 5.0]   # 5, 7, 10 domains
 
-# ── Southern boundary guard ──────────────────────────────────
-# Domains 1..N are dropped from the SMOOTHED series. LOWESS is a local linear
-# fit, so at the edge of the reach it extrapolates rather than smooths, and
-# Oregon Inlet dominates that zone anyway.
-#
-# Same guard, same width as the hindcast's cascade_pipeline/coastsat_lowess.py:
-# LowessConfig(skip_southern_domains=10). Applied AFTER the fit, never before,
-# so the southern data still pulls the values just north of the cut - only the
-# result is withheld. Raw series are untouched and still cover the whole
-# island. Set to 0 to smooth everywhere.
-#
-# This bites less here than in the domain-space scripts: smoothing runs at
-# transect resolution, ~10 points per domain, so the edge fit has far more
-# local support. It is applied for consistency with what the model is scored
-# against, not because this script showed the same excursion.
+# Southern boundary guard
+
+# Domains 1..N are dropped from the SMOOTHED series
 SKIP_SOUTHERN_DOMAINS = 10
 
-# ── Geographic annotations ──────────────────────────────
-# This block used to hold a copy of the town spans, the village centres, the
-# piers, the groins and the Wimble Shoals zone, in domain units and again in
-# metres, with its own colours -- a second description of the island to keep
-# in step with scripts/site_layer/hatteras_site_config.py. It is gone: the village
-# shading now comes from the house helper town_bands() and everything else is
-# read from HATTERAS_ANNOTATIONS. See ANNOTATION HELPERS below.
-#
-# The colours those figures use are set after the imports, with the house
-# style, since they are taken from it.
+# Geographic annotations
 
-# ── Output ───────────────────────────────────────────────────
-# Products live under data/hatteras_init/<stage>/, beside every other
-# input_prep stage's output; only the scripts live under scripts/. Resolved
-# through hat_observed_rates.py since 2026-09-18, when the folder was renamed
-# from lowess_method_comparison_output/.
+# This block used to hold a copy of the town spans, the village centres, the piers
+
+# Output
+
+# Products live under data/hatteras_init/<stage>/, beside every other input_prep stage's output
 OUTPUT_DIR = str(_obs.SMOOTH_METHOD_COMPARISON)
+# -----------------------------------------------------------------------------
 
-# ============================================================
-# IMPORTS
-# ============================================================
 import os
 import sys
 
-# Windows consoles default to cp1252, which cannot encode the arrows and
-# en-dashes in the progress output -- the script died on its first status
-# line. UTF-8 here so it runs the same from PyCharm, a terminal or a
-# scheduled call.
+# Windows consoles default to cp1252, which cannot encode the arrows and en-dashes in the progress output
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -171,8 +108,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
 warnings.filterwarnings("ignore")
 
-# The house figure style and the site's annotation config are siblings in
-# scripts/, which is not on sys.path when this file is run from its own folder.
+# The house figure style and the site's annotation config are siblings in scripts/
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 from site_layer.hat_figure_style import (            # noqa: E402
     C, C_1984, C_1997, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
@@ -181,73 +117,58 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS as ANN   # noqa
 
 # Subfolders are created automatically in main()
 
-# ============================================================
-# STYLE
-# ============================================================
-# One typographic and colour standard for every Hatteras figure, in
-# scripts/site_layer/hat_figure_style.py. This script used to set its own rcParams and
-# name its own hex colours; both are gone.
+# Style
+
+# One typographic and colour standard for every Hatteras figure, in scripts/site_layer/hat_figure_style.py
 apply_style()
 
-# Two periods drawn together are the house vintage pair: the earlier one red,
-# the later one blue.
+# Two periods drawn together are the house vintage pair
 C_PERIOD_1984 = C_1984
 C_PERIOD_2004 = C_1997
 
-# The band over the domains whose LOWESS is withheld, and the shade
-# town_bands() uses for a village span (repeated here only so the legend can
-# show a patch that matches it).
+# The withheld-LOWESS band, and town_bands()' village shade (repeated for the legend patch)
 C_SKIP_ZONE = C["WATER"]
 TOWN_SHADE = "0.94"
 
-# Three LOWESS windows are compared on the sweep figures: grey, purple and
-# green from the house palette, three hues that also separate on luminance.
+# Three LOWESS windows are compared on the sweep figures
 C_WINDOWS = [C["BASE"], C["ACCENT"], C["REF"]]
 
-# ============================================================
-# FRAC / WINDOW HELPERS
-# ============================================================
+# Frac / window helpers
 
+# Convert a physical window width (km) to a LOWESS frac for n_points
 def km_to_frac(window_km, n_points, spacing_m):
-    """Convert a physical window width (km) to a LOWESS frac for n_points."""
     k = (window_km * 1000.0) / spacing_m
     return float(np.clip(k / n_points, 0.02, 1.0))
 
 
+# Median spacing between consecutive sorted x values (positive diffs only)
 def estimate_spacing(x_values):
-    """Median spacing between consecutive sorted x values (positive diffs only)."""
     arr   = np.sort(np.asarray(x_values, dtype=float))
     diffs = np.diff(arr)
     pos   = diffs[diffs > 0]
     return float(np.median(pos)) if len(pos) else 1.0
 
 
+# LOWESS frac for domain-space smoothing at a given physical window width
 def domain_frac(window_km=LOWESS_WINDOW_KM):
-    """LOWESS frac for domain-space smoothing at a given physical window width."""
     n = DOMAIN_MAX - DOMAIN_MIN + 1
     return km_to_frac(window_km, n, DOMAIN_SPACING_M)
 
 
+# LOWESS frac for transect-space smoothing at a given physical window width
 def transect_frac(n_transects, spacing_m, window_km=LOWESS_WINDOW_KM):
-    """LOWESS frac for transect-space smoothing at a given physical window width."""
     return km_to_frac(window_km, n_transects, spacing_m)
 
-# ============================================================
-# DATA LOADING
-# ============================================================
+# Data loading
 
+# Load domain-averaged LRR summary CSV
 def load_domain_csv(path, period_label):
-    """Load domain-averaged LRR summary CSV. Returns standardised DataFrame or None.
-    Tolerates common column name variations and strips filename-prefix corruption
-    (e.g. column named "domain_lrr_summary.csvdomain_number" instead of "domain_number").
-    """
     if path is None or not os.path.exists(path):
         print(f"  Domain CSV ({period_label}): SKIPPED — not found: {path}")
         return None
     df = pd.read_csv(path)
 
-    # Strip any filename prefix accidentally prepended to column names
-    # e.g. "domain_lrr_summary.csvdomain_number" -> "domain_number"
+    # Strip any filename prefix accidentally prepended to column names e.g
     df.columns = [c.split(".csv")[-1] if ".csv" in c else c for c in df.columns]
 
     # Resolve domain column — try configured name then common alternatives
@@ -279,17 +200,8 @@ def load_domain_csv(path, period_label):
           f"LRR range {df['cs_lrr'].min():+.2f}–{df['cs_lrr'].max():+.2f} m/yr")
     return df
 
+# Load transect-level LRR CSV
 def load_transect_csv(path, period_label):
-    """
-    Load transect-level LRR CSV. Returns standardised DataFrame or None.
-
-    Handles:
-      - String transect IDs (e.g. 'usa_NC_0032_0021') — sorted by domain then
-        ID string, then replaced with a sequential integer (1, 2, 3 …)
-      - Missing along_coast_m — derived by spreading each domain's transects
-        evenly across its 500 m band (domain 1 → 0–500 m, domain 2 → 500–1000 m …)
-      - Physical spacing for the LOWESS frac always estimated from along_coast_m
-    """
     if path is None or not os.path.exists(path):
         print(f"  Transect CSV ({period_label}): SKIPPED — not found: {path}")
         return None
@@ -319,9 +231,7 @@ def load_transect_csv(path, period_label):
     # Replace string transect IDs with sequential integers based on sort order
     df["transect_id"] = np.arange(1, len(df) + 1)
 
-    # Derive along_coast_m from domain position if not present in CSV.
-    # Each domain's transects are spread evenly across its 500 m band so that
-    # physical spacing can be estimated for the LOWESS frac calculation.
+    # Derive along_coast_m from domain position if not present in CSV
     if T_ALONG_COAST_COL is None or T_ALONG_COAST_COL not in df.columns:
         def _spread_within_domain(grp):
             n         = len(grp)
@@ -347,12 +257,10 @@ def load_transect_csv(path, period_label):
           f"LRR range {df['lrr'].min():+.2f}–{df['lrr'].max():+.2f} m/yr")
     return df
 
-# ============================================================
-# SMOOTHING
-# ============================================================
+# Smoothing
 
+# LOWESS smoother
 def apply_lowess(x, values, frac):
-    """LOWESS smoother. Returns smoothed array at the same x positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -362,8 +270,8 @@ def apply_lowess(x, values, frac):
     return smoothed
 
 
+# Apply LOWESS in domain space
 def smooth_domain_df(df, window_km=LOWESS_WINDOW_KM):
-    """Apply LOWESS in domain space. Returns copy of df with cs_lrr_smooth column."""
     df   = df.copy()
     frac = domain_frac(window_km)
     df["cs_lrr_smooth"] = apply_lowess(
@@ -376,14 +284,8 @@ def smooth_domain_df(df, window_km=LOWESS_WINDOW_KM):
     return df
 
 
+# Apply LOWESS in transect space
 def smooth_transect_df(df, window_km=LOWESS_WINDOW_KM):
-    """
-    Apply LOWESS in transect space. Returns copy of df with lrr_smooth column.
-
-    Physical spacing for the frac is always estimated from along_coast_m
-    (derived or real), so the window is correct in physical kilometres
-    regardless of whether transect_id or along_coast_m is the plot x-axis.
-    """
     df      = df.copy()
     spacing = estimate_spacing(df["along_coast_m"].values)
     frac    = transect_frac(len(df), spacing, window_km)
@@ -393,27 +295,15 @@ def smooth_transect_df(df, window_km=LOWESS_WINDOW_KM):
          else df["transect_id"].values.astype(float))
 
     df["lrr_smooth"] = apply_lowess(x, df["lrr"].values, frac)
-    # Masked on domain, not on along_coast_m: identical cut, and it carries
-    # through aggregate_to_domains, whose per-domain mean of an all-NaN group
-    # is NaN. So every domain-space figure and the CSV export inherit the
-    # guard without a second mask.
+    # Masked on domain, not on along_coast_m
     if SKIP_SOUTHERN_DOMAINS > 0:
         df.loc[df["domain"] <= SKIP_SOUTHERN_DOMAINS, "lrr_smooth"] = np.nan
     df["_x_smooth"]  = x   # stored so plot functions don't recompute
     return df
 
 
+# Average smoothed (and raw) transect values within each CASCADE domain
 def aggregate_to_domains(t_df):
-    """
-    Average smoothed (and raw) transect values within each CASCADE domain.
-
-    Returns a domain-level DataFrame matching the domain CSV schema so all
-    domain-space plot functions work unchanged:
-      domain        — CASCADE domain number
-      cs_lrr        — mean of raw transect LRRs within the domain
-      cs_std        — std  of raw transect LRRs within the domain
-      cs_lrr_smooth — mean of smoothed transect LRRs within the domain
-    """
     grp = t_df.groupby("domain")
     domain_df = pd.DataFrame({
         "domain":        grp["lrr"].mean().index,
@@ -423,16 +313,9 @@ def aggregate_to_domains(t_df):
     }).reset_index(drop=True)
     return domain_df.sort_values("domain").reset_index(drop=True)
 
-# ============================================================
-# ANNOTATION HELPERS
-# ============================================================
-# Where the villages, piers, groins and shoal zones are is settled in
-# scripts/site_layer/hatteras_site_config.py (HATTERAS_ANNOTATIONS). This script used to
-# carry its own copy of the spans, the village centres and their colours, so
-# the island had two descriptions of itself that had to be kept in step. The
-# village shading now comes from the house helper town_bands(); only the marks
-# town_bands does not draw -- shoal zones, piers, groins -- are added here, at
-# the positions and in the colours the site config gives them.
+# Annotation helpers
+
+# Villages via town_bands(); shoals, piers and groins from HATTERAS_ANNOTATIONS
 
 # Sentences the figures used to carry on the canvas. They belong in a caption.
 CAP_ENDPOINTS = ("Domain 1 is at Cape Point in the south and domain 90 at Pea "
@@ -447,22 +330,18 @@ CAP_GUARD = ("The LOWESS curve is withheld over the southernmost "
              if SKIP_SOUTHERN_DOMAINS > 0 else "")
 
 
+# The value unchanged (an x transform that does nothing)
 def _identity(d):
     return d
 
 
+# A GIS domain number as along-coast metres
 def _domain_to_m(d):
-    """A GIS domain number as along-coast metres. Domain d occupies
-    [(d-1)*500, d*500) m -- the convention load_transect_csv uses -- so its
-    centre is (d-0.5)*500 and the edges of a span lo..hi fall out of the same
-    call. Nothing about the transect-space figures is measured separately."""
     return (d - 0.5) * DOMAIN_SPACING_M
 
 
+# Shoal zones, piers and groins from the site config
 def _reference_marks(ax, to_x=_identity, label_shoals=True):
-    """Shoal zones, piers and groins from the site config. `to_x` maps a GIS
-    domain number onto this panel's x units, so the same positions serve the
-    domain-space and the along-coast figures."""
     trans = blended_transform_factory(ax.transData, ax.transAxes)
     for name, (lo, hi) in ANN.shoal_zones.items():
         ax.axvspan(to_x(lo - 0.5), to_x(hi + 0.5), color=ANN.color_shoal,
@@ -479,19 +358,21 @@ def _reference_marks(ax, to_x=_identity, label_shoals=True):
                    alpha=0.85, zorder=2)
 
 
+# Band from the start of the reach to `hi`, in whatever x-units the axis uses
 def _shade_boundary_zone(ax, hi):
-    """Band from the start of the reach to `hi`, in whatever x-units the axis uses."""
     if SKIP_SOUTHERN_DOMAINS > 0:
         ax.axvspan(ax.get_xlim()[0], hi, facecolor=C_SKIP_ZONE, alpha=0.30,
                    lw=0.0, zorder=0)
 
 
+# Villages, shoals, piers, groins and the guard zone on a domain axis
 def add_domain_annotations(ax, label_shoals=True):
     _reference_marks(ax, label_shoals=label_shoals)
     town_bands(ax, strip=0.085)
     _shade_boundary_zone(ax, SKIP_SOUTHERN_DOMAINS + 0.5)
 
 
+# The same marks on an alongshore-metres axis
 def add_transect_annotations(ax, label_shoals=True):
     _reference_marks(ax, to_x=_domain_to_m, label_shoals=label_shoals)
     town_bands(ax, strip=0.085,
@@ -501,6 +382,7 @@ def add_transect_annotations(ax, label_shoals=True):
     _shade_boundary_zone(ax, SKIP_SOUTHERN_DOMAINS * DOMAIN_SPACING_M)
 
 
+# Legend handles for the marks
 def annotation_legend_handles():
     return [
         Patch(facecolor=TOWN_SHADE, edgecolor="none", label="village span"),
@@ -513,19 +395,14 @@ def annotation_legend_handles():
          if SKIP_SOUTHERN_DOMAINS > 0 else [])
 
 
+# A frameless legend below the panels
 def _outside_legend(fig, handles, ncol=4):
     fig.legend(handles=handles, loc="outside lower center", ncol=ncol,
                frameon=False, fontsize=7.5)
 
 
+# Raw domain means across the withheld zone, so it is not simply blank
 def draw_raw_in_guard_zone(ax, df, color, label=None, col="cs_lrr"):
-    """Raw domain means across the withheld zone, so it is not simply blank.
-
-    Matches what the hindcast does there: splice_lowess_with_raw_south omits
-    the LOWESS line across the southern domains and the raw values are shown
-    instead. On figures that already draw raw everywhere this adds nothing, so
-    it is called only from the smoothed-only ones.
-    """
     if SKIP_SOUTHERN_DOMAINS <= 0:
         return
     z = df[df["domain"] <= SKIP_SOUTHERN_DOMAINS]
@@ -535,11 +412,13 @@ def draw_raw_in_guard_zone(ax, df, color, label=None, col="cs_lrr"):
             marker="o", ms=2.5, alpha=0.75, zorder=2, label=label)
 
 
+# A 'no data' note in an empty panel
 def _no_data(ax, period):
     ax.text(0.5, 0.5, f"no data for {period}", transform=ax.transAxes,
             ha="center", va="center", color=INK_MUTED)
 
 
+# The GIS-domain x axis
 def style_domain_axis(ax, is_bottom=True):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.axhline(0, color=INK_MUTED, lw=0.6, ls="--", zorder=1)
@@ -550,6 +429,7 @@ def style_domain_axis(ax, is_bottom=True):
         ax.set_xlabel(DOMAIN_AXIS_LABEL)
 
 
+# The alongshore x axis
 def style_transect_axis(ax, x_values, is_bottom=True):
     ax.set_xlim(x_values.min() - 1, x_values.max() + 1)
     ax.axhline(0, color=INK_MUTED, lw=0.6, ls="--", zorder=1)
@@ -561,12 +441,9 @@ def style_transect_axis(ax, x_values, is_bottom=True):
                       if TRANSECT_X_AXIS == "along_coast_m"
                       else "transect, numbered south to north")
 
-# ============================================================
-# DOMAIN-SPACE FIGURES
-# Works identically for both modes — receives a domain-level DataFrame
-# regardless of whether it came from load_domain_csv or aggregate_to_domains.
-# ============================================================
+# Domain-space figures Works identically for both modes
 
+# Both periods as two panels, raw optional
 def _domain_two_panel(d1984, d2004, show_raw, out_path, cap):
     configs   = [(d1984, "1984–2004", C_1984),
                  (d2004, "2004–2024", C_1997)]
@@ -609,6 +486,7 @@ def _domain_two_panel(d1984, d2004, show_raw, out_path, cap):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# Raw and smoothed rates by domain, both periods
 def plot_domain_overview(d1984, d2004, out_path, method=""):
     _domain_two_panel(
         d1984, d2004, show_raw=True, out_path=out_path,
@@ -621,6 +499,7 @@ def plot_domain_overview(d1984, d2004, out_path, method=""):
     )
 
 
+# The smoothed rates alone, both periods
 def plot_domain_smoothed_only(d1984, d2004, out_path, method=""):
     _domain_two_panel(
         d1984, d2004, show_raw=False, out_path=out_path,
@@ -632,6 +511,7 @@ def plot_domain_smoothed_only(d1984, d2004, out_path, method=""):
     )
 
 
+# Both periods on one panel, smoothed
 def plot_domain_combined(d1984, d2004, out_path, method=""):
     fig, ax = plt.subplots(figsize=figsize("double", height=3.6),
                            constrained_layout=True)
@@ -664,8 +544,8 @@ def plot_domain_combined(d1984, d2004, out_path, method=""):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# 3-panel bandwidth sensitivity figure for a single period (domain space)
 def plot_domain_sensitivity(df, period_label, color, out_path, method=""):
-    """3-panel bandwidth sensitivity figure for a single period (domain space)."""
     fracs = [domain_frac(w) for w in COMPARE_WINDOWS_KM]
     fig, axes = plt.subplots(len(COMPARE_WINDOWS_KM), 1,
                              figsize=figsize("double", height=7.2),
@@ -695,8 +575,8 @@ def plot_domain_sensitivity(df, period_label, color, out_path, method=""):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# All window sizes overlaid in domain space — both periods
 def plot_domain_window_comparison(d1984, d2004, out_path, method=""):
-    """All window sizes overlaid in domain space — both periods."""
     configs   = [(d1984, "1984–2004", C_1984),
                  (d2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
@@ -728,16 +608,10 @@ def plot_domain_window_comparison(d1984, d2004, out_path, method=""):
     save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
-# ============================================================
-# TRANSECT-SPACE FIGURES  (produced only in "transect" mode)
-# ============================================================
+# Transect-space figures (produced only in "transect" mode)
 
+# Raw transect scatter + LOWESS smoothed curve in along-coast space, with domain-averaged LRR ...
 def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
-    """
-    Raw transect scatter + LOWESS smoothed curve in along-coast space,
-    with domain-averaged LRR overlaid as a dashed line with open markers.
-    Shows how much variability domain averaging collapses.
-    """
     configs   = [(t1984, d1984, "1984–2004", C_1984),
                  (t2004, d2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.8),
@@ -785,8 +659,8 @@ def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# Window sensitivity in transect space — all km windows overlaid, both periods
 def plot_transect_window_comparison(t1984, t2004, out_path):
-    """Window sensitivity in transect space — all km windows overlaid, both periods."""
     configs = [(t1984, "1984–2004", C_1984),
                (t2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
@@ -821,22 +695,10 @@ def plot_transect_window_comparison(t1984, t2004, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# TRANSECT-SMOOTHED WINDOWS IN DOMAIN SPACE
-# Smooths at transect level for each window, aggregates to domain
-# resolution, then plots with domain number and geographic annotations.
-# ============================================================
+# Transect-smoothed windows in domain space Smooths at transect level for each window
 
+# For each window in COMPARE_WINDOWS_KM
 def plot_transect_windows_domain_space(t1984, t2004, out_path):
-    """
-    For each window in COMPARE_WINDOWS_KM:
-      1. Apply LOWESS at transect resolution
-      2. Aggregate smoothed values to domain means
-      3. Plot against CASCADE domain number with geographic annotations
-
-    Replaces plot_domain_window_comparison in transect mode so all curves
-    shown are transect-based — no domain-averaged smoothing is mixed in.
-    """
     configs   = [(t1984, "1984–2004", C_1984),
                  (t2004, "2004–2024", C_1997)]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
@@ -882,18 +744,11 @@ def plot_transect_windows_domain_space(t1984, t2004, out_path):
     save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
-# ============================================================
 
-# ============================================================
-# TRANSECT SENSITIVITY (matches plot_transect_windows_domain_space)
-# ============================================================
+# Transect sensitivity (matches plot_transect_windows_domain_space)
 
+# 3-panel bandwidth sensitivity — transect mode
 def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
-    """
-    3-panel bandwidth sensitivity — transect mode.
-    Smooths at transect level for each window then aggregates to domains,
-    matching plot_transect_windows_domain_space exactly.
-    """
     fig, axes = plt.subplots(len(COMPARE_WINDOWS_KM), 1,
                              figsize=figsize("double", height=7.2),
                              sharex=True, constrained_layout=True)
@@ -927,16 +782,9 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# Method comparison: transect-based against domain-averaged LOWESS, per window size
 
-# ============================================================
-# METHOD COMPARISON — transect-based vs domain-averaged LOWESS
-# Both smoothing approaches overlaid for each window size.
-# ============================================================
-# The two methods are the point of these four figures, so they carry the
-# colour: grey C["BASE"] is smoothing the domain means, the original
-# approach, and purple C["ACCENT"] is smoothing the individual transects,
-# the one under test. The window, where more than one is shown, is the line
-# style.
+# The two methods are the point of these four figures, so they carry the colour
 M_LS = ["-", "--", (0, (1, 1.4))]
 LBL_TRANSECT = "LOWESS on the individual transects, averaged to domains"
 LBL_DOMAIN   = "LOWESS on the domain averages"
@@ -948,19 +796,15 @@ CAP_METHODS = ("Purple is the LOWESS fitted to the individual CoastSat "
                "domain averages before smoothing.")
 
 
+# The raw domain means under a method panel
 def _method_raw(ax, t_df):
     d_raw = aggregate_to_domains(t_df)
     ax.plot(d_raw["domain"], d_raw["cs_lrr"], color=INK_MUTED, lw=0,
             marker="o", ms=2.2, alpha=0.45, zorder=1, label=LBL_RAW)
 
 
+# For each window in COMPARE_WINDOWS_KM, plots both
 def plot_method_comparison(t1984, t2004, da1984, da2004, out_path):
-    """
-    For each window in COMPARE_WINDOWS_KM, plots both:
-      — purple : transect-based LOWESS (smooth transects → aggregate to domains)
-      — grey   : domain-averaged LOWESS (smooth domain means directly)
-    the window carried by the line style. Both in domain space.
-    """
     configs   = [(t1984, da1984, "1984–2004"),
                  (t2004, da2004, "2004–2024")]
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.4),
@@ -1011,12 +855,9 @@ def plot_method_comparison(t1984, t2004, da1984, da2004, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# Single-window method comparison
 def plot_method_comparison_single(t1984, t2004, da1984, da2004,
                                    window_km, out_path):
-    """
-    Single-window method comparison: transect-based vs domain-averaged LOWESS.
-    Shows one window size only so the two curves can be read clearly.
-    """
     ndom  = int(round(window_km * 1000 / DOMAIN_SPACING_M))
     configs   = [(t1984, da1984, "1984–2004"),
                  (t2004, da2004, "2004–2024")]
@@ -1058,12 +899,9 @@ def plot_method_comparison_single(t1984, t2004, da1984, da2004,
     save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
-# ============================================================
-# MAIN
-# Always runs both transect-based and domain-averaged smoothing.
-# Outputs are organised into clearly labelled subfolders.
-# ============================================================
+# Main Always runs both transect-based and domain-averaged smoothing
 
+# Run: load both periods, every figure
 def main():
     print("=" * 65)
     print("CoastSat LRR Smoothing — Hatteras Island")
@@ -1075,7 +913,7 @@ def main():
     print("  Both methods always run — outputs saved to subfolders.")
     print("=" * 65)
 
-    # ── Create subfolders ──────────────────────────────────────────
+    # Create subfolders
     DIR_T       = os.path.join(OUTPUT_DIR, "01_transect_based")
     DIR_D       = os.path.join(OUTPUT_DIR, "02_domain_averaged")
     DIR_C       = os.path.join(OUTPUT_DIR, "03_cascade_inputs")
@@ -1083,7 +921,7 @@ def main():
     for d in [DIR_T, DIR_D, DIR_C, DIR_COMPARE]:
         os.makedirs(d, exist_ok=True)
 
-    # ── Load transect data ──────────────────────────────────────
+    # Load transect data
     print("\nLoading transect data...")
     t1984_raw = load_transect_csv(TRANSECT_CSV_1984_2004, "1984–2004")
     t2004_raw = load_transect_csv(TRANSECT_CSV_2004_2024, "2004–2024")
@@ -1092,14 +930,14 @@ def main():
     td1984 = aggregate_to_domains(t1984) if t1984 is not None else None
     td2004 = aggregate_to_domains(t2004) if t2004 is not None else None
 
-    # ── Load domain-averaged data ────────────────────────────────
+    # Load domain-averaged data
     print("\nLoading domain-averaged data...")
     da1984 = load_domain_csv(DOMAIN_CSV_1984_2004, "1984–2004")
     da2004 = load_domain_csv(DOMAIN_CSV_2004_2024, "2004–2024")
     if da1984 is not None: da1984 = smooth_domain_df(da1984)
     if da2004 is not None: da2004 = smooth_domain_df(da2004)
 
-    # ── 01: Transect-based figures ───────────────────────────────
+    # 01: Transect-based figures
     print("\n[01] Transect-based figures → 01_transect_based/")
 
     # Transect overview: raw scatter + LOWESS + domain averages overlaid
@@ -1131,7 +969,7 @@ def main():
             os.path.join(DIR_T, "sensitivity_2004_2024.png"),
             "smoothed on the individual transects")
 
-    # ── 02: Domain-averaged figures ──────────────────────────────
+    # 02: Domain-averaged figures
     print("\n[02] Domain-averaged figures → 02_domain_averaged/")
 
     plot_domain_window_comparison(da1984, da2004,
@@ -1147,7 +985,7 @@ def main():
             os.path.join(DIR_D, "sensitivity_2004_2024.png"),
             "smoothed on the domain averages")
 
-    # ── 04: Method comparison (Laura's request) ────────────────────
+    # 04: Method comparison (Laura's request)
     print("\n[04] Method comparison figures → 04_method_comparison/")
 
     plot_method_comparison(t1984, t2004, da1984, da2004,
@@ -1160,7 +998,7 @@ def main():
         plot_method_comparison_single(t1984, t2004, da1984, da2004,
             km, os.path.join(DIR_COMPARE, fname))
 
-    # ── 03: CASCADE inputs (transect-based) ───────────────────────
+    # 03: CASCADE inputs (transect-based)
     print("\n[03] Exporting CASCADE inputs → 03_cascade_inputs/")
 
     parts = []

@@ -1,27 +1,10 @@
 """
-DSAS vs CoastSat LRR Comparison — Hatteras Island  (SMOOTHED VERSION)
-======================================================================
-Extends the original comparison script with LOWESS smoothing and
-multiple visualization options for collaborator review.
+DSAS against CoastSat LRR per domain, raw and LOWESS-smoothed, for the two DSAS windows.
 
-New outputs (saved to OUTPUT_DIR)
-----------------------------------
-  overview_smoothed.png          – 2-panel both periods, raw + LOWESS overlay
-  smoothed_only_comparison.png   – 2-panel both periods, smoothed lines only
-  smoothing_sensitivity.png      – 3-panel showing frac=0.10, 0.15, 0.20 side by side
-  combined_sources.png           – single panel combining both periods + both sources
-  scatter_smoothed_1978_1997.png – scatter of smoothed values, period 1
-  scatter_smoothed_1997_2019.png – scatter of smoothed values, period 2
+    python scripts/input_prep/6-scr-smooth/lowess_dsas_vs_coastsat.py
 
-All original outputs are also regenerated.
-
-comparison_table_smoothed.csv carries the raw values for every domain, but its
-LOWESS columns are blank across the southern boundary zone (domains
-1..SKIP_SOUTHERN_DOMAINS), matching what the figures draw and why.
-
-Smoothing method: LOWESS (locally weighted scatterplot smoothing)
-  - Applied independently to each series (DSAS and CoastSat)
-  - Preserves large-scale spatial patterns while removing per-domain noise
+Scatter, line and difference figures per window, with the southern
+boundary guard; written under the 6-scr-smooth data folder. Details: scripts/input_prep/6-scr-smooth/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -29,32 +12,21 @@ Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
 
-# pathlib must be imported before the CONFIG block because every path below is
-# built from PROJECT_BASE_DIR at module level.
+# pathlib first: every path in CONFIG is built from PROJECT_BASE_DIR
 import pathlib
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in pathlib.Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
-# output one had lost its drive (str(_PATH_REPO / "scripts" / "input_prep" / "...")) and so wrote its
-# figures to C:\scripts\ instead of into the repository, and the input ones
-# still spelled the folder "input_preperation" and pointed at a CoastSat tree
-# that has since moved under 5-scr. Anchoring on the pyproject.toml at the repo
-# root makes all of them follow the checkout and survive this file changing
-# depth.
+# Paths anchored on the repo root, never typed (the old literals had broken)
 PROJECT_BASE_DIR = next(
     q for q in pathlib.Path(__file__).resolve().parents
     if (q / "pyproject.toml").exists()
 )
 
 
-# ============================================================
-# CONFIG
-# ============================================================
-
+# --- CONFIG ------------------------------------------------------------------
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 import sys as _sys
 from pathlib import Path as _RP
@@ -62,7 +34,7 @@ _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 
-# --- DSAS CSVs ---
+# DSAS CSVs
 DSAS_CSV_1978_1997 = str(_obs.DSAS_ROOT / "dsas_1978_1997_rates.csv")
 DSAS_CSV_1997_2019 = str(_obs.DSAS_ROOT / "dsas_1997_2019_rates.csv")
 
@@ -70,9 +42,9 @@ DSAS_DOMAIN_COL = "domain_id"
 DSAS_LRR_COL    = "MEAN_LRR"
 DSAS_STD_COL    = "STD_LRR"
 
-# --- CoastSat CSVs ---
-# The retired windows. old_time_periods/ became superseded_20260810/ and
-# these two had not resolved since.
+# CoastSat CSVs
+
+# The retired windows, now under the superseded LRR folder
 COASTSAT_CSV_1978_1997 = str(_obs.COASTSAT_LRR_SUPERSEDED / "1978_1997"
                           / "domain_lrr_summary.csv")
 COASTSAT_CSV_1997_2019 = str(_obs.COASTSAT_LRR_SUPERSEDED / "1997_2019"
@@ -82,31 +54,21 @@ CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
 CS_STD_COL    = "std_lrr"
 
-# --- Domain range ---
+# Domain range
 DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
-# --- LOWESS bandwidth (fraction of data used per local fit) ---
-# 0.10 = ~9 domains  → more local, preserves more variation
-# 0.167 = ~15 domains → recommended default (1.5km smoothing window)
-# 0.20 = ~18 domains → smoother, loses finer spatial patterns
+# LOWESS bandwidth (fraction of data used per local fit)
+
+# Fraction of the data per local fit: 0.10 ~9 domains, 0.167 ~15, 0.20 ~18
 LOWESS_FRAC = 0.15
 
-# --- Southern boundary guard ---
-# Domains 1..N are dropped from the SMOOTHED curves. Oregon Inlet dominates
-# that zone, and LOWESS is a local linear fit, so at the very edge it
-# extrapolates: CoastSat 1978-1997 smooths to -6.21 m/yr at domain 1 where
-# the raw value is -0.59 and the local raw spread is -7.01..-0.59. The
-# smoothed value lands outside the data it claims to summarise.
-#
-# Same guard, same width as the hindcast's
-# cascade_pipeline/coastsat_lowess.py: LowessConfig(skip_southern_domains=10).
-# DISPLAY ONLY, as it is there -- the LOWESS still fits over all 90 domains,
-# so the southern data still pulls the values just north of the cut; only the
-# result is withheld. Set to 0 to show LOWESS everywhere.
+# Southern boundary guard
+
+# Domains 1..N withheld from the smoothed curves (edge extrapolation); display only
 SKIP_SOUTHERN_DOMAINS = 10
 
-# --- Town locations for reference lines ---
+# Town locations for reference lines
 TOWNS = {
     "Buxton": 8,
     "Avon": 26,
@@ -115,32 +77,23 @@ TOWNS = {
     "Rodanthe": 80,
 }
 
-# --- Output ---
-# Products live under data/hatteras_init/<stage>/, beside every other
-# input_prep stage's output; only the scripts live under scripts/. Resolved
-# through hat_observed_rates.py since 2026-09-18, when the folder was renamed
-# from lowess_dsas_vs_coastsat_output/.
-OUTPUT_DIR = str(_obs.SMOOTH_DSAS_VS_COASTSAT)
+# Output
 
-# ============================================================
-# IMPORTS
-# ============================================================
+# Under the stage's data folder, resolved through hat_observed_rates.py
+OUTPUT_DIR = str(_obs.SMOOTH_DSAS_VS_COASTSAT)
+# -----------------------------------------------------------------------------
+
 import os
 import sys
 
-# Windows consoles default to cp1252, which cannot encode the arrows and
-# en-dashes in the closing summary -- the run died there after writing every
-# figure. UTF-8 here, matching lowess_method_comparison.py.
+# Windows consoles default to cp1252, which cannot encode the arrows and en-dashes in the closing summary
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -157,9 +110,8 @@ warnings.filterwarnings("ignore")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ============================================================
-# STYLE
-# ============================================================
+# Style
+
 plt.rcParams.update({
     "font.family": "Arial",
     "axes.spines.top": False,
@@ -177,10 +129,9 @@ C_CS_1997     = "#F4A460"   # light red/tan (dashed)
 C_NO_DSAS     = "#8C8C8C"   # hatch over domains where DSAS has no data
 C_SKIP_ZONE   = "#6A8CAF"   # band over the domains where LOWESS is suppressed
 
-# ============================================================
-# DATA LOADING
-# ============================================================
+# Data loading
 
+# DSAS rates per domain
 def load_dsas(path, domain_col, lrr_col, std_col, period_label):
     df = pd.read_csv(path)
     df[domain_col] = pd.to_numeric(df[domain_col], errors="coerce")
@@ -199,6 +150,7 @@ def load_dsas(path, domain_col, lrr_col, std_col, period_label):
     return df
 
 
+# CoastSat rates per domain, or None if the file is missing
 def load_coastsat(path, domain_col, lrr_col, std_col, period_label):
     if path is None or not os.path.exists(path):
         print(f"  CoastSat ({period_label}): SKIPPED — not found: {path}")
@@ -220,18 +172,17 @@ def load_coastsat(path, domain_col, lrr_col, std_col, period_label):
     return df
 
 
+# Both sources on one domain index, with their difference
 def merge_datasets(dsas, coastsat):
     merged = dsas.merge(coastsat, on="domain", how="outer")
     merged["difference"] = merged["cs_lrr"] - merged["dsas_lrr"]
     return merged.sort_values("domain").reset_index(drop=True)
 
 
-# ============================================================
-# SMOOTHING
-# ============================================================
+# Smoothing
 
+# Apply LOWESS smoothing
 def apply_lowess(domains, values, frac=LOWESS_FRAC):
-    """Apply LOWESS smoothing. Returns smoothed values at same domain positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -242,8 +193,8 @@ def apply_lowess(domains, values, frac=LOWESS_FRAC):
     return smoothed
 
 
+# Add LOWESS-smoothed LRR columns to a merged dataframe
 def add_smoothed_columns(merged, frac=LOWESS_FRAC):
-    """Add LOWESS-smoothed LRR columns to a merged dataframe."""
     d = merged["domain"].values.astype(float)
     merged = merged.copy()
     merged["dsas_lrr_smooth"] = apply_lowess(d, merged["dsas_lrr"].values, frac)
@@ -252,10 +203,9 @@ def add_smoothed_columns(merged, frac=LOWESS_FRAC):
     return merged
 
 
-# ============================================================
-# STATS
-# ============================================================
+# Stats
 
+# r2, RMSE, bias and slope of y on x
 def regression_stats(x, y):
     mask = ~(np.isnan(x) | np.isnan(y))
     x, y = x[mask], y[mask]
@@ -268,6 +218,7 @@ def regression_stats(x, y):
                 rmse=rmse, bias=bias, p=p, n=len(x))
 
 
+# The statistics as one annotation line
 def stats_annotation(s, prefix=""):
     return (f"{prefix}R²={s['r2']:.2f}  "
             f"RMSE={s['rmse']:.2f} m/yr  "
@@ -275,19 +226,15 @@ def stats_annotation(s, prefix=""):
             f"n={s['n']}")
 
 
-# ============================================================
-# SHARED AXIS HELPERS
-# ============================================================
+# Shared axis helpers
 
-# Town labels sit in this band, measured down from the top of the axes; the
-# stats boxes start below it. Both are in axes fractions so they cannot drift
-# into each other when ylim changes.
+# Town labels sit in this band, measured down from the top of the axes
 TOWN_LABEL_Y = 0.985
 STATS_BOX_Y  = 0.88
 
 
+# Vertical reference line and label per town, pinned to the axes top
 def add_town_lines(ax):
-    """Vertical reference line and label per town, pinned to the axes top."""
     trans = blended_transform_factory(ax.transData, ax.transAxes)
     for town, dom in TOWNS.items():
         ax.axvline(dom, color="0.55", lw=0.9, ls="--", alpha=0.7, zorder=0)
@@ -296,13 +243,8 @@ def add_town_lines(ax):
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7))
 
 
+# Blank the smoothed columns across the southern boundary zone
 def mask_southern_smoothed(m):
-    """Blank the smoothed columns across the southern boundary zone.
-
-    Applied after the fit, never before: the LOWESS still sees every domain,
-    matching how the hindcast splices this zone out. Raw columns are
-    untouched, so the raw series still plots across the whole island.
-    """
     if SKIP_SOUTHERN_DOMAINS <= 0:
         return m
     m = m.copy()
@@ -313,13 +255,8 @@ def mask_southern_smoothed(m):
     return m
 
 
+# Raw domain values across the withheld zone, so it is not simply blank
 def draw_raw_in_guard_zone(ax, m, col, color, label=None):
-    """Raw domain values across the withheld zone, so it is not simply blank.
-
-    Matches the hindcast, which omits the LOWESS line across the southern
-    domains and shows the raw values there rather than nothing. Only the
-    smoothed-only figures need this; the others already draw raw everywhere.
-    """
     if SKIP_SOUTHERN_DOMAINS <= 0:
         return
     z = m[m["domain"] <= SKIP_SOUTHERN_DOMAINS]
@@ -329,8 +266,8 @@ def draw_raw_in_guard_zone(ax, m, col, color, label=None):
             marker="o", ms=3, alpha=0.65, zorder=2, label=label)
 
 
+# Mark the domains whose smoothed values were withheld
 def shade_boundary_zone(ax, label=True):
-    """Mark the domains whose smoothed values were withheld."""
     if SKIP_SOUTHERN_DOMAINS <= 0:
         return
     ax.axvspan(DOMAIN_MIN - 0.5, SKIP_SOUTHERN_DOMAINS + 0.5,
@@ -338,16 +275,8 @@ def shade_boundary_zone(ax, label=True):
                label="LOWESS withheld (Oregon Inlet)" if label else None)
 
 
+# Hatch the domains where DSAS has no data, so absence is not read as agreement
 def shade_missing_dsas(ax, m, label=True):
-    """Hatch the domains where DSAS has no data, so absence is not read as agreement.
-
-    The 1997-2019 DSAS export covers domains 8-90; without this the DSAS
-    series simply starts late while CoastSat runs the full span, which reads
-    as the two sources agreeing rather than as one of them being absent.
-
-    Runs are found from the data, so this stays correct if the DSAS coverage
-    changes. Only the first run is labelled, to keep one legend entry.
-    """
     missing = m["dsas_lrr"].isna().values
     if not missing.any():
         return
@@ -369,8 +298,7 @@ def shade_missing_dsas(ax, m, label=True):
                    edgecolor=C_NO_DSAS, lw=0.0, zorder=0,
                    label=(label if isinstance(label, str) else "No DSAS data")
                          if (label and k == 0) else None)
-        # Backed in white like the town labels: on the difference panels the
-        # mean-difference line runs straight through this text otherwise.
+        # Backed in white like the town labels
         ax.text((lo + hi) / 2, 0.5,
                 f"no DSAS\ndata\n(domains {domains[i0]}–{domains[i1]})",
                 transform=trans, ha="center", va="center", fontsize=7.5,
@@ -379,6 +307,7 @@ def shade_missing_dsas(ax, m, label=True):
                           alpha=0.75))
 
 
+# The GIS-domain x axis
 def style_domain_axis(ax):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 10))
@@ -394,15 +323,10 @@ def style_domain_axis(ax):
                 ha="right", va="top", fontsize=8, color="0.4")
 
 
-# ============================================================
-# FIGURE 1 — PRIMARY: Raw + LOWESS overlay, both periods
-# ============================================================
+# Figure 1 — primary: Raw + LOWESS overlay, both periods
 
+# 2-panel figure
 def plot_overview_smoothed(merged_1978, merged_1997, out_path):
-    """
-    2-panel figure: raw lines (faded) + LOWESS overlay (bold).
-    This is the recommended figure for collaborator review.
-    """
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle("DSAS vs CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  "Raw (faded) + LOWESS smoothed (bold)",
@@ -427,13 +351,13 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
         m = mask_southern_smoothed(m)
         d = m["domain"]
 
-        # --- Raw (faded, thin) ---
+        # Raw (faded, thin)
         ax.plot(d, m["dsas_lrr"], color=c_dsas, lw=1.0, alpha=0.25,
                 marker="o", ms=2.5, zorder=2)
         ax.plot(d, m["cs_lrr"],   color=c_cs,   lw=1.0, alpha=0.25,
                 marker="s", ms=2.5, ls="--", zorder=2)
 
-        # --- ±1 std shading (very faint) ---
+        # ±1 std shading (very faint)
         ax.fill_between(d, m["dsas_lrr"] - m["dsas_std"],
                            m["dsas_lrr"] + m["dsas_std"],
                         color=c_dsas, alpha=0.06, zorder=1)
@@ -441,7 +365,7 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
                            m["cs_lrr"] + m["cs_std"],
                         color=c_cs, alpha=0.06, zorder=1)
 
-        # --- LOWESS smoothed (bold) ---
+        # LOWESS smoothed (bold)
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=2.8,
                 label=f"DSAS {label} (smoothed)", zorder=4)
         ax.plot(d, m["cs_lrr_smooth"],   color=c_cs,   lw=2.8, ls="--",
@@ -452,13 +376,7 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
         s_smooth = regression_stats(m["dsas_lrr_smooth"].values,
                                     m["cs_lrr_smooth"].values)
 
-        #txt = (f"Raw:     R²={s_raw['r2']:.2f}  RMSE={s_raw['rmse']:.2f} m/yr  "
-               #f"Bias={s_raw['bias']:+.2f} m/yr\n"
-               #f"Smoothed: R²={s_smooth['r2']:.2f}  RMSE={s_smooth['rmse']:.2f} m/yr  "
-               #f"Bias={s_smooth['bias']:+.2f} m/yr")
-        #ax.text(0.01, 0.97, txt, transform=ax.transAxes, fontsize=8.5,
-                #va="top", family="monospace",
-                #bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
+        # F"Bias={s_raw['bias']:+.2f} m/yr\n" f"Smoothed
 
         ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=11, fontweight="bold")
         shade_boundary_zone(ax)
@@ -473,15 +391,10 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 2 — SMOOTHED ONLY (clean, for presentations)
-# ============================================================
+# Figure 2 — smoothed only (clean, for presentations)
 
+# 2-panel
 def plot_smoothed_only(merged_1978, merged_1997, out_path):
-    """
-    2-panel: LOWESS smoothed lines only, no raw data.
-    Cleanest version for presentations or dissertation figures.
-    """
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=4.68), sharex=True)
     fig.suptitle("DSAS vs CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  f"LOWESS smoothed (frac={LOWESS_FRAC})",
@@ -501,8 +414,7 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
         m = mask_southern_smoothed(m)
         d = m["domain"]
 
-        # DSAS only: this is the presentation figure, and two dotted series
-        # across the withheld zone read as clutter rather than as context.
+        # DSAS only in the guard zone: two dotted series there read as clutter
         draw_raw_in_guard_zone(ax, m, "dsas_lrr", c_dsas,
                                label="DSAS raw mean (LOWESS withheld)")
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=3.0,
@@ -536,15 +448,10 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 3 — SMOOTHING SENSITIVITY (frac comparison)
-# ============================================================
+# Figure 3 — smoothing sensitivity (frac comparison)
 
+# 3-panel showing effect of different LOWESS bandwidths
 def plot_smoothing_sensitivity(merged, period_label, out_path):
-    """
-    3-panel showing effect of different LOWESS bandwidths.
-    Helps collaborators understand smoothing choice.
-    """
     fracs = [0.10, 0.15, 0.20]
     labels_frac = ["frac=0.10  (~9 domains)", 
                    "frac=0.15  (~13 domains) ← default",
@@ -592,15 +499,10 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 4 — COMBINED: Both periods on one panel (smoothed)
-# ============================================================
+# Figure 4 — combined: Both periods on one panel (smoothed)
 
+# Single panel
 def plot_combined_sources(merged_1978, merged_1997, out_path):
-    """
-    Single panel: all 4 smoothed series together.
-    Good for seeing overall pattern and period differences simultaneously.
-    """
     fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
     frames, frames_labelled = {}, False
 
@@ -614,8 +516,7 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
         m = mask_southern_smoothed(m)
         frames[label] = m
         d = m["domain"]
-        # DSAS only, one line per period. Four dotted series across the
-        # withheld zone was clutter on a panel already carrying four curves.
+        # DSAS only, one line per period
         draw_raw_in_guard_zone(ax, m, "dsas_lrr", c_dsas,
                                label=None if frames_labelled else
                                      "DSAS raw mean (LOWESS withheld)")
@@ -651,12 +552,10 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 5 — SCATTER of smoothed values
-# ============================================================
+# Figure 5 — scatter of smoothed values
 
+# Pearson r over the pairs where both series are present
 def pearson_r(x, y):
-    """Pearson r over the pairs where both series are present."""
     x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
     both = ~np.isnan(x) & ~np.isnan(y)
     if both.sum() < 3:
@@ -664,6 +563,7 @@ def pearson_r(x, y):
     return float(np.corrcoef(x[both], y[both])[0, 1]), int(both.sum())
 
 
+# CoastSat against DSAS, raw and smoothed
 def plot_scatter_smoothed(merged, period_label, out_path):
     m = add_smoothed_columns(merged)
     m = mask_southern_smoothed(m)
@@ -708,13 +608,7 @@ def plot_scatter_smoothed(merged, period_label, out_path):
         ax.set_title(subtitle, fontsize=11)
         ax.legend(fontsize=9, framealpha=0.95, loc="lower right")
 
-        # Both panels carry their r. The smoothed one also carries the raw r
-        # and a count of independent spans, because its own r is not a
-        # like-for-like improvement: LOWESS runs along domain order, so
-        # neighbouring smoothed values are built from overlapping windows and
-        # are not independent samples. A window holds frac*n domains, so the
-        # number of effectively independent spans is about 1/frac -- roughly
-        # 6 here, not the 90 points plotted.
+        # Both panels carry r; the smoothed one also the raw r and ~1/frac independent spans
         r_here, n_here = pearson_r(x, y)
         if x_col.endswith("_smooth"):
             note = (f"r = {r_here:+.2f}  over ~{N_EFF_SPANS:.0f} independent spans\n"
@@ -741,10 +635,9 @@ def plot_scatter_smoothed(merged, period_label, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# ORIGINAL PLOTS (kept from original script)
-# ============================================================
+# Original plots (kept from original script)
 
+# Both rates along the island, raw and smoothed
 def plot_line_comparison(merged, period_label, out_path):
     fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
     c_dsas = C_DSAS_1978 if "1978" in period_label else C_DSAS_1997
@@ -776,6 +669,7 @@ def plot_line_comparison(merged, period_label, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
+# CoastSat minus DSAS along the island
 def plot_difference(merged, period_label, out_path):
     m    = add_smoothed_columns(merged)
     m = mask_southern_smoothed(m)
@@ -807,10 +701,7 @@ def plot_difference(merged, period_label, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: both windows, every figure
 def main():
     print("=" * 65)
     print("DSAS vs CoastSat LRR Comparison — Hatteras Island (Smoothed)")
@@ -890,10 +781,7 @@ def main():
         if merged is None:
             continue
         m = add_smoothed_columns(merged)
-        # Same guard as the figures, so the table cannot be read as evidence
-        # the plots withheld. The three *_smooth columns are therefore EMPTY
-        # across domains 1..SKIP_SOUTHERN_DOMAINS; the raw columns are not,
-        # and still cover the whole island.
+        # Same guard as the figures, so the table cannot be read as evidence the plots withheld
         m = mask_southern_smoothed(m)
         cols = ["domain", "dsas_lrr", "cs_lrr", "dsas_std", "cs_std",
                 "difference", "dsas_lrr_smooth", "cs_lrr_smooth", "diff_smooth"]
