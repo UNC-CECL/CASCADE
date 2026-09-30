@@ -61,3 +61,26 @@ as an observed limit of the script, not a coastal one, unless it is re-tested.
 - `.../2026-09-28-dune-ceiling-per-domain/`: with realistic dunes, the long storms are what make 1996–2010 match the imagery.
 
 **Check.** The builder's defaults (`drop`, 72) rebuild the `v3_72` files exactly, and the `v3_trim24` files equal the ones those experiments ran. Built for all four windows. The `v3_72` files are kept, so earlier runs stay reproducible. Which file a run reads is set by `hat_env_forcings.storm_series_file`'s default variant.
+
+## 2026-09-29: split back-to-back storms, `v3_split12_trim24`
+
+**Why.** The 24 h grouping chains storms a week apart, because the berm is overtopped at most high tides in an active spell. Edouard + Fran 1996 became one 119 h event and Jose + Maria 2017 one of 186 h. `v3_trim24` then kept only the 24 h around each merged event's highest peak, so **Fran (2.62 m MHW) and Jose (2.81 m) were not in the model**. Across 1996–2024, 56 spells of ≥8 h above the berm were cut out of merged events.
+
+**The adopted rule (Hannah, 2026-09-29): `--long-events trim --max-duration 24 --split-gap 12`, files `<window>_storms_v3_split12_trim24`.**
+
+1. Group as before (spells <24 h apart).
+2. Split each group wherever the water stays below the berm for ≥12 h. A piece shorter than the 8 h minimum is folded into the piece before it (after, for the first), so no hour the group counted is lost.
+3. Each piece is an event of its own, dated by its start and trimmed to the 24 h around its peak.
+
+**Evidence** (`output/raw_runs/experiments/storms-and-overwash/2026-09-29-event-splitting/`): on the adopted model, managed, both windows, the overwash scores (PSS, POD, POFD, timing and space r), interior RMSE and bias are unchanged to two decimals. Overwash volume rises 2–3% in 2010–2024. It is adopted as the more faithful record, not for skill.
+
+**Check.** Without `--split-gap` the builder rebuilds `v3_72` and `v3_trim24` exactly, and with it the files equal the experiment's `split12`. Built for all four windows:
+
+| window | events | storm-hours (split12_trim24) | events | storm-hours (trim24) |
+|---|---|---|---|---|
+| 1984–2004 | 162 | 3,023 | 155 | 2,936 |
+| 1996–2010 | 159 | 2,981 | 150 | 2,839 |
+| 2004–2024 | 261 | 4,889 | 245 | 4,649 |
+| 2010–2024 | 191 | 3,542 | 178 | 3,345 |
+
+`hat_env_forcings.DEFAULT_STORM_VARIANT` is `v3_split12_trim24`. The `v3_trim24` and `v3_72` files are kept so earlier runs stay reproducible.

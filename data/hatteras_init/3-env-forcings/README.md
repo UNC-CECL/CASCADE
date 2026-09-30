@@ -89,10 +89,13 @@ in the code tree. Three things came out of untangling it:
   and absolute paths into folder names that were renamed years ago. Those that
   belong to live producers are anchored on their own file now.
 
-Two retired figure scripts under `3-storms/from_Hannah/storm_creation/storm_figures/`
-still point at `data/hatteras_init/storms/hindcast_storms/...`, a tree
-renamed before this work began: `HAT_storm_record_figure.py` at
-`fixed_storms/`, and `HAT_storm_record_figure_roya.py` at
-`roya_storms_v2/1984_2004/`; they were already broken and are left alone rather
-than guessed at. The third, `HAT_storm_panel.py`, reads the archived testing
-storms through `hat_env_forcings.py` since 2026-09-18.
+**The retired storm figure scripts were deleted on 2026-09-30** (Hannah: "yes
+delete them"). They were `scripts/input_prep/3-env-forcings/3-storms/from_Hannah/storm_creation/storm_figures/`:
+`HAT_storm_record_figure.py`, `HAT_storm_record_figure_roya.py`,
+`HAT_storm_panel.py`, and `superseded_20260902/HAT_storm_record_figure_largerdiamonds.py`
+with its `WHY.md`. The first two pointed at a `data/hatteras_init/storms/` tree
+renamed before this work began. The figures they drew (`3-storms/figures/1984_2004/`,
+`2004_2024/`) went the day before. The storm record figures are now
+`scripts/input_prep/3-env-forcings/3-storms/storm_figures.py` ->
+`3-storms/figures/1996_2024/`. All five files are in git at commit `ae41ece9`:
+`git show ae41ece9:scripts/input_prep/3-env-forcings/3-storms/from_Hannah/storm_creation/storm_figures/<file>`.

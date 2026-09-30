@@ -76,6 +76,19 @@ _ap.add_argument("--max-duration", type=int, default=72,
                  help="hours; the drop limit, or the trim length with --long-events trim")
 _ap.add_argument("--long-events", choices=("drop", "trim"), default="drop",
                  help="drop events longer than --max-duration (v3_<N>), or trim them (v3_trim<N>)")
+# THE SPLIT RULE (2026-09-29, Hannah adopted "split12"). The 24 h grouping
+# chains storms a week apart, because the berm is overtopped at most high tides
+# in an active spell: Edouard + Fran 1996 became one 119 h event and Jose +
+# Maria 2017 one of 186 h, and the trim then kept only the larger storm, so
+# Fran and Jose were not in the model. --split-gap H splits each grouped event
+# wherever the water stays below the berm for >= H hours; a piece shorter than
+# the minimum duration is folded into the piece before it (after, for the
+# first), so no hour the grouped event counted is lost. Each piece is then an
+# event of its own (trimmed, dated by its own start). Omitted, events are not
+# split and the older series rebuild exactly.
+# (experiments/storms-and-overwash/2026-09-29-event-splitting)
+_ap.add_argument("--split-gap", type=int, default=None,
+                 help="hours below the berm that split a grouped event (v3_split<H>_...)")
 _ap.add_argument("--save-dir", default=None,
                  help="write here instead of the window's hindcast_storms folder (for checks)")
 _args = _ap.parse_args()
@@ -105,10 +118,12 @@ MHW = 0.36              # conversion from NAVD88 to MHW [m]: 0 m NAVD88 = X m MH
 min_storm_dur = 8        # minimum duration that is considered a storm event [hrs]
 max_storm_dur = _args.max_duration   # hours: the drop limit, or the trim length (see --long-events)
 long_events = _args.long_events      # "drop" (v3_<N>) or "trim" (v3_trim<N>)
+split_gap = _args.split_gap          # None, or hours below the berm that split an event
 save_dfs = True         # determine whether to save the dataframes as csv and npy files
 save_dir = _args.save_dir or str(_env.storm_window_dir(START_YEAR, END_YEAR))  # derived from the window
-save_name = "{0}_storms_v3_{1}{2}".format(  # the rule is in the name: v3_72, v3_trim24
-    PERIOD_TAG, "trim" if long_events == "trim" else "", max_storm_dur)
+save_name = "{0}_storms_v3_{1}{2}{3}".format(  # the rules are in the name: v3_72, v3_trim24, v3_split12_trim24
+    PERIOD_TAG, "split{0}_".format(split_gap) if split_gap else "",
+    "trim" if long_events == "trim" else "", max_storm_dur)
 _Path(save_dir).mkdir(parents=True, exist_ok=True)
 
 
@@ -325,6 +340,7 @@ def create_storms(
     save_name="",
     window_start_year=None,
     long_events="drop",
+    split_gap=None,
 ):
     
     """    
@@ -390,6 +406,30 @@ def create_storms(
     # -----------------------------------------------------------------------------
     storms = []
     storm_groups = df.dropna(subset=["StormID"]).groupby("StormID")
+
+    # split_gap: cut each grouped event where the water stays below the berm
+    # for >= split_gap hours; a piece shorter than min_storm_dur joins the
+    # piece before it (after, for the first). See --split-gap above.
+    if split_gap:
+        def _split(group):
+            group = group.sort_values("Time")
+            gaps = group["Time"].diff().dt.total_seconds().div(3600).fillna(0).values
+            cuts = [i for i, g in enumerate(gaps) if g >= split_gap]
+            bounds = [0] + cuts + [len(group)]
+            pieces = [list(range(a, b)) for a, b in zip(bounds[:-1], bounds[1:])]
+            i = 0
+            while len(pieces) > 1 and i < len(pieces):
+                if len(pieces[i]) < min_storm_dur:
+                    j = i - 1 if i > 0 else i + 1
+                    pieces[j] = sorted(pieces[j] + pieces[i])
+                    del pieces[i]
+                    i = 0
+                    continue
+                i += 1
+            return [group.iloc[piece] for piece in pieces]
+
+        storm_groups = [((sid, k), piece) for sid, group in storm_groups
+                        for k, piece in enumerate(_split(group))]
 
     for sid, group in storm_groups:
 
@@ -518,4 +558,5 @@ create_storms(
     save_name=save_name,
     window_start_year=START_YEAR,
     long_events=long_events,
+    split_gap=split_gap,
 )

@@ -84,21 +84,28 @@ def storm_window_dir(start_year: int, end_year: int) -> Path:
     return HINDCAST_STORMS / window_tag(start_year, end_year)
 
 
-# THE STORM SERIES THE HINDCAST RUNS ON (2026-09-28, Hannah adopted trim24).
-# v3_trim24 keeps every event and cuts one longer than 24 h to the 24 h above
-# the berm around its peak. v3_72 (the default until 2026-09-28) DROPPED every
-# event longer than 72 h -- Isabel 2003, March 2018, Florence, Dennis -- a
-# limit that existed only because the pre-49fd069 Barrier3D crashed on long
-# storms. Both are on disk; pass variant="v3_72" to reproduce an older run.
+# THE STORM SERIES THE HINDCAST RUNS ON (2026-09-29, Hannah adopted split12).
+# v3_split12_trim24: the builder's 24 h grouping, then each grouped event split
+# where the water stays below the berm >= 12 h (short pieces folded into a
+# neighbour), then every event cut to the 24 h above the berm around its peak.
+# The split puts back storms the grouping had chained to a larger one and the
+# trim then removed -- Fran 1996 (with Edouard), Jose 2017 (with Maria) -- and
+# changed no score (experiments/storms-and-overwash/2026-09-29-event-splitting).
+# Earlier defaults, both still on disk for reproducing older runs:
+#   v3_trim24  2026-09-28 .. 09-29: every event kept, trimmed to 24 h, not split.
+#   v3_72      until 2026-09-28: events over 72 h DROPPED (Isabel 2003, March
+#              2018, Florence, Dennis), a limit that existed only because the
+#              pre-49fd069 Barrier3D crashed on long storms.
 # Record: 3-storms/PROVENANCE.md; experiments/storms-and-overwash/.
-DEFAULT_STORM_VARIANT = "v3_trim24"
+DEFAULT_STORM_VARIANT = "v3_split12_trim24"
 
 
 def storm_series_file(start_year: int, end_year: int,
                       variant: str = DEFAULT_STORM_VARIANT) -> Path:
     """The .npy CASCADE reads for a window: <window>_storms_<variant>.npy.
-    v3_trim24 (the default since 2026-09-28): every event kept, trimmed to 24 h
-    around its peak. v3_72: events over 72 h dropped (the default before)."""
+    v3_split12_trim24 (the default since 2026-09-29): grouped events split at
+    >= 12 h below the berm, each trimmed to 24 h around its peak. v3_trim24
+    (2026-09-28): trimmed, not split. v3_72: events over 72 h dropped."""
     tag = window_tag(start_year, end_year)
     return storm_window_dir(start_year, end_year) / f"{tag}_storms_{variant}.npy"
 

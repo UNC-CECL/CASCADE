@@ -1,0 +1,31 @@
+peak,rhigh_m_mhw,rhigh_m_navd88,hours_above_berm,label,type,nearest_tc,nearest_tc_km
+1996-07-12 23:00:00,2.197,2.557,26,Bertha 1996,tropical,Bertha,190
+1996-09-01 02:00:00,3.03,3.39,77,Edouard 1996,tropical,Edouard,493
+1996-09-06 07:00:00,2.618,2.978,42,Fran 1996,tropical,Fran,271
+1998-08-26 15:00:00,2.276,2.636,64,Bonnie 1998,tropical,Bonnie,148
+1998-09-01 20:00:00,1.976,2.336,19,Danielle 1998,tropical,Danielle,471
+1999-08-30 16:00:00,3.286,3.646,116,Dennis 1999,tropical,Dennis,125
+1999-09-16 14:00:00,2.603,2.963,30,Floyd 1999,tropical,Floyd,125
+1999-10-18 08:00:00,2.618,2.978,12,Irene 1999,tropical,Irene,58
+2000-10-27 12:00:00,1.999,2.359,21,Subtropical storm 2000,tropical,Unnamed,457
+2001-09-17 00:00:00,2.104,2.464,33,Gabrielle 2001,tropical,Gabrielle,410
+2002-09-10 15:00:00,2.556,2.916,22,Gustav 2002,tropical,Gustav,30
+2003-09-18 16:00:00,5.218,5.578,100,Isabel 2003,tropical,Isabel,72
+2005-09-15 10:00:00,2.342,2.702,23,Ophelia 2005,tropical,Ophelia,61
+2005-10-25 18:00:00,2.398,2.758,29,Wilma 2005,tropical,Wilma,390
+2006-09-01 17:00:00,1.739,2.099,12,Ernesto 2006,tropical,Ernesto,197
+2008-09-05 17:00:00,1.724,2.084,17,Hanna 2008,tropical,Hanna,238
+2010-09-03 08:00:00,3.832,4.192,46,Earl 2010,tropical,Earl,147
+2011-08-27 11:00:00,3.8,4.16,35,Irene 2011,tropical,Irene,75
+2012-10-28 23:00:00,3.645,4.005,56,Sandy 2012,tropical,Sandy,398
+2014-08-28 01:00:00,2.38,2.74,21,Cristobal 2014,tropical,Cristobal,476
+2016-09-03 13:00:00,2.641,3.001,47,Hermine 2016,tropical,Hermine,157
+2016-10-09 07:00:00,2.395,2.755,51,Matthew 2016,tropical,Matthew,75
+2017-09-19 11:00:00,2.81,3.17,73,Jose 2017,tropical,Jose,358
+2017-09-26 16:00:00,3.164,3.524,113,Maria 2017,tropical,Maria,242
+2018-09-13 15:00:00,3.607,3.967,87,Florence 2018,tropical,Florence,165
+2019-08-26 21:00:00,1.626,1.986,13,Erin 2019,tropical,Erin,474
+2019-09-06 12:00:00,3.022,3.382,31,Dorian 2019,tropical,Dorian,8
+2022-10-01 04:00:00,2.135,2.495,29,Ian 2022,tropical,Ian,401
+2023-09-01 01:00:00,2.263,2.623,61,Idalia 2023,tropical,Idalia,365
+2023-09-23 06:00:00,2.175,2.535,35,Ophelia 2023,tropical,Ophelia,144

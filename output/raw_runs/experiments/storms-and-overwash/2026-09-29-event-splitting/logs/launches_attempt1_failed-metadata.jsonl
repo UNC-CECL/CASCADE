@@ -1,0 +1,6 @@
+{"window": "1996_2010", "variant": "g12", "returncode": 1, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 4.8}
+{"window": "1996_2010", "variant": "split12", "returncode": 1, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 5.0}
+{"window": "1996_2010", "variant": "trim24", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 5.2}
+{"window": "2010_2024", "variant": "g12", "returncode": 1, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 5.8}
+{"window": "2010_2024", "variant": "trim24", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 6.1}
+{"window": "2010_2024", "variant": "split12", "returncode": 1, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 3.8}
