@@ -58,9 +58,21 @@ def snapshot(root: Path) -> dict[str, tuple[int, int]]:
 def activate(root: Path, side: str) -> None:
     live = root / "scripts"
     if live.exists():
-        live.rename(root / f"_scripts_{(root / '.active').read_text().strip()}")
-    (root / f"_scripts_{side}").rename(live)
+        _rename(live, root / f"_scripts_{(root / '.active').read_text().strip()}")
+    _rename(root / f"_scripts_{side}", live)
     (root / ".active").write_text(side)
+
+
+# Rename, retrying briefly: Windows can hold a folder open for a moment after a run
+def _rename(src: Path, dst: Path, tries: int = 20) -> None:
+    for i in range(tries):
+        try:
+            src.rename(dst)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                raise
+            time.sleep(3)
 
 
 # One side: run, keep stdout and every file written

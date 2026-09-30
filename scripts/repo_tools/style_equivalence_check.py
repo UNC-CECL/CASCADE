@@ -193,7 +193,7 @@ def main() -> None:
         if p.is_dir():
             rel = p.resolve().relative_to(REPO).as_posix()
             listed = subprocess.run(["git", "ls-tree", "-r", "--name-only", a.ref, "--", rel],
-                                    cwd=REPO, capture_output=True, text=True).stdout.split()
+                                    cwd=REPO, capture_output=True, text=True).stdout.splitlines()
             for f in listed:
                 if f.endswith(".py") and not (REPO / f).exists():
                     print(f"GONE  {f}")

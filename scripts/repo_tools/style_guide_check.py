@@ -25,8 +25,20 @@ SKIP_DIRS = re.compile(r"(__pycache__|supersed|archive|legacy|other_ms|colleague
 AUTHOR_LINES = ("Author:  Hannah A. Henry", "Contact: hahenry@unc.edu", "Version: ")
 BANNER = re.compile(r"^\s*#.*(={5,}|-{5,}|─{5,}|═{5,})")
 CONFIG_RULE = re.compile(r"^# --- CONFIG -+$|^# -{20,}$")
-CODE_LIKE = re.compile(r"^\s*#\s*(\w+\s*=|dict\(|\)|\]|\}|[\w.]+\()")
+PROSE = re.compile(r"\b(the|an|of|to|and|with|from)\b", re.I)
 # -----------------------------------------------------------------------------
+
+
+# Commented-out code, not prose: parses as Python (or is a bracket line) and reads like code
+def code_like(line: str) -> bool:
+    t = line.strip().lstrip("#").strip()
+    if re.fullmatch(r"[)\]}],?|\w+\(|dict\(", t):
+        return True
+    try:
+        ast.parse(t)
+    except SyntaxError:
+        return False
+    return bool(re.search(r"[=()\[\]]", t)) and not PROSE.search(t)
 
 
 # Every departure from the guide in one file
@@ -65,7 +77,7 @@ def check(path: Path) -> list[str]:
     for i, l in enumerate(lines + [""], 1):
         if BANNER.match(l) and not CONFIG_RULE.match(l.strip()):
             out.append(f"line {i}: banner")
-        if l.lstrip().startswith("#") and not CODE_LIKE.match(l) and not CONFIG_RULE.match(l.strip()):
+        if l.lstrip().startswith("#") and not code_like(l) and not CONFIG_RULE.match(l.strip()):
             run.append(i)
             continue
         if len(run) > 1:
