@@ -1,59 +1,17 @@
-# =============================================================================
-# HAT_create_storm_file.py
-# CASCADE-Formatted Storm File Generator — Hatteras Island
-# -----------------------------------------------------------------------------
-# Description:
-#   Generates a CASCADE-compatible storm file (.npy) from NOAA tide gauge data
-#   and WIS hindcast wave data. Storm events are identified as periods where
-#   the computed Total Water Level (TWL) exceeds a threshold. For each event,
-#   five parameters are extracted and stored in CASCADE's native unit system:
-#
-#       [Year_Index, Rhigh, Rlow, Wave_Period, Duration]
-#
-#   Physics (Stockdon et al., 2006):
-#       Rhigh = eta_obs + R2%          (2% exceedance total runup, in dam)
-#       Rlow  = still water level at storm peak, floored at MHW (in dam)
-#       Wave Period = mean peak Tp during storm (s)
-#       Duration = storm length in hours (h), capped at MAX_STORM_DURATION_HR
-#       Year_Index = calendar year of storm peak minus START_YEAR
-#
-#   Units note: CASCADE uses decameters (dam) internally. All elevations are
-#   divided by 10 before saving. Wave period and duration remain in their
-#   native units (seconds and hours respectively).
-#
-# -----------------------------------------------------------------------------
-# KEY PARAMETER DECISIONS (informed by two working Outer Banks reference files):
-#
-#   MAX_STORM_DURATION_HR = 36
-#       CASCADE ran successfully with max durations of exactly
-#       36 hours. Hannah's file crashed with durations up to 189 hours.
-#       triggering a C-level access violation (0xC0000005).
-#
-#   MIN_INTER_STORM_GAP_HR = 48
-#       Increasing to 48 hours keeps separate
-#       storm events distinct, producing realistic individual durations.
-#       MAX_STORM_DURATION_HR acts as a backstop for any events that still
-#       exceed the ceiling after the gap change.
-#
-#   STORM_THRESHOLD = 1.7 m
-#       This produces a realistic distribution of forcing intensities.
-#
-#   Rlow = max(water_level_at_peak_TWL, MHW_M) / 10
-#       Rlow is the still water level (tide + surge, no runup or setup) at the
-#       storm's peak intensity moment, floored at MHW. This prevents near-zero
-#       or negative Rlow values. Rlow_m and Rlow_dam in the readable CSV are
-#       always consistent: Rlow_dam = Rlow_m / 10.
-#
-#   MAX_STORMS_PER_YEAR = 5
-#       Highest-Rhigh events are retained when trimming is needed.
-#
-# Adapted from: Storm_Creation.ipynb
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
-# =============================================================================
+"""
+An earlier CASCADE storm-file generator for Hatteras: NOAA Duck water levels plus WIS waves.
 
+    python scripts/input_prep/3-env-forcings/3-storms/from_Hannah/storm_creation/HAT_create_storms.py
+
+Superseded by historical_storm_creation_v3_HAT.py for the hindcast; kept
+with its own settings. Writes a storm .npy and a readable CSV. Details: scripts/input_prep/3-env-forcings/README.md.
+
+Adapted from: Storm_Creation.ipynb
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -62,71 +20,65 @@ import warnings
 import utide
 from noaa_coops import Station
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
 warnings.filterwarnings('ignore')
 
-# =============================================================================
-# USER CONFIGURATION — edit everything in this block
-# =============================================================================
+# User configuration — edit everything in this block
 
-# --- Time period ---
-# Run once per hindcast period, changing the four variables below each time.
-# Period 1: BEGIN_DATE="19840101", END_DATE="20041231", START_YEAR=1984, OUTPUT_NAME="storms_1984_2004.npy"
-# Period 2: BEGIN_DATE="20040101", END_DATE="20241231", START_YEAR=2004, OUTPUT_NAME="storms_2004_2024_base.npy"
+# Time period
+
+# --- CONFIG ------------------------------------------------------------------
+# Change these four per hindcast period (both periods in README)
 BEGIN_DATE  = "20040101"
 END_DATE    = "20241231"
 START_YEAR  = 2004
 OUTPUT_NAME = "storms_2004_2024.npy"
 
-# --- NOAA Tide Gauge ---
-# Duck, NC (Station 8651370) — closest long-record gauge on the Outer Banks.
-# Downloaded automatically in annual chunks.
+# Noaa Tide Gauge
+
+# Duck, NC (8651370), downloaded in annual chunks
 NOAA_STATION_ID = "8651370"   # Duck, NC
 NOAA_DATUM      = "NAVD"      # NAVD88 — matches WIS and dune elevation data
 NOAA_LAT        = 36.183      # Duck, NC latitude (for utide nodal corrections)
 
-# --- WIS Wave Data ---
-# CSV from WIS Generic Export (https://wisportal.erdc.dren.mil/), station ST63228.
-# One file covering the full 1984–2024 period works for both hindcast periods.
+# Wis Wave Data
+
+# One CSV (station ST63228) covering 1984-2024
 WIS_PATH = Path(
     r"/scripts/input_prep/storm_creation_final/from_Hannah/storm_creation\WIS_raw_data\ST63228-Generic_Export-20260427T11T11_48.csv")
 
-# --- Hatteras site parameters ---
-# MHW_M must match MHW_ELEVATION in HAT_hindcast_1984_2024_old version.py.
-# Set at berm crest so only events that reach or overtop the berm are included.
+# Hatteras site parameters
+
+# The storm threshold sits at the berm crest
 MHW_M           = 0.36        # [m NAVD88] — Duck NC gauge; must match hindcast script
 BEACH_SLOPE     = 0.06        # foreshore slope (dimensionless) #0.2
 BERM_CREST_M    = 1.7         # berm crest elevation [m NAVD88] (set to 1.5 before?)
 STORM_THRESHOLD = 1.7   # berm crest [m NAVD88] — aligns with CASCADE's collision threshold
 
-# --- Storm identification parameters ---
+# Storm identification parameters
 MIN_STORM_DURATION_HR  = 6    # discard events shorter than this [hours]
 MIN_INTER_STORM_GAP_HR = 48   # merge events separated by less than this [hours]
-                              # FIX: increased from 24 → 48 to prevent separate
-                              # nor'easters from merging into 100–189 h mega-events
+                              # raised from 24 to stop separate nor'easters merging into 100-189 h events
 
-# --- Duration cap ---
-# Hard ceiling on storm duration in the saved .npy file.
-# Both working reference files (colleague and Benton/Ocracoke) have max
-# duration of exactly 36 hours. Set here as the cap; any event longer is
-# truncated. Acts as a backstop for the gap merging fix above.
+# Duration cap
+
+# Longer events are truncated in the saved file
 MAX_STORM_DURATION_HR = 36    # [hours] — must not exceed ~36 for Barrier3D stability
 
-# --- Per-year storm cap ---
-# Retains highest-Rhigh events when a year exceeds MAX_STORMS_PER_YEAR.
-# Barrier3D's internal limit is ~5 storms/year.
+# Per-year storm cap
+
+# Keep the highest-Rhigh events (Barrier3D takes ~5 a year)
 MAX_STORMS_PER_YEAR = 5
 
-# --- Surge multiplier ---
-# Scales non-tidal residual only — tidal signal unchanged:
-#   water_level = eta_A  +  (SURGE_MULTIPLIER * eta_NTR)
+# Surge multiplier
+
+# Scales the non-tidal residual only
 SURGE_MULTIPLIER = 1.0
 
-# --- Output ---
+# Output
 import sys as _envsys
 from pathlib import Path as _EnvP
 _envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
@@ -134,31 +86,19 @@ _envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
 from site_layer import hat_env_forcings as _env  # noqa: E402
 OUTPUT_DIR = _env.HINDCAST_STORMS / "fixed_storms"
 
-# --- Plotting ---
+# Plotting
 SHOW_PLOTS = True
 SAVE_PLOTS = True
 
-# =============================================================================
-# CONSTANTS
-# =============================================================================
 
 G = 9.81   # gravitational acceleration [m/s²]
+# -----------------------------------------------------------------------------
 
-# =============================================================================
-# STEP 1 — NOAA TIDE GAUGE: DOWNLOAD, TIDAL DECOMPOSITION, SURGE SEPARATION
-# =============================================================================
+# Step 1 — noaa tide gauge: download, tidal decomposition, surge separation
 
+# Download hourly NOAA water levels and decompose into tidal prediction (eta_A) and non-tidal ...
 def load_noaa_water_levels(station_id: str, begin: str, end: str,
                             datum: str, lat: float) -> pd.DataFrame:
-    """
-    Download hourly NOAA water levels and decompose into tidal prediction
-    (eta_A) and non-tidal residual (eta_NTR = storm surge proxy).
-
-    Returns DataFrame with columns:
-        observed_wl : raw observed water level (m NAVD88)
-        eta_A       : tidal prediction (m)
-        eta_NTR     : non-tidal residual / storm surge (m)
-    """
     print(f"\n{'='*70}")
     print(f"STEP 1: Downloading NOAA Station {station_id} ({begin}–{end})")
     print(f"{'='*70}")
@@ -218,17 +158,10 @@ def load_noaa_water_levels(station_id: str, begin: str, end: str,
     return result
 
 
-# =============================================================================
-# STEP 2 — WIS WAVE DATA: LOAD FROM CSV
-# =============================================================================
+# Step 2 — wis wave data: load from CSV
 
+# Load WIS hindcast CSV from wisportal.erdc.dren.mil Generic Export
 def load_wis_data(filepath: Path) -> pd.DataFrame:
-    """
-    Load WIS hindcast CSV from wisportal.erdc.dren.mil Generic Export.
-    Expected columns: time, waveHs, waveTp, waveMeanDirection.
-
-    Returns DataFrame with columns: Hs (m), Tp (s), WAVD (deg).
-    """
     print(f"\n{'='*70}")
     print(f"STEP 2: Loading WIS data from {filepath.name}")
     print(f"{'='*70}")
@@ -248,20 +181,11 @@ def load_wis_data(filepath: Path) -> pd.DataFrame:
     return out
 
 
-# =============================================================================
-# STEP 3 — MERGE AND COMPUTE RUNUP (STOCKDON ET AL., 2006)
-# =============================================================================
+# Step 3 — merge and compute runup (stockdon et AL., 2006)
 
+# Merge tide and wave data
 def compute_twl(tide_df: pd.DataFrame, wis_df: pd.DataFrame,
                 slope: float, surge_mult: float) -> pd.DataFrame:
-    """
-    Merge tide and wave data; compute Stockdon runup components and TWL.
-
-    Key columns produced:
-        water_level : tide + scaled surge, no runup (m NAVD88) — used for Rlow
-        Rhigh_m     : full 2% exceedance TWL (m NAVD88)
-        TWL         : same as Rhigh_m (used for storm identification threshold)
-    """
     print(f"\n{'='*70}")
     print(f"STEP 3: Merging data and computing runup (slope={slope})")
     print(f"{'='*70}")
@@ -303,23 +227,11 @@ def compute_twl(tide_df: pd.DataFrame, wis_df: pd.DataFrame,
     return df
 
 
-# =============================================================================
-# STEP 4 — STORM IDENTIFICATION
-# =============================================================================
+# Step 4 — storm identification
 
+# Identify discrete storm events as contiguous periods where TWL > threshold
 def identify_storms(df: pd.DataFrame, threshold: float,
                     min_duration_hr: int, min_gap_hr: int) -> list:
-    """
-    Identify discrete storm events as contiguous periods where TWL > threshold.
-
-    1. Find all hours where TWL exceeds threshold.
-    2. Merge events separated by fewer than min_gap_hr hours.
-       min_gap_hr = 48 prevents separate nor'easters from merging into
-       unrealistically long events that crash Barrier3D.
-    3. Discard events shorter than min_duration_hr hours.
-
-    Returns list of (start_timestamp, end_timestamp) pairs.
-    """
     print(f"\n{'='*70}")
     print(f"STEP 4: Storm identification (threshold={threshold} m, "
           f"min_dur={min_duration_hr} h, min_gap={min_gap_hr} h)")
@@ -363,31 +275,12 @@ def identify_storms(df: pd.DataFrame, threshold: float,
     return events
 
 
-# =============================================================================
-# STEP 5 — EXTRACT PER-STORM PARAMETERS
-# =============================================================================
+# Step 5 — extract per-storm parameters
 
+# For each storm event, extract CASCADE storm parameters
 def extract_storm_params(df: pd.DataFrame, events: list,
                           start_year: int, mhw_m: float,
                           max_duration_hr: float) -> tuple:
-    """
-    For each storm event, extract CASCADE storm parameters.
-
-    Rlow (KEY FIX):
-        Rlow = max(water_level_at_peak_TWL, mhw_m) / 10
-        where water_level = tide + surge only (no runup, no setup).
-        Flooring at MHW ensures Rlow is never below the tidal datum.
-        Rlow_m and Rlow_dam are always consistent: Rlow_dam = Rlow_m / 10.
-
-    Duration (KEY FIX):
-        Duration = min(actual exceedance hours, max_duration_hr)
-        Both working reference files cap at 36 h. Raw duration before capping
-        is preserved in the readable CSV as Raw_Duration_h for QA.
-
-    Returns:
-        arr      : (N, 5) float64 array: [Year_Index, Rhigh_dam, Rlow_dam, Tp_s, Duration_h]
-        readable : DataFrame with human-readable QA columns
-    """
     print(f"\n{'='*70}")
     print(f"STEP 5: Extracting per-storm parameters (duration cap={max_duration_hr} h)")
     print(f"{'='*70}")
@@ -460,18 +353,11 @@ def extract_storm_params(df: pd.DataFrame, events: list,
     return arr, readable
 
 
-# =============================================================================
-# STEP 5b — PER-YEAR STORM CAP
-# =============================================================================
+# Step 5b — per-year storm cap
 
+# Limit storms to max_storms per Year_Index, retaining highest-Rhigh events
 def cap_storms_per_year(readable: pd.DataFrame, max_storms: int,
                          start_year: int) -> pd.DataFrame:
-    """
-    Limit storms to max_storms per Year_Index, retaining highest-Rhigh events.
-
-    Barrier3D's internal per-year array limit is ~5 storms. When trimming,
-    the most morphologically significant storms (highest Rhigh) are kept.
-    """
     before = len(readable)
 
     capped = (
@@ -502,14 +388,12 @@ def cap_storms_per_year(readable: pd.DataFrame, max_storms: int,
     return capped
 
 
-# =============================================================================
-# STEP 6 — DIAGNOSTICS AND VISUALIZATION
-# =============================================================================
+# Step 6 — diagnostics and visualization
 
+# TWL time series with identified storm events highlighted
 def plot_twl_timeseries(df: pd.DataFrame, events: list,
                          threshold: float, berm_crest: float,
                          save_dir: Path = None):
-    """TWL time series with identified storm events highlighted."""
     fig, ax = plt.subplots(figsize=(18, 5))
     ax.plot(df.index, df['TWL'], color='steelblue', lw=0.5, alpha=0.8, label='TWL')
     ax.axhline(threshold,  color='orange', ls='--', lw=1.5,
@@ -535,9 +419,9 @@ def plot_twl_timeseries(df: pd.DataFrame, events: list,
         plt.close()
 
 
+# Four-panel distribution plot of storm parameters
 def plot_storm_distributions(arr: np.ndarray, start_year: int,
                               save_dir: Path = None):
-    """Four-panel distribution plot of storm parameters."""
     df = pd.DataFrame(arr, columns=['Year_Index','Rhigh','Rlow','Wave Period','Duration'])
     df['Calendar_Year'] = df['Year_Index'].astype(int) + start_year
     yr_min = int(df['Calendar_Year'].min())
@@ -581,10 +465,10 @@ def plot_storm_distributions(arr: np.ndarray, start_year: int,
         plt.close()
 
 
+# Two-panel annual summary for historical cross-checking
 def plot_storms_by_year(readable: pd.DataFrame, start_year: int,
                         berm_crest: float, surge_mult: float,
                         save_dir: Path = None):
-    """Two-panel annual summary for historical cross-checking."""
     years     = sorted(readable['Calendar_Year'].unique())
     all_years = list(range(int(min(years)), int(max(years)) + 1))
     counts    = readable.groupby('Calendar_Year').size().reindex(all_years, fill_value=0)
@@ -653,8 +537,8 @@ def plot_storms_by_year(readable: pd.DataFrame, start_year: int,
         plt.close()
 
 
+# Print per-year summary for cross-checking against historical record
 def print_annual_summary(readable: pd.DataFrame, start_year: int):
-    """Print per-year summary for cross-checking against historical record."""
     yr_min = int(readable['Calendar_Year'].min())
     yr_max = int(readable['Calendar_Year'].max())
     print(f"\n{'='*60}")
@@ -675,10 +559,10 @@ def print_annual_summary(readable: pd.DataFrame, start_year: int):
     print(f"\nTotal: {total} events over {span} years ({total/span:.1f}/year)")
 
 
+# Pre-flight checks before saving
 def validate_storm_array(arr: np.ndarray, readable: pd.DataFrame,
                           mhw_m: float, berm_m: float,
                           max_dur: float) -> bool:
-    """Pre-flight checks before saving. Must all pass before file is written."""
     print(f"\n{'='*70}")
     print("VALIDATION CHECKS")
     print(f"{'='*70}")
@@ -761,10 +645,7 @@ def validate_storm_array(arr: np.ndarray, readable: pd.DataFrame,
     return passed
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: download, build the events, apply the caps, write the storm file
 def main():
     print("\n" + "="*70)
     print("HAT_create_storm_file.py — CASCADE Storm File Generator")

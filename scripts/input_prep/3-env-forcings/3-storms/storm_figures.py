@@ -1,35 +1,10 @@
 """
-Storm record figures for the canonical 1996 -> 2010 -> 2024 chain.
-==================================================================
-Reads the storm series the hindcast runs on (hat_env_forcings'
-DEFAULT_STORM_VARIANT, v3_split12_trim24 since 2026-09-29) for the two windows and
-draws them as one 1996-2024 record:
+Storm record figures for the canonical 1996 -> 2010 -> 2024 chain, coloured by HURDAT2 type.
 
-    storm_record_1996_2024.png           (a) events per year by storm type,
-                                         (b) every event's Rhigh through time,
-                                         coloured by storm type (HURDAT2)
-    storm_characteristics_1996_2024.png  the two periods compared: Rhigh
-                                         exceedance, seasonality, event length
-                                         before trimming, Rhigh vs wave period
+    python scripts/input_prep/3-env-forcings/3-storms/storm_figures.py
+    python scripts/input_prep/3-env-forcings/3-storms/storm_figures.py --variant v3_72
 
-Output: data/hatteras_init/3-env-forcings/3-storms/figures/1996_2024/, PNGs at the top,
-PDFs + CAPTIONS.md + the labelled-event table under supporting/.
-
-THE WINDOWS OVERLAP BY ONE YEAR. Both summary files hold calendar 2010 (the
-generator writes start..end inclusive), but the model loop runs start..end-1,
-so a 1996-2010 run never spends its 2010 storms. The record here takes
-1996-2009 from the 1996_2010 file and 2010-2024 from the 2010_2024 file, which
-is exactly what the two runs consume. The two files' 2010 rows are identical.
-
-UNITS. The summary stores Rhigh/Rlow in decametres above MHW (the generator's
-(TWL - MHW) / 10 with MHW = 0.36 m NAVD88). Figures show metres above MHW (add 0.36
-for NAVD88); the berm threshold is 1.7 m NAVD88 = 1.34 m MHW.
-
-STORM TYPE (tropical cyclone within 500 km / other high-water event) comes from the NHC
-HURDAT2 best tracks in 1-records/hurdat2/; see TC_NEAR_KM below.
-
-    python storm_figures.py                # 1996-2024, the canonical chain
-    python storm_figures.py --variant v3_72
+Writes the record and characteristics figures, one folder per window. Details: scripts/input_prep/3-env-forcings/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -55,6 +30,7 @@ from site_layer.hat_figure_style import (C, C_1984, C_1997, SMOOTH_RAMP,  # noqa
                                          INK, INK_MUTED, apply_style, caption, figsize,
                                          open_frame, save, support_dir, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 MHW_NAVD88 = 0.36          # generator's MHW: 0 m MHW = 0.36 m NAVD88
 BERM_NAVD88 = 1.7          # generator's berm_elevation
 BERM_MHW = BERM_NAVD88 - MHW_NAVD88
@@ -62,22 +38,7 @@ PERIODS = ((1996, 2010), (2010, 2024))
 PERIOD_COLOURS = (C_1984, C_1997)          # earlier red, later blue (house pair)
 OUT_DIR = env.HINDCAST_STORMS.parent / "figures" / "1996_2024"   # figures/ holds one folder per window
 
-# STORM TYPE, FROM THE NHC BEST TRACKS (HURDAT2). Two classes:
-#   tropical  a tropical or subtropical fix (TD, TS, HU, SD, SS) within
-#             TC_NEAR_KM of Cape Hatteras inside +/-TC_WINDOW_H of the event's
-#             peak. Checked 2026-09-29 for the labelled storms: same storm at a
-#             +/-72 h window, and each sits next to Hatteras at the peak hour.
-#   other     every other event, "other high-water event". Most are nor'easters
-#             (198 of the 240 at the time peak October-April), but the class is
-#             what is LEFT when no cyclone matches, not a positive
-#             identification, so it is not called nor'easter (Hannah,
-#             2026-09-29).
-# A distant-cyclone class (500-1,000 km, or a swell match by wave direction up
-# to 2,000 km) was tried the same day and removed: it rested on thresholds
-# that could not be checked, so Noel 2007 (589 km) and the swell events are
-# now "other". Tropical labels are the HURDAT2 names; other events carry no
-# official name and are unlabelled. Every event's class and nearest cyclone
-# are written to supporting/storm_types_1996_2024.csv.
+# STORM TYPE, FROM THE NHC BEST TRACKS (HURDAT2)
 HURDAT2_FILE = (_REPO / "data" / "hatteras_init" / "3-env-forcings" / "1-records" / "hurdat2"
                 / "hurdat2-1851-2025-091226.txt")
 CAPE_HATTERAS = (35.25, -75.53)
@@ -87,20 +48,15 @@ TC_WINDOW_H = 24
 TYPES = ("tropical", "other")
 TYPE_LABELS = {"tropical": f"Tropical cyclone within {TC_NEAR_KM} km",
                "other": "Other high-water event"}
-# House colours (Hannah, 2026-09-29): the style's amber C["ADDED"] for the
-# cyclones and the theme blue for the rest, taken from the style's blue ramp
-# (SMOOTH_RAMP[1], a step lighter than C_1997) so the amber still stands out
-# on top of it. Tried and replaced the same day: orange/teal, amber/grey,
-# plum/sage.
+# House colours (Hannah, 2026-09-29)
 TYPE_COLOURS = {"tropical": C["ADDED"], "other": SMOOTH_RAMP[1]}
 
-# The generator's total water level, rebuilt to find each event's peak HOUR
-# (the summary keeps only start and end): Duck water level + Stockdon (2006)
-# R2% from WIS Hs/Tp at the generator's beach slope. It reproduces every
-# event's Rhigh to <1 cm, and load_record() checks that it still does.
+# The generator's total water level, rebuilt to find each event's peak hour
 BEACH_SLOPE = 0.06
+# -----------------------------------------------------------------------------
 
 
+# Duck water level and WIS waves on one hourly index
 def load_forcing():
     wl = pd.read_csv(env.DUCK_GAUGE_FILE, index_col="t", parse_dates=True)["v"]
     wis = pd.read_csv(env.WIS_FILE, index_col="time", parse_dates=True)
@@ -112,6 +68,7 @@ def load_forcing():
     return m
 
 
+# Both windows' storm summaries as one record
 def load_record(variant, forcing):
     parts = []
     for (a, b), keep_to in zip(PERIODS, (PERIODS[0][1] - 1, PERIODS[1][1])):
@@ -132,9 +89,8 @@ def load_record(variant, forcing):
     return df
 
 
+# Tropical/subtropical fixes since `first_year`, with the distance (km) of each fix from Cape Hatteras
 def load_hurdat2(path=HURDAT2_FILE, first_year=1990):
-    """Tropical/subtropical fixes since `first_year`, with the distance (km)
-    of each fix from Cape Hatteras."""
     rows, name = [], None
     with open(path) as f:
         for line in f:
@@ -155,6 +111,7 @@ def load_hurdat2(path=HURDAT2_FILE, first_year=1990):
     return h
 
 
+# Each event's type from HURDAT2: tropical near, tropical far, or nor'easter
 def classify(df, forcing):
     h = load_hurdat2()
     win = pd.Timedelta(hours=TC_WINDOW_H)
@@ -172,15 +129,15 @@ def classify(df, forcing):
     return df
 
 
+# A named storm's label
 def label_text(row):
-    """A named storm's label. Nor'easters have no official name and are left
-    unlabelled (Hannah, 2026-09-29: a month/year label reads as a name)."""
     if row["name"] == "Unnamed":    # HURDAT2's unnamed systems (the October 2000 subtropical storm)
         kind = "Subtropical" if str(row.get("tc_status", "")).startswith("S") else "Tropical"
         return f"{kind} storm {row.peak.year}"
     return f"{row['name']} {row.peak.year}"
 
 
+# The line between the two windows, labelled
 def period_boundary(ax, label_y=None):
     b = PERIODS[1][0]
     ax.axvline(b, color=INK_MUTED, lw=0.7, ls=(0, (4, 2)), zorder=1)
@@ -190,9 +147,9 @@ def period_boundary(ax, label_y=None):
                     va="top", color=INK_MUTED, fontsize=7.5)
 
 
-# =============================================================================
-# FIGURE 1: the record
-# =============================================================================
+# Figure 1: the record
+
+# Every event through time, and the count per year
 def fig_record(df, variant, out_dir):
     y0, y1 = PERIODS[0][0], PERIODS[1][1]
     years = np.arange(y0, y1 + 1)
@@ -236,8 +193,7 @@ def fig_record(df, variant, out_dir):
     ax2.text(y1 + 0.9, BERM_MHW + 0.04, f"berm crest ({BERM_MHW:.2f} m)", ha="right",
              fontsize=7, color=INK_MUTED, va="bottom", path_effects=halo)
 
-    # EVERY tropical event is labelled (Hannah, 2026-09-29), once per storm: a
-    # storm with two events (Ophelia 2005) is named at its higher one.
+    # EVERY tropical event is labelled (Hannah, 2026-09-29), once per storm
     top = (df[df["name"].notna()].sort_values("rhigh_m", ascending=False)
            .drop_duplicates(subset=["name", "calendar_year"]).sort_values("frac_year"))
     labelled = []
@@ -248,9 +204,7 @@ def fig_record(df, variant, out_dir):
                              hours_above_berm=int(r.raw_hours), label=txt,
                              type=r["type"], nearest_tc=r["tc_name"],
                              nearest_tc_km=round(r["tc_km"]) if np.isfinite(r["tc_km"]) else None))
-    # The highest non-tropical event (March 2018) is the second-highest of the
-    # record and a documented nor'easter; it has no official name, so it is
-    # marked by type, not by date (Hannah, 2026-09-29).
+    # The highest non-tropical event, marked by type (it has no official name)
     ne = df[df.type == "other"].nlargest(1, "rhigh_m").iloc[0]
     ax2.annotate("nor'easter", (ne.frac_year, ne.rhigh_m), xytext=(0, 5), textcoords="offset points",
                  ha="center", va="bottom", fontsize=6.8, fontstyle="italic", color=INK, zorder=6,
@@ -305,16 +259,14 @@ def fig_record(df, variant, out_dir):
     return pd.DataFrame(labelled)
 
 
-# Label placement: each label tries these offsets (points from its event) and
-# takes the first that overlaps no placed label, no event dot and nothing
-# already written on the panel; failing that, the least crowded one. Labels
-# are placed highest event first, so the big storms get the best positions.
+# Label placement: first free offset, highest events first
 _LABEL_CANDIDATES = [(0, 5), (0, -5), (14, 6), (-14, 6), (14, -6), (-14, -6), (0, 14), (0, -14),
                      (24, 12), (-24, 12), (24, -12), (-24, -12), (0, 24), (0, -24), (34, 0), (-34, 0),
                      (30, 22), (-30, 22), (30, -22), (-30, -22), (0, 34), (0, -34)]
 LABEL_PT = 6.5
 
 
+# Place event labels clear of each other and the dots
 def _place_labels(ax, top, texts, events):
     from matplotlib.text import Text
     fig = ax.figure
@@ -361,9 +313,9 @@ def _place_labels(ax, top, texts, events):
                     path_effects=[pe.withStroke(linewidth=2.0, foreground="white")])
 
 
-# =============================================================================
-# FIGURE 2: the two periods compared
-# =============================================================================
+# Figure 2: the two periods compared
+
+# Height, duration and seasonality by type
 def fig_characteristics(df, variant, out_dir):
     fig, axs = plt.subplots(2, 2, figsize=figsize("double", height=5.4),
                             gridspec_kw=dict(hspace=0.45, wspace=0.3))
@@ -456,6 +408,7 @@ def fig_characteristics(df, variant, out_dir):
     plt.close(fig)
 
 
+# Run: load, classify, draw both figures
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--variant", default=env.DEFAULT_STORM_VARIANT)

@@ -1,66 +1,25 @@
-# =============================================================================
-# HAT_storm_catalog.py
-# Named-storm record for Hatteras Island, NC — SINGLE SOURCE OF TRUTH
-# -----------------------------------------------------------------------------
-# WHY THIS FILE EXISTS:
-#   This catalog previously lived in three places: HAT_storm_record_1984_2021.py
-#   (42 storms, with wind/pressure/landfall/note) and both validator scripts
-#   (39 storms, name/start/end/cat only). They had drifted — BERTHA 1996,
-#   FRAN 1996 and ISAIAS 2020 appeared on the record chart but were never
-#   tested against any storm file. Those three are exactly the source="local"
-#   entries added by hand from the hurricane-history doc, i.e. the ones most
-#   in need of testing.
-#
-#   Import from here everywhere. Do not copy the list.
-#
-#       from HAT_storm_catalog import HISTORICAL_STORMS, storms_in_period
-#
-#   HAT_storm_record_1984_2021.py should also be edited to import from here
-#   and delete its own copy.
-#
-# -----------------------------------------------------------------------------
-# FIELDS:
-#   name      storm name ("Unnamed" for the 2017 ET event)
-#   start/end HURDAT2 full active period — NOT the Hatteras influence window.
-#             A storm active two weeks may affect Hatteras for 24–48 h.
-#   cat       max Saffir-Simpson category over full lifetime (not at landfall)
-#   wind      max sustained wind (mph) corresponding to `cat`
-#   pressure  min central pressure (mb) corresponding to `cat`
-#   landfall  True  -> documented direct Hatteras/Dare Co. impact or evacuation
-#             False -> passed by, minor/no local impact
-#             None  -> no local-impact narrative available (NOAA-only)
-#   note      local-impact detail, where documented
-#   source    "noaa"  -> NOAA Historical Hurricane Tracks, 60 nm buffer of
-#                        Hatteras, Dare County NC
-#             "local" -> hurricane-history doc only; wind/pressure cross-checked
-#                        against NHC/NWS tropical cyclone reports. Track fell
-#                        outside the 60 nm buffer.
-#
-# KNOWN GAPS (deliberate, pending a decision):
-#   Earl 2010, Sandy 2012, Maria 2017, Florence 2018, Michael 2018 appear in the
-#   hurricane-history doc but are absent from the 60 nm buffer search, and their
-#   NC landfalls/tracks were far enough from Hatteras that local impact was
-#   minor/indirect per the doc's own text.
-#
-#   Nor'easters and non-tropical winter storms are NOT included — no catalog
-#   available. At Hatteras these are the dominant morphological forcing, so
-#   unmatched events in a TWL-derived storm file are EXPECTED, not errors.
-# =============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
+"""
+The named-storm record for Hatteras Island, NC: one source for every script that needs it.
 
+    python -c "from HAT_storm_catalog import HISTORICAL_STORMS"   # imported, not run
+
+Holds HISTORICAL_STORMS and the period boundary; the validation script
+imports it. Details: scripts/input_prep/3-env-forcings/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 import pandas as pd
 
+# --- CONFIG ------------------------------------------------------------------
 PERIOD_BOUNDARY = 2004  # Period 1 (calibration) / Period 2 (validation)
 
 
 HISTORICAL_STORMS = [
-    # -------------------------------------------------------------------------
-    # 1984-2004  (Period 1: calibration)
-    # -------------------------------------------------------------------------
+    # 1984-2004 (Period 1: calibration)
+
     {"name": "Diana",     "start": "1984-09-08", "end": "1984-09-16", "cat": "H4", "wind": 115, "pressure": 949,  "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Gloria",    "start": "1985-09-16", "end": "1985-10-02", "cat": "H4", "wind": 125, "pressure": 920,  "landfall": True,  "note": "Direct hit \u2014 Cat 2 at landfall, 6\u20138 ft surge", "source": "noaa"},
     {"name": "Kate",      "start": "1985-11-15", "end": "1985-11-23", "cat": "H3", "wind": 105, "pressure": 954,  "landfall": False, "note": "",                                                  "source": "noaa"},
@@ -81,9 +40,8 @@ HISTORICAL_STORMS = [
     {"name": "Gustav",    "start": "2002-09-08", "end": "2002-09-15", "cat": "H2", "wind": 85,  "pressure": 960,  "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Kyle",      "start": "2002-09-20", "end": "2002-10-12", "cat": "H1", "wind": 75,  "pressure": 980,  "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Isabel",    "start": "2003-09-06", "end": "2003-09-20", "cat": "H5", "wind": 145, "pressure": 915,  "landfall": True,  "note": "Breached island; $167M damage",                      "source": "noaa"},
-    # -------------------------------------------------------------------------
-    # 2004-2024  (Period 2: validation; data currently through 2021)
-    # -------------------------------------------------------------------------
+    # 2004-2024 (Period 2: validation; data currently through 2021)
+
     {"name": "Alex",      "start": "2004-07-31", "end": "2004-08-06", "cat": "H3", "wind": 105, "pressure": 957,  "landfall": True,  "note": "Sound-side flooding, $2.4M damage",                  "source": "noaa"},
     {"name": "Bonnie",    "start": "2004-08-03", "end": "2004-08-14", "cat": "TS", "wind": 55,  "pressure": 1001, "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Ophelia",   "start": "2005-09-06", "end": "2005-09-23", "cat": "H1", "wind": 75,  "pressure": 976,  "landfall": True,  "note": "Hatteras Island evacuated",                          "source": "noaa"},
@@ -107,18 +65,12 @@ HISTORICAL_STORMS = [
     {"name": "Isaias",    "start": "2020-07-30", "end": "2020-08-05", "cat": "H1", "wind": 90,  "pressure": 986,  "landfall": True,  "note": "72 mph in Avon; 1\u20133 ft surge, Zone A evacuated", "source": "local"},
     {"name": "Claudette", "start": "2021-06-17", "end": "2021-06-23", "cat": "TS", "wind": 40,  "pressure": 1003, "landfall": None,  "note": "",                                                  "source": "noaa"},
 ]
+# -----------------------------------------------------------------------------
 
-# --- convenience -------------------------------------------------------------
+# Convenience
 
+# Return catalog entries whose START year falls in [begin_year, end_year], with 'start_ts'/'end_ts' ...
 def storms_in_period(begin_year, end_year, catalog=None):
-    """
-    Return catalog entries whose START year falls in [begin_year, end_year],
-    with 'start_ts'/'end_ts' Timestamps added.
-
-    NOTE: filtering on start year (not overlap) matches the original validator
-    behaviour. A storm starting 2003-12-28 and ending 2004-01-03 belongs to the
-    year it started in, so it cannot be double-counted across the two periods.
-    """
     cat = catalog if catalog is not None else HISTORICAL_STORMS
     out = []
     for s in cat:

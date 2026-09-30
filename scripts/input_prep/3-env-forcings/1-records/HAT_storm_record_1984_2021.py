@@ -1,38 +1,9 @@
 """
-HAT_storm_record_1984_2021.py
+The named storms that affected Hatteras, 1984-2021, on a timeline with a detail sidebar.
 
-Named-storm record for Hatteras Island, NC, 1984-2021.
+    python scripts/input_prep/3-env-forcings/1-records/HAT_storm_record_1984_2021.py
 
-Data sources:
-  - NOAA Historical Hurricane Tracks search (60 nm buffer of Hatteras, Dare
-    County, NC) -> "start"/"end"/"cat" per HISTORICAL_STORMS below, plus
-    max sustained wind speed / min pressure pulled from the same search.
-  - "Hatteras, NC Hurricane History Since 1985" -> local landfall/impact
-    detail (surge, evacuations, damage) for the more notable storms.
-  - Bertha, Fran (1996) and Isaias (2020): NOT in the 60 nm buffer search
-    (their tracks passed outside it), but documented as local impacts in
-    the hurricane-history doc. Wind/pressure for these three were cross-
-    checked against NHC/NWS tropical cyclone reports (source="local"
-    below). This distinction is kept in the data for provenance but is no
-    longer flagged on the figure itself (previously a dagger + footnote).
-
-Known remaining gaps (not yet added -- flagged to Hannah, not included
-without confirmation): Earl 2010, Sandy 2012, Maria 2017, Florence 2018,
-and Michael 2018 all appear in the hurricane-history doc but, like
-Bertha/Fran/Isaias, are absent from the 60 nm buffer search. Unlike
-Bertha/Fran/Isaias their NC landfalls (or, for Sandy/Michael, their
-tracks) were far enough from Hatteras that local impact was minor/indirect
-per the doc's own text, so they were left out pending a decision on
-whether to include them.
-
-Nor'easters / non-tropical winter storms are still not included (no
-dataset available for these).
-
-Chart labels: storms with a documented local-impact note get a plain
-asterisk (*); the writeup is in the "Storm Details" sidebar, matched by
-name/year rather than a numbered reference (numbers next to the year
-abbreviation, e.g. Gloria '85, read as confusingly similar to the year
-itself).
+Draws the storm-record figure from the catalogue in this file. Details: scripts/input_prep/3-env-forcings/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -46,24 +17,13 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.transforms import Bbox
 
-# --------------------------------------------------------------------------
 # Storm data
-# --------------------------------------------------------------------------
-# cat        = max Saffir-Simpson category reached over the storm's full
-#              lifetime (NHC best track), not necessarily at landfall
-# wind       = max sustained wind speed (mph) corresponding to `cat`
-# pressure   = min central pressure (mb) corresponding to `cat`
-# landfall   = True  -> doc confirms direct Hatteras/Dare Co. impact or evac
-#              False -> doc/NHC indicates storm passed by with minor/no
-#                       local impact (or made landfall well south)
-#              None  -> no local-impact narrative available (NOAA-only)
-# source     = "noaa"  -> from the 60 nm buffer search
-#              "local" -> from the hurricane-history doc only; wind/
-#                         pressure cross-checked against NHC reports
+
+# --- CONFIG ------------------------------------------------------------------
+# Fields: cat, wind, pressure (NHC best track), landfall, source (key in README)
 HISTORICAL_STORMS = [
-    # -------------------------------------------------------------------------
-    # 1984-2004  (Period 1: calibration)
-    # -------------------------------------------------------------------------
+    # 1984-2004 (Period 1: calibration)
+
     {"name": "Diana",     "start": "1984-09-08", "end": "1984-09-16", "cat": "H4", "wind": 115, "pressure": 949,  "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Gloria",    "start": "1985-09-16", "end": "1985-10-02", "cat": "H4", "wind": 125, "pressure": 920,  "landfall": True,  "note": "Direct hit \u2014 Cat 2 at landfall, 6\u20138 ft surge", "source": "noaa"},
     {"name": "Kate",      "start": "1985-11-15", "end": "1985-11-23", "cat": "H3", "wind": 105, "pressure": 954,  "landfall": False, "note": "",                                                  "source": "noaa"},
@@ -84,9 +44,8 @@ HISTORICAL_STORMS = [
     {"name": "Gustav",    "start": "2002-09-08", "end": "2002-09-15", "cat": "H2", "wind": 85,  "pressure": 960,  "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Kyle",      "start": "2002-09-20", "end": "2002-10-12", "cat": "H1", "wind": 75,  "pressure": 980,  "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Isabel",    "start": "2003-09-06", "end": "2003-09-20", "cat": "H5", "wind": 145, "pressure": 915,  "landfall": True,  "note": "Breached island; $167M damage",                      "source": "noaa"},
-    # -------------------------------------------------------------------------
-    # 2004-2024  (Period 2: validation; data currently through 2021)
-    # -------------------------------------------------------------------------
+    # 2004-2024 (Period 2: validation; data currently through 2021)
+
     {"name": "Alex",      "start": "2004-07-31", "end": "2004-08-06", "cat": "H3", "wind": 105, "pressure": 957,  "landfall": True,  "note": "Sound-side flooding, $2.4M damage",                  "source": "noaa"},
     {"name": "Bonnie",    "start": "2004-08-03", "end": "2004-08-14", "cat": "TS", "wind": 55,  "pressure": 1001, "landfall": None,  "note": "",                                                  "source": "noaa"},
     {"name": "Ophelia",   "start": "2005-09-06", "end": "2005-09-23", "cat": "H1", "wind": 75,  "pressure": 976,  "landfall": True,  "note": "Hatteras Island evacuated",                          "source": "noaa"},
@@ -112,8 +71,10 @@ HISTORICAL_STORMS = [
 ]
 
 PERIOD_BOUNDARY = 2004  # Period 1 (calibration) / Period 2 (validation)
+# -----------------------------------------------------------------------------
 
 
+# A YYYY-MM-DD date as a decimal year
 def decimal_year(date_str):
     y, m, d = (int(x) for x in date_str.split("-"))
     start = dt.date(y, 1, 1)
@@ -125,13 +86,7 @@ def decimal_year(date_str):
 for s in HISTORICAL_STORMS:
     s["x"] = decimal_year(s["start"])
 
-# --------------------------------------------------------------------------
-# De-clutter: several years have 2-5 storms only weeks apart (e.g. five in
-# 2016). Rather than a running left-to-right push (which can cascade a
-# whole cluster's positions into a neighboring year), group consecutive
-# storms whose gap is below MIN_SEP and evenly redistribute *within* each
-# cluster, centered on the cluster's true mean date. Labels still show each
-# storm's own year, so nothing displayed becomes inaccurate.
+# De-clutter: spread storms that sit weeks apart within their cluster
 storms = sorted(HISTORICAL_STORMS, key=lambda s: s["x"])
 MIN_SEP = 0.16
 clusters, current = [], [storms[0]]
@@ -151,18 +106,15 @@ for cluster in clusters:
     for i, c in enumerate(cluster):
         c["x"] = mean_x + (i - (n - 1) / 2) * MIN_SEP
 
-# Cluster-level spreading can leave the tail of one cluster close to the
-# head of the next (e.g. Colin '16 vs Hermine '16). Clean up any residual
-# close pairs with a small, local nudge.
+# Cluster-level spreading can leave the tail of one cluster close to the head of the next (e.g
 storms.sort(key=lambda s: s["x"])
 CLEANUP_SEP = 0.10
 for i in range(1, len(storms)):
     if storms[i]["x"] - storms[i - 1]["x"] < CLEANUP_SEP:
         storms[i]["x"] = storms[i - 1]["x"] + CLEANUP_SEP
 
-# --------------------------------------------------------------------------
 # Styling
-# --------------------------------------------------------------------------
+
 CAT_COLORS = {
     "H5": "#7a1f1f", "H4": "#c0392b", "H3": "#e67e22", "H2": "#f2a541",
     "H1": "#f1c40f", "TS": "#2f7fb8", "ET": "#95a5a6",
@@ -203,8 +155,7 @@ for s in HISTORICAL_STORMS:
                color=CAT_COLORS[s["cat"]], edgecolor="#2b2b2b",
                linewidth=1.6 if s["landfall"] else 0.8, zorder=3)
 
-# Axes formatting (set BEFORE label placement so pixel<->data mapping used
-# for collision checks below matches the final rendered chart)
+# Axes formatting, before label placement so the collision checks see the final mapping
 ax.set_xlim(x_min, x_max)
 ax.set_ylim(0, 172)
 ax.set_xticks(range(1984, 2022, 2))
@@ -235,30 +186,19 @@ plt.tight_layout()
 fig.canvas.draw()  # finalize layout so pixel positions below are accurate
 renderer = fig.canvas.get_renderer()
 
-# --------------------------------------------------------------------------
-# Collision-aware label placement
-#
-# Rather than assuming above/below alternation is enough (it isn't once 3+
-# storms land within the same year), place each label, measure its actual
-# rendered bounding box, and check it against every box placed so far
-# (marker diamonds + other labels). If it collides, try the next vertical
-# tier out. Names are placed most-intense-storm-first, so e.g. Isabel/
-# Dorian keep their close, prominent labels.
-#
-# Notes no longer live on the chart at all -- they're too long to fit
-# without crowding, even with tiering. Instead, storms with a note get a
-# plain asterisk, and readers find the matching writeup by name in the
-# chronological sidebar list (no number-matching needed).
-# --------------------------------------------------------------------------
+# Collision-aware label placement, most intense first; notes live in the sidebar
+
 placed_boxes = []
 
 
+# A marker's bounding box in pixels
 def px_bbox_from_data(x, y, size_pts2):
     disp = ax.transData.transform((x, y))
     r = (size_pts2 ** 0.5) * fig.dpi / 72.0 / 2.0
     return Bbox.from_bounds(disp[0] - r, disp[1] - r, 2 * r, 2 * r)
 
 
+# Does a box overlap any placed so far?
 def collides(bbox, pad=2.0):
     bbox = bbox.padded(pad)
     return any(bbox.overlaps(b) for b in placed_boxes)
@@ -296,16 +236,8 @@ for s in sorted(HISTORICAL_STORMS, key=lambda s: -s["wind"]):
                            fontsize=fontsize, fontweight=weight, color="#2b2b2b")
         placed_boxes.append(txt.get_window_extent(renderer=renderer))
 
-# --------------------------------------------------------------------------
-# Sidebar: chronological detail list for every storm with a note.
-#
-# Positions are anchored to axes-fraction (0, 1) -- the top-left of the
-# panel -- with a running raw_offset in points, so the physical panel-pixel
-# height doesn't depend on any data/ylim choice. Each entry's vertical
-# footprint is measured directly from its actual rendered bounding box
-# (same renderer-based approach used for the main chart), so header/note
-# spacing is exact rather than a guessed line-height.
-# --------------------------------------------------------------------------
+# Sidebar: a chronological list of every storm with a note, measured as drawn
+
 import textwrap
 
 ax_side.axis("off")
@@ -320,6 +252,7 @@ WRAP_WIDTH = 60
 cursor_pt = 6.0  # running raw_offset, in points, down from the top of the panel
 
 
+# Write one sidebar entry and advance the cursor
 def place_side(text, fontsize, gap_before, weight="normal", style="normal",
                 color="#1c2b39", indent=0.0, linespacing=1.3):
     global cursor_pt
@@ -350,9 +283,7 @@ for s in noted_storms:
 panel_height_pt = ax_side.get_position().height * fig.get_size_inches()[1] * 72.0
 print(f"Sidebar content height: {cursor_pt:.0f}pt / panel height: {panel_height_pt:.0f}pt")
 
-# Products land in the data tree beside the record they describe
-# (2026-09-12). These were absolute paths into "input_preperation",
-# a folder renamed long ago, so neither had resolved since.
+# Products land in the data tree beside the record they describe (2026-09-12)
 from pathlib import Path as _Path
 import sys as _envsys
 from pathlib import Path as _EnvP

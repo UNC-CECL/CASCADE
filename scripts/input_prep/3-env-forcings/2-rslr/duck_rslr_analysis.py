@@ -1,48 +1,16 @@
 """
-duck_rslr_analysis.py
-=====================
-Relative sea level rise (RSLR) rate for the Duck, NC gauge
-(NOAA CO-OPS station 8651370), fitted over each hindcast window.
+Relative sea-level rise at Duck, NC: an OLS trend per hindcast window from the monthly gauge record.
 
-Reads the NOAA monthly mean sea level file (seasonal cycle removed), fits an
-OLS trend inside each window, and writes everything to
-data/hatteras_init/3-env-forcings/2-rslr/ (2026-09-15 layout; the folder was rslr/ until 2026-09-18):
+    python scripts/input_prep/3-env-forcings/2-rslr/duck_rslr_analysis.py
+    python scripts/input_prep/3-env-forcings/2-rslr/duck_rslr_analysis.py --no-figures
 
-    record/   duck_8651370_meantrend.csv       the NOAA download, untouched
-    fits/     duck_rslr_rates.csv              ONE ROW PER WINDOW: slope, CI,
-                                               n, and the value the site
-                                               config carries
-              duck_rslr_timeseries_<w>.csv     the monthly record inside the
-                                               window with its fitted trend
-                                               and residual
-    figures/  duck_rslr_full_record.png/.pdf   the record with the windows
-              duck_rslr_windows.png/.pdf       one panel per window
-              duck_rslr_residuals.png/.pdf     residuals per window
-              CAPTIONS.md                      written by caption()
-
-THE RATES FILE IS NEW (2026-09-15). Until then the fitted slopes existed only
-as annotations burned onto the figures and as hand-typed literals in
-scripts/site_layer/hatteras_site_config.py (HATTERAS_PERIODS[...]["sea_level_rise_rate"],
-rounded to 0.001 m/yr). The config still carries those literals -- this
-script does NOT feed the model -- but the file is the record they were read
-from, and its `config_m_yr` column is the rounded value so the two can be
-diffed.
-
-STYLE. Drawn under the house standard (scripts/site_layer/hat_figure_style.py) since
-2026-09-15: printed width, Arial, panel letters, nothing on the canvas that
-belongs in a caption. Windows are drawn in the vintage pair -- the earlier of
-two windows in red, the later in blue -- and the two pairs (1984-2004 with
-2004-2024; 1996-2010 with 2010-2024) never share a panel, so the pair rule
-holds everywhere. The NOAA full-record trend is the reference green.
-
-Units: all computed rates are in metres per year [m/yr]; the CSVs carry
-mm/yr beside them.
+Writes the fit table and figures under 3-env-forcings/2-rslr/; the config
+keeps rounded literals by choice. Details: scripts/input_prep/3-env-forcings/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-18
-Date:   5/4/2026; restyled and split into record/fits/figures 2026-09-15
 """
 
 from __future__ import annotations
@@ -55,13 +23,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
 
-# The gauge record and every product of this script live in the DATA tree;
-# only the script lives here (2026-09-12). Anchored on this file so it follows
-# the checkout.
+# The gauge record and every product of this script live in the DATA tree
 _SCRIPTS = Path(__file__).resolve().parents[3]          # .../scripts
 import sys as _envsys
 from pathlib import Path as _EnvP
@@ -69,6 +32,7 @@ _envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
                                 if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_env_forcings as _env  # noqa: E402
 _RSLR_DATA = _env.RSLR_ROOT              # 2-rslr/ since 2026-09-18
+# --- CONFIG ------------------------------------------------------------------
 RECORD_DIR = _env.RSLR_RECORD_DIR
 FITS_DIR = _env.RSLR_FITS_DIR
 FIGURES_DIR = _env.RSLR_FIGURES_DIR
@@ -76,16 +40,9 @@ FIGURES_DIR = _env.RSLR_FIGURES_DIR
 DATA_FILE = RECORD_DIR / "duck_8651370_meantrend.csv"
 OUTPUT_PREFIX = "duck_rslr"
 
-# --- Windows ---
-# (start_year, end_year) inclusive of both calendar years, so 1984-2004 fits
-# on 21 years of monthly values. The end year is the survey that closes the
-# window, which is why the windows overlap at their joints.
-# Windows 3 and 4 added 2026-09-11. They OVERLAP windows 1 and 2 on purpose --
-# these are four hindcast windows over one record, not a partition of it.
-#
-# Each window has a PAIR INDEX (0 = earlier of its pair, 1 = later) that picks
-# its colour, and a PAIR that decides which panel of the full-record figure
-# it is drawn on.
+# Windows
+
+# Calendar years inclusive, overlapping on purpose; each with a colour pair
 WINDOWS = [
     # start, end,  pair, pair_index
     (1984, 2004, 0, 0),
@@ -94,13 +51,11 @@ WINDOWS = [
     (2010, 2024, 1, 1),
 ]
 
-# --- Fit settings ---
+# Fit settings
 MIN_MONTHS = 24
 CONFIG_DECIMALS = 3     # the precision hatteras_site_config.py stores rates at
 
-# =============================================================================
-# END CONFIGURATION
-# =============================================================================
+# End configuration
 
 # `scripts/` holds hat_figure_style; this file is three levels below it.
 sys.path.insert(0, str(_SCRIPTS))
@@ -113,35 +68,29 @@ from site_layer.hat_figure_style import (  # noqa: E402
 
 PAIR_COLOUR = {0: C_1984, 1: C_1997}
 PAIR_FILL = {0: C_1984_FILL, 1: C_1997_FILL}
+# -----------------------------------------------------------------------------
 
 
+# A window as 'start-end'
 def window_label(start: int, end: int) -> str:
     return f"{start}–{end}"
 
 
+# A window as 'start_end'
 def window_token(start: int, end: int) -> str:
     return f"{start}_{end}"
 
 
+# '+0.0040 ± 0.0006 m/yr' — four places, so nothing rounds to zero
 def _fmt(rate_m_yr: float, ci_m_yr: float) -> str:
-    """'+0.0040 ± 0.0006 m/yr' — four places, so nothing rounds to zero."""
     sign = "+" if rate_m_yr >= 0 else ""
     return f"{sign}{rate_m_yr:.4f} ± {ci_m_yr:.4f} m/yr"
 
 
-# ---------------------------------------------------------------------------
-# 1. LOAD DATA
-# ---------------------------------------------------------------------------
+# 1. load data
 
+# Load a NOAA CO-OPS monthly mean trend CSV file
 def load_noaa_meantrend(filepath: Path) -> pd.DataFrame:
-    """
-    Load a NOAA CO-OPS monthly mean trend CSV file.
-
-    These files have 4 metadata header lines, a blank line, then a column
-    header line, then data. Values are metres relative to the station's MSL
-    datum (the file's own header says so; an earlier version of this script
-    labelled the axis MLLW, which was wrong).
-    """
     df = pd.read_csv(
         filepath,
         skiprows=6,                   # 4 metadata lines + blank line + header
@@ -161,17 +110,10 @@ def load_noaa_meantrend(filepath: Path) -> pd.DataFrame:
     return df
 
 
-# ---------------------------------------------------------------------------
-# 2. FIT LINEAR TREND (OLS + confidence intervals)
-# ---------------------------------------------------------------------------
+# 2. fit linear trend (ols + confidence intervals)
 
+# OLS trend on Monthly_MSL within [start_year, end_year]
 def fit_linear_trend(df: pd.DataFrame, start_year: int, end_year: int) -> dict:
-    """
-    OLS trend on Monthly_MSL within [start_year, end_year].
-
-    Returns slope, intercept, R², p-value, the 95% CI half-width on the slope,
-    dense predicted arrays with the CI band on the MEAN, and the subset.
-    """
     mask = (df["Year"] >= start_year) & (df["Year"] <= end_year)
     df_fit = df[mask].copy()
     n = len(df_fit)
@@ -208,6 +150,7 @@ def fit_linear_trend(df: pd.DataFrame, start_year: int, end_year: int) -> dict:
     }
 
 
+# One window's trend line to the console
 def print_summary(result: dict, start: int, end: int) -> None:
     print(f"  {window_label(start, end)}:  "
           f"{_fmt(result['slope_m_yr'], result['ci95_m_yr'])}   "
@@ -216,15 +159,10 @@ def print_summary(result: dict, start: int, end: int) -> None:
           f"config={round(result['slope_m_yr'], CONFIG_DECIMALS):.3f}")
 
 
-# ---------------------------------------------------------------------------
-# 3. TABLES
-# ---------------------------------------------------------------------------
+# 3. tables
 
+# One row per window
 def export_rates(windows, results) -> Path:
-    """
-    One row per window. `config_m_yr` is the slope at the precision the site
-    config stores, so a diff against HATTERAS_PERIODS is one column.
-    """
     rows = []
     for (start, end, _pair, _idx), r in zip(windows, results):
         rows.append({
@@ -248,8 +186,8 @@ def export_rates(windows, results) -> Path:
     return fname
 
 
+# The monthly record inside the window, its fitted trend, the residual
 def export_timeseries(result: dict, start_year: int, end_year: int) -> Path:
-    """The monthly record inside the window, its fitted trend, the residual."""
     df_fit = result["df_fit"].copy()
     t = df_fit["decimal_year"].values
     y_trend = result["slope_m_yr"] * t + result["intercept"]
@@ -272,13 +210,10 @@ def export_timeseries(result: dict, start_year: int, end_year: int) -> Path:
     return fname
 
 
-# ---------------------------------------------------------------------------
-# 4. FIGURES
-# ---------------------------------------------------------------------------
+# 4. figures
 
+# Trend line and its 95% band for one window, on top of whatever record the caller has already drawn
 def _draw_window(ax, result, colour, fill, label):
-    """Trend line and its 95% band for one window, on top of whatever record
-    the caller has already drawn."""
     ax.fill_between(result["t_predicted"], result["y_ci_lower"],
                     result["y_ci_upper"], color=fill, alpha=0.6, lw=0,
                     zorder=3)
@@ -286,12 +221,8 @@ def _draw_window(ax, result, colour, fill, label):
             lw=1.2, zorder=4, label=label)
 
 
+# The whole record, twice
 def plot_full_record(df, windows, results) -> Path:
-    """
-    The whole record, twice: (a) with the 1984-2004 / 2004-2024 pair,
-    (b) with the 1996-2010 / 2010-2024 pair. The two pairs overlap in time,
-    so on one panel the four bands would sit on top of each other.
-    """
     n_pairs = 1 + max(w[2] for w in windows)
     fig, axes = plt.subplots(n_pairs, 1, figsize=figsize("double", aspect=0.36 * n_pairs),
                              sharex=True, sharey=True, constrained_layout=True)
@@ -317,8 +248,7 @@ def plot_full_record(df, windows, results) -> Path:
     axes[-1].set_xlabel("Year")
     axes[-1].set_xlim(df["decimal_year"].min() - 0.5, df["decimal_year"].max() + 0.5)
 
-    # One legend for the figure: the record and reference once, then the
-    # window trends of each panel in order.
+    # One legend for the figure: record and reference, then each panel's trends
     handles, labels = [], []
     for ax in axes:
         for h, l in zip(*ax.get_legend_handles_labels()):
@@ -343,9 +273,8 @@ def plot_full_record(df, windows, results) -> Path:
     return out[0]
 
 
+# One panel per window
 def plot_windows(windows, results) -> Path:
-    """One panel per window: the monthly record inside it, the trend and its
-    band. Shared y so the slopes compare by eye."""
     n = len(windows)
     ncol = 2 if n > 1 else 1
     nrow = int(np.ceil(n / ncol))
@@ -392,8 +321,8 @@ def plot_windows(windows, results) -> Path:
     return out[0]
 
 
+# Observed minus fitted trend, per window, with a 12-month running mean
 def plot_residuals(windows, results) -> Path:
-    """Observed minus fitted trend, per window, with a 12-month running mean."""
     n = len(windows)
     ncol = 2 if n > 1 else 1
     nrow = int(np.ceil(n / ncol))
@@ -435,10 +364,7 @@ def plot_residuals(windows, results) -> Path:
     return out[0]
 
 
-# ---------------------------------------------------------------------------
-# MAIN
-# ---------------------------------------------------------------------------
-
+# Run: fit every window, write the table and the figures
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--no-figures", action="store_true",

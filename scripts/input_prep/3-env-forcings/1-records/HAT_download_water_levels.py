@@ -1,59 +1,17 @@
-# =============================================================================
-# HAT_download_water_levels.py
-# NOAA CO-OPS Water Level Downloader — Duck, NC (Station 8651370)
-# -----------------------------------------------------------------------------
-# Purpose:
-#   Produce a gap-checked, completeness-verified hourly water level CSV for use
-#   as the `water_levels_file` input to historical_storm_creation_v3_HAT.py.
-#
-#   Output columns match that script's config exactly:
-#       t = datetime (GMT)          -> t_name_water = "t"
-#       v = water level [m NAVD88]  -> water_name   = "v"
-#
-# -----------------------------------------------------------------------------
-# WHY THIS EXISTS:
-#   The previous Duck CSV was missing the record's three largest events
-#   (Gloria 1985, Halloween 1991, Isabel 2003). Root cause was not the API —
-#   it was that download_noaa_water_levels_resumable.py accepted ANY non-empty
-#   response as a complete month, cached it permanently, wrote the comparison CSV
-#   even when months were missing, and checked completeness at the YEAR level
-#   (< 6000 records) — too coarse to ever see a missing month (8760 - 720 =
-#   8040, well above the threshold). v3's load_data() then dropna()'d the
-#   absent hours in silence, so the storm file lost Isabel with no error.
-#
-# WHAT CHANGED, AND WHY:
-#   Monthly chunks         Kept from the resumable script — one month (~720
-#                          records) is far lighter on CO-OPS than a large
-#                          window and times out much less. This was the right
-#                          call and is preserved.
-#
-#   Cache reuse            Same folder and same {station}_{datum}_{YYYYMM}.csv
-#                          naming, so months already downloaded are NOT re-
-#                          fetched. Existing cache carries over.
-#
-#   Cache VALIDATION       NEW. Every month — cached or freshly fetched — is
-#                          checked against its expected hour count. A truncated
-#                          month is re-fetched rather than trusted forever.
-#                          This is the fix for the actual bug.
-#
-#   Short-month handling   A month that stays short across retries is treated
-#                          as a genuine gauge outage (not API truncation) and
-#                          logged, not retried forever.
-#
-#   Fail loudly            Output CSV is NOT written if any month is empty or
-#                          if any checked storm window is uncovered.
-#
-#   Conservative fill      Only gaps <= INTERP_LIMIT_HR are interpolated.
-#                          Linear fill across a multi-hour outage at a storm
-#                          peak flattens the peak and biases Rhigh low — the
-#                          quiet version of the bug we just found.
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
-# =============================================================================
+"""
+Download the Duck, NC (8651370) hourly water levels from NOAA CO-OPS, gap-checked and completeness-verified.
 
+    python scripts/input_prep/3-env-forcings/1-records/HAT_download_water_levels.py
+
+Monthly chunks, cached and re-validated against the expected hour count;
+short gaps filled, long ones reported; the big storm windows must be covered.
+Writes the hourly CSV the storm builder reads. Details: scripts/input_prep/3-env-forcings/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 import json
 import os
 import time
@@ -68,10 +26,9 @@ try:
 except ImportError:
     raise SystemExit("noaa_coops is not installed.  Install it:  pip install noaa_coops")
 
-# =============================================================================
-# USER CONFIGURATION
-# =============================================================================
+# User configuration
 
+# --- CONFIG ------------------------------------------------------------------
 STATION_ID = "8651370"                  # Duck, NC
 DATUM      = "NAVD"                     # NAVD88 — matches WIS and dune elevations
 UNITS      = "metric"
@@ -81,12 +38,9 @@ BEGIN = "1984-01-01 00:00:00"
 END   = "2024-12-31 23:00:00"           # note the 23:00 — the original script stopped at 00:00
                                         # and silently lost the last 23 hours
 
-# --- Paths ---
-# CACHE_DIR intentionally matches download_noaa_water_levels_resumable.py so the
-# existing cache is reused. Point it at your real cache folder.
-# The record and its download cache moved into the data tree 2026-09-12;
-# only this downloader lives under scripts/. Anchored on this file, since
-# the two literals here were drive-rooted and had never resolved.
+# Paths
+
+# The cache and the record live in the data tree, anchored on this file
 import sys as _envsys
 from pathlib import Path as _EnvP
 _envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
@@ -95,28 +49,26 @@ from site_layer import hat_env_forcings as _env  # noqa: E402
 _WATER_LEVEL = _env.WATER_LEVEL_DIR     # 1-records/water_level/ since 2026-09-18
 CACHE_DIR   = _env.WATER_LEVEL_CACHE
 OUTPUT_DIR  = _WATER_LEVEL
-# Derived from BEGIN/END so the filename always states its own span. This is a
-# guard, not cosmetics: the previous broken CSV was named for the full span, and
-# writing a different span under that name is how a stale file gets read as fresh.
+# Derived from BEGIN/END so the filename always states its own span
 OUTPUT_NAME = None   # None -> auto: {station}_DUCK_{begin}_{end}_{datum}.csv
 
-# --- Request tuning ---
+# Request tuning
 MAX_RETRIES   = 5
 RETRY_WAIT    = 10                      # base seconds; grows each attempt
 REQUEST_PAUSE = 1.0                     # seconds between API calls
 
-# --- Completeness ---
+# Completeness
 MIN_MONTH_FRAC = 0.90                   # a month needs >= this fraction of its hours
 REVALIDATE_CACHE = True                 # re-check cached months against expected hours.
-                                        # Leave True — this is the bug fix. Set False only
-                                        # to skip the (cheap, local) recount.
+                                        # Leave True (the bug fix); False skips the cheap local recount
 
-# --- Gap handling ---
+# Gap handling
 INTERP_LIMIT_HR     = 3                 # fill gaps <= this; leave longer gaps NaN
 REPORT_GAPS_OVER_HR = 3
 
-# --- Storm windows that MUST be covered ---
-# If the gauge is missing here, Rhigh is wrong in a way nothing downstream sees.
+# Storm windows that must be covered
+
+# A gauge gap here makes Rhigh wrong with nothing downstream noticing
 STORM_CHECKS = {
     "Gloria 1985":    ("1985-09-26 00:00", "1985-09-28 00:00"),
     "Halloween 1991": ("1991-10-30 00:00", "1991-11-02 00:00"),
@@ -127,9 +79,7 @@ STORM_CHECKS = {
     "Sandy 2012":     ("2012-10-28 00:00", "2012-10-30 12:00"),
 }
 
-# Storms known to be uncoverable from this gauge. The gate still fires for anything
-# NOT listed here — so a new gap can never pass silently — but a documented outage
-# does not block the run. The reason string is your methods-section note.
+# Storms known to be uncoverable from this gauge
 ACKNOWLEDGED_GAPS = {
     "Sandy 2012": "Duck gauge offline 2012-10-29 -> 2012-11-29 (751 h). CO-OPS has "
                   "no record; five retries returned an identical 34/61 hours. "
@@ -140,14 +90,13 @@ ACKNOWLEDGED_GAPS = {
 }
 
 ABORT_IF_STORM_MISSING = True           # applies only to gaps NOT in ACKNOWLEDGED_GAPS
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# STEP 1 — MONTH PLANNING
-# =============================================================================
+# Step 1 — month planning
 
+# Yield (label 'YYYYMM', start_ts, end_ts, expected_hours) per calendar month
 def month_chunks(begin, end):
-    """Yield (label 'YYYYMM', start_ts, end_ts, expected_hours) per calendar month."""
     b, e = pd.Timestamp(begin), pd.Timestamp(end)
     cur = b.replace(day=1, hour=0, minute=0, second=0)
     out = []
@@ -161,21 +110,21 @@ def month_chunks(begin, end):
     return out
 
 
+# The cache file for one month
 def cache_path(cache_dir, label):
     return cache_dir / f"{STATION_ID}_{DATUM}_{label}.csv"
 
 
-# --- known-short registry -----------------------------------------------------
-# A month that stays short across all retries is a real gauge outage, not API
-# truncation. Without a record of that, REVALIDATE_CACHE re-fetches it (5 attempts
-# with backoff, ~100 s) on EVERY run, forever. This registry remembers the
-# confirmed count so the month is accepted from cache next time — but re-fetches
-# if the count ever changes, in case CO-OPS backfills the record.
+# Known-short registry
 
+# A month that stays short across all retries is a real gauge outage, not API truncation
+
+# The registry of months confirmed short at the source
 def short_registry_path(cache_dir):
     return cache_dir / "_known_short.json"
 
 
+# The known-short registry, or {}
 def load_known_short(cache_dir):
     p = short_registry_path(cache_dir)
     if not p.exists():
@@ -187,6 +136,7 @@ def load_known_short(cache_dir):
         return {}
 
 
+# Write the known-short registry
 def save_known_short(cache_dir, reg):
     try:
         with open(short_registry_path(cache_dir), "w") as f:
@@ -195,8 +145,8 @@ def save_known_short(cache_dir, reg):
         print(f"    (could not write known-short registry: {e})")
 
 
+# Return DataFrame with columns t, v — or None if unreadable/empty
 def read_cached_month(path):
-    """Return DataFrame with columns t, v — or None if unreadable/empty."""
     try:
         df = pd.read_csv(path, parse_dates=["t"])
         if "t" not in df.columns or "v" not in df.columns or df.empty:
@@ -207,21 +157,10 @@ def read_cached_month(path):
         return None
 
 
-# =============================================================================
-# STEP 2 — FETCH WITH RETRY, KEEPING THE BEST RESPONSE
-# =============================================================================
+# Step 2 — fetch with retry, keeping the best response
 
+# Download one month with retry/backoff, keeping the LARGEST response seen
 def fetch_month(station, m_start, m_end, expected):
-    """
-    Download one month with retry/backoff, keeping the LARGEST response seen.
-
-    Retrying matters because CO-OPS under load returns a truncated month rather
-    than an error. Keeping the largest response distinguishes a transient
-    truncation (a later attempt returns more) from a genuine gauge outage
-    (every attempt returns the same short count).
-
-    Returns (DataFrame or None, n_valid).
-    """
     best, best_n = None, -1
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -235,11 +174,7 @@ def fetch_month(station, m_start, m_end, expected):
             )
             if raw is not None and len(raw):
                 vcol = "v" if "v" in raw.columns else raw.columns[0]
-                # NOTE: raw.index is a DatetimeIndex NAMED 't'. Passing the Index
-                # and a Series into DataFrame({...}) makes pandas adopt the Series'
-                # index as the frame index — giving a frame with BOTH a column 't'
-                # and an index named 't', which makes sort_values('t') ambiguous.
-                # .values strips both, leaving a clean RangeIndex.
+                # .values drops the index named 't', so sort_values('t') is not ambiguous
                 df = pd.DataFrame({
                     "t": pd.to_datetime(raw.index).values,
                     "v": pd.to_numeric(raw[vcol], errors="coerce").values,
@@ -261,15 +196,10 @@ def fetch_month(station, m_start, m_end, expected):
     return best, max(best_n, 0)
 
 
-# =============================================================================
-# STEP 3 — DOWNLOAD LOOP
-# =============================================================================
+# Step 3 — download loop
 
+# Walk every month
 def download_all(cache_dir):
-    """
-    Walk every month: reuse valid cache, re-fetch invalid or missing.
-    Returns (DataFrame[t, v], status DataFrame).
-    """
     print("=" * 74)
     print(f"STEP 1: Monthly download — station {STATION_ID} ({BEGIN[:10]} -> {END[:10]})")
     print("=" * 74)
@@ -279,7 +209,7 @@ def download_all(cache_dir):
     cache_dir.mkdir(parents=True, exist_ok=True)
     chunks = month_chunks(BEGIN, END)
 
-    # --- pre-flight: what is already on disk, and how long will this take? ---
+    # Pre-flight: what is already on disk, and how long will this take?
     n_have = sum(1 for label, _, _, _ in chunks if cache_path(cache_dir, label).exists())
     n_todo = len(chunks) - n_have
     print(f"  cache: {cache_dir}")
@@ -310,8 +240,7 @@ def download_all(cache_dir):
 
         n_valid = int(df["v"].notna().sum()) if df is not None else 0
 
-        # Re-fetch if the cached month is short — UNLESS we already confirmed this
-        # exact count is all CO-OPS has. Then it's a real outage, so accept it.
+        # Re-fetch a short cached month unless that count is confirmed as all CO-OPS has
         confirmed_short = known_short.get(label) == n_valid
         stale = (REVALIDATE_CACHE
                  and n_valid < expected * MIN_MONTH_FRAC
@@ -360,8 +289,7 @@ def download_all(cache_dir):
     if not parts:
         raise SystemExit("Nothing downloaded. If a browser test URL also fails, CO-OPS is down.")
 
-    # ignore_index=True discards every part's index at the stitch, so no part can
-    # reintroduce an index level named 't' and make sort_values('t') ambiguous.
+    # ignore_index=True, so no part brings back an index named 't'
     full = (pd.concat(parts, ignore_index=True)
               .drop_duplicates(subset="t")
               .sort_values("t")
@@ -374,10 +302,9 @@ def download_all(cache_dir):
     return full, pd.DataFrame(status)
 
 
-# =============================================================================
-# STEP 4 — HOURLY GRID, GAP REPORT, CONSERVATIVE FILL
-# =============================================================================
+# Step 4 — hourly grid, gap report, conservative fill
 
+# Step 2: the hourly grid, the gap report, the conservative fill
 def build_hourly(df, begin, end, interp_limit_hr, report_over_hr):
     print("\n" + "=" * 74)
     print("STEP 2: Hourly grid, gap report, conservative fill")
@@ -418,12 +345,7 @@ def build_hourly(df, begin, end, interp_limit_hr, report_over_hr):
     else:
         print("  No gaps.")
 
-    # Fill short gaps only.
-    #
-    # CAREFUL: pandas interpolate(limit=N) fills the first N NaNs of EVERY run,
-    # including long ones — a 37 h outage would get 3 fabricated hours at its
-    # leading edge. So interpolate, then restore NaN across every run longer
-    # than the limit. Only wholly-short runs survive as filled.
+    # Fill short gaps only: interpolate, then restore NaN across every long run
     out["v"] = out["v"].interpolate(method="linear",
                                     limit=interp_limit_hr,
                                     limit_area="inside")
@@ -442,15 +364,10 @@ def build_hourly(df, begin, end, interp_limit_hr, report_over_hr):
     return out, gaps_df
 
 
-# =============================================================================
-# STEP 5 — STORM COVERAGE
-# =============================================================================
+# Step 5 — storm coverage
 
+# Returns (unexpected_missing, acknowledged_missing) — lists of storm names
 def check_storm_coverage(df, checks, acknowledged):
-    """
-    Returns (unexpected_missing, acknowledged_missing) — lists of storm names.
-    Only unexpected_missing should ever block a run.
-    """
     print("\n" + "=" * 74)
     print("STEP 3: Coverage during known storms")
     print("=" * 74)
@@ -493,10 +410,7 @@ def check_storm_coverage(df, checks, acknowledged):
     return unexpected, ack_hit
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: download and validate every month, build the hourly record, write it
 def main():
     print("\nHAT_download_water_levels.py")
     print(f"Station {STATION_ID} | {DATUM} | {TIME_ZONE.upper()} | "
@@ -514,7 +428,7 @@ def main():
     empty_months = status[status["frac"] == 0]
     short_months = status[(status["frac"] > 0) & (status["frac"] < MIN_MONTH_FRAC)]
 
-    # --- logs always written, even on abort ---
+    # Logs always written, even on abort
     status.to_csv(OUTPUT_DIR / out_name.replace(".csv", "_month_status.csv"), index=False)
     if len(gaps_df):
         gaps_df.to_csv(OUTPUT_DIR / out_name.replace(".csv", "_gaps.csv"), index=False)
@@ -543,9 +457,9 @@ def main():
         print("  the omission is documented rather than silent.")
         abort = True
 
-    # --- stale-comparison guard ---------------------------------------------------
-    # If we are not going to write out_name this run, any pre-existing file with
-    # that name is stale and will be silently read by v3_HAT.py. Quarantine it.
+    # Stale-comparison guard
+
+    # A file we are not writing this run is stale: quarantine it
     out_path = OUTPUT_DIR / out_name
     if abort and out_path.exists():
         stamp  = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")

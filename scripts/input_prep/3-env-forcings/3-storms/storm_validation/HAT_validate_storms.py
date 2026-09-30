@@ -1,60 +1,16 @@
-# =============================================================================
-# HAT_validate_storms.py
-# Unified storm-record validation — Hatteras Island
-# -----------------------------------------------------------------------------
-# Compares a CASCADE storm file against the documented record of named tropical
-# and extratropical storms near Hatteras Island, NC.
-#
-# REPLACES: HAT_validate_storms.py + HAT_validate_storms_windowchange.py
-#           (which differed only in period config and raw_offset convention)
-#
-# -----------------------------------------------------------------------------
-# WHAT CHANGED, AND WHY:
-#
-#   Catalog moved out          The list lived in three files and had drifted:
-#                              BERTHA/FRAN 1996 and ISAIAS 2020 were on the
-#                              record chart but tested by nothing. Now imported
-#                              from HAT_storm_catalog.py. Do not paste it back.
-#
-#   Format auto-detection      Reads BOTH schemas:
-#                                - v3 summary (Lexi's): StartTime, EndTime,
-#                                  calendar_year, Rhigh [dam rel. MHW]
-#                                - HAT_create_storms readable: Storm_Start,
-#                                  Storm_End, Peak_TWL_Time, Rhigh_m [m NAVD88]
-#                              The original validator required Peak_TWL_Time, so it
-#                              could not read v3 comparison at all.
-#
-#   Datum normalisation        v3 stores (TWL - MHW)/10 dam; HAT_create_storms
-#                              stores TWL/10 dam. Everything is converted to
-#                              m NAVD88 internally so numbers are comparable
-#                              across formats. Get MHW right or the axis lies.
-#
-#   Overlap matching           Default MATCH_MODE="overlap": the model storm
-#                              WINDOW must intersect the named storm window
-#                              (+/- MATCH_WINDOW_DAYS). Works for every format,
-#                              needs no Peak_TWL_Time, and is the better test:
-#                              a storm is captured if the model has an event
-#                              running at the same time, not if a single
-#                              instant lands inside a fuzzy box.
-#                              MATCH_MODE="peak" reproduces the original behaviour
-#                              where Peak_TWL_Time exists.
-#
-#   Shared-match reporting     A merged mega-event can span several named
-#                              storms (the 2003 event runs 09-09 -> 09-19 and
-#                              could claim more than Isabel). The original code
-#                              silently let the first claimant win while still
-#                              reporting every storm as matched. Shared matches
-#                              are now counted and printed.
-#
-# Usage:
-#   Set STORM_FILE / BEGIN_YEAR / END_YEAR below and run.
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
-# =============================================================================
+"""
+Validate a CASCADE storm file against the documented named-storm record, per hindcast period.
 
+    python scripts/input_prep/3-env-forcings/3-storms/storm_validation/HAT_validate_storms.py
+
+Matches model storms to named storms by date window, reports capture and
+false positives, and writes a figure, table and report per period. Details: scripts/input_prep/3-env-forcings/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 import contextlib
 import io
 from pathlib import Path
@@ -80,56 +36,20 @@ except ImportError as _e:
         f"  HAT_storm_record_1984_2021.py should import from it, so the list\n"
         f"  cannot drift between them again.\n")
 
-# =============================================================================
-# USER CONFIGURATION
-# =============================================================================
+# User configuration
 
-# --- Periods ------------------------------------------------------------------
-# Each period validates independently and writes to its own subfolder under
-# validation/ subfolder, so the two never overwrite each other and each can
-# be checked on its own.
-#
-# BOUNDARY — DECIDED BUT NOT YET APPLIED.
-# 2004 currently appears in BOTH storm files, with the same 10 events. If
-# Period 2 initialises from Period 1's final morphological state, those 10 are
-# forced twice. Agreed fix: Period 1 ends 2003-12-31 23:00, Period 2 begins
-# 2004-01-01 — matching historical_storm_creation_HAT.py (v1), which ended
-# Period 1 at 2003-12-31 23:00 for exactly this reason.
-#
-# Config below matches the files AS THEY EXIST TODAY (Period 1 -> 2004), so the
-# script runs against them unchanged. The CROSS-PERIOD SUMMARY will keep
-# reporting the 2004 overlap every run — that is deliberate, and it stops when
-# the input is actually regenerated.
-#
-# WHEN YOU REGENERATE, change in TWO places:
-#   1. historical_storm_creation_v3_HAT.py -> end_time = '2003-12-31 23:00:00'
-#                                             save_name = "1984_2003_storms_v3"
-#   2. here -> "file": "1984_2003_storms_v3_summary.csv",  "end": 2003
-# Note this also drops Alex/Bonnie 2004 from Period 1's catalog slice, so its
-# denominator goes 22 -> 20 and the capture rate shifts for that reason alone.
-#
-# Point these at the *_summary.csv files, NOT the bare CASCADE files. The bare
-# files have only a model-year index and cannot be date-matched.
+# Periods
 
-# Paths are DERIVED from each period's name to match the folder layout:
-#
-#   <STORM_ROOT>/
-#     1984_2004/
-#       1984_2004_storms_v3_summary.csv      <- input  (SUMMARY_TEMPLATE)
-#       validation/                          <- comparison (VALIDATION_SUBFOLDER)
-#     2004_2024/
-#       2004_2024_storms_v3_summary.csv
-#       validation/
-#
-# So renaming a period (e.g. 1984_2004 -> 1984_2003) updates the input path AND
-# the comparison folder together. Override per period with explicit "file" /
-# "outdir" keys if a run ever sits outside this convention.
+# Each period writes its own folder; the 2004 boundary fix is decided, not applied (README)
+
+# Paths are DERIVED from each period's name to match the folder layout
 
 import sys as _envsys
 from pathlib import Path as _EnvP
 _envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
                                 if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_env_forcings as _env  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 STORM_ROOT = _env.HINDCAST_STORMS
 
 SUMMARY_TEMPLATE     = "{name}_storms_v3_summary.csv"
@@ -143,46 +63,34 @@ PERIODS = [
 # Which to run: "all", or a list of names e.g. ["1984_2004"]
 RUN_PERIODS = "all"
 
-# --- Datum --------------------------------------------------------------------
-# MHW conversion for the Duck gauge [m]: 0 m NAVD88 = MHW m MHW.
-# Used to convert v3's (TWL - MHW)/10 dam back to m NAVD88. Must match the MHW
-# in the storm-creation config or every Rhigh here is shifted.
+# Datum
+
+# MHW conversion for the Duck gauge [m]
 MHW = 0.36
 
-# "auto"  -> infer from columns (recommended)
-# "v3"    -> StartTime/EndTime/calendar_year, Rhigh in dam relative to MHW
-# "readable" -> HAT_create_storms.py readable CSV, Rhigh_m in m NAVD88
+# Input format: auto, v3 (dam MHW) or readable (m NAVD88)
 INPUT_FORMAT = "auto"
 
-# --- Matching -----------------------------------------------------------------
-# "overlap" -> model storm window intersects [named_start - W, named_end + W]
-# "peak"    -> Peak_TWL_Time falls in that range (needs the readable format)
+# Matching
+
+# Match mode: overlap of the storm window, or the peak time inside it
 MATCH_MODE = "overlap"
 
-# Days of slack either side of the named storm's HURDAT2 active period.
-#   (1) Duck gauge (8651370) is ~40 km north of Hatteras centre — surge timing
-#       differs by hours depending on approach direction.
-#   (2) HURDAT2 reports full lifetime at sea, not the Hatteras influence window.
-# Recommended 3-5. Larger windows inflate the capture rate; see the sensitivity
-# sweep printed at the end.
+# Days of slack either side of the named storm's HURDAT2 active period
 MATCH_WINDOW_DAYS = 3
 
 # Sweep these windows to show how sensitive the capture rate is to the choice.
 SENSITIVITY_WINDOWS = [0, 1, 2, 3, 5, 7]
 
-# --- Output -------------------------------------------------------------------
-# Each period writes into <STORM_ROOT>/<name>/validation/ :
-#     storm_check_<name>.png     figure
-#     match_table_<name>.csv     per-named-storm match detail
-#     report_<name>.txt          the full console report
+# Output
+
+# Each period writes into <STORM_ROOT>/<name>/validation/ 
 SAVE_FIGURE = True
 SAVE_TABLE  = True
 SAVE_REPORT = True
 SHOW_FIGURE = True   # False when running both periods, or two windows open
 
-# =============================================================================
-# COLOUR SCHEME
-# =============================================================================
+# Colour scheme
 
 CAT_COLORS = {"H5": "#7b0000", "H4": "#b22222", "H3": "#e05c1a",
               "H2": "#e8a020", "H1": "#f0d040", "TS": "#5590d0", "ET": "#8888aa"}
@@ -191,12 +99,12 @@ CAT_ORDER  = ["H5", "H4", "H3", "H2", "H1", "TS", "ET"]
 MATCHED_COLOR   = "#2ca02c"   # model event matched a named storm
 UNMATCHED_COLOR = "#b0b0b0"   # model event is a nor'easter / unnamed
 MISSED_COLOR    = "#d62728"   # named storm not captured
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# STEP 1 — LOAD, DETECT FORMAT, NORMALISE
-# =============================================================================
+# Step 1 — load, detect format, normalise
 
+# Which storm-summary schema a table uses
 def detect_format(df):
     cols = set(df.columns)
     if {"Storm_Start", "Storm_End", "Rhigh_m"} <= cols:
@@ -213,12 +121,8 @@ def detect_format(df):
     raise SystemExit(f"Unrecognised storm file schema: {sorted(cols)}")
 
 
+# Normalise any supported schema to
 def load_storms(path, fmt, mhw, begin_year, end_year):
-    """
-    Normalise any supported schema to:
-        start_ts, end_ts, peak_ts (NaT if absent), year,
-        Rhigh_m, Rlow_m [m NAVD88], duration_h, period_s
-    """
     df = pd.read_csv(path)
     fmt = detect_format(df) if fmt == "auto" else fmt
 
@@ -259,15 +163,10 @@ def load_storms(path, fmt, mhw, begin_year, end_year):
     return out, fmt
 
 
-# =============================================================================
-# STEP 2 — MATCH
-# =============================================================================
+# Step 2 — match
 
+# For each named storm, find the best-matching model event
 def match_storms(model, historical, window_days, mode):
-    """
-    For each named storm, find the best-matching model event.
-    Best = highest Rhigh among candidates. Returns (model, results).
-    """
     win = pd.Timedelta(days=window_days)
     model = model.copy()
     model["matched_to"] = None
@@ -323,15 +222,15 @@ def match_storms(model, historical, window_days, mode):
     return model, results
 
 
+# (matched, total) named storms at one window
 def capture_rate(model, historical, window_days, mode):
     _, res = match_storms(model, historical, window_days, mode)
     return sum(r["matched"] for r in res), len(res)
 
 
-# =============================================================================
-# STEP 3 — REPORT
-# =============================================================================
+# Step 3 — report
 
+# The period's matching report to the console
 def print_report(model, results, window_days, mode):
     matched = [r for r in results if r["matched"]]
     missed  = [r for r in results if not r["matched"]]
@@ -391,6 +290,7 @@ def print_report(model, results, window_days, mode):
                 print(f"    {r['label']}: {r['note']}")
 
 
+# Capture rate against the match window
 def print_sensitivity(model, historical, mode, windows):
     print("\n" + "=" * 74)
     print("MATCH-WINDOW SENSITIVITY")
@@ -404,15 +304,14 @@ def print_sensitivity(model, historical, mode, windows):
         print(f"  {w:<12}{f'{n}/{tot}':<12}{100*n/tot:>3.0f}%  {bar}")
 
 
-# =============================================================================
-# STEP 4 — FIGURE
-# =============================================================================
+# Step 4 — figure
 
+# Annual counts, the timeline and the magnitudes, matched and not
 def make_figure(model, results, window_days, mode, begin_year, end_year, path):
     fig = plt.figure(figsize=(16, 11))
     gs  = fig.add_gridspec(3, 1, height_ratios=[1, 1.5, 1.1], hspace=0.32)
 
-    # --- Panel 1: annual counts, stacked matched/unmatched --------------------
+    # Panel 1: annual counts, stacked matched/unmatched
     ax1 = fig.add_subplot(gs[0])
     years = np.arange(begin_year, end_year + 1)
     m_cnt = [int(((model.year == y) & (model.match_type == "matched")).sum()) for y in years]
@@ -430,7 +329,7 @@ def make_figure(model, results, window_days, mode, begin_year, end_year, path):
     ax1.legend(loc="upper left", fontsize=9, framealpha=0.9)
     ax1.set_xlim(begin_year - 0.6, end_year + 0.6)
 
-    # --- Panel 2: timeline, Rhigh vs date ------------------------------------
+    # Panel 2: timeline, Rhigh vs date
     ax2 = fig.add_subplot(gs[1])
     for r in results:
         ax2.axvspan(r["start"], r["end"], color=CAT_COLORS.get(r["cat"], "#999"),
@@ -458,7 +357,7 @@ def make_figure(model, results, window_days, mode, begin_year, end_year, path):
     ax2.set_title("Shaded bands = named-storm active periods; red lines = missed",
                   fontsize=10, loc="left", color="#555")
 
-    # --- Panel 3: capture table ----------------------------------------------
+    # Panel 3: capture table
     ax3 = fig.add_subplot(gs[2]); ax3.axis("off")
     rows, colors = [], []
     for r in sorted(results, key=lambda x: x["start"]):
@@ -493,24 +392,21 @@ def make_figure(model, results, window_days, mode, begin_year, end_year, path):
     return fig
 
 
-# =============================================================================
-# PATH RESOLUTION
-# =============================================================================
+# Path resolution
 
+# Derive (summary_file, output_dir) from the period name + folder layout
 def resolve_paths(cfg):
-    """Derive (summary_file, output_dir) from the period name + folder layout."""
     folder = Path(cfg["folder"]) if "folder" in cfg else STORM_ROOT / cfg["name"]
     file   = (Path(cfg["file"]) if "file" in cfg
               else folder / SUMMARY_TEMPLATE.format(name=cfg["name"]))
-    # Beside the storm_check output for the same window, not inside the
-    # model-input folder (2026-09-18; was <window>/validation/).
+    # Beside the storm_check output for the same window
     outdir = (Path(cfg["outdir"]) if "outdir" in cfg
               else _env.STORM_VALIDATION / cfg["name"])
     return folder, file, outdir
 
 
+# Print every resolved path and flag missing ones BEFORE any work starts
 def preflight(periods):
-    """Print every resolved path and flag missing ones BEFORE any work starts."""
     print("\n" + "=" * 74)
     print("PATHS")
     print("=" * 74)
@@ -539,10 +435,9 @@ def preflight(periods):
     return ok
 
 
-# =============================================================================
-# RUN ONE PERIOD
-# =============================================================================
+# Run one period
 
+# Validate one period and write its outputs
 def run_period(cfg):
     name, begin, end = cfg["name"], cfg["begin"], cfg["end"]
     folder, file, outdir = resolve_paths(cfg)
@@ -586,10 +481,9 @@ def run_period(cfg):
     return {"cfg": cfg, "model": model, "results": results, "outdir": outdir}
 
 
-# =============================================================================
-# CROSS-PERIOD CHECKS
-# =============================================================================
+# Cross-period checks
 
+# Compare the periods, flagging any overlapping year
 def cross_period_report(runs):
     if len(runs) < 2:
         return
@@ -606,7 +500,7 @@ def cross_period_report(runs):
         print(f"  {c['name']:<14}{yrs:<13}{len(r['model']):>8}{cap:>11}"
               f"{r['model'].Rhigh_m.max():>11.2f} m")
 
-    # --- boundary overlap -----------------------------------------------------
+    # Boundary overlap
     print("\n  Boundary check:")
     for a, b in zip(runs, runs[1:]):
         ca, cb = a["cfg"], b["cfg"]
@@ -630,10 +524,7 @@ def cross_period_report(runs):
             print(f"         Period 1 at 2003-12-31 23:00 to avoid this.")
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: every chosen period, then the cross-period summary
 def main():
     print("\nHAT_validate_storms.py")
     print(f"Catalog: {len(HISTORICAL_STORMS)} named storms (HAT_storm_catalog.py)")

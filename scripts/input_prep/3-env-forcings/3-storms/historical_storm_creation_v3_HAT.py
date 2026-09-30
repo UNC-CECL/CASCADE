@@ -1,27 +1,11 @@
 """
-Creating a historical storm series for CASCADE
-================================================
-CASCADE requires an input storm series consisting of the model year the storm
-occurs, maximum run-up, minimum run-up, wave period, and storm duration.
-Synthetic storms can be created using the multi-variate sea storm model of
-Wahl et al. (2016), but this script converts recorded water level and wave
-data into a CASCADE storm input.
+Build the historical storm series CASCADE reads for one hindcast window, from Duck water levels and WIS waves.
 
-Input files should be csv files with headers. Any missing data will be filled
-with nans and dropped. Water levels can be pulled from a NOAA tide gauge
-(https://tidesandcurrents.noaa.gov/) and wave information can be obtained
-from a WIS Station (https://wisportal.erdc.dren.mil/).
+    python scripts/input_prep/3-env-forcings/3-storms/historical_storm_creation_v3_HAT.py --start-year 1996 --end-year 2010
 
-Input files include:
-- water levels file: should have datetimes and water levels in m NAVD88
-- wave information file: should have datetime, significant wave height (m),
-  and wave period (s) columns.
-
-Input variables include:
-- beach slope (to calculate runup)
-- berm elevation in m NAVD88
-- conversion from m NAVD88 to m MHW for your tidal gauge (check the NOAA
-  datums for your gauge)
+Total water level = gauge + Stockdon R2%; events above the berm, split,
+capped and trimmed; writes the storm .npy and its summary CSV. Its four
+functions are also read by hatteras_ms/experiments/HAT_storm_max_duration.py. Details: scripts/input_prep/3-env-forcings/README.md.
 
 Adapted from: from_lexi/historical_storm_creation_v3.ipynb, by Lexi
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -37,26 +21,13 @@ import os
 from datetime import datetime, timedelta
 
 
-# =============================================================================
-# user inputs
-# =============================================================================
-# THE WINDOW IS GIVEN ONCE, AS A PERIOD (2026-09-11). Everything below that
-# names a year -- the dates, the output directory, the file name -- is derived
-# from it, so they cannot disagree. In the committed state they did: save_dir
-# said 1984_2004 while save_name said 2004_2024, a pair that cannot both be
-# right about what was produced.
-#
-# The two source paths were drive-rooted literals from before the tree was
-# reorganised (str(_PATH_REPO / "scripts" / "..."), str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "...")), so they
-# resolved only if the interpreter happened to start at the drive root. They
-# are anchored on this file now, like every other path in the input tree.
-#
-#     python historical_storm_creation_v3_HAT.py --start-year 1996 --end-year 2010
+# User inputs
+
+# The two source paths are anchored on this file now (history in README)
 import argparse as _argparse
 from pathlib import Path as _Path
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in _Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
@@ -69,36 +40,19 @@ _ap.add_argument("--start-year", type=int, required=True,
 _ap.add_argument("--end-year", type=int, required=True,
                  help="period end. The model loop runs start..end-1, so the "
                       "last storm year the run can spend is end-1")
-# THE LONG-EVENT RULE (2026-09-28, Hannah adopted "trim24"). Grouping runs
-# less than weather_grouping hours apart can make one event of 100-190 h, and
-# the original rule DROPPED any event longer than max_storm_dur -- which at
-# 72 h removed Isabel 2003, March 2018, Florence, Dennis and Nor'Ida. The 72
-# existed only because the pre-49fd069 Barrier3D crashed on long storms
-# (experiments/storms-and-overwash/2026-09-28-storm-max-duration). "trim"
-# keeps every event and cuts one longer than max_storm_dur to the
-# max_storm_dur hours around its peak TWL; Rhigh, Rlow and the period are taken
-# from what is kept. The defaults (drop, 72) reproduce the v3_72 files.
+# THE LONG-EVENT RULE (2026-09-28, Hannah adopted "trim24")
 _ap.add_argument("--max-duration", type=int, default=72,
                  help="hours; the drop limit, or the trim length with --long-events trim")
 _ap.add_argument("--long-events", choices=("drop", "trim"), default="drop",
                  help="drop events longer than --max-duration (v3_<N>), or trim them (v3_trim<N>)")
-# THE SPLIT RULE (2026-09-29, Hannah adopted "split12"). The 24 h grouping
-# chains storms a week apart, because the berm is overtopped at most high tides
-# in an active spell: Edouard + Fran 1996 became one 119 h event and Jose +
-# Maria 2017 one of 186 h, and the trim then kept only the larger storm, so
-# Fran and Jose were not in the model. --split-gap H splits each grouped event
-# wherever the water stays below the berm for >= H hours; a piece shorter than
-# the minimum duration is folded into the piece before it (after, for the
-# first), so no hour the grouped event counted is lost. Each piece is then an
-# event of its own (trimmed, dated by its own start). Omitted, events are not
-# split and the older series rebuild exactly.
-# (experiments/storms-and-overwash/2026-09-29-event-splitting)
+# THE SPLIT RULE (2026-09-29, Hannah adopted "split12")
 _ap.add_argument("--split-gap", type=int, default=None,
                  help="hours below the berm that split a grouped event (v3_split<H>_...)")
 _ap.add_argument("--save-dir", default=None,
                  help="write here instead of the window's hindcast_storms folder (for checks)")
 _args = _ap.parse_args()
 
+# --- CONFIG ------------------------------------------------------------------
 START_YEAR = _args.start_year
 END_YEAR = _args.end_year
 PERIOD_TAG = "{0}_{1}".format(START_YEAR, END_YEAR)
@@ -130,37 +84,23 @@ save_dir = _args.save_dir or str(_env.storm_window_dir(START_YEAR, END_YEAR))  #
 save_name = "{0}_storms_v3_{1}{2}{3}".format(  # the rules are in the name: v3_72, v3_trim24, v3_split12_trim24
     PERIOD_TAG, "split{0}_".format(split_gap) if split_gap else "",
     "trim" if long_events == "trim" else "", max_storm_dur)
+# -----------------------------------------------------------------------------
 _Path(save_dir).mkdir(parents=True, exist_ok=True)
 
 
-# -----------------------------------------------------------------------------
-# DO NOT EDIT CODE BLOCKS BELOW - all inputs are updated automatically. To
-# change results, please change your inputs in the block above. However, you
-# should review the comparison below to ensure it makes sense.
-# -----------------------------------------------------------------------------
+# Do not edit code blocks below - all inputs are updated automatically
 
 
-# =============================================================================
 # Step 1: Load data and combine into a single dataframe
-# =============================================================================
+
+# this function finds all values that are NaN and groups them by consecutive time periods NOTE
 def find_time_gaps(df, col_name):
-    """
-    this function finds all values that are NaN and groups them by consecutive time periods
-    NOTE: this function does not fill or modify missing data. it just informs you where the data is missing
-    df: dataframe
-        has datetime indeces and a column with data to evaluate
-    col_name: string
-        name of col to evaluate in df
-    
-    """
     
     # check for NaN value and create a datetime list of all corresponding NaNs
     nan_index_numbers = np.where(df[col_name].isnull())[0]  # returns numeric index
     time_list_nans = df.index[nan_index_numbers]  # returns the datetime index
 
-    # loop through the NaN times and check if the difference between times is more than 1 hour
-    # if so, that means this is the transition from one consecutive time period of nans to another
-    # add the end value plus the next start value to our list of datetimes
+    # A step of more than 1 hour between NaN times ends one gap and starts the next
     datetime_nans = []
     start = time_list_nans[0]
     datetime_nans.append(start)  # add the first value to the list
@@ -172,8 +112,7 @@ def find_time_gaps(df, col_name):
     stop = time_list_nans[-1]
     datetime_nans.append(stop)  # add last value to list
     
-    # separate out by start and end datetime
-    # start dates will be odd indeces, end dates will be even indeces
+    # Start and end datetimes: starts at odd indices, ends at even
     start_dt = []
     end_dt = []
     n_days = []
@@ -196,6 +135,7 @@ def find_time_gaps(df, col_name):
     print(missing_data_ranges)
 
 
+# This function loads the data, combines everything into a single dataframe with the specified start ...
 def load_data(
     start_time,
     end_time,
@@ -207,30 +147,6 @@ def load_data(
     waveHs_name="waveHs", 
     waveTp_name="waveTp"
 ):
-    """
-    This function loads the data, combines everything into a single dataframe with the specified start and stop values, 
-    and drops rows with nans. It returns the combined dataframe.
-    If data is missing from water level, wave height, or wave period, it will call the function above.
-    
-    start_time: string
-        date to start the storms
-    end_time: string
-        date to end the storms
-    water_levels_file: string
-        file that contains the water levels from NOAA gauge
-    wis_file: string
-        file that contains the wave height and period from WIS gauge
-    t_name_water: string, optional
-        name of the column that contains the datetimes in the water levels file
-    water_name: string, optional
-        name of the column that contains the water levels in the water levels file [m NAVD88]
-    t_name_wis: string, optional
-        name of the column that contains the datetimes in the WIS file    
-    waveHs_name: string, optional
-        name of the column that contains the significant wave heights in the WIS file [m]
-    waveTp_name: string, optional
-        name of the column that contains the wave periods in the WIS file [s]
-    """
     
     # initialize index with continuous datetimes
     dt_list = []
@@ -261,8 +177,7 @@ def load_data(
     df_merged["Hs"] = waveHs
     df_merged["Tp"] = waveTp
     
-    # check for missing data
-    # water levels
+    # Check for missing data water levels
     nan_index_numbers = np.where(df_merged["water_level"].isnull())[0]  # returns numeric index
     if len(nan_index_numbers) > 0:
         find_time_gaps(df_merged, "water_level")
@@ -297,11 +212,10 @@ df_merged = load_data(
 print(df_merged)
 
 
-# =============================================================================
-# Step 2: Calculate the runup to use for the Total Water Level (TWL)
-# =============================================================================
+# Step 2: Calculate the runup to use for the Total Water Level (twl)
+
+# Calculate R2% (2% exceedance runup) using Stockdon et al
 def calculate_r2_percent(Hs, Tp, slope):
-    """Calculate R2% (2% exceedance runup) using Stockdon et al. (2006)"""
     g = 9.81
     # Deep water wavelength
     L0 = (g * Tp**2) / (2 * np.pi)
@@ -331,9 +245,9 @@ df_merged['TWL'] = df_merged['water_level'] + df_merged['R2']
 print(df_merged)
 
 
-# =============================================================================
-# Step 3: Create the CASCADE storms based on berm elevation and TWL
-# =============================================================================
+# Step 3: Create the CASCADE storms based on berm elevation and twl
+
+# df_merged
 def create_storms(
     df_merged, 
     berm_elevation, 
@@ -349,33 +263,8 @@ def create_storms(
     split_gap=None,
 ):
     
-    """    
-    df_merged: dataframe
-        comparison dataframe from the previous function
-    berm_elevation: float
-        berm elevation of your location of interest [m NAVD88]
-    weather_grouping: int, optional
-        if storms occur within the specified limit, they are assumed part of same weather system and are grouped into one event [hrs]
-    MHW: float, optional
-        conversion from m NAVD88 to m MHW for your tidal gauge [m]
-    min_storm_dur: int, optional
-        minimum storm duration that is considered a storm event [hrs]
-    max_storm_dur: int, optional
-        maximum duration to include in storm events [hrs]
-    save_dfs: bool, optional
-        determine whether to save the dataframes as csv and npy files
-    savedir: string, optional
-        directory to save the storm files. if blank, use the current working directory
-    save_name: string, optional
-        name of this storm run
-    window_start_year: int, optional
-        calendar year that becomes model step 1. None anchors on the first
-        year that holds a storm, which is what this script did before 2026-09-11.
-    
-    """
-    # -----------------------------------------------------------------------------
-    # ---------------------------STEP 1 IDENTIFY STORMS ---------------------------
-    # -----------------------------------------------------------------------------
+    # Step 1 identify storms
+
     # initialize new dataframe
     df = pd.DataFrame({
         "Time": pd.to_datetime(df_merged.index),
@@ -407,15 +296,12 @@ def create_storms(
     df.loc[~df["AboveBerm"], "StormID"] = np.nan
     
     
-    # -----------------------------------------------------------------------------
-    # ---------------------------STEP 2 CREATE STORMS ---------------------------
-    # -----------------------------------------------------------------------------
+    # Step 2 create storms
+
     storms = []
     storm_groups = df.dropna(subset=["StormID"]).groupby("StormID")
 
-    # split_gap: cut each grouped event where the water stays below the berm
-    # for >= split_gap hours; a piece shorter than min_storm_dur joins the
-    # piece before it (after, for the first). See --split-gap above.
+    # split_gap: cut events where the water stays below the berm that long; short pieces rejoin
     if split_gap:
         def _split(group):
             group = group.sort_values("Time")
@@ -447,8 +333,7 @@ def create_storms(
         # Duration (hours)
         duration = len(group)  # each row is 1 hour where an exceedance occured
 
-        # "trim": keep a long event, cut to the max_storm_dur hours above the
-        # berm centred on its peak (clamped to the event's ends)
+        # 'trim': keep a long event, cut to max_storm_dur hours around its peak
         trimmed_from = 0
         if long_events == "trim" and duration > max_storm_dur:
             k = int(np.argmax(group["TWL"].values))
@@ -486,18 +371,9 @@ def create_storms(
 
     storms_df = pd.DataFrame(storms)
 
-    # =========================
-    # CONVERT YEAR → TIME (CASCADE)
-    # =========================
-    # MODEL STEP 1 IS THE WINDOW'S FIRST YEAR, not the first year that happens
-    # to hold a storm (2026-09-11). Anchoring on the data means a window whose
-    # opening year is quiet silently shifts the WHOLE series one year earlier,
-    # and nothing downstream can detect it: CASCADE indexes storms by step, so
-    # the run would simply spend the wrong year's storms with no error.
-    #
-    # window_start_year=None keeps the old data-anchored behaviour, so this
-    # reproduces the committed series exactly where the first year is stormy --
-    # which is the case for both of the periods already on disk.
+    # Convert year → time (CASCADE)
+
+    # Model step 1 is the window's first year, not the first stormy year
     if not storms_df.empty:
         first_storm_year = int(storms_df["calendar_year"].min())
         anchor = first_storm_year if window_start_year is None             else int(window_start_year)
@@ -509,18 +385,16 @@ def create_storms(
     else:
         storms_df["time"] = pd.Series(dtype=float)
 
-    # =========================
-    # FINAL FORMAT
-    # =========================
+    # Final format
+
     cascade_df = storms_df[["time", "Rhigh", "Rlow", "period", "duration"]].copy()
     cascade_df = cascade_df.reset_index(drop=True)
     casc_input_array = cascade_df.to_numpy()
     total_storms = len(cascade_df)
     avg_duration = round(np.mean(cascade_df.duration.values),0)
 
-    # =========================
-    # SAVE
-    # =========================
+    # Save
+
     if save_dir == "":
         save_dir = os.getcwd()
     
