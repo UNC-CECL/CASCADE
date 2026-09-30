@@ -43,11 +43,9 @@
 #                 5yr_bins/<window>/  the OLS in successive 5-year bins,
 #                                     1996_2010 2010_2024 1996_2024
 #                 window_convergence/ the same OLS on NESTED families of
-#                     forward_from_    windows, one pinned at each end: which
-#                         1996/        windows recover the long-term rate?
-#                     backward_from_   Each holds sites/ (eight domains),
-#                         2024/        all_transects/ (all ~906) and
-#                                      domain_means/ (the graded unit).
+#                     1-rate_profiles/ windows, one pinned at each end: which
+#                     2-settling_window/ windows recover the long-term rate?
+#                     experiments/     See window_convergence_dir().
 #                                      Seven tolerances scored, headline is
 #                                      CI overlap
 #                 total_change/       the same rate as a DISTANCE: LRR(W) x the
@@ -250,20 +248,51 @@ PROJECTED_RATE_WINDOW = (1996, 2024)
 COASTSAT_WINDOW_CONVERGENCE_ROOT = COASTSAT_RATES / "window_convergence"
 
 
+# QUESTION FIRST (Hannah, 2026-09-29, "it is hard to understand"). The tree
+# splits by the question each product asks, numbered in reading order, and the
+# pinned direction sits under each question:
+#
+#     1-rate_profiles/<direction>_from_<year>/     does the WHOLE alongshore
+#                                                  profile look like 1996-2024?
+#     2-settling_window/<direction>_from_<year>/   when does each LOCATION
+#         a-eight_sites/  b-every_transect/        settle on it?
+#         c-domain_means/
+#     experiments/record_cut_<end>/<direction>_from_<year>/
+#                                                  the settling sweep on a
+#                                                  truncated record
+#
+# Until 2026-09-29 it was record_<start>_<end>/<direction>/{sites,all_transects,
+# domain_means,alongshore_profiles}/, which put two questions at one level and
+# the 2020-truncated experiment beside the main result as an equal.
+WINDOW_PROFILES_DIR = "1-rate_profiles"
+SETTLING_WINDOW_DIR = "2-settling_window"
+WINDOW_EXPERIMENTS_DIR = "experiments"
+
+# The three scales of the settling sweep, keyed as its --scale choices are.
+# Lettered so they list in reading order: the readable case, the island, and
+# the unit the model is graded on.
+SETTLING_SCALE_DIRS = {
+    "sites": "a-eight_sites",
+    "all": "b-every_transect",
+    "domains": "c-domain_means",
+}
+
+
 def window_convergence_dir(direction, anchor_year,
                           ref_start=1996, ref_end=2024) -> Path:
-    """One sweep's folder: `forward_from_1996` or `backward_from_2024`.
+    """One settling sweep's folder: `forward_from_1996` or `backward_from_2024`.
 
     NOT `<start>_<end>`, although rule 2 would ask for it: a span name claims
     ONE interval and each of these folders holds twenty-five of them. What
     they share is the end that is PINNED, so that is what the name gives.
 
-    Nested under `record_<start>_<end>/`, the span of CoastSat the sweep was
-    allowed to see. The full record is `record_1996_2024`; a truncated one is a
-    DIFFERENT EXPERIMENT, not a version of the same product, because every
-    window in it is fitted against a different reference. Filing them apart
-    also stops a truncated forward run overwriting the full one, which shares
-    its pinned year and so its folder name (Hannah, 2026-09-23).
+    The full 1996-2024 record files under `2-settling_window/`. Any other
+    record span is a DIFFERENT EXPERIMENT, not a version of the same product,
+    because every window in it is fitted against a different reference, so it
+    files under `experiments/record_cut_<end>/` (or `record_<start>_<end>/` if
+    the start moved too). Filing them apart also stops a truncated forward run
+    overwriting the full one, which shares its pinned year and so its folder
+    name (Hannah, 2026-09-23).
 
     Two directions, because the pair brackets the answer (Hannah, 2026-09-23).
     Forward pins 1996 and walks the end year outward: how much record do you
@@ -271,13 +300,30 @@ def window_convergence_dir(direction, anchor_year,
     year back: how late can a window begin and still recover the long-term
     rate? Both converge on the same 1996-2024 reference from opposite sides.
     """
+    _check_direction(direction)
+    ref_start, ref_end = int(ref_start), int(ref_end)
+    if (ref_start, ref_end) == (1996, 2024):
+        base = COASTSAT_WINDOW_CONVERGENCE_ROOT / SETTLING_WINDOW_DIR
+    else:
+        record = ("record_cut_{0}".format(ref_end) if ref_start == 1996
+                  else "record_{0}_{1}".format(ref_start, ref_end))
+        base = COASTSAT_WINDOW_CONVERGENCE_ROOT / WINDOW_EXPERIMENTS_DIR / record
+    return base / "{0}_from_{1}".format(direction, int(anchor_year))
+
+
+def window_profiles_dir(direction, anchor_year) -> Path:
+    """One rate-profile family's folder, under `1-rate_profiles/`. Full
+    1996-2024 record only; the profiles have no truncated experiment."""
+    _check_direction(direction)
+    return (COASTSAT_WINDOW_CONVERGENCE_ROOT / WINDOW_PROFILES_DIR
+            / "{0}_from_{1}".format(direction, int(anchor_year)))
+
+
+def _check_direction(direction):
     if direction not in ("forward", "backward"):
         raise ValueError(
             "direction is 'forward' (pinned start) or 'backward' (pinned end), "
             "not {0!r}".format(direction))
-    return (COASTSAT_WINDOW_CONVERGENCE_ROOT
-            / "record_{0}_{1}".format(int(ref_start), int(ref_end))
-            / "{0}_from_{1}".format(direction, int(anchor_year)))
 
 
 WINDOW_CONVERGENCE_SWEEP_FILE = "window_convergence_transects.csv"
