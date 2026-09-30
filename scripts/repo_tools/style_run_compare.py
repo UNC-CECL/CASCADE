@@ -5,10 +5,12 @@ Run scripts before and after a restyle in a scratch copy, and compare what they 
         --before <scripts dir at the old commit> --after <restyled scripts dir> \
         --spec runs.json --out C:/Users/hanna/sw_verify/results
 
-runs.json is a list of {"label", "script", "args": [...], "env": {...}}, the
-script path relative to scripts/. Each run executes in --root with the old then
-the new scripts/ in place; every file written under data/ and output/ is kept
-and compared. Never touches the real repository. Needs numpy and Pillow.
+runs.json is a list of {"label", "script", "args": [...], "env": {...}, "set": {...}},
+the script path relative to scripts/. Each run executes in --root with the old
+then the new scripts/ in place; every file written under data/ and output/ is
+kept and compared. "set" replaces top-level assignments in memory (e.g. an
+interactive MODE), the same way on both sides; the file is never edited.
+Never touches the real repository. Needs numpy and Pillow.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -40,6 +42,25 @@ VOLATILE = [r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?", r"\b\d+(\.\d+)
 ENV = {"SOURCE_DATE_EPOCH": "0", "MPLBACKEND": "Agg", "PYTHONHASHSEED": "0",
        "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
 # -----------------------------------------------------------------------------
+
+# Run a script as __main__ with some top-level assignments replaced (argv: path, json)
+LAUNCHER = """
+import ast, json, os, sys
+path, sets = sys.argv[1], json.loads(sys.argv[2])
+sys.argv = [path] + sys.argv[3:]
+tree = ast.parse(open(path, encoding="utf-8").read())
+hit = set()
+for n in tree.body:
+    if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name) \
+            and n.targets[0].id in sets:
+        n.value = ast.copy_location(ast.parse(repr(sets[n.targets[0].id]), mode="eval").body, n.value)
+        hit.add(n.targets[0].id)
+missing = set(sets) - hit
+if missing:
+    raise SystemExit(f"set: no top-level assignment to {sorted(missing)}")
+sys.path.insert(0, os.path.dirname(path))
+exec(compile(tree, path, "exec"), {"__name__": "__main__", "__file__": path})
+"""
 
 
 # Size and mtime of every file under the watched folders
@@ -81,7 +102,10 @@ def run_side(root: Path, spec: dict, side: str, keep: Path) -> dict:
     before = snapshot(root)
     env = {**os.environ, **ENV, **spec.get("env", {})}
     t0 = time.time()
-    p = subprocess.run([sys.executable, str(root / "scripts" / spec["script"]), *spec.get("args", [])],
+    script = str(root / "scripts" / spec["script"])
+    cmd = ([sys.executable, "-c", LAUNCHER, script, json.dumps(spec["set"])] if spec.get("set")
+           else [sys.executable, script])
+    p = subprocess.run([*cmd, *spec.get("args", [])],
                        cwd=root / "scripts" / Path(spec["script"]).parent, env=env,
                        capture_output=True, text=True, encoding="utf-8", errors="replace",
                        timeout=TIMEOUT_S)
