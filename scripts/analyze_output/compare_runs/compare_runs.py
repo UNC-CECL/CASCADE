@@ -832,6 +832,9 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
 
 # Run: load runs and CoastSat, smooth, draw every figure
 def main():
+    if not RUNS_TO_COMPARE:
+        raise SystemExit("RUNS_TO_COMPARE is empty: name the runs to compare in the CONFIG "
+                         "block first (fields in scripts/analyze_output/README.md)")
     # Resolve comparison name
     global COMPARISON_NAME
     if COMPARISON_NAME is None:
