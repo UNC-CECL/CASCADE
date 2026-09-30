@@ -8,9 +8,12 @@ put together is [`figure_making/GUIDE.md`](figure_making/GUIDE.md).
 
 The reference implementation is `input_prep/5-scr/template/`: copy its shape.
 
-This applies to new scripts and to any script being rewritten. Older scripts
-with long explanatory docstrings are not wrong; bring them in line when you
-next rewrite them, not in a sweep.
+Existing scripts are being brought in line folder by folder (from 2026-09-30),
+each change proven to leave behaviour untouched. Three tools in `repo_tools/`
+support it: `style_guide_check.py` reports departures from this guide,
+`style_equivalence_check.py` proves a restyled file does the same thing, and
+`style_readme_coverage.py` checks the explanations removed from a script
+reached its README.
 
 ---
 
