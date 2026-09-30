@@ -3,7 +3,8 @@
 A script should read top to bottom in a minute. It says **what** it does; the
 **why** lives in the folder's `README.md`. Where files go is
 [`ORGANIZATION.md`](../ORGANIZATION.md); how figures look is
-[`figure_making/STYLE.md`](figure_making/STYLE.md).
+[`figure_making/STYLE.md`](figure_making/STYLE.md), and how a figure script is
+put together is [`figure_making/GUIDE.md`](figure_making/GUIDE.md).
 
 The reference implementation is `input_prep/5-scr/template/`: copy its shape.
 

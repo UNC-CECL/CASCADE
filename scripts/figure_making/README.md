@@ -21,6 +21,9 @@ tools/         figure_index.py (writes output/figures/README.md),
                colour picker and an .npy viewer
 STYLE.md       the house style in words, written by write_style_sheet() in
                scripts/site_layer/hat_figure_style.py
+GUIDE.md       how a figure script is written here: skeleton, where the
+               figure goes, registering it (2026-09-30)
+template/      a standalone figure in the house style, to share
 superseded_20260914/
 model_output/superseded_20260918/   the two 1978-1997 gif scripts; see WHY.md
 ```
