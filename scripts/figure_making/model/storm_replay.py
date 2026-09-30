@@ -41,9 +41,12 @@ class _StormsDone(Exception):
 
 CAPTURE_TEXT = "InteriorUpdate = Elevation[-1, 1:, :]"
 
-# THREE SUSPECTED DEFECTS in how Barrier3D starts overwash, found with this
-# replay on 2026-09-27. None is fixed in barrier3d.py; a VARIANT applies a fix
-# to an in-memory copy of the class only, so their effect can be measured.
+# THREE DEFECTS in how Barrier3D starts overwash, found with this replay on
+# 2026-09-27 and FIXED in ../Barrier3D on 2026-09-28 (990c3bd, 015f11e,
+# e929e65; merged into hatteras/adopted, see HATTERAS_FIXES.md there). The
+# model now carries all three, so `fixes=` is a no-op on it and `defects=` is
+# the variant that matters: it puts a defect BACK into an in-memory copy of the
+# class (the upstream UNC-CECL code), so the fix's effect can still be measured.
 #   "gaps"     DuneGaps() (2020) drops the last overtopped cell of the last
 #              gap, and returns nothing at all when one cell is overtopped.
 #   "slice"    update() sets gap water with Discharge[:, 0, start:stop], but
@@ -54,9 +57,16 @@ CAPTURE_TEXT = "InteriorUpdate = Elevation[-1, 1:, :]"
 #              it (b11b880, 2024 Numba refactor), so inundation transport
 #              Ki * (Q * (S + C))**mm always runs with C = 0.
 FIXES = ("gaps", "slice", "momentum")
+DEFECTS = FIXES
 _SOURCE_FIXES = {
     "slice": ("Discharge[:, 0, start:stop] = Qdune", "Discharge[:, 0, start:stop + 1] = Qdune"),
     "momentum": ("C = 0  # Initialize", "pass  # C kept (replay variant)"),
+}
+# The reverse substitutions: the fixed text in hatteras/adopted back to upstream.
+_INUNDATION_IF = "if inundation == 1:  # Inundation regime"
+_SOURCE_DEFECTS = {
+    "slice": ("Discharge[:, 0, start:stop + 1] = Qdune", "Discharge[:, 0, start:stop] = Qdune"),
+    "momentum": (_INUNDATION_IF, "C = 0  # upstream reset (replay variant)\n{indent}" + _INUNDATION_IF),
 }
 
 
@@ -78,12 +88,41 @@ def _dune_gaps_fixed(self, DuneDomain, Dow, bermel, Rhigh):
     return gaps
 
 
+def _dune_gaps_upstream(self, DuneDomain, Dow, bermel, Rhigh):
+    """DuneGaps as upstream Barrier3D has it (UNC-CECL master): drops the last
+    overtopped cell of the last gap, and a lone overtopped cell entirely."""
+    gaps = []
+    start = 0
+    i = start
+    while i < (len(Dow) - 1):
+        adjacent = Dow[i + 1] - Dow[i]
+        if adjacent == 1:
+            i = i + 1
+        else:
+            stop = i
+            x = DuneDomain[Dow[start] : (Dow[stop] + 1)]
+            Hmean = sum(x) / float(len(x))
+            gaps.append([Dow[start], Dow[stop], Rhigh - (Hmean + bermel), Rhigh / (Hmean + bermel)])
+            start = stop + 1
+            i = start
+    if i > 0:
+        stop = i - 1
+        x = DuneDomain[Dow[start] : (Dow[stop] + 1)]
+        if len(x) > 0:
+            Hmean = sum(x) / float(len(x))
+            gaps.append([Dow[start], Dow[stop], Rhigh - (Hmean + bermel), Rhigh / (Hmean + bermel)])
+    return gaps
+
+
 @functools.lru_cache(maxsize=None)
-def model_class(fixes=()):
-    """(class, update code object, capture line). fixes=() is Barrier3d
+def model_class(fixes=(), defects=()):
+    """(class, update code object, capture line). With neither, Barrier3d
     itself; otherwise a subclass whose update() is compiled from the model's
-    own source with the named text substitutions."""
-    if not fixes:
+    own source with the named text substitutions. A fix already in the model
+    is skipped; a defect is put back from its upstream text."""
+    if set(fixes) & set(defects):
+        raise ValueError(f"both fixed and restored: {set(fixes) & set(defects)}")
+    if not fixes and not defects:
         lines, first = inspect.getsourcelines(Barrier3d.update)
         for i, text in enumerate(lines):
             if CAPTURE_TEXT in text:
@@ -95,25 +134,39 @@ def model_class(fixes=()):
     for f in fixes:
         if f in _SOURCE_FIXES:
             old, new = _SOURCE_FIXES[f]
+            if src.count(new.split("  #")[0]) == 1 or (f == "momentum" and old not in src):
+                continue                    # already fixed in this Barrier3D
             if src.count(old) != 1:
                 raise RuntimeError(f"fix {f!r}: expected one {old!r} in update()")
             src = src.replace(old, new)
+    for f in defects:
+        if f in _SOURCE_DEFECTS:
+            old, new = _SOURCE_DEFECTS[f]
+            if src.count(old) != 1:
+                raise RuntimeError(f"defect {f!r}: expected one {old!r} in update() "
+                                   "(is ../Barrier3D on hatteras/adopted?)")
+            line = next(ln for ln in src.splitlines() if old in ln)
+            new = new.format(indent=line[: len(line) - len(line.lstrip())])
+            src = src.replace(old, new)
+    tag = "+".join([f"fix-{f}" for f in fixes] + [f"upstream-{f}" for f in defects])
     ns = {}
-    exec(compile(src, f"<Barrier3d.update {'+'.join(fixes)}>", "exec"), vars(b3dmod), ns)
+    exec(compile(src, f"<Barrier3d.update {tag}>", "exec"), vars(b3dmod), ns)
     attrs = {"update": ns["update"]}
     if "gaps" in fixes:
         attrs["DuneGaps"] = _dune_gaps_fixed
-    cls = type(f"Barrier3dFix_{'_'.join(fixes)}", (Barrier3d,), attrs)
+    if "gaps" in defects:
+        attrs["DuneGaps"] = _dune_gaps_upstream
+    cls = type(f"Barrier3dVariant_{tag.replace('+', '_').replace('-', '_')}", (Barrier3d,), attrs)
     line = next(i + 1 for i, text in enumerate(src.splitlines()) if CAPTURE_TEXT in text)
     return cls, ns["update"].__code__, line
 
 
-def replay(b_saved, t, storms, fixes=()):
+def replay(b_saved, t, storms, fixes=(), defects=()):
     """Run `storms` (rows of Rhigh m MHW, Rlow m MHW, period s, duration h)
     through model year `t` of a saved Barrier3D domain, starting from the
     grid the run saved entering that year. Returns one dict per storm."""
     b = copy.deepcopy(b_saved)
-    cls, code, line = model_class(tuple(sorted(fixes)))
+    cls, code, line = model_class(tuple(sorted(fixes)), tuple(sorted(defects)))
     b.__class__ = cls
     b._time_index = t
     b._InteriorDomain = np.array(b.DomainTS[t - 1], dtype=float).copy()

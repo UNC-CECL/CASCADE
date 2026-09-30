@@ -117,6 +117,18 @@ def fig_storm_routing_check():
     got, _ = replay(b, T, storms)
     last = got[-1]["elevation"][-1, 1:, :]
     saved = np.asarray(b.DomainTS[T]) * DAM
+    # Two things happen to the grid after the captured line, and the saved grid
+    # has both: update() drops trailing all-bay rows, and the year's shoreline
+    # change drops (retreat) or adds (progradation) rows at the ocean side.
+    # Compared unaligned, a one-cell retreat read as an 8.6 m mismatch.
+    bay = -b._BayDepth * DAM
+    while len(last) > 1 and (last[-1] <= bay).all():
+        last = last[:-1]
+    shift = -int(np.asarray(b.ShorelineChangeTS)[T])   # cells of retreat this year
+    if shift > 0:
+        last = last[shift:]
+    elif shift < 0:
+        saved = saved[-shift:]
     n = min(len(saved), len(last))
     d = last[:n] - saved[:n]
     rows = mm.land_rows(saved[:n], margin=10)
@@ -147,7 +159,9 @@ def fig_storm_routing_check():
     record_caption(out[0],
         f"The storm replay is the model: GIS {GIS}, the {y0 + T - 1} storms of the natural 1996-2010 run. "
         "(a) The interior after replaying the year's real storms through Barrier3d.update() from the grid the "
-        f"run saved entering the year, minus the grid the run saved at the end of the year: largest difference "
+        f"run saved entering the year, minus the grid the run saved at the end of the year, aligned for the "
+        f"trailing bay rows update() drops and the year's shoreline change ({-shift:+d} cell{'s' if abs(shift) != 1 else ''}): "
+        f"largest difference "
         f"{np.abs(d).max():.2e} m. (b) Overwash volume per storm in the replay (purple where Rhigh reached a dune "
         f"gap); they sum to {sum(qs):.1f} m3/m against the run's recorded {q_saved:.1f} m3/m for the year. "
         "The storm-routing figures replay synthetic storms through the same code from the same grid.")
@@ -303,16 +317,17 @@ def fig_storm_routing_hours():
 
 
 def fig_storm_routing_response():
-    """Overwash against storm strength on one grid, as the model is and with
-    each suspected defect fixed in memory (storm_replay.FIXES)."""
+    """Overwash against storm strength on one grid, as the model is (all three
+    overwash fixes, hatteras/adopted) and with the defects put back in memory
+    (storm_replay.DEFECTS, the upstream code)."""
     b, y0 = saved_domain()
     berm = b.BermEl * DAM
     got0, _ = replay(b, T, [(berm + 0.1, berm + 0.05, PERIOD_S, 1)])
     grown = got0[0]["crest_pre"]                     # the crest the storms meet
     levels = np.round(np.linspace(grown.min() - 0.2, grown.max() + 0.8, 16), 3)
-    variants = [((), "as the model is", INK),
-                (("gaps", "slice"), "gap cells fixed", C["BASE"]),
-                (("gaps", "momentum", "slice"), "gap cells + inundation momentum fixed", C["ACCENT"])]
+    variants = [((), "as the model is (all fixed)", INK),
+                (("momentum",), "momentum reset restored", C["BASE"]),
+                (("gaps", "momentum", "slice"), "upstream: all three restored", C["ACCENT"])]
     cases = [("run-up", lambda rh: berm + 0.05), ("inundation", lambda rh: rh - 0.3)]
     res = {}
     for key, rl_of in cases:
@@ -320,7 +335,7 @@ def fig_storm_routing_response():
             storms = [(rh, max(berm + 0.05, rl_of(rh)), PERIOD_S, DURATION_H) for rh in levels]
             out = []
             for st in storms:
-                g, _ = replay(b, T, [st], fixes=fx)
+                g, _ = replay(b, T, [st], defects=fx)
                 s0 = g[0]
                 wet = int(((s0["discharge"][:, 0, :] > 0).any(axis=0)).sum())
                 out.append((s0["owloss"], wet, regime(s0)))
@@ -357,12 +372,14 @@ def fig_storm_routing_response():
         f"mean {grown.mean():.2f} m solid; berm {berm:.2f} m). Left: Rlow at the berm, run-up routing. "
         "Right: Rlow 0.3 m below Rhigh, which puts the gaps in inundation routing once Rlow clears them. "
         "Top: overwash volume. Bottom: how many of the 50 dune cells Rhigh overtops (amber step) against how "
-        "many actually receive water in the routing (points). Black is Barrier3D as it runs in every hindcast; "
-        "grey fixes two gap-handling defects (DuneGaps drops the last overtopped cell of the last gap and "
-        "any single-cell gap; the gap discharge slice start:stop drops each gap's last cell); purple also "
-        "restores the inundation momentum constant C = Cx * AvgSlope, which a 2024 refactor resets to 0 "
-        "before routing. The fixes are applied to an in-memory copy of the model for this figure only; "
-        "barrier3d.py is unchanged.")
+        "many actually receive water in the routing (points). Black is Barrier3D as it runs in every hindcast "
+        "since 2026-09-28 (hatteras/adopted), which carries three overwash fixes: DuneGaps keeps every "
+        "overtopped cell (upstream drops the last cell of the last gap and any single-cell gap), gap discharge "
+        "reaches each gap's last cell (upstream slices start:stop with stop inclusive), and the inundation "
+        "momentum constant C = Cx * AvgSlope is kept (a 2024 upstream refactor resets it to 0 before routing). "
+        "Grey puts only the momentum reset back; purple puts all three back, i.e. upstream Barrier3D. The "
+        "defects are restored in an in-memory copy of the model for this figure only; barrier3d.py is unchanged. "
+        "Record: ../Barrier3D/HATTERAS_FIXES.md.")
     for key, _ in cases:
         for fx, lab, _ in variants:
             print(f"  {key:10s} {lab:40s}", " ".join(f"{o[0]:5.1f}" for o in res[key, fx]))
