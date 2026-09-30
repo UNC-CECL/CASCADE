@@ -88,6 +88,7 @@ SECTIONS = [
 POOR_QUALITY_YEARS = {1996}
 
 # Unified colour palette
+
 # Colours
 CLR_BAR_VILLAGE = '#CABB9E'   # warm linen / sand
 CLR_BAR_INTER   = '#8DAFC2'   # dusty maritime blue
