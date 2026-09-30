@@ -89,11 +89,21 @@ def filter_dates(df: pd.DataFrame, start: str | None, end: str | None) -> pd.Dat
     e.g. all imagery from 1997-01-01 to 2019-12-31.
 
     For matching specific USGS shoreline years instead, use filter_to_years().
+
+    A date-only `end` ("2023-12-31") includes that WHOLE day. Until
+    2026-09-30 it was compared as a timestamp, i.e. midnight, so a pass later
+    that day fell outside a window the docstring called inclusive. No window
+    in use ends on a year with a 31 December pass (those are 2003 and 2023),
+    so no stored product changed.
     """
     if start:
         df = df[df["date"] >= pd.Timestamp(start, tz="UTC")]
     if end:
-        df = df[df["date"] <= pd.Timestamp(end, tz="UTC")]
+        hi = pd.Timestamp(end, tz="UTC")
+        if len(str(end).strip()) == 10:          # date only -> through 23:59:59
+            df = df[df["date"] < hi + pd.Timedelta(days=1)]
+        else:
+            df = df[df["date"] <= hi]
     return df.reset_index(drop=True)
 
 

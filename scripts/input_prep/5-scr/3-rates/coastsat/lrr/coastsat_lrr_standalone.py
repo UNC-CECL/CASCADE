@@ -11,6 +11,10 @@ least 3 positions. Positive = seaward (accretion), negative = erosion.
 
     python coastsat_lrr_standalone.py FOLDER START END OUT.csv
     python coastsat_lrr_standalone.py coastsat_timeseries 1984 2025 rates.csv
+
+START and END are whole calendar years, both included -- the window
+convention of every 5-scr script and of 5-scr/template/, whose
+shoreline_rates_template.py is the fuller version of this file.
 """
 import sys
 from pathlib import Path

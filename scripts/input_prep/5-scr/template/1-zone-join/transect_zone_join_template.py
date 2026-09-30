@@ -1,64 +1,18 @@
 """
-transect_zone_join_template.py
-==============================================================================
-Which transect belongs to which zone: CoastSat transect lines + your zone
-polygons in, a two-column lookup table out.
+Step 1: assign each transect to one zone (point in polygon).
 
-This is a TEMPLATE, not a product. It is the join the 5-scr folder runs
-(2-transect-frame/coastsat_domain_mapping.py), stripped of everything specific
-to Hatteras Island. Its output is exactly the LOOKUP_CSV that
-shoreline_rates_template.py and shoreline_endpoint_template.py read, so it is
-step 0 of both.
+Writes the lookup the step-2 scripts read. A transect inside no zone, or
+inside two, is left out and listed in the problems file -- never snapped.
 
-It imports nothing from this repository. It needs geopandas and matplotlib.
-
-THE PROCESS
------------
-    1  LOAD      the transect lines and the zone polygons. Both must carry a
-                 CRS; a file without one is an error here, never a guess.
-    2  POINT     reduce each transect line to ONE point -- by default its
-                 origin (the landward end CoastSat measures chainage from).
-    3  JOIN      point-in-polygon. A point inside exactly one zone is matched.
-    4  REFUSE    a point inside NO zone is left out. A point inside TWO zones
-                 (overlapping polygons) is left out too. Neither is snapped to
-                 the nearest zone: see the note below.
-    5  WRITE     the lookup, a problems table, and a map to check by eye.
-
-WHY THERE IS NO NEAREST-NEIGHBOUR SNAPPING
-------------------------------------------
-Snapping an unmatched transect to the closest zone looks like tidying up and
-is the one step in this file that makes a WRONG answer invisible. On a curved
-coast the nearest polygon is often across the curve, and once the transect is
-in the lookup nothing downstream can tell: it just pulls that zone's mean
-toward its neighbour's. A transect left out is visible in problems.csv and on
-the map; a transect put in the wrong zone is visible nowhere. Fix the polygons
-or the join point instead.
-
-WHAT TO CHANGE
---------------
-CONFIG, and nothing else unless you mean to change the method. If most of your
-transects come back unmatched, look at the map before touching anything: the
-usual causes are polygons that stop short of the transect origins (try
-JOIN_POINT = "midpoint") or two files in different places entirely.
-
-USAGE
     python transect_zone_join_template.py
     python transect_zone_join_template.py --transects t.geojson --zones z.geojson
 
-INPUT this expects
-    TRANSECTS_FILE   lines, one per transect, with an id column. The CoastSat
-                     transect GeoJSON (coastsat.space) is already this shape;
-                     its "id" is the same string as the time-series filename
-                     (usa_NC_0032_0021 <-> usa_NC_0032_0021.csv), which is
-                     what the other two templates match on.
-    ZONES_FILE       polygons, one per zone, with an id column. Any format
-                     geopandas reads (GeoJSON, shapefile, GeoPackage).
+Needs geopandas, matplotlib.
 
-OUTPUT (in OUTPUT_DIR)
-    transect_zones.csv            transect_id, zone_id   -- the lookup
-    transect_zones_problems.csv   transect_id, problem, zone_ids
-    transect_zones_map.png        points coloured matched / unmatched / ambiguous
-==============================================================================
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations
@@ -73,128 +27,38 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from shapely.geometry import Point
 
-# =============================================================================
-# CONFIG  -- the only part you should need to edit
-# =============================================================================
+# --- CONFIG ------------------------------------------------------------------
+TRANSECTS_FILE  = Path("data/transects.geojson")
+TRANSECT_ID_COL = "id"                 # CoastSat id = time-series filename
+ZONES_FILE      = Path("data/zones.geojson")
+ZONE_ID_COL     = "zone_id"
+OUTPUT_DIR      = Path("data")
+JOIN_POINT      = "origin"             # or "midpoint"
+# -----------------------------------------------------------------------------
 
-TRANSECTS_FILE = Path("data/transects.geojson")
-TRANSECT_ID_COL = "id"          # CoastSat's transect layer calls it "id"
 
-ZONES_FILE = Path("data/zones.geojson")
-ZONE_ID_COL = "zone_id"
-
-OUTPUT_DIR = Path("data")       # the lookup lands where the rates template
-                                # looks for it: data/transect_zones.csv
-
-# Which single point of each transect line decides its zone.
-#   "origin"    first vertex, the landward end CoastSat measures from
-#   "midpoint"  halfway along the line; use it if your polygons are drawn
-#               over the beach and stop short of the transect origins
-JOIN_POINT = "origin"
-
-# =============================================================================
-# 1  LOAD
-# =============================================================================
-
+# Read a layer; refuse a missing CRS or id column
 def load_layer(path: Path, id_col: str, what: str) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(path)
     if gdf.crs is None:
-        raise SystemExit(
-            f"{what} file {path} has no CRS. Set it where the file was made "
-            f"(or with gdf.set_crs) -- guessing one here would put every "
-            f"point in the wrong place without an error.")
+        raise SystemExit(f"{path} has no CRS; set it at the source, don't guess")
     if id_col not in gdf.columns:
-        raise SystemExit(f"{what} file {path} has no column '{id_col}'. "
-                         f"Columns: {list(gdf.columns)}")
+        raise SystemExit(f"{path} has no column '{id_col}': {list(gdf.columns)}")
     gdf = gdf[[id_col, gdf.geometry.name]].copy()
     gdf[id_col] = gdf[id_col].astype(str).str.strip()
-    print(f"  {len(gdf):,} {what.lower()} from {path.name}  ({gdf.crs})")
+    print(f"  {len(gdf):,} {what} from {path.name} ({gdf.crs})")
     return gdf
 
 
-# =============================================================================
-# 2  POINT
-# =============================================================================
-
+# One point per transect line: origin or midpoint
 def join_point(line, how: str) -> Point:
     if line.geom_type == "MultiLineString":
         line = max(line.geoms, key=lambda g: g.length)
-    if how == "origin":
-        return Point(line.coords[0])
-    if how == "midpoint":
-        return line.interpolate(0.5, normalized=True)
-    raise SystemExit(f"JOIN_POINT must be 'origin' or 'midpoint', not {how!r}")
+    return Point(line.coords[0]) if how == "origin" else line.interpolate(0.5, normalized=True)
 
 
-# =============================================================================
-# the run
-# =============================================================================
-
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[2])
-    ap.add_argument("--transects", type=Path, default=TRANSECTS_FILE)
-    ap.add_argument("--zones", type=Path, default=ZONES_FILE)
-    ap.add_argument("--out", type=Path, default=OUTPUT_DIR)
-    ap.add_argument("--join-point", default=JOIN_POINT,
-                    choices=("origin", "midpoint"))
-    args = ap.parse_args()
-
-    transects = load_layer(args.transects, TRANSECT_ID_COL, "Transects")
-    zones = load_layer(args.zones, ZONE_ID_COL, "Zones")
-
-    # Reproject to a metric CRS for the join. The result is the same in any
-    # CRS; a metric one keeps the map honest.
-    crs = zones.estimate_utm_crs()
-    zones = zones.to_crs(crs).rename(columns={ZONE_ID_COL: "zone_id"})
-    points = gpd.GeoDataFrame(
-        {"transect_id": transects[TRANSECT_ID_COL].values},
-        geometry=[join_point(g, args.join_point) for g in transects.geometry],
-        crs=transects.crs).to_crs(crs)
-
-    # A global CoastSat layer has hundreds of thousands of transects; keep the
-    # ones near the zones before the join. 5 km of slack is only for speed --
-    # the join itself decides membership.
-    points = points[points.intersects(zones.union_all().envelope.buffer(5000))]
-    print(f"  {len(points):,} transects near the zones")
-
-    # 3  JOIN
-    hits = gpd.sjoin(points, zones, how="left", predicate="within")
-    per_transect = (hits.groupby("transect_id")["zone_id"]
-                        .agg(lambda s: sorted(s.dropna().astype(str)))
-                        .reset_index(name="zone_ids"))
-
-    # 4  REFUSE -- exactly one zone, or not in the lookup at all
-    n_zones = per_transect["zone_ids"].str.len()
-    matched = per_transect[n_zones == 1].copy()
-    matched["zone_id"] = matched["zone_ids"].str[0]
-    problems = per_transect[n_zones != 1].copy()
-    problems["problem"] = n_zones[n_zones != 1].map(
-        lambda n: "no zone" if n == 0 else "more than one zone")
-    problems["zone_ids"] = problems["zone_ids"].str.join(";")
-
-    # 5  WRITE
-    args.out.mkdir(parents=True, exist_ok=True)
-    matched[["transect_id", "zone_id"]].to_csv(args.out / "transect_zones.csv",
-                                               index=False)
-    problems[["transect_id", "problem", "zone_ids"]].to_csv(
-        args.out / "transect_zones_problems.csv", index=False)
-
-    counts = matched["zone_id"].value_counts()
-    empty = sorted(set(zones["zone_id"]) - set(counts.index))
-    print(f"  matched {len(matched):,}   no zone "
-          f"{(problems['problem'] == 'no zone').sum():,}   more than one zone "
-          f"{(problems['problem'] == 'more than one zone').sum():,}")
-    print(f"  transects per zone: min {counts.min() if len(counts) else 0}, "
-          f"median {counts.median() if len(counts) else 0:.0f}, "
-          f"max {counts.max() if len(counts) else 0}")
-    if empty:
-        print(f"  {len(empty)} zone(s) with NO transect: "
-              f"{', '.join(empty[:10])}{' ...' if len(empty) > 10 else ''}")
-
-    status = pd.Series("matched", index=per_transect["transect_id"])
-    status[problems["transect_id"].values] = problems["problem"].values
-    points["status"] = points["transect_id"].map(status)
-
+# Map of zones and transect points, coloured by match status
+def draw_map(zones, points, how, path):
     fig, ax = plt.subplots(figsize=(9, 9))
     zones.plot(ax=ax, facecolor="#f2efe6", edgecolor="0.55", lw=0.6)
     for zid, geom in zip(zones["zone_id"], zones.geometry):
@@ -207,16 +71,64 @@ def main() -> None:
         sel = points[points["status"] == label]
         if len(sel):
             sel.plot(ax=ax, label=f"{label} ({len(sel)})", zorder=3, **kw)
-    ax.set_title(f"Transect {args.join_point} -> zone, point in polygon only")
-    ax.legend(loc="best", fontsize=8)
+    ax.set_title(f"Transect {how} -> zone")
+    ax.legend(fontsize=8)
     ax.set_axis_off()
     fig.tight_layout()
-    fig.savefig(args.out / "transect_zones_map.png", dpi=200)
+    fig.savefig(path, dpi=200)
     plt.close(fig)
 
-    print(f"  wrote transect_zones.csv, transect_zones_problems.csv and "
-          f"transect_zones_map.png to {args.out.resolve()}")
-    print("  Look at the map before using the lookup.")
+
+# Run: load, join, sort matches from problems, write
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Assign transects to zones.")
+    ap.add_argument("--transects", type=Path, default=TRANSECTS_FILE)
+    ap.add_argument("--zones", type=Path, default=ZONES_FILE)
+    ap.add_argument("--out", type=Path, default=OUTPUT_DIR)
+    ap.add_argument("--join-point", default=JOIN_POINT, choices=("origin", "midpoint"))
+    args = ap.parse_args()
+
+    # Load both layers into one metric CRS
+    transects = load_layer(args.transects, TRANSECT_ID_COL, "transects")
+    zones = load_layer(args.zones, ZONE_ID_COL, "zones")
+    crs = zones.estimate_utm_crs()
+    zones = zones.to_crs(crs).rename(columns={ZONE_ID_COL: "zone_id"})
+    points = gpd.GeoDataFrame(
+        {"transect_id": transects[TRANSECT_ID_COL].values},
+        geometry=[join_point(g, args.join_point) for g in transects.geometry],
+        crs=transects.crs).to_crs(crs)
+    points = points[points.intersects(zones.union_all().envelope.buffer(5000))]  # speed only
+
+    # Point in polygon; keep transects in exactly one zone
+    hits = gpd.sjoin(points, zones, how="left", predicate="within")
+    per_transect = (hits.groupby("transect_id")["zone_id"]
+                        .agg(lambda s: sorted(s.dropna().astype(str)))
+                        .reset_index(name="zone_ids"))
+    n_zones = per_transect["zone_ids"].str.len()
+    matched = per_transect[n_zones == 1].assign(zone_id=lambda d: d["zone_ids"].str[0])
+    problems = per_transect[n_zones != 1].assign(
+        problem=n_zones[n_zones != 1].map(lambda n: "no zone" if n == 0 else "more than one zone"),
+        zone_ids=lambda d: d["zone_ids"].str.join(";"))
+
+    # Write the lookup and the problems list
+    args.out.mkdir(parents=True, exist_ok=True)
+    matched[["transect_id", "zone_id"]].to_csv(args.out / "transect_zones.csv", index=False)
+    problems[["transect_id", "problem", "zone_ids"]].to_csv(
+        args.out / "transect_zones_problems.csv", index=False)
+
+    # Draw the check map
+    status = pd.Series("matched", index=per_transect["transect_id"])
+    status[problems["transect_id"].values] = problems["problem"].values
+    points["status"] = points["transect_id"].map(status)
+    draw_map(zones, points, args.join_point, args.out / "transect_zones_map.png")
+
+    # Report counts and zones left empty
+    empty = sorted(set(zones["zone_id"]) - set(matched["zone_id"]))
+    print(f"  matched {len(matched):,}, "
+          + ", ".join(f"{k} {v}" for k, v in problems["problem"].value_counts().items()))
+    if empty:
+        print(f"  zones with no transect: {', '.join(empty)}")
+    print(f"  wrote lookup, problems and map to {args.out.resolve()} -- check the map")
 
 
 if __name__ == "__main__":

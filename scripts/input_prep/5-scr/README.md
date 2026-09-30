@@ -116,7 +116,8 @@ duneline_positions/      where the 1997 / 2009 / 2023 lines actually sat
 ```
 lib/coastsat_lrr.py            load_timeseries, compute_lrr, filter_dates.
                                The one OLS every CoastSat script uses, so
-                               they cannot drift apart.
+                               they cannot drift apart. filter_dates treats a
+                               date-only end ("2010-12-31") as the whole day.
 lib/scr_paths.py               where the shared modules live (see below)
 tools/windows_index.py         regenerates data/.../5-scr/WINDOWS.md from
                                hat_observed_rates.WINDOW_ROLE
@@ -126,12 +127,23 @@ tools/coastsat_rates_check.py  consistency checks on the rate outputs:
 
 ### template — for people outside this project
 
-`template/shoreline_rates_template.py` is the whole process — load, window,
-fit, screen, group, write — in one standalone file that imports nothing from
-this repository. It is for handing to a colleague starting the same work at
-another site, and it is deliberately not wired into anything here. See
-`template/README.md`, which includes a synthetic dataset with known rates so
-the script can be checked before it is trusted.
+Three standalone files that import nothing from this repository, for handing
+to a colleague starting the same work at another site. None is wired into
+anything here.
+
+```
+template/1-zone-join/
+    transect_zone_join_template.py     the 2-transect-frame join
+template/2-shoreline-change/           either order, after step 1
+    shoreline_rates_template.py        the 3-rates LRR
+    shoreline_endpoint_template.py     end-year mean minus start-year mean
+```
+
+They share one window convention with everything else in 5-scr: a window
+`1996 2010` is **1 January 1996 through 31 December 2010**, both years whole
+(settled 2026-09-30; the rates template used an exclusive end date until then).
+See `template/README.md`, which includes a synthetic dataset with known rates
+so the scripts can be checked before they are trusted.
 
 ---
 
