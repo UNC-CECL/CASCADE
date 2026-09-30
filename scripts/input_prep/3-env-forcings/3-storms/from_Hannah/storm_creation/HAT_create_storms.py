@@ -517,7 +517,7 @@ def plot_storms_by_year(readable: pd.DataFrame, start_year: int,
     for yr, grp in readable.groupby('Calendar_Year'):
         peak = grp.loc[grp['Rhigh_m'].idxmax()]
         ax2.annotate(f"{peak['Rhigh_m']:.2f}", xy=(yr, peak['Rhigh_m']),
-                     xytext=(0, 6), textcoords='raw_offset points',
+                     xytext=(0, 6), textcoords='offset points',
                      ha='center', fontsize=7, color='#333333')
 
     cbar = plt.colorbar(sc, ax=ax2, pad=0.01, shrink=0.8)

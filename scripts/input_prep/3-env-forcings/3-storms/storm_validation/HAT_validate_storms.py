@@ -350,7 +350,7 @@ def make_figure(model, results, window_days, mode, begin_year, end_year, path):
     for _, row in top.iterrows():
         if row.matched_to:
             ax2.annotate(str(row.matched_to), (row.start_ts, row.Rhigh_m),
-                         xytext=(0, 9), textcoords="raw_offset points",
+                         xytext=(0, 9), textcoords="offset points",
                          ha="center", fontsize=8.5, fontweight="bold")
     ax2.set_ylabel("Rhigh [m NAVD88]")
     ax2.legend(loc="upper left", fontsize=9, framealpha=0.9)

@@ -221,7 +221,7 @@ for s in sorted(HISTORICAL_STORMS, key=lambda s: -s["wind"]):
     for dy in LABEL_TIERS:
         va = "bottom" if dy > 0 else "top"
         txt = ax.annotate(label, (s["x"], s["wind"]), xytext=(0, dy),
-                           textcoords="raw_offset points", ha="center", va=va,
+                           textcoords="offset points", ha="center", va=va,
                            fontsize=fontsize, fontweight=weight, color="#2b2b2b")
         bbox = txt.get_window_extent(renderer=renderer)
         if not collides(bbox):
@@ -232,7 +232,7 @@ for s in sorted(HISTORICAL_STORMS, key=lambda s: -s["wind"]):
     if chosen_dy is None:
         dy = LABEL_TIERS[0]
         txt = ax.annotate(label, (s["x"], s["wind"]), xytext=(0, dy),
-                           textcoords="raw_offset points", ha="center", va="bottom",
+                           textcoords="offset points", ha="center", va="bottom",
                            fontsize=fontsize, fontweight=weight, color="#2b2b2b")
         placed_boxes.append(txt.get_window_extent(renderer=renderer))
 
@@ -258,7 +258,7 @@ def place_side(text, fontsize, gap_before, weight="normal", style="normal",
     global cursor_pt
     cursor_pt += gap_before
     txt = ax_side.annotate(text, xy=(indent, 1), xycoords="axes fraction",
-                            xytext=(0, -cursor_pt), textcoords="raw_offset points",
+                            xytext=(0, -cursor_pt), textcoords="offset points",
                             va="top", ha="left", fontsize=fontsize, fontweight=weight,
                             style=style, color=color, linespacing=linespacing)
     bbox = txt.get_window_extent(renderer=renderer)
