@@ -118,7 +118,8 @@ def run_side(root: Path, spec: dict, side: str, keep: Path) -> dict:
         shutil.copy2(root / rel, dst)
     (keep / "stdout.txt").write_text(p.stdout, encoding="utf-8")
     (keep / "stderr.txt").write_text(p.stderr, encoding="utf-8")
-    return {"code": p.returncode, "seconds": round(time.time() - t0, 1), "written": written}
+    return {"code": p.returncode, "seconds": round(time.time() - t0, 1), "written": written,
+            "created": [k for k in written if k not in before]}
 
 
 # Text with the run root and timestamps masked
@@ -205,6 +206,8 @@ def main() -> None:
         shutil.rmtree(d, ignore_errors=True)
         print(f"-- {spec['label']}: {spec['script']} {' '.join(spec.get('args', []))}", flush=True)
         rb = run_side(a.root, spec, "before", d / "before")
+        for rel in rb["created"]:               # so the after side writes them fresh, not over them
+            (a.root / rel).unlink(missing_ok=True)
         ra = run_side(a.root, spec, "after", d / "after")
         problems = compare(a.root, d, rb, ra)
         status = "SAME" if not problems else "DIFFERS"
