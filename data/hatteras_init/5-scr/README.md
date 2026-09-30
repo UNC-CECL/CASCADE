@@ -43,16 +43,18 @@ runs (2026-09-18):
         5yr_bins/<window>/   the OLS in successive 5-year bins, 1996_2010
                              2010_2024 1996_2024 (rebuilt 2026-09-18)
         window_convergence/  WHICH WINDOWS recover the long-term rate? The
-            forward_from_1996/   same OLS on NESTED families of windows, one
-            backward_from_2024/  pinned at each end: forward walks the END out
+            1-rate_profiles/     same OLS on NESTED families of windows, one
+            2-settling_window/   pinned at each end: forward walks the END out
                              (1996-2000 ... 1996-2024), backward walks the
                              START back (2020-2024 ... 1996-2024). Both
                              converge on the 1996-2024 rate from opposite
-                             sides, so the pair BRACKETS the answer. Under each,
-                             three scales: sites/ (eight domains, one transect
-                             each, drawn in full), all_transects/ (all ~906) and
-                             domain_means/ (the unit the model is graded on, a
-                             groupby of the transect sweep, not a refit). Not a
+                             sides, so the pair BRACKETS the answer. Split by
+                             question (2026-09-29): 1-rate_profiles/ (does the
+                             whole alongshore profile match? r per window) and
+                             2-settling_window/ (when does each location settle?
+                             a-eight_sites/, b-every_transect/, c-domain_means/).
+                             The record-cut-at-2020 experiment was deleted
+                             2026-09-29 (--ref-end 2020 regenerates it). Not a
                              target: it says whether the grading window is long
                              enough. Seven tolerances are scored; the headline
                              is CI OVERLAP -- a window passes when its own 95%
@@ -163,7 +165,8 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py` | `3-rates/coastsat/5yr_bins/` |
 | `1-observations/detrended_position/coastsat_detrended_position.py` | `1-observations/detrended_position/` (the index, the matrix, the alongshore step) |
 | `1-observations/detrended_position/coastsat_position_attribution.py` | `1-observations/detrended_position/attribution_*` (five tests, verdicts included) |
-| `3-rates/coastsat/window_convergence/coastsat_window_convergence.py` | `3-rates/coastsat/window_convergence/<direction>_from_<year>/{sites,all_transects,domain_means}/` (tables and its own figures) |
+| `3-rates/coastsat/window_convergence/coastsat_window_convergence.py` | `3-rates/coastsat/window_convergence/2-settling_window/<direction>_from_<year>/{a-eight_sites,b-every_transect,c-domain_means}/` (tables and its own figures); `--ref-end 2020` → `experiments/record_cut_2020/` (deleted 2026-09-29, regenerable) |
+| `3-rates/coastsat/window_convergence/coastsat_window_profiles.py` | `3-rates/coastsat/window_convergence/1-rate_profiles/<direction>_from_<year>/` (profile per window, r against 1996–2024) |
 | `3-rates/duneline/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `3-rates/coastsat/endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
 | `3-rates/coastsat/total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |

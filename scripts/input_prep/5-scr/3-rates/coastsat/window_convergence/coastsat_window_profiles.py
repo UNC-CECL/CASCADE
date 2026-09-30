@@ -13,8 +13,8 @@ regardless of offset (Hannah, 2026-09-29, by interview).
 
 THE SAME NESTED FAMILIES, FROM TWO YEARS (Hannah, 2026-09-29):
 
-    forward_from_1996/alongshore_profiles/    1996-1997, 1996-1998 ... 1996-2024
-    backward_from_2024/alongshore_profiles/   2023-2024, 2022-2024 ... 1996-2024
+    1-rate_profiles/forward_from_1996/    1996-1997, 1996-1998 ... 1996-2024
+    1-rate_profiles/backward_from_2024/   2023-2024, 2022-2024 ... 1996-2024
 
 The convergence sweep stops at five years because below that an OLS is
 describing a storm cycle, not a trend. Hannah asked to see those windows
@@ -41,7 +41,7 @@ the target's own `coastsat_lrr.compute_lrr`, so the estimator is the target's.
 A window with fewer than MIN_OBS positions on a transect gets no fit there,
 and r for that window is over the transects that have one (n in the table).
 
-Outputs  (under obs.window_convergence_dir(direction, anchor)/alongshore_profiles/)
+Outputs  (obs.window_profiles_dir(direction, anchor))
     window_profiles_<direction>_from_<year>.png         (a) every window over
                                                         the reference, (b) r
     window_profiles_panels_<direction>_from_<year>.png  one panel per window
@@ -93,14 +93,25 @@ REF_START, REF_END = wc.REF_START, wc.REF_END
 # OLS through a year boundary can mean anything at all.
 MIN_WINDOW_YEARS = 2
 
-SUBFOLDER = "alongshore_profiles"
-
 # Windows light (short) to dark (long) on the shoreline-blue ramp, coloured by
 # LENGTH so both directions read the same way. The reference is the purple
 # ACCENT, off the ramp, so it cannot be mistaken for a long window.
 WINDOW_CMAP = LinearSegmentedColormap.from_list(
     "window_length", ["#c6dbef", "#6baed6", fs.C_1997, "#08306b"])
 REF_COLOUR = fs.C["ACCENT"]
+
+# THE PANEL FIGURE IS ZOOMED (Hannah, 2026-09-29: "much more zoomed in"). The
+# reference spans about -3..+3 m/yr, but the full axis ran to +80 for the
+# short windows at Cape Point and flattened every panel. The panels share a
+# fixed +/-PANEL_Y_HALF; a short window that runs past it is cut at the edge,
+# and the caption says so. The overlay figure keeps the full axis.
+PANEL_Y_HALF = 5.0
+
+# No window is singled out in the panels (Hannah, 2026-09-29): she is choosing
+# the window, so the 2010 model window is not titled in amber any more.
+PANEL_TITLE_PT = 9.0
+PANEL_TICK_PT = 8.0
+PANEL_LABEL_PT = 9.0
 
 
 def windows_for(direction):
@@ -122,16 +133,6 @@ def window_label(start, end):
 # THE SWEEP
 # ============================================================
 
-def alongshore_x(picks):
-    """Each transect's x: its domain, with the domain's transects spread
-    evenly across [d - 0.5, d + 0.5] in alongshore order."""
-    frame = pd.DataFrame(picks, columns=["domain_number", "transect_id"])
-    rank = frame.groupby("domain_number").cumcount()
-    n = frame.groupby("domain_number")["transect_id"].transform("size")
-    frame["x_domain"] = frame["domain_number"] - 0.5 + (rank + 0.5) / n
-    return frame
-
-
 def run(direction):
     windows = windows_for(direction)
     picks = wc.all_transects()
@@ -144,7 +145,7 @@ def run(direction):
         if i % 150 == 0 or i == len(picks):
             print("    {0}/{1} transects".format(i, len(picks)))
     sweep = pd.DataFrame(rows)
-    sweep = sweep.merge(alongshore_x(picks)[["transect_id", "x_domain"]],
+    sweep = sweep.merge(wc.alongshore_x(picks)[["transect_id", "x_domain"]],
                         on="transect_id", how="left")
     ref = (sweep[(sweep["start_year"] == REF_START) & (sweep["end_year"] == REF_END)]
            .set_index("transect_id")["lrr_m_yr"])
@@ -218,17 +219,6 @@ def draw_overlay(sweep, corr, windows, direction, out_dir):
     pinned = "start" if direction == "forward" else "end"
     axr.plot(corr["n_years"], corr["r_vs_reference"], color=fs.C["LATE"], lw=1.3,
              marker="o", ms=2.8, zorder=3)
-    marked = corr[corr["moving_year"] == wc.MARKED_YEAR]
-    if len(marked):
-        m = marked.iloc[0]
-        axr.plot(m["n_years"], m["r_vs_reference"], "o", ms=6, mfc="none",
-                 mec=fs.C["ADDED"], mew=1.4, zorder=4)
-        axr.annotate("{0}\nr = {1:.2f}".format(
-                         window_label(int(m["start_year"]), int(m["end_year"])),
-                         m["r_vs_reference"]),
-                     (m["n_years"], m["r_vs_reference"]), xytext=(8, -4),
-                     textcoords="offset points", fontsize=7, va="top",
-                     color=fs.C["ADDED"])
     axr.set_xlim(min(lengths) - 0.5, max(lengths) + 0.5)
     axr.set_ylim(min(-0.05, np.nanmin(corr["r_vs_reference"]) - 0.05), 1.05)
     axr.axhline(1.0, color=fs.C["INK_MUTED"], lw=0.5, ls=(0, (1, 2)))
@@ -249,13 +239,12 @@ def draw_overlay(sweep, corr, windows, direction, out_dir):
         "to dark (long); the {ref} reference is purple. The y-axis holds every "
         "window, so the shortest set its range. (b) Pearson r between each "
         "window's alongshore profile and the reference, over the transects "
-        "with a fit; the {mk} window is ringed. The windows are nested, so r "
+        "with a fit. The windows are nested, so r "
         "reaches 1 at the reference by construction: read where it gets there, "
         "not whether. r ignores offset and scale.".format(
             n=sweep["transect_id"].nunique(), pin=pinned,
             py=wc.pinned_year(direction), first=first,
-            ref=window_label(REF_START, REF_END),
-            mk=wc.window_label(direction, wc.MARKED_YEAR)))
+            ref=window_label(REF_START, REF_END)))
     return paths[0]
 
 
@@ -282,33 +271,32 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
         ax.plot(xr, yr, color=REF_COLOUR, lw=0.9, zorder=3)
         ax.axhline(0.0, color=fs.C["INK_MUTED"], lw=0.4, zorder=1)
         ax.set_xlim(0.5, 90.5)
+        ax.set_ylim(-PANEL_Y_HALF, PANEL_Y_HALF)
         ax.grid(True, axis="y", alpha=0.5)
         r = r_of.get("{0}_{1}".format(start, end), np.nan)
-        is_marked = moving == wc.MARKED_YEAR
         ax.set_title("{0}  ({1} yr)  r = {2:.2f}".format(
                          window_label(start, end), end - start + 1, r),
-                     fontsize=7, loc="left",
-                     color=fs.C["ADDED"] if is_marked else fs.INK,
-                     fontweight="bold" if is_marked else "normal")
-        ax.tick_params(labelsize=6)
+                     fontsize=PANEL_TITLE_PT, loc="left", color=fs.INK)
+        ax.set_yticks([-5, -2.5, 0, 2.5, 5])
+        ax.tick_params(labelsize=PANEL_TICK_PT)
     for ax in axes[-1]:
-        ax.set_xlabel("GIS domain", fontsize=7)
+        ax.set_xlabel("GIS domain", fontsize=PANEL_LABEL_PT)
     for ax in axes[:, 0]:
-        ax.set_ylabel("m/yr", fontsize=7)
+        ax.set_ylabel("m/yr", fontsize=PANEL_LABEL_PT)
 
     stem = "window_profiles_panels_{0}_from_{1}".format(direction, wc.pinned_year(direction))
     paths = fs.save(fig, Path(out_dir) / stem, close=True)
     fs.record_caption(paths[0],
         "One panel per window: the CoastSat shoreline change rate at all {n} "
         "transects (blue, darker for longer windows) against the {ref} rate "
-        "(purple), on one shared y-axis that holds every window, domains 1 "
+        "(purple), on one shared y-axis zoomed to ±{half:.0f} m/yr: a short "
+        "window whose rate runs past that is cut at the panel edge. Domains 1 "
         "(Cape Point) to 90 (Pea Island). Each panel names its window, its "
         "length in years of record and the alongshore Pearson r of its "
-        "profile against the reference; the {mk} window is titled in amber. "
-        "The windows are nested, so r rises to 1 at the reference by "
+        "profile against the reference. The windows are nested, so r rises to 1 at the reference by "
         "construction.".format(
             n=sweep["transect_id"].nunique(), ref=window_label(REF_START, REF_END),
-            mk=wc.window_label(direction, wc.MARKED_YEAR)))
+            half=PANEL_Y_HALF))
     return paths[0]
 
 
@@ -316,17 +304,16 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
 # README
 # ============================================================
 
-README = """# {folder}/alongshore_profiles — when does the profile start to look like {ref}?
+README = """# 1-rate_profiles/{folder} — when does the whole profile start to look like {ref}?
 
 Every window of the nested family ({first} … {ref}, the {pin} pinned at
 {py}), drawn as a shoreline change rate profile along all {n} CoastSat
 transects over the {ref} reference, and scored by the alongshore Pearson r of
 each window's profile against it. Built {today} by interview (Hannah).
 
-The companion to the convergence sweep one folder up. That sweep scores each
-transect separately against tolerances, from five years. This one draws the
-whole profile from **two** years, the minimum Hannah asked for, and never
-writes into the sweep's tables.
+The companion to `../../2-settling_window/{folder}/`, which scores each
+location separately against tolerances, from five years. This one draws the
+whole profile from **two** years, the minimum Hannah asked for.
 
 ```
 window_profiles_{direction}_from_{py}.png         (a) every window over the reference, (b) r per window
@@ -345,7 +332,7 @@ window_profiles_correlation.csv                   a row per window: r_vs_referen
 reference by construction. What it shows is where it gets there and how
 steadily. r measures shape only: a window with every hotspot in the right
 place at the wrong magnitude still scores high. Magnitude is scored by the
-bias and tolerance tables in `../all_transects/`.
+bias and tolerance tables in `../../2-settling_window/{folder}/b-every_transect/`.
 
 Producer:
 `scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_window_profiles.py`
@@ -374,8 +361,7 @@ def write_readme(out_dir, direction, corr, n_transects):
 # ============================================================
 
 def one_direction(direction):
-    out_dir = obs.window_convergence_dir(direction, wc.pinned_year(direction),
-                                         ref_start=REF_START, ref_end=REF_END) / SUBFOLDER
+    out_dir = obs.window_profiles_dir(direction, wc.pinned_year(direction))
     out_dir.mkdir(parents=True, exist_ok=True)
     windows, sweep = run(direction)
     corr = correlations(sweep, windows)

@@ -14,6 +14,8 @@ coastsat/
     5yr_bins/      the OLS in successive 5-year bins: WHEN did it change?
     window_convergence/  the OLS on NESTED window families pinned at each
                    end: WHICH WINDOWS recover the long-term rate?
+                   1-rate_profiles/ (whole profile) and 2-settling_window/
+                   (each location)
     total_change/  the rate as a distance, and the projections
     extension/     the same fit beyond the 90 surveyed domains
 duneline/
@@ -96,15 +98,24 @@ coastsat/window_convergence/coastsat_window_convergence.py
     be indistinguishable from the long-term rate rather than as precise as it.
     It barely moves the answer (27 -> 26 years forward, 25 -> 22 backward), and
     that is the finding: the windows disagree because the shoreline changed,
-    not because the fits were noisy. Three scales: `sites/` draws eight transects in full,
-    `all_transects/` runs all ~906 and profiles them alongshore, and
-    `domain_means/` aggregates that sweep to the unit the model is actually
+    not because the fits were noisy. Three scales: `a-eight_sites/` draws eight transects in full,
+    `b-every_transect/` runs all ~906 and profiles them alongshore, and
+    `c-domain_means/` aggregates that sweep to the unit the model is actually
     graded on -- a groupby, not a refit, because the target is the MEAN of
     transect slopes. Averaging turned out to buy nothing: the domain mean
     settles at the same median window as a single transect, which says the
     window-to-window disagreement is shoreline behaviour and not per-transect
     noise. It draws its own figures -- per-unit panel families, not the
     alongshore profile rates_figures.py covers.
+    Output: `window_convergence/2-settling_window/<direction>_from_<year>/`;
+    `--ref-end 2020` files under `experiments/record_cut_2020/` (that run was
+    deleted 2026-09-29; the option still works).
+
+coastsat/window_convergence/coastsat_window_profiles.py
+    The same nested families drawn as whole alongshore profiles, from two-year
+    windows, over the 1996-2024 rate, each scored by the alongshore Pearson r
+    against it (shape only). Reuses the settling sweep's per-transect fit.
+    Output: `window_convergence/1-rate_profiles/<direction>_from_<year>/`.
 
     WHY the windows disagree is answered next door, in
     1-observations/detrended_position/: one island-wide excursion, which on its own

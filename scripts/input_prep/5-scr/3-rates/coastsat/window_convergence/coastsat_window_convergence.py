@@ -40,11 +40,11 @@ the second leg of the canonical chain.
 
 TWO SCALES, in two folders under each direction:
 
-    sites/          one transect at the middle of each of eight evenly spaced
+    a-eight_sites/  one transect at the middle of each of eight evenly spaced
                     domains. The readable case: every position, every fit, one
                     panel per site. Eight transects cannot speak for an
                     island, but they show WHAT is happening.
-    all_transects/  every CoastSat transect on the island, ~906 of them, the
+    b-every_transect/  every CoastSat transect on the island, ~906 of them, the
                     same sweep. Answers whether the eight were representative:
                     the convergence year as an alongshore profile, and the
                     spread within each domain.
@@ -93,19 +93,22 @@ Inputs
 
 Outputs  (hat_observed_rates.window_convergence_dir(direction, anchor))
 -----------------------------------------------------------------------
-    <direction>_from_<anchor>/
-        sites/
+    2-settling_window/<direction>_from_<anchor>/
+        a-eight_sites/
             shoreline_position_window_fits_*.png   the record: positions, the
                                                    annual median, six fits
             window_convergence_*.png               the sweep as an ERROR
             window_convergence_transects.csv       a row per site per window
             convergence_summary.csv                a row per site
-        all_transects/
+        b-every_transect/
             convergence_alongshore_*.png           the island profile
             domain_convergence_summary.csv         a row per GIS domain
             convergence_summary_all_transects.csv  a row per transect
             window_convergence_transects_all.csv   the full sweep
+        c-domain_means/
+            the transect sweep grouped to the 90 domains (no refit)
     README.md beside each, supporting/ for PDFs and CAPTIONS.md
+    A record other than 1996-2024 files under experiments/record_cut_<end>/.
 
 Usage
 -----
@@ -137,7 +140,6 @@ import matplotlib                                     # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt                       # noqa: E402
 from matplotlib.lines import Line2D                   # noqa: E402
-from matplotlib.patches import Patch                  # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
 # ============================================================
@@ -156,7 +158,8 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 # the shoreline, the reference itself is biased -- and the reference is the
 # model's grading target. `--ref-end 2020` refits everything on the record
 # before the step, and the two record spans file side by side under
-# `record_<start>_<end>/` so they can be differenced rather than confused.
+# `experiments/record_cut_<end>/`, apart from the main result in
+# `2-settling_window/`, so they can be differenced rather than confused.
 REF_START, REF_END = 1996, 2024
 
 # The shortest window either sweep fits. Below five years an OLS through ~90
@@ -256,17 +259,19 @@ HEADLINE_LABEL = "CI overlap"
 # second leg of the canonical chain. See [[cascade-canonical-periods]].
 MARKED_YEAR = 2010
 
+# THE FIGURES DO NOT SINGLE OUT THE MODEL WINDOW for now (Hannah, 2026-09-29):
+# she is choosing which window to use, so nothing is drawn in amber -- no
+# 15-year line on the years-needed figure, no amber fit or dashed continuation
+# on the eight-site figure; the marked window is drawn like any other. The
+# tables and README text still score it. Set True to bring the highlight back.
+HIGHLIGHT_MODEL_WINDOW = False
+
 # SIX WINDOWS ARE DRAWN, NOT TWENTY-FIVE (Hannah, 2026-09-23: "too many lines
 # to distinguish anything"). The sweep still FITS every window -- the tables
 # carry all of them -- but a panel that draws them all is a smear in which the
 # two that matter, the marked window and the reference, are lost among
 # twenty-three that differ from their neighbour by one year of record.
 DRAWN_YEARS = [2000, 2005, 2010, 2015, 2020, 2024]
-
-# The shared half-range of the error figure, in m/yr. The shortest windows
-# reach -13, which would flatten every settled curve to a line if the axis
-# held them; they are marked at the edge instead and named in the caption.
-DIFF_HALF = 4.0
 
 
 def windows_for(direction):
@@ -620,7 +625,11 @@ def draw_fits(sweep, summary, out_dir, direction):
     flat = axes.ravel()
     ramp = LinearSegmentedColormap.from_list("windows", list(fs.SMOOTH_RAMP))
     moving_all = sorted(sweep["moving_year"].unique())
-    drawn = [y for y in DRAWN_YEARS if y in moving_all]
+    # The reference is always drawn. Its moving year is REF_END going forward
+    # but REF_START going back, which DRAWN_YEARS does not hold, so until
+    # 2026-09-29 the backward figure listed the reference and never drew it.
+    ref_moving = REF_END if direction == "forward" else REF_START
+    drawn = sorted(set(y for y in DRAWN_YEARS if y in moving_all) | {ref_moving})
     x0 = pd.Timestamp("{0}-01-01".format(REF_START), tz="UTC")
     x1 = pd.Timestamp("{0}-12-31".format(REF_END), tz="UTC")
 
@@ -647,7 +656,7 @@ def draw_fits(sweep, summary, out_dir, direction):
             t1 = pd.Timestamp(row.last_obs, tz="UTC")
             span = (t1 - t0).total_seconds() / (86400.0 * 365.25)
             y0, y1 = row.intercept_m, row.intercept_m + row.lrr_m_yr * span
-            if row.moving_year == MARKED_YEAR:
+            if row.moving_year == MARKED_YEAR and HIGHLIGHT_MODEL_WINDOW:
                 colour, lw, z = fs.C["ADDED"], 2.0, 8
             elif row.n_years == REF_END - REF_START + 1:
                 colour, lw, z = fs.C["ACCENT"], 2.0, 9
@@ -660,7 +669,8 @@ def draw_fits(sweep, summary, out_dir, direction):
                     solid_capstyle="round")
 
             # Forward only: where the marked window's record would put 2024.
-            if row.moving_year == MARKED_YEAR and direction == "forward":
+            if (row.moving_year == MARKED_YEAR and direction == "forward"
+                    and HIGHLIGHT_MODEL_WINDOW):
                 far = (x1 - t0).total_seconds() / (86400.0 * 365.25)
                 ax.plot([t1, x1], [y1, y0 + row.lrr_m_yr * far],
                         color=fs.C["ADDED"], lw=1.2, ls=(0, (3, 2.2)), zorder=7)
@@ -690,7 +700,8 @@ def draw_fits(sweep, summary, out_dir, direction):
         ax.set_visible(False)
 
     others = ", ".join(str(y) for y in drawn
-                       if y not in (MARKED_YEAR, pinned_year(direction))
+                       if y != pinned_year(direction)
+                       and (y != MARKED_YEAR or not HIGHLIGHT_MODEL_WINDOW)
                        and y != (REF_END if direction == "forward" else REF_START))
     handles = [
         Line2D([], [], color="none", marker="o", ms=3.5, mfc=fs.C["BASE"],
@@ -699,12 +710,14 @@ def draw_fits(sweep, summary, out_dir, direction):
                mfc="white", mew=0.6, label="annual median"),
         Line2D([], [], color=ramp(0.45), lw=1.5,
                label="windows at {0}".format(others)),
-        Line2D([], [], color=fs.C["ADDED"], lw=2.0,
-               label="{0}, the marked window".format(window_label(direction, MARKED_YEAR))),
         Line2D([], [], color=fs.C["ACCENT"], lw=2.0,
                label="{0}–{1}, the reference".format(REF_START, REF_END)),
     ]
-    if direction == "forward":
+    if HIGHLIGHT_MODEL_WINDOW:
+        handles.insert(3, Line2D([], [], color=fs.C["ADDED"], lw=2.0,
+                                 label="{0}, the marked window".format(
+                                     window_label(direction, MARKED_YEAR))))
+    if direction == "forward" and HIGHLIGHT_MODEL_WINDOW:
         handles.insert(4, Line2D([], [], color=fs.C["ADDED"], lw=1.2,
                                  ls=(0, (3, 2.2)),
                                  label="that fit continued to {0}".format(REF_END)))
@@ -719,6 +732,21 @@ def draw_fits(sweep, summary, out_dir, direction):
              "{1} calendar years of record would have had you believe about {0}. "
              .format(REF_END, MARKED_YEAR - REF_START + 1)
              if direction == "forward" else "")
+    if not HIGHLIGHT_MODEL_WINDOW:
+        fs.record_caption(paths[0],
+            "The record the sweep is fitted on. Every CoastSat shoreline "
+            "position at one transect in each of eight evenly spaced domains, "
+            "{0} to {1}, with the annual median through them and some of the "
+            "{2} nested fits drawn as straight lines, each spanning the window "
+            "it was fitted on and labelled with its moving year. Every window "
+            "{3} {4}. Purple is {0}–{1}, the reference every window converges "
+            "on. Where the lines separate, the rate still depends on where the "
+            "window is cut. Position is CoastSat chainage, seaward positive, on "
+            "an origin that is arbitrary per transect: only the SLOPE compares "
+            "between panels, and each panel is autoscaled."
+            .format(REF_START, REF_END, len(moving_all), pinned,
+                    pinned_year(direction)))
+        return paths[0]
     fs.record_caption(paths[0],
         "The record the sweep is fitted on. Every CoastSat shoreline position "
         "at one transect in each of eight evenly spaced domains, {0} to {1}, "
@@ -740,338 +768,162 @@ def draw_fits(sweep, summary, out_dir, direction):
     return paths[0]
 
 
-def draw(sweep, summary, out_dir, direction, stem=None, unit_word="transect"):
-    """The sweep as an ERROR: each window's rate minus the reference rate.
+def alongshore_x(picks):
+    """Each transect's x on the domain axis: its domain, with the domain's
+    transects spread evenly across [d - 0.5, d + 0.5] in alongshore order, so
+    906 transects and the village bands share one axis."""
+    frame = pd.DataFrame(picks, columns=["domain_number", "transect_id"])
+    rank = frame.groupby("domain_number").cumcount()
+    n = frame.groupby("domain_number")["transect_id"].transform("size")
+    frame["x_domain"] = frame["domain_number"] - 0.5 + (rank + 0.5) / n
+    return frame
 
-    Plotting the rate itself forced every panel onto its own y axis, because
-    the eight sites sit between -1.7 and +2.8 m/yr -- and a reader cannot then
-    compare a panel with a panel, which is the first thing anyone tries. The
-    DIFFERENCE from each site's own reference is the same information on one
-    shared axis: zero is agreement, the band is the tolerance, and where the
-    curve enters the band for good is the answer the sweep exists for.
+
+# THREE PLAIN THRESHOLDS, NOT SEVEN TOLERANCES (Hannah, 2026-09-29, on the old
+# figures: too many of them, an abstract "rate minus reference" axis, and
+# tolerance jargon). The figure asks one thing -- how many years of record does
+# each transect need before its rate stays within X m/yr of the 1996-2024 rate
+# -- at three values of X, in m/yr and nothing else. All seven tolerances are
+# still scored in the tables. Strictest last, so it stacks on top.
+YEARS_NEEDED_THRESHOLDS = [
+    ("abs100", "±1.0 m/yr", "#6baed6"),
+    ("abs50", "±0.5 m/yr", "#9ecae1"),
+    ("abs", "±0.25 m/yr", "#deebf7"),
+]
+YEARS_NEEDED_STEM = "years_needed_alongshore"
+
+
+def draw_years_needed(ref_start, ref_end):
+    """THE figure of the settling sweep: years needed, per transect, alongshore.
+
+    One panel per direction, read from the stored every-transect summaries, so
+    it can be redrawn without refitting. The three thresholds are NESTED -- a
+    rate that stays within 0.25 m/yr also stays within 0.5 -- so they stack as
+    shaded bands rather than crossing as lines. The model's 15-year window is
+    the amber line: wherever a band reaches above it, 15 years was not enough
+    at that threshold.
     """
     fs.apply_style()
-    sites = list(summary.itertuples(index=False))
-    nrow, ncol = 4, 2
-    fig, axes = plt.subplots(nrow, ncol, figsize=fs.figsize("double", height=8.6),
-                             sharex=True, sharey=True, layout="constrained")
-    flat = axes.ravel()
-    offaxis = []
-
-    for i, site in enumerate(sites):
-        ax = flat[i]
-        sub = sweep[sweep["unit_id"] == site.unit_id].sort_values("moving_year")
-        x = sub["moving_year"].to_numpy()
-        d = sub["diff_m_yr"].to_numpy()
-
-        # THE HEADLINE TOLERANCE, and it is a funnel: a window passes when its
-        # own 95% interval reaches the reference's, so the band is wide where
-        # the record is short and narrows onto the reference at the full
-        # length. The strict reference band sits inside it for scale; the other
-        # five tolerances are in tolerance_comparison_*.png, not here.
-        uw = sub["unc_m_yr"].to_numpy()
-        funnel = uw + site.ref_unc_m_yr
-        ax.fill_between(x, -funnel, funnel, color=fs.C["LATE"], alpha=0.13,
-                        lw=0, zorder=1)
-        ax.plot(x, funnel, color=fs.C["LATE"], lw=0.9, zorder=2)
-        ax.plot(x, -funnel, color=fs.C["LATE"], lw=0.9, zorder=2)
-        ax.axhspan(-site.ref_unc_m_yr, site.ref_unc_m_yr,
-                   color=fs.C["ACCENT_FILL"], alpha=0.45, lw=0, zorder=2)
-        ax.axhline(0.0, color=fs.C["ACCENT"], lw=1.0, zorder=3)
-
-        ax.plot(x, d, color=fs.C["INK"], lw=1.6, zorder=6)
-        ax.set_ylim(-DIFF_HALF, DIFF_HALF)
-        hits = fs.mark_offaxis(ax, x, d, DIFF_HALF, color=fs.C["LATE"])
-        if hits:
-            offaxis.append((site.domain_number, hits))
-
-        ax.axvline(getattr(site, "stable_entry_" + HEADLINE_TAG),
-                   color=fs.C["REF"], lw=0.9, ls=(0, (4, 2)), zorder=5)
-        marked = sub[sub["moving_year"] == MARKED_YEAR]
-        if len(marked):
-            ax.plot(MARKED_YEAR,
-                    np.clip(marked["diff_m_yr"].iloc[0], -DIFF_HALF, DIFF_HALF),
-                    marker="o", ms=5.0, mfc=fs.C["ADDED"], mec="white",
-                    mew=0.9, zorder=10)
-
-        fs._title(ax, i, "GIS {0} · settles {1}".format(
-            site.domain_number,
-            window_label(direction, getattr(site, "stable_entry_" + HEADLINE_TAG))))
-        ax.grid(True, axis="y", alpha=0.6)
-        if i % ncol == 0:
-            ax.set_ylabel("rate − {0}–{1} rate (m/yr)".format(REF_START, REF_END))
-        if i >= len(sites) - ncol:
-            ax.set_xlabel(moving_axis_label(direction))
-        ax.set_xlim(x.min() - 0.5, x.max() + 0.5)
-
-    for ax in flat[len(sites):]:
-        ax.set_visible(False)
-
-    handles = [
-        Line2D([], [], color=fs.C["INK"], lw=1.6, label="error of the window's rate"),
-        Patch(facecolor=fs.C["LATE"], alpha=0.13,
-              label="CI overlap, the headline tolerance"),
-        Patch(facecolor=fs.C["ACCENT_FILL"], alpha=0.45,
-              label="the reference fit's 95% band"),
-        Line2D([], [], color=fs.C["REF"], lw=0.9, ls=(0, (4, 2)),
-               label="convergence window (CI overlap)"),
-        Line2D([], [], color="none", marker="o", ms=5.0, mfc=fs.C["ADDED"],
-               mec="white", mew=0.9,
-               label="{0}, the marked window".format(window_label(direction, MARKED_YEAR))),
-    ]
-    fig.legend(handles=handles, loc="outside lower center", ncol=3)
-
-    if stem is None:
-        stem = "window_convergence_{0}_from_{1}".format(direction, pinned_year(direction))
-    paths = fs.save(fig, Path(out_dir) / stem, close=True)
-    med = int(summary["years_needed_" + HEADLINE_TAG].median())
-    clause = ""
-    if offaxis:
-        clause = (" Beyond ±{0:g} m/yr, off the axis and marked with a "
-                  "triangle at the edge: ".format(DIFF_HALF)
-                  + "; ".join("{0:+.1f} m/yr at GIS {1:.0f} ({2:.0f})"
-                              .format(pts[0][1], g, pts[0][0])
-                              for g, pts in offaxis) + ".")
-    pinned = ("start pinned at {0}, end moving".format(REF_START)
-              if direction == "forward"
-              else "end pinned at {0}, start moving".format(REF_END))
-    fs.record_caption(paths[0],
-        "How wrong a window's rate is, and which windows stop being wrong. "
-        "Each panel is one {7}'s fitted rate MINUS its own "
-        "{0}–{1} rate, against the moving year of the window ({2}); zero "
-        "is agreement and all eight panels share one axis, so a panel compares "
-        "with a panel. The blue funnel is the headline tolerance, CI overlap: "
-        "a window passes where its own 95% interval reaches the reference's, so "
-        "the band is wide where the record is short and narrows onto the "
-        "reference at the full length. The purple band inside it is the "
-        "reference fit's own 95% half-width, the strictest tolerance, drawn for "
-        "scale; the other five are in tolerance_comparison_{3}. The green dash "
-        "is the convergence window — the shortest window after which the "
-        "curve never leaves the funnel again, median {4} years of record, and "
-        "each panel title names its own. The amber point is {5}, the marked "
-        "window. The windows are nested, so the curve reaching zero at "
-        "{0}–{1} is structural: read where it enters the band for good, "
-        "not the fact of arrival.{6}"
-        .format(REF_START, REF_END, pinned,
-                "{0}_from_{1}.png".format(direction, pinned_year(direction)),
-                med, window_label(direction, MARKED_YEAR), clause, unit_word))
-    return paths[0]
-
-
-# ============================================================
-# THE FIGURE -- every transect on the island
-# ============================================================
-
-def draw_alongshore(summary, domains, out_dir, direction, sites=None):
-    """The whole island: is the convergence window a place, or a coincidence?
-
-    Three panels on the domain axis, because eight transects can show WHAT
-    happens but not whether it happens everywhere. Each domain's ~10 transects
-    give a median and an interquartile band, so a domain where the transects
-    disagree cannot pass as a domain that settled.
-    """
-    fs.apply_style()
-    fig, axes = plt.subplots(3, 1, figsize=fs.figsize("double", height=7.6),
+    # x IS THE TRANSECT COUNT, 1-906 south to north (Hannah, 2026-09-29): every
+    # transect one unit wide, nothing stretched to fit a domain. The domains
+    # are only labels, on a second axis under panel (b).
+    order = pd.DataFrame(all_transects(), columns=["domain_number", "transect_id"])
+    order["x"] = np.arange(1, len(order) + 1)
+    xmap = order.set_index("transect_id")["x"]
+    n_tr = len(order)
+    first = order.groupby("domain_number")["x"].min()
+    last = order.groupby("domain_number")["x"].max()
+    centre = (first + last) / 2.0
+    try:
+        from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS
+        spans = {name: (first[lo], last[hi])
+                 for name, (lo, hi) in HATTERAS_ANNOTATIONS.town_spans.items()
+                 if lo in first.index and hi in last.index}
+    except ImportError:
+        spans = {}
+    fig, axes = plt.subplots(2, 1, figsize=fs.figsize("double", height=6.4),
                              sharex=True, layout="constrained")
-    x = domains["domain_number"].to_numpy()
-    site_domains = set(sites or [])
-    marked_years = (MARKED_YEAR - REF_START + 1 if direction == "forward"
-                    else REF_END - MARKED_YEAR + 1)
-
-    ax = axes[0]
-    ax.fill_between(x, domains["years_needed_" + HEADLINE_TAG + "_q25"],
-                    domains["years_needed_" + HEADLINE_TAG + "_q75"],
-                    color=fs.C["BASE_FILL"], alpha=0.75, lw=0, zorder=2)
-    ax.plot(x, domains["years_needed_" + HEADLINE_TAG + "_median"],
-            color=fs.C["LATE"], lw=1.5, zorder=4)
-    ax.axhline(marked_years, color=fs.C["ADDED"], lw=1.4, zorder=5)
-    ax.set_ylabel("years of record needed")
-    fs._title(ax, 0, "Record length before the rate settles (CI overlap)")
-    fs.town_bands(ax, label=True)
-
-    ax = axes[1]
-    ax.fill_between(x, domains["diff_marked_q25_m_yr"], domains["diff_marked_q75_m_yr"],
-                    color=fs.C["BASE_FILL"], alpha=0.75, lw=0, zorder=2)
-    ax.plot(x, domains["diff_marked_median_m_yr"], color=fs.C["LATE"], lw=1.5, zorder=4)
-    ax.axhline(0.0, color=fs.C["ACCENT"], lw=1.0, zorder=3)
-    for edge in (-ABS_TOL_M_YR, ABS_TOL_M_YR):
-        ax.axhline(edge, color=fs.C["INK_MUTED"], lw=0.5, ls=(0, (1, 2)), zorder=3)
-    ax.set_ylabel("{0} − {1}–{2}  (m/yr)".format(
-        window_label(direction, MARKED_YEAR), REF_START, REF_END))
-    fs._title(ax, 1, "Error of the {0} window".format(
-        window_label(direction, MARKED_YEAR)))
-    fs.town_bands(ax, label=False)
-
-    ax = axes[2]
-    # The strictest and the three loosenings, so panel (c) shows what the
-    # tolerance choice is worth rather than one arbitrary answer.
-    for tag, colour in (("ci", fs.C["INK_MUTED"]), ("ci3x", fs.C["REF"]),
-                        ("abs50", fs.C["ADDED"]), ("overlap", fs.C["LATE"])):
-        ax.plot(x, 100.0 * domains["marked_in_" + tag + "_frac"], color=colour,
-                lw=1.3, label=CRITERION_LABEL[tag])
-    ax.set_ylim(-3, 103)
-    ax.set_ylabel("% of transects")
-    ax.set_xlabel(fs.DOMAIN_AXIS_LABEL)
-    fs._title(ax, 2, "Transects whose {0} rate is already in the band".format(
-        window_label(direction, MARKED_YEAR)))
-    fs.town_bands(ax, label=False)
-    ax.legend(loc="upper left", ncol=3)
-
-    for ax in axes:
+    marked_years = MARKED_YEAR - ref_start + 1
+    out_dir = None
+    notes = []
+    for i, direction in enumerate(("forward", "backward")):
+        pinned = ref_start if direction == "forward" else ref_end
+        root = obs.window_convergence_dir(direction, pinned, ref_start, ref_end)
+        out_dir = root.parent
+        s = pd.read_csv(root / obs.SETTLING_SCALE_DIRS["all"]
+                        / "convergence_summary_all_transects.csv")
+        s["x"] = s["transect_id"].map(xmap)
+        s = s.sort_values("x")
+        years = (marked_years if direction == "forward"
+                 else ref_end - MARKED_YEAR + 1)
+        model = ("{0}–{1}".format(ref_start, MARKED_YEAR) if direction == "forward"
+                 else "{0}–{1}".format(MARKED_YEAR, ref_end))
+        ax = axes[i]
+        below = np.zeros(len(s))
+        fracs = []
+        for tag, name, colour in YEARS_NEEDED_THRESHOLDS:
+            y = s["years_needed_" + tag].to_numpy(float)
+            ax.fill_between(s["x"], below, y, step="mid", color=colour, lw=0,
+                            label="within " + name)
+            fracs.append((name, 100.0 * np.mean(y <= years)))
+            below = y
+        box = dict(facecolor="white", edgecolor="none", pad=1.5, alpha=0.9)
+        note = "{0} yr is enough at: ".format(years) + " · ".join(
+            "{0:.0f}% ({1})".format(f, n) for n, f in fracs) + " of transects"
+        notes.append((direction, note))
+        if HIGHLIGHT_MODEL_WINDOW:
+            ax.axhline(years, color=fs.C["ADDED"], lw=1.8, zorder=5,
+                       path_effects=fs._halo(3.5))
+            ax.text(n_tr - 5, years + 0.5,
+                    "model window, {0} ({1} yr)".format(model, years),
+                    ha="right", va="bottom", color=fs.C["ADDED"], fontsize=7.5,
+                    fontweight="bold", zorder=6, bbox=box)
+            ax.text(6, years + 0.5, note, ha="left", va="bottom", fontsize=7,
+                    color=fs.INK, zorder=6, bbox=box)
+        ax.set_ylim(0, ref_end - ref_start + 1.5)
+        ax.set_xlim(0.5, n_tr + 0.5)
+        ax.set_ylabel("years of record needed")
         ax.grid(True, axis="y", alpha=0.6)
-        ax.set_xlim(x.min() - 0.5, x.max() + 0.5)
-        for d in site_domains:
-            ax.axvline(d, color=fs.C["INK_MUTED"], lw=0.4, alpha=0.5, zorder=0)
+        fs.town_bands(ax, label=(i == 0), spans=spans)
+        fs._title(ax, i, "Windows starting {0} (the end moves later)".format(ref_start)
+                  if direction == "forward"
+                  else "Windows ending {0} (the start moves earlier)".format(ref_end))
+    axes[-1].set_xlabel("transect (1–{0}, south → north)".format(n_tr))
+    axes[-1].set_xticks([1] + list(range(100, n_tr + 1, 100)))
+    # GIS domain labels under the transect axis: piecewise-linear between the
+    # domains' centre transects, so each label sits over its own transects.
+    dom = axes[-1].secondary_xaxis(
+        -0.28, functions=(
+            lambda x: np.interp(x, centre.to_numpy(), centre.index.to_numpy(float)),
+            lambda d: np.interp(d, centre.index.to_numpy(float), centre.to_numpy())))
+    dom.set_xticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
+    dom.set_xlabel(fs.DOMAIN_AXIS_LABEL)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles[::-1], labels[::-1], loc="outside lower center", ncol=3,
+               title="years needed before the rate stays")
 
-    handles = [
-        Line2D([], [], color=fs.C["LATE"], lw=1.5, label="domain median"),
-        Patch(facecolor=fs.C["BASE_FILL"], alpha=0.75,
-              label="interquartile range of the domain's transects"),
-        Line2D([], [], color=fs.C["ADDED"], lw=1.4,
-               label="the {0} window, {1} years".format(
-                   window_label(direction, MARKED_YEAR), marked_years)),
-        Line2D([], [], color=fs.C["INK_MUTED"], lw=0.4,
-               label="the eight sites of the panel figures"),
-    ]
-    fig.legend(handles=handles, loc="outside lower center", ncol=2)
-
-    stem = "convergence_alongshore_{0}_from_{1}".format(direction, pinned_year(direction))
-    paths = fs.save(fig, Path(out_dir) / stem, close=True)
-    med = summary["years_needed_" + HEADLINE_TAG].median()
-    frac = 100.0 * summary["marked_in_" + HEADLINE_TAG].mean()
-    pinned = ("pinned at {0} with the end moving out".format(REF_START)
-              if direction == "forward"
-              else "pinned at {0} with the start moving back".format(REF_END))
+    paths = fs.save(fig, out_dir / YEARS_NEEDED_STEM, close=True)
     fs.record_caption(paths[0],
-        "The same nested sweep run on every CoastSat transect on the island "
-        "({0:.0f} of them), aggregated to the {1:.0f} model domains, with the "
-        "window {2}. (a) how many years of record the fitted rate needs before "
-        "its own 95% interval stops failing to reach the {3}–{4} fit's — "
-        "CI overlap, the headline tolerance — against the {5} "
-        "years the {6} window has (amber). (b) that window's error: its rate "
-        "minus the {3}–{4} rate, with ±{7} m/yr as hairlines. (c) the "
-        "fraction of each domain's transects whose {6} rate already sits inside "
-        "each of the three tolerances. Blue is the domain median over its ~10 "
-        "transects and the grey band their interquartile range, so a domain "
-        "whose transects disagree cannot pass as one that settled. Across the "
-        "island the median record length needed is {8:.0f} years and {9:.0f}% "
-        "of transects have their {6} rate inside the CI band. Thin grey "
-        "verticals are the eight sites drawn in the panel figures."
-        .format(len(summary), len(domains), pinned, REF_START, REF_END,
-                marked_years, window_label(direction, MARKED_YEAR),
-                ABS_TOL_M_YR, med, frac))
-    return paths[0]
+        "How many years of CoastSat record each of the island's {n} transects "
+        "needs before its shoreline change rate (OLS, the target's estimator) "
+        "comes within a threshold of the {rs}–{re} rate and stays there for "
+        "every longer window. (a) windows starting in {rs}, the end moving "
+        "later; (b) windows ending in {re}, the start moving earlier. The "
+        "bands stack from the loosest threshold (±1.0 m/yr, darkest, bottom) "
+        "to the strictest (±0.25 m/yr, lightest, top): the top of each band is "
+        "the years that threshold needs. {full} years means only the full "
+        "record matches. {model}The x-axis "
+        "counts transects south to north, each one unit wide; GIS domain "
+        "numbers are given beneath it. Village spans are shaded.".format(n=len(xmap), rs=ref_start, re=ref_end,
+                                   full=ref_end - ref_start + 1,
+                                   model=("The amber line is the model's "
+                                          "15-year window; where a band rises "
+                                          "above it, 15 years was not enough at "
+                                          "that threshold. The percentages are "
+                                          "the share of transects where it was. "
+                                          if HIGHLIGHT_MODEL_WINDOW else "")))
+    return paths[0], notes
 
 
-def draw_domain_vs_transect(domain_summary, transect_domains, out_dir,
-                            direction, sites=None):
-    """Does averaging the domain buy you a shorter window?
-
-    The point of the domain scale. The model is graded on the domain MEAN of
-    ~10 transect rates, so a single transect's convergence window is an upper
-    bound -- averaging cancels the per-transect scatter and should settle
-    sooner. This figure puts the two on the same axes and says by how much.
-    """
-    fs.apply_style()
-    fig, axes = plt.subplots(2, 1, figsize=fs.figsize("double", height=5.8),
-                             sharex=True, layout="constrained")
-    d = domain_summary.sort_values("domain_number")
-    t = transect_domains.sort_values("domain_number")
-    x = d["domain_number"].to_numpy()
-    marked_years = (MARKED_YEAR - REF_START + 1 if direction == "forward"
-                    else REF_END - MARKED_YEAR + 1)
-
-    ax = axes[0]
-    ax.plot(t["domain_number"], t["years_needed_" + HEADLINE_TAG + "_median"],
-            color=fs.C["BASE"], lw=1.2, zorder=3)
-    ax.plot(x, d["years_needed_" + HEADLINE_TAG], color=fs.C["LATE"], lw=1.6,
-            zorder=4)
-    ax.axhline(marked_years, color=fs.C["ADDED"], lw=1.4, zorder=5)
-    ax.set_ylabel("years of record needed")
-    fs._title(ax, 0, "Record length before the rate settles (CI overlap)")
-    fs.town_bands(ax, label=True)
-
-    ax = axes[1]
-    ax.plot(t["domain_number"], t["diff_marked_median_m_yr"], color=fs.C["BASE"],
-            lw=1.2, zorder=3)
-    ax.plot(x, d["diff_marked_m_yr"], color=fs.C["LATE"], lw=1.6, zorder=4)
-    ax.axhline(0.0, color=fs.C["ACCENT"], lw=1.0, zorder=2)
-    for edge in (-ABS_TOL_M_YR, ABS_TOL_M_YR):
-        ax.axhline(edge, color=fs.C["INK_MUTED"], lw=0.5, ls=(0, (1, 2)), zorder=2)
-    ax.set_ylabel("{0} − {1}–{2}  (m/yr)".format(
-        window_label(direction, MARKED_YEAR), REF_START, REF_END))
-    ax.set_xlabel(fs.DOMAIN_AXIS_LABEL)
-    fs._title(ax, 1, "Error of the {0} window".format(
-        window_label(direction, MARKED_YEAR)))
-    fs.town_bands(ax, label=False)
-
-    for ax in axes:
-        ax.grid(True, axis="y", alpha=0.6)
-        ax.set_xlim(x.min() - 0.5, x.max() + 0.5)
-        for dom in set(sites or []):
-            ax.axvline(dom, color=fs.C["INK_MUTED"], lw=0.4, alpha=0.5, zorder=0)
-
-    # Out of the axes: the marked-window rule sits at 15 years, far below the
-    # 22-29 the curves occupy, and an in-axes legend lands on top of it.
-    fig.legend(handles=[
-        Line2D([], [], color=fs.C["BASE"], lw=1.2,
-               label="single transect (domain median)"),
-        Line2D([], [], color=fs.C["LATE"], lw=1.6,
-               label="domain mean of ~10 transects"),
-        Line2D([], [], color=fs.C["ADDED"], lw=1.4,
-               label="the {0} window, {1} years".format(
-                   window_label(direction, MARKED_YEAR), marked_years)),
-    ], loc="outside lower center", ncol=3)
-
-    stem = "domain_mean_vs_transect_{0}_from_{1}".format(direction, pinned_year(direction))
-    paths = fs.save(fig, Path(out_dir) / stem, close=True)
-    med_d = d["years_needed_" + HEADLINE_TAG].median()
-    med_t = t["years_needed_" + HEADLINE_TAG + "_median"].median()
-    n_ok = int(d["marked_in_" + HEADLINE_TAG].sum())
-    fs.record_caption(paths[0],
-        "What averaging a domain buys. The model is graded on the domain MEAN "
-        "of its ~10 transect rates, so a single transect's convergence window "
-        "is an upper bound; blue is the mean, grey the median over the same "
-        "domain's individual transects. (a) years of record the rate needs "
-        "before its own 95% interval reaches the {0}–{1} fit's for good — CI "
-        "overlap, the headline tolerance — against the "
-        "{2} years the {3} window has (amber). (b) that window's error against "
-        "the {0}–{1} rate, with ±{4} m/yr as hairlines. Averaging "
-        "moves the island median from {5:.0f} years to {6:.0f}, and {7} of "
-        "{8} domain means have their {3} rate inside the band. The mean's band "
-        "is the MEAN of the transects' 95% half-widths, not a standard error "
-        "of the mean: adjacent transects are views of the same shoreline and "
-        "propagating them as independent would divide the band by about "
-        "√10 and manufacture a later window out of an assumption. Thin "
-        "grey verticals are the eight sites of the panel figures."
-        .format(REF_START, REF_END, marked_years,
-                window_label(direction, MARKED_YEAR), ABS_TOL_M_YR,
-                med_t, med_d, n_ok, len(d)))
-    return paths[0]
-
-
-DOMAINS_README = """# {folder}/domain_means — the unit the model is graded on
+DOMAINS_README = """# {folder}/c-domain_means — the unit the model is graded on
 
 The grading target is the domain MEAN of its transect rates
 (`coastsat_domain_lrr.py` fits each transect and averages the slopes), so this
-is the scale the answer actually has to be given at. `../sites/` and
-`../all_transects/` work on single transects, which are noisier and therefore
-an upper bound on the convergence window.
+is the scale the answer actually has to be given at. `../a-eight_sites/` and
+`../b-every_transect/` work on single transects. Averaging was expected to
+settle sooner; it does not, so the disagreement between windows is real
+shoreline behaviour rather than per-transect scatter.
 
 No refitting happens here: every window of every transect is already in
-`../all_transects/window_convergence_transects_all.csv`, and this is that table
+`../b-every_transect/window_convergence_transects_all.csv`, and this is that table
 grouped to the {n_domains} domains.
 
 ```
-domain_mean_vs_transect_{stem}.png   what averaging buys, both panels
-window_convergence_domains_{stem}.png
-                                     the eight site domains as an ERROR, the
-                                     like-for-like against ../sites/
-tolerance_comparison_{stem}.png      the five tolerances on one error curve
 window_convergence_domains.csv       a row per domain per window
 convergence_summary_domains.csv      a row per domain
-supporting/                          the PDFs and CAPTIONS.md
 ```
+
+Tables only. The figure is `../../years_needed_alongshore.png`.
 
 ## Two uncertainties, and the scoring uses the wider
 
@@ -1090,142 +942,14 @@ size of the choice is visible.
 """
 
 
-def draw_tolerances(sweep, summary, out_dir, direction, example=None):
-    """How forgiving is "close"? The four candidate tolerances, side by side.
-
-    Panels (a) and (b) are ONE transect each -- the same error curve as the
-    site figures, with every tolerance drawn on it, so the difference between
-    the criteria is a picture rather than a table. (a) is a transect where the
-    four disagree most about the convergence window, (b) one where they agree:
-    together they show that the choice matters in some places and nowhere near
-    as much in others.
-
-    Panel (c) is the island: what fraction of all transects have settled by a
-    given record length, one curve per tolerance. The horizontal gap between
-    those curves at 50% IS the cost of the choice, in years.
-
-    THE ONE THAT IS NOT A BAND. `overlap` widens with the window's own
-    uncertainty, so on (a) and (b) it is a FUNNEL -- wide at five years of
-    record, narrowing onto the reference at twenty-nine. That shape is the
-    point of it: it asks a short window to be indistinguishable from the
-    reference, not to be as precise as it.
-    """
-    fs.apply_style()
-    fig, axes = plt.subplots(3, 1, figsize=fs.figsize("double", height=8.0),
-                             layout="constrained")
-
-    shown = [t for t in HEADLINE_TAGS]
-    colours = {"ci": fs.C["INK_MUTED"], "ci3x": fs.C["REF"],
-               "abs50": fs.C["ADDED"], "abs100": fs.C["EARLY"],
-               "overlap": fs.C["LATE"]}
-
-    # Which transects to draw: most and least disagreement among the four.
-    spread = (summary[["stable_entry_" + t for t in shown]].max(axis=1)
-              - summary[["stable_entry_" + t for t in shown]].min(axis=1))
-    order = spread.sort_values()
-    picks = [summary.loc[order.index[-1]], summary.loc[order.index[len(order) // 2]]]
-    if example is not None:
-        hit = summary[summary["unit_id"] == example]
-        if len(hit):
-            picks[0] = hit.iloc[0]
-
-    for panel, site in enumerate(picks):
-        ax = axes[panel]
-        sub = sweep[sweep["unit_id"] == site["unit_id"]].sort_values("moving_year")
-        x = sub["moving_year"].to_numpy()
-        d = sub["diff_m_yr"].to_numpy()
-        uw = sub["unc_m_yr"].to_numpy()
-        ur = float(site["ref_unc_m_yr"])
-
-        # The funnel first, so the flat bands read on top of it.
-        ax.fill_between(x, -(uw + ur), uw + ur, color=fs.C["LATE"], alpha=0.13,
-                        lw=0, zorder=1)
-        ax.plot(x, uw + ur, color=colours["overlap"], lw=0.9, zorder=3)
-        ax.plot(x, -(uw + ur), color=colours["overlap"], lw=0.9, zorder=3)
-        for tag, half in (("ci", ur), ("ci3x", 3 * ur), ("abs50", 0.50),
-                          ("abs100", 1.00)):
-            for sign in (1, -1):
-                ax.axhline(sign * half, color=colours[tag], lw=0.9,
-                           ls=(0, (4, 2.5)), zorder=3)
-
-        ax.axhline(0.0, color=fs.C["ACCENT"], lw=1.0, zorder=4)
-        ax.plot(x, d, color=fs.C["INK"], lw=1.8, zorder=8)
-
-        # Where each tolerance says the window has settled.
-        for tag in shown:
-            ax.plot(site["stable_entry_" + tag], 0.0, marker="v", ms=6.5,
-                    mfc=colours[tag], mec="white", mew=0.8, zorder=12,
-                    clip_on=False)
-
-        lim = max(1.35, min(4.0, float(np.nanmax(np.abs(d[-12:]))) * 3.0))
-        lim = max(lim, 1.35)
-        ax.set_ylim(-lim, lim)
-        fs.mark_offaxis(ax, x, d, lim, color=fs.C["INK"])
-        ax.set_xlim(x.min() - 0.5, x.max() + 0.5)
-        ax.set_ylabel("rate \u2212 {0}\u2013{1} rate (m/yr)".format(REF_START, REF_END))
-        ax.set_xlabel(moving_axis_label(direction))
-        ax.grid(True, axis="y", alpha=0.6)
-        kind = "the four disagree most" if panel == 0 else "typical"
-        fs._title(ax, panel, "GIS {0:.0f} \u00b7 {1} \u00b7 {2}".format(
-            site["domain_number"],
-            str(site["unit_id"]).replace("usa_NC_", ""), kind))
-
-    # (c) the island: how much of it has settled by a given record length
-    ax = axes[2]
-    for tag in shown:
-        yrs = np.sort(summary["years_needed_" + tag].to_numpy())
-        pct = 100.0 * np.arange(1, len(yrs) + 1) / len(yrs)
-        ax.step(yrs, pct, where="post", color=colours[tag], lw=1.6,
-                label=CRITERION_LABEL[tag])
-    marked_years = (MARKED_YEAR - REF_START + 1 if direction == "forward"
-                    else REF_END - MARKED_YEAR + 1)
-    ax.axvline(marked_years, color=fs.C["ADDED"], lw=1.4, ls=(0, (1, 2)), zorder=1)
-    ax.set_xlabel("years of record in the window")
-    ax.set_ylabel("% of transects settled")
-    ax.set_ylim(0, 102)
-    ax.grid(True, axis="both", alpha=0.6)
-    fs._title(ax, 2, "How much of the island has settled, by record length")
-    ax.legend(loc="upper left", ncol=2)
-
-    stem = "tolerance_comparison_{0}_from_{1}".format(direction, pinned_year(direction))
-    paths = fs.save(fig, Path(out_dir) / stem, close=True)
-    bits = ", ".join("{0} {1} ({2:.0f}% of marked windows pass)".format(
-        CRITERION_LABEL[t],
-        window_label(direction, summary["stable_entry_" + t].median()),
-        100.0 * summary["marked_in_" + t].mean()) for t in shown)
-    fs.record_caption(paths[0],
-        "What \u201cclose enough\u201d costs. Every tolerance the sweep scores, "
-        "drawn on the same error curve. (a) and (b) are single transects: the "
-        "black line is the window\u2019s rate minus the {0}\u2013{1} rate, the "
-        "dashed pairs are the fixed tolerances, and the blue funnel is CI "
-        "overlap \u2014 the only one that is not a band, because it widens with "
-        "the window\u2019s own uncertainty and narrows onto the reference. The "
-        "triangles on the zero line mark where each tolerance says the rate has "
-        "settled. (a) is the transect where the four disagree most, (b) one "
-        "where they nearly agree. (c) the whole island: the share of the {2} "
-        "transects settled by a given record length, one curve per tolerance, "
-        "with the marked window\u2019s {3} years dotted \u2014 the horizontal "
-        "gap between curves is what the choice of tolerance is worth, in years. "
-        "Island medians: {4}. The windows are nested, so every curve reaches "
-        "100% at the full record by construction. 3× the reference band "
-        "and ±0.50 m/yr are nearly the same width on this record — the "
-        "reference fit’s half-width is about 0.15 m/yr — so their "
-        "curves in (c) track each other, and the choice between them is not "
-        "worth arguing about."
-        .format(REF_START, REF_END, len(summary), marked_years, bits))
-    return paths[0]
-
-
 # ============================================================
 # READMEs
 # ============================================================
 
-DIRECTION_README = """# window_convergence/record_{ref_start}_{ref_end}/{folder} — {headline}
+DIRECTION_README = """# {folder} — {headline}
 
-Fitted on the CoastSat record **{ref_start}–{ref_end}**. A sweep run on a
-different record span lives under a different `record_` folder and is a
-different experiment, not a version of this one: every window in it is scored
-against a different reference.
+**When does each location settle on the long-term rate?** Fitted on the
+CoastSat record **{ref_start}–{ref_end}**. {record_note}
 
 {intro}
 
@@ -1236,10 +960,19 @@ The marked year {marked} is a real model window in both: forward it is
 {ref_start}–{marked}, the window the model is graded on, and backward it is
 {marked}–{ref_end}, the second leg of the canonical chain.
 
+The figure for this sweep is `../years_needed_alongshore.png` (both
+directions, one panel each).
+
 ```
-sites/          eight evenly spaced domains, one transect each, in full
-all_transects/  every CoastSat transect, aggregated to the 90 domains
+a-eight_sites/     eight transects: shoreline position through time with the
+                   fits drawn on it (the one figure here), plus tables
+b-every_transect/  tables for all ~906 transects (the figure's source)
+c-domain_means/    tables for the transects averaged to the 90 domains
 ```
+
+The numbers below are the domain means under seven tolerances ("settles" = the
+window's rate enters the tolerance and stays inside it for every longer window).
+The figure uses only the three plain ones, ±0.25, ±0.5 and ±1.0 m/yr.
 
 ## The window this sweep gives
 
@@ -1252,19 +985,67 @@ Producer:
 `--direction {direction}`. Built {today} by interview (Hannah).
 """
 
-SITES_README = """# {folder}/sites — eight transects, in full
+SETTLING_README = """# {title}
+
+**How many years of record does each place need before its shoreline change
+rate stays within X m/yr of the {rs}–{re} rate?** One figure answers it:
+
+![years needed](years_needed_alongshore.png)
+
+`years_needed_alongshore.png` has one line of numbers per transect (906) along
+the island, south to north. (a) is windows starting {rs}, with the end moving
+later, and (b) is windows ending {re}, with the start moving earlier. The shaded
+bands are three thresholds, ±1.0, ±0.5 and ±0.25 m/yr: the top of each band is
+the years that threshold needs.{amber}
+
+{notes}
+
+"Stays within" means the window's rate is inside the threshold and every
+longer window's rate is too. The first time a rate passes through the band
+doesn't count, because most transects swing through it and back out.
+{full} years means only the full record matches.
+
+```
+forward_from_{rs}/     windows {rs}–{rs1} … {rs}–{re}
+backward_from_{re}/    windows {re4}–{re} … {rs}–{re}
+    a-eight_sites/     shoreline position through time at 8 transects, with
+                       the fits drawn on it (supporting figure) + tables
+    b-every_transect/  per-transect tables (the figure's source)
+    c-domain_means/    the same, averaged to the 90 model domains (tables)
+```
+
+Redraw without refitting:
+`python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_window_convergence.py --figure-only{flag}`
+
+**Retired 2026-09-29** (Hannah: too many figures, an abstract "rate minus
+reference" axis, and tolerance jargon). The figures that went are
+`window_convergence_*` (eight sites and domains, the error curves),
+`convergence_alongshore_*`, `tolerance_comparison_*` and
+`domain_mean_vs_transect_*`, in both directions. Their tables are all kept.
+PNGs are gitignored, but each one's PDF was committed in 3c6de274, under the old
+layout: `window_convergence/record_<start>_<end>/<direction>/{{sites,all_transects,domain_means}}/supporting/`.
+To see one: `git show 3c6de274:data/hatteras_init/5-scr/3-rates/coastsat/window_convergence/record_1996_2024/forward_from_1996/all_transects/supporting/convergence_alongshore_forward_from_1996.pdf > old.pdf`.
+"""
+
+RECORD_NOTE_FULL = (
+    "The whole-profile companion question is in `../../1-rate_profiles/`.")
+RECORD_NOTE_CUT = (
+    "**This is an experiment**: the record is cut to {ref_start}–{ref_end}, "
+    "so every window is scored against the {ref_start}–{ref_end} rate, not "
+    "1996–2024. It asks whether the answer depends on the 2021 step. The main "
+    "result is `../../../2-settling_window/`.")
+
+SITES_README = """# {folder}/a-eight_sites — eight transects, in full
 
 Eight evenly spaced domains (GIS {domain_list}), one transect each: the middle
 one of its domain by alongshore order. The readable scale — every position,
-every fit, one panel per site. `../all_transects/` runs the same sweep on all
+every fit, one panel per site. `../b-every_transect/` runs the same sweep on all
 of them and says whether these eight were representative.
 
 ```
 shoreline_position_window_fits_{stem}.png
                                    the record: positions, the annual median,
-                                   and six of the {n_windows} fits. Read first
-window_convergence_{stem}.png      the same sweep as an ERROR against the
-                                   moving year, on one shared axis
+                                   and six of the {n_windows} fits
 window_convergence_transects.csv   a row per site per window
 convergence_summary.csv            a row per site: reference, the marked
                                    window, six convergence entries
@@ -1281,25 +1062,25 @@ lost among the rest, each differing from its neighbour by one year of record
 {findings}
 """
 
-ALL_README = """# {folder}/all_transects — the whole island
+ALL_README = """# {folder}/b-every_transect — the whole island
 
 The same nested sweep on every CoastSat transect in the lookup
 ({n_transects} of them, {n_fits} fits), aggregated to the {n_domains} model
-domains. It exists to answer one question about `../sites/`: were the eight
+domains. It exists to answer one question about `../a-eight_sites/`: were the eight
 representative, or did an even spread of eight happen to pick the unsettled
 ones?
 
+The figure drawn from these tables is `../../years_needed_alongshore.png`.
+
 ```
-convergence_alongshore_{stem}.png       three panels on the domain axis
-tolerance_comparison_{stem}.png         what "close enough" costs: all five
-                                        tolerances on one error curve, and
-                                        the island settled-by-record-length
 domain_convergence_summary.csv          a row per GIS domain: medians and
                                         quartiles across its ~10 transects
 convergence_summary_all_transects.csv   a row per transect
 window_convergence_transects_all.csv    the full sweep, {n_fits} rows
-supporting/                             the PDF and CAPTIONS.md
 ```
+
+`years_needed_abs`, `_abs50` and `_abs100` are the ±0.25, ±0.5 and ±1.0 m/yr
+columns the figure draws.
 
 The domain number is the **median** across its transects, never the mean: one
 transect that never settles would drag a mean to the end of the record and
@@ -1401,12 +1182,11 @@ def one_direction(direction, domains_for_sites, scale, today):
         sweep = run_sweep(picks, windows, announce=True)
         summary = summarise(sweep, direction)
 
-        out = root / "sites"
+        out = root / obs.SETTLING_SCALE_DIRS["sites"]
         out.mkdir(parents=True, exist_ok=True)
         sweep.to_csv(out / obs.WINDOW_CONVERGENCE_SWEEP_FILE, index=False)
         summary.to_csv(out / obs.WINDOW_CONVERGENCE_SUMMARY_FILE, index=False)
         draw_fits(sweep, summary, out, direction)
-        draw(sweep, summary, out, direction)
         (out / "README.md").write_text(SITES_README.format(
             folder=folder, today=today, stem=stem, n_windows=len(windows),
             domain_list=", ".join(str(d) for d in domains_for_sites),
@@ -1425,14 +1205,11 @@ def one_direction(direction, domains_for_sites, scale, today):
         by_domain = summarise_domains(summary_all)
 
         if scale in ("all", "every"):
-            out = root / "all_transects"
+            out = root / obs.SETTLING_SCALE_DIRS["all"]
             out.mkdir(parents=True, exist_ok=True)
             sweep_all.to_csv(out / "window_convergence_transects_all.csv", index=False)
             summary_all.to_csv(out / "convergence_summary_all_transects.csv", index=False)
             by_domain.to_csv(out / "domain_convergence_summary.csv", index=False)
-            draw_alongshore(summary_all, by_domain, out, direction,
-                            sites=domains_for_sites)
-            draw_tolerances(sweep_all, summary_all, out, direction)
             findings = findings_text(summary_all, direction, "all")
             (out / "README.md").write_text(ALL_README.format(
                 folder=folder, stem=stem, n_transects=len(summary_all),
@@ -1453,16 +1230,10 @@ def one_direction(direction, domains_for_sites, scale, today):
             dom_sweep = score_units(domain_mean_sweep(sweep_all))
             dom_summary = summarise(dom_sweep, direction)
 
-            out = root / "domain_means"
+            out = root / obs.SETTLING_SCALE_DIRS["domains"]
             out.mkdir(parents=True, exist_ok=True)
             dom_sweep.to_csv(out / "window_convergence_domains.csv", index=False)
             dom_summary.to_csv(out / "convergence_summary_domains.csv", index=False)
-            eight = dom_summary[dom_summary["domain_number"].isin(domains_for_sites)]
-            draw(dom_sweep, eight, out, direction, unit_word="domain mean",
-                 stem="window_convergence_domains_{0}".format(stem))
-            draw_domain_vs_transect(dom_summary, by_domain, out, direction,
-                                    sites=domains_for_sites)
-            draw_tolerances(dom_sweep, dom_summary, out, direction)
             dom_findings = findings_text(dom_summary, direction, "domains")
             (out / "README.md").write_text(DOMAINS_README.format(
                 folder=folder, stem=stem, n_domains=len(dom_summary),
@@ -1488,6 +1259,8 @@ def one_direction(direction, domains_for_sites, scale, today):
     (root / "README.md").write_text(DIRECTION_README.format(
         folder=folder, headline=title, direction=direction, today=today,
         ref_start=REF_START, ref_end=REF_END, marked=MARKED_YEAR,
+        record_note=RECORD_NOTE_FULL if (REF_START, REF_END) == (1996, 2024)
+        else RECORD_NOTE_CUT.format(ref_start=REF_START, ref_end=REF_END),
         first=REF_START + MIN_WINDOW_YEARS - 1,
         last=REF_END - MIN_WINDOW_YEARS + 1,
         intro=intro.format(ref_start=REF_START, ref_end=REF_END,
@@ -1516,6 +1289,9 @@ def main(argv=None):
     ap.add_argument("--ref-end", type=int, default=REF_END,
                     help="last year of the record; the reference window is "
                          "<ref-start>-<ref-end> and both sweeps converge on it")
+    ap.add_argument("--figure-only", action="store_true",
+                    help="redraw years_needed_alongshore from the stored "
+                         "tables without refitting")
     ap.add_argument("--abs-tol", type=float, default=ABS_TOL_M_YR)
     ap.add_argument("--rel-tol", type=float, default=REL_TOL)
     args = ap.parse_args(argv)
@@ -1532,8 +1308,34 @@ def main(argv=None):
                   else (args.direction,))
 
     answers = {}
-    for d in directions:
-        answers[d] = one_direction(d, args.domains, args.scale, today)
+    if not args.figure_only:
+        for d in directions:
+            answers[d] = one_direction(d, args.domains, args.scale, today)
+    # Needs both directions' every-transect tables, from this run or on disk.
+    have = all((obs.window_convergence_dir(
+                    d, REF_START if d == "forward" else REF_END, REF_START, REF_END)
+                / obs.SETTLING_SCALE_DIRS["all"]
+                / "convergence_summary_all_transects.csv").is_file()
+               for d in ("forward", "backward"))
+    if have:
+        path, notes = draw_years_needed(REF_START, REF_END)
+        print("wrote {0}".format(path))
+        for d, note in notes:
+            print("  {0:>8}: {1}".format(d, note))
+        full = (REF_START, REF_END) == (1996, 2024)
+        (path.parent / "README.md").write_text(SETTLING_README.format(
+            title=("2-settling_window — how many years does each place need?"
+                   if full else
+                   "experiments/{0} — the settling sweep on a record cut to "
+                   "{1}–{2}".format(path.parent.name, REF_START, REF_END)),
+            rs=REF_START, re=REF_END, rs1=REF_START + MIN_WINDOW_YEARS - 1,
+            re4=REF_END - MIN_WINDOW_YEARS + 1, full=REF_END - REF_START + 1,
+            flag="" if full else " --ref-end {0}".format(REF_END),
+            amber=(" The amber line is the model's 15-year window."
+                   if HIGHLIGHT_MODEL_WINDOW else ""),
+            notes="\n".join("- **{0}**: {1}".format(
+                "(a) forward" if d == "forward" else "(b) backward", n)
+                for d, n in notes)), encoding="utf-8")
 
     print("\n" + "=" * 70)
     for d, text in answers.items():
