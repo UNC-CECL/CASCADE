@@ -104,7 +104,7 @@ def filter_to_dates(df: pd.DataFrame,
     return out.sort_values("date").reset_index(drop=True)
 
 
-# Backwards-compatible wrapper
+# Kept for backwards compatibility: wraps filter_to_dates using Jan 1 of each year
 def filter_to_years(df: pd.DataFrame,
                     years: list[int],
                     window_days: int = 0) -> pd.DataFrame:
