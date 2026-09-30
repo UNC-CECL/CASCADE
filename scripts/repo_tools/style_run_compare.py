@@ -85,6 +85,7 @@ def run_side(root: Path, spec: dict, side: str, keep: Path) -> dict:
     return {"code": p.returncode, "seconds": round(time.time() - t0, 1), "written": written}
 
 
+# Text with the run root and timestamps masked
 def normalise(text: str, root: Path) -> str:
     text = text.replace(str(root), "<ROOT>").replace(root.as_posix(), "<ROOT>")
     for pat in VOLATILE:
@@ -119,6 +120,7 @@ def same(a: Path, b: Path, root: Path) -> str | None:
     return "bytes differ"
 
 
+# Every difference between the two sides of one run
 def compare(root: Path, label_dir: Path, rb: dict, ra: dict) -> list[str]:
     problems = []
     if rb["code"] != ra["code"]:
@@ -138,6 +140,7 @@ def compare(root: Path, label_dir: Path, rb: dict, ra: dict) -> list[str]:
     return problems
 
 
+# Run: install both script versions, then run and compare every spec entry
 def main() -> None:
     ap = argparse.ArgumentParser(description="Compare script outputs before and after a restyle.")
     ap.add_argument("--root", type=Path, required=True)

@@ -37,8 +37,7 @@ _PATH_REPO = next(_p for _p in pathlib.Path(__file__).resolve().parents
 
 # --- CONFIG ------------------------------------------------------------------
 
-# --- CoastSat CSVs ---
-# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+# CoastSat CSVs, resolved through hat_observed_rates.py
 from site_layer.hat_observed_rates import domain_csv  # noqa: E402
 COASTSAT_CSV_1984_2004 = str(domain_csv(1984, 2004))
 COASTSAT_CSV_2004_2024 = str(domain_csv(2004, 2024))
@@ -94,8 +93,7 @@ C_VILLAGE_LINE = "0.40"      # dark gray   — Salvo / Waves / Rodanthe lines
 C_PIER         = "#1565C0"   # medium blue — pier lines
 C_GROIN        = "#B71C1C"   # dark red    — groin lines
 
-# --- Output ---
-# Products live under output/, never beside the script -- see output/README.md.
+# Output folder, under output/comparisons/
 from site_layer.hat_figure_style import COMPARISONS_ROOT, FIG_W_DOUBLE  # noqa: E402
 OUTPUT_DIR = str(COMPARISONS_ROOT / "smoothing_vs_cascade" / "1984_2004")
 

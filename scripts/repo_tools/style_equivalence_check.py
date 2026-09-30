@@ -25,6 +25,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 
 
@@ -39,6 +40,10 @@ def strip_docstrings(tree: ast.AST) -> ast.AST:
     return tree
 
 
+# -----------------------------------------------------------------------------
+
+
+# One statement as comparable text, positions ignored
 def dump(node: ast.AST) -> str:
     return ast.dump(node, include_attributes=False)
 
@@ -56,6 +61,7 @@ def binds(stmt: ast.stmt) -> set[str]:
     return out
 
 
+# Names a statement reads when it runs (not inside nested function bodies)
 def reads(stmt: ast.stmt) -> set[str]:
     if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
         parts = list(stmt.decorator_list)
@@ -82,6 +88,7 @@ def movable(stmt: ast.stmt) -> bool:
                              ast.Assign, ast.AnnAssign))
 
 
+# Every way the new source could behave differently from the old
 def compare(old_src: str, new_src: str) -> list[str]:
     problems = []
     old = strip_docstrings(ast.parse(old_src)).body
@@ -109,8 +116,7 @@ def compare(old_src: str, new_src: str) -> list[str]:
         if seq_old != seq_new:
             problems.append(f"'{name}' is bound in a different order")
 
-    # Each statement sees the same bound names it read before; a statement that
-    # calls anything sees at least everything it saw before (callees read globals)
+    # Same names resolved as before; a call sees at least what it saw before
     def seen(stmts):
         out, bound = {}, set()
         for s in stmts:
@@ -134,9 +140,7 @@ def compare(old_src: str, new_src: str) -> list[str]:
     return problems
 
 
-# Module globals a statement can touch when it runs: what it reads directly,
-# plus everything read by this module's functions it reaches (transitively),
-# plus what earlier results it reads were built from
+# Module globals a statement can reach: direct reads, local functions it calls, inputs of results it reads
 def reach_factory(stmts, module_names):
     defs = {s.name: s for s in stmts
             if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
@@ -154,6 +158,7 @@ def reach_factory(stmts, module_names):
     return reach
 
 
+# Transitive closure of names through function bodies and carried results
 def _close(names, defs, body_reads, carried):
     seen, todo = set(), list(names)
     while todo:
@@ -172,6 +177,7 @@ def at_ref(ref: str, path: Path) -> str | None:
     return r.stdout.decode("utf-8") if r.returncode == 0 else None
 
 
+# Run: compare each file with its version at --ref, and check none went missing
 def main() -> None:
     ap = argparse.ArgumentParser(description="Prove restyled scripts are unchanged in behaviour.")
     ap.add_argument("paths", nargs="+", type=Path)
