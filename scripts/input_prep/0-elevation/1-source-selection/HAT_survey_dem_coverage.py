@@ -1,47 +1,12 @@
 """
-HAT_survey_dem_coverage.py
+Score every candidate DEM year by how much of the 2009 DEM's dry-land gaps it measures.
 
-Which DEM year can fill the 2009 base DEM's DRY-LAND gaps, and what is the
-earliest one that does?
+    python scripts/input_prep/0-elevation/1-source-selection/HAT_survey_dem_coverage.py [--domains 78,79,80]
 
-WHAT THE TARGET IS, AND WHY IT CHANGED
----------------------------------------
-The 2009 DEM's nodata is not one thing. Two very different populations sit
-inside it, and conflating them produced a wrong answer once already:
-
-  SOUND MARGIN     west of the community, genuinely below MHW. 2017 and 2019
-                   agree it is 0% above MHW out to ~600 m from the island. No
-                   survey should "fill" this - it is water, and the model
-                   should see water.
-  DEVELOPED GAPS   holes inside the community itself, where the 2009 survey is
-                   only 64-80% complete across parts of the island. Both 2017
-                   and 2019 show these at ~1.2-1.5 m NAVD88, 100% above MHW.
-                   This is real dry land the 2009 survey missed, and it is what
-                   is worth filling.
-
-So the target here is DRY-LAND GAPS only: cells where 2009 has no value and the
-consensus of the candidate DEMs says the ground is above MHW.
-
-The consensus is the MEDIAN of every candidate covering the cell, deliberately
-not any single dataset. Using one year as the "is this land?" reference makes
-that year score 100% by construction, because cells it does not cover are
-excluded from the target it is then measured against.
-
-AUTHENTICITY CHECK - COVERAGE IS NOT THE SAME AS MEASUREMENT
--------------------------------------------------------------
-A gridded DEM product may be hydro-flattened and void-filled, in which case it
-reports coverage everywhere without having measured anything. 2014 NCFMP scored
-100% here and is disqualified for exactly this: 85.9% of its values in the gap
-are the single constant -0.762 m, another 8.7% are -0.914 m, so 94.6% of its
-"coverage" is two stamped water surfaces. Genuine surveys show their most common
-value in ~0.2% of cells.
-
-Every candidate is therefore scored for value repetition, and any dataset whose
-top value exceeds FLAT_FRACTION_WARN of its gap coverage is flagged.
-
-    python HAT_survey_dem_coverage.py [--domains 78,79,80]
-
-Requires: rasterio, geopandas, numpy, pyproj
+Dry-land gaps are 2009 nodata cells the candidates' median puts above MHW.
+Candidates that stamp flat water surfaces (hydro-flattened, like 2014 NCFMP) are
+flagged. Reads the D: GIS drive; writes a coverage table beside this step's
+data. Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -67,16 +32,8 @@ POLY_ROOT = Path(r"D:\Hatteras_GIS\Elevation\Polygons")
 BASE_DEM = POLY_ROOT / "2009" / "usace2009_nc_dem_Job1076020" / "2009_full.tif"
 DOMAIN_FILE = Path(r"D:\Hatteras_GIS\domains.geojson")
 DOMAIN_ID_FIELD = "domain_id"
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
-    """
-    Walk up until a directory holds data/hatteras_init.
-
-    NOT parents[N]. This file moved into 1-source-selection/ on 2026-08-25, and the
-    old parents[3] then resolved to input_prep/ rather than the project root.
-    That raises nothing - it just makes every path below it wrong, silently,
-    until some glob comes back empty. Same helper and same reason as
-    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
-    """
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
             return p
@@ -89,16 +46,17 @@ from pathlib import Path as _ELP
 _elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_elevation_products as _el  # noqa: E402
-# source-selection/, where the committed copies are. This wrote to a pooled
-# 0-elevation/figures/ that the 2026-08-25 product-first inversion removed,
-# so a re-run recreated that folder beside the real one (fixed 2026-09-18).
+# --- CONFIG ------------------------------------------------------------------
+# Source-selection/, where the committed copies are
 OUT_DIR = _el.source_selection_dir()
 
 MHW = 0.36                 # m NAVD88
 CLIP = (500, 2000)
 FLAT_FRACTION_WARN = 0.10  # top value > this share of coverage -> flag
+# -----------------------------------------------------------------------------
 
 
+# Every candidate DEM folder under POLY_ROOT except the base
 def candidates():
     out = []
     for ydir in sorted(POLY_ROOT.iterdir()):
@@ -116,6 +74,7 @@ def candidates():
     return out
 
 
+# A candidate's EPSG, vertical datum and resolution
 def describe(tifs):
     with rasterio.open(tifs[0]) as s:
         crs = CRS.from_wkt(s.crs.to_wkt()) if s.crs else None
@@ -127,10 +86,8 @@ def describe(tifs):
                 "n_files": len(tifs)}
 
 
+# WarpedVRT rejects boundless reads, so partial overlap is intersected and pasted at the right offset
 def read_on_grid(vrts, bounds, shape):
-    """WarpedVRT rejects boundless reads, so partial overlap is intersected and
-    pasted at the right offset. Errors are not swallowed - an earlier version
-    caught everything and silently scored every dataset 0%."""
     bx0, by0, bx1, by1 = bounds
     out = np.full(shape, np.nan, np.float32)
     for vrt in vrts:
@@ -158,6 +115,7 @@ def read_on_grid(vrts, bounds, shape):
     return out
 
 
+# Run: score every candidate over the chosen domains, write the table
 def main():
     doms_arg = None
     for i, a in enumerate(sys.argv):
@@ -218,13 +176,11 @@ def main():
                 if v.size:
                     c["vals"].append(v[::37].astype(np.float32))
             cells.append(f"{100 * hit / max(n, 1):10.1f}%")
-            # per-domain, NOT the running total c["cov"] - writing the
-            # cumulative sum here made every row look like a monotonic climb
+            # Per-domain count, not the running total (which made every row climb)
             this_domain[f"{k}_cells"] = hit
             this_domain[f"{k}_pct"] = (round(100 * hit / n, 2)
                                        if n else None)
-        # n == 0 means the domain has no dry-land gap at all; percentages are
-        # undefined there, not 0%, or the summary reads as 26 failing domains
+        # No dry-land gap: percentages undefined (None), not 0%
         per_domain.append({"domain": did, "dryland_gap": n, **this_domain})
         print(f"{did:>4} {n:>12,}  " + "  ".join(cells), flush=True)
 

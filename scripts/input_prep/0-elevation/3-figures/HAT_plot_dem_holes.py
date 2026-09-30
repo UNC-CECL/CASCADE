@@ -1,95 +1,10 @@
 """
-HAT_plot_dem_holes.py
-
 Where the nodata and sub-MHW holes are in a Barrier3D start DEM.
 
-WHAT THIS ANSWERS
------------------
-"Do I have a lot of cells by my dunes that are under MHW, or data gaps?"
-Counting them per domain (the audit CSVs) says how many. This says WHERE, and
-separates the two things that both look like "low" on an elevation ramp:
+    python scripts/input_prep/0-elevation/3-figures/HAT_plot_dem_holes.py
 
-    a cell that is water because it is the ocean or the sound   - expected
-    a cell that is water INSIDE the island                      - a hole
-
-Only the second is coloured loudly. Everything else is deliberately pale, so a
-figure of a clean DEM is a quiet figure.
-
-THE CATEGORIES, per profile, in the extractor's own frame
----------------------------------------------------------
-Profiles are read ocean-first (arr[:, ::-1], OCEAN_LOC="right"), z = raw - MHW,
-exactly as HAT_dune_topo_extractor.load_domain does.
-
-    beach_start  first cell with z > 0.50 m       (BEACH_START_THR_M)
-    last_land    last cell with z > 0
-
-Cells seaward of beach_start or landward of last_land are open water. Cells
-BETWEEN them that are not land are holes:
-
-    land          z > 0                             pale sand
-    open water    outside [beach_start, last_land]  pale blue
-    wet hole      z <= 0, valid data, inside        strong blue
-    gap           nodata (raw <= -9), inside        strong red
-
-Nodata is never a step on an elevation ramp here, for the reason FIGURES.md
-gives: "not surveyed" is not a low elevation, and conflating the two is what
-drowned three roadways at t=0.
-
-The two affected categories are #1f6fb4 blue against #d7191c red. The red is
-saturated on purpose. Unsurveyed cells are the category a reader must not skim
-past - they are the ones that become a fictitious elevation downstream - and
-they are also the rarer of the two at 0.32% of cells, so at this scale they
-have to hold their own against the blue at single-pixel widths. A muted
-#d6604d, sampled off the same RdBu ramp as the blue, was tried and is the
-better choice for a figure meant to sit quietly in a page of body text; it lost
-too much at one-cell width here.
-
-Under a red-green deficiency the red darkens towards olive while the blue
-holds, so the pair still parts. Magenta against this blue, the first draft, is
-the pair to avoid: it holds neither the hue nor the luminance gap.
-
-ORIENTATION
------------
-Ocean is at the BOTTOM of panels A and B, landward upward. That is the
-convention HAT_dune_topo_extractor.pick_window draws for picking a dune search
-window, so this figure and the picker read the same way round.
-
-THE THREE PANELS
-----------------
-A  the island unrolled. Alongshore runs left-right; cross-shore is UTM easting
-   with the island trend removed by a cubic fit through the 90 domain origins,
-   so a 45 km arc lies flat instead of drifting 5 km across the panel. The
-   detrend is a rigid per-domain shift - no cell is resampled, and cross-shore
-   distances within a domain are untouched. This is the locator panel: it keeps
-   each domain's own shoreline shape, which panel B removes. The cross-shore
-   axis is metres landward of the seaward edge of the detrended strip, so its
-   zero is a drawing origin and not a landform.
-
-B  the same cells straightened: every profile shifted so its own beach_start
-   sits at cross-shore 0. The dune band becomes a horizontal stripe instead of
-   following the shoreline curve, so a hole IN THE DUNES is separable from a
-   hole 500 m behind them. Panel A cannot show that; the shoreline moves.
-
-C  per-domain percentages, dune band vs interior.
-
-ONE ALONGSHORE AXIS
--------------------
-All three panels share x, in kilometres of UTM northing measured from the
-southern edge of domain 1. Every domain is painted at its true northing, so a
-vertical line means the same place in all three panels. Domains are spaced
-~504 m and carry 500 m of data, so there are ~4 m unpainted seams between them;
-that is real, not a plotting artefact.
-
-Left to right is south -> north, which is the model alongshore direction
-(ALONGSHORE_FLIP = True flips the raster north-at-top rows so profile index
-increases northward). Within a domain, profile p is raster row 49 - p.
-
-INPUT   data/hatteras_init/1-barrier3d-domains/<PRODUCT>/npy-arrays/domain_<N>.npy
-        the arrays CASCADE reads - m NAVD88, -10 nodata - not the .tif, so what
-        is drawn is what the model ingests.
-        Georeferencing comes from the elevation product resample_audit.csv.
-
-OUTPUT  <elevation product>/figures/HAT_<slug>_holes.png
+TOPO_PRODUCT / DEM_PRODUCT pick the product. Writes
+<elevation product>/figures/HAT_<slug>_holes.png. Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -114,10 +29,8 @@ REPO = next(_p for _p in Path(__file__).resolve().parents
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_elevation_products import product  # noqa: E402
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
+# --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1984-start"        # which npy-arrays folder
 DEM_PRODUCT = "2009-2014-1996"     # which elevation product it came from
 SLUG = "1984dem"
@@ -142,6 +55,7 @@ LABELS = ["subaerial ($z$ > MHW)",
           "unsurveyed, within the envelope"]
 CMAP = ListedColormap(COLORS)
 NORM = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5], CMAP.N)
+# -----------------------------------------------------------------------------
 
 plt.rcParams.update({
     "font.size": 9.5,
@@ -165,16 +79,10 @@ P = product(DEM_PRODUCT)
 OUT_PNG = P.figures / f"HAT_{SLUG}_holes.png"
 
 
-# =============================================================================
-# CLASSIFY
-# =============================================================================
+# Classify
 
+# (n_along, n_cross) ocean-first raw m NAVD88 -> codes, beach_start, last_land
 def classify(raw):
-    """(n_along, n_cross) ocean-first raw m NAVD88 -> codes, beach_start, last_land.
-
-    beach_start / last_land are -1 on a profile with no land at all. None exist
-    in this product, but a forecast domain could have one.
-    """
     nod = raw <= RAW_NODATA_MAX
     z = raw - MHW_M
     land = (~nod) & (z > 0.0)
@@ -199,19 +107,14 @@ def classify(raw):
     return cat, beach_start, last_land
 
 
+# Raw array, ocean-first cross-shore, profile index increasing NORTHWARD
 def load_domain(n):
-    """Raw array, ocean-first cross-shore, profile index increasing NORTHWARD.
-
-    The .npy is raster order: row 0 north, column 199 east = ocean. [:, ::-1]
-    puts the ocean first, which is what the extractor does. [::-1] on the rows
-    is ALONGSHORE_FLIP, so profile 0 is the southern edge of the domain.
-    """
     a = np.load(ARR_DIR / f"domain_{n}.npy").astype(float)
     return a[::-1, ::-1]
 
 
+# domain -> (origin_x, origin_y) from the product resample audit
 def read_origins():
-    """domain -> (origin_x, origin_y) from the product resample audit."""
     out = {}
     with (P.resampled_10m / "resample_audit.csv").open() as f:
         for r in csv.DictReader(f):
@@ -219,10 +122,9 @@ def read_origins():
     return out
 
 
-# =============================================================================
-# BUILD
-# =============================================================================
+# Build
 
+# Run: classify every domain's cells and draw the island strip
 def main():
     origins = read_origins()
     domains = sorted(origins)
@@ -235,24 +137,18 @@ def main():
 
     n_along, n_cross = cats[domains[0]].shape
 
-    # --- the shared alongshore axis -----------------------------------------
-    # One 10 m grid in UTM northing. Domain n occupies columns [x0, x0+50),
-    # counting from the SOUTH, so column index increases northward like the
-    # model profile index does.
+    # One 10 m grid in UTM northing; column index increases northward
     ox_all = np.array([origins[n][0] for n in domains])
     oy_all = np.array([origins[n][1] for n in domains])
     north_max, north_min = oy_all.max(), oy_all.min() - n_along * GRID_M
     nx = int(round((north_max - north_min) / GRID_M))
     x_km = np.arange(nx + 1) * GRID_M / 1000.0
 
+    # Southernmost column of the domain whose north edge is at oy
     def col0(oy):
-        """Southernmost column of the domain whose north edge is at oy."""
         return nx - int(round((north_max - oy) / GRID_M)) - n_along
 
-    # --- panel A: unroll the island -----------------------------------------
-    # Remove the island trend from easting so the strip lies flat. The fit is
-    # evaluated once per domain, so each block is shifted rigidly - no cell is
-    # resampled and no cross-shore distance changes.
+    # Remove the island trend from easting so the strip lies flat
     coef = np.polyfit(oy_all, ox_all, DETREND_DEG)
     resid = ox_all - np.polyval(coef, oy_all)          # west edge, detrended
     j_all = np.round((resid - resid.min()) / GRID_M).astype(int)
@@ -260,21 +156,18 @@ def main():
     grid = np.full((ny, nx), -1, dtype=np.int8)        # -1 = no domain here
 
     for i, n in enumerate(domains):
-        # cats[n] is (profile S->N, cross ocean-first). Flip cross so index
-        # increases eastward, then transpose to (easting, alongshore).
+        # Cats[n] is (profile S->N, cross ocean-first)
         block = cats[n][:, ::-1].T
         j0 = int(j_all[i]) + A_PAD_CELLS
         x0 = col0(oy_all[i])
         grid[j0:j0 + n_cross, x0:x0 + n_along] = block
 
-    # Row 0 is the WEST (sound) edge. Flip so row 0 is the ocean edge, then
-    # origin="lower" puts the ocean at the bottom with landward upward, the
-    # same way round as the extractor's pick_window.
+    # Flip so row 0 is the ocean edge: ocean at the bottom, landward upward, as in pick_window
     grid = grid[::-1]
     gm = np.ma.masked_where(grid < 0, grid)
     a_km = ny * GRID_M / 1000.0
 
-    # --- panel B: straighten every profile ----------------------------------
+    # panel B: straighten every profile
     strt = np.full((STRAIGHT_ROWS, nx), -1, dtype=np.int8)
     for i, n in enumerate(domains):
         c, b = cats[n], bstarts[n]
@@ -286,7 +179,7 @@ def main():
             strt[:seg.size, x0 + p] = seg
     sm = np.ma.masked_where(strt < 0, strt)
 
-    # --- panel C: per-domain percentages ------------------------------------
+    # panel C: per-domain percentages
     dune_gap, dune_wet, int_gap, int_wet = [], [], [], []
     for n in domains:
         c, b, l = cats[n], bstarts[n], llands[n]
@@ -321,9 +214,7 @@ def main():
     nwet = sum(int((cats[n] == WET).sum()) for n in domains)
     ngap_pct, nwet_pct = 100 * ngap / tot, 100 * nwet / tot
 
-    # =========================================================================
-    # DRAW
-    # =========================================================================
+    # Draw
     fig = plt.figure(figsize=(17.5, 11.6))
     gs = fig.add_gridspec(3, 1, height_ratios=[1.05, 1.85, 1.05], hspace=0.33,
                           left=0.070, right=0.986, top=0.850, bottom=0.070)
@@ -337,7 +228,7 @@ def main():
         ax.set_title(f"({letter})  {text}", loc="left", fontsize=10.5)
         ax.title.set_position((0.0, 1.0))
 
-    # --- a -------------------------------------------------------------------
+    # a
     axA = fig.add_subplot(gs[0])
     axA.imshow(gm, cmap=CMAP, norm=NORM, origin="lower", aspect="auto",
                interpolation="nearest", extent=[XLIM[0], XLIM[1], 0, a_km])
@@ -353,7 +244,7 @@ def main():
     axt.set_xticklabels([str(domains[t]) for t in ticks])
     axt.set_xlabel("Barrier3D domain", labelpad=3)
 
-    # --- b -------------------------------------------------------------------
+    # b
     axB = fig.add_subplot(gs[1], sharex=axA)
     axB.imshow(sm, cmap=CMAP, norm=NORM, origin="lower", aspect="auto",
                interpolation="nearest",
@@ -370,7 +261,7 @@ def main():
     axB.set_ylabel("distance landward of\nbeach start (m)")
     axB.tick_params(labelbottom=False)
 
-    # --- c -------------------------------------------------------------------
+    # c
     axC = fig.add_subplot(gs[2], sharex=axA)
     w = n_along * GRID_M / 1000.0 * 0.88
     axC.bar(dom_km, int_wet, width=w, color=COLORS[WET], alpha=0.55, lw=0,
@@ -404,7 +295,7 @@ def main():
         for s in ax.spines.values():
             s.set_color("0.35")
 
-    # --- key and caption -----------------------------------------------------
+    # key and caption
     handles = [Patch(facecolor=c, edgecolor="0.45", lw=0.5, label=l)
                for c, l in zip(COLORS, LABELS)]
     fig.legend(handles=handles, loc="upper center", ncol=4, frameon=False,

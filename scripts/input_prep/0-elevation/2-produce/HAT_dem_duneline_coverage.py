@@ -1,145 +1,13 @@
 """
-HAT_dem_duneline_coverage.py
+Does the 1996 ALACE swath in the 1984-start DEM reach the 1984 dune line? Measured per profile.
 
-Does the 1996 ALACE swath in the `2009-2014-1996` DEM actually reach the 1984
-dune line?
+    python scripts/input_prep/0-elevation/2-produce/HAT_dem_duneline_coverage.py
+    python scripts/input_prep/0-elevation/2-produce/HAT_dem_duneline_coverage.py --domains 8,9,77
 
-WHY THIS EXISTS
----------------
-`2009-2014-1996` is the 1984-start DEM: a 1996 beach and foredune grafted onto
-a 2009 backdune, with NO road boundary - the landward limit is the ALACE
-swath's own edge. ALACE surveyed "from the low water line to the landward base
-of the sand dunes", so the graft seam lands at the dune toe.
-
-That is fine as long as the 1984 dune is INSIDE the swath. Where the swath
-stops seaward of the 1984 dune line, the model's t=0 dune is a 2009 dune
-wearing a 1996 beach, and no amount of care in the pick pass can recover the
-1984 crest from a surface that does not contain it.
-
-This script measures that, per profile, at 1 m, over all 90 domains. It
-CHANGES NOTHING. It writes no elevation, edits no product, and proposes no
-correction - it reports where the question has a bad answer.
-
-THE REFERENCE LINES
--------------------
-    duneline_1984.geojson   495 vertices   the initial condition being tested
-    duneline_1997.geojson   581 vertices   the CONTEMPORANEOUS control
-
-1997 is one year after the ALACE flight, so it is where the 1996 DEM's OWN
-dune sits. Reporting the reach against both separates two things that a single
-number confounds:
-
-    "1996 never flew that far landward"     <- fails against BOTH lines
-    "the dune moved between the dates"      <- fails against 1984 only
-
-The 1984-1997 separation is reported per domain so the second term is a
-measured quantity rather than an assumption. Island-wide it is small - the
-`2-brie-offset/dunelines/README.md` splits the naive 1984-vs-row-0 offset as
-feature +16.2 m, date +0.8 m - but it is not small everywhere, and the
-per-domain column is the point.
-
-BOTH FILES ARE UTM 18N IN METRES. That README lists 1984 as EPSG:26918 and
-1997 as EPSG:3725; those are the NAD83 and NAD83(NSRS2007) realizations of the
-same projection and the transform between them at Hatteras is 0.000 m. They
-are reprojected on load anyway, but no datum shift is being absorbed silently.
-
-WHAT IS MEASURED, AND THE SIGN CONVENTION
------------------------------------------
-Every cross-shore distance in the outputs is METRES LANDWARD FROM THE OCEAN
-EDGE of the 2000 m domain window. Larger = further landward. This is the same
-origin `start_beach_median_m` in HAT_dem_1984_mosaic.py uses and the same one
-HAT_dune_topo_extractor.py works in (OCEAN_LOC="right", so arrays are read
-ocean-first).
-
-Per profile (raster row; 500 per domain at 1 m):
-
-    d1984_m, d1997_m      the dune lines' own positions
-    reach_contig_m        walk landward from the FIRST 1996 cell and stop at
-                          the first cell that is not 1996. The solid swath.
-    reach_max_m           the landward-most 1996 cell anywhere in the profile,
-                          holes ignored. The swath's true extent.
-    gap1984_contig_m      d1984_m - reach_contig_m
-    gap1984_max_m         d1984_m - reach_max_m    (and the same two for 1997)
-
-    A POSITIVE GAP MEANS 1996 STOPS SEAWARD OF THE LINE - the coverage is
-    MISSING there. Negative means 1996 reaches past it.
-
-Both reach rules are reported because ALACE coverage in the band is patchy
-(30-84%, median ~53%). Where the two diverge widely, what sits landward of the
-contiguous swath is speckle rather than surface, and that divergence
-(`reach_spread_m`) is itself a finding. Neither rule is applied to the other's
-exclusion, and no hole-bridging tolerance is invented.
-
-Profiles with no 1996 at all are given reach 0 - the swath reaches the ocean
-edge and no further - rather than being dropped. `n_rows_no_1996` counts them
-so a domain whose median rests on empty profiles is visible.
-
-ABSENT IS NOT THE SAME AS REJECTED
-----------------------------------
-A cell can lack 1996 because ALACE never flew it, or because ALACE flew it and
-this pipeline threw the return away. Those are different problems with
-different fixes, and `clip_domain_*_survey.tif` cannot tell them apart - it
-records only the winner.
-
-So stage 1 of HAT_dem_1984_mosaic.py is RE-RUN here, in the padded window, with
-its guards imported rather than restated, and every cell is classified:
-
-    0  absent              ALACE has no data for this cell
-    1  written             1996 won; this is what the DEM carries
-    2  rej_ceiling         above 12.00 m NAVD88, the uncorrected-return tail
-    3  rej_floor_gap       below -2.64 m NAVD88 where NO other survey saw it
-    4  rej_floor_replace   below MHW where another survey did - a wet swash
-                           return that would have displaced dry measured beach
-    5  rej_connectivity    passed the floors, unreachable from the island
-
-The recomputed `written` mask is checked cell for cell against the shipped
-`clip_domain_<N>_survey.tif`. A nonzero mismatch means this diagnostic and the
-product on disk have drifted apart; it is printed per domain and totalled at
-the end. It should be zero.
-
-THE BAND METRIC
----------------
-Separately from the reach test, the composition of THE EXTRACTOR'S OWN WINDOW
-is reported: 0-80 m landward of each profile's own beach start, the default
-search band HAT_dune_topo_extractor.py picks dune crests in. That window is
-anchored to beach start, not to the dune line, so it answers a different
-question - "will the pick pass be picking in 1996 or in 2009?" - and is kept in
-its own columns rather than blended with the reach numbers.
-
-THE PER-DOMAIN FLAG
--------------------
-    dune84_carried_by_1996 = median over profiles of gap1984_contig_m <= 0
-
-Position alone, against the contiguous swath. No coverage threshold is
-involved: a threshold would be a number picked out of the air, and the question
-asked was where the fill stops relative to the 1984 line. The band fractions
-sit beside the flag for a reader who wants to weigh it, and every input to it
-is in the profile CSV.
-
-INPUTS
-    data/.../0-elevation/2009-2014-1996/1-gapfill-1m/clip_domain_*_survey.tif
-    D:/Hatteras_GIS/.../2009_full.tif, 2014_full.tif, 1996_FallEC_J1441002/
-    D:/Hatteras_GIS/domains.geojson
-    data/.../2-brie-offset/dunelines/duneline_1984.geojson
-    data/.../2-brie-offset/dunelines/duneline_1997.geojson
-
-OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996-duneline/)
-    duneline_coverage_domains.csv     90 rows, one per domain
-    duneline_coverage_profiles.csv    45,000 rows, one per 1 m profile
-    1-alace-class-10m/clip_domain_<N>_alaceclass.tif
-                                      the six-code classification at 10 m,
-                                      modal over each 10 x 10 block
-    figures/                          drawn by
-                                      3-figures/HAT_plot_duneline_coverage.py
-
-Requires: rasterio, geopandas, numpy, scipy
-
-    python HAT_dem_duneline_coverage.py
-    python HAT_dem_duneline_coverage.py --domains 8,9,77   # a subset, to check
-
-`--domains` is for checking the code path on a few windows. It writes the CSVs
-for that subset only, so a subset run OVERWRITES the full ones - re-run without
-it before reading anything.
+Changes nothing: re-runs the mosaic's 1996 stage, classifies every cell (absent,
+written, or rejected by which rule), and writes per-domain and per-profile
+tables and 10 m class rasters under
+data/hatteras_init/0-elevation/2009-2014-1996-duneline/. Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -167,40 +35,28 @@ sys.path.insert(0, str(gf.PROJECT_ROOT / "scripts"))
 from site_layer.hat_elevation_products import ELEVATION_ROOT, product as _product  # noqa: E402
 
 
-# =============================================================================
-# CONFIG
-# =============================================================================
-
 SOURCE_TAG = "2009-2014-1996"
 
-# A DIAGNOSTIC SIBLING, NOT A PRODUCT. It holds no elevation raster and forks
-# nothing: the 178 MB of 1 m tifs stay where they are and are read in place, so
-# this folder and the product it describes cannot drift apart on disk. It is
-# deliberately NOT registered in hat_elevation_products.PRODUCTS - product()
-# resolves things that have gapfill_1m and resampled_10m stages, and this has
-# neither.
+# A DIAGNOSTIC SIBLING, NOT A PRODUCT
 from site_layer.hat_elevation_products import duneline_check_dir  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 OUT_DIR = duneline_check_dir(SOURCE_TAG)
 CLASS_DIR = OUT_DIR / "1-alace-class-10m"
 DOMAIN_CSV = "duneline_coverage_domains.csv"
 PROFILE_CSV = "duneline_coverage_profiles.csv"
 
-# This named 1-barrier3d-domains/2-brie-offset/dunelines, which never
-# existed; the lines are in 2-brie-offset/dunelines/ (fixed 2026-09-18).
+# This named 1-barrier3d-domains/2-brie-offset/dunelines, which never existed
 from site_layer.hat_topo_version import DUNELINE_DIR as DUNE_DIR  # noqa: E402
 DUNE_LINES = {1984: DUNE_DIR / "duneline_1984.geojson",
               1997: DUNE_DIR / "duneline_1997.geojson"}
 TARGET_YEAR = 1984      # the line the flag is about
 CONTROL_YEAR = 1997     # the contemporaneous control
 
-# The extractor's default search band, 0-80 m landward of beach start. Changing
-# this without changing HAT_dune_topo_extractor.py makes the band columns mean
-# something the pick pass does not do.
+# The extractor's default search band, 0-80 m landward of beach start
 BAND_START_M = 0.0
 BAND_END_M = 80.0
 
-# Classification codes. The order matters twice: it is the tie-break precedence
-# for the 10 m downsample below, and it is the column order in the CSVs.
+# Classification codes; the order is the tie-break precedence and the CSV column order
 CLS_ABSENT = 0
 CLS_WRITTEN = 1
 CLS_CEILING = 2
@@ -213,42 +69,19 @@ CLS_NAMES = {CLS_ABSENT: "absent", CLS_WRITTEN: "written",
              CLS_CONNECTIVITY: "rej_connectivity"}
 N_CLS = len(CLS_NAMES)
 
-# Most informative FIRST. A 10 x 10 block split evenly between "written" and a
-# rejection is drawn as the rejection, because the figure exists to show where
-# the fill fails and a tie that hid the failure would defeat it. Ties are rare
-# and the count-based CSV is unaffected either way.
+# Classes most informative first, so a tie is drawn as the rejection
 CLS_TIE_ORDER = [CLS_CONNECTIVITY, CLS_FLOOR_REPLACE, CLS_FLOOR_GAP,
                  CLS_CEILING, CLS_ABSENT, CLS_WRITTEN]
 
 CLASS_NODATA = 255
 GRID_SIZE_M = gf.GRID_SIZE_M      # 10 m, the Barrier3D cell
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE REFERENCE LINES
-# =============================================================================
+# The reference lines
 
+# Column index of a digitized line, one per raster row
 def line_col_per_row(geom, shape, transform, min_rows=10):
-    """
-    Column index of a digitized line, one per raster row.
-
-    Deliberately DIFFERENT from HAT_dem_1984_mosaic.ocean_side_mask, which takes
-    the MAX column. That is right for a boundary - it yields the smallest ocean
-    region and cannot place a road cell on the ocean side of itself - but this
-    is not a boundary. It is a reference POSITION, and where the line runs
-    diagonally through a row it occupies several columns with no reason to
-    prefer either end. The MEAN is used, and the within-row span comes back
-    alongside it so a reader can see how diagonal the line is where a profile's
-    number looks odd.
-
-    Rows the line does not reach are interpolated from the rows it does and held
-    flat past the ends, exactly as ocean_side_mask does, so a line that steps
-    briefly outside the padded window does not punch a hole in the series.
-
-    Returns (col_per_row, span_per_row, n_rows_hit). n_rows_hit below min_rows
-    means the line does not meaningfully cross this window and the column series
-    comes back all-NaN - the caller decides what that means.
-    """
     rl = rasterize([(geom, 1)], out_shape=shape, transform=transform,
                    fill=0, all_touched=True).astype(bool)
 
@@ -270,23 +103,10 @@ def line_col_per_row(geom, shape, transform, min_rows=10):
     return col, span, n_have
 
 
-# =============================================================================
-# THE REACH RULES
-# =============================================================================
+# The reach rules
 
+# Per profile, in ocean-first column indices
 def reach_indices(written_ocean_first):
-    """
-    Per profile, in ocean-first column indices:
-
-        first    the first 1996 cell walking landward from the ocean edge
-        contig   the last cell of the CONTIGUOUS run that starts there
-        far      the landward-most 1996 cell anywhere in the profile
-
-    A profile with no 1996 gets -1 in all three; the caller maps that to a reach
-    of 0 m, meaning the swath reaches the ocean edge and no further. That is a
-    measurement, not a fill - those profiles are counted separately as
-    n_rows_no_1996 so a median resting on them is visible rather than implied.
-    """
     w = written_ocean_first
     _, width = w.shape
     any96 = w.any(axis=1)
@@ -303,18 +123,8 @@ def reach_indices(written_ocean_first):
     return first, contig, far
 
 
+# HAT_dune_topo_extractor's start_beach, per profile rather than as a median
 def start_beach_per_row(arr_crop):
-    """
-    HAT_dune_topo_extractor's start_beach, per profile rather than as a median.
-
-    Mirrors HAT_dem_1984_mosaic.start_beach_median_m cell for cell - ocean-first,
-    minus MHW, clamped at WATER_CLAMP_M, first index strictly above
-    BEACH_START_THR_M - and differs from it only in not taking the median. The
-    constants are imported from that module rather than restated, so the two
-    cannot drift.
-
-    Returns ocean-first indices, -1 where the profile never clears the threshold.
-    """
     z = arr_crop[:, ::-1] - m84.MHW_ELEVATION
     z = np.where(np.isnan(z), m84.WATER_CLAMP_M, z)
     z[z < m84.WATER_CLAMP_M] = m84.WATER_CLAMP_M
@@ -322,36 +132,21 @@ def start_beach_per_row(arr_crop):
     return np.where(above.any(axis=1), above.argmax(axis=1), -1)
 
 
-# =============================================================================
-# THE 10 m CLASSIFICATION
-# =============================================================================
+# The 10 m classification
 
+# Modal class over each block x block cell, ties broken by CLS_TIE_ORDER
 def downsample_class(cls_1m, block):
-    """
-    Modal class over each block x block cell, ties broken by CLS_TIE_ORDER.
-
-    NOT the same rule as HAT_dem_resample_clip.downsample_survey, and the
-    difference is deliberate. That function reports the provenance of the four
-    cells bilinear actually reads, because its output has to describe the
-    elevation value written beside it. Nothing here writes an elevation. This
-    raster exists to be looked at, so it reports what MOST of the block is, and
-    the tie-break only decides the rare even split.
-    """
     h, w = cls_1m.shape
     b = cls_1m.reshape(h // block, block, w // block, block)
     counts = np.stack([(b == c).sum(axis=(1, 3)) for c in range(N_CLS)])
-    # A weight strictly smaller than one cell, so it orders ties and nothing
-    # else.
+    # A weight strictly smaller than one cell, so it orders ties and nothing else
     bonus = np.zeros(N_CLS)
     for rank, c in enumerate(CLS_TIE_ORDER):
         bonus[c] = (len(CLS_TIE_ORDER) - rank) / (block * block * 10.0)
     return (counts + bonus[:, None, None]).argmax(axis=0).astype(np.uint8)
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: per domain, classify, measure reach against both dune lines, write the tables
 def main(only_domains=None):
     src_product = _product(SOURCE_TAG)
     shipped_1m = src_product.gapfill_1m
@@ -429,10 +224,7 @@ def main(only_domains=None):
         valid09 = np.isfinite(base)
         has96, has14 = np.isfinite(g96), np.isfinite(g14)
 
-        # --- STAGE 1 OF THE MOSAIC, RE-RUN FOR ITS REJECTS ------------------
-        # Every constant comes from m84. If that script's guards change, this
-        # diagnostic changes with them, and the shipped-raster check below is
-        # what proves the two are still in step.
+        # Every constant comes from m84, so this diagnostic moves with the product
         covered_by_other = valid09 | has14
         cand96_cov = has96.copy()
         if m84.APPLY_OVERRIDE_CEILING:
@@ -472,10 +264,7 @@ def main(only_domains=None):
         cls[cand96] = CLS_WRITTEN
         cls_c = cls[crop]
 
-        # --- IS THIS STILL THE PRODUCT ON DISK? -----------------------------
-        # The recomputed winners against the shipped provenance raster, cell for
-        # cell. Nonzero means this diagnostic is describing a DEM that is not
-        # the one in 1-gapfill-1m, and every number below it is suspect.
+        # The recomputed winners against the shipped provenance raster, cell for cell
         sp = shipped_1m / f"clip_domain_{dom}_survey.tif"
         with rasterio.open(sp) as s:
             shipped = s.read(1)
@@ -483,7 +272,7 @@ def main(only_domains=None):
                         != (cls_c == CLS_WRITTEN)).sum())
         total_mismatch += mismatch
 
-        # --- REACH AND LINES, OCEAN-FIRST -----------------------------------
+        # REACH AND LINES, OCEAN-FIRST
         width = cls_c.shape[1]
         w96 = (cls_c == CLS_WRITTEN)[:, ::-1]
         first_i, contig_i, far_i = reach_indices(w96)
@@ -502,7 +291,7 @@ def main(only_domains=None):
             span_m[yr] = span[r0:r0 + win.height] * res_x
             n_hit[yr] = n
 
-        # --- THE EXTRACTOR'S OWN WINDOW -------------------------------------
+        # THE EXTRACTOR'S OWN WINDOW
         cols = np.arange(width)[None, :]
         sb0 = np.where(sb_i >= 0, sb_i, 0)[:, None]
         band = ((cols >= sb0 + int(BAND_START_M / res_x))
@@ -516,7 +305,7 @@ def main(only_domains=None):
             band_frac[c] = np.where(band_n > 0, hit / np.maximum(band_n, 1),
                                     np.nan)
 
-        # --- PROFILE ROWS ---------------------------------------------------
+        # PROFILE ROWS
         gaps = {}
         for yr in DUNE_LINES:
             gaps[(yr, "contig")] = d_m[yr] - reach_contig_m
@@ -548,7 +337,7 @@ def main(only_domains=None):
                 rec[f"band_frac_{CLS_NAMES[c]}"] = _r(band_frac[c][r], 4)
             profile_rows.append(rec)
 
-        # --- DOMAIN ROW -----------------------------------------------------
+        # DOMAIN ROW
         def pct(a, p):
             a = np.asarray(a, float)
             a = a[np.isfinite(a)]
@@ -595,7 +384,7 @@ def main(only_domains=None):
                 float(np.nanmean(band_frac[c])), 4)
         domain_rows.append(d)
 
-        # --- THE 10 m CLASSIFICATION ----------------------------------------
+        # THE 10 m CLASSIFICATION
         t_out = src.window_transform(win)
         cls10 = downsample_class(cls_c, block)
         gf.write_raster(
@@ -627,7 +416,7 @@ def main(only_domains=None):
         w.writeheader()
         w.writerows(profile_rows)
 
-    # --- SUMMARY ------------------------------------------------------------
+    # SUMMARY
     n = len(domain_rows)
     carried = [r for r in domain_rows if r["dune84_carried_by_1996"]]
     missed = [r for r in domain_rows if not r["dune84_carried_by_1996"]]

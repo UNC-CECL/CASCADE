@@ -1,110 +1,12 @@
 """
-HAT_dem_gap_fill.py
+Step 1 of 3 (2009-start DEM): clip the 2009 DEM per domain and fill its gaps from the 2014 NOAA Post-Sandy DEM.
 
-Step 1 of 3: clips the 2009 DEM to each domain and fills its gaps from the 2014
-NOAA Post-Sandy DEM. Writes one gap-filled 1 m clip and one survey-year raster
-per domain; HAT_dem_resample_clip.py resamples them to 10 m.
+    python scripts/input_prep/0-elevation/2-produce/HAT_dem_gap_fill.py
 
-WHAT THIS IS ACTUALLY FIXING
-----------------------------
-Not "voids in a surface". Measured on the real DEM, each domain contains exactly
-TWO nodata regions and both touch the domain edge - interior enclosed nodata is
-0 cells, 0.00%. With OCEAN_LOC="right" in HAT_dune_topo_extractor.py, the east
-region (~480 m) is the Atlantic and the west region (~1045 m) is Pamlico Sound.
-The 2009 survey simply stops at the waterline on each side.
-
-The gap that matters is the sound-side margin, and HAT_dune_topo_extractor.py
-already documents why (lines 281-297): roadway_manager.bulldoze drowns a roadway
-when >20% of the cells BORDERING it sit at or below 0 m MHW, and a no-data cell
-passes that test. In GIS 78/79/80 the row landward of NC-12 is 17-25 no-data
-cells and ZERO genuinely wet ones, so all three roadways width-drowned at t=0 on
-missing coverage alone - while the profiles were still 0.5-0.7 m ABOVE MHW.
-
-So this fills measured ground the 2009 survey missed. It does not invent
-elevation anywhere.
-
-THE FOUR RULES THAT BOUND THE FILL
------------------------------------
-1. COVERAGE.   Only cells the 2014 DEM actually has a value for. It covers
-               97.34% of the island's DRY-LAND gaps - cells 2009 missed where
-               the consensus of candidate DEMs puts the ground above MHW. See
-               FILL_DEM_PATH for the full scoring and why the alternatives lost.
-2. CONNECTIVITY. Only cells contiguous with the island's valid 2009 surface, so
-               detached marsh hummocks and any water returns SMRF kept out in
-               the sound cannot become new land in the barrier interior. This
-               cannot exclude the target cells: the fringe landward of NC-12 is
-               contiguous with the island by definition.
-               Computed on a BUFFERED window - on the bare 500 m strip, marsh
-               that connects to the island just outside the domain would be
-               severed by the crop.
-3. ELEVATION.  A guard at the DOWNSTREAM water threshold (-3.0 m MHW, the
-               extractor's WATER_CLAMP_M), not at MHW. Flooring at MHW would
-               discard real low marsh and would not have protected the drowning
-               fix anyway - see the note on FILL_MIN_ELEV_NAVD. Sub-MHW fills
-               are counted, not rejected.
-4. VERTICAL.   Nothing is applied. Both bias correction and feathering are OFF,
-               so a filled cell is the 2014 measurement unchanged. Both bias
-               estimates are still computed and written to the audit every run.
-
-Everything each rule rejects is counted per domain in the audit CSV. Nothing is
-dropped silently.
-
-THE SEAM IS REAL, KNOWN, AND DELIBERATELY LEFT IN
---------------------------------------------------
-Where the fill meets measured 2009 ground there is a step. The numbers below
-were measured on the SUPERSEDED 2008 point-cloud attempt; seam_check() re-runs
-every time, so the current source's figures are in the audit CSV
-(seam_median_abs_m against ctrl_median_abs_m). The reasoning for leaving it
-uncorrected carries over:
-
-  measured <-> measured, whole domain      0.028 m   terrain roughness
-  measured <-> measured, near the boundary 0.028 m   same - the margin is smooth
-  fill <-> measured (what we ship)         0.341 m   ~12x either control
-  2008 <-> 2008 across the same boundary   0.030 m   <- the decisive one
-
-The last row grids 2008 on BOTH sides of the boundary, so any inter-survey
-offset cancels. It comes out flat, at the roughness floor. The ground therefore
-does NOT drop at the marsh edge: terrain accounts for ~9% of the step and the
-rest is the two surveys disagreeing where they meet.
-
-The obvious fix - shift 2008 onto 2009 per domain - was rejected because the
-disagreement is not a datum offset and does not have a consistent sign. Signed
-step by domain: -0.685, +0.136, -0.787, -0.117, +0.277, +0.455, +0.109. The fill
-is too low in some domains and too high in others, and the boundary estimate
-(+0.25 median) disagrees with the whole-domain overlap (-0.05 median). Any
-single-number shift removes the seam at the boundary and introduces a comparable
-disagreement across the interior instead - trading a visible artifact for an
-invisible one.
-
-Feathering was rejected for the same reason: it hides the step over 5 m without
-addressing the disagreement, and smooths measured data to do it.
-
-So the step stays, and clip_domain_<N>_survey.tif marks exactly which cells came
-from 2008 so any consumer can find it. At the 10 m Barrier3D grid it collapses
-to one cell boundary - 0.3 m over 10 m, ~3% slope, within the range of real
-back-barrier relief, but it is fabricated and worth knowing about when reading
-overwash behaviour near a fill margin.
-
-INPUTS
-    D:/Hatteras_GIS/.../2009_full.tif   base, 1 m, EPSG:3725 + NAVD88
-    D:/Hatteras_GIS/.../2014_full.tif   fill, 1 m, EPSG:6347 + NAVD88
-                                        (reprojected on read by WarpedVRT)
-    D:/Hatteras_GIS/domains.geojson     90 boxes, 2000 x 500 m
-
-OUTPUTS (data/hatteras_init/0-elevation/1-gapfill-1m/)
-    clip_domain_<N>_filled.tif      gap-filled clip, m NAVD88
-    clip_domain_<N>_survey.tif      which survey each cell came from:
-                                        2009 = measured by the 2009 DEM
-                                        2014 = filled from the 2014 DEM
-                                           0 = neither survey saw it
-    gapfill_audit.csv               per-domain counts for every rule above
-
-Filenames follow the legacy 2009-domain-clipresample convention
-(clip_domain_N.tif) with _filled marking the new set. Layout is flat rather than
-per-domain subfolders: step 1 writes the 1 m clips and step 2 writes the 10 m
-ones, so one folder per step means re-running a step is a single delete.
-
-Requires: rasterio, geopandas, numpy, scipy
+Fills only nodata, under four selection rules (coverage, floor, connectivity,
+no value changes). Writes a 1 m filled clip and a survey-year raster per domain
+under data/hatteras_init/0-elevation/<product>/1-gapfill-1m/; next is
+HAT_dem_resample_clip.py. Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -129,20 +31,9 @@ from rasterio.windows import Window, from_bounds
 from scipy.interpolate import griddata
 from scipy.ndimage import binary_dilation, distance_transform_edt, label
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
-    """
-    Walk up until a directory holds data/hatteras_init.
-
-    NOT parents[N]. This file moved into 2-produce/ on 2026-08-25, and the
-    old parents[3] then resolved to input_prep/ rather than the project root.
-    That raises nothing - it just makes every path below it wrong, silently,
-    until some glob comes back empty. Same helper and same reason as
-    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
-    """
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
             return p
@@ -155,40 +46,14 @@ from pathlib import Path as _ELP
 _elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_elevation_products as _el  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ELEVATION_DIR = _el.ELEVATION_ROOT
 GIS_ROOT = Path(r"D:\Hatteras_GIS")
 
 BASE_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2009"
                  / "usace2009_nc_dem_Job1076020" / "2009_full.tif")
 
-# FILL SOURCE: 2014 NOAA Post-Sandy DEM.
-#
-# Chosen by measurement, not vintage. Every candidate DEM was scored against the
-# 2009 DRY-LAND gaps (cells 2009 missed where the consensus of candidates puts
-# the ground above MHW), over all 90 domains:
-#
-#     2014 NCFMP          100.00%   DISQUALIFIED - hydro-flattened, 70.5% of its
-#                                   values in the gap are the constant -0.762 m
-#     2014 NOAA Post-Sandy 97.34%   <- earliest genuine, and the best
-#     2017 USACE           23.74%
-#     2016 post-Matthew    21.98%
-#     2019 DUNEX           21.98%
-#     2018 post-Florence    9.74%
-#
-# The 2016/2017/2019 collapse is spatial extent: they score 95-100% on domains
-# 78-80 but are localised surveys - 2019 is below 50% in 60 of 90 domains. A
-# choice made on the developed reaches alone would have picked a dataset
-# covering less than a quarter of the island's gaps.
-#
-# Different CRS from the base (EPSG:6347 NAD83(2011) vs EPSG:3725
-# NAD83(NSRS2007)); WarpedVRT reprojects on read.
-#
-# Superseded point-cloud attempts, kept for the record:
-#   2008 NOAA IOCM  topo-only, ~19% of the sound-side gap, 17/150 in the NC-12 strip
-#   2011 post-Irene topo-only, ~35%, 28/150
-# Neither is reproducible from this script any more - the point-cloud path was
-# removed on 2026-08-26 along with the classifier that fed it. A point-cloud
-# candidate now has to be gridded to a DEM before it gets here.
+# Fill source: 2014 NOAA Post-Sandy DEM, chosen by measured dry-gap coverage (see README)
 FILL_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2014"
                  / "2014_NOAA_Post_Sandy_DEM_Job1076021" / "2014_full.tif")
 FILL_SOURCE_TAG = "2014_NOAA_PostSandy"
@@ -197,16 +62,9 @@ FILL_SOURCE_YEAR = 2014
 DOMAIN_FILE = GIS_ROOT / "domains.geojson"
 DOMAIN_ID_FIELD = "domain_id"
 
-# The product this script builds. Named for its COMPOSITION, not for the fill
-# source and not for a hindcast period - this DEM currently serves both the
-# 1984 and the 2004 period, so a period in the name would be a false claim.
-# FILL_SOURCE_TAG above still names the SOURCE, and appears in the console
-# output and the figure labels.
+# The product this script builds
 PRODUCT_TAG = "2009-2014"
-# Paths come from scripts/site_layer/hat_elevation_products.py, not from string
-# concatenation here. Six scripts used to build them by hand and that is how
-# HAT_road_elevation.py silently stopped finding its rasters - see the note at
-# the top of that module.
+# Paths from site_layer/hat_elevation_products.py, never built by hand
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hat_elevation_products import product as _product  # noqa: E402
 
@@ -216,90 +74,21 @@ AUDIT_CSV = "gapfill_audit.csv"
 GRID_SIZE_M = 10.0    # the eventual Barrier3D cell; the clip must divide by it
 EXPECTED_CLIP = (500, 2000)   # rows, cols at 1 m
 
-# --- vertical datum (matches HAT_dune_topo_extractor / hindcast config) ---
+# vertical datum (matches HAT_dune_topo_extractor / hindcast config)
 MHW_ELEVATION = 0.36          # m NAVD88, Duck NC gauge 8651370
 
-# --- RULE 3: elevation floor ---
-# Set to the DOWNSTREAM threshold, not to MHW, and it is a guard rather than a
-# filter. Reasoning, because this was reversed once already:
-#
-#   * HAT_dune_topo_extractor.py does the MHW referencing itself (line 1017,
-#     z = raw - 0.36) and applies its own water threshold at WATER_CLAMP_M =
-#     -3.0 m MHW = -2.64 m NAVD88. That -3.0 was picked deliberately -
-#     "keeps back-barrier marsh cells (Lexi's v3 edit)", up from -1.0. Flooring
-#     at MHW here would undo that decision one step upstream, invisibly.
-#   * A floor at MHW never protected the road-drowning fix it was added for.
-#     roadway_manager.bulldoze drowns when >20% of bordering cells sit at or
-#     below 0 m MHW; a filled cell at -0.2 m MHW counts as wet exactly as the
-#     -3.0 sentinel did when it was unsurveyed. The bug was cells genuinely
-#     ABOVE MHW reading as wet because nobody surveyed them, and filling those
-#     with their true elevation fixes it whatever the floor is.
-#   * The 2008 cloud bottoms out at -1.33 m NAVD88, so this floor rejects
-#     nothing in practice. It exists to catch a future fill source that could.
-#
-# Sub-MHW fills are still COUNTED per domain (cand_below_mhw in the audit), so
-# lowering the floor costs no visibility.
+# Rule 3: an elevation floor at -2.64 m NAVD88, a guard matching the extractor's water clamp
 APPLY_ELEV_FLOOR = True
 FILL_MIN_ELEV_NAVD = MHW_ELEVATION - 3.0   # -2.64 m NAVD88, the extractor's clamp
 
-# --- RULE 2: connectivity ---
+# RULE 2: connectivity
 REQUIRE_ISLAND_CONNECTION = True
 CONTEXT_BUFFER_M = 200.0      # window padding for connectivity + boundary context
 
-# Strict connectivity severs a 300 m marsh platform if a 20 m tidal creek that
-# is water in BOTH surveys separates it from the island. Gaps up to this width
-# are bridged before the connectivity test, so creek-separated back barrier is
-# kept while genuinely detached patches out in the sound are still rejected.
-# 0.0 disables bridging (strict connectivity).
-#
-# 20 m, measured rather than guessed. Across 12 sampled domains there were 2969
-# detached components holding 1,055,741 candidate cells. Recovery vs bridging
-# distance, by component count and by CELL count (cells are what matters - the
-# goal is captured area, and one 200k-cell platform outweighs 50 specks):
-#
-#     bridge   % components   % detached cells
-#        2 m           7.1%              3.5%
-#        5 m          10.3%             16.2%   <- first step
-#       15 m          14.6%             18.6%
-#       20 m          16.2%             30.4%   <- second step, then a plateau
-#       30 m          18.9%             31.6%
-#      100 m          31.6%             39.9%
-#      200 m          47.7%             47.6%   <- columns converge
-#
-# 20 m sits on the plateau right after the second step: 20->30 m buys 1.2 more
-# points, 30->100 m buys 8.3 for five times the reach. Below 200 m the cell
-# column runs at ~2x the component column, i.e. bridging is selectively catching
-# large platforms; by 200 m they converge, which means it has stopped gaining
-# area preferentially and is just admitting open sound. 20 m is also a credible
-# tidal-creek width, which 100 m is not.
-#
-# In context of ALL candidates in those domains (4,420,718 cells):
-#   strict 76.1%  |  5 m 80.0%  |  20 m 83.4%  |  100 m 85.7%
-#
-# Note this barely moves the domains that motivated the fill. In GIS 78/79/80
-# only ~20k of ~300k candidates are detached at all, so ~93-94% is already
-# connected and their detached patches sit at 49-174 m - open water, not creeks.
-# Bridging is about how much back barrier domains 10/50/90 carry, not the road.
+# Bridge gaps up to 20 m (a tidal creek) before the connectivity test; measured, see README
 GAP_BRIDGE_M = 20.0
 
-# --- RULE 4: vertical reconciliation ---
-#
-# BOTH VALUE-MODIFYING STEPS ARE OFF. Of the rules here, only these two change
-# what a cell says; coverage, connectivity and the floor merely select which
-# measured cells get used. With both off, a filled cell is the 2008 measurement
-# and nothing else.
-#
-# Bias correction was ON and was misfiring. It estimated a single offset from a
-# 10 m collar around the fill, which by construction sits on the 2009 waterline
-# - the one place the two surveys disagree for reasons that are not a datum
-# offset. min-z gridding there picks water-surface returns, so the collar
-# measured "min-z reads low in wet cells" and applied it hundreds of metres into
-# dry marsh. Across 28 domains it produced +0.824 to -0.104 m (median +0.125),
-# the signature of an unstable estimator rather than real per-domain offsets.
-# Full-domain overlap says the surveys actually agree to ~0.03 m.
-#
-# Both estimates are still COMPUTED and written to the audit every run, so the
-# decision to not apply them stays visible and checkable.
+# Rule 4: vertical reconciliation; both value-changing steps off, both still reported
 APPLY_BIAS_CORRECTION = False
 APPLY_FEATHER = False
 
@@ -307,38 +96,22 @@ OVERLAP_RING_PX = 10          # collar used for the (reported) ring estimate
 FEATHER_WIDTH_PX = 5          # blend distance, only if APPLY_FEATHER
 MIN_RING_CELLS = 25           # below this the ring estimate is not trustworthy
 
-# How the 2008 ground returns become a 1 m raster.
-#   "median"  median of ground returns in the cell. Closer to how a gridded DEM
-#             surface is built, so it is comparable to the 2009 values it sits
-#             beside, and one stray low return cannot set the cell.
-#   "min"     lowest return. The classic bare-earth proxy, but over wet marsh
-#             the lowest return is often the water surface - and cells below
-#             0 m MHW are exactly what the drowning test counts, so this is
-#             conservative in the wrong direction for this particular bug.
+# How the 2008 ground returns become a 1 m raster
 GRID_STAT = "median"
 
 NODATA_OUT = -9999.0
 
-# The _survey raster stores the year each cell's elevation came from, so it
-# needs no legend. 0 means neither survey saw the cell.
+# The _survey raster stores the year each cell's elevation came from, so it needs no legend
 SURVEY_2009, SURVEY_NONE = 2009, 0
 SURVEY_FILL = FILL_SOURCE_YEAR   # the year written for a filled cell
 SURVEY_NODATA = 65535   # unused sentinel; 0 is a real value here, not nodata
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# GEOMETRY - the domain window, snapped to the DEM's own grid
-# =============================================================================
+# Geometry - the domain window, snapped to the DEM's own grid
 
+# Polygon bounds -> integer window on the source grid, trimmed to whole `block`-sized blocks so the ...
 def snap_window(bounds, transform, res_x, res_y, block):
-    """
-    Polygon bounds -> integer window on the source grid, trimmed to whole
-    `block`-sized blocks so the later 10 m resample divides evenly.
-
-    Nearest cell edge, not floor/ceil: a polygon 0.4 m off grid should snap to
-    the near edge, not grow the window by a whole cell. Returns the adjustment
-    so it is reported rather than absorbed.
-    """
     minx, miny, maxx, maxy = bounds
     left, top = transform.c, transform.f
 
@@ -358,14 +131,14 @@ def snap_window(bounds, transform, res_x, res_y, block):
     return Window(col0, row0, width, height), adj
 
 
+# The window grown by pad_px on every side
 def pad_window(win, pad_px):
     return Window(win.col_off - pad_px, win.row_off - pad_px,
                   win.width + 2 * pad_px, win.height + 2 * pad_px)
 
 
+# Boundless so a domain hanging off the DEM edge yields nodata, not an error - the domains do ...
 def read_window(src, win, nodata_in):
-    """Boundless so a domain hanging off the DEM edge yields nodata, not an
-    error - the domains do overshoot the DEM's east edge by ~6 m."""
     fill = nodata_in if nodata_in is not None else NODATA_OUT
     arr = src.read(1, window=win, boundless=True, fill_value=fill).astype(np.float64)
     if nodata_in is not None and not np.isnan(nodata_in):
@@ -373,23 +146,10 @@ def read_window(src, win, nodata_in):
     return arr
 
 
-# =============================================================================
-# =============================================================================
-# THE FILL SOURCE DEM
-# =============================================================================
+# The fill source DEM
 
+# The candidate DEM, read onto the base DEM's grid on demand
 class FillSource:
-    """
-    The candidate DEM, read onto the base DEM's grid on demand.
-
-    WarpedVRT handles the CRS difference (EPSG:6347 -> EPSG:3725) and any
-    resolution difference on read, so nothing downstream needs to know the
-    source is in a different realisation of NAD83.
-
-    Nearest-neighbour resampling deliberately: this fills cells the 2009 survey
-    missed, and interpolating would invent values at the very edges where the
-    two surveys meet, which is where they are least comparable.
-    """
 
     def __init__(self, path, dst_crs):
         self.src = rasterio.open(path)
@@ -401,9 +161,8 @@ class FillSource:
         self.res = self.src.transform.a
         self.nodata = self.src.nodata
 
+    # Read onto the base grid; WarpedVRT rejects boundless reads, so overlap is pasted at its offset
     def read_on_grid(self, bounds, shape):
-        """WarpedVRT rejects boundless reads, so partial overlap is intersected
-        and pasted at the right offset rather than erroring."""
         bx0, by0, bx1, by1 = bounds
         out = np.full(shape, np.nan, np.float32)
         vb = self.vrt.bounds
@@ -430,21 +189,10 @@ class FillSource:
         self.src.close()
 
 
-# =============================================================================
-# THE FILL
-# =============================================================================
+# The fill
 
+# Candidate cells reachable from the island through valid ground or other candidates
 def island_connected(valid, candidate, bridge_px=0):
-    """
-    Candidate cells reachable from the island through valid ground or other
-    candidates. The island is the largest connected component of valid 2009
-    cells in the (buffered) window.
-
-    bridge_px dilates the land mask before the reachability test, so a gap up
-    to 2*bridge_px wide is crossed. Dilation is used ONLY to decide
-    reachability - the returned mask is still a subset of the real candidates,
-    so no cell is invented by bridging.
-    """
     if not valid.any():
         return np.zeros_like(candidate)
     lab_v, n_v = label(valid, structure=np.ones((3, 3)))
@@ -461,8 +209,8 @@ def island_connected(valid, candidate, bridge_px=0):
     return candidate & np.isin(lab_a, list(keep))
 
 
+# z[a] - z[b] over every 4-connected pair with a in mask_a, b in mask_b
 def _neighbour_diffs(z, mask_a, mask_b):
-    """z[a] - z[b] over every 4-connected pair with a in mask_a, b in mask_b."""
     out = []
     for sl_a, sl_b in ((np.s_[:, :-1], np.s_[:, 1:]),
                        (np.s_[:, 1:], np.s_[:, :-1]),
@@ -474,20 +222,11 @@ def _neighbour_diffs(z, mask_a, mask_b):
     return np.concatenate(out) if out else np.empty(0)
 
 
+# How big a step does the fill create where it meets measured 2009 ground? Reported against a CONTROL
 def seam_check(z, measured, filled):
-    """
-    How big a step does the fill create where it meets measured 2009 ground?
-
-    Reported against a CONTROL: the same statistic between adjacent measured
-    cells. Real terrain is not flat, so a seam step only means something
-    relative to how much neighbouring cells normally differ. seam ~ control
-    means the fill is indistinguishable from the surface it joins, and no
-    feathering is warranted. seam >> control is a genuine cliff.
-    """
     seam = _neighbour_diffs(z, filled, measured)
     ctrl = _neighbour_diffs(z, measured, measured)
-    # Every key present every time, so the audit CSV has stable columns even
-    # for a domain with no fill at all.
+    # Every key present every time, so the audit CSV keeps stable columns
     res = {"seam_n": int(seam.size), "ctrl_n": int(ctrl.size),
            "seam_median_signed_m": None, "seam_median_abs_m": None,
            "seam_p90_abs_m": None, "ctrl_median_abs_m": None,
@@ -505,6 +244,7 @@ def seam_check(z, measured, filled):
     return res
 
 
+# Median base - fill over a ring around the fill, and how many cells it used
 def estimate_bias(base, fill, fill_mask, ring_px):
     ring = binary_dilation(fill_mask, iterations=ring_px) & ~fill_mask
     both = ring & ~np.isnan(base) & ~np.isnan(fill)
@@ -514,9 +254,8 @@ def estimate_bias(base, fill, fill_mask, ring_px):
     return float(np.nanmedian(base[both] - fill[both])), n
 
 
+# Locally-consistent continuation of the 2009 surface into the fill area, used only as the blend ...
 def boundary_extrapolation(base, fill_mask, buffer_px):
-    """Locally-consistent continuation of the 2009 surface into the fill area,
-    used only as the blend target at the seam so the merge has no hard step."""
     dil = binary_dilation(fill_mask, iterations=buffer_px)
     border = dil & ~fill_mask & ~np.isnan(base)
     br, bc = np.where(border)
@@ -533,6 +272,7 @@ def boundary_extrapolation(base, fill_mask, buffer_px):
     return out
 
 
+# Blend the fill into the base over feather_px from the fill edge
 def feathered_merge(base, fill_vals, fill_mask, extrap, feather_px):
     dist = distance_transform_edt(fill_mask)
     w = np.clip(dist / max(feather_px, 1e-9), 0, 1)
@@ -543,10 +283,9 @@ def feathered_merge(base, fill_vals, fill_mask, extrap, feather_px):
     return out
 
 
-# =============================================================================
-# IO
-# =============================================================================
+# Io
 
+# Write one single-band GeoTIFF
 def write_raster(arr, transform, crs, path, dtype, nodata):
     profile = {"driver": "GTiff", "height": arr.shape[0], "width": arr.shape[1],
                "count": 1, "dtype": dtype, "crs": crs, "transform": transform,
@@ -555,9 +294,8 @@ def write_raster(arr, transform, crs, path, dtype, nodata):
         dst.write(arr.astype(dtype), 1)
 
 
+# The DEM is a COMPOUND CRS (EPSG:3725 + NAVD88), whose to_epsg() is None, so a plain `gdf.crs != ...
 def resolve_crs(src, gdf):
-    """The DEM is a COMPOUND CRS (EPSG:3725 + NAVD88), whose to_epsg() is None,
-    so a plain `gdf.crs != src.crs` reports a reprojection that is a no-op."""
     if src.crs is None:
         print("  WARNING: DEM has no CRS; assuming domains already match.")
         return gdf
@@ -576,10 +314,7 @@ def resolve_crs(src, gdf):
     return gdf
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: per domain, clip, fill, check the seams, write the rasters, then the audit
 def main():
     for label_, path in (("base DEM", BASE_DEM_PATH),
                          ("domain file", DOMAIN_FILE),
@@ -645,8 +380,7 @@ def main():
             conn = cand
         n_conn_drop = n_cand - int(conn.sum())
 
-        # Both estimates are computed and reported every run even when nothing
-        # is applied, so "we chose not to correct" stays a checkable claim.
+        # Both bias estimates reported every run, applied or not
         bias_ring, n_ring = estimate_bias(base_b, g2008, conn, OVERLAP_RING_PX)
         ov = valid & has08
         n_ov = int(ov.sum())
@@ -657,9 +391,7 @@ def main():
         fill_vals = g2008 + bias
 
         n_floor_drop = 0
-        # Counted on the CROPPED domain window, not the padded context window,
-        # so it is comparable with `filled` in the audit. Counting it on the
-        # padded window made this column exceed `filled` and read as >100%.
+        # Counted on the cropped domain window, to compare with `filled`
         _c = np.s_[pad_px:pad_px + win.height, pad_px:pad_px + win.width]
         n_sub_mhw = int((conn[_c] & (fill_vals[_c] < MHW_ELEVATION)).sum())
         if APPLY_ELEV_FLOOR:

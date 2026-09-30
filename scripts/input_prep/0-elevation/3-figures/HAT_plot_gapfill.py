@@ -1,67 +1,11 @@
 """
-HAT_plot_gapfill.py
+Review figure for a DEM gap fill: 2009 alone, what the fill adds, and which cells came from where.
 
-Review figure for the 2009 DEM gap fill: what the 2009 survey alone gives,
-what the fill adds, and exactly which cells came from where.
+    python scripts/input_prep/0-elevation/3-figures/HAT_plot_gapfill.py
+    python scripts/input_prep/0-elevation/3-figures/HAT_plot_gapfill.py --source <PRODUCT>
 
-Three panels, all on the same 10 m grid and the same colour scale:
-    (a) 2009 survey      cells the 2009 DEM measured; everything else blank
-    (b) with fill        the product that goes to the dune/topo extractor
-    (c) survey source    2009 measured / fill-year filled / never surveyed
-
-Panels (a) and (b) differ ONLY in the filled cells, so flipping between them
-shows the fill directly. Panel (c) is the same information as a categorical map,
-which is easier to read where the fill is thin.
-
-STYLE. Every figure here is drawn under `scripts/site_layer/hat_figure_style.py` at the
-printed width (190 mm), and carries no title, statistics line or footnote on the
-canvas: that text is written to CAPTIONS.md beside the PNGs. The terrain ramp is
-the house style's one sanctioned exception to drawing elevation in classes.
-
-Domain boxes are drawn over every panel: no fill, thin white outline, so they
-locate a domain without hiding the data under it.
-
-COLOUR
-------
-Elevation uses `terrain`, and the reason is specific: it is built for
-topography, with a blue water band occupying the first 25% of the ramp. That
-only reads correctly if sea level lands exactly on that internal break, hence
-vmin is DERIVED - vmin = SEA_LEVEL_M - (vmax - SEA_LEVEL_M) / 3 - rather than
-taken from a percentile. Set vmin from a percentile and the blue/green boundary
-drifts to an arbitrary elevation, drawing dry ground as water.
-
-The categorical panel's two colours are sampled from `terrain` itself,
-terrain(0.05) water blue for 2009 and terrain(0.30) low-land green for the
-fill, so it belongs to the same palette as the elevation maps. They carry a
-deliberate luminance ladder - 80 / 153 / 228 against the grey, spacing 73 and
-75 - because blue-vs-green is a weak colour-vision-deficiency axis and
-brightness has to carry what hue cannot.
-
-Nodata is neutral grey in every panel and never a step on the elevation ramp -
-"not surveyed" is not a low elevation, and the whole point of this work is that
-conflating those two drowned three roadways at t=0.
-
-SOURCE SELECTION
-----------------
-Tag, fill year and long label live together in SOURCES, so a re-render cannot
-put one source's label on another's data - hand-editing the three constants
-separately already printed "cells the 2014 DEM measured" on the 2008 figures
-once.
-
-    python HAT_plot_gapfill.py                       # 2009-2014
-    python HAT_plot_gapfill.py --source <PRODUCT>
-
-INPUT   data/hatteras_init/0-elevation/<SOURCE_TAG>/2-resampled-10m/
-            resampled_domain_<N>_filled.tif
-            resampled_domain_<N>_survey.tif
-OUTPUT  data/hatteras_init/0-elevation/<SOURCE_TAG>/figures/
-            HAT_gapfill_<SOURCE_TAG>_island.png         whole island, 3 panels
-            HAT_gapfill_<SOURCE_TAG>_domains_78_80.png  zoom on 78-80
-            HAT_gapfill_<SOURCE_TAG>_roads_78_80.png    the zoom, + NC-12
-        SOURCE_TAG is in the name, so a new source cannot overwrite the
-        existing figures.
-
-Requires: rasterio, geopandas, numpy, matplotlib
+Writes the island, domains 78-80 and road-overlay figures to
+data/hatteras_init/0-elevation/<product>/figures/. Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -84,16 +28,8 @@ from matplotlib.ticker import FuncFormatter, MaxNLocator
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
-    """
-    Walk up until a directory holds data/hatteras_init.
-
-    NOT parents[N]. This file moved into 3-figures/ on 2026-08-25, and the
-    old parents[3] then resolved to input_prep/ rather than the project root.
-    That raises nothing - it just makes every path below it wrong, silently,
-    until some glob comes back empty. Same helper and same reason as
-    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
-    """
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
             return p
@@ -121,41 +57,19 @@ FIG_DIR = None  # set from SOURCE_TAG below (was the pooled 0-elevation/figures/
 # The repository copy of D:/Hatteras_GIS/domains.geojson (identical; 2026-09-18).
 from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 
-# NC-12 alignments. These are EPSG:2264 (NC State Plane, US survey FEET) while
-# the maps are EPSG:3725 (UTM 18N, metres), so they are reprojected on load -
-# plotted raw they would land thousands of km off the map.
+# NC-12 alignments, reprojected from NC State Plane feet on load
 from site_layer.hat_topo_version import ROAD_LINE_ROOT as ROAD_DIR  # noqa: E402
-# Keyed by PERIOD; the files are the 1978 and 2008 LINES those periods read
-# (hat_topo_version.ROAD_LINE_FOR_YEAR), filed by vintage since 2026-09-15.
+# Keyed by period; the files are the 1978 and 2008 lines those periods read
 ROAD_FILES = {1984: ROAD_DIR / "1978" / "nc12_1978.geojson",
               2004: ROAD_DIR / "2008" / "nc12_2008.geojson"}
-# Two vintages of the same line, so they take the house vintage pair: the
-# EARLIER alignment (1984) red, the LATER one (2004) blue. They are very nearly
-# coincident through 78-80, so 2004 is solid underneath and 1984 dashed on top -
-# where they coincide you see a blue line with red dashes, and where they
-# diverge each is legible on its own. Both carry a white casing so they survive
-# terrain running from dark water to near-white dune crest.
+# Two vintages of the same line, so they take the house vintage pair
 ROAD_STYLE = {2004: dict(color=C_1997, linestyle="-", linewidth=1.5),
               1984: dict(color=C_1984, linestyle=(0, (3.6, 2.4)), linewidth=1.5)}
 ROAD_CASING = {2004: dict(color="white", linewidth=3.0),
                1984: dict(color="white", linewidth=3.0)}
 ROAD_ORDER = [2004, 1984]   # draw order: solid first, dashed on top
 
-# Fill sources this script knows how to plot. Keeping tag, year and label in ONE
-# place stops them drifting apart - hand-editing three constants per re-render
-# already put "cells the 2014 DEM measured" on the 2008 figures once.
-#
-#     python HAT_plot_gapfill.py                      # default (below)
-#     python HAT_plot_gapfill.py --source <PRODUCT>
-#
-# Keyed by PRODUCT, not by fill source - the directories were renamed for
-# composition on 2026-08-25 (2014_NOAA_PostSandy -> 2009-2014).
-#
-# 2008_NOAA_IOCM was an entry here until 2026-08-26. Its rasters are gone from
-# disk (they were never tracked - *.tif is gitignored), and the point-cloud
-# path that produced them has been removed from HAT_dem_gap_fill.py, so
-# --source 2008_NOAA_IOCM could not have re-rendered anything. A dead option
-# that reads as a live one is worse than no option.
+# Fill sources this script knows how to plot
 SOURCES = {
     "2009-2014": (
         2014,
@@ -171,10 +85,7 @@ if SOURCE_TAG not in SOURCES:
                      f"known: {', '.join(SOURCES)}")
 SURVEY_FILL, SOURCE_LONG = SOURCES[SOURCE_TAG]
 
-# Built from SURVEY_FILL so it cannot disagree with the data being plotted.
-# It used to be printed under every figure as a `fig.text` footnote; under the
-# house style nothing on the canvas belongs in a caption, so it is now the tail
-# of each CAPTIONS.md entry instead.
+# Built from SURVEY_FILL so it cannot disagree with the data being plotted
 SOURCE_NOTE = (f"Fill is limited to cells the {SURVEY_FILL} source measured, "
                f"contiguous with the island (20 m bridging), above -2.64 m NAVD88. "
                f"No bias correction, no feathering — filled cells are the "
@@ -182,10 +93,7 @@ SOURCE_NOTE = (f"Fill is limited to cells the {SURVEY_FILL} source measured, "
                f"{SOURCE_LONG}. Axes are UTM eastings and northings in km; "
                f"domain outlines are white.")
 
-# The superseded fallback that used to live here is gone: the resolver knows
-# which products are superseded and where they sit, so there is one place that
-# has to be right rather than a probe-two-paths-and-hope in every consumer.
-# A missing directory is reported there, not as an empty glob later.
+# The superseded fallback that used to live here is gone
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hat_elevation_products import product as _product  # noqa: E402
 
@@ -193,37 +101,15 @@ _P = _product(SOURCE_TAG)
 IN_DIR = _P.resampled_10m
 FIG_DIR = _P.figures
 
+# --- CONFIG ------------------------------------------------------------------
 GRID = 10.0
 
-# Breathing room around the island-wide mosaic. Without it the northernmost and
-# southernmost domains sit flush against the axes frame, which reads as the data
-# being cut off rather than ending.
+# Breathing room around the island-wide mosaic
 ISLAND_PAD_M = 700.0
 
-# Zoom figure geometry. Height is derived from the data aspect at draw time;
-# ZOOM_CHROME_IN is the vertical allowance for the suptitle, colorbar and tick
-# labels, which do not scale with the map. NOT the footnote - that sits outside
-# the axes and bbox_inches="tight" adds it after layout, so reserving space for
-# it just opens a gap under the title. Measured: gap above the axes tracks this
-# value almost 1:1, and a two-line suptitle needs ~0.35 in.
-# Legends sit OUTSIDE the axes, under the panels, since 2026-09-10: an inside
-# legend on a map this narrow either covers the island or sits in the nodata
-# grey, and the house rule is frameless and outside wherever the layout allows.
+# Zoom figure geometry: height from the data aspect, legends outside the axes
 
-# Road-overlay zooms: (domain ids, which NC-12 years, filename slug, title).
-#
-# 78-80 carries BOTH alignments - those are the domains the extractor names as
-# width-drowning at t=0, and seeing 1984 against 2004 there is the point.
-#
-# 8-15 carries BOTH as well. An earlier version drew only 2004 here, on the
-# grounds that it is the alignment contemporaneous with this DEM and that
-# putting the 1984 line over a 2009+2014 surface invites comparing a road to a
-# DEM holding no information from its era. That was overruled deliberately:
-# seeing where the road WAS against where it WENT is the point, and this view
-# is meant to be read as a pair with the 1984-start DEM's own 8-15 figure,
-# which now draws the same two lines.
-# The third element is the figure's own caption sentence; the common method
-# paragraph (SOURCE_NOTE) and panel key are appended when it is written.
+# Road-overlay zooms: (domain ids, NC-12 years, filename slug, caption sentence)
 ROAD_ZOOMS = [
     ([78, 79, 80], [2004, 1984], "roads_78_80",
      "Domains 78-80, the roadways the extractor names as width-drowning at "
@@ -237,35 +123,14 @@ ROAD_ZOOMS = [
      "1984 dashed red, 2004 solid blue."),
 ]
 
-# The house double-column width (190 mm) since 2026-09-10: a figure is drawn at
-# the width it is printed, so its 8-9 pt type is 8-9 pt on the page. It was
-# 15 in, which reduced to a page turned every label into 4 pt.
+# The house double-column width (190 mm) since 2026-09-10
 ZOOM_FIG_W = figsize("double")[0]
 ZOOM_CHROME_IN = 1.05
 ID_RE = re.compile(r"resampled_domain_(\w+)_filled\.tif$")
 
 SURVEY_2009, SURVEY_NONE = 2009, 0
 
-# Categorical colours for the survey-source panel, SAMPLED FROM `terrain` so
-# panel C is built from the same palette as the elevation maps:
-#
-#     C_2009  terrain(0.05)  #2353b9  deep water blue
-#     C_FILL  terrain(0.30)  #31d670  the green of terrain's low-land band
-#
-# Luminance ladder, which is what keeps the three readable:
-#
-#     2009 measured  #2353b9   luminance  80
-#     fill           #31d670   luminance 153   (73 from blue, 75 from grey)
-#     never surveyed #E4E4E4   luminance 228
-#
-# Spacing 73 and 78 is nearly even, so all three separate by brightness alone.
-# That matters more here than usual: blue-vs-green is the WEAKEST colour-vision
-# -deficiency axis of the pairings tried, so brightness is doing the work that
-# hue cannot be relied on for. Without the gap this pair would be a poor choice;
-# with it, it holds up in greyscale and under CVD.
-#
-# The dataviz validator could not be run here (no node on this machine), so the
-# ladder was computed directly rather than machine-checked.
+# Survey-source colours sampled from terrain, spaced by luminance so they read in greyscale
 C_2009 = "#2353b9"   # terrain's water blue
 C_FILL = "#31d670"   # terrain's low-land green
 C_NONE = "#E4E4E4"   # neutral grey, off the elevation ramp entirely
@@ -273,21 +138,14 @@ C_NONE = "#E4E4E4"   # neutral grey, off the elevation ramp entirely
 ELEV_CMAP = "terrain"
 ELEV_PCT = (2, 98)   # clip the ramp to percentiles so a few spikes don't flatten it
 
-# matplotlib's `terrain` is built for topography: its blue water band occupies
-# the FIRST 25% of the ramp, then green -> brown -> white for land. That is only
-# meaningful if sea level lands exactly on that internal boundary, so vmin is
-# derived rather than taken from a percentile:
-#
-#     0 maps to  |vmin| / (|vmin| + vmax)  ==  0.25   ->   vmin = -vmax / 3
-#
-# Set from a percentile instead and the blue/green break drifts to some
-# arbitrary elevation, so the map would draw dry ground as water or vice versa.
+# Matplotlib's `terrain` is built for topography
 SEA_LEVEL_M = 0.0        # m NAVD88; use MHW (0.36) to key the break to MHW
 TERRAIN_WATER_FRAC = 0.25
+# -----------------------------------------------------------------------------
 
 
+# Places every domain on one 10 m grid covering the island
 def load_mosaic():
-    """Places every domain on one 10 m grid covering the island."""
     paths = sorted(IN_DIR.glob("resampled_domain_*_filled.tif"))
     if not paths:
         raise FileNotFoundError(f"no domain rasters in {IN_DIR} - run steps 1-2 first")
@@ -325,10 +183,7 @@ def load_mosaic():
         h, w = a.shape
         sub_e = elev[r0:r0 + h, c0:c0 + w]
         sub_s = surv[r0:r0 + h, c0:c0 + w]
-        # Domains are placed independently and their boxes are not a perfect
-        # tiling (505 m spacing against a 500 m extent), so overlaps exist.
-        # Keep whatever is already there rather than letting the later domain
-        # silently overwrite its neighbour.
+        # Overlapping boxes: keep what is already placed rather than overwrite a neighbour
         take = np.isnan(sub_e) & ~np.isnan(a)
         sub_e[take] = a[take]
         sub_s[take] = sv[take]
@@ -339,23 +194,17 @@ def load_mosaic():
     return elev, surv, extent, len(paths)
 
 
+# Domain box outlines, in white
 def draw_domains(ax, gdf, lw=0.35):
     gdf.boundary.plot(ax=ax, color="white", linewidth=lw, zorder=5)
 
 
+# UTM eastings here are 6-digit metres (450439..458392)
 def km_axes(ax, nx=3, ny=6):
-    """
-    UTM eastings here are 6-digit metres (450439..458392). Three panels side by
-    side cannot fit those without colliding, and matplotlib's shared offset
-    label is easy to miss. Kilometres with a small tick count is legible at any
-    panel width and needs no offset text.
-    """
     ax.xaxis.set_major_locator(MaxNLocator(nbins=nx, prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=ny))
 
-    # Decimal places from the span, not fixed: the island figure covers ~45 km
-    # of northing where 0 dp is right, the zoom covers ~1.5 km where 0 dp
-    # renders every tick as the same number.
+    # Decimal places from the span, not fixed
     def dp(span_m):
         return 0 if span_m > 20_000 else (1 if span_m > 2_000 else 2)
 
@@ -368,15 +217,8 @@ def km_axes(ax, nx=3, ny=6):
     ax.tick_params(labelsize=8)
 
 
+# Loads the NC-12 alignments, reprojects them, and CLIPS them to the domain footprint
 def load_roads(dst_crs, clip_to=None):
-    """
-    Loads the NC-12 alignments, reprojects them, and CLIPS them to the domain
-    footprint.
-
-    The geojsons run the full length of the highway, well beyond the 90 domains
-    at both ends. Unclipped, the island figure shows road where there is no
-    model domain, which reads as coverage that does not exist.
-    """
     out = {}
     for yr, f in ROAD_FILES.items():
         if not f.exists():
@@ -396,17 +238,8 @@ def load_roads(dst_crs, clip_to=None):
     return out
 
 
+# BOTH casings first, then both lines in ROAD_ORDER so the dashed 1984 lands on top of the solid 2004 ...
 def draw_roads(ax, roads, scale=1.0):
-    """
-    BOTH casings first, then both lines in ROAD_ORDER so the dashed 1984 lands
-    on top of the solid 2004 rather than under it (see ROAD_STYLE).
-
-    Casings-then-lines, not casing-line-casing-line: the two alignments are
-    nearly coincident through the reaches these figures zoom on, and the second
-    casing then painted out the first line, so 2004 disappeared wherever it
-    mattered. `scale` thins the lines for the island-wide figure, where the same
-    widths would smother the island.
-    """
     for yr in ROAD_ORDER:
         if yr not in roads:
             continue
@@ -419,13 +252,13 @@ def draw_roads(ax, roads, scale=1.0):
         roads[yr].plot(ax=ax, zorder=8 + ROAD_ORDER.index(yr), **st)
 
 
+# Both alignments in their map colours
 def road_legend_handles(roads):
-    """Both alignments in their map colours. They are the house vintage pair,
-    so neither is white and the swatches carry straight over."""
     return [Line2D([], [], label=f"NC-12 {y}", **ROAD_STYLE[y])
             for y in ROAD_ORDER if y in roads]
 
 
+# One elevation panel
 def panel_elev(ax, i, arr, extent, vmin, vmax, title):
     ax.set_facecolor(C_NONE)
     im = ax.imshow(arr, extent=extent, origin="upper", cmap=ELEV_CMAP,
@@ -434,6 +267,7 @@ def panel_elev(ax, i, arr, extent, vmin, vmax, title):
     return im
 
 
+# Run: load the mosaic and roads, draw the island, zoom and road figures
 def main():
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     elev, surv, extent, n = load_mosaic()
@@ -462,13 +296,7 @@ def main():
           f"at {100 * f:.0f}% of terrain; {n_clip:,} cells clip low "
           f"({100 * n_clip / valid.size:.2f}%)")
 
-    # The island spans ~9 km east-west and ~47 km north-south at equal aspect,
-    # so panel width follows figure HEIGHT, not the width asked for. At the
-    # house double-column width (190 mm) a full page of height gives three
-    # ~40 mm panels, which is the whole strip at one look; the figure is no
-    # longer 13 x 19 in reduced to a page, where the type became 4 pt. A shade
-    # under FIG_H_MAX because the legend sits outside the axes and
-    # bbox_inches="tight" adds it after layout.
+    # Panel width follows figure height here (a 9 x 47 km island at equal aspect)
     fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=9.15),
                              sharex=True, sharey=True, constrained_layout=True)
 
@@ -477,9 +305,7 @@ def main():
     panel_elev(axes[1], 1, filled, extent, vmin, vmax,
                f"with {SURVEY_FILL} fill")
 
-    # Boundaries must ascend and the fill year (2014) is now GREATER than the
-    # measured year (2009), so measured precedes fill in the colour list. With
-    # the old 2008 ordering these two were swapped and the map lied.
+    # Boundaries ascend: measured 2009 before the 2014 fill
     lo, hi = sorted([SURVEY_2009, SURVEY_FILL])
     cmap_s = ListedColormap([C_NONE,
                              C_2009 if lo == SURVEY_2009 else C_FILL,
@@ -492,9 +318,7 @@ def main():
 
     for ax in axes:
         draw_domains(ax, gdf)
-        # thinner at island scale: 45 km of line at zoom widths would smother
-        # the island. Dashed vs solid does not resolve at this scale - the zoom
-        # figure is where that distinction is readable.
+        # Thinner roads at island scale
         draw_roads(ax, roads, scale=0.45)
         ax.set_xlim(extent[0] - ISLAND_PAD_M, extent[1] + ISLAND_PAD_M)
         ax.set_ylim(extent[2] - ISLAND_PAD_M, extent[3] + ISLAND_PAD_M)
@@ -504,8 +328,7 @@ def main():
         spines_for_image(ax)
     axes[0].set_ylabel("Northing (km)")
 
-    # ax=all three, not axes[:2] - a colorbar sized against a subset shrinks
-    # only those axes and leaves the rest misaligned.
+    # Colorbar against all three axes, so none is shrunk out of line
     cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
                       fraction=0.028, pad=0.01, aspect=45)
     cb.set_label("Elevation (m NAVD88)")
@@ -527,22 +350,17 @@ def main():
     plt.close(fig)
     print(f"wrote {out}")
 
-    # ---- zoom: the domains the extractor names as width-drowning at t=0 ----
+    # zoom: the domains the extractor names as width-drowning at t=0
     sel = gdf[gdf["domain_id"].astype(int).isin([78, 79, 80])]
     if not sel.empty:
         zminx, zminy, zmaxx, zmaxy = sel.total_bounds
         pad = 150
-        # Height from the DATA aspect, not hard-coded. The panels are
-        # set_aspect("equal") and the zoom extent is wider than it is tall, so
-        # matplotlib shrinks each axes to match and a fixed tall figure leaves
-        # slack that constrained_layout splits above and below the panels -
-        # which reads as a big empty gap under the title.
+        # Figure height from the zoom's aspect, so no gap opens under the title
         _zw = (zmaxx + pad) - (zminx - pad)
         _zh = (zmaxy + pad) - (zminy - pad)
         _panel_w = ZOOM_FIG_W / 3.0
         _fig_h = _panel_w / (_zw / _zh) + ZOOM_CHROME_IN
-        # sharey: all three panels show the same extent, so repeating the
-        # northing labels three times only narrows the maps.
+        # Shared y: all three panels show the same extent
         fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=_fig_h),
                                  sharex=True, sharey=True,
                                  constrained_layout=True)
@@ -578,19 +396,8 @@ def main():
         plt.close(fig)
         print(f"wrote {out2}")
 
-        # ---- road-overlay zooms, one per entry in ROAD_ZOOMS ----
-        # Drawn at zoom rather than island scale on purpose: island-wide the
-        # road is a ~1 px line over 45 km, where dashed and solid are
-        # indistinguishable and the overlay would carry no information.
+        # Road-overlay zooms, one per entry in ROAD_ZOOMS, drawn at zoom scale
         def _road_zoom(dom_ids, years, slug, cap):
-            """One A/B/C zoom with the named NC-12 alignments drawn over it.
-
-            `years` selects WHICH alignments, and every entry in ROAD_ZOOMS
-            currently asks for both. It stays a parameter rather than being
-            hardcoded because the restriction was tried and reversed once
-            already - see the note on ROAD_ZOOMS - and a future zoom may well
-            want one line only.
-            """
             zsel = gdf[gdf["domain_id"].astype(int).isin(dom_ids)]
             if zsel.empty:
                 print(f"  domains {dom_ids} not in the domain file - "

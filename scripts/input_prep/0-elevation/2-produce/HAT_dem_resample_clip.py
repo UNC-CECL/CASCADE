@@ -1,60 +1,11 @@
 """
-HAT_dem_resample_clip.py
+Step 2 of 3: resample each 1 m domain clip to the 10 m Barrier3D grid (50 x 200 per domain).
 
-Step 2 of 3: resamples each gap-filled 1 m domain clip (output of
-HAT_dem_gap_fill.py) to the 10 m Barrier3D grid, 50 x 200 per domain.
-HAT_export_to_numpy.py converts these to .npy in the final step.
+    python scripts/input_prep/0-elevation/2-produce/HAT_dem_resample_clip.py
+    python scripts/input_prep/0-elevation/2-produce/HAT_dem_resample_clip.py --product 2009-2014-1996
 
-CLIPPING NOW HAPPENS IN STEP 1 - AND THE ORDER MATTERS
--------------------------------------------------------
-Barrier3D needs each domain to be an exact 50 x 200 array of true 10 x 10 m
-cells. That only works if the 10 m grid is built from the domain's own corner,
-so each 10 m cell is an exact 10 x 10 block of 1 m source cells.
-
-Resampling the whole island first and clipping second cannot deliver that. The
-domain boxes do not sit on a global 10 m grid - their origins land at arbitrary
-sub-10 m offsets (450439.120, 454507.796, ...). Cutting them from a grid whose
-cell edges fall on multiples of 10 snaps outward to the enclosing cells, giving
-51 x 201 for most domains and shifting every domain up to half a cell off its
-polygon.
-
-Confirmed against the existing ArcGIS outputs: clip_domain_N.tif and
-resampled_domain_N.tif share a byte-identical origin for every domain checked,
-so the 10 m grid was built inside the clip. There is also no global grid worth
-preserving - domains 50 and 51 share an x origin but their y origins differ by
-505.126 m against a 500 m extent, so the boxes were never a tiling of one grid.
-
-Clipping therefore lives in step 1, which needs the 1 m window anyway to do the
-fill. This step only reduces 1 m -> 10 m, which keeps the window definition in
-exactly one place.
-
-RESAMPLE METHOD - SETTLED EMPIRICALLY
---------------------------------------
-Reconstructed resampled_domain_N.tif from clip_domain_N.tif for domains 1, 2, 3,
-25, 50, 75, 100 and 120. ArcGIS used BILINEAR, not the Nearest Neighbor default
-the old docstring assumed:
-
-    method                          agreement with existing files
-    nearest (any of the 100 cells)  0.1% of cells (chance)
-    block mean (all 100 cells)      max diff 1.16 m
-    bilinear                        exact, max diff 2.4e-07 (float32 epsilon)
-
-At an exact 10x reduction the 10 m cell center lands on the boundary between
-source cells 4 and 5 on both axes, so bilinear collapses to a tie: the plain
-mean of the central 2 x 2 source cells. It uses 4 of the 100 cells under each
-output cell and ignores the other 96. That reproduces your existing domains, so
-it is the default - see AGGREGATION for the alternative.
-
-INPUTS  (data/hatteras_init/0-elevation/1-gapfill-1m/)
-    clip_domain_<N>_filled.tif
-    clip_domain_<N>_survey.tif
-
-OUTPUTS (data/hatteras_init/0-elevation/2-resampled-10m/)
-    resampled_domain_<N>_filled.tif     the 50 x 200 Barrier3D grid
-    resampled_domain_<N>_survey.tif     2009 / fill year / 0 per cell
-    resample_audit.csv
-
-Requires: rasterio, numpy
+Reads a product's 1-gapfill-1m/ clips and writes 2-resampled-10m/ rasters and
+resample_audit.csv; next is HAT_export_to_numpy.py. Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -72,20 +23,9 @@ import numpy as np
 import rasterio
 from rasterio.transform import Affine
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
-    """
-    Walk up until a directory holds data/hatteras_init.
-
-    NOT parents[N]. This file moved into 2-produce/ on 2026-08-25, and the
-    old parents[3] then resolved to input_prep/ rather than the project root.
-    That raises nothing - it just makes every path below it wrong, silently,
-    until some glob comes back empty. Same helper and same reason as
-    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
-    """
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
             return p
@@ -100,16 +40,8 @@ _elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
 from site_layer import hat_elevation_products as _el  # noqa: E402
 ELEVATION_DIR = _el.ELEVATION_ROOT
 
-# Must match FILL_SOURCE_TAG in HAT_dem_gap_fill.py, or PRODUCT_TAG in
-# HAT_dem_1984_mosaic.py - each source keeps its own subfolder so a re-run
-# cannot clobber another source's rasters or its audit CSV.
-#
-# Selected on the command line rather than by editing, because there are now
-# two live products and hand-editing a constant per run is how the figures
-# ended up labelled with the wrong source once already:
-#
-#     python HAT_dem_resample_clip.py                              # baseline
-#     python HAT_dem_resample_clip.py --product 2009-2014-1996     # 1984 start
+# --- CONFIG ------------------------------------------------------------------
+# Which product to resample: matches the producing script's tag; chosen with --product
 DEFAULT_SOURCE = "2009-2014"
 
 SOURCE_TAG = DEFAULT_SOURCE
@@ -132,58 +64,28 @@ AUDIT_CSV = "resample_audit.csv"
 GRID_SIZE_M = 10.0
 EXPECTED_SHAPE = (50, 200)   # rows, cols at 10 m; None to skip the check
 
-# AGGREGATION
-#   "arcgis_bilinear"  mean of the central 2 x 2 source cells - reproduces your
-#                      existing domains exactly. Uses 4 of 100 cells.
-#   "mean"             mean of all 100 cells. More defensible for elevation, but
-#                      will NOT reproduce the existing files (up to ~1.2 m at
-#                      dune crests, where sampling 4 cells is least
-#                      representative).
-#   "nearest"          single source cell. NOT what produced the existing files.
+# Aggregation: arcgis_bilinear reproduces the existing domains exactly (options in README)
 AGGREGATION = "arcgis_bilinear"
 
-# ArcGIS emitted a partial-weight value at some nodata edges and nodata at
-# others. Strict (all 4 required) matched it exactly in the interior and
-# differed only at <= 13 cells per domain, all on nodata margins. Strict does
-# not invent elevation at the water edge, so it is the default.
+# ArcGIS emitted a partial-weight value at some nodata edges and nodata at others
 BILINEAR_REQUIRE_ALL_FOUR = True
 
 NODATA_OUT = -9999.0
 SURVEY_2009, SURVEY_NONE = 2009, 0
 SURVEY_NODATA = 65535
 
-# Every non-base code a survey raster may carry, MOST SPECIFIC FIRST. This is
-# the precedence downsample_survey resolves a mixed 2 x 2 block with, so the
-# order is a decision, not a list:
-#
-#   1996 first  it is the override that defines the 1984-start product. A 10 m
-#               cell that drew any of its four read cells from ALACE should say
-#               so - that is the flag a reader uses to find the graft.
-#   2014 next   the gap fill, and the only code the 2009-start product has.
-#
-# SURVEY_NONE outranks both: an unsurveyed cell in the core is also when the
-# elevation output is nodata under BILINEAR_REQUIRE_ALL_FOUR, so the two agree
-# by construction. Blocks that mix two fill codes are counted per domain in the
-# audit as `mixed_source_cells`, so the precedence never hides how often it had
-# to choose.
+# Every non-base code a survey raster may carry, MOST SPECIFIC FIRST
 SURVEY_FILL_CODES = list(fill_codes(SOURCE_TAG))
 
-# Kept because the audit and the console line report "filled cells" against one
-# code. For the 1984 product that is the 1996 count; the 2014 count is reported
-# beside it.
+# Kept because the audit and the console line report "filled cells" against one code
 SURVEY_FILL = 2014
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# RESAMPLING - exact block reduction
-# =============================================================================
+# Resampling - exact block reduction
 
+# Reduces a (block*R, block*C) array to (R, C)
 def downsample(arr, block, method):
-    """
-    Reduces a (block*R, block*C) array to (R, C). Every output cell is an exact
-    block x block window of source cells - that is what makes the 10 m cells
-    true 10 x 10 m cells rather than resampled approximations.
-    """
     h, w = arr.shape
     if h % block or w % block:
         raise ValueError(f"clip {arr.shape} is not a whole multiple of {block}")
@@ -210,18 +112,8 @@ def downsample(arr, block, method):
     raise ValueError(f"unknown AGGREGATION: {method!r}")
 
 
+# Survey year for the SAME four cells bilinear actually reads, so the flag describes the value that ...
 def downsample_survey(survey, block):
-    """
-    Survey year for the SAME four cells bilinear actually reads, so the flag
-    describes the value that was written rather than the whole block. A 10 m
-    cell reads a fill code if any of the central 2 x 2 came from that fill, and
-    0 if any of them was unsurveyed - which is also when the elevation output is
-    nodata under BILINEAR_REQUIRE_ALL_FOUR, so the two agree by construction.
-
-    Returns (survey_10m, n_mixed) where n_mixed counts blocks whose four read
-    cells carried more than one fill code and SURVEY_FILL_CODES had to break
-    the tie.
-    """
     h, w = survey.shape
     b = survey.reshape(h // block, block, w // block, block)
     lo, hi = block // 2 - 1, block // 2
@@ -237,6 +129,7 @@ def downsample_survey(survey, block):
     return out, n_mixed
 
 
+# One band, with its transform, CRS and nodata
 def read_raster(path):
     with rasterio.open(path) as s:
         arr = s.read(1)
@@ -244,6 +137,7 @@ def read_raster(path):
         return arr, s.transform, s.crs, nd
 
 
+# Write one single-band GeoTIFF
 def write_raster(arr, transform, crs, path, dtype, nodata):
     profile = {"driver": "GTiff", "height": arr.shape[0], "width": arr.shape[1],
                "count": 1, "dtype": dtype, "crs": crs, "transform": transform,
@@ -252,10 +146,7 @@ def write_raster(arr, transform, crs, path, dtype, nodata):
         dst.write(arr.astype(dtype), 1)
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: per domain, resample elevation and provenance, then the audit
 def main():
     if not INPUT_DIR.exists():
         raise FileNotFoundError(

@@ -1,70 +1,11 @@
 """
-HAT_export_to_numpy.py
+Step 3 of 3: convert each 10 m domain raster to the .npy array HAT_dune_topo_extractor.py reads.
 
-Step 3 of 3: converts each 10 m domain raster into the .npy array that
-HAT_dune_topo_extractor.py reads, matching the documented ArcGIS
-RasterToNumPyArray convention:
-    - nodata cells filled with -10 (not NaN)
-    - no unit conversion - stays in METRES NAVD88
-    - no axis transpose - rasterio's row-major read uses the same
-      north-at-top / west-at-left convention as arcpy.RasterToNumPyArray
+    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py --product 2009-2014-1996   # -> 1984-start
+    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py                            # -> 2004-start
 
-THE CONTRACT THIS HAS TO SATISFY
----------------------------------
-Read out of HAT_dune_topo_extractor.py rather than assumed:
-
-  LOAD_PATH              INIT_ROOT/1-barrier3d-domains/{TOPO_PRODUCT}/
-                         npy-arrays
-  filenames (line 2557)  startswith("domain_") and endswith(".npy")
-  load      (line 994)   np.load(...).astype(float), must be 2D
-  nodata    (line 1015)  raw <= RAW_NODATA_MAX_NAVD (-9.0); raw nodata is
-                         exactly -10.0 m NAVD88
-  units     (line 1017)  z = raw - MHW_M, so raw must be m NAVD88
-  shape                  ALONG_COLS=50 alongshore, TOPO_ROWS=200 cross-shore,
-                         OCEAN_LOC="right" -> ocean at the HIGH column index
-
-Our 10 m rasters are 50 rows (alongshore, 500 m) x 200 cols (cross-shore,
-2000 m) with east at the high column index, and east is the ocean side. So the
-arrays go through as-is: no transpose, no flip, no unit change.
-
-THE FILENAME IS NOT domain_N_topography_2009.npy
--------------------------------------------------
-That is what the extractor WRITES. What it READS is domain_<N>.npy. Getting
-this backwards produces a folder the extractor silently finds zero domains in.
-
-ONE FOLDER PER START PERIOD
-----------------------------
-Output goes to 1-barrier3d-domains/<TOPO_TARGET>/npy-arrays/, where TOPO_TARGET
-is the period the arrays are for - "1984-start" or "2004-start". The two periods
-start from different DEMs:
-
-    --product 2009-2014-1996  ->  1984-start
-    --product 2009-2014       ->  2004-start
-
-Before 2026-08-25 the tree was keyed on the DEM year and both periods read one
-set of arrays. Dune picks are keyed per version WITHIN a product, so a new
-version starts from defaults rather than inheriting another version's windows.
-
-THE SURVEY ARRAYS GO IN A SIBLING FOLDER, DELIBERATELY
--------------------------------------------------------
-The extractor globs domain_*.npy. A survey array named domain_5_survey.npy would
-match that glob and be loaded as if it were a domain. So the survey arrays go to
-a separate directory that the extractor never looks at, under the same
-domain_<N>.npy name.
-
-INPUTS  (data/hatteras_init/0-elevation/<PRODUCT>/2-resampled-10m/)
-    resampled_domain_<N>_filled.tif
-    resampled_domain_<N>_survey.tif
-
-OUTPUTS
-    data/hatteras_init/1-barrier3d-domains/<TOPO_TARGET>/
-        npy-arrays/domain_<N>.npy          m NAVD88, -10 nodata
-        npy-arrays_survey/domain_<N>.npy   provenance codes
-
-    python HAT_export_to_numpy.py --product 2009-2014-1996   # -> 1984-start
-    python HAT_export_to_numpy.py                            # -> 2004-start
-
-Requires: rasterio, numpy
+Writes data/hatteras_init/1-barrier3d-domains/<period>/npy-arrays/ (m NAVD88,
+-10 nodata) and npy-arrays_survey/ (provenance). Details: scripts/input_prep/0-elevation/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -80,20 +21,9 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
-    """
-    Walk up until a directory holds data/hatteras_init.
-
-    NOT parents[N]. This file moved into 2-produce/ on 2026-08-25, and the
-    old parents[3] then resolved to input_prep/ rather than the project root.
-    That raises nothing - it just makes every path below it wrong, silently,
-    until some glob comes back empty. Same helper and same reason as
-    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
-    """
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
             return p
@@ -109,10 +39,8 @@ _elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
 from site_layer import hat_elevation_products as _el  # noqa: E402
 ELEVATION_DIR = _el.ELEVATION_ROOT
 
-# Which elevation product to export. "2009-2014" is the baseline;
-# "2009-2014-1996" is the 1984-start DEM. Resolved through
-# scripts/site_layer/hat_elevation_products.py so a layout change cannot leave this
-# pointing at a directory that is no longer there.
+# --- CONFIG ------------------------------------------------------------------
+# Which elevation product to export
 SOURCE_TAG = "2009-2014"
 if "--product" in sys.argv:
     SOURCE_TAG = sys.argv[sys.argv.index("--product") + 1]
@@ -125,10 +53,7 @@ INPUT_GLOB = "resampled_domain_*_filled.tif"
 ID_PATTERN = re.compile(r"resampled_domain_(\w+)_filled\.tif$")
 
 DEM_YEAR = "2009"
-# WHICH PERIOD PRODUCT these arrays are for. Must match TOPO_PRODUCT in
-# HAT_dune_topo_extractor.py - that is the script that reads them.
-#     --product 2009-2014-1996  ->  TOPO_TARGET "1984-start"
-#     --product 2009-2014       ->  TOPO_TARGET "2004-start"
+# WHICH PERIOD PRODUCT these arrays are for
 TOPO_TARGET = "1984-start" if SOURCE_TAG == "2009-2014-1996" else "2004-start"
 if "--target" in sys.argv:
     TOPO_TARGET = sys.argv[sys.argv.index("--target") + 1]
@@ -146,14 +71,13 @@ EXPECTED_SHAPE = (50, 200)
 AUDIT_CSV = "export_audit.csv"
 
 SURVEY_2009, SURVEY_NONE = 2009, 0
-# Every non-base code this product's survey rasters may carry. Taken from the
-# resolver rather than hardcoded to 2014: the 1984 product also carries 1996,
-# and a hardcoded 2014 reported its fill count as if the 1996 graft were not
-# there.
+# Every non-base code this product's survey rasters may carry
 from site_layer.hat_elevation_products import fill_codes as _fill_codes  # noqa: E402
 SURVEY_FILL_CODES = list(_fill_codes(SOURCE_TAG)) or [2014]
+# -----------------------------------------------------------------------------
 
 
+# Run: per domain, write the elevation and provenance arrays, then the audit
 def main():
     if not INPUT_DIR.exists():
         raise FileNotFoundError(
