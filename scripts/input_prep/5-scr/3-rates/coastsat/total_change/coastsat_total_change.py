@@ -552,7 +552,9 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
           for i, w in enumerate(windows) if w]
     labels = ["Unsmoothed domain means"] + [
         f"LOWESS {w * km_of:g} km ({w} domains)" for w in windows if w]
-    fig.legend(h, labels, loc="outside lower center", ncol=len(h), frameon=False)
+    # At most three columns: five entries on one row ran off both edges of the
+    # canvas once the 7-domain curve joined the overlay.
+    fig.legend(h, labels, loc="outside lower center", ncol=min(len(h), 3), frameon=False)
 
     # How far apart the windows are, in the unit of the axis.
     spread = {w: float((sm["series"][w][0] - sm["series"][0][0]).abs().max())

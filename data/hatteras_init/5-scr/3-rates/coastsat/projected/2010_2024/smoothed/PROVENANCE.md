@@ -1,6 +1,6 @@
 # 3-rates/coastsat/projected/2010_2024/smoothed - provenance
 
-Written 2026-09-22 10:21 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product projected), beside the raw comparison one level up.
+Written 2026-09-30 14:05 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product projected), beside the raw comparison one level up.
 
 **Projected shoreline change** = the 1996-2024 LRR x 14 yr, evaluated over 2010-2024 -- a window the rate was NOT fitted on. That is what makes it a projection.
 
@@ -17,6 +17,7 @@ LOWESS commutes with the x years multiply, so smoothing the RATE and smoothing t
 | raw (none) | 90 | +9.3 | 19.4 | -27.5 to +84.9 | 19.4 | 27.6 | 80% | 0.79 |
 | 3 domains / 1.5 km | 90 | +10.0 | 17.9 | -19.1 to +84.9 | 18.3 | 26.0 | 88% | 0.83 |
 | 5 domains / 2.5 km | 90 | +10.2 | 17.0 | -13.1 to +84.9 | 17.5 | 24.9 | 88% | 0.85 |
+| 7 domains / 3.5 km | 90 | +10.3 | 16.6 | -10.5 to +84.9 | 16.6 | 24.0 | 87% | 0.85 |
 | 10 domains / 5 km | 90 | +10.4 | 16.2 | -8.3 to +84.9 | 14.8 | 22.9 | 86% | 0.87 |
 
 **Read the bias and the RMS residual, not r.** A symmetric smoother strips high-frequency variance that is uncorrelated between the two sides, so r rises with the window whether or not the smoothing is right; the column is named `r_inflated_by_smoothing` in `tables/residual_by_scale.csv` for that reason. The bias is close to smoothing-invariant and is the honest summary of whether the trend over- or under-predicts net change.
