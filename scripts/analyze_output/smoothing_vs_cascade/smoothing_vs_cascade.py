@@ -761,6 +761,9 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
 
 # Run: load CoastSat and CASCADE, smooth, draw every figure, write the table
 def main():
+    # Print UTF-8 on Windows consoles (the summary uses arrows)
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8", errors="replace")
     print("=" * 65)
     print("CoastSat LRR Smoothing — Hatteras Island")
     print(f"LOWESS bandwidth: frac={LOWESS_FRAC}")
