@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""Two settings of one sweep axis, stacked, each against the observed target.
+"""
+Two settings of one sweep axis, stacked, each against the observed target.
 
-The alongshore panels in plot_sensitivity.py overlay every cell; when two
-neighbouring values differ only in a few domains, the lines sit on top of each
-other. This stacks two runs (top, bottom) on shared axes so the difference
-reads by eye. A value equal to the calibration default is the matrix baseline.
+    python scripts/sensitivity_analysis/plot_sensitivity_pair.py --start-year 1996 --sweep wave_angle_high_fraction --top 0.5 --bottom 0.51
 
-Usage:
-    python plot_sensitivity_pair.py --start-year 1996 \
-        --sweep wave_angle_high_fraction --top 0.5 --bottom 0.51
+For neighbouring values whose curves sit on top of each other in
+plot_sensitivity.py. Writes pair_<...>.png beside that script's figures. Details: scripts/sensitivity_analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -26,8 +23,8 @@ import matplotlib.pyplot as plt
 import plot_sensitivity as ps
 
 
+# (run_dir, run_name, index row) for one value of the axis
 def run_for(value, cells, index, sweep, start_year, preset, base_name):
-    """(run_dir, run_name, index row) for one value of the axis."""
     default = ps.normalise(ps.sweep_base_value(ps.SWEEPS[sweep]["setting"]))
     if abs(value - default) < 1e-9:
         run_dir = ps.find_run_dir(ps.RAW_RUNS, base_name,
@@ -41,6 +38,7 @@ def run_for(value, cells, index, sweep, start_year, preset, base_name):
     return cell.run_dir, cell.run_name, index.loc[cell.key]
 
 
+# Run: the two cells, stacked on shared axes over the target
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--start-year", type=int, required=True,

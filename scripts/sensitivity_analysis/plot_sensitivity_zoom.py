@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""A zoomed view of one sweep axis over a value range, beside the full set.
+"""
+A zoomed view of one sweep axis over a value range, beside the full set.
 
-plot_sensitivity.py draws every cell of an axis on one panel. A fine sweep
-added later (e.g. high-angle fraction 0.51-0.54, 2026-09-29) would crowd that
-panel, so this draws only the cells inside [--lo, --hi] with the plotter's own
-functions and writes them to a sub-folder. The standard 01-06 set is untouched.
+    python scripts/sensitivity_analysis/plot_sensitivity_zoom.py --start-year 1996 --sweep wave_angle_high_fraction --lo 0.5 --hi 0.55
 
-Usage:
-    python plot_sensitivity_zoom.py --start-year 1996 \
-        --sweep wave_angle_high_fraction --lo 0.5 --hi 0.55
+Draws only the cells inside [--lo, --hi] with plot_sensitivity.py's own
+functions, into a sub-folder of its figures; the standard set is untouched. Details: scripts/sensitivity_analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -23,6 +20,7 @@ import argparse
 import plot_sensitivity as ps
 
 
+# Run: the cells inside [--lo, --hi], drawn with plot_sensitivity's functions
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--start-year", type=int, required=True,

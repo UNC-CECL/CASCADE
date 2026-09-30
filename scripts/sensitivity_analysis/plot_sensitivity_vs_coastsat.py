@@ -1,27 +1,12 @@
 #!/usr/bin/env python3
 """
-Sensitivity Results vs CoastSat — Raw + Smoothing Window Comparison
-====================================================================
-Post-processing script for HAT_waveSensitivity_1984_2004.py comparison.
+Legacy: each wave sweep of a May 2026 session folder against raw and smoothed CoastSat LRR.
 
-Reads the shoreline change rate CSVs saved during a sensitivity session
-(no CASCADE re-run required) and plots each parameter sweep against:
-  - Raw CoastSat LRR (faded period colour, ±1 std envelope)
-  - LOWESS-smoothed CoastSat for each window size in COMPARE_WINDOWS_DOMAINS
+    python scripts/sensitivity_analysis/plot_sensitivity_vs_coastsat.py
 
-Outputs (written to OUTPUT_DIR)
---------------------------------
-  wave_height_vs_coastsat.png
-  wave_period_vs_coastsat.png
-  wave_asymmetry_vs_coastsat.png
-  wave_angle_high_fraction_vs_coastsat.png
-  sensitivity_overview_2x2.png      <- all four parameters in one grid
-
-Usage
------
-1. Point SESSION_DIR to the timestamped comparison folder from the sensitivity run.
-2. Point COASTSAT_CSV_1984_2004 / _2004_2024 to your CoastSat CSVs.
-3. python plot_sensitivity_vs_coastsat.py
+Replaced by plot_sensitivity.py. It reads SESSION_DIR (a folder written by the
+deleted HAT_waveSensitivity_1984_2004.py) and a CoastSat path that no longer
+exists; edit both before use. Details: scripts/sensitivity_analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -37,10 +22,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -57,8 +39,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
 warnings.filterwarnings("ignore")
 
-# Same anchor its sibling plot_sensitivity.py uses, so run_layout -- the
-# one definition of where a run folder keeps its files -- is importable.
+# Same anchor as plot_sensitivity.py, so run_layout is importable
 _HERE = Path(__file__).resolve()
 _REPO_ROOT = next(_p for _p in _HERE.parents
                   if (_p / "pyproject.toml").exists())
@@ -70,36 +51,21 @@ if str(_REPO_ROOT / "scripts") not in sys.path:
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# =============================================================================
-# SECTION 1: SESSION FOLDER  <- edit this each time
-# =============================================================================
-# Point to the timestamped folder created by HAT_waveSensitivity_1984_2004.py.
-# Structure expected:
-#   SESSION_DIR/
-#     wave_height/
-#       HAT_1984_2004_wvSens_wave_height_1p0/
-#         tables/shoreline_change_rate.csv     (or, before the 2026-09-10
-#         layout change, the flat *_shoreline_change_rate.csv beside it --
-#         run_layout resolves either)
-#       ...
-#     wave_period/ ...
-#     wave_asymmetry/ ...
-#     wave_angle_high_fraction/ ...
+# --- CONFIG ------------------------------------------------------------------
+# Section 1: session folder
 
+# The timestamped session folder (expected layout in the README)
 SESSION_DIR = str(_PATH_REPO / "output" / "calibration" / "sensitivity" / "HAT_1984_2004_waveSensitivity_20260508_154602")
 
 # Period being plotted — must match the sensitivity run
 START_YEAR = 1984
 END_YEAR   = 2004
 
-# =============================================================================
-# SECTION 2: COASTSAT DATA
-# =============================================================================
+# Section 2: CoastSat data
 
 PROJECT_BASE_DIR  = str(_PATH_REPO)
 COASTSAT_BASE_DIR = os.path.join(
@@ -117,27 +83,19 @@ CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
 CS_STD_COL    = "std_lrr"     # set to None if your CSV has no std column
 
-# Which CoastSat period to use as the primary reference
-# (should match the sensitivity run period)
+# The CoastSat period to use as the reference (match the sweep)
 CS_ACTIVE_PERIOD = 1984   # <- 1984 or 2004
 
-# =============================================================================
-# SECTION 3: SMOOTHING WINDOWS
-# =============================================================================
-# Window sizes in CASCADE domains (500 m each).
-# Must have the same number of entries as C_WINDOWS below.
-#   5  domains  ->  2.5 km  ->  frac = 0.056
-#  10  domains  ->  5.0 km  ->  frac = 0.111   <- recommended calibration window
-#  15  domains  ->  7.5 km  ->  frac = 0.167
+# Section 3: smoothing windows
+
+# Window sizes in 500 m domains; one colour each in C_WINDOWS
 
 COMPARE_WINDOWS_DOMAINS = [5, 10, 15]
 
 DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
-# =============================================================================
-# SECTION 4: COLOURS AND STYLE
-# =============================================================================
+# Section 4: colours and style
 
 # CoastSat period colours (matches 6-scr-smooth/old_smoothing/loess_v3_window_sensitivity.py)
 C_CS_1984 = "#1F4E79"   # dark blue
@@ -150,9 +108,7 @@ C_WINDOWS = ["#2ca02c", "#ff7f0e", "#9467bd"]   # green, orange, purple
 MODEL_LW    = 1.8   # model line width
 MODEL_ALPHA = 0.82
 
-# =============================================================================
-# SECTION 5: GEOGRAPHIC ANNOTATION CONSTANTS
-# =============================================================================
+# Section 5: geographic annotation constants
 
 TOWN_SPANS = {
     "Buxton":      (7,  8),
@@ -170,11 +126,10 @@ C_VILLAGE_LINE = "0.40"
 C_PIER         = "#1565C0"
 C_GROIN        = "#B71C1C"
 
-# =============================================================================
-# SECTION 6: OUTPUT
-# =============================================================================
+# Section 6: output
 
 OUTPUT_DIR = os.path.join(SESSION_DIR, "coastsat_comparison_figures")
+# -----------------------------------------------------------------------------
 
 # Parameter metadata — controls figure labels and value ordering
 PARAM_META = {
@@ -200,19 +155,11 @@ PARAM_META = {
     },
 }
 
-# =============================================================================
-# HELPER: DISCOVER SENSITIVITY RUNS
-# =============================================================================
 
+# Helper: discover sensitivity runs
+
+# {value: run folder} for one parameter's sweep in the session folder
 def discover_param_runs(session_dir, param_name):
-    """
-    Scan session_dir/{param_name}/ for per-value run subfolders and return
-    {param_value (float) -> rate_csv_path (str)}, sorted by value.
-
-    Folder naming convention (from HAT_waveSensitivity_1984_2004.py):
-      HAT_{YYYY}_{YYYY}_wvSens_{param_name}_{value_str}/
-    where value_str uses 'p' in place of '.' (e.g. 1p2 -> 1.2).
-    """
     param_dir = os.path.join(session_dir, param_name)
     if not os.path.isdir(param_dir):
         return {}
@@ -233,9 +180,7 @@ def discover_param_runs(session_dir, param_name):
         except ValueError:
             continue
 
-        # RESOLVED, NOT GLOBBED. The rate CSV is tables/shoreline_change_rate.csv
-        # in the new run layout and {run}_shoreline_change_rate.csv in the old;
-        # the run folder is named for the run, so it supplies the prefix.
+        # Resolved, not globbed: the rate CSV path depends on the run layout
         csv_path = resolve_run_file(full_path, "rate_csv", folder_name)
         if csv_path.is_file():
             runs[val] = str(csv_path)
@@ -243,27 +188,19 @@ def discover_param_runs(session_dir, param_name):
     return dict(sorted(runs.items()))
 
 
+# (gis_ids, rates) from one run's shoreline change rate CSV, real domains only
 def load_rate_csv(csv_path, start_real_idx=15, end_real_idx=105):
-    """
-    Load a *_shoreline_change_rate.csv and return (gis_ids, rates) for
-    real domains only.
-    """
     df = pd.read_csv(csv_path)
     real = df.dropna(subset=["gis_domain_id"]).copy()
     real["gis_domain_id"] = real["gis_domain_id"].astype(int)
     real = real.sort_values("gis_domain_id").reset_index(drop=True)
     return real["gis_domain_id"].values, real["model_rate_m_per_yr"].values
 
-# =============================================================================
-# HELPER: COASTSAT LOADING + SMOOTHING
-# =============================================================================
 
+# Helper: CoastSat loading + smoothing
+
+# A CoastSat domain_lrr_summary CSV
 def load_coastsat(path, period_label):
-    """
-    Load a CoastSat domain_lrr_summary CSV.
-    Returns a DataFrame with columns: domain, cs_lrr, cs_std
-    or None if the file is missing.
-    """
     if path is None or not os.path.exists(path):
         print(f"  CoastSat ({period_label}): not found — {path}")
         return None
@@ -303,13 +240,13 @@ def load_coastsat(path, period_label):
     return result
 
 
+# A window in CASCADE domains as a LOWESS frac
 def domains_to_frac(n_domains):
-    """Convert a window size in CASCADE domains to a LOWESS frac value."""
     return n_domains / (DOMAIN_MAX - DOMAIN_MIN + 1)
 
 
+# LOWESS-smooth one series
 def apply_lowess(domains, values, frac):
-    """Apply LOWESS smoothing; returns smoothed values at the same positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -319,11 +256,8 @@ def apply_lowess(domains, values, frac):
     return smoothed
 
 
+# Smoothed CoastSat LRR for every window in COMPARE_WINDOWS_DOMAINS
 def compute_all_smoothed(cs_df):
-    """
-    Compute LOWESS-smoothed CoastSat LRR for every window in
-    COMPARE_WINDOWS_DOMAINS.  Returns {n_domains: smoothed_array}.
-    """
     d = cs_df["domain"].values.astype(float)
     v = cs_df["cs_lrr"].values
     return {
@@ -331,10 +265,9 @@ def compute_all_smoothed(cs_df):
         for n in COMPARE_WINDOWS_DOMAINS
     }
 
-# =============================================================================
-# GEOGRAPHIC ANNOTATION HELPERS
-# =============================================================================
+# Geographic annotation helpers
 
+# Wimble Shoals, towns, village lines, piers and the groin on one axes
 def add_geographic_annotations(ax):
     trans = blended_transform_factory(ax.transData, ax.transAxes)
 
@@ -378,6 +311,7 @@ def add_geographic_annotations(ax):
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))
 
 
+# Legend handles for the geographic annotations
 def annotation_legend_handles():
     return [
         Patch(fc=C_TOWN_SPAN, alpha=0.30, label="Community"),
@@ -389,10 +323,9 @@ def annotation_legend_handles():
         Line2D([0], [0], color=C_GROIN, lw=1.1, ls=":", label="Groin"),
     ]
 
-# =============================================================================
-# AXIS STYLING
-# =============================================================================
+# Axis styling
 
+# Domain-axis limits, ticks and grid
 def style_ax(ax):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.xaxis.set_major_locator(ticker.MultipleLocator(10))
@@ -406,6 +339,7 @@ def style_ax(ax):
     ax.axhline(0, color="#2c2c2c", lw=1.1, ls="--", alpha=0.55)
 
 
+# Accretion and erosion labels either side of zero
 def add_accretion_erosion_labels(ax):
     ybot, ytop = ax.get_ylim()
     zero_frac  = (0 - ybot) / (ytop - ybot)
@@ -416,35 +350,13 @@ def add_accretion_erosion_labels(ax):
             transform=ax.transAxes, fontsize=9, color="#555555",
             ha="right", va="center", style="italic")
 
-# =============================================================================
-# MAIN FIGURE: one parameter, all model lines + raw + all smoothing windows
-# =============================================================================
+# Main figure: one parameter, all model lines + raw + all smoothing windows
 
+# Full annotated figure for one wave parameter sweep
 def plot_param_vs_coastsat(
     param_name, runs, cs_active, cs_period_color, smoothed_dict,
     out_path, cs_ref=None, cs_ref_color=None,
 ):
-    """
-    Full annotated figure for one wave parameter sweep.
-
-    Layout (all on one panel):
-      - Raw CoastSat (faded period colour, ±1 std envelope)
-      - LOWESS-smoothed CoastSat for each window in COMPARE_WINDOWS_DOMAINS
-      - Cascade model lines (viridis, one per parameter value)
-      - Geographic annotation layer
-      - Grouped legend
-
-    Parameters
-    ----------
-    param_name      : str
-    runs            : dict {param_value -> (gis_ids, rates)}
-    cs_active       : pd.DataFrame — CoastSat for the active period
-    cs_period_color : str — colour for the active CoastSat period
-    smoothed_dict   : dict {n_domains -> smoothed_array} for the active period
-    out_path        : str — comparison PNG path
-    cs_ref          : pd.DataFrame or None — secondary CoastSat period (reference)
-    cs_ref_color    : str or None
-    """
     meta   = PARAM_META.get(param_name, {"label": param_name, "units": "", "axis_label": param_name})
     values = sorted(runs.keys())
     n_vals = len(values)
@@ -454,10 +366,10 @@ def plot_param_vs_coastsat(
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
-    # -- Geographic annotations (drawn first, underneath data) ----------------
+    # Geographic annotations (drawn first, underneath data)
     add_geographic_annotations(ax)
 
-    # -- CoastSat raw (active period) -----------------------------------------
+    # CoastSat raw (active period)
     d_cs  = cs_active["domain"].values
     lrr   = cs_active["cs_lrr"].values
     std   = cs_active["cs_std"].values
@@ -469,7 +381,7 @@ def plot_param_vs_coastsat(
             marker="o", ms=2.0, zorder=2,
             label=f"CoastSat raw ({START_YEAR}\u2013{END_YEAR})")
 
-    # -- CoastSat secondary period (reference, if provided) -------------------
+    # CoastSat secondary period (reference, if provided)
     if cs_ref is not None and cs_ref_color is not None:
         d_ref = cs_ref["domain"].values
         ax.plot(d_ref, cs_ref["cs_lrr"].values,
@@ -477,7 +389,7 @@ def plot_param_vs_coastsat(
                 ls="--", zorder=2,
                 label=f"CoastSat raw (ref period, faded)")
 
-    # -- LOWESS-smoothed CoastSat (one line per window) ------------------------
+    # LOWESS-smoothed CoastSat (one line per window)
     for n_dom, win_col in zip(COMPARE_WINDOWS_DOMAINS, C_WINDOWS):
         smoothed = smoothed_dict[n_dom]
         km       = n_dom * 0.5
@@ -486,7 +398,7 @@ def plot_param_vs_coastsat(
                 color=win_col, lw=2.2, alpha=0.90, zorder=4,
                 label=f"LOWESS {n_dom}-domain ({km:.1f} km,  frac={frac:.3f})")
 
-    # -- Cascade model lines (viridis, one per parameter value) ---------------
+    # Cascade model lines (viridis, one per parameter value)
     for k, val in enumerate(values):
         gis_ids, rates = runs[val]
         col = cmap(k / max(n_vals - 1, 1))
@@ -494,7 +406,7 @@ def plot_param_vs_coastsat(
         ax.plot(gis_ids, rates, color=col,
                 lw=MODEL_LW, alpha=MODEL_ALPHA, zorder=5, label=lbl)
 
-    # -- Axis formatting ------------------------------------------------------
+    # Axis formatting
     style_ax(ax)
 
     # Set ylim from data before placing accretion/erosion labels
@@ -510,7 +422,7 @@ def plot_param_vs_coastsat(
 
     add_accretion_erosion_labels(ax)
 
-    # -- Axis labels & title --------------------------------------------------
+    # Axis labels & title
     ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=11, fontweight="bold", labelpad=6)
     ax.set_ylabel("Shoreline Change Rate (m/yr)",
@@ -527,12 +439,7 @@ def plot_param_vs_coastsat(
         fontsize=12, fontweight="bold", pad=10, color="#1a2a3a",
     )
 
-    # -- Legend: grouped into three labelled sections -------------------------
-    # Group 1: Observed (CoastSat raw + smoothed windows)
-    # Group 2: Model runs (one per parameter value)
-    # Group 3: Geographic annotation proxies
-    #
-    # A dummy handle with an empty label creates visual spacing in the legend.
+    # Legend in three groups: observed, model runs, geographic annotations
 
     def spacer(label=""):
         return Line2D([0], [0], color="none", label=label)
@@ -575,7 +482,7 @@ def plot_param_vs_coastsat(
         handlelength=1.8,
     )
 
-    # -- Caption --------------------------------------------------------------
+    # Caption
     window_str = ", ".join(
         f"{n} domains ({n * 0.5:.1f} km)" for n in COMPARE_WINDOWS_DOMAINS
     )
@@ -591,16 +498,10 @@ def plot_param_vs_coastsat(
     print(f"  Saved: {os.path.basename(out_path)}")
     plt.close(fig)
 
-# =============================================================================
-# 2×2 OVERVIEW FIGURE
-# =============================================================================
+# 2×2 overview figure
 
+# All four parameters in one 2x2 grid
 def plot_overview_2x2(all_runs, cs_active, cs_period_color, all_smoothed, out_path):
-    """
-    2x2 grid: one panel per wave parameter, compact version.
-    Each panel shows: raw CoastSat (faded), all smoothing windows, all model lines.
-    No geographic annotations (too cluttered at this scale) — just data.
-    """
     params = [p for p in PARAM_META if p in all_runs and all_runs[p]]
     n_params = len(params)
     ncols = 2
@@ -702,10 +603,8 @@ def plot_overview_2x2(all_runs, cs_active, cs_period_color, all_smoothed, out_pa
     print(f"  Saved: {os.path.basename(out_path)}")
     plt.close(fig)
 
-# =============================================================================
-# MAIN
-# =============================================================================
 
+# Run: one figure per parameter, then the overview
 def main():
     print("=" * 70)
     print("Sensitivity vs CoastSat — Raw + Smoothing Window Comparison")
@@ -715,7 +614,7 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ── Load CoastSat ─────────────────────────────────────────────────────────
+    # Load CoastSat
     print("Loading CoastSat data...")
     cs_1984 = load_coastsat(COASTSAT_CSV_1984_2004, "1984_2004")
     cs_2004 = load_coastsat(COASTSAT_CSV_2004_2024, "2004-2024")
@@ -744,7 +643,7 @@ def main():
         frac = domains_to_frac(n_dom)
         print(f"  {n_dom}-domain window  ({km:.1f} km,  frac={frac:.3f})  ... OK")
 
-    # ── Discover and load sensitivity runs ───────────────────────────────────
+    # Discover and load sensitivity runs
     print(f"\nScanning session folder for sensitivity runs...")
     all_runs = {}
 
@@ -771,7 +670,7 @@ def main():
         print("\nNo sensitivity runs found. Check SESSION_DIR.")
         return
 
-    # ── Generate one figure per parameter ────────────────────────────────────
+    # Generate one figure per parameter
     print(f"\nGenerating figures...")
 
     for param_name, runs in all_runs.items():
@@ -789,7 +688,7 @@ def main():
             cs_ref_color    = ref_color,
         )
 
-    # ── 2×2 overview ─────────────────────────────────────────────────────────
+    # 2×2 overview
     if len(all_runs) > 1:
         print("  2x2 overview ...")
         plot_overview_2x2(

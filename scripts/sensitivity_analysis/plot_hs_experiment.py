@@ -1,24 +1,11 @@
 #!/usr/bin/env python3
-"""Where a higher Hs changes the source/sink correction, zone by zone.
+"""
+Where a higher Hs changes the source/sink correction, zone by zone (Hs 2.5 vs 3.0).
 
-WHAT THIS ANSWERS
-    The totals say the required correction field shrinks ~6% at Hs 3.0. They
-    also hide the finding: the reaches move in OPPOSITE directions, and the
-    ones that improve are not the ones carrying most of the correction. A
-    single number for the island would report a modest win and conceal that
-    the mid-island got worse.
+    python scripts/sensitivity_analysis/plot_hs_experiment.py
 
-WHY DIVERGING, AND WHY ORDERED SOUTH TO NORTH
-    The quantity is a signed change either side of "no difference", which is a
-    polarity encoding: two hues with a neutral midpoint, never a sequential
-    ramp. And the zones are laid out by their domain range rather than sorted
-    by value, so the panel reads as an alongshore profile -- which is what
-    exposes that the improvement is concentrated at one end of the island.
-
-INPUT
-    The two pass-0 calibrations under output/calibration/hs/, produced by
-    be_zone_residual_fit.py with HAT_BE_OUTPUT_DIR redirected. Nothing
-    here reads or writes the production calibration.
+Reads the two pass-0 calibrations under output/calibration/hs/ and writes a
+diverging bar figure and its CSV to output/calibration/hs/comparison/. Details: scripts/sensitivity_analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -35,10 +22,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -58,34 +42,23 @@ from plot_sensitivity import HOUSE_STYLE, panel_label, tidy  # noqa: E402
 
 plt.rcParams.update(HOUSE_STYLE)
 
+# --- CONFIG ------------------------------------------------------------------
 EXPERIMENT = PROJECT_BASE_DIR / "output" / "calibration" / "hs"
 CONTROL = EXPERIMENT / "02_zones_Hs2p5" / "be_zone_metrics.csv"
 TEST = EXPERIMENT / "03_zones_Hs3" / "be_zone_metrics.csv"
 OUT_DIR = EXPERIMENT / "comparison"
+# -----------------------------------------------------------------------------
 
-# THE ENCODING IS NOT FIXED, so it is detected rather than assumed. The
-# analysis writes through whatever encoding stdout has: run at a Windows
-# console it emits cp1252 (the case be_apply_fit_to_config.py's RATES_ENCODING documents),
-# run with stdout redirected to a file it emits UTF-8. Assuming either one
-# turns the en-dash in "Buxton-Avon Transition" into mojibake in the zone
-# labels -- a replacement character one way, "a-EUR-quote" the other.
+# Encoding detected, not assumed: the analysis writes cp1252 or UTF-8
 METRICS_ENCODINGS = ("utf-8", "cp1252")
 
-# A diverging pair with a neutral midpoint: less correction needed is the good
-# direction and gets the cool hue, more correction the warm one. Deliberately
-# NOT the sensitivity figures' sequential ramp -- that encodes magnitude along
-# one hue, and this quantity has a sign.
+# Diverging pair: less correction is the cool hue, more the warm one
 BETTER, WORSE, NEUTRAL = "#2166AC", "#B2182B", "#8A8F94"
 INK, INK_MUTED = "#222222", "#666666"
 
 
+# One pass-0 calibration, indexed by domain, in whichever encoding decodes cleanly
 def load(path):
-    """One pass-0 calibration, indexed by domain.
-
-    Tries each encoding in turn and takes the first that decodes cleanly. A
-    wrong guess does not raise -- cp1252 decodes any byte -- so UTF-8 is tried
-    first and only a genuine decode failure falls through to it.
-    """
     frame = None
     for encoding in METRICS_ENCODINGS:
         try:
@@ -96,29 +69,21 @@ def load(path):
     if frame is None:
         raise ValueError(f"{path} decoded as none of {METRICS_ENCODINGS}")
 
-    # The en-dash in "Buxton-Avon Transition" is ALREADY LOST in the file: the
-    # analysis wrote a literal U+FFFD because its own output encoding could not
-    # represent the character. No read encoding recovers it, so it is repaired
-    # here for display. Fixing it at the source would mean the analysis writing
-    # UTF-8 explicitly, which is a change to a script this experiment is
-    # deliberately not modifying.
+    # Repair the en dash the analysis already lost (a literal U+FFFD in the file)
     frame["physical_zone"] = frame["physical_zone"].str.replace(
         "�", "–", regex=False)
     return frame
 
 
+# Per-zone RMS residual for both arms, ordered south to north
 def zone_table(control, test, period):
-    """Per-zone RMS residual for both arms, ordered south to north."""
     col = f"smooth_residual_{period}"
     rows = []
     for zone, group in control.groupby("physical_zone"):
         idx = group.index
         a = float(np.sqrt((control.loc[idx, col] ** 2).mean()))
         b = float(np.sqrt((test.loc[idx, col] ** 2).mean()))
-        # NOT `first`/`last`: those are DataFrame methods, so a column of either
-        # name is reachable by [] but NOT by attribute -- row.first silently
-        # returns a bound method, which is how the zone labels came out as
-        # "<bound method NDFrame.first of zone ...>" on the first draft.
+        # Columns read with [], not attributes: first/last are DataFrame methods
         rows.append(dict(zone=zone, domain_from=int(idx.min()),
                          domain_to=int(idx.max()),
                          control=a, test=b, change_pct=100 * (b / a - 1)))
@@ -126,6 +91,7 @@ def zone_table(control, test, period):
     return pd.DataFrame(rows).sort_values("domain_from").reset_index(drop=True)
 
 
+# Run: both arms' zone residuals, the diverging bar figure and its CSV
 def main():
     control, test = load(CONTROL), load(TEST)
     OUT_DIR.mkdir(parents=True, exist_ok=True)

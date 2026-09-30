@@ -1,69 +1,14 @@
 #!/usr/bin/env python3
-"""Parameter sensitivity for the Hatteras hindcast, either period.
+"""
+Run the hindcast once per sweep cell, with one setting moved off its calibrated value.
 
-WHY THIS REPLACED THE SCRIPTS THAT WERE HERE
-    `HAT_waveSensitivity_1984_2004.py` and
-    `HAT_waveheight_Sensitivity_1984_2004.py` both built the model by hand.
-    Between them they had: a SyntaxError that made one of them unrunnable,
-    input paths that no longer resolved (`RoadSetback_1984.csv` under
-    `raw_offset/`, `storms_1984_2004_base.npy` under `hindcast_storms/` --
-    neither exists; the only copies live under `old_method_offset/` and
-    `old/testing_storms/`), a direct `Cascade(...)` call against the STOCK
-    class rather than the sandbox one every hindcast run uses, and a comment
-    pinning them to "HAT_hindcast_1984_2024_old version.py". Anything they
-    produced would have described a different model on legacy forcing.
+    python scripts/sensitivity_analysis/hindcast_sensitivity.py --start-year 1996 --param wave_height
+    python scripts/sensitivity_analysis/hindcast_sensitivity.py --start-year 1996 --param all --dry-run
 
-    This drives the hindcast instead of reimplementing it. Each cell is one
-    ordinary run of `HAT_hindcast_1984_2024.py` with one setting moved through
-    the environment, exactly the way `HAT_run_all.py` drives the matrix. There
-    is no second copy of the model setup here, so the sweep inherits the period
-    table, the measured setbacks, the groin and the LRR estimator
-    automatically, and cannot drift from them.
-
-    Nothing in the notebook or the headless .py knows this file exists. Those
-    two were touched once, on 2026-09-01, to make the swept values settings
-    rather than literals and to give an off-default value a run-name token;
-    that is the whole of their involvement, and both changes stand on their own.
-
-BOTH PERIODS COME FREE
-    The period is `--start-year`, and everything period-specific is already in
-    HATTERAS_PERIODS. Nothing in this file knows what year it is.
-
-CELLS CANNOT COLLIDE WITH THE MATRIX, BUT THE TWO AXES DO IT DIFFERENTLY
-    Without some separator every cell would derive the SAME name as the matrix
-    run beside it, and the last one to finish would be left wearing the
-    production name -- the failure `output/calibration/groin/README.md` documents for
-    the rig sweep. Two mechanisms prevent it, and which one applies depends on
-    the axis:
-
-      * `relocation_setback` earns a NAME token (`rset40`) from
-        `cascade_pipeline.hindcast`, so the cell is a separate directory beside
-        the matrix run and a separate row in run_index.csv.
-
-      * The four WAVE axes earn one too (`waveHs1p2`), again since 2026-09-16.
-        Between 09-01 and 09-16 the runner filed a wave cell by a forcing ARM
-        under the matrix run's own name instead, which fanned one sweep out
-        into twelve top-level folders; the purpose layout put the token back.
-
-    Every cell is filed under raw_runs/sensitivity/<axis>/<period>/<preset>/
-    by run_registry: this driver sets HAT_RUN_KIND=sensitivity and the runner
-    derives the axis from the name's trailing token. The index key is
-    (run_name, kind, tag), so a cell and its baseline -- which differ only in
-    the token -- are two rows.
-
-WHAT IS SWEPT
-    Five axes, one at a time, each around its calibration value. Only the swept
-    parameter moves, so every cell differs from its baseline in exactly one
-    thing. Four are the wave climate; the fifth is the relocation target, which
-    is not wave physics but is the newest and least settled number in the
-    model -- `hat_run.yaml` records that 20 m clears the GIS 11 drowning
-    threshold by ONE 10 m cell.
-
-Usage:
-    python hindcast_sensitivity.py --start-year 1984 --param wave_height
-    python hindcast_sensitivity.py --start-year 1984 --param all --dry-run
-    python hindcast_sensitivity.py --start-year 2004 --param wave_height \\
-        --values 1.5,2.0,2.5
+Each cell is an ordinary run of HAT_hindcast_1984_2024.py with one HAT_ setting
+changed through the environment, filed under output/raw_runs/sensitivity/ and
+logged to output/calibration/sensitivity/sensitivity_<start>.jsonl for
+plot_sensitivity.py. Details: scripts/sensitivity_analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -97,67 +42,26 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_BASE_DIR / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 OUT_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "sensitivity"
 
-# The "each domain relocates to its own measured offset" case. The environment
-# carries strings, and an EMPTY string reads as unset in HAT_hindcast_config
-# (`if raw != ""`), so this case has to be spelled: "" would silently leave the
-# cell at the default and the result would be indistinguishable from one.
+# Spelled out: an empty string reads as unset and would run the default
 MEASURED = "measured"
+# -----------------------------------------------------------------------------
 
 
+# The arm the relocation-target axis has to be measured in, for a period
 def relocation_arm(start_year, end_year):
-    """The arm the relocation-target axis has to be measured in, for a period.
-
-    Period 1 holds the 1989 and 1999 events, and the drowning this axis asks
-    about is a prescribed DISPLACEMENT landing on top of the emergent target --
-    with the events off, the axis would measure something else and report a
-    reassuring flat line. So it forces them on there.
-
-    Period 2 holds no RelocationEvent (only the 2022 Jug Handle BridgeEvent),
-    so forcing them on would add a `reloc` token claiming history the period
-    does not have, and would name the cells for a baseline the matrix has never
-    run. There the axis moves EMERGENT relocations alone, which is a real but
-    different question, and the ordinary arm is the right one.
-
-    Read from HATTERAS_ROAD_EVENTS rather than by testing the year, so adding
-    an event to that table brings this with it.
-
-    Args:
-        start_year: Period start.
-        end_year: Period end.
-
-    Returns:
-        Environment overrides for the arm, possibly empty.
-    """
     events = [event for event in HATTERAS_ROAD_EVENTS
               if isinstance(event, RelocationEvent)
               and start_year <= event.year <= end_year]
     return {"HAT_RELOCATIONS": "true"} if events else {}
 
 
-# The swept axes. `setting` is the HAT_hindcast_config field, which fixes both
-# the environment name (HAT_ + upper case) and the default the name token is
-# measured against -- so a value equal to the default produces an untokened
-# name, which would be the matrix run. Those cells are skipped, not run.
-#
-# `arm` is a per-axis callable (start_year, end_year) -> environment overrides,
-# for an axis that would be inert or misnamed in the default arm. A callable
-# rather than a dict because whether the override is right DEPENDS ON THE
-# PERIOD -- see relocation_arm.
+# The swept axes: `setting` is the HAT_hindcast_config field; `arm` adds per-period overrides
 SWEEPS = {
-    # The four wave axes are centred on option A (Hs 2.0, Tp 7.5, asymmetry
-    # 0.6, high-angle 0.5; the defaults since 2026-09-27) and were set with
-    # Hannah on 2026-09-28. Each keeps one cell past where the 09-24..09-27
-    # wave studies (raw_runs/experiments/wave-climate/) saw the model break, so
-    # the record shows the edge rather than stopping short of it:
-    #   Hs 0.75 and Tp 12  -- the barrier drowned at Hs 0.75 / Tp 10 and at
-    #                         Tp 12 with Hs 1-1.25 (both at other settings)
-    #   asymmetry 0.5      -- below it the net drift reverses
-    #   high-angle 0.55    -- past ~0.5 most of the coast turns anti-diffusive
-    # The USGS hindcast mean Hs for this coast is ~1.2-1.3 m; 2.0 is a fitted
-    # value, and 2.0-2.5 was a flat optimum in the 09-27 Hs check.
+    # Wave axes centred on option A, each with one cell past where the model breaks
     "wave_height": {
         "setting": "hs",
         "label": "Wave height Hs",
@@ -183,18 +87,7 @@ SWEEPS = {
         "values": [0.3, 0.4, 0.45, 0.5, 0.55],
     },
 
-    # NOT wave physics, and swept for a different reason. 20 m was decided on
-    # 2026-09-01 because 30 m drowned NC-12 at GIS 11 in all eight 1984-2004
-    # reloc arms, and hat_run.yaml records that 20 clears that threshold by ONE
-    # 10 m cell. A number chosen with one cell of margin needs its margin
-    # measured rather than asserted. 0 is the GIS 85/86 ratchet in its purest
-    # form; MEASURED is the pre-2026-08-31 behaviour as it actually was.
-    #
-    # RUN WITH THE HISTORICAL EVENTS ON. The drowning being asked about is a
-    # prescribed 1999 DISPLACEMENT landing on top of the emergent target, so
-    # with the events off this axis would measure something else and report a
-    # reassuring flat line. Period 1 only: no event falls in 2004-2024, and
-    # there the axis moves emergent relocations alone.
+    # Relocation target: its margin over the GIS 11 drowning, run with the historical events on
     "relocation_setback": {
         "setting": "relocation_setback_m",
         "label": "Relocation target",
@@ -205,42 +98,21 @@ SWEEPS = {
 }
 
 
+# One swept value as the run will see it: a float, or None for `measured`
 def normalise(value):
-    """One swept value as the run will see it: a float, or None for `measured`.
-
-    Comparison against the default has to happen on this, not on what was
-    typed. 20, "20" and 20.0 are one cell and MEASURED and None are one cell,
-    but `20 == "20"` and `"measured" == None` are both False, and either would
-    run a duplicate of the baseline under a name that hides which one it is.
-    """
     if value is None or (isinstance(value, str)
                          and value.strip().lower() in ("", "none", MEASURED)):
         return None
     return float(value)
 
 
+# One swept value, spelled for the environment
 def as_environment_value(value):
-    """One swept value, spelled for the environment."""
     return MEASURED if normalise(value) is None else repr(normalise(value))
 
 
+# The environment one sweep cell runs under, as HAT_run_all.run_once builds it
 def build_environment(start_year, sweep, value, args):
-    """The environment one sweep cell runs under.
-
-    Mirrors `HAT_run_all.run_once`, including HAT_IGNORE_SETTINGS: without it
-    the settings this does not set would come from whatever experiment was last
-    left in `hat_run.yaml`, and every cell would silently inherit it. Stray
-    HAT_* variables in the calling shell are dropped for the same reason.
-
-    Args:
-        start_year: Period start, a key of HATTERAS_PERIODS.
-        sweep: One entry of SWEEPS.
-        value: The value for this cell.
-        args: Parsed CLI arguments.
-
-    Returns:
-        The environment dict for subprocess.
-    """
     environment = {key: val for key, val in os.environ.items()
                    if not key.startswith("HAT_")}
     environment.update({
@@ -256,64 +128,36 @@ def build_environment(start_year, sweep, value, args):
         "HAT_MAKE_GIFS": "false",     # 30+ cells x 4 GIFs is files nobody reads
         "HAT_SAVE_MODEL_STATE": "false",
         "MPLBACKEND": "Agg",
-        # The child prints a few non-ASCII characters (arrows, en dashes);
-        # without this its stdout is cp1252 on Windows and the capture below
-        # raised UnicodeDecodeError on every cell (2026-09-16).
+        # The child prints non-ASCII; force UTF-8 so the capture decodes
         "PYTHONIOENCODING": "utf-8",
     })
-    # The axis's own arm first, then the swept value. In this order, so an axis
-    # can move the arm it is measured in but cannot overwrite the one value
-    # that defines the cell.
+    # The axis's arm first, then the swept value, so the arm cannot overwrite the cell
     environment.update(arm_for(sweep, start_year, args.end_year))
     environment[env_name(sweep)] = as_environment_value(value)
     return environment
 
 
+# The environment variable HAT_hindcast_config reads for this axis
 def env_name(sweep):
-    """The environment variable HAT_hindcast_config reads for this axis."""
     return "HAT_" + sweep["setting"].upper()
 
 
+# The environment overrides this axis needs for this period, possibly none
 def arm_for(sweep, start_year, end_year):
-    """The environment overrides this axis needs for this period, possibly none."""
     arm = sweep.get("arm")
     return {} if arm is None else arm(start_year, end_year)
 
 
+# The values of a sweep worth running: the calibration default is skipped
 def cells_for(sweep):
-    """The values of a sweep that are worth running.
-
-    A value equal to the calibration default produces no name token, so the run
-    would derive -- and collide with -- the matrix run's own directory. That
-    cell is not a sensitivity result anyway: it IS the baseline, and reading it
-    from there is both free and more honest than re-running it under a name
-    that hides which one it is.
-
-    Args:
-        sweep: One entry of SWEEPS.
-
-    Returns:
-        (runnable_values, skipped_default) where skipped_default is the
-        calibration value if it appears in the sweep, else None.
-    """
     default = normalise(field_default(sweep["setting"]))
     runnable = [v for v in sweep["values"] if normalise(v) != default]
     present = any(normalise(v) == default for v in sweep["values"])
     return runnable, (default if present else None)
 
 
+# Run one sweep cell and return its outcome for the manifest
 def run_cell(start_year, sweep, value, args):
-    """Runs one sweep cell and returns its outcome.
-
-    Args:
-        start_year: Period start year.
-        sweep: One entry of SWEEPS.
-        value: The parameter value for this cell.
-        args: Parsed CLI arguments.
-
-    Returns:
-        A dict recording the cell, suitable for the manifest.
-    """
     environment = build_environment(start_year, sweep, value, args)
     row = dict(setting=sweep["setting"], value=value, ok=True, seconds=0.0,
                detail="dry-run")
@@ -334,8 +178,7 @@ def run_cell(start_year, sweep, value, args):
         detail = "\n".join(tail[-6:]) or completed.stderr[-400:]
         print(f"      FAILED exit {completed.returncode}\n{detail}")
     else:
-        # The run prints where it landed; echoing it makes the sweep log a map
-        # from parameter value to directory without a second convention.
+        # Echo where the run landed, so the sweep log maps value to directory
         landed = [line for line in completed.stdout.splitlines()
                   if line.startswith("done ")]
         detail = landed[-1].split(None, 1)[1].strip() if landed else ""
@@ -344,6 +187,7 @@ def run_cell(start_year, sweep, value, args):
     return row
 
 
+# Run: every cell of the chosen sweeps, appending each outcome to the manifest
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--start-year", type=int, default=1984,
