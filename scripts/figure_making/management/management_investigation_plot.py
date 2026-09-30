@@ -61,10 +61,7 @@ COASTSAT_LABEL = "CoastSat LRR (1984–2004)"   # label shown in legend
 START_YEAR = 1984
 END_YEAR   = 2004
 
-# RUN PATHS
-# Keys   = labels shown on the plot (keep them short)
-# Values = path to the saved run folder (must contain the run's .npz archive)
-# Order sets plotting order (first = bottom of legend); any number of scenarios
+# Runs to compare: legend label -> saved run folder (with its .npz); order sets the legend order
 
 RUN_PATHS = {
     "Natural": (

@@ -1,26 +1,15 @@
 """
-clip_nc_coast.py
-==============================================================================
-Rebuild data/hatteras_init/map_elements/nc_coast_80k/ from the NC 1:80k
-coastline on the D: GIS drive.
+Rebuild the clipped NC 1:80k coastline the figures read, from the source on the D: GIS drive.
 
     python scripts/figure_making/tools/clip_nc_coast.py
 
-WHY
-    The overwash maps drew the coast straight off
-    D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp -- 6 MB for the whole state --
-    so they could not be made without the drive. They only ever use the land
-    in a window a few km around the domain boxes, so the repository keeps that
-    window: every polygon within NC_COAST_PAD_M (25 km) of the boxes, clipped,
-    as a geojson (0.75 MB) in EPSG:4326 like its source.
-
-    Re-run it only if the source changes; the output is what the figures read.
-==============================================================================
+Keeps every polygon within NC_COAST_PAD_M of the domain boxes; writes
+data/hatteras_init/map_elements/nc_coast_80k/. Needs the D: drive. Details: scripts/figure_making/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-09-30
 """
 
 from __future__ import annotations
@@ -38,6 +27,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_map_layers as ml  # noqa: E402
 
 
+# Run: clip the state coastline to the padded domain window and save it
 def main():
     if not ml.NC_COAST_SOURCE.exists():
         raise SystemExit(f"\n{ml.NC_COAST_SOURCE} is not reachable: connect "

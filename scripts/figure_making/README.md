@@ -28,6 +28,10 @@ superseded_20260914/
 model_output/superseded_20260918/   the two 1978-1997 gif scripts; see WHY.md
 ```
 
+Each folder has a README listing its scripts, what not to trust, and each
+script's original header and code notes, word for word (moved there when the
+scripts were brought in line with `scripts/STYLE.md`, 2026-09-30).
+
 ## Where the figures go
 
 **Not here.** Products land under `output/` — rule 1 of `ORGANIZATION.md`:

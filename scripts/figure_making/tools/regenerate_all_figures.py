@@ -1,24 +1,10 @@
 """
-regenerate_all_figures.py
-==============================================================================
-Redraws every figure published under output/figures/ from its own script, in
-the numbered layout's order, then rewrites the index (output/figures/README.md).
+Redraw every figure published under output/figures/ from its own script, then rewrite the index.
 
-    python scripts/figure_making/tools/regenerate_all_figures.py            # everything
-    python scripts/figure_making/tools/regenerate_all_figures.py --only 4-model-mechanics
-    python scripts/figure_making/tools/regenerate_all_figures.py --list
+    python scripts/figure_making/tools/regenerate_all_figures.py [--only 4-model-mechanics] [--list]
 
-WHY IT EXISTS
-    output/figures/ is gitignored and fed by ~25 scripts, so "are the figures up
-    to date?" had no answer short of remembering which script drew what. On
-    2026-09-29, 44 of 182 figures were still from 09-17, before option-A waves
-    and the 09-28 adoption. This is the answer now: one list of producers, run
-    in order, each one's log kept, failures reported at the end rather than
-    stopping the rest. Add a producer here when a script starts publishing to
-    output/figures/.
-
-    The logs go to output/logs/scratch/figures_<timestamp>/, one per step.
-==============================================================================
+Runs each producer in STEPS in the numbered layout's order, logging each to
+output/logs/scratch/figures_<timestamp>/ and reporting failures at the end. Details: scripts/figure_making/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -39,6 +25,7 @@ REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml"
 S = "scripts/"
 
 # (top folder it fills, label, command). Order = the layout's order.
+# --- CONFIG ------------------------------------------------------------------
 STEPS = [
     ("1-site", "site maps", [S + "figure_making/island/study_area_figures.py"]),
     ("2-observations", "CoastSat periods", [S + "figure_making/shoreline/plot_coastsat_calibration_periods.py"]),
@@ -73,14 +60,16 @@ STEPS = [
 INDEX = [S + "figure_making/tools/figure_index.py"]
 FIGURES = REPO / "output" / "figures"
 PRODUCERS = FIGURES / "supporting" / "producers.json"   # read by figure_index.py
+# -----------------------------------------------------------------------------
 
 
+# {path under output/figures: mtime} for every published PNG
 def png_times() -> dict[str, float]:
-    """{path under output/figures: mtime} for every published PNG."""
     return {p.relative_to(FIGURES).as_posix(): p.stat().st_mtime
             for p in FIGURES.rglob("*.png") if "supporting" not in p.parts}
 
 
+# Run: each producer in order, record what it redrew, then the index
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[3])
     ap.add_argument("--only", nargs="+", metavar="FOLDER",

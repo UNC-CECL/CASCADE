@@ -1,37 +1,15 @@
 """
-figure_index.py
-==============================================================================
-Writes `output/figures/README.md`, the map of the figures: the layout, a
-"where do I find..." table, and one table per folder listing every figure,
-what it shows, the script that draws it and the day it was drawn.
+Write output/figures/README.md: the figure layout, every figure with what it shows and what drew it.
 
     python scripts/figure_making/tools/figure_index.py
 
-Re-run after adding or redrawing a figure; `regenerate_all_figures.py` runs it
-at the end.
-
-WHY IT IS GENERATED
-    A hand-kept index of a folder ~25 scripts write into is stale the day after
-    it is written, and a wrong index is worse than none. Everything in the
-    table is recorded beside the figures:
-      * "shows" is the first sentence of the figure's entry in its folder's
-        `supporting/CAPTIONS.md`;
-      * "drawn by" comes from `supporting/producers.json`, which
-        `regenerate_all_figures.py` writes by noting which files each producer
-        touched; for a figure redrawn by hand since, it falls back to searching
-        the scripts tree for the figure's file name;
-      * "drawn" is the PNG's modification date, so a stale figure shows.
-    A dash in "shows" or "drawn by" is a real finding: nobody wrote down what
-    the figure shows, or nothing can reproduce it.
-
-THE LAYOUT (Hannah, 2026-09-29): numbered in the paper's order, see LAYOUT.
-    The folder names come from hat_figure_style.FIGURE_SUBJECTS / INPUT_STEPS.
-==============================================================================
+Captions from each folder's supporting/CAPTIONS.md, producers from
+regenerate_all_figures.py's record (or a search of scripts/). Details: scripts/figure_making/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 from __future__ import annotations
 
@@ -45,13 +23,12 @@ REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml"
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_figure_style as _hs  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 FIGURES = _hs.FIGURES_ROOT
 SCRIPTS = REPO / "scripts"
 PRODUCERS = FIGURES / "supporting" / "producers.json"
 
-# Every folder that holds figures, in reading order, with one line saying what
-# it answers. A folder on disk that is missing here is listed under "other" so
-# it cannot hide.
+# Every figure folder, in reading order, with the question it answers; unknown folders go under other
 LAYOUT = {
     "1-site": "Where the reach is, how the 90 model domains tile it, and what one domain is.",
     "2-observations": "What was measured: CoastSat shoreline, the digitised dune lines, the mean shoreline on imagery.",
@@ -80,8 +57,7 @@ LAYOUT = {
     "style": "The house style sheet every figure is drawn under.",
 }
 
-# "Where do I find ...": the questions people actually ask, pointed at a path
-# under output/figures/. Each path is checked; a missing one is flagged.
+# Where do I find ...: common questions pointed at checked paths
 FAQ = [
     ("Where is the study area / a map of the domains?", "1-site/study_area.png"),
     ("Which way do the domain numbers run?", "4-model-mechanics/brie/brie_domain_orientation.png"),
@@ -102,18 +78,19 @@ FAQ = [
     ("What does each management scenario do?", "5-results/scenario_grid.png"),
 ]
 SKIP_PARTS = {"supporting", "talk"}
+# -----------------------------------------------------------------------------
 
 
+# A caption's first sentence, written to stand alone
 def first_sentence(text: str) -> str:
-    """The caption's first sentence, which is written to stand alone."""
     text = " ".join(text.split())
     m = re.search(r"(.+?\.)(?:\s|$)", text)
     s = (m.group(1) if m else text)
     return s if len(s) <= 220 else s[:217].rstrip() + "…"
 
 
+# {figure file name: caption} from a folder's supporting/CAPTIONS.md
 def captions(folder: Path) -> dict[str, str]:
-    """{figure file name: caption} from the folder's supporting/CAPTIONS.md."""
     md = folder / "supporting" / "CAPTIONS.md"
     if not md.is_file():
         return {}
@@ -124,11 +101,8 @@ def captions(folder: Path) -> dict[str, str]:
     return out
 
 
+# {file name: caption} from every CAPTIONS.md under data/ and output/comparisons/
 def source_captions() -> dict[str, str]:
-    """{file name: caption} from every CAPTIONS.md under data/ and
-    output/comparisons/. A figure PUBLISHED as a copy (the mean-shoreline
-    images, copied from data/hatteras_init/5-scr/) has its caption beside the
-    original, not beside the copy; this finds it by file name."""
     out: dict[str, str] = {}
     for root in (REPO / "data", REPO / "output" / "comparisons"):
         for md in root.rglob("CAPTIONS.md"):
@@ -140,16 +114,15 @@ def source_captions() -> dict[str, str]:
     return out
 
 
+# {path under output/figures: script}, as regenerate_all_figures.py recorded it
 def recorded_producers() -> dict[str, str]:
-    """{path under output/figures: script} as regenerate_all_figures.py saw it."""
     if PRODUCERS.is_file():
         return json.loads(PRODUCERS.read_text(encoding="utf-8"))
     return {}
 
 
+# {figure stem: script}, by searching scripts/ for the file name
 def searched_producers() -> dict[str, str]:
-    """{figure stem: script}, by searching the scripts tree for the file name.
-    The fallback for a figure redrawn by hand after the last full regeneration."""
     hits: dict[str, str] = {}
     for py in SCRIPTS.rglob("*.py"):
         if "__pycache__" in py.parts or "superseded" in str(py):
@@ -161,15 +134,15 @@ def searched_producers() -> dict[str, str]:
     return hits
 
 
+# Every folder under output/figures holding a PNG, talk/ and supporting/ aside
 def figure_dirs() -> list[Path]:
-    """Every folder under output/figures holding a PNG, talk/ and supporting/ aside."""
     dirs = {p.parent for p in FIGURES.rglob("*.png")}
     return sorted(d for d in dirs
                   if not SKIP_PARTS.intersection(d.relative_to(FIGURES).parts))
 
 
+# The layout as an indented tree with figure counts
 def tree_lines() -> list[str]:
-    """The layout as an indented tree with figure counts."""
     lines = ["```", "output/figures/"]
     for key, blurb in LAYOUT.items():
         d = FIGURES / key
@@ -188,6 +161,7 @@ def tree_lines() -> list[str]:
     return lines
 
 
+# Run: gather captions and producers, write the README
 def main() -> Path:
     recorded = recorded_producers()
     searched = searched_producers()

@@ -1,4 +1,11 @@
 """
+Show one saved .npy elevation array as an image.
+
+    python scripts/figure_making/tools/npy_view.py
+
+The path is typed at the top and points into data/hatteras_init/topography/2009_FIXED/,
+a folder that no longer exists: edit it before use. Details: scripts/figure_making/tools/README.md.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu

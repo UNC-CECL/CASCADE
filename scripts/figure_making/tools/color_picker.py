@@ -1,4 +1,11 @@
 """
+Preview a linear colour gradient between two hex colours, with each step's hex code.
+
+    python scripts/figure_making/tools/color_picker.py
+
+Edit the two colours and the step count at the top; shows the swatches in a
+window. Needs the rgb_gradient package. Details: scripts/figure_making/tools/README.md.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu

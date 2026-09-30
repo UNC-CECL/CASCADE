@@ -115,7 +115,6 @@ def load_history(run_dir):
     x_s_initial = np.array([float(model.x_s_TS[0]) for model in inner])
 
     # The road moves too: its setback is measured from a retreating dune line
-    # road_rows() renders as NaN rather than as a road at the dune line.
     roadways = getattr(cascade, "_roadways", None) or []
 
     # Where the road is comes from this run's own roadway mask, not the whole reach (README)
