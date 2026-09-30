@@ -135,3 +135,11 @@ unsmoothed model's domain-scale swings still count as error.
 - **1996–2010:** the model sits roughly on CoastSat but about 10 m seaward of the dune line. The dune line retreats island-wide while the model holds, and that retreat may be an imagery artefact.
 - **2010–2024:** the model erodes past CoastSat (about −24 m against the window's own rate, the 2021 step).
 - **Only the offset study adds:** a shoreline-built offset fits slightly better at the domain scale (+3–4 points raw, level when smoothed). So the offset source is a small lever and not the cause of the 2010–2024 failure.
+
+## Both offsets against projected change (added 2026-09-29)
+
+Drawn from this study's full-management runs, but filed in
+`output/comparisons/offset_source/` (see its README):
+`offset_source_model_change_vs_projected_full_management.png`, both periods,
+the projected target (CoastSat LRR 1996-2024, LOWESS 7, x 14 yr) on top;
+scores in `tables/vs_projected.csv` there.

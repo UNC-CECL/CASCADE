@@ -246,16 +246,18 @@ def plot_buffer_diagnostic(padded, year, padding, output_dir, output_basename):
         open_frame(ax)
     ax_o.plot(x, padded / 1000.0, color=C["INK"], lw=1.4)
     ax_o.plot(x[real], padded[real] / 1000.0, color=C["LATE"], lw=1.8)
-    ax_o.set_ylabel(f"{FEATURE_LABEL} offset (km)")
-    _title(ax_o, 0, f"Island offset as written, {year}{(' ' + VERSION) if VERSION else ''}")
+    ax_o.set_ylabel("Cross-shore offset (km)")
+    # No build version in the title: the folder carries it, and a title naming
+    # it went stale when the builds were renumbered v2 -> v1 (2026-09-28).
+    _title(ax_o, 0, f"Initial {FEATURE_NOUN} offset, {year}")
     # the wrap from the last domain back to the first is drawn at the right end
     ax_t.plot(x, theta, color=C["INK"], lw=1.2)
     for sign in (1, -1):
         ax_t.axhline(sign * UNSTABLE_ANGLE_DEG, color=C["ACCENT"], lw=0.9, ls="--")
     ax_t.axhline(0, color=INK_MUTED, lw=0.6)
-    ax_t.set_ylabel("Shoreline angle to the\nnext domain (degrees)")
-    ax_t.set_xlabel("Padded domain, numbered as GIS (shaded: buffer domains)")
-    _title(ax_t, 1, "Angle BRIE reads")
+    ax_t.set_ylabel("Shoreline angle (°)")
+    ax_t.set_xlabel("Alongshore domain (GIS numbering)")
+    _title(ax_t, 1, "Shoreline orientation between adjacent domains")
     path = Path(output_dir) / f"{output_basename}_buffer_diagnostic.png"
     save(fig, path, vector=False, dpi=200, close=True)
     record_caption(path, (

@@ -223,6 +223,26 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
              "the m/yr twin of `total_change/`."),
         ],
     ),
+    (
+        "Does the island offset's source matter?",
+        "BRIE's island offset built from the 1997 dune line or from the mean "
+        "CoastSat shoreline (1995–1997). Full management, option A waves, "
+        "zeroBE; within a pair only the offset differs.",
+        [
+            ("Start here: both starts against the target",
+             f"{OUT}/offset_source/"
+             "offset_source_model_change_vs_projected_full_management.png",
+             "both periods, against projected change (1996–2024 LRR x 14 yr, "
+             "LOWESS 7). **Barely**: bias and RMS differ by under 0.5 m."),
+            ("How far apart the two runs are",
+             f"{OUT}/offset_source/offset_source_difference_full_management.png",
+             "both periods, no observation; about 3 m on average, up to 15–18 m."),
+            ("What drives the difference",
+             f"{OUT}/offset_source/"
+             "offset_source_orientation_vs_model_full_management.png",
+             "the offset's turning (embayments, bulges), not its orientation."),
+        ],
+    ),
 ]
 
 # Item 4 of the 2026-09-21 tidy: model_vs_observed slices by OBSERVATION while

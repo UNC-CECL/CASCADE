@@ -75,6 +75,16 @@ CoastSat against the dune line, with the runs, as **net change in metres** over 
 | The same, as rates (m/yr) | `output/comparisons/target_comparison/projected/change_rate/paired/target_and_own_run_projected_rate_<w>.png` <br>*windows:* 1996_2010, 2010_2024 | every figure above divided back by 14 yr: the CoastSat LRR, the dune line's measured rate (no scaling to the window), the model's endpoint rate. `_rate` in every stem; same layout, own `tables/skill.csv` in m/yr. |
 | ...on each window's own rate | `output/comparisons/target_comparison/total_change/change_rate/paired/target_and_own_run_total_change_rate_<w>.png` <br>*windows:* 1996_2010, 2010_2024 | the m/yr twin of `total_change/`. |
 
+## Does the island offset's source matter?
+
+BRIE's island offset built from the 1997 dune line or from the mean CoastSat shoreline (1995–1997). Full management, option A waves, zeroBE; within a pair only the offset differs.
+
+| for | open | note |
+|---|---|---|
+| Start here: both starts against the target | `output/comparisons/offset_source/offset_source_model_change_vs_projected_full_management.png` | both periods, against projected change (1996–2024 LRR x 14 yr, LOWESS 7). **Barely**: bias and RMS differ by under 0.5 m. |
+| How far apart the two runs are | `output/comparisons/offset_source/offset_source_difference_full_management.png` | both periods, no observation; about 3 m on average, up to 15–18 m. |
+| What drives the difference | `output/comparisons/offset_source/offset_source_orientation_vs_model_full_management.png` | the offset's turning (embayments, bulges), not its orientation. |
+
 ## Cross-reference: what `model_vs_observed/` actually plots
 
 That tree is sliced by which **observation** the model is held against, while `3-rates/` and `4-comparisons/` are sliced by **estimator**. Same underlying observations, different question, so the folder names do not line up. This is the translation:

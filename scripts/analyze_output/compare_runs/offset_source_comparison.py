@@ -30,9 +30,16 @@ QUANTITIES  per GIS domain (500 m), shoreline start minus dune-line start
 
 OUTPUT   output/comparisons/offset_source/
     offset_source_model_change_full_management.png  the two runs, both periods
+    offset_source_model_change_vs_projected_full_management.png
+                    the same, with the projected target on top (2026-09-29)
     offset_source_difference_full_management.png   profiles
     offset_source_orientation_vs_model_full_management.png   scatter
-    tables/summary.csv, tables/per_domain.csv
+    tables/summary.csv, tables/per_domain.csv, tables/vs_projected.csv
+
+TARGET  (second version of the change figure, Hannah 2026-09-29) projected
+    shoreline change: the CoastSat LRR fitted on 1996-2024, LOWESS over 7
+    domains (southern 10 raw), x 14 yr -- one profile, the same in both
+    periods. The model stays unsmoothed.
 
 USAGE
     python scripts/analyze_output/compare_runs/offset_source_comparison.py
@@ -72,6 +79,42 @@ COL = {"duneline": "#1b7f6b", "shoreline": "#6a3d9a"}   # as in the study's figu
 DX_M = 500.0              # BarrierLength: one GIS domain
 YEARS = 14
 INTERIOR = (2, 89)
+LOWESS_DOMAINS = 7         # the group's smoothing range
+SKIP_SOUTHERN = 10
+
+
+def projected_target():
+    """Projected shoreline change (m): the 1996-2024 CoastSat LRR target, built
+    as the runner builds it at LOWESS_DOMAINS, x YEARS."""
+    from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS
+    from cascade_pipeline.hindcast import build_target_table
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
+                                                 build_coastsat_series)
+    ds = CoastSatDataset(label="CoastSat LRR (1996-2024)", period_start=1996,
+                         csv_path=str(COASTSAT_LRR_ROOT / "1996_2024" / "transect_lrr_full.csv"))
+    cfg = LowessConfig(window_domains=(LOWESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
+    cs = build_coastsat_series([ds], active_period_start=1996, lowess_config=cfg,
+                               domains=HATTERAS_DOMAINS)[0]
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOWESS_DOMAINS).set_index(
+        "gis_domain")["target_lrr_m_yr"] * YEARS
+
+
+def vs_target(t, obs):
+    """Each run against the projected target, interior GIS 2-89: bias and RMS
+    residual are the numbers to read; explained and r beside them."""
+    rows = []
+    for start, end in PERIODS:
+        p = t[t.period == f"{start}_{end}"].set_index("gis_domain").loc[INTERIOR[0]:INTERIOR[1]]
+        o = obs.reindex(p.index)
+        for src in SOURCES:
+            m = p[f"model_change_{src}_m"]
+            res = m - o
+            rows.append(dict(period=f"{start}-{end}", offset=src, bias_m=res.mean(),
+                             rms_residual_m=np.sqrt((res ** 2).mean()),
+                             variance_explained=1 - (res ** 2).sum() / ((o - o.mean()) ** 2).sum(),
+                             r=np.corrcoef(m, o)[0, 1]))
+    return pd.DataFrame(rows)
 
 
 def run_dir(src, start, end):
@@ -195,8 +238,9 @@ def fig_profiles(t):
     return png
 
 
-def fig_change_only(t):
+def fig_change_only(t, obs=None, scores=None):
     """Panels (a, b) of the profile figure on their own: the two runs' change.
+    With `obs`, the second version: the projected target drawn on top of them.
     Every label stays out of the data (Hannah, 2026-09-28): the villages and
     shoals are named in a strip above the highest line, and the groin and
     piers are drawn below that strip and named in the legend, not on the lines."""
@@ -207,7 +251,9 @@ def fig_change_only(t):
     DATA_TOP = 0.78       # axes fraction the highest line may reach
     f, axes = plt.subplots(1, 2, figsize=figsize("double", height=3.1), sharey=True,
                            constrained_layout=True)
-    vals = t[[f"model_change_{s}_m" for s in SOURCES]].to_numpy()
+    vals = t[[f"model_change_{s}_m" for s in SOURCES]].to_numpy().ravel()
+    if obs is not None:
+        vals = np.concatenate([vals, obs.to_numpy()])
     lo, hi = np.nanmin(vals), np.nanmax(vals)
     y0 = lo - 0.04 * (hi - lo)
     ylim = (y0, y0 + (hi - y0) / DATA_TOP)
@@ -216,6 +262,8 @@ def fig_change_only(t):
         ax = axes[j]
         for src in SOURCES:
             ax.plot(p.index, p[f"model_change_{src}_m"], color=COL[src], lw=1.2, zorder=4)
+        if obs is not None:
+            ax.plot(obs.index, obs.values, color=INK, lw=1.8, zorder=5)
         ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
         ax.set_xlim(0.5, 90.5)
         ax.set_ylim(*ylim)
@@ -236,8 +284,11 @@ def fig_change_only(t):
                        ls=(0, (1.5, 1.5)), zorder=3)
         _title(ax, j, f"{start}–{end}")
         ax.set_xlabel(DOMAIN_AXIS_LABEL)
-    axes[0].set_ylabel("Modelled change (m)")
-    f.legend(handles=[Line2D([], [], color=COL["duneline"], lw=1.2, label="Started from the dune line"),
+    axes[0].set_ylabel("Modelled change (m)" if obs is None else "Shoreline change (m)")
+    target = ([Line2D([], [], color=INK, lw=1.8,
+                      label="Projected CoastSat position")]
+              if obs is not None else [])
+    f.legend(handles=target + [Line2D([], [], color=COL["duneline"], lw=1.2, label="Started from the dune line"),
                       Line2D([], [], color=COL["shoreline"], lw=1.2, label="Started from the shoreline"),
                       Line2D([], [], color=INK, lw=0.7, label="Buxton groin"),
                       Line2D([], [], color=INK_MUTED, lw=0.6, ls=(0, (1.5, 1.5)),
@@ -245,6 +296,25 @@ def fig_change_only(t):
                       Patch(color=C["ADDED"], alpha=0.25, label="Shoals"),
                       Patch(color="0.94", label="Villages")],
              loc="outside lower center", ncol=3, frameon=False)
+    if obs is not None:
+        png = OUT / "offset_source_model_change_vs_projected_full_management.png"
+        save(f, png, close=True)
+        sc = "; ".join(
+            f"{r.period} {'dune line' if r.offset == 'duneline' else 'shoreline'} bias "
+            f"{r.bias_m:+.1f} m, RMS residual {r.rms_residual_m:.1f} m"
+            for r in scores.itertuples())
+        record_caption(png, (
+            "Modelled total shoreline change, each run's LRR x 14 yr, seaward positive, with the "
+            "island offset taken from the dune line (green) or from the shoreline (purple), "
+            "against PROJECTED shoreline change (black): the CoastSat LRR fitted on 1996-2024, "
+            "LOWESS over 7 domains (southern 10 raw), x 14 yr -- the same profile in both "
+            "panels, carried onto each period rather than fitted on it; the model is "
+            "unsmoothed. (a) 1996-2010, (b) 2010-2024. The version of "
+            "offset_source_model_change_full_management.png with the target on top. Interior "
+            "GIS 2-89, model minus target: " + sc + " (tables/vs_projected.csv). Amber: Avon "
+            "and Wimble Shoals; solid line: Buxton groin; dotted lines: the Avon (GIS 26) and "
+            "Rodanthe (GIS 79) piers; grey bands: villages." + COMMON))
+        return png
     png = OUT / "offset_source_model_change_full_management.png"
     save(f, png, close=True)
     record_caption(png, (
@@ -307,9 +377,14 @@ def main():
     (OUT / "tables").mkdir(parents=True, exist_ok=True)
     t.to_csv(OUT / "tables" / "per_domain.csv", index=False)
     summary.to_csv(OUT / "tables" / "summary.csv", index=False)
-    for png in (fig_profiles(t), fig_change_only(t), fig_scatter(t, summary)):
+    obs = projected_target()
+    scores = vs_target(t, obs)
+    scores.to_csv(OUT / "tables" / "vs_projected.csv", index=False)
+    for png in (fig_profiles(t), fig_change_only(t), fig_change_only(t, obs, scores),
+                fig_scatter(t, summary)):
         print(png.relative_to(_REPO))
     print(summary.drop(columns=["duneline_run", "shoreline_run"]).round(2).T.to_string())
+    print(scores.round(3).to_string(index=False))
     return 0
 
 
