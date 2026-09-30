@@ -55,6 +55,9 @@ START_REAL_INDEX = NUM_BUFFER_DOMAINS             # = 15
 END_REAL_INDEX   = START_REAL_INDEX + NUM_REAL_DOMAINS  # = 105
 DOMAIN_TICK_STEP    = 5
 DOMAIN_SPACING_M    = 500   # metres per CASCADE domain (used to convert window_domains → km)
+
+# Section 2: file paths
+
 # Paths resolved from the repo root, never typed
 PROJECT_BASE_DIR = next(
     p for p in pathlib.Path(__file__).resolve().parents
@@ -212,6 +215,8 @@ LOWESS_SKIP_SOUTHERN_DOMAINS = 10
 # -----------------------------------------------------------------------------
 
 
+# Helper functions — domain utilities
+
 # GIS domain ID (1-based) -> CASCADE padded array index
 def _gis_to_pad(gis_id):
     return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
@@ -241,6 +246,8 @@ def assign_run_colors(runs):
 
     return fixed_runs + auto_runs if fixed_runs else auto_runs
 
+
+# Helper functions — data loading
 
 # A run's (gis_ids, LRR m/yr, run_dir), resolved by run_registry unless run_dir is given
 def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
@@ -374,6 +381,8 @@ def splice_lowess_with_raw_south(win_gis_x, win_smoothed, skip_n=None):
     mask = win_gis_x > skip_n
     return win_gis_x[mask], win_smoothed[mask]
 
+
+# Helper functions — geographic annotations
 
 # Shoals, villages, piers and groin on an axis in GIS domain units
 def add_geographic_annotations(ax):
