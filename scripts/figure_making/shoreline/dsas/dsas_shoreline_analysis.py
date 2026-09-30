@@ -130,6 +130,7 @@ period_names = {
 }
 
 
+# Option 1: sequential colour scheme, all periods on one axis
 fig, ax = plt.subplots(figsize=figsize("double", height=3.32))
 
 colors_seq = ['#08519c', '#3182bd', '#6baed6', '#c6dbef']
@@ -157,6 +158,7 @@ print("✓ Saved: v1_sequential_colors.png")
 plt.close()
 
 
+# Option 2: faceted panels, one per period
 fig, axes = plt.subplots(4, 1, figsize=figsize("double", height=5.61), sharex=True)
 
 colors_distinct = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
@@ -184,6 +186,7 @@ print("✓ Saved: v2_faceted.png")
 plt.close()
 
 
+# Option 3: early vs recent comparison
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize("double", height=2.49), sharey=True)
 
 if 'EPR_1978_1987' in domain_rates.columns:
@@ -225,6 +228,7 @@ print("✓ Saved: v3_early_vs_recent.png")
 plt.close()
 
 
+# Option 4: calibration periods only, the cleanest for CASCADE comparison
 if 'EPR_1978_1997' in domain_rates.columns and 'EPR_1997_2019' in domain_rates.columns:
     fig, ax = plt.subplots(figsize=figsize("double", height=3.32))
     
