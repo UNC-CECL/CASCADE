@@ -40,7 +40,9 @@ import HAT_wave_grid_smoothed_score as G  # noqa: E402
 import HAT_metres_2_wave_sensitivity_plot as p2  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     INK, INK_MUTED, DOMAIN_AXIS_LABEL, _title, apply_style, open_frame, record_caption, save,
-    structures, support_dir, town_bands)
+    C, STRUCTURE_LABEL_PT, structures, support_dir, town_bands)
+from site_layer.hatteras_site_config import (  # noqa: E402
+    HATTERAS_ANNOTATIONS, HATTERAS_NOURISHMENT_PROJECTS)
 
 common = G.common
 EXP = G.RAW_RUNS / "experiments" / "wave-climate"
@@ -68,6 +70,46 @@ def zerobe():
 def final():
     t = scored(EXP / "2026-09-27-wave-grid-fixed-ends" / "tables" / "all_runs.csv")
     return t.drop_duplicates(["scenario", "period_start", *K])
+
+
+def observed_change_smoothed(period):
+    """Observed end-minus-start change, smoothed as the target is
+    (common.smooth_like_target: LOWESS at common.SMOOTH_DOMAINS, the southern
+    10 raw). The 5-scr table carries 0/3/5/10 only, so 7 is built from its raw
+    (window 0) column (Hannah, 2026-09-28: the group's range is 7)."""
+    f = (p2.INIT_ROOT / "5-scr" / "3-rates" / "coastsat" / "total_change"
+         / p2.study.window(period) / "smoothed" / "tables" / "domain_smoothed.csv")
+    d = pd.read_csv(f)
+    return common.smooth_like_target(d[d.window_domains == 0].set_index("domain_number")["observed_m"])
+
+
+def draw_shoals(ax, label=True, label_pt=STRUCTURE_LABEL_PT):
+    """Shoal zones as faint hatched boxes, as coastsat_lrr_windows.draw_shoals
+    (5-scr/3-rates) draws them, named at the bottom when `label`."""
+    matplotlib.rcParams["hatch.linewidth"] = 0.5
+    for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
+        kw = dict(transform=ax.get_xaxis_transform(), facecolor="none", zorder=0.8, clip_on=True)
+        ax.add_patch(plt.Rectangle((lo - 0.5, 0), hi - lo + 1, 1, hatch="///",
+                                   edgecolor=C["ADDED"], lw=0, alpha=0.30, **kw))
+        ax.add_patch(plt.Rectangle((lo - 0.5, 0), hi - lo + 1, 1, edgecolor=C["ADDED"],
+                                   lw=0.6, alpha=0.55, **kw))
+        if label:
+            ax.text((lo + hi) / 2, 0.02, name, transform=ax.get_xaxis_transform(),
+                    ha="center", va="bottom", fontsize=label_pt, color="#8a620e", zorder=1)
+
+
+def draw_fills(ax, start, end, label_pt=STRUCTURE_LABEL_PT):
+    """A bar over each enabled model-input fill in the window, the year on it,
+    just inside the top of the panel (the title sits above the frame)."""
+    trans = ax.get_xaxis_transform()
+    for p in HATTERAS_NOURISHMENT_PROJECTS:
+        if not (p.enabled and start <= p.year <= end):
+            continue
+        lo, hi = min(p.gis_domains), max(p.gis_domains)
+        ax.plot([lo - 0.45, hi + 0.45], [0.90, 0.90], color=INK, lw=2.2,
+                solid_capstyle="butt", zorder=7, transform=trans)
+        ax.text((lo + hi) / 2, 0.875, f"{p.year} fill", ha="center", va="top",
+                fontsize=label_pt, color=INK, zorder=7, transform=trans)
 
 
 def rec_row(t, sc, p):
@@ -186,58 +228,83 @@ def fig2():
 
 
 # ---------------------------------------------------------------------------
-def fig3():
+def fig3(runs=None, ends=None, png=None, solved_on="the CoastSat LRR"):
+    """`runs` {(period, scenario): run folder} and `ends` {period: (GIS 1, GIS 90)}
+    draw another end solve (2026-09-28: the position-change solve); by default
+    the fixed-ends sweep's option-A runs and ENDS."""
     t = final()
+    ends = ends or ENDS
+    png = png or OUT / "3_recommended_vs_coastsat.png"
+    # Target, observed change and the header scores at common.SMOOTH_DOMAINS
+    # (7 since 2026-09-28); the table's scores were made at 10, so re-scored here.
     targets = {p: common.coastsat_target(p) for p in (1996, 2010)}
-    obs = {p: p2.observed_change(p) for p in (1996, 2010)}
-    f, axes = plt.subplots(2, 2, figsize=(17, 10.5), sharex=True, constrained_layout=True)
+    obs = {p: observed_change_smoothed(p) for p in (1996, 2010)}
+    f, axes = plt.subplots(2, 2, figsize=(17, 10.5), sharex=True, sharey="row", constrained_layout=True)
     rows, head = [], {}
     for j, p in enumerate((1996, 2010)):
         ax_r, ax_p = axes[0, j], axes[1, j]
         ax_r.plot(targets[p].index, targets[p].values, color=INK, lw=2.8, zorder=6)
         ax_p.plot(obs[p].index, obs[p].values, color=INK, lw=2.8, zorder=6)
-        parts = []
+        parts, parts_p = [], []
         for sc in COLOR:
-            r = rec_row(t, sc, p)
-            if r is None:
-                continue
-            rt = pd.read_csv(EXP / "2026-09-27-wave-grid-fixed-ends" / r.run_dir / "tables"
-                             / "shoreline_change_rate.csv").set_index("gis_domain")
+            if runs is None:
+                r = rec_row(t, sc, p)
+                if r is None:
+                    continue
+                run = EXP / "2026-09-27-wave-grid-fixed-ends" / r.run_dir
+            else:
+                run = runs.get((p, sc))
+                if run is None:
+                    continue
+            rt = pd.read_csv(run / "tables" / "shoreline_change_rate.csv").set_index("gis_domain")
+            sc7 = G.score_run(run, targets[p])
             ax_r.plot(rt.index, rt.lrr_m_yr, color=COLOR[sc], lw=1.8, zorder=5)
             ax_p.plot(rt.index, rt.change_rate_m_yr * 14, color=COLOR[sc], lw=1.8, zorder=5)
-            parts.append(f"{NAME[sc].split()[0].lower()} {100 * r.raw_variance_explained:+.0f}%, "
-                         f"bias {r.bias_m_yr:+.2f}")
-            rows.append(dict(period=PER[p], scenario=sc, raw_pct=100 * r.raw_variance_explained,
-                             smoothed_pct=100 * r.smoothed_variance_explained, bias=r.bias_m_yr,
-                             run_dir=r.run_dir))
+            name = "managed" if sc == "full_management" else "natural"
+            parts.append(f"{name} {sc7['raw_rmse_m_yr']:.2f}")
+            d = common.interior(rt.change_rate_m_yr * 14) - common.interior(obs[p])
+            rmse_p = float(np.sqrt((d ** 2).mean()))
+            parts_p.append(f"{name} {rmse_p:.1f}")
+            rows.append(dict(period=PER[p], scenario=sc, lowess_domains=common.SMOOTH_DOMAINS,
+                             raw_pct=100 * sc7["raw_variance_explained"],
+                             smoothed_pct=100 * sc7["smoothed_variance_explained"],
+                             rmse=sc7["raw_rmse_m_yr"], bias=sc7["bias_m_yr"],
+                             position_rmse_m=rmse_p, run_dir=str(run)))
         for ax in (ax_r, ax_p):
             ax.axhline(0, color=INK_MUTED, lw=0.6)
             ax.set_xlim(1, 90)
             ax.grid(axis="y")
             open_frame(ax)
             town_bands(ax, label=(ax is ax_r), fontsize=11)
+            draw_shoals(ax, label=(ax is ax_r), label_pt=11)
         structures(ax_p, label=True, label_pt=11)
         structures(ax_r, label=False)
-        _title(ax_r, j, f"{PER[p]}: ends GIS 1 {ENDS[p][0]:+.1f}, GIS 90 {ENDS[p][1]:+.1f} m/yr\n"
-                        + ";  ".join(parts))
-        _title(ax_p, 2 + j, "")
+        end = p + 14
+        draw_fills(ax_r, p, end, label_pt=11)
+        draw_fills(ax_p, p, end, label_pt=11)
+        _title(ax_r, j, f"{PER[p]} (boundary flux {ends[p][0]:+.1f} / {ends[p][1]:+.1f} m/yr)\n"
+                        "RMSE (m/yr): " + ", ".join(parts))
+        _title(ax_p, 2 + j, "RMSE (m): " + ", ".join(parts_p))
         ax_p.set_xlabel(DOMAIN_AXIS_LABEL)
-    axes[0, 0].set_ylabel("Shoreline change rate, LRR (m/yr)")
-    axes[1, 0].set_ylabel("Position change, end minus start (m)")
-    handles = [Line2D([], [], color=INK, lw=2.8, label="CoastSat (LOWESS, 10 domains)"),
+    axes[0, 0].set_ylabel("LRR (m/yr)")
+    axes[1, 0].set_ylabel("Position change (m)")
+    handles = [Line2D([], [], color=INK, lw=2.8, label=f"CoastSat (LOWESS, {common.SMOOTH_DOMAINS} domains)"),
                Line2D([], [], color=COLOR["full_management"], lw=1.8, label="Model, full management"),
                Line2D([], [], color=COLOR["natural"], lw=1.8, label="Model, natural")]
     f.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False,
-             title="Recommended: Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5")
-    png = OUT / "3_recommended_vs_coastsat.png"
+             title="Hs = 2.0 m, Tp = 7.5 s, asymmetry 0.6, high-angle fraction 0.5")
     save(f, png, dpi=250, close=True)
     pd.DataFrame(rows).to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
     record_caption(png, (
         "The recommended wave climate (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5) "
-        "with the end domains fixed at the values solved for it (full management), against "
-        "CoastSat (black). Top: LRR rate per domain; bottom: position change, end minus "
-        "start. Header: raw share of the alongshore variation explained and mean interior "
-        "bias (m/yr). Metres offset (dune line), no groin, no relocations."))
+        f"with the end domains fixed at the values solved for it on {solved_on} (full "
+        "management), against CoastSat (black). Top: LRR rate per domain; bottom: position "
+        "change, end minus start. Headers: boundary flux at GIS 1 / GIS 90 and the RMSE of "
+        "the raw model LRR (top) and position change (bottom), interior GIS 2-89, "
+        f"against the target at LOWESS {common.SMOOTH_DOMAINS} domains (southern 10 "
+        "raw). Edge source/sink (edgeBE: GIS 1 and 90 only), metres offset (dune line), no "
+        "groin, no relocations; the groin and piers are marked, not modelled. Hatched: shoal "
+        "zones. Bars: model-input fills in the window (none 1996-2010)."))
     return png
 
 
