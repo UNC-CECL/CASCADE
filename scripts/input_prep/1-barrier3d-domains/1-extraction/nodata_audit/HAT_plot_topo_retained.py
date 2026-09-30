@@ -1,77 +1,10 @@
 """
-HAT_plot_topo_retained.py
+What the DEM's unsurveyed ground becomes in a CASCADE input domain, and what Barrier3D does with it at t = 0.
 
-What the DEM's unsurveyed ground becomes once it is a CASCADE input domain, and
-what Barrier3D does with it at t = 0.
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/HAT_plot_topo_retained.py
 
-THE ANSWER TO "ARE THERE CELLS THAT STAY NO-DATA AT MODEL START"
------------------------------------------------------------------
-No. There is no such state to stay in. Barrier3D has one float per cell and no
-representation for "unknown", so the extractor writes every unsurveyed cell to
-SENTINEL_WATER_M and CASCADE reads it as an elevation of exactly -3.0 m MHW.
-The `<stem>_nodata.npy` mask that records which cells those were is a sidecar:
-hat_topo_version.domain_arrays() hands Cascade() the topography and dune paths
-only, so nothing in the run ever opens it.
-
-So the question is not whether no-data survives. It is what the model believes
-instead, and the answer is: open water, at the bottom of the clamp, in the
-middle of the barrier.
-
-WHY THAT IS NOT COSMETIC
-------------------------
-barrier3d.FindWidths - transcribed in roadway.interior_widths - measures the
-island as the run of land from interior row 0 to THE FIRST WATER CELL. Land
-behind a water cell is invisible to it. One unsurveyed cell at row k therefore
-truncates that profile's island at row k-1 and discards every real, measured
-cell behind it.
-
-Panel (c) is that cost. It is an UPPER BOUND on the damage, not an estimate:
-it compares the width Barrier3D actually sees against the width it would see if
-every unsurveyed cell turned out to be land. Nobody knows that they are - that
-is what unsurveyed means - so the true loss is somewhere between zero and the
-bar drawn. The bound is still worth having, because it is the number that would
-have to be small for the truncation not to matter.
-
-The same conflation is what drowned three roadways at t = 0 in an earlier
-product: roadway_manager.bulldoze drowns a road when more than 20% of the cells
-flanking it sit at or below 0 m MHW, and an unsurveyed cell passes that test.
-predict_drowning() is run here against this product's own setbacks and the
-verdict is printed.
-
-THE PANELS
-----------
-a  The CASCADE input domain for all 90 domains: the 2 dune rows Barrier3D
-   builds from dunes/domain_<N>_dune.npy, then the interior rows from
-   topography/. Ocean at the bottom. This is the whole stack the model starts
-   from, in the order it starts from it.
-
-b  The seaward 300 m of the same stack, so the dune rows and the first interior
-   rows are actually resolvable. At island scale two 10 m rows are one pixel.
-
-c  Island width Barrier3D sees, and the upper bound on what unsurveyed cells
-   cost it.
-
-d  Unsurveyed cells per domain: in the DEM, and still there in the input domain.
-
-DUNE ROWS
----------
-dunes/domain_<N>_dune.npy is one height above berm per profile, (50,). Barrier3D
-runs DuneWidth = 2, and row 1 is a copy of row 0 - see the dune-rows note in
-the extractor. Both rows are drawn. Their elevation is BERM_ELEV + height; the
-berm is 1.7 m NAVD88, so 1.34 m MHW.
-
-No dune cell in this product is unsurveyed: all 4500 carry a measured height.
-That is checked at run time, not assumed, and the count is printed.
-
-INPUT   <product>/npy-arrays/domain_<N>.npy                    m NAVD88
-        <product>/dune-topo/<version>/topography/domain_<N>_topography.npy   dam
-        <product>/dune-topo/<version>/topography/domain_<N>_nodata.npy      bool
-        <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy             dam
-
-        Product and version resolve through scripts/site_layer/hat_topo_version.py.
-        Do not hardcode either.
-
-OUTPUT  <product>/dune-topo/<version>/figures/HAT_topo_retained_<version>.png
+Reads the product's npy-arrays; writes figures/HAT_topo_retained_<version>.png
+in the dune-topo version. Details: scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -99,10 +32,8 @@ from site_layer import hat_topo_version as htv  # noqa: E402
 from cascade_pipeline import roadway  # noqa: E402
 from site_layer.hat_elevation_products import product as elevation_product  # noqa: E402
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
+# --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1984-start"
 DEM_PRODUCT = "2009-2014-1996"     # alongshore georeferencing only
 VERSION_OVERRIDE = None            # None -> hat_topo_version resolves it
@@ -147,30 +78,22 @@ plt.rcParams.update({
 })
 
 
-
-# Every output of this folder lands under one directory beside the extraction it
-# describes, rather than being scattered through the run folder it did not
-# produce. audit_dir() is the only place that name is spelled.
+# All outputs in one nodata-audit/ folder beside the extraction; audit_dir() names it
 AUDIT_SUBDIR = "nodata-audit"
+# -----------------------------------------------------------------------------
 
 
+# <product>/dune-topo/<version>/nodata-audit/, created on demand
 def audit_dir(topo_dir):
-    """<product>/dune-topo/<version>/nodata-audit/, created on demand."""
     d = topo_dir.parent / AUDIT_SUBDIR
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-# =============================================================================
-# CLASSIFY
-# =============================================================================
+# Classify
 
+# Raw ocean-first m NAVD88 -> (unsurveyed, sub-MHW) counts in the envelope
 def classify_input(raw):
-    """Raw ocean-first m NAVD88 -> (unsurveyed, sub-MHW) counts in the envelope.
-
-    The envelope rule is the one HAT_plot_dem_holes.py uses, so panel (d)'s
-    'in the DEM' bars mean the same thing that figure's red does.
-    """
     nod = raw <= RAW_NODATA_MAX
     z = raw - MHW_M
     land = (~nod) & (z > 0.0)
@@ -193,12 +116,8 @@ def classify_input(raw):
     return gap, wet
 
 
+# The CASCADE input domain as one categorical array, ocean-first
 def stack_domain(topo_m, nodata):
-    """The CASCADE input domain as one categorical array, ocean-first.
-
-    Rows 0..DUNE_ROWS-1 are the dune, then the interior. Returns the codes and
-    the per-profile last-land row of the INTERIOR part, in interior numbering.
-    """
     land = topo_m > 0.0
     last_land = np.where(land.any(axis=0),
                          topo_m.shape[0] - 1 - land[::-1, :].argmax(axis=0), -1)
@@ -214,19 +133,14 @@ def stack_domain(topo_m, nodata):
     return np.vstack([dune, interior]), last_land
 
 
+# (width Barrier3D sees, width if every unsurveyed cell were land), cells
 def widths_and_bound(topo_m, nodata):
-    """(width Barrier3D sees, width if every unsurveyed cell were land), cells.
-
-    The first is roadway.interior_widths verbatim - barrier3d.FindWidths, which
-    stops at the first cell at or below sea level. The second re-runs it on a
-    copy with the unsurveyed cells lifted above the threshold, which is the
-    most land those cells could possibly be hiding.
-    """
     seen = roadway.interior_widths(topo_m)
     lifted = np.where(nodata, 1.0, topo_m)
     return seen, roadway.interior_widths(lifted)
 
 
+# domain -> (origin_x, origin_y) from the product's resample audit
 def read_origins(dem_product):
     out = {}
     P = elevation_product(dem_product)
@@ -236,12 +150,8 @@ def read_origins(dem_product):
     return out
 
 
+# 1984 road setback in metres per GIS domain, or None if unavailable
 def read_setbacks():
-    """1984 road setback in metres per GIS domain, or None if unavailable.
-
-    Only used for the t = 0 drowning check, which is a printout. A missing file
-    downgrades that check rather than failing the figure.
-    """
     from site_layer.hat_topo_version import road_setback_file
     p = road_setback_file(1984)
     if not p.is_file():
@@ -254,10 +164,7 @@ def read_setbacks():
     return dict(zip(ids, vals))
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: classify every domain's input, draw the retained-topography figure
 def main():
     topo_dir, dune_dir, version = htv.topo_dirs(TOPO_PRODUCT, VERSION_OVERRIDE)
     arr_dir, _ = htv.npy_dirs(TOPO_PRODUCT)
@@ -298,7 +205,7 @@ def main():
 
     n_along = stacks[domains[0]].shape[1]
 
-    # --- shared alongshore axis ---------------------------------------------
+    # Shared alongshore axis
     oy_all = np.array([origins[n][1] for n in domains])
     north_max = oy_all.max()
     nx = int(round((north_max - (oy_all.min() - n_along * GRID_M)) / GRID_M))
@@ -320,7 +227,7 @@ def main():
     gm = np.ma.masked_where(grid < 0, grid)
     zoom = np.ma.masked_where(grid[:ZOOM_ROWS] < 0, grid[:ZOOM_ROWS])
 
-    # --- totals --------------------------------------------------------------
+    # Totals
     T = {k: sum(s[k] for s in stats)
          for k in ("in_gap", "in_wet", "out_gap", "out_wet")}
     seen_all = np.concatenate([s["seen"] for s in stats])
@@ -330,9 +237,8 @@ def main():
                        for s in stats])
     seen_m = np.array([float(s["seen"].mean()) * GRID_M for s in stats])
 
-    # =========================================================================
-    # DRAW
-    # =========================================================================
+    # Draw
+
     fig = plt.figure(figsize=(17.5, 13.8))
     gs = fig.add_gridspec(4, 1, height_ratios=[1.50, 1.05, 0.85, 0.80],
                           hspace=0.42, left=0.070, right=0.986,
@@ -341,7 +247,7 @@ def main():
     def panel_title(ax, letter, text):
         ax.set_title(f"({letter})  {text}", loc="left", fontsize=10.5)
 
-    # --- (a) full stack ------------------------------------------------------
+    # (a) full stack
     axA = fig.add_subplot(gs[0])
     axA.imshow(gm, cmap=CMAP, norm=NORM, origin="lower", aspect="auto",
                interpolation="nearest",
@@ -360,7 +266,7 @@ def main():
     axt.set_xticklabels([str(domains[t]) for t in ticks])
     axt.set_xlabel("Barrier3D domain", labelpad=3)
 
-    # --- (b) zoom ------------------------------------------------------------
+    # (b) zoom
     axB = fig.add_subplot(gs[1], sharex=axA)
     axB.imshow(zoom, cmap=CMAP, norm=NORM, origin="lower", aspect="auto",
                interpolation="nearest",
@@ -375,7 +281,7 @@ def main():
     axB.set_ylabel("distance landward of\nthe dune toe (m)")
     axB.tick_params(labelbottom=False)
 
-    # --- (c) widths ----------------------------------------------------------
+    # (c) widths
     axC = fig.add_subplot(gs[2], sharex=axA)
     w = n_along * GRID_M / 1000.0 * 0.92
     axC.bar(dom_km, seen_m, width=w, color="#e6dcc8", edgecolor="0.55", lw=0.4,
@@ -395,7 +301,7 @@ def main():
                           f"unsurveyed cell")
     axC.tick_params(labelbottom=False)
 
-    # --- (d) retention -------------------------------------------------------
+    # (d) retention
     axD = fig.add_subplot(gs[3], sharex=axA)
     a_in = np.array([s["in_gap"] for s in stats], float)
     a_out = np.array([s["out_gap"] for s in stats], float)
@@ -440,7 +346,7 @@ def main():
     fig.savefig(out_png, dpi=170, facecolor="white")
     print(f"wrote {out_png}\n")
 
-    # --- printout ------------------------------------------------------------
+    # Printout
     print("at model start")
     print("  cells flagged no-data in what CASCADE reads   : 0 "
           "(no such state exists)")

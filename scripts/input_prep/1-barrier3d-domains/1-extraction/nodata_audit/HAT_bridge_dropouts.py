@@ -1,73 +1,11 @@
 """
-HAT_bridge_dropouts.py
+Fill the unsurveyed cells that three references agreed are survey dropouts, as a new dune-topo version.
 
-Fill the unsurveyed cells that three references agreed are survey dropouts, and
-write the result as a NEW dune-topo version.
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/HAT_bridge_dropouts.py
 
-WHAT IT CHANGES, AND WHAT IT REFUSES TO CHANGE
------------------------------------------------
-Only the cells that HAT_test_hole_pond_or_dropout.py cleared as DROPOUT. Each
-such hole is bracketed by MEASURED land on both sides along its own profile, so
-the fill is a straight linear interpolation between two measurements. No value
-is invented beyond what those two measurements already imply, and nothing that
-was judged POND or left UNCLEAR is touched - those keep the -3.0 m sentinel.
-
-    interior row:   r-1      r    r+1   r+2    r+3
-    v1 (dam):      0.111   -0.3  -0.3  -0.3   0.116     <- three unsurveyed
-    v2 (dam):      0.111   0.112 0.113 0.114  0.116     <- interpolated
-
-THE NODATA MASK IS DELIBERATELY LEFT ALONE
--------------------------------------------
-A bridged cell is still a cell no survey ever saw. Its value is now an
-interpolation, not a measurement, and any consumer asking "was this measured?"
-must still get NO. So `<stem>_nodata.npy` is copied through unchanged and a
-SECOND mask, `<stem>_bridged.npy`, records which cells were filled. Two masks,
-two different questions:
-
-    nodata   True = no survey saw this cell            (unchanged from v1)
-    bridged  True = and its value is now interpolated  (new in v2)
-
-Collapsing them into one would destroy the only record that these values are
-inferred, which is the same conflation that put three roadways underwater at
-t = 0 in an earlier product.
-
-WHY A NEW VERSION RATHER THAN AN EDIT
---------------------------------------
-v1 is what the extractor produced from the DEM. v2 is v1 with a documented,
-evidence-backed repair applied on top. Keeping both means the repair can be
-audited, reverted, or re-derived, and any figure or run can say which it used.
-
-    v1  extraction, untouched
-    v2  v1 + bridged dropouts
-
-Interior SHAPES and interior ROW 0 are identical between them - this only
-rewrites values inside existing arrays. That matters because every road setback
-is measured from interior row 0, so the 1984 setback CSVs stay valid across the
-version bump and do not need re-measuring.
-
-TWO THINGS HAVE TO MOVE FOR v2 TO TAKE EFFECT
-----------------------------------------------
-hat_topo_version.resolve_version puts the EXTRACTOR'S `VERSION` literal ABOVE
-the CURRENT file. Writing CURRENT alone is silently ineffective. So this script
-writes both, and says so:
-
-    dune-topo/CURRENT                        -> v2
-    HAT_dune_topo_extractor.py  VERSION      -> "v2"
-
-THE CLOBBER RISK, STATED PLAINLY
----------------------------------
-Because the extractor now says VERSION = "v2", re-running it would overwrite
-these arrays with a fresh, UNBRIDGED extraction. That is recoverable in one
-command - this script reads v1 and rebuilds v2 - but it is silent, so
-BRIDGE_MANIFEST.txt in the run folder says it too.
-
-INPUT   dune-topo/<src>/topography, dunes
-        dune-topo/<src>/nodata-audit/hole_verdicts.csv
-        dune-topo/<src>/nodata-audit/bracketed_hole_cells.csv
-
-OUTPUT  dune-topo/<dst>/topography/domain_<N>_{topography,nodata,bridged}.npy
-        dune-topo/<dst>/dunes/domain_<N>_dune.npy      (copied unchanged)
-        dune-topo/<dst>/BRIDGE_MANIFEST.txt
+Copies SRC_VERSION's arrays and picks to DST_VERSION, linearly bridges each
+cleared hole along its profile, and writes the topography, nodata and bridged
+masks plus BRIDGE_MANIFEST.txt. Details: scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -92,6 +30,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
 from cascade_pipeline import roadway  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1984-start"
 SRC_VERSION = "v1"
 DST_VERSION = "v2"
@@ -101,52 +40,11 @@ EXTRACTOR = (REPO / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extrac
              / "HAT_dune_topo_extractor.py")
 
 AUDIT_SUBDIR = "nodata-audit"
+# -----------------------------------------------------------------------------
 
 
+# Give the new version its own pick set, seeded from the source version
 def carry_picks_forward(src_version, dst_version):
-    """Give the new version its own pick set, seeded from the source version.
-
-    WHY THIS IS PART OF THE VERSION BUMP AND NOT AN AFTERTHOUGHT
-
-    The extractor derives its window file from the VERSION literal:
-
-        PICK_SET    = RUN_NAME = VERSION
-        WINDOW_JSON = PICKS_DIR / f"HAT_dune_search_windows_{PICK_SET}.json"
-
-    So bumping VERSION without writing that file leaves every consumer that
-    resolves picks through the extractor pointing at a path that does not
-    exist. That is not hypothetical: v1 -> v2 did exactly this on 2026-08-26,
-    and `HAT_road_offset_from_dune_start.py` -- which re-derives interior row 0
-    from these windows in order to measure the road setbacks -- could not be
-    re-run at all afterwards. The setbacks already on disk stayed correct; they
-    simply could not be regenerated.
-
-    COPYING IS THE RIGHT ANSWER HERE, NOT SHARING
-
-    The extractor's own guard prescribes this procedure verbatim: "set
-    PICK_SET = RUN_NAME and copy the old file to
-    HAT_dune_search_windows_<RUN_NAME>.json first". The reason is that
-    `save_windows()` writes back to WINDOW_JSON after EVERY domain during a
-    pick pass, so pointing a re-pick at a shared file destroys the earlier
-    version's picks one domain at a time. A per-version copy makes that
-    impossible.
-
-    And the copy is semantically honest for a BRIDGED version: bridging fills
-    unsurveyed cells inside existing arrays. It does not move a dune, so it
-    cannot move a dune window. v2's windows ARE v1's windows.
-
-    PROVENANCE IS RECORDED RATHER THAN IMPLIED
-
-    A bare copy would leave a file that looks like it was picked for this
-    version. `_meta.inherited_from` says otherwise, so a later reader can tell
-    an inherited pick set from a re-picked one. It goes INSIDE `_meta` on
-    purpose: consumers count domains as "every key that is not `_meta`", so a
-    second top-level underscore key would be counted as a domain.
-
-    Returns:
-        (destination path, "written" | "exists") or None if the source has no
-        pick file to carry.
-    """
     picks_dir = htv.picks_dir(TOPO_PRODUCT)
     src = picks_dir / f"HAT_dune_search_windows_{src_version}.json"
     dst = picks_dir / f"HAT_dune_search_windows_{dst_version}.json"
@@ -178,8 +76,8 @@ def carry_picks_forward(src_version, dst_version):
     return dst, "written"
 
 
+# {(domain, profile)
 def cleared_holes(src_run):
-    """{(domain, profile): [interior rows]} for holes judged DROPOUT."""
     a = src_run / AUDIT_SUBDIR
     verd = {(int(r["domain"]), int(r["profile"])): r["verdict"]
             for r in csv.DictReader((a / "hole_verdicts.csv").open())}
@@ -191,14 +89,8 @@ def cleared_holes(src_run):
     return {k: sorted(v) for k, v in cells.items()}
 
 
+# Linear fill of `rows` in one profile
 def bridge_profile(col, rows):
-    """Linear fill of `rows` in one profile. Returns False if not bracketed.
-
-    Refuses rather than guesses. A hole touching either end of the array has no
-    measured value on one side, so there is nothing to interpolate between -
-    that is an extrapolation, which is the thing this whole exercise exists to
-    avoid.
-    """
     lo, hi = rows[0] - 1, rows[-1] + 1
     if lo < 0 or hi >= col.size:
         return False
@@ -211,6 +103,7 @@ def bridge_profile(col, rows):
     return True
 
 
+# Run: carry the picks forward, bridge every cleared hole, write the version and its manifest
 def main():
     src_topo, src_dune, src_ver = htv.topo_dirs(TOPO_PRODUCT, SRC_VERSION)
     src_run = src_topo.parent
@@ -262,7 +155,7 @@ def main():
     for d, g in sorted(width_gain.items()):
         print(f"    D{d}: mean island width {g:+.0f} m")
 
-    # --- verification --------------------------------------------------------
+    # Verification
     print("\n  verifying against the source:")
     bad = 0
     for gis in range(1, 91):
@@ -284,7 +177,7 @@ def main():
     if bad:
         raise SystemExit("\nverification failed - v2 not activated\n")
 
-    # --- manifest ------------------------------------------------------------
+    # Manifest
     (dst_run / "BRIDGE_MANIFEST.txt").write_text(f"""\
 {TOPO_PRODUCT} dune-topo {DST_VERSION}
 ================================================================
@@ -323,11 +216,9 @@ mean island width gained: """ + ", ".join(
         f"D{d} {g:+.0f} m" for d, g in sorted(width_gain.items())) + "\n",
         encoding="utf-8")
 
-    # --- activate ------------------------------------------------------------
-    # Picks FIRST. The moment the extractor's VERSION literal moves, every
-    # caller that resolves a window file through it looks for this version's
-    # pick set. Writing it after the bump would leave a window -- however
-    # short -- in which the tree resolves to a path that does not exist.
+    # Activate
+
+    # Picks first, so the tree never resolves to a version with no pick set
     carry_picks_forward(src_ver, DST_VERSION)
 
     (dst_run.parent / "CURRENT").write_text(DST_VERSION, encoding="utf-8")

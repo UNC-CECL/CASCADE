@@ -1,46 +1,21 @@
 """
+Build each domain's Barrier3D dune and interior arrays from its DEM, with a hand-picked dune search window.
+
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/HAT_dune_topo_extractor.py
+
+MODE (in CONFIG) picks the pass: "pick" drags a dune search window per domain
+on the profile stack (NC-12 drawn for reference, saved after every domain),
+"run" extracts with the saved windows, "pick_and_run" does both. Writes the
+topography and dune arrays (dam), the picks JSON, a settings sheet, a manifest
+and QC figures to the product's dune-topo/<version>/ folder.
+Details: scripts/input_prep/1-barrier3d-domains/README.md.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-22
 """
 
-        # ==============================================================================
-# HAT_dune_topo_extractor.py
-#
-# Hatteras CASCADE dune & interior topography extractor with per-domain,
-# interactively selected dune search windows.
-#
-# INPUT  : domain_#.npy, shape = (alongshore_rows, cross_shore_cols),
-#          elevation in m NAVD88
-# OUTPUT : interior topography and dune height arrays, in decameters (dam)
-#          + a JSON of the per-domain dune search windows (re-runnable)
-#
-# WORKFLOW
-#   1. MODE = "pick"          -> step through domains, drag a dune search
-#                                window on the profile stack, saves to JSON
-#                                after every domain (safe to quit and resume)
-#   2. MODE = "run"           -> extract using the saved JSON windows
-#   3. MODE = "pick_and_run"  -> both in one pass
-#
-# PICKER LAYOUT / KEYS
-#   The picker draws the domain with the OCEAN AT THE BOTTOM: cross-shore runs
-#   vertically (cell 0 = ocean, landward upward), alongshore runs left-right.
-#   Left panel = elevation map, right panel = profile stack, shared y-axis.
-#   This is display only; i0/i1 are still cross-shore indices from the ocean.
-#
-#   NC-12 is drawn on both panels (v4): filled road cells and a dashed centre
-#   line on the map, a shaded cross-shore envelope on the profile stack, one
-#   colour per road vintage. It is there to stop the window being dragged onto
-#   the road embankment, which a dune-crest argmax will happily lock onto. The
-#   road constrains nothing in code -- see ROAD OVERLAY in CONFIG.
-#
-#   drag vertically on either panel : set the cross-shore search window
-#   enter / close window            : accept current window
-#   r                               : reset to the default window
-#   s                               : skip this domain (use DEFAULT_WINDOW_PX)
-#   q / esc                         : quit picking, keep everything saved so far
-# ==============================================================================
 
 from __future__ import annotations
 
@@ -56,9 +31,7 @@ import numpy as np
 
 import matplotlib
 try:
-    # needed for a real, blocking, interactive picker window. Only force it if
-    # tkinter actually exists, otherwise matplotlib fails later with a confusing
-    # error at figure-creation time instead of here.
+    # Needed for a real, blocking, interactive picker window
     import tkinter  # noqa: F401
     matplotlib.use("TkAgg")
 except Exception:
@@ -68,13 +41,11 @@ from matplotlib.colors import FuncNorm, ListedColormap
 from matplotlib.transforms import blended_transform_factory
 from matplotlib.widgets import SpanSelector
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# Sized for a projected slide rather than a screen: at 19 in wide, 11 pt tick
-# labels are unreadable once the figure is scaled into a talk.
+# Type sized for a projected slide
 plt.rcParams.update({
     "font.size": 13,
     "axes.titlesize": 13.0,
@@ -87,140 +58,42 @@ plt.rcParams.update({
     "savefig.facecolor": "white",
 })
 
-# ==============================================================================
-# CONFIG
-# ==============================================================================
+# --- CONFIG ------------------------------------------------------------------
+# Mode
 
-# --- MODE ---------------------------------------------------------------
-# v4 RE-PICKS every window with the road drawn on the picker (see ROAD OVERLAY).
-# The v3 windows were drawn without knowing where NC-12 sits, so a window could
-# sit landward of the road and take the road embankment for a dune crest. This
-# pass is an ADJUSTMENT, not a blind redraw: the picker opens on each domain's
-# saved v4 window (seeded from v3), so "r" resets to the v3 pick and accepting
-# without dragging keeps it.
+# v4 re-picks every window with the road on the picker, adjusting the saved v3 windows
 MODE = "pick_and_run"      # "pick" | "run" | "pick_and_run"
-# Domains to process. This filters BOTH passes -- picking AND running -- so it
-# is the modelled set, not just a picking subset.
-#
-#   list(range(1, 91))      the 90 domains CASCADE runs (D1 = Cape Point ->
-#                           D90 = Pea Island). The DEM folder holds 131; 91-131
-#                           are north of the study area and are not modelled,
-#                           so picking or extracting them is wasted work.
-#   None                    every domain_*.npy found
-#   [1, 5, 11, 33, 67, 74]  a trial set. Worth doing before committing to 90
-#                           hand-picks: 33 (25.6 deg) and 67 (22.8 deg) are the
-#                           worst obliquity on the island and two of the four
-#                           SCATTER flags; 11 (8.0 deg) is the domain the road
-#                           setbacks kept failing on; 74 (5.7 deg) is a
-#                           near-square control where panels 1 and 2 should look
-#                           almost identical; 1 and 5 are Cape Point, where a
-#                           LINEAR fit to the shoreline is most likely to fail.
+# Domains to process, in both passes: the 90 modelled domains by default (options in README)
 PICK_DOMAINS = list(range(1, 91))
-# True for the v4 road re-pick. The v4 picks file is SEEDED from v3, so every
-# domain is already present and False would skip all 90 -- nothing would be
-# re-picked. Set back to False once the re-pick is finished, so a later run in
-# "pick_and_run" resumes instead of starting over.
+# True for the v4 re-pick (seeded from v3); set False afterwards so pick_and_run resumes
 REPICK_EXISTING = True     # False = skip domains already present in the JSON
 SAVE_QC_FIGS = True        # per-domain dune-detection QC figure
 SAVE_COMPARISON_FIGS = True  # per-domain raw GIS vs processed CASCADE input figure
 SAVE_SETTINGS_SHEET = True   # per-domain settings/results sheet (csv + xlsx)
 
-# --- PATHS --------------------------------------------------------------
-# Everything for one settings variant lands in ONE run folder, so comparing
-# versions means comparing two directories:
-#
-#   data\hatteras_init\dune_topo\
-#       picks\
-#           HAT_dune_search_windows_2009_pea_hatteras.json  <- your picks (see below)
-#       2009_v1\
-#           RUN_MANIFEST.txt                     <- every setting that made this folder
-#           HAT_dune_topo_settings_2009_v1.xlsx  <- per-domain sheet (+ .csv)
-#           HAT_dune_topo_summary_2009_v1.png    <- all domains on one page
-#           topography\  domain_7_topography_2009.npy   <- CASCADE reads these two
-#           dunes\       domain_7_dune_2009.npy
-#           figures\
-#               gis_vs_processed\  domain_007_gis_vs_processed.png
-#               qc\                domain_007_qc.png
-#       2009_v2\   ... same shape, nothing shared, nothing overwritten
-#
-# NOTE: topography\ and dunes\ moved. Point the hindcast runner at
-#       RUN_DIR\topography and RUN_DIR\dunes for whichever version you're using.
-# v3 = v2 settings + ALONGSHORE_FLIP = True (see GEOMETRY below). Bumped rather
-# than reused so 2009_v2 survives as the unflipped reference to diff against.
-# v4 = v3 settings + the NC-12 overlay and a full re-pick of the dune windows
-# with the road visible. No processing setting changed, so a v4 run in "run"
-# mode on the v3 windows reproduces the v3 arrays byte for byte -- what makes
-# v4 different is the WINDOWS, which is exactly why it gets its own folder and
-# its own picks file rather than overwriting v3.
-# WHICH PRODUCT this run builds. One of the period folders under
-# data/hatteras_init/1-barrier3d-domains/ - see scripts/site_layer/hat_topo_version.py.
-# Added 2026-08-25 when the tree went period-first; before that there was only
-# one topography and both hindcast periods read it.
-#
-#     "1984-start"   from DEM 2009-2014-1996  (1996 ALACE, no road boundary)
-#     "2004-start"   from DEM 2009-2014       (the baseline gap fill)
-#     "forecast"     from a 2025 DEM, later
+# Paths
+
+# Run layout: one folder per settings version (tree in README); which product this run builds
 TOPO_PRODUCT = "1984-start"
 
-# scripts/ on the path, so the ARRAY NAMES come from the same resolver that
-# owns the directory layout - one definition, used by the writer here and by
-# every reader. hat_topo_version PARSES this file for TOPO_PRODUCT/VERSION and
-# never imports it, so importing it here creates no cycle.
+# scripts/ on the path, so array names come from the one resolver
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))   # scripts/ (1-extraction/ since 2026-09-09)
 from site_layer.hat_topo_version import (array_name, year_for_product,  # noqa: E402
                               ROAD_LINE_VINTAGES)
 
 VERSION = "v2"             # 2026-09-02 re-pick (was "v3" until the 2026-09-04
-                           # renumber). What this script WRITES.
-                           # Since 2026-09-04 it no longer decides what is
-                           # READ: dune-topo/CURRENT outranks it in
-                           # hat_topo_version.resolve_version. Do not point
-                           # this at v3-v8 (layers built ON v2) - a re-run
-                           # would overwrite their arrays. Guide: 1984-start/
-                           # 2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md.
-                           # To change the default, edit CURRENT; for one
-                           # run, HAT_TOPO_VERSION_1984_START.
+                           # renumber); what this writes: dune-topo/CURRENT decides what is read
 
-# A LABEL ONLY. It is no longer written into any filename.
-#
-# The arrays were domain_<N>_topography_2009.npy until 2026-08-26. The year was
-# false for both live products - 2004-start is the 2009+2014 mosaic, 1984-start
-# is 2009+2014+1996 - and the fix is not a better year but no year: the period
-# lives in the PRODUCT DIRECTORY, which every reader must resolve anyway. See
-# the long note in scripts/site_layer/hat_topo_version.py for why a per-period tag was
-# tried and reverted the same day.
-#
-# What remains here is the text on two figures. It names the product, because
-# "2009 extracted crest" was captioning a 1996-grafted surface.
+# A label only, on two figures: no year in any filename since 2026-08-26
 DEM_LABEL = TOPO_PRODUCT
-# v5 reads the GAP-FILLED arrays: 2009 base with its gaps filled from the 2014
-# NOAA Post-Sandy DEM (see data/hatteras_init/0-elevation/FIGURES.md).
-# 25,591,292 cells filled at 1 m, 254,760 at this 10 m grid, mostly landward of
-# NC-12. The un-filled set is still at "2009_pea_hatteras" with its v4 picks
-# intact, so both can be run and compared.
-#
-# PICKS ARE PER-VERSION and none exist for v5 yet - picks/ holds only
-# 2009_v4, 2009_pea_hatteras and ..._straight. This run needs a pick pass
-# (MODE includes "pick"). Re-picking is warranted, not a formality: the filled
-# interior differs materially from what v4 was picked against.
+# v5 reads the gap-filled arrays
 DEM_NAME = "2009_pea_hatteras_filled"
-# The product folder already says which run this is, so the run folder is the
-# VERSION alone: 2004-start/dune-topo/v5, not .../2009_v5. The migrated v5 keeps
-# its inner filenames (HAT_dune_topo_settings_2009_v5.csv) - those are outputs
-# of a run that happened, and renaming them would rewrite history.
+# The product folder already says which run this is, so the run folder is the VERSION alone
 RUN_NAME = VERSION
 
 PROJECT_ROOT = Path(str(_PATH_REPO))
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-# These two moved when data\hatteras_init was reorganized into the numbered
-# 1-barrier3d-domains \ 2-brie-offset \ ... tree. They previously read
-# INIT_ROOT/"elevations"/DEM_NAME and INIT_ROOT/"dune_topo", neither of which
-# exists any more, so the script could not find its own inputs or the 2009_v2
-# run folder it wrote.
-# Period-first layout (2026-08-25). Was {DEM_YEAR}-raw/{DEM_YEAR}-npy-arrays/
-# {DEM_NAME} and {DEM_YEAR}-dune-topo/{RUN_NAME}, which keyed three path
-# segments on the DEM year and said nothing about which run the arrays were
-# for.
+# Paths from hat_topo_version: the period-first layout since 2026-08-25
 from site_layer.hat_topo_version import npy_dirs, product_dir  # noqa: E402
 PRODUCT_DIR = product_dir(TOPO_PRODUCT)
 LOAD_PATH = npy_dirs(TOPO_PRODUCT)[0]                            # the extraction half (2026-09-09)
@@ -237,55 +110,18 @@ ISLAND_FIG_PATH = RUN_DIR / f"HAT_dune_topo_island_offsets_{RUN_NAME}.png"
 PLAN_FIG_STEM = f"HAT_dune_topo_island_planview_{RUN_NAME}"  # + _{year}.png
 MANIFEST_PATH = RUN_DIR / "RUN_MANIFEST.txt"
 
-# Picks live OUTSIDE the run folder. They are the only artifact here you cannot
-# regenerate, and they describe where the dune sits in the DEM -- not which
-# settings variant you're testing -- so v2, v3... reuse them by default. Set
-# PICK_SET = RUN_NAME instead if you want a version to carry its own picks.
-# The picks are FRAME-DEPENDENT. A window picked on a straightened array is a
-# valid index range on an unstraightened one -- it just points at different
-# cells -- so the two frames cannot share a file. save_windows() stamps
-# "straightened" on every entry and the run pass refuses on a mismatch, but it
-# writes back to WINDOW_JSON on every domain: pointing this at the v1 set would
-# overwrite v1's unstraightened windows as you re-pick, and 2009_v1 would stop
-# being reproducible.
-# Set this by hand to match STRAIGHTEN below (it is defined further down, so it
-# cannot be referenced here):
-#     STRAIGHTEN = True   ->  f"{DEM_NAME}_straight"
-#     STRAIGHTEN = False  ->  DEM_NAME
-#
-# v4 CARRIES ITS OWN PICKS -- PICK_SET = RUN_NAME, not the shared straight set.
-# This is the case the warning above describes. v4 re-picks all 90 windows, and
-# save_windows() writes back to WINDOW_JSON after EVERY domain, so pointing this
-# at f"{DEM_NAME}_straight" would destroy the v3 picks as you worked and 2009_v3
-# would stop being reproducible. The v4 file was seeded by copying the v3 one, so
-# every domain opens on its v3 window and an unchanged domain stays unchanged:
-#
-#   picks\HAT_dune_search_windows_2009_pea_hatteras_straight.json   v1-v3, FROZEN
-#   picks\HAT_dune_search_windows_2009_v4.json                      v4, re-picked
+# Picks are frame-dependent and written back every domain, so v4 keeps its own file (seeded from v3)
 PICK_SET = RUN_NAME
 PICKS_DIR = PRODUCT_DIR / "1-extraction" / "picks"
 WINDOW_JSON = PICKS_DIR / f"HAT_dune_search_windows_{PICK_SET}.json"
 
-# No TAG. Names come from hat_topo_version.array_name(), which is also what
-# every reader calls - see _gis_id() at the save site.
+# No tag: names come from hat_topo_version.array_name()
 
-# --- ISLAND OFFSETS -----------------------------------------------------
-# Measured per-domain dune offsets used to place domains in a common cross-shore
-# frame. One value per GIS domain, header row = year.
-#
-# CONVENTION (both inferred from the data -- change if your pipeline says otherwise):
-#   OFFSET_ROW_ORDER = "D1_first"    row 0 of the CSV is domain 1 (Cape Point).
-#       Check: this puts the largest raw_offset (6301 m) at Cape Point, which is what
-#       a seaward-protruding headland should look like. Reversed puts the max at
-#       Pea Island instead.
-#   OFFSET_SEAWARD_POSITIVE = True   larger value = further seaward.
-#       Check: 75/90 domains go negative 1984->2004, mean -2.07 m/yr. Seaward-
-#       positive reads that as island-wide retreat at ~2 m/yr (right for Hatteras);
-#       the other sign reads it as island-wide accretion (wrong).
+# Island offsets
+
+# Measured per-domain dune offsets, used to place domains in a common cross-shore frame
 SAVE_ISLAND_FIG = True
-# Each start's CURRENT build (2026-09-18). These named hindcast_<year>/
-# folders that no longer existed, and the fallback search found several
-# candidates per year, called it ambiguous and skipped the offsets.
+# Each start's CURRENT build (2026-09-18)
 from site_layer.hat_topo_version import BRIE_ROOT as OFFSET_DIR, offset_file  # noqa: E402
 OFFSET_FILES = {
     1984: offset_file(1984, "input"),
@@ -296,88 +132,30 @@ NUM_REAL_DOMAINS = 90
 N_BUFFER_DOMAINS = 15          # raw_offset files may be padded to 15+90+15 = 120 rows
 OFFSET_COLUMN = 0              # for multi-year raw_offset files, which column to read
 
-# WHICH YEAR'S OFFSETS THIS PRODUCT IS PLOTTED AT (2026-08-27).
-#
-# Both files above are still LOADED -- panel 3 of the island-offsets figure is
-# a 1984->2004 change rate and needs both. What PRODUCT_YEAR controls is the
-# PLAN VIEW, which used to be written once per offset year and so produced
-# four PNGs per run:
-#
-#     2004-start/dune-topo/v1/..._planview_v1_1984_padded.png
-#                             ..._planview_v1_1984_trimmed.png
-#                             ..._planview_v1_2004_padded.png
-#                             ..._planview_v1_2004_trimmed.png
-#
-# The topography is IDENTICAL in all four -- it is whatever TOPO_PRODUCT built.
-# Only off_cells differs, i.e. which canvas row each domain's row 0 lands on.
-# So the _1984_ pair above places the 2009+2014 surface at the 1984 measured
-# shoreline: an island that never existed, sitting in the 2004 product's folder
-# under a filename that reads like a 1984 initial condition.
-#
-# That loop is older than the period-first tree. When ONE topography was read
-# by BOTH hindcast periods (see hat_topo_version.py), plotting it at both years
-# was the whole point. Now that 1984-start and 2004-start are separate DEM
-# products, each with its own offsets -- 1984-start/README.md line 149 pins
-# shoreline_offset to 2-brie-offset/1984/ -- the pairing is 1:1 and
-# the cross-product figures are noise.
-#
-# The year is RESOLVED from the product through hat_topo_version.YEAR_PRODUCT,
-# never spelled here, so a third product cannot pick up a stale literal.
-# strict=False: "forecast" and "buffer" are not hindcast periods, and for those
-# PRODUCT_YEAR is None and the plan view falls back to every year it loaded --
-# the old behaviour, for the case where there is no relevant year to pick.
+# No relevant year: the plan view falls back to every year it loaded
 PRODUCT_YEAR = year_for_product(TOPO_PRODUCT, strict=False)
 
-# Plan-view canvas, reproducing the ABSOLUTE placement of
-# initialization_figures.py (island_<year>_absolute.png) exactly:
-#   offset_cells = round(offset_m / 10); each domain's topo row 0 (ocean side)
-#   lands on canvas row = offset_cells; alongshore flipped with np.fliplr.
+# Plan-view canvas, reproducing initialization_figures.py's absolute placement
 SAVE_ISLAND_PLAN_FIG = True
-# ISLAND_FLIP_ALONGSHORE was REMOVED (2026-08-17). It applied np.fliplr to each
-# domain INSIDE the placement loop, so it did not mirror the island -- it reversed
-# the 50 cells of every 500 m block against the ascending domain order. That was a
-# workaround for the source arrays having the within-domain alongshore order
-# backwards, which ALONGSHORE_FLIP now fixes at load. Keeping both double-flipped:
-# measured seam/inner discontinuity ratio on the plotted canvas was
-#
-#     v2 arrays + flip  1.97 (right)      v2 arrays, no flip  21.15
-#     v3 arrays + flip 21.15 (WRONG)      v3 arrays, no flip   1.97 (right)
-#
-# so v2's plan view was only correct because two errors cancelled. The flip is
-# gone rather than defaulted False, per the decision to keep this code lean.
-# CONSEQUENCE: plotting a PRE-CORRECTION run (2009_v2 or earlier) through this
-# function now sawtooths, and _assert_alongshore_continuity below will say so.
-# To regenerate a v2 plan view, re-extract it with ALONGSHORE_FLIP = True instead.
+# ISLAND_FLIP_ALONGSHORE was removed (2026-08-17)
 ISLAND_INCLUDE_DUNE = True     # write the dune crest into canvas row raw_offset-1
 ISLAND_ELEV_MIN_M = -1.0       # poster value. Raising this flattens land contrast:
 ISLAND_ELEV_MAX_M = 4.0        #   land maps to ramp 0.35-1.0, so max=4 puts a 2 m
                                #   cell at tan, max=5 at pale yellow-green.
 ISLAND_SEA_LEVEL_POS = 0.35    # colormap position for 0 m, as in the poster
 ISLAND_SENTINEL_AS_OCEAN = False  # False = poster behaviour: sentinel (-3 m) water
-                                  #   cells clip to the dark navy bottom of terrain,
-                                  #   so the model's cross-shore extent stays visible
-                                  #   and only outside-canvas NaN is light blue.
-                                  # True = sentinel also renders light blue.
+                                  # cells clip to terrain's navy; True = sentinel also renders light blue
 ISLAND_OCEAN_COLOR = "#b0cfe8"    # poster set_bad colour
-# Display only, does not touch the .npy files. ONE FIGURE PER YEAR PER MODE, so a
-# single run gives you both versions to compare:
-#   "trimmed" = each domain only as tall as its own island, as stored
-#   "padded"  = every domain given the same cross-shore extent (ISLAND_PAD_ROWS),
-#               sentinel-filled landward, so the water behind each domain shows as
-#               the navy wedge in the poster figure
-# If TRIM_INTERIOR_ROWS = False the arrays are already padded and the two match.
+# Display only, does not touch the .npy files
 ISLAND_CROSS_SHORE_MODES = ["trimmed", "padded"]
 ISLAND_PAD_ROWS = 200               # cells of constant cross-shore extent when padded.
-                                    # 200 = 2000 m, equal to TOPO_ROWS, so nothing is
-                                    #       cropped (the poster look)
-                                    # 100 = 1000 m, tighter; the script warns if that
-                                    #       crops real land off the sound side
+                                    # 200 = 2000 m, nothing cropped; 100 = 1000 m, warns if land is cropped
 OFFSET_ROW_ORDER = "D1_first"  # "D1_first" | "D90_first"
 OFFSET_SEAWARD_POSITIVE = True
 
-# --- ISLAND SECTIONS ----------------------------------------------------
-# D1 = Cape Point (south) -> D90 = Pea Island (north). Labels the sheet, the
-# per-domain figures and the summary figure. Set to [] to disable.
+# Island sections
+
+# D1 = Cape Point (south) to D90 = Pea Island (north); [] disables the labels
 SECTIONS = [
     ((1, 6),   "Cape Point"),
     ((7, 8),   "Buxton"),
@@ -388,131 +166,42 @@ SECTIONS = [
     ((84, 90), "Pea Island / N. Rodanthe"),
 ]
 
-# --- DATUMS / THRESHOLDS ------------------------------------------------
+# Datums / thresholds
 MHW_M = 0.36               # m NAVD88
 BERM_ELEV_NAVD_M = 1.70    # m NAVD88 (matches the 1.7 m storm/collision threshold)
 BEACH_START_THR_M = 0.50   # m MHW-relative, strict '>' comparison
 WATER_CLAMP_M = -3.0       # m MHW-relative; below this -> sentinel.
-                           #   -3.0 keeps back-barrier marsh cells (Lexi's v3 edit)
-                           #   -1.0 was the original dune_topo_extractor_from_GIS behavior
+                           # -3.0 keeps back-barrier marsh (Lexi's v3 edit); -1.0 was the original
 SENTINEL_WATER_M = -3.0    # m MHW-relative
 MIN_DUNE_H_M = 0.1         # m, floor on dune height above berm
 
-# --- NO DATA IS NOT WATER -----------------------------------------------
-# The source LiDAR carries -10.0 m NAVD88 where it has no return. Clamping used
-# to fold that into SENTINEL_WATER_M, so a cell the survey never saw became
-# indistinguishable from a cell measured below MHW. That conflation is not
-# cosmetic: roadway_manager.bulldoze drowns a roadway when >20% of the cells
-# BORDERING it sit at or below 0 m MHW, and a no-data cell satisfies that test.
-# In GIS 78/79/80 the row landward of NC-12 is 17-25 no-data cells and ZERO
-# genuinely wet ones, so all three roadways "width-drowned" at t=0 on the
-# strength of missing survey coverage. The giveaway is where the data stops:
-# those profiles end while the ground is still 0.5-0.7 m ABOVE MHW, whereas
-# their neighbours grade down through zero the way a real sound margin does.
-#
-# So no-data is tracked separately and written to its own array. The topography
-# CASCADE reads is UNCHANGED -- no-data still lands on SENTINEL_WATER_M there,
-# because Barrier3D has no representation for "unknown" and inventing an
-# elevation would be worse. What changes is that the information now survives,
-# so any consumer that cares can ask.
-#
-#   <stem>_nodata.npy         bool, same shape as the topography array
-#                             True = this cell was never surveyed
+# No data is not water
+
+# The -10 m no-return value is tracked apart from the water clamp
 RAW_NODATA_MAX_NAVD = -9.0   # raw NoData is exactly -10.0 m NAVD88
 NODATA_SENTINEL_M = -99.0    # internal only; never written to the topography
 WRITE_NODATA_MASK = True
 
-# --- GEOMETRY -----------------------------------------------------------
+# Geometry
 TOPO_ROWS = 200            # max interior rows written
 ALONG_COLS = 50            # alongshore profiles per domain (500 m / 10 m)
 OCEAN_LOC = "right"        # "right", "left", "top", "bottom" in the RAW array
 
-# True reverses alongshore order after orienting. REQUIRED for Hatteras, because
-# the GIS row order and the domain numbering run in OPPOSITE directions:
-#
-#   1. Every resampled_domain_*.tfw has pixel Y size = -10 and zero rotation, so
-#      the rasters are north-up and array ROW 0 IS THE NORTHERNMOST row. With
-#      OCEAN_LOC="right" no rotation is applied, so axis 0 stays alongshore:
-#      within a domain, index 0 = north, index 49 = south.
-#   2. The .tfw upper-left northing increases monotonically with domain number
-#      (D1 = 3,899,274 -> D90 = 3,944,002 m, 502.6 m per step), so DOMAIN NUMBER
-#      INCREASES NORTHWARD. D1 = Cape Point / south, as OFFSET_ROW_ORDER and
-#      SECTIONS already assume.
-#
-# Unflipped, the assembled island is a 90-tooth sawtooth: each 500 m block is
-# internally mirrored against its neighbours. Measured on the 2009_v2 output,
-# mean jump at domain seams vs. mean jump within a domain:
-#
-#                        as saved   flipped
-#     island width        21.1x      1.97x     (134 m seam jumps -> 12.5 m)
-#     dune height          3.45x     1.54x
-#     mean interior elev   4.87x     1.41x
-#
-# WHAT THIS DOES AND DOES NOT AFFECT. BRIE resolves ONE node per 500 m Barrier3D
-# domain (brie_coupler.py: dy=500, alongshore_section_count=ny) and exchanges a
-# scalar x_s, so it never sees within-domain cells -- the sawtooth does not
-# corrupt alongshore transport. Barrier3D's own 50-cell axis is near
-# mirror-symmetric (Q1/Q3 weighting and the i>0 / i<BarrierLength-1 boundaries
-# are symmetric; the router writes only into row d+1 so sweep order is
-# immaterial). The one asymmetry is a bug: DiffuseDunes loops
-# `range(2, BarrierLength)`, so alongshore cell 0 never exchanges sand with cell
-# 1 while cell 49 does.
-#
-# So this flag is about GEOGRAPHIC FIDELITY AND CROSS-INPUT CONSISTENCY, which is
-# where the real exposure is: NC-12 masks, community/nourishment zones and
-# setback CSVs are all built in GIS row order and must share ONE frame with the
-# topography, or the road sits at the mirrored alongshore position inside every
-# domain. Flipping HERE -- at load, before the shear -- is what keeps the picker,
-# the road masks, shear_like(), the QC figures and the saved .npy in that one
-# frame. Do NOT reverse only the arrays written to disk: that is what
-# PEA_dune_topo_extractor_..._alongshore_corrected.py does
-# (CORRECT_SAVED_ALONGSHORE), and it leaves every figure and mask mirrored
-# against the files CASCADE reads.
-#
-# THE SAVED PICKS ARE UNAFFECTED. i0/i1 are scalar CROSS-SHORE indices, and the
-# flip commutes with straighten + water-trim: reversing alongshore negates the
-# polyfit slope but leaves ref[i] -> ref[n-1-i], hence shear[i] -> shear[n-1-i]
-# and an identical per-profile cross-shore frame. Verified on all 90 domains
-# (z_flipped == z_unflipped[::-1] exactly, c0 and n_cross_trimmed unchanged) by
-# HAT_alongshore_frame_check.py. No re-picking is needed.
+# True reverses alongshore order after orienting
 ALONGSHORE_FLIP = True
 
-# --- ROAD OVERLAY -------------------------------------------------------
-# NC-12 drawn on the picker and every per-domain figure. DISPLAY AND DIAGNOSTICS
-# ONLY: the road never enters find_dunes, build_interior or straighten_profiles,
-# so the arrays CASCADE reads are byte-identical with SHOW_ROAD either way. What
-# it changes is what YOU see while picking -- a search window that sits landward
-# of the road is picking the road embankment, not a dune crest.
-#
-# THE MASKS ARE NOT MADE HERE. HAT_rasterize_road_to_domains.py burns the road
-# geojson onto each domain's resampled_*.tif affine, so they are cell-for-cell
-# aligned with the DEM .npy by construction. This script only reads them, and
-# refuses anything whose shape disagrees.
-#
-# TWO VINTAGES ON A 2009 DEM. The road lines are 1978 and 2008 exports -- the
-# stand-ins for the 1984 and 2004 starts, paired in
-# hat_topo_version.ROAD_LINE_FOR_YEAR -- and the topography is 2009. That
-# mismatch IS the subject of RoadOffset_dunestart_audit.md, so both are drawn,
-# in different colours, with the LINE vintage in every label -- never read the
-# 1978 line as 1984 topography, nor as 1978 topography.
-#
-# RENAMED 2026-09-15. The masks were domain_<N>_road_1978.npy / _2004.npy and
-# now carry the line's true vintage. ROAD_YEARS are therefore LINE vintages,
-# not period starts, and they key every road_masks / road_stats dict below and
-# every "road ... <year>" column of the settings sheet.
+# Road overlay
+
+# NC-12 drawn on the picker and every per-domain figure
 SHOW_ROAD = True
 ROAD_YEARS = list(ROAD_LINE_VINTAGES)
 REQUIRE_ROAD_MASKS = True   # missing file or shape mismatch -> hard error.
-                            # All 90 domains have masks for both years, so this
-                            # only ever fires if the raster tree moved or a
-                            # re-export changed a grid.
+                            # fires only if the raster tree moved or a re-export changed a grid
 from site_layer.hat_topo_version import ROAD_RASTER_ROOT  # noqa: E402
 ROAD_MASK_DIR_FMT = "{year}/masks"
 ROAD_MASK_NAME_FMT = "domain_{domain}_road_{year}.npy"
 
-# D1-D7 (Cape Point) have ZERO road cells in both vintages -- NC-12 does not
-# reach the point. An empty mask is normal and silent; only a missing file or a
-# shape mismatch is an error.
+# D1-D7 (Cape Point) have ZERO road cells in both vintages -- NC-12 does not reach the point
 ROAD_COLORS = {1978: "#6A1B9A", 2008: "#111111"}   # purple 1978 line, near-black 2008 line
 ROAD_EDGE_COLOR = "#FFFFFF"   # thin outline so the road reads on dark water AND
                               # light land, which a single fill colour cannot
@@ -520,89 +209,39 @@ ROAD_PLAN_ALPHA = 0.55        # filled road cells on a map panel
 ROAD_ENVELOPE_ALPHA = 0.10    # cross-shore envelope band on a profile panel
 SHOW_ROAD_CENTER_LINE = True  # dashed alongshore line through the road centre
 
-# --- DUNE SEARCH --------------------------------------------------------
+# Dune search
 DEFAULT_WINDOW_PX = 8      # fallback window length (px landward of beach start)
 CLIP_WINDOW_TO_BEACH = True  # per profile, start the search at max(i0, beach_start)
-                             # so a picked window can't wander onto the wet beach
-                             # where the shoreline curves within a domain
+                             # so a window cannot wander onto the wet beach where the shoreline curves
 
-# --- INTERIOR -----------------------------------------------------------
+# Interior
 USE_CONST_INTERIOR = False  # interior starts one cell landward of the MOST landward
-                           # dune in the domain -> alongshore alignment preserved.
-                           # False = each profile starts behind its own dune (v3's
-                           # original behavior; breaks alongshore alignment).
+                           # dune in the domain, keeping alignment; False = each profile behind its own dune
 FILL_MISSING_DUNE = True   # profiles with no dune found get MIN_DUNE_H_M instead of
-                           # the -3.0 m sentinel (a negative dune height is not a
-                           # valid Barrier3D input)
+                           # the -3.0 m sentinel (a negative dune height is not a valid Barrier3D input)
 TRIM_INTERIOR_ROWS = True  # CHANGES THE .npy CASCADE READS, not just the figures.
-                           # True  = Lexi's v3: drop all-water rows, so each domain's
-                           #         interior array is only as tall as its own island.
-                           # False = your dune_topo_extractor_from_GIS.py: every domain
-                           #         is exactly (TOPO_ROWS, ALONG_COLS), padded landward
-                           #         with sentinel. This is what produced the 2009_v1
-                           #         arrays behind the poster figure.
+                           # True = Lexi's v3, drop all-water rows; False = fixed (TOPO_ROWS, ALONG_COLS), as 2009_v1
 
-# --- STRAIGHTEN ---------------------------------------------------------
-# Shear each alongshore profile so the shoreline runs HORIZONTALLY, before the
-# dune window is picked.
-#
-# Why: the clip boxes are north-up (rot = 0.00 on all 131 rasters) while
-# Hatteras trends NNW, so cross-shore is due east-west and the shoreline crosses
-# each 500 m domain diagonally. Domain 11's dune runs cell 3 -> 13: 8 deg of
-# obliquity, 100 m of drift. Two consequences, and they are separate:
-#
-#   1. THE WINDOW has to be wide enough to span the diagonal. Domain 11's is
-#      [3, 15] = 120 m -- also wide enough to catch a back-dune, a wooded ridge,
-#      or a house. The two worst-obliquity domains (GIS 33 at 25.6 deg, GIS 67
-#      at 22.8 deg) are two of the four SCATTER flags in the road setbacks.
-#
-#   2. THE WEDGE. USE_CONST_INTERIOR cuts horizontally at max(dune_loc) + 1,
-#      throwing away everything seaward of that on every other profile.
-#
-# Straightening fixes (1). USE_CONST_INTERIOR = False fixes (2). Set both --
-# even straightened, residual dune variability is real and the const cut still
-# costs 20-40 m of it.
-#
-# NEITHER fixes the distance inflation: the profiles are still due east-west, so
-# cross-shore AND alongshore distances stay long by 1/cos(theta) -- 1% at 8 deg,
-# 4% at 16 deg, 11% at 26 deg. A "500 m" domain spans 500/cos(theta) m of
-# shoreline. Only re-clipping with rotated boxes fixes that.
-#
-# THE PICKS BECOME FRAME-DEPENDENT. A window picked straightened is a valid
-# index range on an unstraightened array; it just points at different cells.
-# save_windows records STRAIGHTEN and the run pass refuses on a mismatch. Use a
-# NEW WINDOW_JSON and a NEW RUN_NAME rather than overwriting a picked set.
+# Straighten
+
+# Shear each profile so the shoreline runs horizontally before the window is picked (why: README)
 STRAIGHTEN = True
 
-# What to align on. "beach" = the first cell above BEACH_START_THR_M, which is
-# computed without a window -- no chicken-and-egg with the dune pick.
+# What to align on: 'beach', the first cell above BEACH_START_THR_M
 STRAIGHTEN_REF = "beach"
 
-# "linear"  fit a straight line to start_beach, shear by that. Over 500 m the
-#           island does not curve, so the obliquity IS linear: the fit removes
-#           exactly the diagonal and leaves real alongshore variability in the
-#           array. Immune to a few bad profiles.
-# "raw"     shear by start_beach itself. Flattens real structure too and folds
-#           every noisy pixel into the geometry. Diagnostic only.
+# 'linear' shears by a straight-line fit to start_beach; 'raw' by start_beach itself
 STRAIGHTEN_FIT = "linear"
 
 # Below this many profiles with a beach, skip straightening and say so.
 STRAIGHTEN_MIN_PROFILES = 10
+# -----------------------------------------------------------------------------
 
 
-# ==============================================================================
-# ARRAY HELPERS
-# ==============================================================================
+# Array helpers
 
+# First/last (inclusive) columns that are not entirely water
 def water_col_bounds(domain_array: np.ndarray, w_elev: float) -> tuple[int, int]:
-    """
-    First/last (inclusive) columns that are not entirely water.
-
-    `<=` rather than `==`: no-data now carries NODATA_SENTINEL_M, which is below
-    w_elev. With `==` a column of pure no-data would read as "not water" and
-    survive trimming, silently changing every array's shape. Water and no-data
-    are both "nothing to model here" for trimming purposes, so both trim.
-    """
     keep = [c for c in range(domain_array.shape[1])
             if not np.all(domain_array[:, c] <= w_elev + 1e-9)]
     if not keep:
@@ -610,9 +249,8 @@ def water_col_bounds(domain_array: np.ndarray, w_elev: float) -> tuple[int, int]
     return min(keep), max(keep)
 
 
+# Trim leading/trailing rows that are entirely water
 def remove_water_rows(domain_array: np.ndarray, w_elev: float) -> np.ndarray:
-    """Trim leading/trailing rows that are entirely water. `<=` for the reason
-    in water_col_bounds: no-data must trim like water or shapes change."""
     keep = [r for r in range(domain_array.shape[0])
             if not np.all(domain_array[r, :] <= w_elev + 1e-9)]
     if not keep:
@@ -620,13 +258,8 @@ def remove_water_rows(domain_array: np.ndarray, w_elev: float) -> np.ndarray:
     return domain_array[min(keep):max(keep) + 1, :]
 
 
+# Return an (alongshore, cross_shore) array with the ocean in the LAST column
 def orient_ocean_right(arr: np.ndarray, ocean_loc: str) -> np.ndarray:
-    """
-    Return an (alongshore, cross_shore) array with the ocean in the LAST column.
-
-    NOTE: v3's "top"/"left" branches used np.flip(arr), which flips BOTH axes and
-    silently reverses the alongshore order. These branches do not.
-    """
     if ocean_loc == "right":
         out = arr
     elif ocean_loc == "left":
@@ -642,21 +275,8 @@ def orient_ocean_right(arr: np.ndarray, ocean_loc: str) -> np.ndarray:
     return np.ascontiguousarray(out)
 
 
+# Shear each alongshore profile so the shoreline is horizontal
 def straighten_profiles(z: np.ndarray, start_beach: np.ndarray):
-    """
-    Shear each alongshore profile so the shoreline is horizontal.
-
-    Returns (z_sheared, start_beach_sheared, shear, obliquity_deg).
-
-    shear[i] = cells dropped from the SEAWARD end of profile i. Anything that
-    indexes the same grid afterwards -- an NC-12 mask, a dune-line mask -- has
-    to be sheared with this same array via shear_like(), or it points at
-    different ground than the topography does.
-
-    The fit's slope is cells cross-shore per cell alongshore. Both axes are
-    CELL_SIZE_M, so obliquity = atan(slope): the shoreline's angle to the grid's
-    east-west axis, measured directly rather than inferred from dune_loc's span.
-    """
     n_along, n_cross = z.shape
     shear = np.zeros(n_along, dtype=int)
 
@@ -687,9 +307,7 @@ def straighten_profiles(z: np.ndarray, start_beach: np.ndarray):
     shear = np.round(ref - np.nanmin(ref)).astype(int)
     shear = np.clip(shear, 0, n_cross - 1)
 
-    # Cells shifted in from beyond the original array were never surveyed
-    # either, so they are no-data rather than water. They trim identically
-    # (see water_col_bounds), so this changes the mask, not the topography.
+    # Cells shifted in from beyond the array are no-data, not water
     zs = np.full_like(z, NODATA_SENTINEL_M)
     for i in range(n_along):
         k = int(shear[i])
@@ -702,14 +320,8 @@ def straighten_profiles(z: np.ndarray, start_beach: np.ndarray):
     return zs, sb_new, shear, obliq
 
 
+# Apply an existing shear to another array on the same grid
 def shear_like(arr: np.ndarray, shear: np.ndarray) -> np.ndarray:
-    """
-    Apply an existing shear to another array on the same grid.
-
-    Must be the SAME shear straighten_profiles() returned for this domain. Used
-    by HAT_road_setback_extract.py to put the NC-12 and dune-line masks in the
-    frame the topography was saved in.
-    """
     out = np.zeros_like(arr)
     n_along, n_cross = arr.shape
     for i in range(min(n_along, len(shear))):
@@ -721,27 +333,8 @@ def shear_like(arr: np.ndarray, shear: np.ndarray) -> np.ndarray:
     return out
 
 
+# Put a raw GIS mask into the frame the topography was saved in
 def align_mask_to_topography(raw_mask: np.ndarray, dom: dict) -> np.ndarray:
-    """Put a raw GIS mask into the frame the topography was saved in.
-
-    MOVED HERE from HAT_road_offset_from_dune_start.py (2026-08-18). It lived
-    there as a private copy that re-derived this script's frame from outside it,
-    which meant two definitions of the same chain that had to be kept in step by
-    hand. It is now defined once, next to shear_like, and the setback script
-    imports it. Any change to load_profiles' ordering has to be reflected here or
-    the assert at the bottom fires.
-
-    The chain must match ``load_profiles`` operation for operation, or the mask
-    indexes different ground than ``dune_loc`` does:
-
-        orient_ocean_right   same OCEAN_LOC and the same ALONGSHORE_FLIP
-        [:, ::-1]            ocean-first, as load_profiles does to build ``raw``
-        shear_like(shear)    the SAME per-profile shear, not a re-fit one
-        [:, c0:c0+n_cross]   the SAME water-trim window
-
-    ``load_profiles`` returns c0 but not c1; the trimmed width of ``z`` supplies
-    the rest, which is also a check that the two arrays end up the same shape.
-    """
     mask = np.squeeze(np.asarray(raw_mask))
     if mask.ndim != 2:
         raise ValueError(f"expected a 2-D mask, got shape {mask.shape}")
@@ -751,9 +344,7 @@ def align_mask_to_topography(raw_mask: np.ndarray, dom: dict) -> np.ndarray:
     oriented = orient_ocean_right(binary, OCEAN_LOC)
     ocean_first = np.ascontiguousarray(oriented[:, ::-1])
 
-    # shear_like fills with np.zeros_like, so on a bool array the cells shifted
-    # in from beyond the seaward end become False -- correct for a mask, which
-    # is why the bool dtype has to survive this call.
+    # shear_like fills with zeros, so the mask must stay bool
     sheared = shear_like(ocean_first, dom["shear"])
 
     c0 = int(dom["c0"])
@@ -768,36 +359,9 @@ def align_mask_to_topography(raw_mask: np.ndarray, dom: dict) -> np.ndarray:
     return np.ascontiguousarray(trimmed, dtype=bool)
 
 
+# Source cross-shore cell that becomes SAVED interior row 0, per profile
 def interior_row0_line(prof_arr: np.ndarray,
                        dune_loc: np.ndarray) -> tuple[np.ndarray, int]:
-    """Source cross-shore cell that becomes SAVED interior row 0, per profile.
-
-    MOVED HERE from HAT_road_offset_from_dune_start.py alongside
-    align_mask_to_topography, and for the same reason: the setback measures from
-    interior row 0, this script's figures and road columns measure from interior
-    row 0, and there must be exactly one definition of where that is.
-
-    ``build_interior`` with USE_CONST_INTERIOR = False fills each column from
-    ``prof_arr[i, dune_loc[i] + 1:]``, so interior row 0 is the cell one landward
-    of the crest. But TRIM_INTERIOR_ROWS = True then runs ``remove_water_rows``,
-    which drops leading AND trailing all-water rows -- so if interior row 0 were
-    all-water across every profile, the SAVED row 0 would be a different cell
-    and every setback would be off by that shift.
-
-    It is currently zero on all 90 domains, but it is computed rather than
-    assumed, because a change to the dune window or the water clamp could make
-    it nonzero without any other visible symptom.
-
-    TWO FIXES APPLIED IN THE MOVE, both of which are no-ops on the current
-    settings and both of which were latent bugs in the original:
-      1. the all-water test is now `<= SENTINEL_WATER_M + 1e-9`, matching
-         remove_water_rows. The original used `== SENTINEL_WATER_M`, which does
-         NOT catch a leading row of pure no-data (NODATA_SENTINEL_M = -99 is
-         below the sentinel, so `==` kept a row that the real trim dropped).
-      2. lead_trim is only applied when TRIM_INTERIOR_ROWS is True. The original
-         assumed it, so with TRIM_INTERIOR_ROWS = False it would have shifted
-         row 0 by a trim that never happened.
-    """
     topo, start_island = build_interior(prof_arr, dune_loc)
 
     if TRIM_INTERIOR_ROWS:
@@ -808,26 +372,27 @@ def interior_row0_line(prof_arr: np.ndarray,
         lead_trim = 0
 
     if start_island is not None:
-        # USE_CONST_INTERIOR: the cut is horizontal, so row 0 is the same cell on
-        # every profile whether or not that profile found a dune.
+        # USE_CONST_INTERIOR: a horizontal cut, the same row 0 on every profile
         row0 = np.full(len(dune_loc), start_island + lead_trim, dtype=int)
     else:
         row0 = np.where(dune_loc >= 0, dune_loc + 1 + lead_trim, -1)
     return row0, lead_trim
 
 
+# Sort key: the domain number in a name, then the name
 def natural_key(name: str) -> tuple:
     m = re.search(r"domain_(\d+)", name)
     return (int(m.group(1)) if m else 10**9, name)
 
 
+# The domain number in a file stem, or None
 def domain_number(stem: str) -> int | None:
     m = re.search(r"domain_(\d+)", stem)
     return int(m.group(1)) if m else None
 
 
+# Island section label for a domain, per the D1=Cape Point convention
 def section_for(stem: str) -> str:
-    """Island section label for a domain, per the D1=Cape Point convention."""
     n = domain_number(stem)
     if n is None:
         return ""
@@ -837,46 +402,28 @@ def section_for(stem: str) -> str:
     return ""
 
 
+# Zero-padded figure name so 90+ domains sort correctly in Explorer
 def fig_stem(stem: str) -> str:
-    """Zero-padded figure name so 90+ domains sort correctly in Explorer."""
     n = domain_number(stem)
     return f"domain_{n:03d}" if n is not None else stem
 
 
+# A domain's figure title, with its island section
 def fig_title(stem: str) -> str:
     sec = section_for(stem)
     return f"{stem}  ({sec})" if sec else stem
 
 
-# ==============================================================================
-# ROAD MASKS
-#
-# Read-only consumers of HAT_rasterize_road_to_domains.py. Nothing here writes a
-# mask, and nothing here influences the dune search or the saved arrays.
-# ==============================================================================
+# Road masks: read-only consumers of HAT_rasterize_road_to_domains.py's masks
 
+# Where HAT_rasterize_road_to_domains.py put one domain's mask
 def road_mask_path(year: int, domain_id: int) -> Path:
-    """Where HAT_rasterize_road_to_domains.py put one domain's mask."""
     return (Path(ROAD_RASTER_ROOT) / ROAD_MASK_DIR_FMT.format(year=year)
             / ROAD_MASK_NAME_FMT.format(domain=domain_id, year=year))
 
 
+# Load every ROAD_YEARS mask for one domain, in both frames
 def load_road_masks(dem_path: Path, dom: dict) -> tuple[dict, dict]:
-    """Load every ROAD_YEARS mask for one domain, in both frames.
-
-    Returns (road_raw, road_aligned), each {year: bool array}:
-
-        road_raw      (n_along, n_raw)   ocean-first, UNSHEARED and UNTRIMMED --
-                                        the frame panel 1 of the comparison
-                                        figure draws, so the road's real diagonal
-                                        across the domain stays visible
-        road_aligned  (n_along, n_cross) the frame the topography and dune_loc
-                                        live in, via align_mask_to_topography
-
-    Empty dicts if SHOW_ROAD is False. A domain with no road cells still gets an
-    all-False entry rather than being omitted -- D1-D7 are that case every run,
-    and callers should not have to distinguish "no road here" from "not loaded".
-    """
     if not SHOW_ROAD:
         return {}, {}
 
@@ -897,9 +444,7 @@ def load_road_masks(dem_path: Path, dom: dict) -> tuple[dict, dict]:
         mask = np.squeeze(np.load(path))
         if mask.ndim != 2:
             raise ValueError(f"{path.name}: expected a 2-D mask, got {mask.shape}")
-        # The mask is checked against the RAW DEM shape, before any orienting, so
-        # a grid mismatch is reported against the thing the rasterizer actually
-        # snapped to. No transpose or resize: that would hide a misregistration.
+        # The mask is checked against the raw DEM shape; no transpose or resize
         if tuple(mask.shape) != tuple(dom["raw_shape_unoriented"]):
             raise ValueError(
                 f"{path.name}: road shape {mask.shape} does not match DEM shape "
@@ -915,13 +460,9 @@ def load_road_masks(dem_path: Path, dom: dict) -> tuple[dict, dict]:
     return raw_out, aligned_out
 
 
+# Seaward edge, landward edge and centre cell of the road, per profile
 def road_profile_positions(mask: np.ndarray | None) -> tuple[np.ndarray, np.ndarray,
                                                              np.ndarray]:
-    """Seaward edge, landward edge and centre cell of the road, per profile.
-
-    NaN on profiles the road does not cross, which is a real state -- the road
-    leaves the domain, or the domain has no road at all.
-    """
     if mask is None:
         return (np.array([], dtype=float),) * 3
     n_along = mask.shape[0]
@@ -937,16 +478,9 @@ def road_profile_positions(mask: np.ndarray | None) -> tuple[np.ndarray, np.ndar
     return seaward, landward, center
 
 
+# Re-index road cells into the SAVED interior grid
 def processed_road_grid(mask: np.ndarray | None, row0_line: np.ndarray,
                         n_rows: int, n_cols: int) -> np.ndarray:
-    """Re-index road cells into the SAVED interior grid.
-
-    The interior is cut per profile at interior row 0, so a road cell's row in
-    the saved array is (source cell - row0[i]). This is what shows whether NC-12
-    is inside the array CASCADE actually reads, and at which interior row --
-    which is the same quantity roadway_manager.bulldoze indexes with
-    int(road_setback / dy).
-    """
     out = np.zeros((n_rows, n_cols), dtype=bool)
     if mask is None:
         return out
@@ -961,35 +495,9 @@ def processed_road_grid(mask: np.ndarray | None, row0_line: np.ndarray,
     return out
 
 
+# Per-domain road geometry and setback from SAVED interior row 0
 def road_offset_stats(mask: np.ndarray | None,
                       row0_line: np.ndarray) -> dict:
-    """Per-domain road geometry and setback from SAVED interior row 0.
-
-    `setback_median_m` IS `setback_dunestart_m` from RoadOffset_<year>_domains.csv --
-    same reference row, same frame, same shear, same edge, same statistic. It is
-    computed here independently so the two can be diffed; if they disagree, one
-    of the two frames has drifted.
-
-    MEASURED FROM THE SEAWARD EDGE OF THE ROAD BLOCK, NOT ITS CENTRE, and
-    reported as a MEDIAN over profiles. Both of those match
-    HAT_road_offset_from_dune_start.py, and neither is arbitrary:
-
-      * the seaward edge is what `roadway_manager.bulldoze` indexes --
-        `[road_start : road_start + road_width]` starts at the seaward edge, so
-        that is the cell `int(road_setback / dy)` has to land on. Measuring the
-        centre instead reads high by half the mask width, which on a ~24 m mask
-        (ROAD_BUFFER_M = 6 plus all_touched on 10 m cells) is a systematic ~10 m.
-      * the median, because NC-12 leaves some domains diagonally: the handful of
-        profiles where the road clips a corner drag a mean by up to ~150 m while
-        the median stays on the road proper.
-
-    The centre and the width are still reported, as geometry -- they are what
-    tells you the mask is a fat buffer around an 8 m road rather than the road.
-
-    Sign: POSITIVE = road LANDWARD of interior row 0 (the normal case, and the
-    only one Barrier3D can represent). Negative means the road sits seaward of
-    the dune line, which is what the audit's NEGATIVE floor is about.
-    """
     empty = {
         "road_profiles": 0, "road_cells": 0,
         "road_span_cells": np.nan, "road_center_cell": np.nan,
@@ -1003,8 +511,7 @@ def road_offset_stats(mask: np.ndarray | None,
 
     seaward, landward, center = road_profile_positions(mask)
 
-    # Cap at ALONG_COLS, as the setback script does: profiles beyond the 50
-    # CASCADE keeps are not part of the measurement.
+    # Cap at ALONG_COLS, as the setback script does
     n = min(len(center), len(row0_line), ALONG_COLS)
     row0 = np.asarray(row0_line[:n], dtype=float)
     valid = np.isfinite(center[:n]) & (row0 >= 0)
@@ -1028,21 +535,15 @@ def road_offset_stats(mask: np.ndarray | None,
             "setback_max_m": float(np.max(sb)),
             "center_median_m": float(np.median(ctr)),
             "road_width_cells": float(np.median(width)),
-            # counted on the SEAWARD edge, because that is the value that gets
-            # floored before it reaches the model
+            # Counted on the seaward edge, the value floored before the model
             "n_seaward": int(np.count_nonzero(sb < 0)),
         })
     return out
 
 
+# Draw exact road cells on an (alongshore x, cross-shore y) map panel
 def add_road_plan_overlay(ax, mask: np.ndarray | None, year: int,
                           *, zorder: float = 5.0, label: bool = True) -> None:
-    """Draw exact road cells on an (alongshore x, cross-shore y) map panel.
-
-    The white contour is not decoration: the fill sits on a terrain colormap that
-    runs from near-black water to pale land, and no single fill colour is legible
-    against both. The outline is.
-    """
     if mask is None or not np.any(mask):
         return
     color = ROAD_COLORS.get(year, "#111111")
@@ -1066,14 +567,9 @@ def add_road_plan_overlay(ax, mask: np.ndarray | None, year: int,
                 label=f"NC-12 {year}")
 
 
+# Road's cross-shore envelope on a profile-stack panel (elevation x, cell y)
 def add_road_envelope(ax, mask: np.ndarray | None, year: int,
                       *, label: bool = True) -> None:
-    """Road's cross-shore envelope on a profile-stack panel (elevation x, cell y).
-
-    A profile stack has no alongshore axis, so the road cannot be drawn cell by
-    cell -- what it can show is the band of cross-shore cells the road occupies
-    anywhere in the domain, which is what you compare the search window against.
-    """
     if mask is None or not np.any(mask):
         return
     color = ROAD_COLORS.get(year, "#111111")
@@ -1087,37 +583,10 @@ def add_road_envelope(ax, mask: np.ndarray | None, year: int,
                zorder=1)
 
 
-# ==============================================================================
-# LOAD / PREP
-# ==============================================================================
+# Load / prep
 
+# Load one domain
 def load_profiles(in_path: Path) -> dict:
-    """
-    Load one domain. Returns a dict:
-        raw         : (n_along, n_cross_raw) RAW GIS elevation in m NAVD88,
-                      oriented OCEAN-FIRST, untrimmed. For the comparison figure.
-        z           : (n_along, n_cross) MHW-relative, clamped, water-trimmed,
-                      OCEAN-FIRST (index 0 = ocean). This is what gets processed.
-        start_beach : (n_along,) first index in z where z > BEACH_START_THR_M,
-                      -1 if none
-        c0          : cross-shore raw_offset of z within raw. WITHOUT
-                      straightening, z[:, k] == raw column k + c0. WITH
-                      straightening the mapping is per profile:
-                          z[i, k] == raw[i, k + c0 + shear[i]]
-        shear       : (n_along,) cells dropped from the seaward end of each
-                      profile to make the shoreline horizontal. Zeros if
-                      STRAIGHTEN is False. Any mask that has to index the same
-                      grid must be put through shear_like() with THIS array.
-        obliquity_deg : the shoreline's angle to the grid's east-west axis,
-                      from the slope of the start_beach fit. 0.0 if not
-                      straightened.
-        road_raw    : {year: bool (n_along, n_cross_raw)} NC-12, ocean-first,
-                      unsheared and untrimmed. Empty if SHOW_ROAD is False.
-        road_masks  : {year: bool (n_along, n_cross)} NC-12 in the SAME frame as
-                      z, via align_mask_to_topography. Empty if SHOW_ROAD is
-                      False. Display and diagnostics only -- nothing downstream
-                      of here lets the road affect the dune search or the arrays.
-    """
     arr = np.load(in_path).astype(float, copy=False)
     if arr.ndim != 2:
         raise ValueError(f"expected 2D array, got {arr.ndim}D")
@@ -1125,8 +594,7 @@ def load_profiles(in_path: Path) -> dict:
     raw_shape_unoriented = arr.shape   # the shape the road rasterizer snapped to
     arr = orient_ocean_right(arr, OCEAN_LOC)
 
-    # sanity check that OCEAN_LOC is actually right (the original script's AUTO_ORIENT,
-    # demoted to a warning so orientation stays an explicit, documented choice)
+    # Sanity check that OCEAN_LOC is right (a warning, not an auto-orient)
     edge = max(1, min(5, arr.shape[1] // 20))
     left_q = np.nanpercentile(arr[:, :edge], 25)
     right_q = np.nanpercentile(arr[:, -edge:], 25)
@@ -1136,9 +604,7 @@ def load_profiles(in_path: Path) -> dict:
 
     raw = np.ascontiguousarray(arr[:, ::-1])  # NAVD88, ocean first, untrimmed
 
-    # No-data is identified on the RAW array, before the clamp folds it into the
-    # water sentinel. It then rides the same shear/trim/slice path as z, marked
-    # by a value far below the clamp, and is separated out again at save time.
+    # No-data is identified on the RAW array, before the clamp folds it into the water sentinel
     nodata = raw <= RAW_NODATA_MAX_NAVD
 
     z = raw - MHW_M
@@ -1153,10 +619,7 @@ def load_profiles(in_path: Path) -> dict:
         print(f"[warn] {in_path.name}: alongshore={n_along} > {ALONG_COLS}; "
               f"only first {ALONG_COLS} profiles used.")
 
-    # ORDER MATTERS: start_beach -> straighten -> water trim.
-    # start_beach is found on the untrimmed array because the shear is what
-    # defines the frame; c0 must then be measured on the array the window is
-    # actually picked in, or the two disagree.
+    # Order matters: start_beach, then straighten, then water trim
     above = z > BEACH_START_THR_M
     start_beach = np.where(above.any(axis=1), above.argmax(axis=1), -1)
 
@@ -1172,62 +635,34 @@ def load_profiles(in_path: Path) -> dict:
            "name": in_path.name,
            "raw_shape_unoriented": raw_shape_unoriented}
 
-    # LAST, because align_mask_to_topography needs the finished z, c0 and shear.
-    # Loading the road cannot change any of them -- if it ever appears to, the
-    # shape assert inside align_mask_to_topography is what will say so.
+    # LAST, because align_mask_to_topography needs the finished z, c0 and shear
     dom["road_raw"], dom["road_masks"] = load_road_masks(in_path, dom)
     return dom
 
 
+# NaN out sentinel water cells for plotting/statistics
 def masked_profiles(prof_arr: np.ndarray) -> np.ndarray:
-    """NaN out sentinel water cells for plotting/statistics."""
     return np.where(prof_arr <= SENTINEL_WATER_M + 1e-9, np.nan, prof_arr)
 
 
+# The fallback window: DEFAULT_WINDOW_PX landward of the median beach start
 def default_window(prof_arr: np.ndarray, start_beach: np.ndarray) -> tuple[int, int]:
     valid = start_beach[start_beach >= 0]
     base = int(np.median(valid)) if valid.size else 0
     return base, min(base + DEFAULT_WINDOW_PX, prof_arr.shape[1])
 
 
-# --- SUGGESTED WINDOW ---------------------------------------------------
-# How far landward of the beach a foredune is allowed to be looked for, and how
-# much margin to leave either side of the crest the search finds.
+# Suggested window
+
+# How far landward to look for a foredune, and the margin around the crest
 SUGGEST_REACH_PX = 26      # cells landward of beach start to hunt the crest in
 SUGGEST_PAD_SEAWARD = 3    # cells kept seaward of the crest
 SUGGEST_PAD_LANDWARD = 2   # cells kept landward of the crest (INSIDE the window)
 
 
+# A crest-aware starting window
 def suggest_window(prof_arr: np.ndarray, start_beach: np.ndarray,
                    road_seaward: int | None = None) -> tuple[int, int, float]:
-    """A crest-aware starting window: (i0, i1, median crest elevation).
-
-    WHY THE SEEDED WINDOW IS NOT ENOUGH. A re-pick seeded from the previous set
-    opens every domain on its previous window, which is precisely the thing a
-    re-pick exists to question -- and if that window clipped the crest, the
-    picker shows no sign of it. The argmax simply pins at i1-1 and looks
-    plausible. This proposes a window derived from the PROFILE instead.
-
-    METHOD. Per profile, take the unconstrained argmax over
-    [start_beach, start_beach + SUGGEST_REACH_PX) -- i.e. the highest ground in
-    the foredune zone, with no window imposed. Take the median of those
-    locations across the domain, then bracket it with margin. The result
-    contains the crest by construction, which the seeded window may not.
-
-    THE ROAD IS A WARNING, NOT A LIMIT -- and the first version of this got that
-    wrong. Bounding the hunt at NC-12's seaward edge looks prudent (the
-    embankment is a flat-topped ridge an argmax locks onto) but it fails exactly
-    where this project lives: at GIS 85 the road sits at cell 13 and the crest
-    at 14, so a road-bounded hunt excluded the crest BY CONSTRUCTION and
-    proposed a 0.54 m "dune" against a real 4.93 m one. Wherever the island has
-    migrated over the roadbed, the dune IS landward of the road.
-
-    So the hunt is unbounded landward within SUGGEST_REACH_PX, and
-    `road_seaward` is used only to tell the caller whether the proposed window
-    overlaps NC-12, which the picker surfaces as a warning for the eye.
-
-    Returns (i0, i1 EXCLUSIVE, median crest elevation, overlaps_road).
-    """
     n_along, n_cross = prof_arr.shape
     limit = n_cross
 
@@ -1260,14 +695,8 @@ def suggest_window(prof_arr: np.ndarray, start_beach: np.ndarray,
     return i0, i1, crest_el, overlaps
 
 
+# (median crest, % of profiles whose argmax pins at i1-1, is a higher cell sitting just outside the ...
 def window_diagnostics(prof_arr, start_beach, i0, i1):
-    """(median crest, % of profiles whose argmax pins at i1-1, is a higher cell
-    sitting just outside the landward edge?).
-
-    The pin fraction is the live tell for a clipped window: a crest that really
-    is the last cell in the window is fine, but a crest that pins there WHILE
-    cell i1 is higher means the window is cutting the dune off.
-    """
     elev, loc = find_dunes(prof_arr, start_beach, i0, i1)
     ok = loc >= 0
     if not ok.any():
@@ -1281,12 +710,10 @@ def window_diagnostics(prof_arr, start_beach, i0, i1):
     return float(np.median(elev[ok])), pinned, higher
 
 
-# ==============================================================================
-# INTERACTIVE PICKER
-# ==============================================================================
+# Interactive picker
 
+# SpanSelector with a props/rectprops fallback for matplotlib < 3.5
 def _span_selector(ax, on_select):
-    """SpanSelector with a props/rectprops fallback for matplotlib < 3.5."""
     try:
         return SpanSelector(ax, on_select, "vertical", useblit=True,
                             props=dict(alpha=0.2, facecolor="#FF8C00"))
@@ -1295,21 +722,10 @@ def _span_selector(ax, on_select):
                             rectprops=dict(alpha=0.2, facecolor="#FF8C00"))
 
 
+# Show the domain ocean-at-bottom and let the user drag a dune search window
 def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
                 init: tuple[int, int],
                 road_masks: dict | None = None) -> tuple[str, int, int]:
-    """
-    Show the domain ocean-at-bottom and let the user drag a dune search window.
-
-    Display only: the cross-shore axis runs vertically with cell 0 (ocean) at the
-    bottom, landward upward. i0/i1 are still cross-shore indices from the ocean.
-
-    NC-12 is drawn on both panels (v4). It is there to tell you when a window has
-    wandered onto the road embankment: the road is a hard, flat-topped ridge a
-    dune-crest argmax will happily lock onto, and the v3 windows were picked
-    without being able to see it. The road never constrains the window in code --
-    only your eye.
-    """
     n_along, n_cross = prof_arr.shape
     zm = masked_profiles(prof_arr)
     state = {"i0": init[0], "i1": init[1], "action": None}
@@ -1326,7 +742,7 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
     finite = zm[np.isfinite(zm)]
     vmax = float(np.percentile(finite, 99)) if finite.size else 3.0
 
-    # --- map panel: alongshore on x, cross-shore on y, ocean at the bottom ---
+    # Map panel: alongshore on x, cross-shore on y, ocean at the bottom
     im = ax_map.imshow(
         np.ma.masked_invalid(zm.T), aspect="auto", origin="lower",
         extent=[-0.5, n_along - 0.5, -0.5, n_cross - 0.5],
@@ -1340,7 +756,7 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
     ax_map.set_ylabel("cross-shore cell  (0 = ocean, landward up)")
     ax_map.legend(loc="upper right", fontsize=9, framealpha=0.9)
 
-    # --- profile panel: elevation on x, cross-shore on y ---
+    # Profile panel: elevation on x, cross-shore on y
     y = np.arange(n_cross)
     ax_prof.plot(zm.T, y, color="0.75", lw=0.6)
     med = np.nanmedian(zm, axis=0)
@@ -1366,9 +782,7 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
     spans = [None, None]
     sug_lines = [None, None]
 
-    # The road's seaward edge, so the suggestion can never propose a window
-    # that reaches NC-12. road_masks is the aligned dict the caller passes
-    # for display; if it is absent the hunt is simply unbounded landward.
+    # The road's seaward edge, so the suggestion can never propose a window that reaches NC-12
     _road_sea = None
     if road_masks:
         cols = [np.flatnonzero(m.any(axis=0)) for m in road_masks.values()
@@ -1382,21 +796,10 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
         for k, ax in enumerate((ax_map, ax_prof)):
             if spans[k] is not None:
                 spans[k].remove()
-            # HALF-CELL OFFSETS, so the band covers the cells actually SEARCHED.
-            #
-            # The window is half-open: find_dunes slices prof_arr[i, i0:i1], so
-            # cell i1 is NOT searched. Drawn as axhspan(i0, i1) the band's edge
-            # landed on the CENTRE of cell i1, so "drag to cover the crest"
-            # excluded the crest -- and did so silently, since the argmax simply
-            # pinned at i1-1. It cost the real crest at GIS 43, 64, 72, 85 and
-            # 86, up to 1.5 m at GIS 85 (3.44 m picked against 4.93 m actual).
-            #
-            # Display only: no stored pick moves, no number changes. It just
-            # makes the shaded band mean what a reader assumes it means.
+            # HALF-CELL OFFSETS, so the band covers the cells actually SEARCHED
             spans[k] = ax.axhspan(state["i0"] - 0.5, state["i1"] - 0.5,
                                   color="#FF8C00", alpha=0.25, zorder=0)
-            # the suggestion, as an outline so it reads as a proposal rather
-            # than a second selection
+            # The suggestion, as an outline so it reads as a proposal rather than a second selection
             if sug_lines[k] is not None:
                 for ln in sug_lines[k]:
                     ln.remove()
@@ -1462,12 +865,10 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
     return state["action"], state["i0"], state["i1"]
 
 
-# ==============================================================================
-# EXTRACTION
-# ==============================================================================
+# Extraction
 
+# Dune elevation and location per profile within the picked window
 def find_dunes(prof_arr, start_beach, i0, i1):
-    """Dune elevation and location per profile within the picked window."""
     n_along, n_cross = prof_arr.shape
     dune_elev = np.full(n_along, np.nan)
     dune_loc = np.full(n_along, -1, dtype=int)
@@ -1483,9 +884,7 @@ def find_dunes(prof_arr, start_beach, i0, i1):
         valid = w > SENTINEL_WATER_M + 1e-9
         if not valid.any():
             continue
-        # argmax INSIDE the window. v3 used np.where(prof == dune_elev)[0][0] over
-        # the whole profile, which can snap the dune onto an earlier cell of equal
-        # elevation (common on a quantized DEM).
+        # Argmax inside the window, not over the whole profile
         k = int(np.argmax(np.where(valid, w, -np.inf)))
         dune_elev[i] = float(w[k])
         dune_loc[i] = a + k
@@ -1493,8 +892,8 @@ def find_dunes(prof_arr, start_beach, i0, i1):
     return dune_elev, dune_loc
 
 
+# Return interior topography, (cross_shore_rows, alongshore_cols), ocean-first
 def build_interior(prof_arr, dune_loc):
-    """Return interior topography, (cross_shore_rows, alongshore_cols), ocean-first."""
     n_along, n_cross = prof_arr.shape
     topo = np.full((TOPO_ROWS, ALONG_COLS), SENTINEL_WATER_M, dtype=float)
     n_fill = min(ALONG_COLS, n_along)
@@ -1521,21 +920,15 @@ def build_interior(prof_arr, dune_loc):
     return topo, None
 
 
+# 'domain_11' -> '11'
 def _gis_id(stem: str) -> str:
-    """'domain_11' -> '11'.
-
-    This script names arrays by the npy-arrays stem; hat_topo_version.
-    array_name() names them by GIS id. They MUST produce the same filename, so
-    the id is derived here rather than the name being spelled twice. An
-    unexpected stem raises instead of silently writing a file no reader will
-    look for - which is exactly how the old per-script tag went wrong.
-    """
     if not stem.startswith("domain_"):
         raise ValueError(
             f"unexpected array stem {stem!r} - expected 'domain_<gis id>'")
     return stem[len("domain_"):]
 
 
+# One domain: find the dunes, build the interior, save both arrays and the figures
 def extract_domain(stem, prof_arr, start_beach, i0, i1, topo_dir, dune_dir,
                    shear=None, obliquity_deg=0.0, road_masks=None):
     n_along, n_cross = prof_arr.shape
@@ -1567,18 +960,12 @@ def extract_domain(stem, prof_arr, start_beach, i0, i1, topo_dir, dune_dir,
     if TRIM_INTERIOR_ROWS:
         topo_m = remove_water_rows(topo_m, SENTINEL_WATER_M)
 
-    # Where SAVED interior row 0 sits on each profile, and the road measured
-    # against it. Diagnostics only -- computed from dune_loc and the same
-    # build_interior call the arrays came from, and written to nothing but the
-    # settings sheet and the figures.
+    # Where SAVED interior row 0 sits on each profile, and the road measured against it
     row0_line, lead_trim = interior_row0_line(prof_arr, dune_loc)
     road_stats = {yr: road_offset_stats(m, row0_line)
                   for yr, m in (road_masks or {}).items()}
 
-    # Split no-data back out. The topography written is byte-identical to what
-    # this script produced before the mask existed: every no-data cell goes back
-    # to SENTINEL_WATER_M, because Barrier3D has no representation for
-    # "unknown". The mask is what carries the distinction forward.
+    # Split no-data back out; the topography written is unchanged
     topo_nodata = topo_m <= NODATA_SENTINEL_M + 1e-9
     dune_nodata = dune_m <= NODATA_SENTINEL_M + 1e-9
     topo_m = np.where(topo_nodata, SENTINEL_WATER_M, topo_m)
@@ -1613,8 +1000,7 @@ def extract_domain(stem, prof_arr, start_beach, i0, i1, topo_dir, dune_dir,
         "mean_interior_elev_m": float(np.mean(topo_m[topo_m > SENTINEL_WATER_M + 1e-9]))
         if np.any(topo_m > SENTINEL_WATER_M + 1e-9) else np.nan,
         "start_island": start_island,
-        # the saved arrays are in the straightened frame; nothing about a .npy
-        # says so, and a window or a mask from the other frame is silently wrong
+        # The saved arrays are in the straightened frame
         "straightened": bool(STRAIGHTEN),
         "obliquity_deg": obliquity_deg,
         "shear_max_cells": int(np.max(shear)) if shear is not None else 0,
@@ -1627,13 +1013,11 @@ def extract_domain(stem, prof_arr, start_beach, i0, i1, topo_dir, dune_dir,
     }
 
 
-# ==============================================================================
-# QC FIGURE
-# ==============================================================================
+# Qc figure
 
+# QC figure in the same ocean-at-bottom orientation as the picker
 def qc_figure(stem, prof_arr, start_beach, res, fig_dir: Path,
               road_masks: dict | None = None):
-    """QC figure in the same ocean-at-bottom orientation as the picker."""
     n_along, n_cross = prof_arr.shape
     zm = masked_profiles(prof_arr)
     i0, i1 = res["i0"], res["i1"]
@@ -1649,7 +1033,7 @@ def qc_figure(stem, prof_arr, start_beach, res, fig_dir: Path,
     finite = zm[np.isfinite(zm)]
     vmax = float(np.percentile(finite, 99)) if finite.size else 3.0
 
-    # --- map: alongshore x, cross-shore y (ocean at bottom) ---
+    # Map: alongshore x, cross-shore y (ocean at bottom)
     im = ax_map.imshow(np.ma.masked_invalid(zm.T), aspect="auto", origin="lower",
                        extent=[-0.5, n_along - 0.5, -0.5, n_cross - 0.5],
                        cmap="terrain", vmin=-1.0, vmax=max(vmax, 2.0))
@@ -1667,7 +1051,7 @@ def qc_figure(stem, prof_arr, start_beach, res, fig_dir: Path,
     ax_map.legend(loc="upper right", fontsize=8, framealpha=0.9)
     plt.setp(ax_map.get_xticklabels(), visible=False)
 
-    # --- profiles: elevation x, cross-shore y ---
+    # Profiles: elevation x, cross-shore y
     y = np.arange(n_cross)
     ax_prof.plot(zm.T, y, color="0.75", lw=0.5)
     ax_prof.plot(np.nanmedian(zm, axis=0), y, color="k", lw=2.0)
@@ -1681,7 +1065,7 @@ def qc_figure(stem, prof_arr, start_beach, res, fig_dir: Path,
     ax_prof.set_ylim(-0.5, n_cross - 0.5)
     plt.setp(ax_prof.get_yticklabels(), visible=False)
 
-    # --- dune height alongshore, aligned under the map ---
+    # Dune height alongshore, aligned under the map
     ax_h.plot(np.arange(n_along), res["dune_h"], color="#FF8C00", lw=1.5,
               marker="o", ms=3)
     ax_h.axhline(MIN_DUNE_H_M, color="0.5", ls="--", lw=1.0)
@@ -1713,32 +1097,10 @@ def qc_figure(stem, prof_arr, start_beach, res, fig_dir: Path,
     plt.close(fig)
 
 
-# ==============================================================================
-# GIS vs PROCESSED COMPARISON FIGURE
-# ==============================================================================
+# GIS vs processed comparison figure
 
+# The whole chain, left to right
 def comparison_figure(stem, dom, res, fig_dir: Path):
-    """
-    The whole chain, left to right: what came in, what you picked on, what
-    CASCADE gets.
-
-    RAW           the DEM as GIS exported it (m NAVD88, untrimmed). The clip
-                  boxes are north-up while the island trends NNW, so the
-                  shoreline crosses each domain diagonally -- and so does every
-                  overlay, because they are mapped back through the per-profile
-                  shear: raw[i, k + c0 + shear[i]]. The diagonal you see here is
-                  what the shear removes.
-
-    STRAIGHTENED  the array the picker showed you and the window was drawn on
-                  (m MHW, clamped, sheared, water-trimmed). Same overlays, now
-                  horizontal. If the beach-start line still slopes here, the
-                  linear fit did not capture that domain's shoreline.
-
-    PROCESSED     the .npy files CASCADE reads, converted back to m for display.
-
-    With STRAIGHTEN = False the first two panels are the same picture, minus the
-    trim and the datum shift. That is the point of showing both.
-    """
     raw = dom["raw"]
     zs = dom["z"]
     c0 = dom["c0"]
@@ -1769,15 +1131,13 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
     ax_int = fig.add_subplot(gs[0, 2])
     ax_dun = fig.add_subplot(gs[1, 2])
 
-    # Shared elevation span so the three panels are comparable by eye -- just
-    # labelled NAVD88 vs MHW. Scaling each to its own percentile lets the -10 m
-    # shoreface swamp the ramp and the island reads as one flat colour.
+    # Shared elevation span so the three panels are comparable by eye -- just labelled NAVD88 vs MHW
     land = raw[raw > MHW_M]
     hi_navd = float(np.percentile(land, 99)) if land.size else MHW_M + 4.0
     vmin_r = MHW_M - 1.0
     vmax_r = max(hi_navd, MHW_M + 2.0)
 
-    # ---------------- 1: raw GIS ----------------
+    # 1: raw GIS
     im_r = ax_raw.imshow(raw.T, aspect="auto", origin="lower",
                          extent=[-0.5, n_along - 0.5, -0.5, n_raw - 0.5],
                          cmap="terrain", vmin=vmin_r, vmax=vmax_r)
@@ -1798,15 +1158,11 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
     ax_raw.plot(xs, off - 0.5, color="0.3", lw=1.0, ls="-.",
                 label="water trim edge")
 
-    # The road in the RAW frame: unsheared and untrimmed, so this is NC-12's real
-    # diagonal across the north-up clip box. Compare it with the same road on
-    # panel 2 -- that difference is what the shear removes, and it is the error
-    # any raw cross-shore median of the road inherits.
+    # The road in the raw frame: NC-12's real diagonal, before the shear
     for _yr, _m in (dom.get("road_raw") or {}).items():
         add_road_plan_overlay(ax_raw, _m, _yr)
 
-    # crop to the island so the diagonal is legible next to the straightened
-    # panel; the full raw is mostly sound and shoreface
+    # Crop to the island so the diagonal is legible next to the straightened panel
     lo_r = max(float(np.nanmin(off)) - 4.0, -0.5)
     hi_r = min(float(np.nanmax(off)) + n_cross + 4.0, n_raw - 0.5)
     ax_raw.set_ylim(lo_r, hi_r)
@@ -1816,7 +1172,7 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
                      f"{dom['name']}", fontsize=13.5)
     ax_raw.legend(loc="upper right", fontsize=11, framealpha=0.92)
 
-    # ---------------- 2: straightened (the picking frame) ----------------
+    # 2: straightened (the picking frame)
     zm = masked_profiles(zs)
     im_s = ax_str.imshow(np.ma.masked_invalid(zm.T), aspect="auto",
                          origin="lower",
@@ -1848,7 +1204,7 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
     ax_str.set_title(t2, fontsize=13.5)
     ax_str.legend(loc="upper right", fontsize=11, framealpha=0.92)
 
-    # ---------------- 3: what CASCADE reads ----------------
+    # 3: what CASCADE reads
     im_i = ax_int.imshow(np.ma.masked_invalid(topo_disp), aspect="auto",
                          origin="lower",
                          extent=[-0.5, n_int_cols - 0.5, -0.5, n_int_rows - 0.5],
@@ -1857,11 +1213,7 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
     cb_i.set_label("elev (m MHW)", fontsize=13)
     cb_i.ax.tick_params(labelsize=12)
 
-    # The road re-indexed into the SAVED interior grid. This is the panel that
-    # answers the question the other two cannot: is NC-12 inside the array
-    # CASCADE reads, and at which interior row -- the same row
-    # roadway_manager.bulldoze lands on with int(road_setback / dy). A road that
-    # falls off the seaward edge here has a negative setback.
+    # The road re-indexed into the SAVED interior grid
     _row0 = np.asarray(res.get("row0_line", []), dtype=int)
     for _yr, _m in (dom.get("road_masks") or {}).items():
         if _row0.size:
@@ -1879,8 +1231,7 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
                          origin="lower", extent=[-0.5, ALONG_COLS - 0.5, -0.5, 0.5],
                          cmap="YlOrBr", vmin=0.0,
                          vmax=max(float(np.nanmax(dune_disp)), 0.5))
-    # the dune strip is a tenth the height of the map above it, so the map's
-    # aspect would leave it a bar too short to read a tick off
+    # A taller colourbar for the short dune strip
     cb_d = fig.colorbar(im_d, ax=ax_dun, pad=0.02, fraction=0.045, aspect=5)
     cb_d.set_label("dune h above\nberm (m)", fontsize=13)
     cb_d.ax.tick_params(labelsize=12)
@@ -1910,12 +1261,10 @@ def comparison_figure(stem, dom, res, fig_dir: Path):
     plt.close(fig)
 
 
-# ==============================================================================
-# SETTINGS SHEET & JSON I/O
-# ==============================================================================
+# Settings sheet & json I/O
 
+# Every global knob, for the config sheet / manifest / provenance
 def global_config() -> dict:
-    """Every global knob, for the config sheet / manifest / provenance."""
     return {
         "run name": RUN_NAME,
         "version": VERSION,
@@ -1946,9 +1295,7 @@ def global_config() -> dict:
         "STRAIGHTEN_REF": STRAIGHTEN_REF if STRAIGHTEN else "",
         "STRAIGHTEN_FIT": STRAIGHTEN_FIT if STRAIGHTEN else "",
         "TRIM_INTERIOR_ROWS": TRIM_INTERIOR_ROWS,
-        # Road overlay. Recorded because the road columns in the sheet are
-        # meaningless without knowing which vintage and which mask tree produced
-        # them -- but note that NONE of these affect the saved arrays.
+        # Road overlay settings, recorded; none affect the saved arrays
         "SHOW_ROAD": SHOW_ROAD,
         "ROAD_YEARS": str(ROAD_YEARS) if SHOW_ROAD else "",
         "ROAD_RASTER_ROOT": str(ROAD_RASTER_ROOT) if SHOW_ROAD else "",
@@ -1956,17 +1303,8 @@ def global_config() -> dict:
     }
 
 
+# Per-year NC-12 columns for the settings sheet
 def road_columns(res: dict) -> dict:
-    """Per-year NC-12 columns for the settings sheet.
-
-    `road setback <year> (m)` is the cross-check column: seaward edge, median
-    over profiles, metres from SAVED interior row 0, positive = landward. It
-    should equal `setback_dunestart_m` in RoadOffset_<year>_domains.csv to the metre.
-    See road_offset_stats for why the edge and the statistic are what they are.
-
-    Blank rather than 0 where the road is absent: D1-D7 have no NC-12 at all, and
-    a 0 there would read as "road exactly at interior row 0".
-    """
     def num(v, nd=1):
         return round(v, nd) if np.isfinite(v) else ""
 
@@ -1985,23 +1323,20 @@ def road_columns(res: dict) -> dict:
         out[f"road setback mean {year} (m)"] = num(st["setback_mean_m"])
         out[f"road setback min {year} (m)"] = num(st["setback_min_m"])
         out[f"road setback max {year} (m)"] = num(st["setback_max_m"])
-        # centre-referenced, for continuity with the roya-style dune-to-road
-        # number; NOT the value bulldoze indexes
+        # Centre-referenced, for continuity with the roya-style dune-to-road number
         out[f"road center offset {year} (m)"] = num(st["center_median_m"])
-        # Profiles where the road is SEAWARD of interior row 0. Barrier3D cannot
-        # represent that (int(negative/dy) indexes from the landward end), so it
-        # is the flag the setback audit's NEGATIVE floor exists to handle.
+        # Profiles where the road is SEAWARD of interior row 0
         out[f"road seaward profiles {year}"] = st["n_seaward"]
     return out
 
 
+# One sheet row per domain
 def settings_row(res: dict, w: dict | None) -> dict:
-    """One sheet row per domain: settings used + what came out."""
     return {
         "domain": domain_number(res["stem"]),
         "stem": res["stem"],
         "section": section_for(res["stem"]),
-        # --- settings, mirroring the tracking sheet ---
+        # Settings, mirroring the tracking sheet
         "root GIS domains": LOAD_PATH.name,
         "root dunes/topo": RUN_NAME,
         "figure name": f"{fig_stem(res['stem'])}_gis_vs_processed.png",
@@ -2022,7 +1357,7 @@ def settings_row(res: dict, w: dict | None) -> dict:
         "MHW (m NAVD88)": MHW_M,
         "berm (m NAVD88)": BERM_ELEV_NAVD_M,
         "water clamp (m MHW)": WATER_CLAMP_M,
-        # --- results ---
+        # Results
         "interior start row": res["start_island"],
         "lead trim rows": res.get("lead_trim_rows", ""),
         "dunes found": res["n_found"],
@@ -2041,17 +1376,13 @@ def settings_row(res: dict, w: dict | None) -> dict:
     }
 
 
+# Write the per-domain settings sheet as CSV, plus XLSX if pandas is around
 def write_settings_sheet(rows: list, base_path: Path) -> None:
-    """Write the per-domain settings sheet as CSV, plus XLSX if pandas is around."""
     if not rows:
         return
     base_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Union of keys in first-seen order, not rows[0].keys(). With
-    # REQUIRE_ROAD_MASKS = False a domain whose mask is missing contributes no
-    # road columns, and DictWriter raises on any row holding a key the header
-    # does not -- so keying off the first row would turn one absent mask into a
-    # crash after all 90 domains had been processed.
+    # Fieldnames from every row, so one absent mask cannot crash the write
     fieldnames = list(dict.fromkeys(k for r in rows for k in r))
     csv_path = base_path.with_suffix(".csv")
     with open(csv_path, "w", newline="") as f:
@@ -2074,8 +1405,8 @@ def write_settings_sheet(rows: list, base_path: Path) -> None:
         print("[info] pandas/openpyxl not available; wrote CSV only")
 
 
+# Plain-text record so a run folder found later explains itself
 def write_manifest(rows: list, path: Path) -> None:
-    """Plain-text record so a run folder found later explains itself."""
     path.parent.mkdir(parents=True, exist_ok=True)
     cfg = global_config()
     width = max(len(k) for k in cfg)
@@ -2142,8 +1473,8 @@ def write_manifest(rows: list, path: Path) -> None:
     print(f"[manifest] {path}")
 
 
+# Every domain on one page
 def summary_figure(rows: list, path: Path) -> None:
-    """Every domain on one page: windows, dune heights, interior extent."""
     if not rows:
         return
     rows = sorted([r for r in rows if r["domain"] is not None],
@@ -2176,9 +1507,7 @@ def summary_figure(rows: list, path: Path) -> None:
     ax0.step(d, [r["interior start row"] for r in rows], where="mid",
              color="#B71C1C", lw=1.4, label="interior start row")
 
-    # NC-12's median cross-shore cell per domain, on the same axis as the search
-    # window. Where the road line dips INTO the orange band, that domain's window
-    # and the road overlap -- the crest argmax could be locking onto the road.
+    # NC-12's median cross-shore cell per domain, on the same axis as the search window
     for _yr in ROAD_YEARS:
         key = f"road center cell {_yr}"
         if not any(isinstance(r.get(key), (int, float)) for r in rows):
@@ -2226,12 +1555,8 @@ def summary_figure(rows: list, path: Path) -> None:
     print(f"[summary] {path}")
 
 
+# Return the raw_offset CSV for a year
 def resolve_offset_file(year: int, configured) -> Path | None:
-    """
-    Return the raw_offset CSV for a year. If the configured path is wrong, search
-    OFFSET_DIR rather than silently skipping -- the hindcast_* subfolder naming
-    is a convention this script only partly knows.
-    """
     configured = Path(configured)
     if configured.exists():
         return configured
@@ -2253,8 +1578,8 @@ def resolve_offset_file(year: int, configured) -> Path | None:
     return None
 
 
+# Preflight every path before doing any work
 def check_paths() -> bool:
-    """Preflight every path before doing any work. False = don't run."""
     print("=" * 78)
     print(f"PATH CHECK  —  run {RUN_NAME}")
     print("=" * 78)
@@ -2326,11 +1651,7 @@ def check_paths() -> bool:
     else:
         row("new", "picks", wj, "   (created on first pick)")
 
-    # save_windows() rewrites WINDOW_JSON after EVERY domain, so a picking run
-    # against a SHARED pick set destroys the picks of every version pointing at
-    # it, one domain at a time, with no prompt. That is how 2009_v3 would have
-    # been lost to the v4 re-pick. Loud, but not fatal: sharing a pick set is
-    # legitimate when you are only topping up domains that were never picked.
+    # Picking against a shared pick set overwrites other versions' picks: warn
     if MODE in ("pick", "pick_and_run") and PICK_SET != RUN_NAME:
         row("WARN", "pick set", wj,
             f"\n            ^ MODE = {MODE!r} will REWRITE this shared pick set "
@@ -2370,8 +1691,8 @@ def check_paths() -> bool:
     return ok
 
 
+# {year
 def load_offsets() -> dict:
-    """{year: (domain_numbers, offset_m)} from the CASCADE island-raw_offset CSVs."""
     out = {}
     for year, configured in OFFSET_FILES.items():
         path = resolve_offset_file(year, configured)
@@ -2401,16 +1722,8 @@ def load_offsets() -> dict:
     return out
 
 
+# Terrain with 0 m pinned to colormap position 0.35
 def _island_norm():
-    """Terrain with 0 m pinned to colormap position 0.35.
-
-    A LOCAL copy, and no longer shared with anything. It was written to
-    match the initialization figure, which moved to the house elevation
-    classes on 2026-09-17 (hat_figure_style.elevation_cmap: a hard break at
-    0 m, one colour for water). This is a QC view inside the extractor, so
-    it was left on the ramp rather than changed in the same pass -- but it
-    is now the extractor's own choice, not a shared convention.
-    """
     lo, hi, pos = ISLAND_ELEV_MIN_M, ISLAND_ELEV_MAX_M, ISLAND_SEA_LEVEL_POS
 
     def fwd(x):
@@ -2427,18 +1740,8 @@ def _island_norm():
     return cmap, FuncNorm((fwd, inv), vmin=lo, vmax=hi)
 
 
+# Warn if the assembled alongshore axis is discontinuous at domain seams
 def _assert_alongshore_continuity(grids, label: str, warn_ratio: float = 5.0):
-    """Warn if the assembled alongshore axis is discontinuous at domain seams.
-
-    A per-domain alongshore reversal is almost invisible in a 45 km plan view --
-    it reads as roughness -- but it puts every 500 m block backwards. The signal
-    is unmistakable in numbers: compare the mean jump ACROSS domain seams with the
-    mean jump WITHIN a domain. A continuous island sits near 1; a per-domain
-    reversal drove this to 21 on the 2009_v3 arrays when the legacy plotting flip
-    was still applied, which is the bug this guard exists to catch.
-
-    Returns the ratio, or nan when it cannot be computed.
-    """
     series = []
     for g in grids:
         land = (g > SENTINEL_WATER_M + 1e-9).sum(axis=0).astype(float)
@@ -2465,8 +1768,8 @@ def _assert_alongshore_continuity(grids, label: str, warn_ratio: float = 5.0):
     return ratio
 
 
+# Stitch processed domains onto one plan-view canvas at their dune offsets
 def _build_island_canvas(recs, offset_m_by_domain, mode):
-    """Stitch processed domains onto one plan-view canvas at their dune offsets."""
     use = [(n, r) for n, r in recs if n in offset_m_by_domain]
     if not use:
         return None, None, None, None
@@ -2477,9 +1780,7 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
     for n_dom, r in use:
         g = r["topo_dm"] * CELL_SIZE_M                 # dam -> m MHW
 
-        # The road in the SAVED interior frame, so it is padded, cropped and
-        # placed by exactly the same rules as the topography it sits on. Built
-        # before the pad/crop below so it goes through both with the grid.
+        # The road in the saved interior frame, padded and cropped with the grid
         _row0 = np.asarray(r.get("row0_line", []), dtype=int)
         for yr in ROAD_YEARS:
             m = (r.get("road_masks") or {}).get(yr)
@@ -2489,8 +1790,7 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
                 else np.zeros(g.shape, dtype=bool))
 
         if mode == "padded":
-            # pad landward, matching where dune_topo_extractor_from_GIS.py left its
-            # sentinel: interior row 0 is the ocean side, rows increase landward
+            # Pad landward, matching where dune_topo_extractor_from_GIS.py left its sentinel
             n = g.shape[0]
             if n < ISLAND_PAD_ROWS:
                 g = np.vstack([g, np.full((ISLAND_PAD_ROWS - n, g.shape[1]),
@@ -2504,18 +1804,13 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
                 if n_land:
                     cropped.append((n_dom, n, n_land))
                 g = g[:ISLAND_PAD_ROWS]
-                # The road can be cropped off entirely here: NC-12 sits well
-                # landward on the wide domains, so ISLAND_PAD_ROWS = 100 loses it
-                # where it also loses real land. That is the same loss the
-                # `cropped` warning already reports, not a separate bug.
+                # The road can be cropped off entirely here
                 for yr in ROAD_YEARS:
                     roads[yr][-1] = roads[yr][-1][:ISLAND_PAD_ROWS]
         if ISLAND_SENTINEL_AS_OCEAN:
             g = np.where(g <= SENTINEL_WATER_M + 1e-9, np.nan, g)
         d = r["dune_dm"] * CELL_SIZE_M + (BERM_ELEV_NAVD_M - MHW_M)   # -> m MHW
-        # No per-domain flip here: the arrays already run south -> north within a
-        # domain, matching the ascending domain order. See the removal note at
-        # ISLAND_INCLUDE_DUNE.
+        # No per-domain flip: the arrays already run south to north
         grids.append(g)
         dunes.append(d)
 
@@ -2548,8 +1843,7 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
         canvas[origin:end, col:col + n_cols] = g[:end - origin, :]
         if ISLAND_INCLUDE_DUNE and origin >= 1:
             canvas[origin - 1, col:col + min(n_cols, d.size)] = d[:n_cols]
-        # Same origin, same columns, same clip as the grid above -- the road is
-        # placed by the topography's rule, not its own.
+        # The road placed by the topography's origin, columns and clip
         for yr in ROAD_YEARS:
             rg = roads[yr][k]
             if rg.shape[0] >= end - origin:
@@ -2559,25 +1853,8 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
     return canvas, np.array(starts), [n for n, _ in use], road_canvas
 
 
+# Plan view of the processed dune + interior for domains 1-90 at the measured offsets, on the terrain ...
 def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
-    """
-    Plan view of the processed dune + interior for domains 1-90 at the measured
-    offsets, on the terrain ramp initialization_figures.py used until
-    2026-09-17 (see _island_norm); that figure is now in elevation classes.
-
-    ONE FIGURE PER CROSS-SHORE MODE, at PRODUCT_YEAR's offsets only. It used to
-    be one per offset YEAR per mode; see the PRODUCT_YEAR note for why the
-    off-year figure was a topography and a shoreline from different decades.
-    When PRODUCT_YEAR is None (a product with no hindcast year) it falls back
-    to every year loaded, which is the pre-2026-08-27 behaviour.
-
-    THE ROAD IS NOT RESTRICTED. Both NC-12 vintages stay on the canvas, in
-    their own colours -- that overlay is the subject of
-    RoadOffset_dunestart_audit.md and the reason SHOW_ROAD exists here at all.
-    The vintage mismatch it documents is a property of the ROAD LINES, not of
-    which shoreline the domains are placed against, so restricting the offsets
-    does not make it stale.
-    """
     recs = sorted([(domain_number(r["stem"]), r) for r in summary
                    if domain_number(r["stem"]) is not None])
     if not recs or not offsets:
@@ -2620,10 +1897,7 @@ def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
             im = ax.pcolormesh(np.ma.masked_invalid(canvas), cmap=cmap, norm=norm,
                                shading="auto", rasterized=True)
 
-            # NC-12 across the whole island, in the offset frame. At 45 km wide a
-            # single 20 m road is around one pixel, so it is drawn with
-            # pcolormesh on the same canvas rather than as a line: that way it
-            # cannot drift relative to the topography it was placed against.
+            # NC-12 across the whole island, in the offset frame
             for _yr in ROAD_YEARS:
                 rc = (road_canvas or {}).get(_yr)
                 if rc is None or not rc.any():
@@ -2685,17 +1959,8 @@ def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
             print(f"[planview] {path}")
 
 
+# All domains together
 def island_figure(summary: list, offsets: dict, path: Path) -> None:
-    """
-    All domains together: measured dune offsets vs the crest this run extracted.
-
-    The measured offsets and the extracted crest live in DIFFERENT frames -- the
-    offsets are in the model's common cross-shore frame, the extracted crest is in
-    the per-domain raw DEM array frame (m landward of that array's cell 0). They
-    are NOT differenced here. They're plotted on separate panels, and the script
-    reports the correlation between them so the frame relationship is testable
-    rather than assumed.
-    """
     recs = sorted([(domain_number(r["stem"]), r) for r in summary
                    if domain_number(r["stem"]) is not None])
     if not recs:
@@ -2706,8 +1971,7 @@ def island_figure(summary: list, offsets: dict, path: Path) -> None:
     for _, r in recs:
         loc = r["dune_loc"].astype(float)
         loc[loc < 0] = np.nan
-        # back to the raw cross-shore axis: k + c0 + shear[i] (shear is zeros
-        # when STRAIGHTEN is False, so this is the original `+ c0`)
+        # Back to the raw cross-shore axis
         _sh = np.asarray(r.get("shear", 0))
         pm = (loc + r["c0"] + _sh) * CELL_SIZE_M
         pos_mean.append(np.nanmean(pm))
@@ -2728,15 +1992,7 @@ def island_figure(summary: list, offsets: dict, path: Path) -> None:
                  bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none",
                            alpha=0.85))
 
-    # 1) measured offsets, all domains
-    #
-    # BOTH YEARS STAY. Panel 3 is a 1984->2004 change rate and is empty without
-    # them, and the r() notes under panel 2 are only interpretable as a pair.
-    # What changed 2026-08-27 is WEIGHT: the year this product is actually
-    # built for (PRODUCT_YEAR) is drawn solid and heavy, the other dashed and
-    # faded and labelled "reference". Before, the two read as equal candidates
-    # for the initial condition, which is exactly the confusion the plan-view
-    # split had -- see the PRODUCT_YEAR note.
+    # 1) Measured offsets, all domains: both years drawn, the product's year heavy
     colors = {1984: "#1565C0", 2004: "#B71C1C"}
     for year in sorted(offsets):
         dom, v = offsets[year]
@@ -2815,6 +2071,7 @@ def island_figure(summary: list, offsets: dict, path: Path) -> None:
         print(f"         {n}")
 
 
+# The saved picks, or an empty set
 def load_windows(path: Path) -> dict:
     if path.exists():
         with open(path) as f:
@@ -2822,6 +2079,7 @@ def load_windows(path: Path) -> dict:
     return {"_meta": {}}
 
 
+# Write the picks with the settings they were made under
 def save_windows(path: Path, windows: dict) -> None:
     windows["_meta"] = {
         "updated": datetime.now().isoformat(timespec="seconds"),
@@ -2850,10 +2108,7 @@ def save_windows(path: Path, windows: dict) -> None:
         json.dump(windows, f, indent=2, sort_keys=True)
 
 
-# ==============================================================================
-# MAIN
-# ==============================================================================
-
+# Run: preflight the paths, pick and/or extract every domain, then the sheet and figures
 def main():
     print("=" * 86)
     print(f"HAT dune / topography extraction  |  {RUN_NAME}  |  MODE = {MODE}")
@@ -2913,7 +2168,7 @@ def main():
 
     windows = load_windows(Path(WINDOW_JSON))
 
-    # ---------------- PICK PASS ----------------
+    # Pick pass
     if MODE in ("pick", "pick_and_run"):
         for name in names:
             stem = Path(name).stem
@@ -2934,11 +2189,7 @@ def main():
                 print(f"[skip] {name}: {e}")
                 continue
 
-            # Open on the SAVED window when there is one, so a re-pick is an
-            # adjustment: the v4 file was seeded from v3, so each domain shows
-            # its v3 window, "r" resets to it, and accepting without dragging
-            # keeps it. Falling back to default_window here -- as this did before
-            # v4 -- would have made every one of the 90 re-picks a blind redraw.
+            # Open on the SAVED window when there is one, so a re-pick is an adjustment
             saved = windows.get(stem)
             if saved and bool(saved.get("straightened", False)) == bool(STRAIGHTEN):
                 init = (int(saved["i0"]), int(saved["i1"]))
@@ -2959,18 +2210,12 @@ def main():
                 "n_cross_trimmed": int(dom["z"].shape[1]),
                 "n_along": int(dom["z"].shape[0]),
                 "trim_offset_c0": int(dom["c0"]),
-                # the frame this window was picked in. A window picked
-                # straightened is a valid index range on an unstraightened
-                # array; it just points at different cells. The run pass
-                # refuses on a mismatch rather than quietly using it.
+                # The frame this window was picked in
                 "straightened": bool(STRAIGHTEN),
                 "obliquity_deg": dom["obliquity_deg"],
                 "shear_max_cells": int(np.max(dom["shear"])),
                 "picked": datetime.now().isoformat(timespec="seconds"),
                 # What this window replaced, so the v3 -> v4 change is auditable
-                # from the picks file alone. Equal values mean the road showed
-                # nothing wrong with the old window and it was accepted as-is,
-                # which is a result worth being able to see.
                 "prev_i0": init[0], "prev_i1": init[1],
                 "changed": bool((int(i0), int(i1)) != (init[0], init[1])),
             }
@@ -2979,7 +2224,7 @@ def main():
                 f"  (was [{init[0]}, {init[1]}])"
             print(f"[pick] {stem}: window [{i0}, {i1}] saved{moved}")
 
-    # ---------------- RUN PASS ----------------
+    # Run pass
     if MODE in ("run", "pick_and_run"):
         summary, rows = [], []
         for name in names:
@@ -2996,10 +2241,7 @@ def main():
                 i0, i1 = default_window(prof_arr, start_beach)
                 print(f"[warn] {stem}: no picked window, using default [{i0}, {i1}]")
             else:
-                # absent == picked before straightening existed == False.
-                # NOT "unknown, proceed": that would silently apply an
-                # unstraightened window to a straightened array, which is a
-                # valid index range pointing at the wrong cells.
+                # Not 'unknown, proceed': that would apply an unstraightened window to a straightened array
                 w_str = bool(w.get("straightened", False))
                 if w_str != bool(STRAIGHTEN):
                     print(f"[skip] {stem}: window was picked with "
@@ -3022,8 +2264,7 @@ def main():
             if res is None:
                 continue
             res["c0"] = dom["c0"]
-            # carried for island_plan_figure, which needs the road in the saved
-            # interior frame and so needs the masks and the row0 line together
+            # Carried for island_plan_figure, which needs the road in the saved interior frame
             res["road_masks"] = dom.get("road_masks")
             if SAVE_QC_FIGS:
                 qc_figure(stem, prof_arr, start_beach, res, Path(FIG_DIR_QC),

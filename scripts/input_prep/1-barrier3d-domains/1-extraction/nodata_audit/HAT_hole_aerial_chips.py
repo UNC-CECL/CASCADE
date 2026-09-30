@@ -1,62 +1,10 @@
 """
-HAT_hole_aerial_chips.py
-
 Reference B: 1996 aerial chips for the holes where references A and C disagree.
 
-WHY ONLY THE CONFLICTS
-----------------------
-HAT_test_hole_pond_or_dropout.py runs two references over the 99 unsurveyed
-holes that truncate the model island:
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/HAT_hole_aerial_chips.py
 
-    A  the 2014 NCFMP hydro-flattening stamp
-    C  the shape of the nodata blob
-
-They agree on 40 holes and CONFLICT on 58. With only two references and no
-tiebreaker, the conservative default - not the evidence - decides those 58, so
-the test asserts "pond" on cells where its own NCFMP vote says otherwise. That
-is what this fixes, and it is why the aerial pass is worth its cost after all:
-58 chips, not the 99 the full pass would have needed.
-
-WHY THE AERIAL IS THE RIGHT TIEBREAKER
----------------------------------------
-It is the only reference contemporaneous with the survey. A is 2014 standing in
-for 1996 across 18 years of marsh change; C has no date at all. The 1996 frames
-were flown the same year as the ALACE survey that this DEM's beach comes from,
-so a pond visible in them is a pond the lidar would have been looking at.
-
-WHAT YOU ARE JUDGING
---------------------
-Each chip is the 1996 imagery around one hole, with the unsurveyed cells drawn
-as an outline. The question is only:
-
-    is there standing water inside the outline?
-
-    yes            -> POND      the -3.0 m sentinel is right, leave it
-    no, it is land -> DROPOUT   the lidar failed over ground, bridge it
-    cannot tell    -> UNCLEAR   no vote; the conservative default keeps it water
-
-Do not judge the ring, and do not try to reconcile it with the other two votes -
-the whole point is an independent third opinion.
-
-COORDINATES
------------
-The frames are NAD83 / North Carolina State Plane in US SURVEY FEET, 3-band
-RGB, 1 ft pixels. The domain rasters are EPSG 3725, UTM 18N, metres. Every
-transform goes through pyproj from the frame's own CRS, never a hardcoded
-factor - a foot is not 0.3048 m in this projection, it is 0.304800609601219 m,
-and the difference over 3 million feet of easting is metres.
-
-Frames overlap. The one chosen for a hole is the one giving the cleanest chip -
-these are scanned frames with a black surround baked into the raster, so bounds
-margin is not a guide. See pick_frame.
-
-INPUT   dune-topo/<version>/hole_verdicts.csv          which holes conflict
-        dune-topo/<version>/bracketed_hole_cells.csv   the cells to outline
-        D:\\Hatteras_GIS\\Aerial\\1996_henderson\\1996_georef_TIF\\*.tif
-
-OUTPUT  dune-topo/<version>/figures/aerial_1996_conflicts/
-            sheet_D<a>-<b>.png        contact sheets, 12 chips each
-            aerial_review.csv         one row per hole, blank verdict column
+Reads hole_verdicts.csv; writes contact sheets of 12 chips each and a blank
+aerial_review.csv to fill with HAT_hole_aerial_picker.py. Needs the D: drive. Details: scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -82,6 +30,7 @@ REPO = next(
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1984-start"
 AERIAL_DIR = Path(r"D:\Hatteras_GIS\Aerial\1996_henderson\1996_georef_TIF")
 DOMAIN_EPSG = 3725
@@ -92,22 +41,20 @@ CHIP_PX = 420             # rendered chip size, pixels
 PER_SHEET = 12            # chips per contact sheet (3 x 4)
 POND, DROPOUT, UNKNOWN = "POND", "DROPOUT", "UNKNOWN"
 
-# Every output of this folder lands under one directory beside the extraction it
-# describes, rather than being scattered through the run folder it did not
-# produce. audit_dir() is the only place that name is spelled.
+# All outputs in one nodata-audit/ folder beside the extraction; audit_dir() names it
 AUDIT_SUBDIR = "nodata-audit"
+# -----------------------------------------------------------------------------
 
 
+# <product>/dune-topo/<version>/nodata-audit/, created on demand
 def audit_dir(topo_dir):
-    """<product>/dune-topo/<version>/nodata-audit/, created on demand."""
     d = topo_dir.parent / AUDIT_SUBDIR
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-
+# [(path, bounds, crs)] for every 1996 frame, read once
 def frame_index():
-    """[(path, bounds, crs)] for every 1996 frame, read once."""
     out = []
     for p in sorted(AERIAL_DIR.glob("*.tif")):
         with rasterio.open(p) as s:
@@ -119,8 +66,8 @@ def frame_index():
     return out
 
 
+# The chip window from one frame, plus its fraction of black pixels
 def read_chip(path, fx, fy, half):
-    """The chip window from one frame, plus its fraction of black pixels."""
     with rasterio.open(path) as s:
         win = from_bounds(fx - half, fy - half, fx + half, fy + half,
                           s.transform)
@@ -131,17 +78,8 @@ def read_chip(path, fx, fy, half):
     return img, black
 
 
+# The covering frame that gives the CLEANEST chip, not the widest margin
 def pick_frame(frames, fx, fy, half):
-    """The covering frame that gives the CLEANEST chip, not the widest margin.
-
-    Choosing by distance from the frame's bounds was the first version and it
-    put a black wedge across a third of the D6 chips. These are scanned aerial
-    frames: each carries a black surround baked INTO the raster, so a point can
-    sit far inside the bounds and still land on unexposed film. Frames overlap,
-    so the fix is to read the candidate window from each and keep the one with
-    the least black - which costs a few extra reads for 58 chips and nothing
-    else.
-    """
     best = (None, None, 1.1)
     for p, b, _ in frames:
         if not (b.left <= fx <= b.right and b.bottom <= fy <= b.top):
@@ -154,18 +92,17 @@ def pick_frame(frames, fx, fy, half):
     return best
 
 
+# The four UTM corners of one 10 m domain cell
 def cell_corners_utm(npy_row, npy_col, origin):
-    """The four UTM corners of one 10 m domain cell."""
     ox, oy = origin
     x0, x1 = ox + GRID_M * npy_col, ox + GRID_M * (npy_col + 1)
     y0, y1 = oy - GRID_M * (npy_row + 1), oy - GRID_M * npy_row
     return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 
 
+# Run: the cleanest frame per conflict hole, the contact sheets, the review template
 def main():
-    # Headless only when this file is the program. HAT_hole_aerial_picker.py
-    # imports the helpers below and needs a real interactive backend, so the
-    # module must not claim Agg at import time.
+    # Headless only when this file is the program
     plt.switch_backend("Agg")
     topo_dir, _, version = htv.topo_dirs(TOPO_PRODUCT)
     vdir = audit_dir(topo_dir)
@@ -230,7 +167,7 @@ def main():
         print(f"  [warn] no 1996 frame covers {len(missing)} holes: {missing}")
     print(f"  rendered {len(chips)} chips")
 
-    # --- contact sheets ------------------------------------------------------
+    # Contact sheets
     sheets = [chips[i:i + PER_SHEET] for i in range(0, len(chips), PER_SHEET)]
     for k, group in enumerate(sheets, 1):
         ncol = 4
@@ -272,10 +209,9 @@ def main():
         plt.close(fig)
         print(f"  wrote {p.name}")
 
-    # --- review sheet --------------------------------------------------------
-    # The PICKER owns this file. Writing a fresh template over a reviewed one
-    # would silently destroy the pass it took to fill in, so an existing file
-    # with any verdict in it is left alone. Delete it to start over.
+    # Review sheet
+
+    # The picker owns this file: an existing one with verdicts is left alone
     rev = outdir / "aerial_review.csv"
     if rev.is_file():
         done = sum(1 for r in csv.DictReader(rev.open())

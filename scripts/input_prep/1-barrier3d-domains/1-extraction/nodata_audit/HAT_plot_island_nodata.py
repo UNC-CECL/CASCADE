@@ -1,70 +1,10 @@
 """
-HAT_plot_island_nodata.py
+The island plan view reduced to one question: where is the unsurveyed ground in what CASCADE runs on?
 
-The island plan view, stripped to one question: where is the unsurveyed ground
-in what CASCADE actually runs on?
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/HAT_plot_island_nodata.py
 
-WHY A SECOND PLAN VIEW
-----------------------
-HAT_dune_topo_island_planview_<run>_<year>_padded.png shows elevation, and at
-that colour scale an unsurveyed cell is indistinguishable from water: both sit
-at the -3.0 m sentinel and both render as the same dark blue. That is not a
-flaw in the figure - it is the honest consequence of Barrier3D having no
-representation for "unknown" - but it means the elevation view cannot answer
-"is any of this no-data affecting my model".
-
-So this draws the same canvas, at the same offsets, with the same padding, and
-throws the elevation away. Land is one flat grey, water another, and the only
-thing with a colour is the no-data.
-
-THE CANVAS IS THE SAME ONE, DELIBERATELY
------------------------------------------
-Every geometric rule here is copied from _build_island_canvas() in
-HAT_dune_topo_extractor.py so the two figures overlay cell for cell:
-
-    offsets     2-brie-offset/<year>/Island_Dune_Offsets_*.csv,
-                metres, seaward positive, row 0 = domain 1 (Cape Point).
-                A 120-row file is stripped of its 15 buffer domains per end.
-    origin      round(offset_m / 10) - the canvas row interior row 0 lands on
-    padding     every domain padded landward to ISLAND_PAD_ROWS = 200 cells,
-                or cropped to it
-    dune        written into canvas row origin - 1, one row, matching
-                ISLAND_INCLUDE_DUNE
-    columns     domains concatenated in ascending order, 50 profiles each,
-                no per-domain flip - the arrays already run south to north
-
-If those constants move in the extractor they must move here. The alternative -
-importing the extractor - drags in its interactive picker and its own
-TOPO_PRODUCT literal, which is how the figure scripts came to disagree with the
-road scripts before.
-
-TWO SHADES OF RED, AND THE DIFFERENCE MATTERS
-----------------------------------------------
-    unsurveyed              a cell CASCADE reads as -3.0 m water that was
-                            never measured
-    unsurveyed, truncating   the same, AND it is the first water cell on its
-                            profile, so barrier3d.FindWidths stops there
-
-The second is the one with a demonstrable effect. FindWidths measures the
-island as the run of land from interior row 0 to the first water cell, and land
-behind that cell is invisible to the model. A truncating unsurveyed cell
-therefore deletes every real, measured cell behind it from the island width
-Barrier3D uses. The rest of the red is inside the barrier and may or may not
-matter, depending on what the run does with it.
-
-Panel (b) counts both per domain, so nothing is missed at 45 km: a single
-unsurveyed cell is a third of a pixel wide in panel (a) and can be invisible
-there while still being a real bar below.
-
-INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
-        <product>/dune-topo/<version>/topography/domain_<N>_nodata.npy     bool
-        <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy            dam
-        2-brie-offset/<year>/Island_Dune_Offsets_*.csv            m
-
-        Product and version resolve through scripts/site_layer/hat_topo_version.py.
-
-OUTPUT  <product>/dune-topo/<version>/HAT_dune_topo_island_nodata_<version>_<year>_padded.png
-        Written beside the elevation plan view it is meant to be compared with.
+Reads a dune-topo version's topography arrays; writes the plan view beside the
+elevation plan view it is compared with, plus zooms. Details: scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -89,10 +29,9 @@ REPO = next(
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
 
-# =============================================================================
-# CONFIG - mirrors HAT_dune_topo_extractor.py
-# =============================================================================
+# Config - mirrors HAT_dune_topo_extractor.py
 
+# --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1984-start"
 VERSION_OVERRIDE = None
 OFFSET_YEAR = 1984
@@ -134,29 +73,23 @@ plt.rcParams.update({
 })
 
 
-
-# Every output of this folder lands under one directory beside the extraction it
-# describes, rather than being scattered through the run folder it did not
-# produce. audit_dir() is the only place that name is spelled.
+# All outputs in one nodata-audit/ folder beside the extraction; audit_dir() names it
 AUDIT_SUBDIR = "nodata-audit"
+# -----------------------------------------------------------------------------
 
 
+# <product>/dune-topo/<version>/nodata-audit/, created on demand
 def audit_dir(topo_dir):
-    """<product>/dune-topo/<version>/nodata-audit/, created on demand."""
     d = topo_dir.parent / AUDIT_SUBDIR
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-# =============================================================================
-# CANVAS
-# =============================================================================
+# Canvas
 
+# Offset in metres per domain, {domain
 def load_offsets(year):
-    """Offset in metres per domain, {domain: offset_m}. Mirrors load_offsets()."""
-    # The CURRENT build (2026-09-18). This took the first sorted match under
-    # 2-brie-offset/, which for 1984 and 2004 is superseded_20260915_flat/ --
-    # a build that differs from the current one.
+    # The CURRENT build (2026-09-18)
     from site_layer.hat_topo_version import offset_file
     hits = [offset_file(year, "input")]
     if not hits[0].is_file():
@@ -170,13 +103,8 @@ def load_offsets(year):
     return {i + 1: float(v[i]) for i in range(v.size)}
 
 
+# Pad landward to ISLAND_PAD_ROWS with the sentinel, or crop to it
 def pad_or_crop(topo_m, nodata):
-    """Pad landward to ISLAND_PAD_ROWS with the sentinel, or crop to it.
-
-    Returns the padded arrays and how many real land cells the crop discarded,
-    which the extractor also reports - a domain wider than 2000 m loses its bay
-    margin to this figure's frame, not to the model.
-    """
     n = topo_m.shape[0]
     if n < ISLAND_PAD_ROWS:
         pad = ISLAND_PAD_ROWS - n
@@ -190,23 +118,8 @@ def pad_or_crop(topo_m, nodata):
     return topo_m, nodata, 0
 
 
+# Category codes for one domain, plus per-profile truncation flags
 def classify(topo_m, nodata):
-    """Category codes for one domain, plus per-profile truncation flags.
-
-    Two things are separated here, and the distinction is the whole point of
-    the figure:
-
-    INSIDE the island envelope - row 0 up to that profile's last cell above
-    MHW - an unsurveyed cell is a hole in the barrier. Beyond it, the same cell
-    is open sound the survey never flew over, which is the expected state of a
-    lidar return over water and changes nothing about the barrier.
-
-    first_water is barrier3d.FindWidths' stopping point: the first cell at or
-    below sea level, scanning landward from interior row 0. Sea level is 0 in
-    the Lagrangian frame, and these arrays are MHW-relative. When that cell is
-    unsurveyed, the profile's island is truncated there and every measured cell
-    behind it is invisible to the model.
-    """
     n_rows, n_cols = topo_m.shape
     water = topo_m <= 0.0
     land = ~water
@@ -228,11 +141,7 @@ def classify(topo_m, nodata):
         if r < n_rows and nodata[r, c]:
             cat[r, c] = GAP_TRUNC
             trunc[c] = True
-            # Measured land behind the truncating cell. Flagged ONLY on
-            # profiles an unsurveyed cell truncated: land behind a genuine
-            # water cell is also invisible to FindWidths, but that is a real
-            # bay, not a data artefact, and colouring it here would blame the
-            # survey for the island's actual shape.
+            # Measured land behind the truncating cell
             beyond = land[r + 1:, c]
             hidden[c] = int(beyond.sum())
             rows_beyond = np.nonzero(beyond)[0] + r + 1
@@ -240,6 +149,7 @@ def classify(topo_m, nodata):
     return cat, trunc, first_water, hidden
 
 
+# Run: classify every domain, draw the island plan view and the zooms
 def main():
     topo_dir, dune_dir, version = htv.topo_dirs(TOPO_PRODUCT, VERSION_OVERRIDE)
     out_png = (audit_dir(topo_dir)
@@ -300,9 +210,8 @@ def main():
     n_trunc = sum(d["n_trunc"] for d in per_domain)
     with_in = [d["domain"] for d in per_domain if d["n_in"]]
 
-    # =========================================================================
-    # DRAW
-    # =========================================================================
+    # Draw
+
     fig = plt.figure(figsize=(20, 10.4))
     gs = fig.add_gridspec(2, 1, height_ratios=[3.05, 1.0], hspace=0.16,
                           left=0.055, right=0.988, top=0.838, bottom=0.075)
@@ -341,8 +250,7 @@ def main():
     axB.set_axisbelow(True)
     axB.set_ylim(0, max((a_in + a_out).max() * 1.34, 1))
 
-    # Truncated profiles are a count of profiles, not of cells, so they get
-    # their own axis rather than being stacked onto a bar they do not belong on.
+    # Truncated profiles on their own axis: a count of profiles, not cells
     axT = axB.twinx()
     axT.plot(dom_centre[t_all > 0], t_all[t_all > 0], ls="none", marker="o",
              ms=4.5, color=COLORS[GAP_TRUNC],
@@ -405,9 +313,8 @@ def main():
           + (f"  -> {clean}" if 0 < len(clean) <= 12 else ""))
     print()
 
-    # =========================================================================
-    # ZOOM
-    # =========================================================================
+    # Zoom
+
     z0, z1 = ZOOM_DOMAINS
     zi = [k for k, n in enumerate(domains) if z0 <= n <= z1]
     if zi:
@@ -418,16 +325,9 @@ def main():
                   per_domain, n_along, version, zoom_png)
 
 
+# The same canvas, cropped to a few domains, at one pixel per cell
 def draw_zoom(canvas, domains, zi, off_cells, fw_rows, hidden_all, per_domain,
               n_along, version, out_png):
-    """The same canvas, cropped to a few domains, at one pixel per cell.
-
-    The FindWidths boundary is drawn on top as a step line. Above it, on a
-    truncated profile, is measured land the model cannot see - which is the
-    whole reason this zoom exists. The step is drawn per profile rather than
-    smoothed: it moves by whole cells, and interpolating it would suggest a
-    precision the 10 m grid does not have.
-    """
     c0 = zi[0] * n_along
     c1 = (zi[-1] + 1) * n_along
     sub = canvas[:, c0:c1]

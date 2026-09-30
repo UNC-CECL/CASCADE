@@ -1,93 +1,12 @@
 """
-HAT_hole_aerial_picker.py
+Review the aerial chips one hole at a time: a keystroke per hole records pond, dropout or unclear.
 
-Interactive review of the 1996 aerial chips: reference B, one keystroke per hole.
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/HAT_hole_aerial_picker.py
 
-WHAT YOU ARE DECIDING
----------------------
-For each unsurveyed hole where the NCFMP stamp (A) and the blob shape (C)
-disagree, one question:
-
-    is there standing water INSIDE the yellow outline, in 1996?
-
-    w   POND      water. The -3.0 m sentinel is right; leave the DEM alone.
-    g   DROPOUT   ground. The lidar failed over land; the cell is bridgeable.
-    u   UNCLEAR   no vote. The conservative default keeps it water.
-
-UNCLEAR is a real answer and costs nothing. It is there so you are never forced
-to guess, which is the failure mode that would quietly turn a review into a
-coin-flip dressed as evidence.
-
-Judge only what is inside the outline. Do not try to reconcile it with the two
-votes shown in the title - B is worth having precisely because it is an
-independent opinion, and a tiebreaker that has already read the other votes is
-not one.
-
-THE TRAP IN THE 1996 IMAGERY, AND WHAT TO DO ABOUT IT
-------------------------------------------------------
-The 1996 frames have a narrow tonal range. Wet sand, damp marsh and shallow
-standing water all land on the same mid-grey, and a dark patch is as often
-shadow or dense vegetation as it is water. Texture and a closed edge separate
-water better than darkness does.
-
-When 1996 will not resolve, press z to cycle the other sources on the drive:
-
-    2019 NGS      0.30 m colour, covers every hole - the most legible
-    2008 IOCM     0.50 m colour
-    2014          0.35 m colour
-    2018 NAIP     0.60 m colour AND near-infrared, plus an NDWI view
-    2004          colour, closest in time to 1996 after 1996 itself
-
-Only 2018 carries a verified NIR band; 2014 and 2016 ship four bands but the
-fourth is not infrared, so they get no NDWI. See verify_nir().
-
-NDWI is (green - NIR) / (green + NIR): BLUE is water, RED is land. Water
-absorbs near-infrared almost completely, so it separates open water from wet
-sand in a way no visible-band image can. It is the view to reach for on exactly
-the chips that are hard - but it exists only for 2018.
-
-The catch, and it is a real one: only 1996 is contemporaneous with the survey
-whose dropouts are in question. Everything else answers "is there a pond here
-NOW", which is strong evidence for a pond that has sat in one place for
-decades and weak evidence for a marsh pool that migrates. Let the later
-imagery break a tie; do not let it overrule a clear 1996 view. The 2018 NIR
-also covers only domains 1-8, which happens to be where 48 of the 57 conflicts
-are.
-
-KEYS
-----
-    w / g / u     verdict, then auto-advance
-    left / right  move to another hole without deciding
-    n             jump to the next hole with no verdict
-    z / x         cycle imagery forward / back for this hole
-    r             clear this hole's verdict
-    q             quit
-
-Every verdict is written to aerial_review.csv IMMEDIATELY, the same way
-HAT_dune_topo_extractor.save_windows writes after every domain. Quit whenever
-you like and re-run to resume; 58 holes is more than one sitting.
-
-Any write that would REDUCE the number of verdicts on disk copies the old file
-to aerial_review.<timestamp>.bak.csv first. That guard exists because the file
-was once blanked by a helper that had checked it was empty earlier in the
-session and did not re-check before overwriting. A hand-entered review cannot
-be regenerated from anything, so it does not get overwritten silently.
-
-CACHE
------
-Rendering a chip means reading a window from up to 33 scanned frames to find
-the one with the least black surround, which is slow enough to feel in an
-interactive loop. So chips are rendered once into figures/aerial_1996_conflicts
-/chip_cache/ as PNGs plus an index of the outline geometry, and the picker
-reads those. Delete the folder to force a rebuild. The PNGs are covered by
-.gitignore's *.png rule, like every other figure here.
-
-INPUT   dune-topo/<version>/hole_verdicts.csv
-        dune-topo/<version>/bracketed_hole_cells.csv
-        the 1996 frames, via HAT_hole_aerial_chips
-
-OUTPUT  dune-topo/<version>/figures/aerial_1996_conflicts/aerial_review.csv
-            the aerial_verdict column, filled in
+Interactive (needs a windowing backend and the D: drive). Cycles through 1996
+and later imagery, with an NDWI view where a source has a verified NIR band;
+writes the aerial_verdict column of aerial_review.csv, backing up before it
+would lose a verdict. Details: scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -118,44 +37,15 @@ sys.path.insert(0, str(HERE))
 from site_layer import hat_topo_version as htv  # noqa: E402
 import HAT_hole_aerial_chips as chips  # noqa: E402
 
-# Chip half-widths are PER HOLE, not fixed. The truncating holes run from 1 to
-# 56 cells, so a fixed 90 m view fits a 3-cell hole in D6 and cuts a 560 m hole
-# in D1 clean off the edge - which is what the first version did. Each hole gets
-# a close view sized to its own footprint and a wide view for context.
+# --- CONFIG ------------------------------------------------------------------
+# Chip half-widths are PER HOLE, not fixed
 ZOOM_MIN_M = 90.0                 # floor, so a single-cell hole is not a pinhole
 ZOOM_CLOSE = 0.85                 # close half-width = this x the hole span
 ZOOM_WIDE = 2.6                   # wide view = this x the close one
 
-# --- IMAGERY SOURCES ----------------------------------------------------
-# 1996 is the only CONTEMPORANEOUS evidence and stays the primary view: it was
-# flown the same year as the ALACE survey whose dropouts are in question. The
-# rest are CORROBORATION, and they answer a slightly different question - "is
-# there a pond here in 2019" rather than "in 1996". For a pond that has sat in
-# the same place for decades that is strong support; for a marsh pool that
-# migrates it is weaker. Cycle to them when 1996 is ambiguous, which is often,
-# because 1996 is a scanned panchromatic-ish frame where wet sand, damp marsh
-# and shallow water all land on the same mid-grey.
-#
-# Near-infrared is the band that actually settles a hard chip. Water absorbs it
-# almost completely, so a pond is near-black in NIR while wet sand stays bright
-# - the discrimination the visible bands cannot make. A source with real NIR
-# gets an extra NDWI view, (green - NIR) / (green + NIR), positive over water.
-#
-# WHICH BAND IS NIR IS VERIFIED, NOT CONFIGURED. Three of these datasets ship
-# four bands, and only one of them is genuinely RGB+NIR:
-#
-#     2018 NAIP   band 4 veg/water 3.33 against 2.06 for the best visible  ->  NIR
-#     2014        band 4 veg/water 0.86 - BRIGHTER over water              ->  not NIR
-#     2016        band 4 veg/water 1.16                                    ->  not NIR
-#     2019 NGS    band 4 has 12 distinct values                            ->  alpha mask
-#
-# Assuming band 4 was NIR produced an NDWI panel for 2014 that called open
-# water "land" while its own photo showed a pond. So `nir` below is a CANDIDATE
-# index, and verify_nir() has to agree before any NDWI view is written.
-#
-# NOT Google Earth: its imagery is licensed, bulk tile extraction breaches its
-# terms, and it is lower resolution here than the 2019 NGS tiles and has no NIR
-# band at all. Nothing it offers is missing from this list.
+# Imagery sources
+
+# Imagery: 1996 is primary, the rest corroborate; the NIR band is verified, not assumed (README)
 AERIAL_ROOT = Path(r"D:\Hatteras_GIS\Aerial")
 SOURCES = [
     dict(key="1996", label="1996 scanned",  res=1.00, zooms=2, nir=None,
@@ -178,35 +68,27 @@ COLOR = {POND: "#1f6fb4", DROPOUT: "#d7191c", UNCLEAR: "#7a7a7a", "": "#c9c9c9"}
 REVIEW_COL = "aerial_verdict"
 
 
-
-# Every output of this folder lands under one directory beside the extraction it
-# describes, rather than being scattered through the run folder it did not
-# produce. audit_dir() is the only place that name is spelled.
+# All outputs in one nodata-audit/ folder beside the extraction; audit_dir() names it
 AUDIT_SUBDIR = "nodata-audit"
+# -----------------------------------------------------------------------------
 
 
+# <product>/dune-topo/<version>/nodata-audit/, created on demand
 def audit_dir(topo_dir):
-    """<product>/dune-topo/<version>/nodata-audit/, created on demand."""
     d = topo_dir.parent / AUDIT_SUBDIR
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-# =============================================================================
-# THE WINDOW HAS TO BE A REAL WINDOW
-# =============================================================================
+# The window has to BE a real window
 
-# Backends that deliver key_press_event to a live window. Anything else - Agg,
-# or PyCharm's SciView (module://backend_interagg), which renders a figure as a
-# static image in a tool pane - makes plt.show() return immediately and the
-# script exit with nothing reviewed and no error. That is not a failure mode a
-# user should have to diagnose, so it is checked and fixed here.
+# Backends that deliver key_press_event to a live window
 INTERACTIVE = {"tkagg", "qtagg", "qt5agg", "qt6agg", "wxagg", "macosx",
                "gtk3agg", "gtk4agg", "nbagg", "webagg"}
 
 
+# Switch to a real windowing backend, or stop with instructions
 def ensure_interactive_backend():
-    """Switch to a real windowing backend, or stop with instructions."""
     be = matplotlib.get_backend().lower()
     if be in INTERACTIVE:
         return be
@@ -229,41 +111,25 @@ def ensure_interactive_backend():
         f"and swallows every key.\n")
 
 
+# Drop matplotlib's own bindings for the keys this picker uses
 def free_the_keys():
-    """Drop matplotlib's own bindings for the keys this picker uses.
-
-    Found by collision, not by reading the docs: 'g' toggles a grid over the
-    imagery, 'r' resets the view, and left/right walk matplotlib's own view
-    history. All three fire alongside the picker's handler, so a verdict could
-    also silently rescale the chip you were judging.
-    """
     for rc in ("keymap.grid", "keymap.grid_minor", "keymap.home",
                "keymap.back", "keymap.forward", "keymap.save",
                "keymap.yscale", "keymap.xscale", "keymap.zoom",
                "keymap.pan", "keymap.fullscreen"):
         matplotlib.rcParams[rc] = []
-    # 'q' is left alone: matplotlib's quit closes the window, which is what the
-    # picker wants it to do anyway.
+    # 'q' left alone: matplotlib's quit closes the window, which is what the picker wants
     matplotlib.rcParams["keymap.quit"] = ["q", "ctrl+w", "cmd+w"]
 
 
-# =============================================================================
-# CACHE
-# =============================================================================
+# Cache
 
 NIR_MIN_RATIO = 2.5        # veg/water brightness ratio a NIR band must beat
 NIR_MIN_MARGIN = 1.4       # and by this factor over the best visible band
 
 
+# Is band `cand` really near-infrared? (ok, ratio, best_visible_ratio)
 def verify_nir(path, cand):
-    """Is band `cand` really near-infrared? (ok, ratio, best_visible_ratio).
-
-    NIR is bright over vegetation and near-black over water. So classify from
-    the VISIBLE bands only - vegetation as green-dominant and above-median
-    brightness, water as the darkest decile - then ask which band separates
-    them best. A real NIR band wins by a clear margin; a mislabelled fourth
-    band does not, and an alpha mask is not even monotonic.
-    """
     with rasterio.open(path) as d:
         a = d.read(out_shape=(d.count, 900, 900)).astype(float)
     if a.shape[0] < cand:
@@ -286,14 +152,8 @@ def verify_nir(path, cand):
     return ok, r_cand, r_vis
 
 
+# One aerial dataset, sampled in the domain CRS regardless of its own
 class ImagerySource:
-    """One aerial dataset, sampled in the domain CRS regardless of its own.
-
-    Each dataset carries its own projection and linear unit - the 1996 frames
-    are State Plane in US survey feet, the rest are UTM in metres - so the
-    transform and the metres-to-unit factor are read from each file rather
-    than assumed anywhere.
-    """
 
     def __init__(self, cfg):
         import glob as _g
@@ -321,13 +181,8 @@ class ImagerySource:
                                      f" - no NDWI")
                     self.nir = None
 
+    # (rgb, ndwi|None, fx, fy, half, tile) or None if nothing covers it
     def chip(self, x_utm, y_utm, half_m):
-        """(rgb, ndwi|None, fx, fy, half, tile) or None if nothing covers it.
-
-        Picks the covering tile with the least black, for the reason in
-        HAT_hole_aerial_chips.pick_frame: scanned frames carry an unexposed
-        surround baked into the raster, so bounds margin is not a guide.
-        """
         if not self.ok:
             return None
         fx, fy = self.tf.transform(x_utm, y_utm)
@@ -357,13 +212,8 @@ class ImagerySource:
         return best[1], best[2], fx, fy, half, best[3]
 
 
+# Render every conflict hole in every source that covers it
 def build_cache(vdir, cache):
-    """Render every conflict hole in every source that covers it.
-
-    Was 1996 only. Extended because the 1996 frames cannot separate wet sand
-    from shallow water, which is most of what makes a hole hard to call, and
-    the drive already holds colour at 0.30 m and near-infrared at 0.35 m.
-    """
     cache.mkdir(parents=True, exist_ok=True)
     verdicts = list(csv.DictReader((vdir / "hole_verdicts.csv").open()))
     conflicts = [r for r in verdicts
@@ -452,12 +302,10 @@ def build_cache(vdir, cache):
     return index
 
 
-# =============================================================================
-# REVIEW FILE
-# =============================================================================
+# Review file
 
+# Existing verdicts, keyed (domain, profile)
 def load_review(path, index):
-    """Existing verdicts, keyed (domain, profile). Missing file is fine."""
     got = {}
     if path.is_file():
         for r in csv.DictReader(path.open()):
@@ -468,8 +316,8 @@ def load_review(path, index):
             for e in index}
 
 
+# How many verdicts the file on disk currently holds
 def count_verdicts(path):
-    """How many verdicts the file on disk currently holds. 0 if absent."""
     if not path.is_file():
         return 0
     try:
@@ -480,20 +328,8 @@ def count_verdicts(path):
         return 0
 
 
+# Write the review file, backing it up first if this would LOSE verdicts
 def save_review(path, index, verdicts):
-    """Write the review file, backing it up first if this would LOSE verdicts.
-
-    A review pass is hand-entered judgement that cannot be regenerated from
-    anything. This file has already been destroyed once - blanked by a helper
-    that had checked it was empty earlier in the same session and did not
-    re-check before overwriting - so any write that reduces the verdict count
-    now leaves a timestamped copy behind and says so.
-
-    The check is on the count rather than on content because that is the only
-    thing that matters here: a write that keeps or adds verdicts is the normal
-    path, and a write that drops them is either a deliberate reset or a bug,
-    and both deserve a copy on disk.
-    """
     have = count_verdicts(path)
     want = sum(1 for v in verdicts.values() if v)
     if have > want:
@@ -515,10 +351,9 @@ def save_review(path, index, verdicts):
                         verdicts[(e["domain"], e["profile"])]])
 
 
-# =============================================================================
-# PICKER
-# =============================================================================
+# Picker
 
+# Run: build the image cache, then one keystroke per hole, saving as it goes
 def main():
     backend = ensure_interactive_backend()
     free_the_keys()
@@ -567,14 +402,12 @@ def main():
         for px in v["polys"]:
             ax.add_patch(Polygon(px, closed=True, fill=False,
                                  edgecolor="#ffe100", lw=2.0))
-        # Clip to the image. Without this a polygon reaching past the chip
-        # autoscales the axes and the imagery shrinks into a white field.
+        # Clip to the image, so a long polygon cannot shrink the imagery
         ax.set_xlim(0, chips.CHIP_PX)
         ax.set_ylim(chips.CHIP_PX, 0)
         ax.set_aspect("equal")
 
-        # A scale bar of a round length near a quarter of the view, so it stays
-        # useful whether the chip is 180 m or 1.5 km across.
+        # A round-length scale bar near a quarter of the view
         target = v["half_m"] / 2.0
         step = min([1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000],
                    key=lambda s: abs(s - target))
