@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-# HOUSE STYLE
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents

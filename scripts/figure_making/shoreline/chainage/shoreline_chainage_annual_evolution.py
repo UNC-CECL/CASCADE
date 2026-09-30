@@ -22,7 +22,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents

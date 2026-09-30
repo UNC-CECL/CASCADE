@@ -20,7 +20,7 @@ _dsys.path.insert(0, str(_REPO / "scripts"))
 from site_layer.hat_observed_rates import DSAS_ROOT as _DSAS  # noqa: E402
 import pandas as pd
 
-# HOUSE STYLE
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 _sys.path.insert(0, str(_REPO / "scripts"))
 from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
