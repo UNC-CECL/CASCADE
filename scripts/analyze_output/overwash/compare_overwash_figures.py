@@ -1,36 +1,23 @@
 """
-Hatteras Island — CASCADE vs Observed Overwash Comparison
-==========================================================
+Model overwash (Qow) against the imagery record: stacked, contingency and spatial figures.
 
-Figure 1  (PLOT_STACKED = True)
-    Top:    CASCADE Qow heatmap, imagery years highlighted
-    Bottom: Observed overwash (binary)
-    Shared domain x-axis + section annotations
+    python scripts/analyze_output/overwash/compare_overwash_figures.py
 
-Figure 2  (PLOT_CONTINGENCY = True)
-    Imagery years only, equal-height rows
-    Hit / Miss / False Alarm / Correct Rejection per domain
-    Summary stats printed to console
-
-USAGE
------
-Set NPZ_PATH, OBS_XLSX_PATH, OUT_DIR, and QOW_THRESHOLD, then run.
+compare_overwash_observed.py plus the spatial (normalised and dual-panel)
+figures. Reads one run's .npz and the overwash observation workbook; writes to
+output/comparisons/overwash/. Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-18
 """
-
 import os, io, pickle, zipfile, warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -42,76 +29,50 @@ import matplotlib.patches as mpatches
 import matplotlib.colors as mcolors
 warnings.filterwarnings('ignore')
 
-# ══════════════════════════════════════════════════════════════════════
-# CONFIGURATION
-# ══════════════════════════════════════════════════════════════════════
-# ── Paths are ANCHORED, not typed ────────────────────────────────────
-# All three used to be absolute literals under a folder spelling that no
-# longer exists ("input_preperation", renamed to "input_prep"), so this
-# script could not read its observations and crashed on the first save.
-# Anchoring on the pyproject.toml at the repo root makes them follow the
-# checkout instead of one machine's layout.
 import pathlib as _pathlib
 import sys as _sys
 
+
+# --- CONFIG ------------------------------------------------------------------
+# Paths resolved from the repo root, never typed
 PROJECT_BASE_DIR = next(
     q for q in _pathlib.Path(__file__).resolve().parents
     if (q / "pyproject.toml").exists()
 )
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-
 _sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
-
-# --- Which run to read. RESOLVED, NOT JOINED BY HAND: a run lives at
-# raw_runs/[<arm>/]<period>/<preset>/<name>, and find_run_dir raises naming
-# what IS on disk rather than handing back a path that is not there.
+# The run to read, resolved through run_registry
 RUN_NAME   = "HAT_1984_2004_calibBE_road_bdm_groin"
 RUN_PERIOD = "1984_2004"
 RUN_PRESET = "calibBE"
-
 NPZ_PATH = str(find_run_dir(RAW_RUNS, RUN_NAME, RUN_PERIOD, RUN_PRESET)
                / f"{RUN_NAME}.npz")
-
-# The observation workbook, resolved by site_layer/hat_overwash.py
-# (2026-09-18). This typed scripts/input_prep/8-overwash-analysis/, which the
-# workbook left on 2026-09-10, so the script could not find its observations.
 from site_layer.hat_overwash import WORKBOOK as _OBS_WORKBOOK  # noqa: E402
+# The observation workbook (site_layer/hat_overwash.py)
 OBS_XLSX_PATH = str(_OBS_WORKBOOK)
-
 # Products go under output/, never beside the script -- see output/README.md.
 from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
 OUT_DIR = str(COMPARISONS_ROOT / "overwash")
 os.makedirs(OUT_DIR, exist_ok=True)
-
+# Model run
 START_YEAR          = 1984
 END_YEAR            = 2004    # model has END_YEAR - START_YEAR timesteps
 NUM_REAL_DOMAINS    = 90
 NUM_BUFFER_DOMAINS  = 15
 FIRST_GIS_DOMAIN_ID = 1
-
+# Which figures to produce
 PLOT_STACKED     = True
 PLOT_CONTINGENCY = True
 PLOT_SPATIAL     = True    # spatial profile comparison (two versions)
-
-# Model threshold for "predicted overwash"
-# Any cell where Qow > QOW_THRESHOLD is counted as a model overwash prediction.
-# Start at 0 (any non-zero flux), raise if too many false alarms.
+# A model cell counts as overwash if Qow > this (dam³/yr); 0 = any
 QOW_THRESHOLD = 0.0    # dam³/yr
-
-# Imagery year remapping
-# Some imagery dates post-date the storm they capture. Map them to the model
-# year that best represents the event visible in the image.
-# e.g. 2004 imagery (May 2004) shows Isabel 2003 deposits → remap to 2003.
+# Observation years mapped onto model years (README)
 YEAR_REMAP = {
     2004: 2003,    # May 2004 imagery captures Hurricane Isabel (Sep 2003) deposits
 }
-
 DPI = 200
-
-# ══════════════════════════════════════════════════════════════════════
-# ISLAND SECTIONS
-# ══════════════════════════════════════════════════════════════════════
+# Island sections, matching CASCADE's ANN_TOWN_SPANS
 SECTIONS = [
     ("Cape Point",                              1,  6,  "inter"),
     ("Buxton",                                  7,  8,  "village"),
@@ -122,39 +83,27 @@ SECTIONS = [
     ("Pea Island /\nN. Rodanthe",              84,  90, "inter"),
 ]
 POOR_QUALITY_YEARS = {1996}
-
-# ══════════════════════════════════════════════════════════════════════
-# UNIFIED COLOUR PALETTE
-# ──────────────────────────────────────────────────────────────────────
-# Concept: muted coastal earth & ocean tones, consistent warmth across
-# all elements.  Section bar uses desaturated versions of the same
-# warm/cool families used in the contingency legend.
-# Inspired by AGU / Nature Geoscience figure aesthetics.
-# ══════════════════════════════════════════════════════════════════════
-
-# ── Geography (section bar) — linen/maritime, very desaturated ────────
+# Colours
 CLR_BAR_VILLAGE = '#CABB9E'   # warm linen / sand
 CLR_BAR_INTER   = '#8DAFC2'   # dusty maritime blue
-
-# ── Contingency categories ─────────────────────────────────────────────
+# Contingency colours
 CLR_HIT  = '#2E7D5A'   # deep maritime green   — model & obs agree on overwash
 CLR_MISS = '#2A5F8F'   # deep maritime blue    — obs yes, model missed
 CLR_FA   = '#A85840'   # warm brick            — model yes, obs no (over-prediction)
 CLR_CR   = '#F2EFE9'   # warm cream/parchment  — both show no overwash
 CLR_NA   = '#BEB9B4'   # warm greige           — no imagery this year
-
-# ── Observation binary (stacked figure) ────────────────────────────────
+# Observation colours
 CLR_OBS_ON   = '#A85840'   # brick — overwash observed (same family as FA)
 CLR_OBS_OFF  = '#FFFFFF'   # white — no overwash (assessed)
 CLR_HATCH_F  = '#F2F2EE'   # warm off-white — no imagery background
 CLR_HATCH_E  = '#C0BBB5'   # warm mid-grey  — hatch lines
 CLR_IMG_BAND = '#EDF3F8'   # very light maritime blue — imagery row highlight
-
-# ══════════════════════════════════════════════════════════════════════
-# CASCADE NPZ LOADER
-# ══════════════════════════════════════════════════════════════════════
+# CASCADE .npz loader, duplicated from plot_overwash.py for portability
 _cls_reg = {}
+# -----------------------------------------------------------------------------
 
+
+# A stand-in class for anything the pickled model references but cannot import
 def _dummy(module, name):
     key = (module, name)
     if key not in _cls_reg:
@@ -165,11 +114,15 @@ def _dummy(module, name):
             {"__init__": lambda self, *a, **k: None, "__setstate__": _ss})
     return _cls_reg[key]
 
+
+# Unpickler that substitutes stand-ins for missing classes
 class _FU(pickle.Unpickler):
     def find_class(self, m, n):
         try: return super().find_class(m, n)
         except: return _dummy(m, n)
 
+
+# (years, Qow per year x domain, GIS ids) from a CASCADE .npz
 def load_qow_matrix(npz_path):
     n_yrs  = END_YEAR - START_YEAR
     s_idx  = NUM_BUFFER_DOMAINS
@@ -192,9 +145,8 @@ def load_qow_matrix(npz_path):
     years = np.arange(START_YEAR, START_YEAR + Q.shape[0], dtype=int)
     return years, Q, gis_ids
 
-# ══════════════════════════════════════════════════════════════════════
-# OBSERVATION LOADER
-# ══════════════════════════════════════════════════════════════════════
+
+# (observed matrix aligned to model years, observed years, domain ids)
 def load_obs_matrix(xlsx_path, years_model):
     df = pd.read_excel(xlsx_path, sheet_name='Overwash_Matrix', skiprows=3, header=0)
     df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
@@ -222,15 +174,15 @@ def load_obs_matrix(xlsx_path, years_model):
             obs_years.append(yr)   # store as MODEL year for alignment
     return mat, np.array(obs_years, dtype=int), domain_ints
 
-# ══════════════════════════════════════════════════════════════════════
-# SHARED DRAWING HELPERS
-# ══════════════════════════════════════════════════════════════════════
+
+# Vertical section boundaries on a heatmap
 def section_dividers(ax, n_domains, zorder=3):
-    """White vertical lines at section boundaries. x = 0-indexed domain."""
     section_starts = [s[1] - 1 for s in SECTIONS]   # 0-indexed
     for x in section_starts:
         ax.axvline(x=x - 0.5, color='white', linewidth=1.1, zorder=zorder)
 
+
+# The island-section colour bar
 def section_bar(axb, n_domains):
     axb.set_xlim(-0.5, n_domains - 0.5)
     axb.set_ylim(0, 1); axb.axis('off')
@@ -250,9 +202,8 @@ def section_bar(axb, n_domains):
             axb.text(mid, 0.38, sec_name,
                      fontsize=6.2 if '\n' in sec_name else 7, **kw)
 
-# ══════════════════════════════════════════════════════════════════════
-# FIGURE 1 — STACKED DUAL-PANEL
-# ══════════════════════════════════════════════════════════════════════
+
+# Figure 1: model Qow above, observed overwash below, shared domain axis
 def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     n_y = len(years_m)
     n_d = len(domain_ints)
@@ -263,8 +214,7 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     ax_o = fig.add_axes([0.07, 0.19, 0.82, 0.21])   # obs    (middle 21%)
     ax_b = fig.add_axes([0.07, 0.12, 0.82, 0.05])   # section bar
 
-    # ── MODEL HEATMAP ─────────────────────────────────────────────────
-    # Highlight imagery year rows on model panel
+    # Model heatmap, imagery-year rows highlighted
     for yi, yr in enumerate(years_m):
         if yr in obs_years:
             ax_m.axhspan(yi - 0.5, yi + 0.5,
@@ -297,7 +247,7 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
         'Blue bold years = aerial imagery available for that year',
         fontsize=11, fontweight='bold', loc='left', pad=6)
 
-    # ── OBSERVATION HEATMAP ───────────────────────────────────────────
+    # Observation heatmap
     ax_o.set_facecolor(CLR_HATCH_F)
 
     # Hatch unobserved years
@@ -370,17 +320,14 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     print(f"Saved: {out}")
     plt.show()
 
-# ══════════════════════════════════════════════════════════════════════
-# FIGURE 2 — CONTINGENCY (imagery years only, equal-height rows)
-# ══════════════════════════════════════════════════════════════════════
+
+# Figure 2: hit / miss / false alarm / correct rejection per image and domain
 def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     n_y  = len(years_m)    # ALL model years (e.g. 20 for 1984-2003)
     n_d  = len(domain_ints)
     obs_set = set(obs_years.tolist())
 
-    # Build full n_y × n_d contingency matrix — all model years as rows
-    # 0 = Correct Rejection, 1 = Hit, 2 = False Alarm, 3 = Miss, 4 = Not Assessed
-    # Non-imagery years → all 4 (grey "not assessed")
+    # Contingency matrix, all model years: 0=CR, 1=Hit, 2=FA, 3=Miss, 4=not assessed
     cont = np.full((n_y, n_d), 4, dtype=float)
 
     for yi, yr in enumerate(years_m):
@@ -418,8 +365,7 @@ def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     ax_c  = fig.add_axes([0.07, 0.26, 0.82, 0.65])
     ax_b  = fig.add_axes([0.07, 0.18, 0.82, 0.05])
 
-    # ── Colormap using unified palette ────────────────────────────────
-    # 0=CR, 1=Hit, 2=FA, 3=Miss, 4=NA
+    # Colormap in the unified palette: 0=CR, 1=Hit, 2=FA, 3=Miss, 4=NA
     cmap_c = mcolors.ListedColormap([CLR_CR, CLR_HIT, CLR_FA, CLR_MISS, CLR_NA])
     norm_c = mcolors.BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5], cmap_c.N)
 
@@ -456,8 +402,7 @@ def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
         f'POD = {pod_str}   CSI = {csi_str}   False Alarm Rate = {far_str}',
         fontsize=11, fontweight='bold', loc='left', pad=6)
 
-    # Legend: placed OUTSIDE axes in figure space below section bar
-    # so it never covers any data
+    # Legend outside the axes, below the section bar, clear of the data
     leg_handles = [
         mpatches.Patch(fc=CLR_HIT,  ec='#1A5C3A', lw=0.5,
                        label='Hit — model & obs both show overwash'),
@@ -496,20 +441,9 @@ def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     print(f"Saved: {out}")
     plt.show()
 
-# ══════════════════════════════════════════════════════════════════════
-# SPATIAL PROFILE COMPARISON — shared data prep helper
-# ══════════════════════════════════════════════════════════════════════
-def compute_spatial_data(Q, obs_mat, domain_ints):
-    """
-    Returns per-domain summary arrays used by both spatial profile figures.
 
-    qow_mean  : mean annual Qow per domain across all model years (dam³/yr)
-    qow_p25   : 25th percentile of annual Qow per domain
-    qow_p75   : 75th percentile of annual Qow per domain
-    obs_freq  : fraction of assessed imagery years with overwash per domain
-                (NaN where no assessed imagery exists for that domain)
-    bar_colors: colour per domain based on section type (village vs inter-village)
-    """
+# Per-domain overwash frequency, model and observed, for the spatial figures
+def compute_spatial_data(Q, obs_mat, domain_ints):
     n_d = len(domain_ints)
 
     qow_mean = Q.mean(axis=0)
@@ -535,8 +469,8 @@ def compute_spatial_data(Q, obs_mat, domain_ints):
     return qow_mean, qow_p25, qow_p75, obs_freq, bar_colors
 
 
+# Section shading behind a spatial panel
 def _draw_section_background(ax, domain_ints, alpha=0.08):
-    """Very subtle alternating section shading on an axes."""
     village_doms = set()
     for _, lo, hi, stype in SECTIONS:
         if stype == "village": village_doms.update(range(lo, hi+1))
@@ -546,10 +480,7 @@ def _draw_section_background(ax, domain_ints, alpha=0.08):
                        alpha=alpha, zorder=0, linewidth=0)
 
 
-# ══════════════════════════════════════════════════════════════════════
-# OPTION 1 — NORMALISED SINGLE-PANEL
-# Both model and observations scaled to 0–1 on the same y-axis.
-# ══════════════════════════════════════════════════════════════════════
+# Figure 3: normalised overwash frequency alongshore, model vs observed
 def plot_spatial_normalised(Q, obs_mat, domain_ints, obs_years, years_m):
     qow_mean, qow_p25, qow_p75, obs_freq, bar_colors = \
         compute_spatial_data(Q, obs_mat, domain_ints)
@@ -570,22 +501,22 @@ def plot_spatial_normalised(Q, obs_mat, domain_ints, obs_years, years_m):
 
     _draw_section_background(ax, domain_ints)
 
-    # ── Observation frequency bars (behind curve) ─────────────────────
+    # Observation frequency bars (behind curve)
     bars = ax.bar(x, freq_norm, width=0.85, color=bar_colors,
                   alpha=0.75, zorder=2, linewidth=0,
                   label=f'Observed overwash frequency\n(fraction of {n_img} imagery years)')
 
-    # ── Model IQR shading ─────────────────────────────────────────────
+    # Model IQR shading
     ax.fill_between(x, qow_p25_n, qow_p75_n,
                     color=CLR_MISS, alpha=0.18, zorder=3,
                     label='Modelled Qow IQR (25th–75th pct.)')
 
-    # ── Model mean curve ──────────────────────────────────────────────
+    # Model mean curve
     ax.plot(x, qow_norm, color=CLR_MISS, linewidth=1.8,
             zorder=4, label='Modelled mean annual Qow (normalised)')
     ax.fill_between(x, 0, qow_norm, color=CLR_MISS, alpha=0.10, zorder=3)
 
-    # ── Section dividers ──────────────────────────────────────────────
+    # Section dividers
     for _, lo, _, _ in SECTIONS:
         ax.axvline(x=lo-1-0.5, color='#AAAAAA', linewidth=0.7,
                    linestyle='--', alpha=0.6, zorder=5)
@@ -644,10 +575,7 @@ def plot_spatial_normalised(Q, obs_mat, domain_ints, obs_years, years_m):
     plt.show()
 
 
-# ══════════════════════════════════════════════════════════════════════
-# OPTION 2 — DUAL PANEL, SHARED X-AXIS
-# Model and observations on separate panels, each with its own y-axis.
-# ══════════════════════════════════════════════════════════════════════
+# Figure 4: model and observed alongshore in two panels
 def plot_spatial_dual_panel(Q, obs_mat, domain_ints, obs_years, years_m):
     qow_mean, qow_p25, qow_p75, obs_freq, bar_colors = \
         compute_spatial_data(Q, obs_mat, domain_ints)
@@ -661,7 +589,7 @@ def plot_spatial_dual_panel(Q, obs_mat, domain_ints, obs_years, years_m):
     ax_o = fig.add_axes([0.07, 0.25, 0.88, 0.19])   # obs   (bottom) — gap of 0.06 above
     axb  = fig.add_axes([0.07, 0.13, 0.88, 0.06])   # section bar
 
-    # ── TOP: modelled Qow curve ───────────────────────────────────────
+    # TOP: modelled Qow curve
     _draw_section_background(ax_m, domain_ints)
 
     ax_m.fill_between(x, qow_p25, qow_p75,
@@ -688,7 +616,7 @@ def plot_spatial_dual_panel(Q, obs_mat, domain_ints, obs_years, years_m):
                    f'({years_m[0]}–{years_m[-1]})',
                    fontsize=10, fontweight='bold', loc='left', pad=6)
 
-    # ── BOTTOM: observation frequency bars ───────────────────────────
+    # BOTTOM: observation frequency bars
     _draw_section_background(ax_o, domain_ints)
 
     ax_o.bar(x, obs_freq, width=0.85, color=bar_colors,
@@ -762,9 +690,7 @@ def plot_spatial_dual_panel(Q, obs_mat, domain_ints, obs_years, years_m):
     plt.show()
 
 
-# ══════════════════════════════════════════════════════════════════════
-# MAIN
-# ══════════════════════════════════════════════════════════════════════
+# Run: load model and observations, draw the chosen figures
 def main():
     print("Loading CASCADE model ...")
     years_m, Q, gis_ids = load_qow_matrix(NPZ_PATH)
@@ -789,6 +715,7 @@ def main():
         plot_spatial_dual_panel(Q, obs_mat, domain_ints, obs_years, years_m)
 
     print("\nDone.")
+
 
 if __name__ == "__main__":
     main()
