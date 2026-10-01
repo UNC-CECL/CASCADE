@@ -1828,7 +1828,8 @@ the copies in the output directory were older. So the export overwrote the
 CURRENT figures with SUPERSEDED ones, quietly, every time it ran.
 
 3-figures/ is the record now, and the staleness check below reads the same
-place. The superseded copies were moved under superseded_20260825/.
+place. The superseded copies were moved under superseded_20260825/ (in
+data/hatteras_init/7-source-sink/archive/, deleted 2026-10-01).
 ```
 
 ```text

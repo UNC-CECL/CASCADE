@@ -38,7 +38,7 @@ DATA_ALLOWED = {"reference_yaml_hatteras.yaml"}
 # Rule 1, second case: the root of scripts/ holds folders and README.md only
 ROOT_ALLOWED = {"README.md"}
 
-# Rule 4: superseded_<date>, optionally with a reason after the date
+# Rule 4 (data and output): superseded_<date>, optionally with a reason after the date
 RETIRE_GOOD = re.compile(r"^superseded_\d{8}(_[A-Za-z0-9][\w-]*)?$")
 
 # output/archive/ files retired material as YYYY-MM-DD_<what>/, its own idiom
@@ -170,7 +170,7 @@ def inside_compliant_retirement(path: Path) -> bool:
                for part in path.parts[:-1])
 
 
-# Rule 4: retirement folders that are not superseded_<date>, or lack a note
+# Rule 4: retired code is deleted; retired data is superseded_<date> with a note
 def rule_4_retirement_idioms():
     out = []
     for tree in README_TREES:
@@ -179,6 +179,9 @@ def rule_4_retirement_idioms():
             continue
         for path in walk(base):
             if not path.is_dir() or not RETIRE_ANY.match(path.name):
+                continue
+            if tree == "scripts":
+                out.append((path.relative_to(REPO), "retired code: delete it (git keeps it)"))
                 continue
             if inside_compliant_retirement(path):
                 continue
@@ -300,7 +303,7 @@ def main():
     if wanted is None or 4 in wanted:
         total += show("retirement folders off the convention",
                       rule_4_retirement_idioms(), 4, limit,
-                      "expected superseded_<date>/ with a WHY.md")
+                      "code: delete it; data: superseded_<date>/ with a WHY.md")
     if wanted is None or 5 in wanted:
         counted, literal = rule_5_paths()
         total += show("roots found by counting parent directories",

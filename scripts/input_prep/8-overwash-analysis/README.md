@@ -15,7 +15,11 @@ Split into steps 2026-09-22 to match the data tree, which was already
 | `2-record/overwash_heatmap_multiperiod.py` | The heatmap figure, one per period (`period1`, `period2`, `combined`), plus the two tables and `CAPTIONS.md`. |
 | `2-record/overwash_map_periods.py` | The island map, one figure per period, with the domains shaded by images with overwash and the date strip beside it; `--both` adds the side-by-side figure. Needs `D:/Hatteras_GIS` (domain boxes, coastline). |
 | `3-vs-footprint/overwash_vs_footprint.py` | Sets the overwash seen between the two dune-line frames (Aug 1985 to Oct 1997, nine images) against the rows the 1984 reconstruction adds and removes, per domain; contingency, lists, flags and three figures (alongshore, summary, three-panel island map). Reads the footprint, the road relocation table and the shoreline rates as inputs. |
-| `superseded_20260910/` | The May 2026 single-period script. Kept for the record; its paths are dead. |
+
+`superseded_20260910/`, the May 2026 single-period script whose paths were
+dead, was deleted on 2026-10-01; recover it with
+`git log --diff-filter=D --oneline -- scripts/input_prep/8-overwash-analysis/superseded_20260910`
+and `git show <commit>^:<path>`.
 
 ## Run
 

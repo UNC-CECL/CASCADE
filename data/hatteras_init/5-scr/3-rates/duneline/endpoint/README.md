@@ -5,8 +5,9 @@ two dune lines that bound each window, per 100 m transect and per GIS domain.
 Written by `scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py`,
 read through `hat_observed_rates.dune_endpoint_csv(start, end, level)`.
 `rate_windows.py` draws and scores the dune line from here. It replaced
-`duneline_lrr/`, an OLS through every line in the window; see
-`../../../archive/duneline_lrr_retired_20260918/WHY.md`.
+`duneline_lrr/`, an OLS through every line in the window. Its archive,
+`5-scr/archive/duneline_lrr_retired_20260918/` (with the WHY.md), was
+deleted 2026-10-01; recover it from git.
 
 ```
 <start>_<end>/

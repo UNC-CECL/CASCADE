@@ -145,42 +145,29 @@ them — `input_prep/0-elevation/`, `input_prep/1-barrier3d-domains/`,
 `input_prep/4-mgmt-forcings/road_offset/` and `.../road_relocation/` are the
 substantial ones. Read those before changing a forcing.
 
-## Superseded code: `old_<what it holds>/`
+## Retired code is deleted
 
-A folder holding retired scripts is named **`old_` plus what it holds** — one
-rule, everywhere under `scripts/`:
+A script that is retired is deleted, not parked in a folder (ORGANIZATION.md
+rule 4, since 2026-10-01). Git keeps it. The folder's `README.md` gets a short
+"Deleted <date>" record naming each file, why it went, and the recovery
+commands:
 
 ```
-figure_making/old_dsas_scripts/            input_prep/old_source_sink_search/
-figure_making/old_plot_tests/              input_prep/1-barrier3d-domains/1-extraction/old_extractors/
-figure_making/shoreline/old_rate_analysis/
-hatteras_ms/old_drafts/                    input_prep/5-scr/CoastSat/old_dsas_comparisons/
-hatteras_ms/old_versions/                  input_prep/5-scr/CoastSat/old_time_periods/
-sensitivity_analysis/old_guides/           input_prep/6-scr-smooth/old_smoothing/
-input_prep/4-mgmt-forcings/road_offset/1-produce/old_method/
+git log --diff-filter=D --oneline -- <path>
+git show <commit>^:<path>
 ```
 
-Before 2026-09-02 there were six spellings across fourteen folders — `old/`,
-`drafts/`, `old_versions/`, `old_method/`, `old_plot_tests/`,
-`old_time_periods/` — and seven of them were bare `old/`, including an `old/`
-nested inside another `old/`. Nothing referenced them by path, so the renames
-broke nothing.
+Before deleting, check that the file is committed (`git cat-file -e
+HEAD:<path>`). A file that is only staged, or never committed, is not
+protected. Check also that nothing live imports it or loads it by path, and
+that any data folder beside it is either tracked or no longer wanted, because
+git-ignored data deleted with the code is gone for good.
 
-**The descriptor is not decoration.** `figure_making/` holds two retired
-folders side by side, so a single uniform name — every one of them
-`old_method/` — would collide. Keeping what each holds is also what makes a
-bare listing legible: `old_extractors` and `old_smoothing` say which stage they
-were retired from, where two `old/` entries at different depths do not.
-
-**`old_method/` under `road_offset/1-produce/` is the one to leave alone.** It
-is not dormant: `road_offset/README.md` cites it three times as the legacy
-method kept for comparison against `HAT_road_offset_from_dune_start.py`, and
-that comparison is the argument for the current setbacks.
-
-Retired code is kept, not deleted, and all of it is tracked — so anything here
-is recoverable from history if a folder is ever removed. What is NOT uniformly
-tracked is the data beside it: several of these folders hold figures and CSVs
-that exist nowhere else and are not in git. Check before deleting one.
+History: until 2026-09-02 retired code sat in `old/`-style folders (six
+spellings across fourteen folders), then in `old_<what>/`, then in
+`superseded_<date>/`. On 2026-10-01 the last fourteen `superseded_<date>/`
+folders under `scripts/` were deleted. Each one is recorded in the README of
+the folder that held it.
 
 ## The import idiom
 

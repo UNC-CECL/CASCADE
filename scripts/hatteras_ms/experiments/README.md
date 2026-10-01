@@ -21,8 +21,9 @@ Several scripts import another study's module and re-point its folders (the
 `_div10` / `_option_a` variants, the storm studies' shared `MD` / `S`), so
 rename or move one only together with the scripts that import it.
 
-`superseded_20260907/` holds the retired 1984 seaward row-insert set, which
-cannot be re-run; its `WHY.md` says why.
+`superseded_20260907/`, the retired 1984 seaward row-insert set that could
+not be re-run, was deleted on 2026-10-01 (recover from git; see
+`../README.md`, "Deleted 2026-10-01").
 
 ## The scripts in detail
 

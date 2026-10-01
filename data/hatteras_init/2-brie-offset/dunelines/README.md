@@ -91,7 +91,8 @@ Rebuilt from the new lines the same day:
 NOT rebuilt:
 - `5-scr/3-rates/duneline_lrr/`, a fit through several lines. Retired later
   that day for `3-rates/duneline/endpoint/` (net change, built from these
-  lines); the fit is in `5-scr/archive/duneline_lrr_retired_20260918/`
+  lines); the fit was archived in `5-scr/archive/duneline_lrr_retired_20260918/`,
+  deleted 2026-10-01 (recover from git)
 - the 1984 dune-line shift measurement
 - every model run on the 1996 or 2010 inputs
 

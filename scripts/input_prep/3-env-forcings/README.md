@@ -16,8 +16,12 @@ WIS waves.
     storm_validation/                     the named-storm catalogue and the validator
     from_Hannah/                          an earlier generator (HAT_create_storms.py)
     from_lexi/, from_roya/                colleagues' generators, kept as they were (not restyled)
-    superseded_20260922/                  the retired storm_check scripts (see WHY.md)
 ```
+
+The retired storm_check scripts (`3-storms/superseded_20260922/`, replaced by
+`storm_validation/HAT_validate_storms.py`) were deleted on 2026-10-01; recover
+them with `git log --diff-filter=D --oneline -- scripts/input_prep/3-env-forcings/3-storms/superseded_20260922`
+and `git show <commit>^:<path>`.
 
 `historical_storm_creation_v3_HAT.py` is also read by
 `hatteras_ms/experiments/HAT_storm_max_duration.py`, which compiles four of its

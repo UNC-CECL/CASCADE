@@ -3,8 +3,12 @@
 Cross-run and per-run figures: the hindcast result, the scenario grid, the GIS 11
 relocation question, the plan-view animation, and the tool that redraws a
 run's own figures. The manuscript copies go to `output/figures/5-results/`;
-working copies to `output/comparisons/`. `superseded_20260914/` and
-`superseded_20260918/` hold retired versions (see their WHY.md).
+working copies to `output/comparisons/`. The retired versions in
+`superseded_20260914/` (`HAT_hindcast_final_figure.py`) and
+`superseded_20260918/` (the two 1978-1997 gif scripts) were deleted on
+2026-10-01; recover them with
+`git log --diff-filter=D --oneline -- scripts/figure_making/model_output/<folder>`
+and `git show <commit>^:<path>`.
 
 ```
 hindcast_final_figure_lowess.py  THE hindcast result: both periods against the LOWESS curve
@@ -216,7 +220,7 @@ The calibrated hindcast against the LOWESS reference curve — presentation figu
 THE hindcast result figure. It had a companion, HAT_hindcast_final_figure.py,
 which drew the same two runs scored over D2-D89; on 2026-09-14 this figure took
 on both scoring windows and the companion was retired to
-model_output/superseded_20260914/. The three features below were what distinguished
+model_output/superseded_20260914/ (deleted 2026-10-01). The three features below were what distinguished
 the two, and are now simply what this figure has.
 
     SHARED Y AXIS

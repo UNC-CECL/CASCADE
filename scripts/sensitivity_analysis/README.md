@@ -9,7 +9,6 @@ plot_sensitivity.py              the sweep's figures: skill per axis, alongshore
 plot_sensitivity_pair.py         two cells of one axis, stacked, when their curves overlap
 plot_sensitivity_zoom.py         one axis over a value range, beside the full set
 plot_hs_experiment.py            the wave-height experiment specifically (source/sink by zone)
-plot_sensitivity_vs_coastsat.py  legacy: each cell against the observed rates, from a May session folder
 ```
 
 The driver's manifest goes to `output/calibration/sensitivity/`
@@ -17,12 +16,6 @@ The driver's manifest goes to `output/calibration/sensitivity/`
 `output/raw_runs/sensitivity/figures/<start>_<end>_<preset>/` (since
 2026-09-28). `output/calibration/sensitivity/figures/README.md` is one of the
 three decision records in the output tree.
-
-What not to trust: `plot_sensitivity_vs_coastsat.py` is replaced by
-`plot_sensitivity.py`. It reads a session folder written by the deleted
-`HAT_waveSensitivity_1984_2004.py` and CoastSat CSVs under
-`scripts/input_prep/CoastSat/`, which no longer exists; both need editing
-before it runs.
 
 **A cell that moves a forcing earns a name token**, so it lands in its own
 directory. Without one it would derive the same name as the matrix run it is
@@ -873,164 +866,21 @@ Usage:
     python plot_sensitivity_pair.py --start-year 1996         --sweep wave_angle_high_fraction --top 0.5 --bottom 0.51
 ```
 
-### plot_sensitivity_vs_coastsat.py
+### Deleted 2026-10-01
 
-Legacy: each wave sweep of a May 2026 session folder against raw and smoothed CoastSat LRR.
+- `plot_sensitivity_vs_coastsat.py` — replaced by `plot_sensitivity.py`. It
+  read a session folder written by the deleted
+  `HAT_waveSensitivity_1984_2004.py` and CoastSat CSVs under
+  `scripts/input_prep/CoastSat/`, neither of which exists.
+- `superseded_20260902/` — two markdown guides from the earlier sweep
+  (domain-by-domain analysis; verification and interpretation) and their WHY.md.
 
-From the script's original header:
+To recover, by the path it was last committed under:
 
-```text
-Sensitivity Results vs CoastSat — Raw + Smoothing Window Comparison
-Post-processing script for HAT_waveSensitivity_1984_2004.py comparison.
-
-Reads the shoreline change rate CSVs saved during a sensitivity session
-(no CASCADE re-run required) and plots each parameter sweep against:
-  - Raw CoastSat LRR (faded period colour, ±1 std envelope)
-  - LOWESS-smoothed CoastSat for each window size in COMPARE_WINDOWS_DOMAINS
-
-Outputs (written to OUTPUT_DIR)
-  wave_height_vs_coastsat.png
-  wave_period_vs_coastsat.png
-  wave_asymmetry_vs_coastsat.png
-  wave_angle_high_fraction_vs_coastsat.png
-  sensitivity_overview_2x2.png      <- all four parameters in one grid
-
-Usage
-1. Point SESSION_DIR to the timestamped comparison folder from the sensitivity run.
-2. Point COASTSAT_CSV_1984_2004 / _2004_2024 to your CoastSat CSVs.
-3. python plot_sensitivity_vs_coastsat.py
 ```
-
-Notes that were in the code:
-
-```text
-HOUSE STYLE: one typeface and one palette across every figure in this
-project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-found by searching upward (ORGANIZATION.md rule 5). This file drew in
-matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+git log --diff-filter=D --oneline -- scripts/sensitivity_analysis/<path>
+git show <commit>^:scripts/sensitivity_analysis/<path>
 ```
-
-```text
-Same anchor its sibling plot_sensitivity.py uses, so run_layout -- the
-one definition of where a run folder keeps its files -- is importable.
-```
-
-```text
-Anchored 2026-09-14: absolute into a home directory, or into a tree
-renamed since. Rule 5 of ORGANIZATION.md.
-```
-
-```text
-Point to the timestamped folder created by HAT_waveSensitivity_1984_2004.py.
-Structure expected:
-SESSION_DIR/
-wave_height/
-HAT_1984_2004_wvSens_wave_height_1p0/
-tables/shoreline_change_rate.csv     (or, before the 2026-09-10
-layout change, the flat *_shoreline_change_rate.csv beside it --
-run_layout resolves either)
-...
-wave_period/ ...
-wave_asymmetry/ ...
-wave_angle_high_fraction/ ...
-```
-
-```text
-Which CoastSat period to use as the primary reference
-(should match the sensitivity run period)
-```
-
-```text
-Window sizes in CASCADE domains (500 m each).
-Must have the same number of entries as C_WINDOWS below.
-5  domains  ->  2.5 km  ->  frac = 0.056
-10  domains  ->  5.0 km  ->  frac = 0.111   <- recommended calibration window
-15  domains  ->  7.5 km  ->  frac = 0.167
-```
-
-```text
-RESOLVED, NOT GLOBBED. The rate CSV is tables/shoreline_change_rate.csv
-in the new run layout and {run}_shoreline_change_rate.csv in the old;
-the run folder is named for the run, so it supplies the prefix.
-```
-
-```text
--- Legend: grouped into three labelled sections -------------------------
-Group 1: Observed (CoastSat raw + smoothed windows)
-Group 2: Model runs (one per parameter value)
-Group 3: Geographic annotation proxies
-
-A dummy handle with an empty label creates visual spacing in the legend.
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`discover_param_runs()`**
-
-```text
-Scan session_dir/{param_name}/ for per-value run subfolders and return
-{param_value (float) -> rate_csv_path (str)}, sorted by value.
-
-Folder naming convention (from HAT_waveSensitivity_1984_2004.py):
-  HAT_{YYYY}_{YYYY}_wvSens_{param_name}_{value_str}/
-where value_str uses 'p' in place of '.' (e.g. 1p2 -> 1.2).
-```
-
-**`load_rate_csv()`**
-
-```text
-Load a *_shoreline_change_rate.csv and return (gis_ids, rates) for
-real domains only.
-```
-
-**`load_coastsat()`**
-
-```text
-Load a CoastSat domain_lrr_summary CSV.
-Returns a DataFrame with columns: domain, cs_lrr, cs_std
-or None if the file is missing.
-```
-
-**`compute_all_smoothed()`**
-
-```text
-Compute LOWESS-smoothed CoastSat LRR for every window in
-COMPARE_WINDOWS_DOMAINS.  Returns {n_domains: smoothed_array}.
-```
-
-**`plot_param_vs_coastsat()`**
-
-```text
-Full annotated figure for one wave parameter sweep.
-
-Layout (all on one panel):
-  - Raw CoastSat (faded period colour, ±1 std envelope)
-  - LOWESS-smoothed CoastSat for each window in COMPARE_WINDOWS_DOMAINS
-  - Cascade model lines (viridis, one per parameter value)
-  - Geographic annotation layer
-  - Grouped legend
-
-Parameters
-----------
-param_name      : str
-runs            : dict {param_value -> (gis_ids, rates)}
-cs_active       : pd.DataFrame — CoastSat for the active period
-cs_period_color : str — colour for the active CoastSat period
-smoothed_dict   : dict {n_domains -> smoothed_array} for the active period
-out_path        : str — comparison PNG path
-cs_ref          : pd.DataFrame or None — secondary CoastSat period (reference)
-cs_ref_color    : str or None
-```
-
-**`plot_overview_2x2()`**
-
-```text
-2x2 grid: one panel per wave parameter, compact version.
-Each panel shows: raw CoastSat (faded), all smoothing windows, all model lines.
-No geographic annotations (too cluttered at this scale) — just data.
-```
-
-</details>
 
 ### plot_sensitivity_zoom.py
 

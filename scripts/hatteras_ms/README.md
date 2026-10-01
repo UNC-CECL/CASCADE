@@ -18,10 +18,7 @@ HINDCAST_PLAN.md               planning notes: the order the notebook builds
 
 tools/        read or repair the run record; none of them run the model
 experiments/  one-off studies, each a run-it then plot-it pair
-figures/      figures built from finished runs
 groin-sweep/  the M and f fit, its own config and worker
-old_drafts/   superseded
-old_versions/ superseded runners, and the inherited driver that predates them
 ```
 
 ## Which Barrier3D the run uses
@@ -65,11 +62,9 @@ Two live studies, plus one retired.
   `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`
   and `HAT_score_road_position.py`. `RELOCATION_COMPARISON_RESULTS.md` is
   what it concluded.
-* `superseded_20260907/` -- the 1984 seaward row-insert set, which cannot be
-  re-run: the topography layers it studied were deleted, its output folders
-  are empty, and its arms are not in the run tree. Kept because the four
-  scripts are the only record of how it was driven. Its `WHY.md` has the
-  evidence.
+* `superseded_20260907/` -- the 1984 seaward row-insert set, which could not
+  be re-run (its topography layers, outputs and arms were gone). Deleted
+  2026-10-01 with the other retirement folders below; git has the scripts.
 
 A driver spawns the runner as a subprocess with `HAT_IGNORE_SETTINGS=1`, so
 whatever is sitting in `hat_run.yaml` cannot reach an experiment.
@@ -78,9 +73,29 @@ whatever is sitting in `hat_run.yaml` cannot reach an experiment.
 
 The five figure scripts that were here (`hindcast_final_figure_lowess`,
 `scenario_grid`, `rerender_run_figures`, `planview_evolution_gif`,
-`gis11_relocation_drown_figure`) and their `superseded_20260914/` moved to
+`gis11_relocation_drown_figure`) and their `superseded_20260914/` (since
+deleted, 2026-10-01) moved to
 `scripts/figure_making/model_output/` on 2026-09-18, so every figure script is
 in one tree.
+
+## Deleted 2026-10-01
+
+Hannah chose to delete the retirement folders rather than keep them (git keeps
+them):
+
+* `superseded_20260819/` -- the old 1984-2024 runners
+  (`HAT_hindcast_1984_2024.py`, `_newdomains`, `_newplot`) and the inherited
+  driver `benton_script.py` (that lineage lives on `origin/benton-cascade`)
+* `superseded_20260911/` -- `HAT_hindcast_1984_2024_versioncontrol.py` and
+  `HAT_hindcast_QC_skeleton.ipynb`
+* `experiments/superseded_20260907/` -- the 1984 seaward row-insert set
+
+To recover one, by the path it was last committed under:
+
+```
+git log --diff-filter=D --oneline -- scripts/hatteras_ms/<folder>/<file>
+git show <commit>^:scripts/hatteras_ms/<folder>/<file>
+```
 
 ## Paths: search upward, do not count
 

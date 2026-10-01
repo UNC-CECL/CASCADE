@@ -74,9 +74,10 @@ twelve days after the 1984 run was remade on topography v2 -- the caption said
 
 So on 2026-09-14 both windows were put on each panel of this figure, computed
 rather than quoted, and the headline was retired to
-`scripts/figure_making/model_output/superseded_20260914/` (see the WHY.md there). Its
+`scripts/figure_making/model_output/superseded_20260914/` (deleted 2026-10-01 with
+its WHY.md; recover from git). Its
 last two PNGs were deleted the same day rather than kept beside their
-replacements -- the retired script still runs and regenerates them, so keeping
+replacements -- the retired script still ran then and could regenerate them, so keeping
 a copy bought nothing but a second set of numbers to go stale.
 
 The headline's three shaded bands were NOT ported, and that was not an

@@ -22,7 +22,6 @@ run. See "What the hindcast actually runs" below.
 ```
 lowess_method_comparison.py   CURRENT. Transect-first vs domain-first smoothing.
 lowess_dsas_vs_coastsat.py    Side question: DSAS vs CoastSat as sources.
-superseded_20260902/         The lineage, v1-v4, provenance only.
 ```
 
 Both scripts run from anywhere - every path is anchored on the `pyproject.toml`
@@ -193,10 +192,18 @@ if you need to know exactly what they ran on:
 
     git show f0b64cf1:scripts/input_prep/6-scr-smooth/hindcast_lowess_snapshot/coastsat_lowess.py
 
-## superseded_20260902/ - how the method got here
+## How the method got here (v1-v4, deleted 2026-10-01)
 
-Provenance only; none of these run against the current tree (their paths still
-name `input_preperation`). Oldest first:
+The lineage was kept in `superseded_20260902/` until 2026-10-01, when it was
+deleted (Hannah: delete, git keeps them); none of it ran against the current
+tree (its paths still named `input_preperation`). To read one:
+
+```
+git log --diff-filter=D --oneline -- scripts/input_prep/6-scr-smooth/superseded_20260902/<file>
+git show <commit>^:scripts/input_prep/6-scr-smooth/superseded_20260902/<file>
+```
+
+Oldest first:
 
 The `v1`-`v4` order is reconstructed from file dates (2026-04-07, 05-14, 07-20,
 08-06), not from anything the files themselves declare - so read the ordering as

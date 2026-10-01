@@ -124,7 +124,8 @@ by hand.
 
 > **The last stale caller is retired:** `diagnose_road_drowning.py`, which built
 > `domain_{n}_topography_{TOPO_DUNE_INIT_YEAR}.npy`, moved to
-> `scripts/figure_making/management/superseded_20260918/` on 2026-09-18.
+> `scripts/figure_making/management/superseded_20260918/` on 2026-09-18, and
+> was deleted from there on 2026-10-01 (recover from git).
 
 ## The arrays are git-ignored; the record of them is not
 

@@ -83,13 +83,20 @@ archive/                     kept, not for use
                                         1984-2004 / 2004-2024 framing)
     coastsat_lrr_quicklooks_20260918/   the autoscaled bar and scatter PNGs that
                                         used to sit beside each LRR fit
-    duneline_lrr_retired_20260918/      the dune-line OLS, retired for endpoint
-    2026-09-19_4-comparisons_duplicates/ coastsat_windows/ and duneline_windows/:
-                                        their figures duplicated 3-rates (window
-                                        and chain figures); the 2 x 2 moved to
-                                        3-rates/coastsat/lrr/lrr_four_windows
     rodanthe_plots/                     poster figures; the script writes to
                                         output/figures/2-observations/shoreline/ now
+```
+
+Deleted from `archive/` on 2026-10-01 (Hannah: delete, git keeps them):
+`duneline_lrr_retired_20260918/` (the dune-line OLS, retired for endpoint) and
+`2026-09-19_4-comparisons_duplicates/` (window and chain figures that
+duplicated 3-rates; the 2 x 2 moved to 3-rates/coastsat/lrr/lrr_four_windows).
+Their tracked files (tables, PDFs, CAPTIONS, READMEs) come back from git; the
+PNGs were git-ignored and are gone.
+
+```
+git log --diff-filter=D --oneline -- data/hatteras_init/5-scr/archive/<folder>
+git show <commit>^:data/hatteras_init/5-scr/archive/<folder>/<file>
 ```
 
 Until 2026-09-18 all of these sat side by side at the top of `5-scr/`. Four

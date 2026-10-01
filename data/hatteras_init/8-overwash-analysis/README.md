@@ -37,11 +37,13 @@ of it. Scripts: `scripts/input_prep/8-overwash-analysis/`.
         overwash_vs_model_summary.csv       both/observed-only/model-only counts, hit rates
 CAPTIONS.md                         one entry per figure, headed by its folder; the
                                     figures carry no in-image text
-archive/superseded_20260910/
-    figures-2026-05-18/             the three May 2026 heatmaps the current ones replace
-    Figures_1984_2004-2026-05-12/   earlier Period 1 drafts and model-comparison panels,
-                                    with the workbook as it was on 2026-05-11
 ```
+
+`archive/superseded_20260910/` (the May 2026 heatmaps and Period 1 drafts, with
+the workbook as it was on 2026-05-11) was deleted on 2026-10-01. The workbook
+copy and the WHY.md come back from git
+(`git log --diff-filter=D --oneline -- data/hatteras_init/8-overwash-analysis/archive/superseded_20260910`,
+then `git show <commit>^:<path>`); the PNGs were git-ignored and are gone.
 
 Grouped by job since 2026-09-18. Before that the folders were split by file
 type (`observations/`, `figures/`, `tables/`), which put the footprint

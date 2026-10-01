@@ -16,7 +16,6 @@ conversion happens here and nowhere downstream.
 1-extraction/                      DEM -> the domain arrays (v1, v2): the first half of the stage
     HAT_dune_topo_extractor.py     the whole chain: pick -> extract -> figures
     nodata_audit/                  the dropout bridge
-    old_extractors/                ancestors, kept for provenance only
 2-domain-reconstruction-1984/      v2 -> v3: the 1984 domains reconstructed from the 1996-based DEM,
                                    one subfolder per step, in the order the argument runs (2026-09-09)
     1-measurement/                 how far the dune line moved: the shift N comes from, and its per-domain plotters
@@ -87,7 +86,11 @@ only the figures and the road columns of the settings sheet change. The masks
 it draws come from `4-mgmt-forcings/road_offset/`, which means that stage runs
 *before* a pick pass, not after.
 
-## old/
+## The extractor's ancestors (deleted 2026-10-01)
+
+Last committed in `1-extraction/superseded_20260909/`; deleted on 2026-10-01
+(Hannah: delete, git keeps them). Kept here because the live extractor's
+comments refer to them.
 
 | file | what it was |
 |---|---|
@@ -96,8 +99,12 @@ it draws come from `4-mgmt-forcings/road_offset/`, which means that stage runs
 
 Neither runs against the current tree - their paths (`hatteras_init/dunes/`,
 `hatteras_init/topography/`, `hatteras_init/elevations/`) predate the numbered
-reorganisation and no longer exist. They are here to explain the live file's
-comments, not to be executed.
+reorganisation and no longer exist. To read one:
+
+```
+git log --diff-filter=D --oneline -- scripts/input_prep/1-barrier3d-domains/1-extraction/superseded_20260909/<file>
+git show <commit>^:scripts/input_prep/1-barrier3d-domains/1-extraction/superseded_20260909/<file>
+```
 
 ## What was removed 2026-08-26, and why
 

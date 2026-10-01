@@ -1,20 +1,14 @@
 # figure_making/management — NC-12 and nourishment
 
 The management the hindcast applies, drawn from `hatteras_site_config`: a
-table of the rules and a timeline of every event, plus an older tool that
-compares management scenarios from saved runs. Output goes to
-`output/figures/3-model-inputs/4-management/`. `superseded_20260918/` holds
-`diagnose_road_drowning.py`, retired.
+table of the rules and a timeline of every event. Output goes to
+`output/figures/3-model-inputs/4-management/`.
 
 ```
 management_rules_table_figure.py  the rules as a table (manuscript and slide versions)
 management_timeline_figure.py     every management event as a domain-by-year timeline
-management_investigation_plot.py  natural vs roadway vs nourishment, from saved runs
 ```
 
-What not to trust: `management_investigation_plot.py` names runs from the
-1984-2004 period (`RUN_PATHS`) that are no longer in the run tree; fill it with
-current runs before using it.
 
 ## The scripts in detail
 
@@ -23,101 +17,20 @@ is its original header and any notes that were in its code, kept word for
 word when the scripts were brought in line with `scripts/STYLE.md`
 (2026-09-30).
 
-### management_investigation_plot.py
+### Deleted 2026-10-01
 
-Natural vs roadway vs roadway + historical nourishment, plotted from saved runs (no re-running).
+- `management_investigation_plot.py` — natural vs roadway vs nourishment from
+  saved runs; its `RUN_PATHS` named `HAT_1984_2004_*_Hs2p5` runs that no
+  longer exist anywhere under `output/raw_runs/`.
+- `superseded_20260918/diagnose_road_drowning.py` (with its WHY.md) — retired
+  2026-09-18, the last caller of the old `domain_{n}_topography_<year>.npy` names.
 
-From the script's original header:
+To recover, by the path it was last committed under:
 
-```text
-HATTERAS ISLAND: Management Investigation — Plot from Saved Runs
-Natural vs Roadway Management vs Roadway Management + Historical Beach Nourishment
-
-This script loads previously saved CASCADE NPZ files and produces the
-management comparison plots without re-running any simulations.
-
-USAGE
-1. Run your three scenarios separately using HAT_hindcast_1984_2024_old version.py
-   (or any other script) with the appropriate management flags.
-2. Fill in the RUN_PATHS dict below with the paths to each saved run folder.
-3. Run this script -- it loads the cascade objects and plots.
-
-Each RUN_PATHS entry:
-    "Label shown on plot": r"C:/path/to/saved/run/folder"
-
-The folder must contain the run's .npz archive (written by cascade.save()).
 ```
-
-Notes that were in the code:
-
-```text
-HOUSE STYLE: one typeface and one palette across every figure in this
-project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-found by searching upward (ORGANIZATION.md rule 5). This file drew in
-matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+git log --diff-filter=D --oneline -- scripts/figure_making/management/<path>
+git show <commit>^:scripts/figure_making/management/<path>
 ```
-
-```text
-Typeface only: this script writes ANIMATION frames, and the printed-width
-rule does not apply to something that is never printed. Its figsize is
-the frame size and is left as it is.
-```
-
-```text
-Anchored 2026-09-14: every path here was absolute into one home
-directory, and two of the trees they named have since been renamed.
-Rule 5 of ORGANIZATION.md.
-```
-
-```text
-Output folder for plots
-Under management/, the subject it belongs to (2026-09-18); this wrote a
-top-level output/figures/management_investigation/ beside it.
-```
-
-```text
-Path to the CoastSat transect CSV for the active period.
-Columns expected: domain_number (GIS 1–90), lrr_m_yr (m/yr per transect).
-```
-
-```text
-── RUN PATHS ────────────────────────────────────────────────────────────────
-Keys   = labels shown on the plot (keep them short)
-Values = path to the saved run folder (must contain the run's .npz archive)
-
-Order determines plotting order (first = bottom of legend).
-Add or remove entries freely — the script handles 2, 3, or more scenarios.
-```
-
-```text
-Historical BN volume schedule — used for the BN bar panel on yearly plots.
-Only needed for Period 2 (2004–2024). For Period 1 leave as empty dict {}.
-Format: {calendar_year: [volume_m3 per padded domain index, length=120]}
-If you leave this empty the bar panel will show zeros (correct for Period 1).
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`load_cascade()`**
-
-```text
-Load a saved CASCADE object from a run folder.
-
-CASCADE's save() method writes <run name>.npz containing the full
-pickled Cascade object under the key 'cascade.npy'. The path is resolved
-through run_layout so either run-folder layout is read correctly.
-
-Parameters
-----------
-run_folder : str
-    Path to the saved run folder (the argument passed to cascade.save()).
-
-Returns
--------
-cascade object or None if loading fails
-```
-
-</details>
 
 ### management_rules_table_figure.py
 

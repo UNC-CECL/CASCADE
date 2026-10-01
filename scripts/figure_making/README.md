@@ -7,8 +7,7 @@ map and 1212 output files mixed into the code.
 ```
 island/        the island as the model starts it; study_area_figures.py draws
                the generic site figures (study area, domain framework, one domain)
-management/    NC-12 and nourishment: the timeline, the rules, the investigation
-               (diagnose_road_drowning.py retired to management/superseded_20260918/)
+management/    NC-12 and nourishment: the timeline and the rules
 shoreline/     shoreline change, observed and modelled
     dsas/        the DSAS rates
     chainage/    the raw CoastSat record, and the gifs of it
@@ -24,8 +23,6 @@ STYLE.md       the house style in words, written by write_style_sheet() in
 GUIDE.md       how a figure script is written here: skeleton, where the
                figure goes, registering it (2026-09-30)
 template/      a standalone figure in the house style, to share
-superseded_20260914/
-model_output/superseded_20260918/   the two 1978-1997 gif scripts; see WHY.md
 ```
 
 Each folder has a README listing its scripts, what not to trust, and each
@@ -84,14 +81,29 @@ palette.
 Every script here was writing beside itself, by an absolute path into one
 machine's home directory. They are anchored on the repository now.
 
-## superseded_20260914/
+## Deleted 2026-10-01
 
-Three sets retired together, none deleted:
+Every retirement folder in this tree was deleted (Hannah: delete, git keeps
+them), with two dead scripts:
 
-* `old_dsas_scripts/` — an earlier shoreline comparison, replaced by `shoreline/`
-* `old_plot_tests/` — plots of the CASCADE package's own test scenarios, not of
-  this site at all
-* `old_rate_analysis/` — the rate analysis that `shoreline/dsas/` replaced
+* `superseded_20260914/` — `old_dsas_scripts/` (an earlier shoreline
+  comparison, replaced by `shoreline/`), `old_plot_tests/` (plots of the
+  CASCADE package's own test scenarios, not of this site), `old_rate_analysis/`
+  (the rate analysis `shoreline/dsas/` replaced)
+* `model_output/superseded_20260914/` and `model_output/superseded_20260918/`
+  — the retired hindcast headline figure and the two 1978-1997 gif scripts
+* `management/superseded_20260918/` — `diagnose_road_drowning.py`
+* `management/management_investigation_plot.py` — its runs
+  (`HAT_1984_2004_*_Hs2p5`) no longer exist
+* `shoreline/plot_shoreline_from_npz.py` — read a deleted run file
+  (`HAT_2004_2024_base_newbufferv3.npz`) by absolute path
+
+To recover one, by the path it was last committed under:
+
+```
+git log --diff-filter=D --oneline -- scripts/figure_making/<path>
+git show <commit>^:scripts/figure_making/<path>
+```
 
 ## What left this tree
 
@@ -106,11 +118,6 @@ Active scripts here carry no `HAT_` prefix. The 15 that did were renamed on
 itself: `management/` and `model_output/` were fully prefixed while
 `shoreline/dsas/` and most of `shoreline/` were not, so the same folder
 answered the question two ways.
-
-**Retirement folders are frozen.** The `superseded_*/` trees keep whatever
-names they had; only a reference to a script that is still live was updated in
-them, so their WHY.md files still point at something real. Renaming a retired
-file edits a record for no gain.
 
 Environment variables keep `HAT_` everywhere in this repo: they share a
 namespace with every other program on the machine, which is what a prefix is

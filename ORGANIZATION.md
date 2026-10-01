@@ -82,7 +82,24 @@ vintages. That is a deliberate trade, and it costs nothing only if the real
 vintage is written down beside it. Every such folder carries a `PROVENANCE.md`
 saying what the survey actually is and what follows from the difference.
 
-## 4. Retirement is a dated folder with a note
+## 4. Retired code is deleted; retired data is a dated folder with a note
+
+**Code** (everything under `scripts/`, which git tracks in full) is deleted
+when it is retired, not parked (Hannah, 2026-09-22 for 5-scr, made the rule
+2026-10-01). Git keeps it. The folder's `README.md` records what went, why,
+and how to get it back:
+
+```
+git log --diff-filter=D --oneline -- <path>
+git show <commit>^:<path>
+```
+
+Use the path the file was last *committed* under. A script that moved before
+it was deleted has no history at its first path.
+
+**Data and products** (`data/`, `output/`) are retired into a dated folder
+with a note, because most of them are git-ignored, and a deleted ignored file
+cannot be recovered:
 
 ```
 superseded_20260907/
@@ -90,9 +107,9 @@ superseded_20260907/
 ```
 
 Not `old_`, not `_ARCHIVE_`, not `_backup`, not a bare `old/`. A date says when
-the decision was taken; the note says what the decision was. **Nothing is
-deleted for being superseded** — a retired script is often the only record of
-how something was done.
+the decision was taken; the note says what the decision was. Deleting a
+retired data folder is a separate decision, taken item by item, after checking
+which of its files git does not hold.
 
 **A reason may follow the date** (relaxed 2026-09-22):
 
@@ -112,8 +129,14 @@ first**, so folders sort chronologically and the rule's point survives.
 (`output/README.md`). What sits inside one of those is filed, not stray, and
 is not asked to be a `superseded_` folder as well.
 
-`scripts/repo_tools/hat_layout_check.py` enforces exactly this: date first,
-optional reason after it.
+`scripts/repo_tools/hat_layout_check.py` enforces this: under `scripts/` a
+retirement folder of any name is flagged (delete it); elsewhere, date first,
+optional reason after it, and a `WHY.md`.
+
+Until 2026-10-01 this rule said **nothing is deleted for being superseded**,
+for code too. Fourteen `superseded_<date>/` folders of scripts had built up
+under `scripts/` by then. All were deleted that day, each recorded in its
+parent folder's README.
 
 ## 5. Find the root by searching upward, never by counting
 

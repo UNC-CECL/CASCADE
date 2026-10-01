@@ -2,7 +2,7 @@
 
 The observed shoreline record and its rates (CoastSat, the target; DSAS, the
 independent check), the chainage animations of the raw CoastSat record, and
-two tools that draw a saved run's shoreline.
+a poster tool.
 
 ```
 plot_coastsat_calibration_periods.py   THE observed-rate figure: CoastSat per run period
@@ -12,7 +12,6 @@ dsas/dsas_from_gis.py                  format the GIS-computed DSAS domain stati
 dsas/dsas_rate_verification.py         check the DSAS rates against known values
 dsas/dsas_shoreline_analysis.py        DSAS rates, all in one: table and four figures
 chainage/shoreline_chainage_*.py       40 years of CoastSat chainage: decade panels, GIFs
-plot_shoreline_from_npz.py             a saved run's shoreline: yearly GIFs and the rate figure
 rodanthe_erosion_example_poster.py     Rodanthe erosion trends, for a poster
 ```
 
@@ -20,9 +19,9 @@ What not to trust:
 - `dsas/dsas_shoreline_analysis.py` writes its CSV and four PNGs into the
   folder it is run from, not under `output/` (ORGANIZATION.md rule 1).
 - The three older DSAS scripts run straight through with no `main()`.
-- `plot_shoreline_from_npz.py` and `rodanthe_erosion_example_poster.py` had
-  their header stranded below an inserted import (from the 2026-09-22 rename);
-  it is restored as the header, and its original text is below.
+- `rodanthe_erosion_example_poster.py` had its header stranded below an
+  inserted import (from the 2026-09-22 rename); it is restored as the header,
+  and its original text is below.
 
 ## The scripts in detail
 
@@ -518,195 +517,19 @@ these at the top of the panel, and structures() already knows to
 tuck its own labels under them.
 ```
 
-### plot_shoreline_from_npz.py
+### Deleted 2026-10-01
 
-Shoreline change from saved CASCADE runs: yearly relative and absolute GIFs, and the rate figure.
+- `plot_shoreline_from_npz.py` — yearly shoreline GIFs and the rate figure
+  from a saved run; it read `HAT_2004_2024_base_newbufferv3.npz` by absolute
+  path (a run deleted long before) and the retired 1984-2004 / 2004-2024
+  windows.
 
-From the script's original header:
+To recover, by the path it was last committed under:
 
-```text
-HATTERAS ISLAND: Shoreline Change Analysis from CASCADE NPZ Output
-Loads pre-saved CASCADE NPZ comparison and produces:
-  1. Yearly relative shoreline change + BN bar panel → GIF
-  2. Yearly absolute shoreline position + BN bar panel → GIF
-  3. Publication-quality rate profile vs CoastSat LOWESS
-
-Annotation system, color palette, LOWESS CoastSat pipeline, and geographic
-annotation data all match HAT_hindcast_1984_2024_old version.py exactly.
-
-Usage:
-  1. Set NPZ_PATHS_BY_LABEL  (Section 2) — one entry per run to compare.
-  2. Set START_YEAR / END_YEAR            — must match the loaded run period.
-  3. Set SOURCE_SINK_PRESET and Hs labels as needed for plot titles.
-  4. Run from PyCharm or command line.
 ```
-
-Notes that were in the code:
-
-```text
-HOUSE STYLE: one typeface and one palette across every figure in this
-project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-found by searching upward (ORGANIZATION.md rule 5). This file drew in
-matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+git log --diff-filter=D --oneline -- scripts/figure_making/shoreline/<path>
+git show <commit>^:scripts/figure_making/shoreline/<path>
 ```
-
-```text
-Anchored 2026-09-14. These named a home directory or a tree renamed
-twice over, so none resolved. Rule 5 of ORGANIZATION.md.
-```
-
-```text
-NPZ paths — one entry per run you want to compare.
-Keys are used as legend labels in every plot.
-```
-
-```text
-"Hindcast 2004–2024": (
-r"...\HAT_2004_2024_base_newbufferv3\cascade.npz"
-),
-```
-
-```text
-Matches Section 6b of HAT_hindcast_1984_2024_old version.py exactly.
-Used only for BN bar panels in yearly plots; actual nourishment was applied
-during the hindcast run, not here.
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`load_cascade_from_npz()`**
-
-```text
-Load a saved CASCADE object from an NPZ file.
-
-Standard CASCADE save format:
-    np.load(path, allow_pickle=True)["cascade.npy"].item()
-```
-
-**`build_relative_shoreline_change_matrix()`**
-
-```text
-[time × domain] relative shoreline change from t=0.
-flip_sign=True: positive = accretion, negative = erosion.
-```
-
-**`build_nourishment_arrays()`**
-
-```text
-Build year-keyed nourishment on/volume dicts for BN bar panels.
-Any event year outside [START_YEAR, END_YEAR] is silently skipped.
-```
-
-**`_bn_group_labels()`**
-
-```text
-Group consecutive nourished GIS domains; return one label descriptor per group.
-
-    Instead of a cramped label above every individual bar (which overlaps badly
-    when 10 Buxton or 4 Avon domains are all adjacent), this detects runs of
-    consecutive nourished domains and returns a single centered annotation per run.
-
-    Parameters
-    ----------
-    active_gis : list[int]   GIS domain IDs with non-zero BN this year (sorted)
-    bn_real    : array[90]   BN volume (m³) per real domain (index = gis_d - 1)
-
-    Returns
-    -------
-    list of dicts with keys:
-        x_center  float   — GIS domain x position to center the label over
-        top_vol   float   — max volume in group (drives the label's y position)
-        label     str     — e.g. "D6–15
-91.7k/dom" or "D85
-309.6k"
-```
-
-**`load_transect_data()`**
-
-```text
-Load individual transect LRR values from transect_lrr_full.csv.
-Derives along-coast distance by spreading each domain's transects evenly
-across its 500 m band.
-
-Returns domain_ids, lrr_values, along_coast_m — all None on load failure.
-```
-
-**`lowess_smooth_transect_to_domains()`**
-
-```text
-Apply LOWESS at transect resolution using physical along-coast distance (m),
-then aggregate smoothed values to GIS domain resolution.
-
-Returns gis_x, smoothed, frac — all None on failure.
-```
-
-**`splice_lowess_with_raw_south()`**
-
-```text
-Return (plot_x, plot_y) for a LOWESS window with optional southern splice.
-
-Widest window + skip_n > 0: domains 1–skip_n use raw per-domain means.
-All other windows: line simply starts at domain skip_n+1.
-```
-
-**`load_all_coastsat()`**
-
-```text
-Load all COASTSAT_DATASETS, apply LOWESS at transect resolution.
-
-Returns a list of cs_series dicts matching the run-script structure.
-active_start_year controls which dataset gets full-opacity 'active' styling.
-```
-
-**`add_geographic_annotations()`**
-
-```text
-Add all geographic reference annotations to an axis.
-
-Layer order (bottom → top):
-  1. Wimble Shoals influence zone  (hatched amber fill, bottom label)
-  2. Community shaded spans        (steel-blue fill, top labels)
-  3. Village center lines          (dashed gray,    y=0.84)
-  4. Pier lines                    (dash-dot blue,  y=ANN_PIER_LABEL_Y)
-  5. Groin lines                   (dotted red,     y=ANN_GROIN_LABEL_Y)
-
-X-axis must be in GIS domain IDs (1–90).
-Y-axis label positions use blended axes-fraction coordinates (data x, axes y).
-```
-
-**`plot_yearly_relative_shoreline_and_bn()`**
-
-```text
-One PNG per year: relative shoreline change from t=0 (upper panel)
-+ historical BN volume bar (lower panel).
-X-axis: GIS domain IDs 1–90.
-```
-
-**`plot_yearly_absolute_shoreline_and_bn()`**
-
-```text
-One PNG per year: raw x_s position with ocean fill (upper panel)
-+ historical BN volume bar (lower panel).
-X-axis: GIS domain IDs 1–90.
-
-Sign convention:
-    lower x_s  = seaward / ocean side
-    higher x_s = landward / back-barrier side
-Ocean fill drawn from y_min up to shoreline curve.
-```
-
-**`plot_publication_rate_figure()`**
-
-```text
-Publication-quality rate comparison figure.
-
-Matches the annotated figure produced at the end of main() in the run
-script: model line (warm orange) + CoastSat scatter + multi-window LOWESS
-+ full geographic annotation layer.
-X-axis: GIS domain IDs 1–90.
-```
-
-</details>
 
 ### rodanthe_erosion_example_poster.py
 

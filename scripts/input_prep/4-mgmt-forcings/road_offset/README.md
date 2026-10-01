@@ -14,7 +14,6 @@ offset rather than a roadbed, so it is kept out of the forcing. See the note at
 
 ```
 1-produce/     each method: its producer, and the figures about THAT method
-  old_method/    the legacy method, kept for comparison
 2-audit/       read-only checks on one method's own output
 3-figures/      per-domain views, either method
 4-compare/     anything that spans BOTH methods
@@ -29,7 +28,7 @@ output sound"; `4-compare/` asks "which method should we spend".
 
 | | old | dune-start |
 |---|---|---|
-| Script | `1-produce/old_method/road_offset_pipeline.py` | `1-produce/HAT_road_offset_from_dune_start.py` |
+| Script | `road_offset_pipeline.py` (deleted 2026-10-01; its output is in the data archive) | `1-produce/HAT_road_offset_from_dune_start.py` |
 | Zero point | same-year **digitised dune line** | **interior row 0**, the row `roadway_manager.py:99` indexes against |
 | Samples/domain | 5 ArcGIS transects | up to 50 alongshore profiles |
 | Statistic | `min(road) − min(dune)`, minima taken independently | per-profile difference, then median |
@@ -55,10 +54,6 @@ default is what gave both vintages the 2004-start island until 2026-08-26.
 ## The workflow
 
 ```
-# old method — one run per vintage
-HAT_ROAD_YEAR=1984 python 1-produce/old_method/road_offset_pipeline.py
-HAT_ROAD_YEAR=2004 python 1-produce/old_method/road_offset_pipeline.py
-
 # dune-start method — masks first, then the measurement
 # The masks are SHARED by both periods (they register to the resampled_*.tif
 # grids, which no fill touches), so they are burnt once per road vintage.
@@ -75,7 +70,6 @@ python 1-produce/HAT_road_offset_from_dune_start.py
 
 # figures
 python 1-produce/HAT_road_placement_on_domains.py     # per method, both years
-python 1-produce/old_method/HAT_old_method_figures.py # how the old number is made
 python 3-figures/HAT_road_island_planview.py          # the whole island, both years
 
 # audits — not optional polish
@@ -98,8 +92,18 @@ domain is an unmanaged barrier wearing a road label for the whole hindcast.
 | `HAT_rasterize_road_to_domains.py` | `raster/<vintage>/masks/` — **the only script that masks the road**. Set `HAT_ROAD_YEAR` to the LINE vintage (1978 or 2008); do not save a per-vintage copy |
 | `HAT_road_offset_from_dune_start.py` | `dunestart_offset/measured/<year>/` — setback, elevation, per-domain and per-profile detail, audit |
 | `HAT_road_placement_on_domains.py` | one PNG per method, into that method's folder |
-| `old_method/road_offset_pipeline.py` | `old_method_offset/<year>/RoadSetback_<year>.csv` |
-| `old_method/HAT_old_method_figures.py` | figures + audit for the old method's arithmetic |
+
+**Deleted 2026-10-01:** the legacy method's producers,
+`road_offset_pipeline.py` (wrote `RoadSetback_<year>.csv`) and
+`HAT_old_method_figures.py` (its figures and audit). They were last committed
+under `1-produce/superseded_20260911/` with a WHY.md; their output stays in
+`data/hatteras_init/4-mgmt-forcing/road_offset/archive/superseded_20260911/`,
+which live scripts still read. To recover a script:
+
+```
+git log --diff-filter=D --oneline -- scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/superseded_20260911/<file>
+git show <commit>^:scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/superseded_20260911/<file>
+```
 
 `HAT_road_placement_on_domains.py` draws every method through one implementation
 of `place_road` and the drown test, and `4-compare/` imports it rather than

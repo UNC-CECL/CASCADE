@@ -1055,7 +1055,9 @@ two lines that bound a window, per transect and per domain, in m and m/yr,
 one folder per window. Written by
 scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py. It replaced
 duneline_lrr/ (an OLS through every line in the window, 2026-09-16; Hannah:
-"we are tracking net change"), now under archive/duneline_lrr_retired_20260918/.
+"we are tracking net change"); its archived copy,
+archive/duneline_lrr_retired_20260918/, was deleted 2026-10-01 (recover
+from git).
 ```
 
 ```text
@@ -1234,7 +1236,8 @@ island offset -- so it is resolved here rather than typed there.
 The four windows drawn on one y axis (coastsat_lrr_windows.py). Since
 2026-09-19 only its 2 x 2 is drawn, into 3-rates/coastsat/lrr/; the
 per-window and halves figures duplicated 3-rates and were archived with
-the old folder (archive/2026-09-19_4-comparisons_duplicates/).
+the old folder (archive/2026-09-19_4-comparisons_duplicates/, deleted
+2026-10-01; recover from git).
 ```
 
 ```text
@@ -1430,7 +1433,6 @@ figures here, their tables in tables/
 4-vs-model/               the record against modelled overwash in
 the hindcast runs (2026-09-27): figures
 here, tables in tables/
-archive/                  superseded_20260910/
 ```
 
 ```text
@@ -1477,7 +1479,8 @@ each apply pass
 <pair>/1-field/  2-method/  3-limits/
 4-export/                 be_rates_<period>.py and
 be_calibration_domains.csv (default pair)
-archive/                  superseded_20260825/, _20260902/, _20260914/
+archive/                  superseded_20260914/ (_20260825/ and _20260902/
+                          deleted 2026-10-01)
 
 A PAIR IS TWO CALIBRATION PERIODS FITTED JOINTLY, named
 <p1start>_<p1end>__<p2start>_<p2end>, e.g. 1984_2004__2004_2024. Until

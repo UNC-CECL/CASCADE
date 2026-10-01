@@ -224,8 +224,6 @@ def mean_shoreline_csv(start, end) -> Path:
     return mean_shoreline_dir(start, end) / "transect_means_{0}.csv".format(label)
 # The four windows on one y axis (coastsat_lrr_windows.py)
 COASTSAT_LRR_WINDOWS = COASTSAT_LRR_ROOT
-# Retired: duneline_windows.py duplicated 3-rates/duneline/endpoint
-DUNELINE_WINDOWS = ARCHIVE / "2026-09-19_4-comparisons_duplicates" / "duneline_windows"
 # Two-window comparison figures; outputs deleted as stale
 TWO_PERIOD_COMPARISON = COMPARISONS / "two_period_comparison"
 # Retired windows, kept for the DSAS comparison in 6-scr-smooth

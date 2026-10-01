@@ -91,4 +91,5 @@ net change".
 - The 5-year bins were rebuilt on 1996 → 2024. The 06-02 run on 1984/2004 is
   in `../archive/coastsat_5yr_bins/`.
 - The dune-line OLS (`duneline_lrr/`) was retired for the endpoint product;
-  see `../archive/duneline_lrr_retired_20260918/`.
+  its archive, `../archive/duneline_lrr_retired_20260918/`, was deleted
+  2026-10-01 (recover from git).

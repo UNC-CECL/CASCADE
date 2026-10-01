@@ -14,8 +14,6 @@ work runs, and where the data tree is grouped the same way the names match.
     1-produce/        duneline_to_raw_offsets -> island_offset_hybrid, and
                       build_island_offset.py, the one command that runs both
     2-figures/        version comparison, the 1:1 offset profile
-    superseded_20260914/  the retired 1984 linear-bridge variant
-                          (was old-linear-bridge/ until 2026-09-22)
 3-env-forcings/       sea level, storms, waves  (data: 1-records/ 2-rslr/ 3-storms/)
     1-records/        the gauge downloader, the hurricane record figure
     2-rslr/           the sea-level fit
@@ -40,8 +38,12 @@ work runs, and where the data tree is grouped the same way the names match.
 
 HAT_units_datum_check.py   a cross-stage check: are the inputs in the units and
                            datum the model assumes (m, MHW vs NAVD88)?
-superseded_20260902/       the parametric source/sink attempts; see its WHY.md
 ```
+
+`superseded_20260902/` (the parametric source/sink attempts) was deleted on
+2026-10-01; recover it with
+`git log --diff-filter=D --oneline -- scripts/input_prep/superseded_20260902`
+and `git show <commit>^:<path>`.
 
 Note the plural: the code folder is `4-mgmt-forcings`, the data folder is
 `4-mgmt-forcing`. That is a spelling accident, not a distinction; it is left
