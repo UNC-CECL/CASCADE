@@ -41,3 +41,7 @@ Then diff `utm_x`/`utm_y` per `(domain, profile)` against the new
 bracketed hole on its profile; a window that moved far enough could put a
 different hole under an old verdict. Re-review anything that moved or is new —
 the picker resumes on blank rows and refuses to blank a filled file.
+
+Since 2026-10-01 `HAT_bracketed_hole_cells.py` writes that file and prints this
+diff against `bracketed_hole_cells_v1.csv` itself. For dune-topo `v2` it found
+all 99 holes unchanged, with none moved or new.

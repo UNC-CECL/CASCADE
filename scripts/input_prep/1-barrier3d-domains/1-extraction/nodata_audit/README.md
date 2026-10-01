@@ -22,7 +22,8 @@ answer, so they sit beside the extractor whose output they read.
 
 | | script | writes |
 |---|---|---|
-| 1 | `HAT_plot_island_nodata.py` | `HAT_island_nodata_<ver>_<year>_padded.png`, a `_D1-8.png` zoom, and **`bracketed_hole_cells.csv`** |
+| 1 | `HAT_bracketed_hole_cells.py` | **`bracketed_hole_cells.csv`** |
+| 1 | `HAT_plot_island_nodata.py` | `HAT_island_nodata_<ver>_<year>_padded.png`, a `_D1-8.png` zoom |
 | 2 | `HAT_plot_topo_retained.py` | `HAT_topo_retained_<ver>.png` |
 | 3 | `HAT_test_hole_pond_or_dropout.py` | `hole_verdicts.csv`, `dropout_mask/domain_<N>.npy` |
 | 4 | `HAT_hole_aerial_chips.py` | `aerial_1996_conflicts/sheet_*.png`, `aerial_review.csv` |
@@ -35,8 +36,11 @@ answer, so they sit beside the extractor whose output they read.
 The chain is here to be rerun if a bridged surface is ever wanted; the decision
 as of 2026-08-28 is that one is not. See "Re-audit of the current v1" below.
 
-**1 must run before 3**, which needs `bracketed_hole_cells.csv`. 2 is
-independent. 4 and 5 both need 3's verdicts; 5 supersedes 4 - the contact
+**`HAT_bracketed_hole_cells.py` must run before 3**, which needs
+`bracketed_hole_cells.csv`; the two step-1 scripts and 2 are independent.
+Until 2026-10-01 this table credited the CSV to `HAT_plot_island_nodata.py`,
+which never wrote it: the original writer was never committed (see
+"HAT_bracketed_hole_cells.py" below). 4 and 5 both need 3's verdicts; 5 supersedes 4 - the contact
 sheets are for reading away from a machine, the picker is for deciding.
 **3 must run a second time after 5**: it reads `aerial_review.csv` at load, so
 a review pass finished afterwards changes nothing until it is re-run. That
@@ -165,6 +169,15 @@ changed which cell `FindWidths` stops at, so the old pass never saw them:
 | the 18 newly exposed holes | 87 | 3,980 m |
 | **live v1 total** | **818** | **46,190 m** |
 
+**Correction, 2026-10-01.** The 18 are not an effect of the moved window.
+`HAT_bracketed_hole_cells.py`, run on this same live `v1`, finds the strict
+bracketed set (the cell past the hole is measured land) to be exactly the
+original 99, at the same npy cells, and the 18 are profiles where the
+unsurveyed run ends in *measured water* with land somewhere further back. They
+are a looser count of "land hidden behind", not new holes. That agrees with the
+neighbour test below, which found them to be unsurveyed cells inside surveyed
+water. The dune-topo `v2` gives the same 99 and the same 18.
+
 16 of the 18 sit in domains 9-90, so the first pass's "none of which carries a
 road" exit line does not transfer on location and had to be re-established on
 substance.
@@ -273,6 +286,56 @@ Each script's header says what it does and how to run it. Below, for each,
 is its original header and any notes that were in its code, kept word for
 word when the scripts were brought in line with `scripts/STYLE.md`
 (2026-09-30).
+
+### HAT_bracketed_hole_cells.py
+
+The unsurveyed holes that stop FindWidths with measured land on both sides, cell by cell.
+
+Written 2026-10-01 to replace a writer that was never committed. Four scripts
+read its output (`HAT_test_hole_pond_or_dropout.py`, `HAT_hole_aerial_chips.py`,
+`HAT_hole_aerial_picker.py`, `HAT_bridge_dropouts.py`). Until then the only copy
+was `aerial-review/bracketed_hole_cells_v1.csv`, kept from the deleted tree.
+
+**What counts as a bracketed hole.** On each profile, find the first cell at or
+below 0 m MHW, the one `FindWidths` stops at. If that cell is unsurveyed, the
+hole is the unbroken run of unsurveyed cells starting there. It is bracketed
+when the cell before the run is land (interior row ≥ 1) and the cell after it is
+*measured land* (above 0 m MHW, surveyed). Those are the holes
+`HAT_bridge_dropouts.py` can fill, since it interpolates between exactly those
+two cells. One hole per profile, the first, as before.
+
+Profiles whose run ends in measured water, with land further back, are counted
+and printed ("hide land, not bracketed") but not written. They are the "18 new
+holes" of the 08-28 re-audit (see the correction there).
+
+**Where each cell is on the raw grid.** `npy_row`/`npy_col` index the product's
+`npy-arrays/domain_<N>.npy`. The script imports the extractor and rebuilds each
+domain from those arrays and the version's own picks file. The steps are
+`load_profiles`, `find_dunes`, `build_interior`, `remove_water_rows` and
+`interior_row0_line`. It then **refuses** unless the rebuilt interior equals the
+saved topography and nodata mask. A version whose arrays were edited after
+extraction (a row insert, a bridge) therefore stops the script rather than
+getting wrong coordinates. Saved row `r` on profile `p` is processed column
+`row0[p] + r`, raw ocean-first column `+ c0 + shear[p]`, and so
+`npy_col = W - 1 - that` and `npy_row = 49 - p` (ocean on the right, alongshore
+flip). `utm_x`/`utm_y` are the cell centre, `origin + 10 (col + ½)`, with the
+origin taken from the elevation product's `2-resampled-10m/resample_audit.csv`.
+
+**Checked against the surviving file, 2026-10-01.** On the live `1984-start/v1`
+the output matches `aerial-review/bracketed_hole_cells_v1.csv` row for row:
+99 holes, 731 cells, 42,210 m hidden, with every `domain`, `profile`, `npy_row`,
+`npy_col`, `utm_x` and `utm_y` identical. Only `interior_row` differs, by a
+constant 1-3 rows per profile in D1, D3, D4, D6, D7 and D24, which is the
+moved window origin. Every interior cell of v1 (586,840) and v2 (581,185)
+maps to the raw cell it was extracted from. The only exceptions are cells the
+shear shifted in and cells past the profile end, neither of which can be in a
+bracketed hole.
+
+**The review diff is automatic.** `aerial-review/README.md` asks for the
+new cells to be diffed against the reviewed ones before old verdicts are
+trusted. The script prints that diff: holes unchanged, moved, new and gone.
+For `v2` it is 99 unchanged and none moved, new or gone, so `aerial_review.csv`
+applies to `v2` as is.
 
 ### HAT_bridge_dropouts.py
 
