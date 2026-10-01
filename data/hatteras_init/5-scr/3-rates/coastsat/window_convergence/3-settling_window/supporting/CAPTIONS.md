@@ -1,4 +1,4 @@
-# Captions — 2-settling_window
+# Captions — 3-settling_window
 
 Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
 

@@ -1,7 +1,7 @@
 # backward_from_2024 — how late can a window begin?
 
 **When does each location settle on the long-term rate?** Fitted on the
-CoastSat record **1996–2024**. The whole-profile companion question is in `../../1-rate_profiles/`.
+CoastSat record **1996–2024**. The whole-profile companion questions are in `../../1-rate_profiles/` and `../../2-r_bias_rmse/`.
 
 The END is pinned at 2024 and the START walks back, one year at a time: 2020–2024 through 1996–2024. It answers how recent a window can be and still recover the long-term rate — the other bracket on the same question.
 

@@ -742,12 +742,13 @@ To see one: `git show 3c6de274:data/hatteras_init/5-scr/3-rates/coastsat/window_
 """
 
 RECORD_NOTE_FULL = (
-    "The whole-profile companion question is in `../../1-rate_profiles/`.")
+    "The whole-profile companion questions are in `../../1-rate_profiles/` "
+    "and `../../2-r_bias_rmse/`.")
 RECORD_NOTE_CUT = (
     "**This is an experiment**: the record is cut to {ref_start}–{ref_end}, "
     "so every window is scored against the {ref_start}–{ref_end} rate, not "
     "1996–2024. It asks whether the answer depends on the 2021 step. The main "
-    "result is `../../../2-settling_window/`.")
+    "result is `../../../3-settling_window/`.")
 
 SITES_README = """# {folder}/a-eight_sites — eight transects, in full
 
@@ -1030,7 +1031,7 @@ def main(argv=None):
             print("  {0:>8}: {1}".format(d, note))
         full = (REF_START, REF_END) == (1996, 2024)
         (path.parent / "README.md").write_text(SETTLING_README.format(
-            title=("2-settling_window — how many years does each place need?"
+            title=("3-settling_window — how many years does each place need?"
                    if full else
                    "experiments/{0} — the settling sweep on a record cut to "
                    "{1}–{2}".format(path.parent.name, REF_START, REF_END)),

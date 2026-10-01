@@ -96,9 +96,11 @@ PROJECTED_RATE_WINDOW = (1996, 2024)
 COASTSAT_WINDOW_CONVERGENCE_ROOT = COASTSAT_RATES / "window_convergence"
 
 
-# Question first: 1-rate_profiles, 2-settling_window, experiments
+# Question first: 1-rate_profiles, 2-r_bias_rmse, 3-settling_window, experiments
+# (2-r_bias_rmse added and settling renumbered 2 -> 3, Hannah 2026-10-01)
 WINDOW_PROFILES_DIR = "1-rate_profiles"
-SETTLING_WINDOW_DIR = "2-settling_window"
+WINDOW_SCORES_DIR = "2-r_bias_rmse"
+SETTLING_WINDOW_DIR = "3-settling_window"
 WINDOW_EXPERIMENTS_DIR = "experiments"
 
 # The settling sweep's three scales, keyed as its --scale choices are
@@ -117,7 +119,7 @@ def window_convergence_dir(direction, anchor_year,
     ONE interval and each of these folders holds twenty-five of them. What
     they share is the end that is PINNED, so that is what the name gives.
 
-    The full 1996-2024 record files under `2-settling_window/`. Any other
+    The full 1996-2024 record files under `3-settling_window/`. Any other
     record span is a DIFFERENT EXPERIMENT, not a version of the same product,
     because every window in it is fitted against a different reference, so it
     files under `experiments/record_cut_<end>/` (or `record_<start>_<end>/` if
@@ -148,6 +150,17 @@ def window_profiles_dir(direction, anchor_year) -> Path:
     _check_direction(direction)
     return (COASTSAT_WINDOW_CONVERGENCE_ROOT / WINDOW_PROFILES_DIR
             / "{0}_from_{1}".format(direction, int(anchor_year)))
+
+
+def window_scores_dir(direction=None, anchor_year=None) -> Path:
+    """The r / bias / RMSE scores of the rate profiles, under `2-r_bias_rmse/`:
+    the folder itself (both directions together) or, given a direction, that
+    direction's folder. Full 1996-2024 record only."""
+    base = COASTSAT_WINDOW_CONVERGENCE_ROOT / WINDOW_SCORES_DIR
+    if direction is None:
+        return base
+    _check_direction(direction)
+    return base / "{0}_from_{1}".format(direction, int(anchor_year))
 
 
 def _check_direction(direction):

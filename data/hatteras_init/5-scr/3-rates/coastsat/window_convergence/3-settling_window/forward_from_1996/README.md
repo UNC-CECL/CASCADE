@@ -1,7 +1,7 @@
 # forward_from_1996 — how much record do you need from 1996?
 
 **When does each location settle on the long-term rate?** Fitted on the
-CoastSat record **1996–2024**. The whole-profile companion question is in `../../1-rate_profiles/`.
+CoastSat record **1996–2024**. The whole-profile companion questions are in `../../1-rate_profiles/` and `../../2-r_bias_rmse/`.
 
 The START is pinned at 1996 and the END walks out, one year at a time: 1996–2000 through 1996–2024. It answers how much record the chain needs before the fitted rate stops depending on where it is cut off.
 

@@ -1,4 +1,4 @@
-# 2-settling_window — how many years does each place need?
+# 3-settling_window — how many years does each place need?
 
 **How many years of record does each place need before its shoreline change
 rate stays within X m/yr of the 1996–2024 rate?** One figure answers it:
