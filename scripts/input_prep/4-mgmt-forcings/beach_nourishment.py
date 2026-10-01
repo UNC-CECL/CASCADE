@@ -79,7 +79,7 @@ def model_projects() -> pd.DataFrame:
 _VOL_RE = re.compile(r"([\d,]{5,})\s*cy")
 
 
-# The spreadsheet
+# The spreadsheet as one row per year that carries a note or a flag
 def record_projects() -> pd.DataFrame:
     raw = pd.read_excel(RECORD_XLSX, sheet_name="Nourishment_Timeline",
                         header=None, skiprows=3)

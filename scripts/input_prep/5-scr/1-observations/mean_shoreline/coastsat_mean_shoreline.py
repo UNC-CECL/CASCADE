@@ -283,7 +283,7 @@ def write_geojson(vertices, path, window, built_on, n_total):
         json.dump(doc, fh, indent=1)
 
 
-# Two panels
+# Two panels: where the line is, and how well sampled it is
 def figure(df, vertices, folder, window):
     import matplotlib
     matplotlib.use("Agg")

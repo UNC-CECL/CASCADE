@@ -501,7 +501,7 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
 
 # Figure 4 — combined: Both periods on one panel (smoothed)
 
-# Single panel
+# Single panel: all four smoothed series together
 def plot_combined_sources(merged_1978, merged_1997, out_path):
     fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
     frames, frames_labelled = {}, False

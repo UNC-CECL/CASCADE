@@ -126,7 +126,7 @@ def load_layers():
 
 # Measurements
 
-# Per transect
+# Per transect: the station of the seaward-most road crossing (the one nearest the dune)
 def road_stations(tr, road):
     rows = []
     for _, t in tr.iterrows():

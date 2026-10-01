@@ -156,7 +156,7 @@ def find_widths(interior: np.ndarray, sl: float = SL_DAM):
     return domain_width, interior_width
 
 
-# Per profile
+# Per profile: land cells behind the first water cell, and the width they span
 def land_behind_first_water(interior: np.ndarray, sl: float = SL_DAM):
     domain_width = int(np.shape(interior)[0])
     n_along = int(np.shape(interior)[1])

@@ -244,7 +244,7 @@ def credit_figure(fig, text, x=0.995, y=0.004):
     fig.text(x, y, text, ha="right", va="bottom", fontsize=6.5, color=INK_MUTED, zorder=25)
 
 
-# Tile attribution
+# Tile attribution: the one text a licence puts on the canvas
 def credit(ax, text, loc="lower right"):
     x, ha = (0.988, "right") if loc.endswith("right") else (0.012, "left")
     y, va = (0.018, "bottom") if loc.startswith("lower") else (0.982, "top")

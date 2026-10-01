@@ -706,7 +706,7 @@ def resolve_domains(spec: str, setbacks: dict) -> list:
     return [d for d in got if d in setbacks]
 
 
-# Keyboard walk
+# Keyboard walk through the domains: n/p next/prev, w write png, q quit
 def browse(domains, year, setbacks, start, out_dir):
     idx = domains.index(start) if start in domains else 0
     fig, axes = plt.subplots(2, 1, figsize=(13, 9),

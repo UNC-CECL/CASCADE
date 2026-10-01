@@ -72,7 +72,7 @@ def smooth_side(frame, value_col, window):
     return series.reindex(pd.RangeIndex(1, N + 1, name="domain_number"))
 
 
-# Per half
+# Per half: the raw domain means and the smoothed series, both sides
 def build(product, window):
     tcd.PROD = tcd.PRODUCTS[product]
     out = {}

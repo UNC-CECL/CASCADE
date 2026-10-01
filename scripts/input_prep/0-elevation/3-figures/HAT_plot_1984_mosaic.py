@@ -210,7 +210,7 @@ def panel_elev(ax, i, arr, extent, vmin, vmax, title):
     return im
 
 
-# Categorical provenance
+# Categorical provenance panel; codes mapped to contiguous indices so colours cannot slide
 def panel_survey(ax, i, surv, extent, title):
     codes = [SURVEY_NONE, SURVEY_1996, SURVEY_2009, SURVEY_2014]
     cols = [C_NONE, C_1996, C_2009, C_2014]

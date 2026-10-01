@@ -120,7 +120,7 @@ def domain_table(M, domains, index):
 
 # The figure
 
-# Three panels
+# Three panels: what the signal is, where it is, and how well sampled
 def draw(index, by_domain, out_dir):
     fs.apply_style()
     fig, axes = plt.subplots(3, 1, figsize=fs.figsize("double", height=7.8),

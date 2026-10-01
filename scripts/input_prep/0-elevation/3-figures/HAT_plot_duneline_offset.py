@@ -539,7 +539,7 @@ def load_1m(gdf, ids):
     return out, (x0, x1, y0, y1)
 
 
-# Grey relief
+# Grey relief under the data; no value is readable off it, and none is labelled
 def _hillshade(ax, arr, extent, res=1.0):
     from matplotlib.colors import LightSource
     ax.set_facecolor(NODATA_GREY)
