@@ -127,7 +127,7 @@ sensitivity_analysis/  standalone sweep driver and plotter, working off the
                        run registry rather than off a live run.
 
 analyze_output/        read-only comparisons across finished runs —
-                       compare_runs/, overwash/, smoothing_vs_cascade/.
+                       compare_runs/, overwash/.
                        Scripts only: their products go to
                        output/comparisons/<topic>/, never beside the script.
 
