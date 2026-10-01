@@ -307,7 +307,7 @@ def validate(n_per_window=12, seed=0):
     rows = []
     for w in WINDOWS:
         for v in ("drop72", "full"):
-            d = (MATRIX / wtag(w) / "edgeBE" / CONTROLS[(w[0], "natural")]) if v == "drop72" else run_path(v, "natural", w)
+            d = (CONTROL_MATRIX / wtag(w) / "edgeBE" / CONTROLS[(w[0], "natural")]) if v == "drop72" else run_path(v, "natural", w)
             c = load_state(d)
             summ = pd.read_csv(summary_csv(w, v))
             shares = storm_shares(c, summ)

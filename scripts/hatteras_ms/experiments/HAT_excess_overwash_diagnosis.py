@@ -41,7 +41,7 @@ VARIANTS = ("drop72", "trim24")
 # A variant's full-management run for a window
 def run_dir(w, v):
     if v == "drop72":
-        return S.MATRIX / S.wtag(w) / "edgeBE" / S.CONTROLS[(w[0], "full_management")]
+        return S.CONTROL_MATRIX / S.wtag(w) / "edgeBE" / S.CONTROLS[(w[0], "full_management")]
     return S.run_path(v, "full_management", w)
 
 

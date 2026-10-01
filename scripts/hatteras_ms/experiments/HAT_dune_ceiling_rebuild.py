@@ -71,7 +71,7 @@ def jobs():
 def existing(w, st, d, r, scen):
     if d == 3.4 and r == "current":
         if st == "drop72":
-            return S.MATRIX / S.wtag(w) / "edgeBE" / S.CONTROLS[(w[0], scen)]
+            return S.CONTROL_MATRIX / S.wtag(w) / "edgeBE" / S.CONTROLS[(w[0], scen)]
         return S.run_path("trim24", scen, w)
     return None
 
@@ -168,7 +168,7 @@ def score():
     ovm = S.overwash_module()
     obs = pd.read_csv(ow.OBSERVATIONS / "overwash_observations.csv")
     pads = [DOM.gis_to_pad(g) for g in range(1, 91)]
-    lidar_c = S.load_state(S.MATRIX / "2010_2024/edgeBE" / S.CONTROLS[(2010, "full_management")])
+    lidar_c = S.load_state(S.CONTROL_MATRIX / "2010_2024/edgeBE" / S.CONTROLS[(2010, "full_management")])
     lidar = crest_series(lidar_c, pads)[0]                       # the 2009 lidar crests
     cells_all = []
     everything = [(w, st, d, r, sc) for w in S.WINDOWS for st in STORMS for d in DMAX
