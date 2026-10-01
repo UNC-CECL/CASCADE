@@ -1,13 +1,13 @@
 """
 Which observation should CASCADE be graded against? Both candidate targets beside the model.
 
-    python scripts/analyze_output/compare_runs/target_comparison.py
+    python scripts/analyze_output/compare_runs/hindcast_vs_observed/target_comparison.py
     python ... --units rate                              # change_rate/ in m/yr
     python ... --coastsat-target total [--units rate]
 
 CoastSat and dune-line targets and three model sets, as net change over each
 14-yr window (or as a rate); loaders from rate_windows.py. Writes
-output/comparisons/target_comparison/. Details: scripts/analyze_output/README.md.
+output/comparisons/target_comparison/. Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

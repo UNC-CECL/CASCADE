@@ -29,12 +29,12 @@ offset_source/          dune line vs shoreline as BRIE's island offset: how much
 | folder | script | runs |
 |---|---|---|
 | `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_lowess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
-| `model_vs_observed/` | `scripts/analyze_output/compare_runs/rate_windows.py` | the option A edgeBE nogroin matrix and the option A dune-line end solve, 1996 and 2010 (since 09-27), `runs_used.csv` |
-| `matrix_vs_observed/` | `scripts/analyze_output/compare_runs/matrix_vs_observed.py` | all 22 option A nogroin matrix runs, `scores.csv` |
-| `target_comparison/` | `scripts/analyze_output/compare_runs/target_comparison.py` | option A since 09-27: the edgeBE and zeroBE matrix and the dune-line and 1996-2024 LRR end solves, 1996 and 2010, `runs_used.csv` |
+| `model_vs_observed/` | `scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py` | the option A edgeBE nogroin matrix and the option A dune-line end solve, 1996 and 2010 (since 09-27), `runs_used.csv` |
+| `matrix_vs_observed/` | `scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_vs_observed.py` | all 22 option A nogroin matrix runs, `scores.csv` |
+| `target_comparison/` | `scripts/analyze_output/compare_runs/hindcast_vs_observed/target_comparison.py` | option A since 09-27: the edgeBE and zeroBE matrix and the dune-line and 1996-2024 LRR end solves, 1996 and 2010, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/scenario_grid.py` | every matrix arm, both periods |
-| `offset_source/` | `scripts/analyze_output/compare_runs/offset_source_comparison.py` | the full-management duneline/shoreline pairs of `experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a`, 1996 and 2010, `tables/summary.csv` |
+| `offset_source/` | `scripts/analyze_output/compare_runs/offset_source/offset_source_comparison.py` | the full-management duneline/shoreline pairs of `experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a`, 1996 and 2010, `tables/summary.csv` |
 
 ## Layout rule
 

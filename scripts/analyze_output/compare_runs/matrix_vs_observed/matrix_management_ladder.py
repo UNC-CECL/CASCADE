@@ -2,11 +2,11 @@
 """
 The matrix runs of each window and preset in order of increasing management, one panel per rung.
 
-    python scripts/analyze_output/compare_runs/matrix_management_ladder.py
+    python scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_management_ladder.py
 
 Two versions per window and preset: rate (LRR vs the CoastSat target) and
 position change (vs observed change). Writes output/raw_runs/matrix/figures/.
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

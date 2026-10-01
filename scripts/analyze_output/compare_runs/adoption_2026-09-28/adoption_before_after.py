@@ -8,7 +8,7 @@ Score every matrix run before and after the 2026-09-28 adoption: shoreline, over
 Reads output/raw_runs/archive/2026-09-28-pre-ceiling/matrix/ (before) and
 output/raw_runs/matrix/ (after); writes output/comparisons/adoption_2026-09-28/.
 Each side must be scored under the Barrier3D it ran on (see README.md).
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

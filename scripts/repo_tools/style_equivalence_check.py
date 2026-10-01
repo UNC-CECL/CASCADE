@@ -1,7 +1,7 @@
 """
 Prove a restyled script does the same thing as before: same code, only moved.
 
-    python style_equivalence_check.py scripts/analyze_output/compare_runs/rate_windows.py
+    python style_equivalence_check.py scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py
     python style_equivalence_check.py --ref bab312a3 scripts/analyze_output
 
 Compares each file against its version at --ref (default HEAD). Passes only if,

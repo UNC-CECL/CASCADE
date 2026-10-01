@@ -1,11 +1,11 @@
 """
 The two smoothed halves-overlay sheets with the zeroBE CASCADE hindcast drawn over them.
 
-    python scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py [--window 7]
+    python scripts/analyze_output/compare_runs/hindcast_vs_observed/smoothed_lowess7_with_cascade.py [--window 7]
 
 Imports the observed curves from 5-scr's smoothed_lowess7_vs_duneline.py and
 adds the model line; writes output/comparisons/target_comparison/smoothed_lowess7_with_cascade/.
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -208,7 +208,7 @@ def main(argv=None) -> int:
     (OUT_ROOT / "PROVENANCE.md").write_text("\n".join([
         "# smoothed_lowess7_with_cascade — provenance", "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "`scripts/analyze_output/compare_runs/smoothed_lowess7_with_cascade.py`.",
+        "`scripts/analyze_output/compare_runs/hindcast_vs_observed/smoothed_lowess7_with_cascade.py`.",
         "",
         "The observations-only pair in "
         "`data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/"

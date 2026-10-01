@@ -8,7 +8,7 @@ affects the outcome.
 
 | | |
 |---|---|
-| script | `scripts/analyze_output/compare_runs/offset_source_comparison.py` |
+| script | `scripts/analyze_output/compare_runs/offset_source/offset_source_comparison.py` |
 | runs | the full-management pair of each period in `raw_runs/experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a/` (listed in `tables/summary.csv`); no new runs |
 | settings | option A waves, zeroBE ends, relocations and groins off; within a pair only the offset differs |
 | model change | each run's LRR x 14 yr (m, seaward positive) |

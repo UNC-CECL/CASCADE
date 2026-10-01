@@ -71,4 +71,4 @@ Before adoption: +5.7 / 25.7 and +11.6 / 23.4 m in 1996–2010, −17.7 / 30.2 a
 
 In 2010–2024 the model ends closer to the dune line than to CoastSat, the same reading as `model_vs_observed/`.
 
-Drawn by `scripts/analyze_output/compare_runs/matrix_vs_observed.py`. It was named `matrix_rate_and_position.py`, writing to `matrix_rate_and_position/`, for a few hours on 2026-09-27.
+Drawn by `scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_vs_observed.py`. It was named `matrix_rate_and_position.py`, writing to `matrix_rate_and_position/`, for a few hours on 2026-09-27.

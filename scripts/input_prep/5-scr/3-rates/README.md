@@ -1209,7 +1209,7 @@ changes exactly where the fill does.
 ```text
 The observed panel. `std`, `line_lw` and `fill_y` exist for the
 comparison figure that lays a scoring target over this
-(scripts/analyze_output/compare_runs/rate_windows.py):
+(scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py):
 with `fill_y` given, THAT series takes the fill and a light outline, and
 the per-domain means are only the thin line over it, so the reference is
 the shape and the data the line (Hannah, 2026-09-15, option A).
@@ -1816,7 +1816,7 @@ products; everything below is shared.
 One alongshore LOWESS pass at transect resolution, averaged to domains,
 with GIS 1..SPLICE_DOMAINS put back to their raw domain means -- the
 scoring target's own two steps, shared with the smoothing-scale sweep in
-analyze_output/compare_runs/smoothing_scale.py.
+analyze_output/compare_runs/hindcast_vs_observed/smoothing_scale.py.
 
 Args:
     dom_ids, along_m, values: per-transect domain id, along-coast distance

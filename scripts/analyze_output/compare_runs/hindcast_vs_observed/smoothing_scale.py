@@ -1,12 +1,12 @@
 """
 Does the grading smoothing window matter? Model net change against the CoastSat projection at several LOWESS widths.
 
-    python scripts/analyze_output/compare_runs/smoothing_scale.py
+    python scripts/analyze_output/compare_runs/hindcast_vs_observed/smoothing_scale.py
     python ... --windows 0 3 5 10 --n-null 1000
 
 Scores every width against a phase-randomised null; model sets from
 target_comparison.py. Writes output/comparisons/target_comparison/smoothing_scale/.
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -402,7 +402,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
         "# target_comparison/smoothing_scale - provenance",
         "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "scripts/analyze_output/compare_runs/smoothing_scale.py "
+        "scripts/analyze_output/compare_runs/hindcast_vs_observed/smoothing_scale.py "
         "(2026-09-21, Hannah, by interview).",
         "",
         "## The figure",

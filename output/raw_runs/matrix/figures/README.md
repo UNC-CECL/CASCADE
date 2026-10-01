@@ -20,5 +20,5 @@ The matrix runs of each window and preset in order of increasing management (Han
 - Captions: `<window>/supporting/CAPTIONS.md`.
 - Numbers: `supporting/ladder_scores.csv` (per rung: rate and position RMSE and bias).
 
-Drawn by `scripts/analyze_output/compare_runs/matrix_management_ladder.py` from whatever
+Drawn by `scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_management_ladder.py` from whatever
 matrix runs are current. Re-run it after a matrix re-run.

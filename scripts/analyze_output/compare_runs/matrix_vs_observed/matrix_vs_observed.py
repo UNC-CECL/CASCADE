@@ -2,12 +2,12 @@
 """
 Every matrix run against the observations: rate and position change, and start/end positions.
 
-    python scripts/analyze_output/compare_runs/matrix_vs_observed.py
+    python scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_vs_observed.py
 
 Two figures per run, written into each run's figures/vs_observed/ and to
 output/comparisons/matrix_vs_observed/, plus per-scenario figures, scores.csv
 and y_bounds.txt. Other scripts import its loaders (matrix_runs, rates, score).
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

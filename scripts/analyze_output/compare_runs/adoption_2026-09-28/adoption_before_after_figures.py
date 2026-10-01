@@ -5,7 +5,7 @@ Figures of the 2026-09-28 adoption, before vs after: scorecard, shoreline, overw
 
 Reads the tables adoption_before_after.py writes and each run's
 shoreline_change_rate.csv; writes output/comparisons/adoption_2026-09-28/figures/.
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

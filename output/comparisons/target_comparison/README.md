@@ -57,7 +57,7 @@ The stems carry `_rate` after the target mode, and `tables/skill.csv` there repo
 
 The two candidate targets and the hindcast, as **net change in position (m)
 over each 14-yr model window**, 1996–2010 and 2010–2024. Built 2026-09-19
-(Hannah, by interview) by `scripts/analyze_output/compare_runs/target_comparison.py`,
+(Hannah, by interview) by `scripts/analyze_output/compare_runs/hindcast_vs_observed/target_comparison.py`,
 which reuses `rate_windows.py`'s loaders, so the observations and runs are
 the ones `model_vs_observed/` draws as rates.
 

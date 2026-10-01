@@ -3,7 +3,7 @@
 - **Before:** `raw_runs/archive/2026-09-28-pre-ceiling/matrix`. Barrier3D 49fd069, Dmaxel default, `v3_72` storms, LOWESS-7 option A ends.
 - **After:** `raw_runs/matrix`. Barrier3D `hatteras/adopted` (overwash fixes and per-cell dune ceilings), `v3_trim24` storms, the beach/dune manager's 4 m cap limited to the sand it adds (see below), re-solved ends (1996 +4.3509/+19.0935, 2010 +8.0/+21.2582).
 
-Produced by `scripts/analyze_output/compare_runs/adoption_before_after.py`. Each side was scored under the Barrier3D it ran on.
+Produced by `scripts/analyze_output/compare_runs/adoption_2026-09-28/adoption_before_after.py`. Each side was scored under the Barrier3D it ran on.
 
 | File | Contents |
 |---|---|
@@ -46,7 +46,7 @@ Effect on the managed runs, after the adoption, cap on whole cells → cap on ad
 
 Overwash scores did not change at two decimals. The natural and roadway-only runs do not use the manager.
 
-## Figures (`figures/`, made by `scripts/analyze_output/compare_runs/adoption_before_after_figures.py`)
+## Figures (`figures/`, made by `scripts/analyze_output/compare_runs/adoption_2026-09-28/adoption_before_after_figures.py`)
 
 The captions are in `figures/supporting/CAPTIONS.md`.
 

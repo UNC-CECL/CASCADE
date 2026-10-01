@@ -77,5 +77,5 @@ On the adopted model, 2010–2024 is less erosive against both observations: bia
 - `runs_used.csv`: run, folder, commit, topography, offsets, and the dune line's vintages and dates.
 - `y_bounds.txt`: the shared y range (±10 m/yr) and the rule behind it.
 
-Drawn by `scripts/analyze_output/compare_runs/rate_windows.py`:
-`python scripts/analyze_output/compare_runs/rate_windows.py`
+Drawn by `scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py`:
+`python scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py`

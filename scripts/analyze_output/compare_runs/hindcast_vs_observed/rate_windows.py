@@ -1,13 +1,13 @@
 """
 Model against observation, every hindcast window: CoastSat shoreline and dune line, each with its end-solved run.
 
-    python scripts/analyze_output/compare_runs/rate_windows.py
+    python scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py
     python ... --no-sensitivity        # the main level only
 
 Draws the observation in each reading with the model over it, edgeBE, full
 management, groin off; writes output/comparisons/model_vs_observed/.
 target_comparison.py, smoothing_scale.py and smoothed_lowess7_with_cascade.py
-import its loaders. Details: scripts/analyze_output/README.md.
+import its loaders. Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

@@ -1,11 +1,11 @@
 """
 How much does the island offset's source (dune line or CoastSat shoreline) change what the model does?
 
-    python scripts/analyze_output/compare_runs/offset_source_comparison.py
+    python scripts/analyze_output/compare_runs/offset_source/offset_source_comparison.py
 
 Reads the full-management pairs of the 2026-09-28 option-A offset study and
 their offsets; writes figures and tables to output/comparisons/offset_source/.
-Details: scripts/analyze_output/README.md.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
