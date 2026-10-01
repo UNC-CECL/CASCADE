@@ -26,6 +26,7 @@ class Cascade:
         road_width,
         road_ele,
         road_setback,
+        road_setback_trigger,
         nourishment_interval,
         nourishment_volume,
         overwash_filter,
@@ -58,6 +59,10 @@ class Cascade:
             self._road_setback = road_setback
         else:
             self._road_setback = [road_setback] * self._ny
+        if np.size(road_setback_trigger) > 1:
+            self._road_setback_trigger = road_setback_trigger
+        else:
+            self._road_setback_trigger = [road_setback_trigger] * self._ny
         if np.size(nourishment_interval) > 1:
             self._nourishment_interval = nourishment_interval
         else:
@@ -144,6 +149,7 @@ class Cascade:
         road_ele=1.7,  # ---------- roadway management --------------- #
         road_width=30,
         road_setback=30,
+        road_setback_trigger=20.0,
         dune_design_elevation=3.7,
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
@@ -241,6 +247,11 @@ class Cascade:
             Width of roadway [m]
         road_setback: int or list of int, optional
             Setback of roadway from the inital dune line and after road relocations [m]
+        road_setback_trigger: float or list of floats, optional
+            Maximum road setback at which the existing roadway dune-rebuilding
+            process is permitted [m]. When the current setback is greater than
+            this trigger, artificial rebuilding is skipped and existing dunes
+            continue to evolve naturally. The default is 20 m.
         dune_design_elevation: float or list of floats, optional
             Elevation to which dune is initially rebuilt [m MHW]
         dune_minimum_elevation: float or list of floats, optional
@@ -392,6 +403,7 @@ class Cascade:
             road_width=road_width,
             road_ele=road_ele,
             road_setback=road_setback,
+            road_setback_trigger=road_setback_trigger,
             nourishment_interval=nourishment_interval,
             nourishment_volume=nourishment_volume,
             overwash_filter=overwash_filter,
@@ -400,6 +412,23 @@ class Cascade:
             beach_nourishment_module=beach_nourishment_module,
             outwash_module=outwash_module,
         )
+
+        overlapping_management = [
+            index
+            for index, (roadway_on, beach_dune_on) in enumerate(
+                zip(
+                    self._roadway_management_module,
+                    self._beach_nourishment_module,
+                )
+            )
+            if roadway_on and beach_dune_on
+        ]
+        if overlapping_management:
+            raise CascadeError(
+                "Choose either RoadwayManager or BeachDuneManager for each "
+                "domain; both are enabled for domain indices "
+                f"{overlapping_management}."
+            )
 
         if self._community_economics_module:
             if not any(self._beach_nourishment_module):
@@ -434,6 +463,9 @@ class Cascade:
         self._nourishments = []
 
         for iB3D in range(self._ny):
+            self._initial_beach_width[iB3D] = (
+                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+            )
             self._roadways.append(
                 RoadwayManager(
                     initial_road_elevation=self._road_ele[iB3D],
@@ -443,12 +475,13 @@ class Cascade:
                     initial_dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
+                    nourishment_interval=self._nourishment_interval[iB3D],
+                    nourishment_volume=self._nourishment_volume[iB3D],
+                    initial_beach_width=self._initial_beach_width[iB3D],
+                    road_setback_trigger=self._road_setback_trigger[iB3D],
                 )
             )
 
-            self._initial_beach_width[iB3D] = (
-                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-            )
             self._nourishments.append(
                 BeachDuneManager(
                     nourishment_interval=self._nourishment_interval[iB3D],
@@ -708,8 +741,24 @@ class Cascade:
                     self._roadways[iB3D].road_relocation_setback = self._road_setback[
                         iB3D
                     ]
-                    self._roadways[iB3D].update(
-                        self._barrier3d[iB3D], self._trigger_dune_knockdown
+                    self._roadways[iB3D].nourishment_interval = (
+                        self._nourishment_interval[iB3D]
+                    )
+                    self._roadways[iB3D].nourishment_volume = (
+                        self._nourishment_volume[iB3D]
+                    )
+                    self._nourish_now[iB3D] = self._roadways[iB3D].update(
+                        self._barrier3d[iB3D],
+                        self._trigger_dune_knockdown,
+                        nourish_now=self._nourish_now[iB3D],
+                    )
+
+                beach_width_index = self._barrier3d[iB3D].time_index - 1
+                if not np.isfinite(
+                    self._roadways[iB3D].beach_width[beach_width_index]
+                ):
+                    self._roadways[iB3D].beach_width[beach_width_index] = (
+                        self._roadways[iB3D].beach_width[beach_width_index - 1]
                     )
 
                 # update x_b to include a fake beach width and the dune line; we
