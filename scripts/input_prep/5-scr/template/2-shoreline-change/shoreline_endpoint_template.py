@@ -104,6 +104,42 @@ def keep(r: pd.Series) -> bool:
             and r["n_end"] >= MIN_OBS_PER_END and abs(r["rate_m_yr"]) <= MAX_ABS_RATE)
 
 
+# End windows, output tag and interval from the command line: survey dates or calendar years
+def choose_ends(a: argparse.Namespace):
+    if bool(a.start_date) != bool(a.end_date):
+        raise SystemExit("give both --start-date and --end-date, or neither")
+    if a.start_date:
+        ends = survey_ends(a.start_date, a.end_date, HALF_WINDOW_DAYS)
+        tag = f"{a.start_date}_{a.end_date}"
+        interval_yr = (ends[1][2] - ends[0][2]).days / DAYS_PER_YEAR
+        return ends, tag, interval_yr
+    if a.end_year <= a.start_year:
+        raise SystemExit("--end-year must be after --start-year")
+    ends = calendar_ends(a.start_year, a.end_year, a.end_window_years)
+    tag = f"{a.start_year}_{a.end_year}"
+    if a.end_window_years != 1:
+        tag += f"_ends{a.end_window_years}yr"
+    interval_yr = float(round((ends[1][2] - ends[0][2]).days / DAYS_PER_YEAR))
+    return ends, tag, interval_yr
+
+
+# Bar chart of zone change, blue seaward
+def draw_bars(per_zone: pd.DataFrame, tag: str, path: Path) -> None:
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.bar(per_zone["zone_id"].astype(str), per_zone["mean_change_m"],
+           yerr=per_zone["std_change_m"], edgecolor="none",
+           color=["#2166ac" if v > 0 else "#b2182b" for v in per_zone["mean_change_m"]],
+           error_kw={"ecolor": "0.4", "lw": 0.8})
+    ax.axhline(0, color="0.2", lw=0.8)
+    ax.set(xlabel="zone", ylabel="net shoreline change (m)",
+           title=f"Net shoreline change, {tag.replace('_', ' to ', 1).replace('_', ', ')} (blue seaward)")
+    if len(per_zone) > 25:
+        ax.set_xticks([])
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
 # Run: set ends, difference, screen, average by zone, write
 def main() -> None:
     ap = argparse.ArgumentParser(description="Net shoreline change per zone.")
@@ -117,20 +153,7 @@ def main() -> None:
     a = ap.parse_args()
 
     # Choose the end windows and the interval
-    if bool(a.start_date) != bool(a.end_date):
-        raise SystemExit("give both --start-date and --end-date, or neither")
-    if a.start_date:
-        ends = survey_ends(a.start_date, a.end_date, HALF_WINDOW_DAYS)
-        tag = f"{a.start_date}_{a.end_date}"
-        interval_yr = (ends[1][2] - ends[0][2]).days / DAYS_PER_YEAR
-    else:
-        if a.end_year <= a.start_year:
-            raise SystemExit("--end-year must be after --start-year")
-        ends = calendar_ends(a.start_year, a.end_year, a.end_window_years)
-        tag = f"{a.start_year}_{a.end_year}"
-        if a.end_window_years != 1:
-            tag += f"_ends{a.end_window_years}yr"
-        interval_yr = float(round((ends[1][2] - ends[0][2]).days / DAYS_PER_YEAR))
+    ends, tag, interval_yr = choose_ends(a)
 
     # Find the transect files and the lookup
     files = sorted(a.timeseries.rglob("*.csv"))
@@ -169,19 +192,7 @@ def main() -> None:
     per_zone.to_csv(a.out / f"endpoint_per_zone_{tag}.csv", index=False)
 
     # Bar chart of zone change
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.bar(per_zone["zone_id"].astype(str), per_zone["mean_change_m"],
-           yerr=per_zone["std_change_m"], edgecolor="none",
-           color=["#2166ac" if v > 0 else "#b2182b" for v in per_zone["mean_change_m"]],
-           error_kw={"ecolor": "0.4", "lw": 0.8})
-    ax.axhline(0, color="0.2", lw=0.8)
-    ax.set(xlabel="zone", ylabel="net shoreline change (m)",
-           title=f"Net shoreline change, {tag.replace('_', ' to ')} (blue seaward)")
-    if len(per_zone) > 25:
-        ax.set_xticks([])
-    fig.tight_layout()
-    fig.savefig(a.out / f"endpoint_per_zone_{tag}.png", dpi=200)
-    plt.close(fig)
+    draw_bars(per_zone, tag, a.out / f"endpoint_per_zone_{tag}.png")
 
     print(per_zone.to_string(index=False, float_format=lambda v: f"{v:8.2f}"))
 

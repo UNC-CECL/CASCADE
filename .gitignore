@@ -207,6 +207,8 @@ output/calibration/**
 *.gif
 *.tfw
 *.aux.xml
+# the shareable templates ship their expected output, figures included
+!scripts/input_prep/5-scr/template/*/example/expected_output/*.png
 
 # raw/cached data under data/hatteras_init/
 #

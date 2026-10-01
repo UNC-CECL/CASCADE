@@ -26,6 +26,11 @@
 # rather than a missing-file error, which is the more confusing of the two.
 *.geojson filter=lfs diff=lfs merge=lfs -text
 
+# Except the shareable templates' example layers (a few KB). They are meant to
+# be copied out and run by someone without this repository or LFS, and a
+# pointer file in their place fails as a confusing parse error.
+scripts/input_prep/5-scr/template/**/*.geojson !filter !diff !merge
+
 # Not listed here on purpose:
 #   *.npy   the init domain arrays are gitignored; the only ones tracked are
 #           the ~19 KB shoreline matrices, which are small and diff-irrelevant
