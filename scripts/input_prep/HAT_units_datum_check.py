@@ -90,14 +90,14 @@ def recorded_survey_offset(domains) -> float | None:
                 continue
     return float(np.median(vals)) if vals else None
 
-BERM_ELEVATION = 1.7      # m NAVD88, runner line 718
-MHW_ELEVATION = 0.36      # m NAVD88, runner line 719
+BERM_ELEVATION = 1.7      # m NAVD88, the runner's BERM_ELEVATION
+MHW_ELEVATION = 0.36      # m NAVD88, the runner's MHW_ELEVATION
 DUNE_REBUILD_HEIGHT = 3.0
 REBUILD_ELEV_THRESHOLD = 0.01
 ROAD_WIDTH_M = 20.0
 
 SENTINEL_WATER_M = -3.0   # extractor's water sentinel, m MHW-relative
-ABS_MIN_DUNE_H = 0.3      # roadway_manager.py:530
+ABS_MIN_DUNE_H = 0.3      # roadway_manager.py, _absolute_minimum_dune_height
 
 FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
 
@@ -141,7 +141,7 @@ def print_contract():
         print(f"  {q:<{w}}  {s:<24} {c:<34} {m}")
     print()
     print("  The first three take PRE-CONVERTED values. Everything else is")
-    print("  converted for you. barrier3d.py:1197 pops MHW and never uses it")
+    print("  converted for you. Barrier3d.__init__ pops MHW and never uses it")
     print("  again -- nothing grid-shaped is converted by the model.")
 
 
@@ -346,7 +346,7 @@ def main():
     print("=" * 100)
     print("NOTES -- true, documented, deliberately not changed")
     print("=" * 100)
-    print("  drown_threshold = 0 is commented '0 m MSL' in roadway_manager.py:766,")
+    print("  drown_threshold = 0 is commented '0 m MSL' in RoadwayManager.update,")
     print("  but it is compared against xyz_interior_grid * dz, which is")
     print("  MHW-RELATIVE. The effective test is 0 m MHW -- roughly 0.26 m")
     print("  stricter than the comment claims. Every roadway_drown verdict is")

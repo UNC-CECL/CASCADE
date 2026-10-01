@@ -89,7 +89,7 @@ _SETBACK_SOURCES = {
     "dunestart": (ROADS_ROOT / "dunestart_offset" / "measured" / "{year}"
                   / "RoadSetback_{year}_dunestart.csv"),
 }
-# Matches hatteras_site_config.py:78,91
+# Matches hatteras_site_config.py: HATTERAS_PERIODS road_setback_file, the dunestart files
 SETBACK_METHOD = "dunestart"
 # Rebound in main() from --method; the ported drawing code reads this global.
 SETBACK = {y: Path(str(_SETBACK_SOURCES[SETBACK_METHOD]).format(year=y))
@@ -101,15 +101,15 @@ OUT_DIR = ROADS_ROOT / "figures"
 BERM_NAVD, MHW_M = 1.7, 0.36
 BETA, BAY_DEPTH_M = 0.04, 3.0
 DUNE_WIDTH_M = 20.0                       # barrier3d-default-parameters.yaml
-BERM_MHW = BERM_NAVD - MHW_M              # load_input.py:241 -> 1.34 m MHW
+BERM_MHW = BERM_NAVD - MHW_M              # load_input.py, BermEl / 10 - MHW -> 1.34 m MHW
 
 # roadway_manager / runner
 ROAD_WIDTH_M, DX, DY, DZ = 20.0, 10, 10, 10
-DROWN_THRESHOLD, PCT_WATER = 0.0, 0.2     # roadway_manager.py:50-51, :531
-SL_DAM = 0.0                              # barrier3d.py:1165, never changes
+DROWN_THRESHOLD, PCT_WATER = 0.0, 0.2     # roadway_manager.py, bulldoze() defaults
+SL_DAM = 0.0                              # barrier3d.py, _SL = 0 in Barrier3d.__init__, never changes
 ROAD_ELEVATION_FALLBACK = 1.45
 FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
-# Villages: a RoadwayManager is constructed (cascade.py:428) but never updated.
+# Villages: a RoadwayManager is constructed (cascade.py, Cascade.__init__) but never updated.
 VILLAGE_RANGES = [(21, 31), (68, 83)]
 
 # Colour

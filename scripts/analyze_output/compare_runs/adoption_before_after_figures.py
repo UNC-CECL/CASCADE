@@ -62,7 +62,7 @@ OUTCOMES = [  # code, label, colour
     (3, "false alarm: modelled, not observed", C["ADDED"]),
     (4, "neither", "0.93"),
 ]
-BDM_CAP_M = 4.0   # cascade/beach_dune_manager.py:612, m above the berm
+BDM_CAP_M = 4.0   # cascade/beach_dune_manager.py, _artificial_maximum_dune_height; m above the berm
 C_1997_FILL = C["LATE_FILL"]
 # -----------------------------------------------------------------------------
 

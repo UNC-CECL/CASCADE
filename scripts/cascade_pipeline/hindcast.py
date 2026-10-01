@@ -245,8 +245,8 @@ def build_island_offset(offset_path, geometry, mode="metres"):
     UNITS. `Cascade(shoreline_offset=...)` must be in METRES.
     `brie_coupler.offset_shoreline` adds the values straight onto
     `brie.x_t` / `brie.x_s` with no conversion, and those are metres -- see
-    `brie_coupler.py:390` ("convert from dam to meters") and line 344
-    (`barrier3d.x_s = brie.x_s / 10`). The measurement file is already metres,
+    `brie_coupler.py`, update_brie_for_human_modifications ("convert from dam to
+    meters") and update_ast (`barrier3d.x_s = brie.x_s / 10`). The measurement file is already metres,
     so it needs no conversion at all.
 
     Args:

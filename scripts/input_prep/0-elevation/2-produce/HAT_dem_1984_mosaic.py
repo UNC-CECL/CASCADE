@@ -71,8 +71,8 @@ SURVEY_NONE, SURVEY_2009 = 0, 2009
 SURVEY_1996, SURVEY_2014 = OVERRIDE_YEAR, gf.FILL_SOURCE_YEAR
 
 # Reproduces HAT_dune_topo_extractor.py, so the audit's shift column matches the extractor
-BEACH_START_THR_M = 0.50    # m MHW, strict '>' - extractor line 297
-WATER_CLAMP_M = -3.0        # m MHW - extractor line 297
+BEACH_START_THR_M = 0.50    # m MHW, strict '>' - the extractor's BEACH_START_THR_M
+WATER_CLAMP_M = -3.0        # m MHW - the extractor's WATER_CLAMP_M
 # -----------------------------------------------------------------------------
 
 

@@ -38,7 +38,7 @@ _b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
                                 if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _b3d  # noqa: E402
 BARRIER3D_DIR = _b3d.DOMAIN_ROOT
-# The method the runner spends (hatteras_site_config.py:78,91)
+# The method the runner spends (hatteras_site_config.py: HATTERAS_PERIODS road_setback_file, the dunestart files)
 import sys as _tvsys
 from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
@@ -517,7 +517,7 @@ def write_markdown(scen_rows, all_problems, path: Path):
       "and all 100 came out at `0.145 dam`: the model gains a 20 m ribbon of "
       "1.45 m land across open water.")
     a("2. `RoadwayManager` sets `_drown_break = 1` and returns.")
-    a("3. `cascade.py` (~line 625) sees `drown_break` on **every later year** "
+    a("3. `Cascade.update` (`cascade.py`) sees `drown_break` on **every later year** "
       "and never calls `update()` again. `_road_break[iB3D] = 1`, dune growth "
       "rates reset to natural.")
     a("")

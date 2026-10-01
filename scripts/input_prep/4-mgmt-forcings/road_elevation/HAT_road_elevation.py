@@ -1154,7 +1154,7 @@ def main():
     print(f"\n{'=' * 92}")
     print("NEXT: wire the per-domain elevation into the runner (NOT done here)")
     print("=" * 92)
-    print("  CASCADE accepts a per-domain road_ele -- cascade.py:47 does")
+    print("  CASCADE accepts a per-domain road_ele -- Cascade.__init__ (cascade.py) does")
     print("      if np.size(road_ele) > 1: self._road_ele = road_ele")
     print("      else:                     self._road_ele = [road_ele] * ny")
     print("  and passes self._road_ele[iB3D] to each RoadwayManager. So a list")

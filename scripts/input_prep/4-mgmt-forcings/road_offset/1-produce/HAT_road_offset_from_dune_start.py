@@ -917,7 +917,7 @@ def write_audit(audit: dict, exts: dict) -> None:
         "found inside the picked search window. Those are different features, "
         "not the same feature at two dates.",
         "2. **Different frame.** The legacy measurement is taken with both lines "
-        "\"raw, ocean-first\" (`HAT_setback_from_lines.py:254`) -- i.e. "
+        "\"raw, ocean-first\" (`measure()` in the since-deleted `HAT_setback_from_lines.py`) -- i.e. "
         "unstraightened, so it still carries the obliquity smear this script "
         "removes.",
         "3. **The legacy file is already floored.** It prints "

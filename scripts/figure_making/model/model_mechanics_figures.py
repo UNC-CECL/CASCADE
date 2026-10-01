@@ -195,7 +195,7 @@ def fig_barrier3d_storm_year():
         "edgeBE, no road, no beach/dune management). (a) The year's storms in the order the model applies them: "
         "each bar runs from Rlow to Rhigh, the total water level range above MHW over the hours the water "
         f"stood above the berm ({berm:.2f} m MHW). Barrier3D grows the dune first and then tests EVERY storm of "
-        "the year against that one crest (barrier3d.py:1358), although each storm also lowers the dune it "
+        "the year against that one crest (barrier3d.py, DuneDomainCrest in update), although each storm also lowers the dune it "
         f"erodes. The shaded band spans that crest's lowest cell ({crest_min:.2f} m) to its mean "
         f"({crest_mean:.2f} m); the dotted grey line is the lowest crest on 1 January, before growth "
         f"({crest_jan.min():.2f} m). A storm whose Rhigh clears a gap overwashes through it (purple, labelled "
@@ -301,7 +301,7 @@ def fig_barrier3d_domain_budget():
     return out
 
 
-# BRIE's angle between each domain and the next (brie.py:820)
+# BRIE's angle between each domain and the next (brie.py, theta in Brie.update)
 def shoreline_angle_deg(x_s_m, dy):
     return np.degrees(np.arctan2(np.roll(x_s_m, -1) - x_s_m, dy))
 
@@ -604,7 +604,7 @@ def fig_brie_domain_orientation():
     return out
 
 
-# BRIE's diffusivity (m2/yr) at given shoreline angles, from its own table (brie.py:1293)
+# BRIE's diffusivity (m2/yr) at given shoreline angles, from its own table (brie.py, r_ipl in Brie.update)
 def brie_diffusivity(asymmetry, high_fraction, theta_deg, c):
     import warnings
     from brie import Brie
@@ -855,7 +855,7 @@ def split_shoreline_change(c):
         idx = np.maximum(1, np.minimum(br._wave_climl, np.round(90 - theta).astype(int)))
         r = np.maximum(0, cd[idx] * dt / 2 / dy ** 2)
         lap = np.roll(old, -1) - 2 * old + np.roll(old, 1)
-        # brie.py:1310: A x = (1 + 2r) x - r (x[i-1] + x[i+1]) = x - r lap(x), periodic
+        # brie.py, the dv tridiagonal in Brie.update: A x = (1 + 2r) x - r (x[i-1] + x[i+1]) = x - r lap(x), periodic
         a_new = new - r * (np.roll(new, -1) - 2 * new + np.roll(new, 1))
         b3d[t - 1] = a_new - old - r * lap
         be[t - 1] = 2 * qat / (2 * hb[t] + d_sf) * DAM
