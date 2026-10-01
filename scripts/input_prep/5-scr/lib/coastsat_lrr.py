@@ -161,7 +161,7 @@ def collect_csv_files(folders: list[str]) -> list[str]:
         found = glob.glob(os.path.join(folder, "*.csv"))
         files.extend(found)
     if not files:
-        print("⚠️  No CSV files found. Check your DATA_FOLDERS paths.")
+        print("Warning: no CSV files found. Check your DATA_FOLDERS paths.")
     return sorted(files)
 
 
@@ -216,6 +216,8 @@ def plot_lrr_summary(results_df: pd.DataFrame):
 def main():
     csv_files = collect_csv_files(DATA_FOLDERS)
     print(f"Found {len(csv_files)} CSV file(s).\n")
+    if not csv_files:
+        raise SystemExit("Nothing to fit: set DATA_FOLDERS in the CONFIG block to folders of transect CSVs.")
 
     records = []
 
