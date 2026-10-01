@@ -121,20 +121,54 @@ COMMON = (" Full management, option A waves (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, 
           "v1-vs-v2-adopted-setup. Statistics in tables/summary.csv, interior GIS 2-89.")
 
 
-# Profiles: the two runs' change with the target, offset difference, change difference
-def fig_profiles(t, obs):
-    f, axes = plt.subplots(3, 2, figsize=figsize("double", height=6.6), sharex=True,
+# The two runs' change with the projected target on top
+def fig_change(t, obs):
+    f, axes = plt.subplots(1, 2, figsize=figsize("double", height=3.1), sharey=True,
+                           constrained_layout=True)
+    for j, (start, end) in enumerate(PERIODS):
+        p = t[t.period == f"{start}_{end}"].set_index("gis_domain")
+        ax = axes[j]
+        ax.plot(obs.index, obs.values, color=INK, lw=1.6, zorder=5)
+        for v in ARMS:
+            ax.plot(p.index, p[f"model_change_{v}_m"], color=COL[v], lw=1.1, zorder=4)
+        ax.axhline(0, color=INK_MUTED, lw=0.6)
+        ax.set_xlim(0.5, 90.5)
+        ax.grid(axis="y")
+        open_frame(ax)
+        town_bands(ax)
+        _title(ax, j, f"{start}–{end}")
+        ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    axes[0].set_ylabel("Shoreline change (m)")
+    f.legend(handles=[Line2D([], [], color=INK, lw=1.6, label="Projected CoastSat position"),
+                      Line2D([], [], color=COL["v1"], lw=1.1, label="Shoreline v1 (3-year window)"),
+                      Line2D([], [], color=COL["v2"], lw=1.1, label="Shoreline v2 (±1 year of DEM collection)")],
+             loc="outside lower center", ncol=3, frameon=False)
+    png = OUT / "shoreline_v1_vs_v2_model_change_vs_projected_full_management.png"
+    save(f, png, close=True)
+    sc = "; ".join(f"{r.period} {r.offset} bias {r.bias_m:+.1f} m, RMS residual "
+                   f"{r.rms_residual_m:.1f} m" for r in t.attrs["scores"].itertuples())
+    record_caption(png, (
+        "Modelled total shoreline change, each run's LRR x 14 yr, seaward positive, with the "
+        "shoreline island offset averaged over a 3-year window (v1, red) or over "
+        "+/-1 year of the DEM collection (v2, blue), against projected shoreline change (black): CoastSat "
+        "LRR 1996-2024, LOWESS 7 domains, southern 10 raw, x 14 yr, the same profile in both "
+        "panels; the model is unsmoothed. (a) 1996-2010, (b) 2010-2024. Interior GIS 2-89, "
+        "model minus target: " + sc + " (tables/vs_projected.csv). The differences are in "
+        "shoreline_v1_vs_v2_difference_full_management.png." + COMMON))
+    return png
+
+
+# Profiles: offset difference and change difference, v2 minus v1
+def fig_difference(t):
+    f, axes = plt.subplots(2, 2, figsize=figsize("double", height=4.6), sharex=True,
                            sharey="row", constrained_layout=True)
     for j, (start, end) in enumerate(PERIODS):
         p = t[t.period == f"{start}_{end}"].set_index("gis_domain")
-        a0, a1, a2 = axes[:, j]
-        a0.plot(obs.index, obs.values, color=INK, lw=1.6, zorder=5)
-        for v in ARMS:
-            a0.plot(p.index, p[f"model_change_{v}_m"], color=COL[v], lw=1.1, zorder=4)
+        a1, a2 = axes[:, j]
         a1.bar(p.index, p.d_offset_m, width=0.85, color=INK_MUTED)
         a2.bar(p.index, p.d_model_change_m, width=0.85,
                color=[COL["v2"] if x > 0 else COL["v1"] for x in p.d_model_change_m])
-        for k, ax in enumerate((a0, a1, a2)):
+        for k, ax in enumerate((a1, a2)):
             ax.axhline(0, color=INK_MUTED, lw=0.6)
             ax.set_xlim(0.5, 90.5)
             ax.grid(axis="y")
@@ -143,28 +177,23 @@ def fig_profiles(t, obs):
             _title(ax, 2 * k + j, f"{start}–{end}")
         a2.set_xlabel(DOMAIN_AXIS_LABEL)
         if j == 0:
-            a0.set_ylabel("Shoreline change (m)")
             a1.set_ylabel("Offset difference,\nv2 − v1 (m, seaward +)")
             a2.set_ylabel("Change difference,\nv2 − v1 (m)")
-    f.legend(handles=[Line2D([], [], color=INK, lw=1.6, label="Projected CoastSat position"),
-                      Line2D([], [], color=COL["v1"], lw=1.1, label="Shoreline v1 (calendar window)"),
-                      Line2D([], [], color=COL["v2"], lw=1.1, label="Shoreline v2 (DEM-centred window)"),
-                      Patch(color=COL["v2"], label="v2 start more accretional"),
+    f.legend(handles=[Patch(color=COL["v2"], label="v2 start more accretional"),
                       Patch(color=COL["v1"], label="v1 start more accretional")],
-             loc="outside lower center", ncol=3, frameon=False)
+             loc="outside lower center", ncol=2, frameon=False)
     png = OUT / "shoreline_v1_vs_v2_difference_full_management.png"
     save(f, png, close=True)
     s = t.attrs["summary"].set_index("period")
     record_caption(png, (
-        "Model outcome with the shoreline island offset averaged over the calendar window (v1) "
-        "or the DEM-centred window (v2). (a, b) Modelled total shoreline change, each run's LRR "
-        "x 14 yr, seaward positive: red v1, blue v2; black, projected shoreline change (CoastSat "
-        "LRR 1996-2024, LOWESS 7 domains, southern 10 raw, x 14 yr), the same profile in both "
-        "panels; the model is unsmoothed. (c, d) The difference in the offset itself, v2 minus "
-        "v1, seaward position with each build's mean removed (m). (e, f) The difference in "
-        "modelled change, v2 start minus v1 start; blue where the v2 start is more accretional. "
-        "Interior: r between the runs {:.2f} / {:.2f}, mean |difference| {:.1f} / {:.1f} m, "
-        "largest {:.1f} m at GIS {} / {:.1f} m at GIS {} (1996-2010 / 2010-2024).".format(
+        "What changes when the shoreline island offset is averaged over +/-1 year of the DEM "
+        "collection (v2) instead of a 3-year window (v1). (a, b) The difference in the offset itself, "
+        "v2 minus v1, seaward position with each build's mean removed (m). (c, d) The "
+        "difference in modelled total shoreline change (each run's LRR x 14 yr), v2 start "
+        "minus v1 start; blue where the v2 start is more accretional. Interior: r between the "
+        "runs {:.2f} / {:.2f}, mean |difference| {:.1f} / {:.1f} m, largest {:.1f} m at GIS {} / "
+        "{:.1f} m at GIS {} (1996-2010 / 2010-2024). The two runs' change is in "
+        "shoreline_v1_vs_v2_model_change_vs_projected_full_management.png.".format(
             s.loc["1996-2010", "r_between_runs"], s.loc["2010-2024", "r_between_runs"],
             s.loc["1996-2010", "mean_abs_diff_m"], s.loc["2010-2024", "mean_abs_diff_m"],
             s.loc["1996-2010", "max_abs_diff_m"], s.loc["1996-2010", "max_at_gis"],
@@ -213,7 +242,7 @@ def fig_scatter(t, summary):
     return png
 
 
-# Run: build the tables, score against the target, draw two figures
+# Run: build the tables, score against the target, draw three figures
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     apply_style()
@@ -225,7 +254,8 @@ def main():
     obs = osc.projected_target()
     scores = vs_target(t, obs)
     scores.to_csv(OUT / "tables" / "vs_projected.csv", index=False)
-    for png in (fig_profiles(t, obs), fig_scatter(t, summary)):
+    t.attrs["scores"] = scores
+    for png in (fig_change(t, obs), fig_difference(t), fig_scatter(t, summary)):
         print(png.relative_to(_REPO))
     print(summary.drop(columns=["v1_run", "v2_run"]).round(2).T.to_string())
     print(scores.round(3).to_string(index=False))

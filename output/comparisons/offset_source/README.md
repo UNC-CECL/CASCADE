@@ -106,7 +106,8 @@ Hannah, 2026-10-01: the model-output comparison of shoreline offset **v1**
   offset difference itself (r -0.58, -0.59).
 
 ```
-shoreline_v1_vs_v2/shoreline_v1_vs_v2_difference_full_management.png        profiles: change + target, offset difference, change difference
+shoreline_v1_vs_v2/shoreline_v1_vs_v2_model_change_vs_projected_full_management.png   the two runs' change, target on top
+shoreline_v1_vs_v2/shoreline_v1_vs_v2_difference_full_management.png        profiles: offset difference, change difference
 shoreline_v1_vs_v2/shoreline_v1_vs_v2_offset_vs_model_full_management.png    scatter: offset vs turning as the predictor
 shoreline_v1_vs_v2/tables/summary.csv, per_domain.csv, vs_projected.csv
 shoreline_v1_vs_v2/supporting/CAPTIONS.md, supporting/*.pdf

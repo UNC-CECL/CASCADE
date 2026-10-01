@@ -70,9 +70,9 @@ Asked by Hannah on 2026-10-01: the same comparison for shoreline offset v1
 pairs of `output/raw_runs/experiments/island-offset/2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup/`.
 It imports its offsets, orientation and projected target from
 `offset_source_comparison.py`, so the two use the same definitions. It checks
-each run's metadata offset version against the arm it is filed under. It writes two
-figures (profiles with the target on top; scatter against offset and turning
-difference) and three tables to `output/comparisons/offset_source/shoreline_v1_vs_v2/`.
+each run's metadata offset version against the arm it is filed under. It writes three
+figures (the two runs' change with the target on top; profiles of the offset
+and change differences; scatter against offset and turning difference) and three tables to `output/comparisons/offset_source/shoreline_v1_vs_v2/`.
 
 <details><summary>Function notes (the original docstrings)</summary>
 
