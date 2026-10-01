@@ -1,31 +1,19 @@
 #!/usr/bin/env python3
-"""The option A groin grid, M x f x window, run through the unchanged runner.
+"""
+The option A groin grid, M x f x window, run through the unchanged runner.
 
-WHY THE RUNNER AND NOT HAT_groin_sweep_worker. The worker is a second copy of
-the runner, and as of 2026-09-29 it is not the adopted model: it hardcodes the
-old waves (2.5 / 8 / 0.7 / 0.1), and its parameter-file repair restores a
-snapshot with no per-cell dune ceilings. Driving the runner means every cell
-is the adopted model by construction. Runs write their own parameters file,
-so they are safe alongside other sessions' runs (Hannah, 2026-09-29).
+    python launch_groin_grid.py [--streams 3] [--only 1996:3:0.6] [--kind blocking] [--study TAG]
 
-WHAT IS SET. Only the groin and the filing; every other value is the code
-default (HAT_IGNORE_SETTINGS=1, stray HAT_* dropped, as HAT_run_all does):
-edgeBE, full_management without historical relocations, option A waves,
-v3_trim24 storms. M = 0 is not run: the paired baseline is the adopted matrix
-run with the same tokens, which the runner resolves by itself.
-    1996  HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin
-    2010  HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin
+Sets only the groin and the filing (HAT_IGNORE_SETTINGS=1); every other value
+is the code default. Each cell is its own member of the experiment,
+raw_runs/experiments/<study>/<member>/; a cell already run is skipped, so a
+relaunch resumes. Logs go to grid_logs/ beside this script.
+Details: README.md beside this script.
 
-The M = 2-5, f = 0.6 cells are the confirmation runs for the emulator in
-groin_stability_option_a.py.
-
-FILING. Run names carry `groin` but not M or f, so each cell is its own
-experiment member: raw_runs/experiments/groin/2026-09-29-option-a-grid/M<M>_f<f>/.
-A cell whose metadata already exists is skipped, so a relaunch resumes.
-
-    python launch_groin_grid.py [--streams 3] [--only 1996:3:0.6]
-
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -39,32 +27,35 @@ import threading
 import time
 from pathlib import Path
 
+# --- CONFIG ------------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[4]
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-# The first grid (dipole, 1996->2003 linear ramp: the schedule the runner had
-# until 2026-09-29). Later studies pass --study and --kind.
-STUDY = "groin/2026-09-29-option-a-grid"
-KIND = "dipole"
+STUDY = "groin/2026-09-29-option-a-grid"   # the first grid; later studies pass --study
+KIND = "dipole"                            # 1996->2003 linear ramp then; later studies pass --kind
 RAW = REPO / "output" / "raw_runs" / "experiments"
 LOGS = HERE / "grid_logs"
 
 M_VALUES = (1, 2, 3, 4, 5, 7, 10)
 F_VALUES = (0.2, 0.4, 0.6, 0.8, 1.0)
 PERIODS = (1996, 2010)
+# -----------------------------------------------------------------------------
 
 
+# Experiment member for one cell: M<M>_f<f>, or b<b>_f<f> for blocking
 def member(M, f):
     if KIND == "blocking":
         return f"b{M:.2f}_f{f:.1f}"
     return f"M{M}_f{f:.1f}"
 
 
+# Has this cell already run (its run metadata exists)?
 def done(period, M, f):
     return any((RAW / STUDY / member(M, f)).glob(
         f"{period}_*/*/*/*_run_metadata.json"))
 
 
+# Run one cell through the runner, logging to grid_logs/; returns the exit code
 def run(period, M, f):
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
     env.update({
@@ -95,6 +86,7 @@ def run(period, M, f):
     return code
 
 
+# Run: build the cell list, skip finished cells, run the rest in parallel streams
 def main():
     global KIND, STUDY
     ap = argparse.ArgumentParser()
@@ -115,8 +107,7 @@ def main():
         M = float(M) if KIND == "blocking" else int(M)
         cells = [(int(p), M, float(f))]
     else:
-        # Low M first in both windows, so an early stop still leaves the
-        # plausible end of the grid.
+        # Low M first in both windows, so an early stop still leaves the plausible end
         Ms = [int(m) if float(m).is_integer() else m for m in (args.M or M_VALUES)]
         cells = [(p, M, f) for M in Ms for f in (args.f or F_VALUES)
                  for p in PERIODS]
@@ -129,6 +120,7 @@ def main():
         jobs.put(c)
     failed = []
 
+    # Take cells off the queue until it is empty
     def worker():
         while True:
             try:

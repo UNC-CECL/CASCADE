@@ -1,43 +1,22 @@
 """
-HAT_geometric_distance_sanity_check.py
-========================================
-General-purpose tool: computes per-domain distance-to-datum for ANY set of
-shoreline geojsons (dune lines, wet/dry lines, or a mix -- doesn't matter
-which), using the offshore datum line + domain polygons, and produces two
-diagnostic figures so the result can be checked BY EYE, not just trusted
-numerically.
+Per-domain distance to the offshore datum for any set of shoreline geojsons, with two figures to check it by eye.
 
-Consolidates and generalizes HAT_duneline_geometric_distance.py and
-HAT_wetdry_geometric_distance.py into one reusable tool. Handles both file
-styles automatically:
-  - one feature per file, no 'year' property (e.g. duneline_1967.geojson)
-    -> labeled from the filename
-  - many dated features in one file (e.g. wet_dry_shorelines_groin.geojson)
-    -> labeled from each feature's own 'year' (+ month, if a year repeats)
+    python HAT_geometric_distance_sanity_check.py
 
-FIGURES
--------
-1. Spatial map (real coordinates): domain polygons, the datum line, and
-   every shoreline overlaid, colored by year (older=blue, newer=red via
-   colormap) -- lets you SEE whether shorelines actually fall inside the
-   expected domains and stay roughly parallel to the datum line. This is
-   the figure most likely to catch a wrong CRS, wrong file, or reversed
-   geometry immediately, before ever looking at a number.
-2. Distance profile: distance-to-datum (or change-from-REFERENCE_KEY, if
-   set) per domain, one line per shoreline, same color scheme as the map.
+Reads the domain polygons, the datum line and SHORELINE_FILES from INPUT_DIR;
+writes the raw-distance CSV, one change-from-reference CSV per REFERENCE_KEYS
+and two sanity-check figures to OUTPUT_DIR. Needs numpy, pandas, matplotlib,
+pyproj, shapely. Details: README.md beside this script.
 
-Also runs the same validation/sanity checks already established:
-  - if VALIDATION_KNOWN_GOOD is set, checks a named shoreline's min-
-    subtracted values against it (as done for 1967 dune line).
-  - prints a pairwise seaward/landward check between any two named
-    shorelines you list in SEAWARD_CHECK_PAIRS (e.g. wet/dry vs dune line
-    at the same year -- wet/dry should be seaward everywhere).
-
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 import os
 import json
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -48,18 +27,18 @@ from pyproj import Transformer
 from shapely.geometry import shape
 from shapely.ops import transform as shp_transform
 
-# =============================================================================
-# CONFIG
-# =============================================================================
-INPUT_DIR  = r"/hard-structures/groin\hindcast_groin_test\input_prep\shoreline_position\input"
-OUTPUT_DIR = r"/scripts/groin/HAT-buxton-hindcast-groin-test/input_prep/shoreline_position/shoreline_position_output"
+# --- CONFIG ------------------------------------------------------------------
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
+GROIN = REPO / "hard-structures" / "groin"
+INPUT_DIR  = str(GROIN / "HAT-groin-buxton-input" / "groin_init" / "island_offset" / "input")
+OUTPUT_DIR = str(GROIN / "HAT-groin-buxton-output" / "shoreline_position_output")
 
 TARGET_CRS = "EPSG:26918"
 
 DOMAIN_POLYGONS_FILE = os.path.join(INPUT_DIR, "domains_subset_2_12.geojson")
 DATUM_LINE_FILE       = os.path.join(INPUT_DIR, "offshore_datum_line.geojson")
 
-# Any mix of single-feature and multi-feature (dated) shoreline files.
+# Any mix of single-feature and multi-feature (dated) shoreline files
 SHORELINE_FILES = [
     os.path.join(INPUT_DIR, "duneline_1967.geojson"),
     os.path.join(INPUT_DIR, "duneline_1978.geojson"),
@@ -70,18 +49,11 @@ SHORELINE_FILES = [
 
 N_SAMPLES = 25   # points sampled along each domain's clipped shoreline segment
 
-# Change-from-reference CSVs are saved for each key in this list (one CSV per
-# key), ready to feed straight into HAT_groin_effect_comparison.py's observed-
-# change logic. Add both a dune-line and a wet/dry reference if you want to
-# compare either baseline. Leave empty to skip (raw-distance CSV only).
-REFERENCE_KEYS = ["duneline_1967", "wetdry_1967"]
+REFERENCE_KEYS = ["duneline_1967", "wetdry_1967"]   # one change CSV per key; [] = raw CSV only (README)
 
-# Which reference (if any) the *figure's* second panel shows change relative
-# to -- independent from REFERENCE_KEYS above (that controls saved CSVs).
-FIGURE_REFERENCE_KEY = "wetdry_1967"
+FIGURE_REFERENCE_KEY = "wetdry_1967"   # the profile figure's reference, separate from REFERENCE_KEYS
 
-# Optional validation against a known-good min-subtracted series (see
-# HAT_duneline_geometric_distance.py). Set KEY to None to skip.
+# Known-good min-subtracted series to validate against; KEY None skips it (README)
 VALIDATION_KEY = "duneline_1967"
 VALIDATION_KNOWN_GOOD = {
     2: 895.0, 3: 772.2, 4: 603.2, 5: 471.6, 6: 368.0,
@@ -89,18 +61,16 @@ VALIDATION_KNOWN_GOOD = {
 }
 VALIDATION_TOLERANCE_M = 15.0
 
-# Optional pairwise seaward/landward checks: (should_be_seaward, reference).
-# Prints whether the first is seaward of (smaller distance than) the second
-# at every domain both have data for.
+# Pairwise checks: (should_be_seaward, reference), smaller distance at every shared domain
 SEAWARD_CHECK_PAIRS = [
     ("wetdry_1967", "duneline_1967"),
 ]
 
 FIGURE_DPI = 200
+# -----------------------------------------------------------------------------
 
-# =============================================================================
-# GEOMETRY HELPERS
-# =============================================================================
+
+# A geojson and its CRS name (TARGET_CRS if it names none)
 def _load_geojson(path):
     with open(path) as f:
         data = json.load(f)
@@ -108,6 +78,7 @@ def _load_geojson(path):
     return data, src_crs
 
 
+# A shapely geometry reprojected into target_crs
 def _reproject(geom, src_crs, target_crs=TARGET_CRS):
     if src_crs == target_crs:
         return geom
@@ -115,6 +86,7 @@ def _reproject(geom, src_crs, target_crs=TARGET_CRS):
     return shp_transform(lambda x, y, z=None: transformer.transform(x, y), geom)
 
 
+# Domain polygons keyed by domain_id
 def load_domain_polygons(path):
     data, src_crs = _load_geojson(path)
     polys = {}
@@ -124,23 +96,14 @@ def load_domain_polygons(path):
     return polys
 
 
+# The first feature of a file, reprojected
 def load_single_geom(path):
     data, src_crs = _load_geojson(path)
     return _reproject(shape(data["features"][0]["geometry"]), src_crs)
 
 
+# Every shoreline in a file as {label: (geometry, sort_key)}, labelled from year or filename (README)
 def load_shorelines(path):
-    """Load every shoreline feature in a file, auto-labeling each one.
-
-    - Multi-feature files with a 'year' property (e.g. wet/dry): labeled
-      'wetdry_<year>' or 'wetdry_<year>_<month>' if the year repeats.
-    - Single-feature files with no 'year' property (e.g. duneline_YYYY.geojson):
-      labeled from the filename stem.
-
-    Returns dict {label: (geometry, sort_key)}; sort_key is a float year
-    (with a small month-based fraction added for duplicate years) so
-    figures can be colored/ordered chronologically regardless of label text.
-    """
     data, src_crs = _load_geojson(path)
     stem = os.path.splitext(os.path.basename(path))[0]
     out = {}
@@ -170,7 +133,7 @@ def load_shorelines(path):
             seen_years.setdefault(key, []).append(month)
             out[key] = (geom, sort_key)
         else:
-            # Single-feature file, no year -- derive label + sort key from filename.
+            # Single-feature file, no year: label and sort key from the filename
             digits = "".join(c for c in stem if c.isdigit())
             sort_key = float(digits) if digits else 0.0
             out[stem] = (geom, sort_key)
@@ -178,6 +141,7 @@ def load_shorelines(path):
     return out
 
 
+# Mean distance to the datum line of the shoreline clipped to each domain
 def per_domain_mean_distance(line, domain_polys, datum_line, n_samples=N_SAMPLES):
     results = {}
     for d, poly in domain_polys.items():
@@ -206,13 +170,32 @@ def per_domain_mean_distance(line, domain_polys, datum_line, n_samples=N_SAMPLES
     return results
 
 
-# =============================================================================
-# FIGURES
-# =============================================================================
+# Change-from-reference CSV for every shoreline, in the groin comparison's format
+def save_change_table(all_raw, domains, reference_key, output_dir):
+    if reference_key not in all_raw:
+        print(f"  REFERENCE_KEYS: '{reference_key}' not found among loaded "
+              f"shorelines -- skipping its change table.")
+        return None
+
+    ref_vals, _ = all_raw[reference_key]
+    df = pd.DataFrame({"Domain_ID": domains})
+    for label, (result, _) in sorted(all_raw.items(), key=lambda kv: kv[1][1]):
+        change = [
+            (result[d] - ref_vals[d])
+            if (result.get(d) is not None and ref_vals.get(d) is not None)
+            else np.nan
+            for d in domains
+        ]
+        df[f"change_from_{reference_key}_{label}_m"] = change
+
+    out_path = os.path.join(output_dir, f"Change_from_{reference_key}_D2_D12.csv")
+    df.to_csv(out_path, index=False)
+    print(f"  Saved: {out_path}")
+    return df
+
+
+# Map in real coordinates: domains, datum line, every shoreline coloured by year
 def fig_spatial_map(domain_polys, datum_line, shorelines, out_path):
-    """Real-coordinate map: domain polygons, datum line, every shoreline
-    colored chronologically. The figure most likely to catch a CRS/file/
-    geometry mistake by eye before trusting any number."""
     fig, ax = plt.subplots(figsize=(10, 12))
 
     for d, poly in domain_polys.items():
@@ -242,8 +225,7 @@ def fig_spatial_map(domain_polys, datum_line, shorelines, out_path):
     cbar = fig.colorbar(sm, ax=ax, fraction=0.04, pad=0.02)
     cbar.set_label("Year (approx.)", fontsize=9)
 
-    # Zoom to the domain polygons' own extent, not the full (much longer)
-    # shoreline/datum-line length -- that's the point of this figure.
+    # Zoom to the domain polygons, not the much longer shoreline and datum line
     all_bounds = [poly.bounds for poly in domain_polys.values()]
     xmin = min(b[0] for b in all_bounds)
     ymin = min(b[1] for b in all_bounds)
@@ -257,7 +239,7 @@ def fig_spatial_map(domain_polys, datum_line, shorelines, out_path):
     ax.set_aspect("equal")
     ax.set_xlabel("Easting (m, EPSG:26918)")
     ax.set_ylabel("Northing (m, EPSG:26918)")
-    ax.set_title("Spatial sanity check \u2014 domains, datum line, shorelines "
+    ax.set_title("Spatial sanity check — domains, datum line, shorelines "
                  "(zoomed to domain range)",
                  fontsize=12, fontweight="bold")
     ax.legend(fontsize=8, loc="upper right")
@@ -267,9 +249,8 @@ def fig_spatial_map(domain_polys, datum_line, shorelines, out_path):
     print(f"  Saved: {out_path}")
 
 
+# Distance to datum (or change from a reference) per domain, coloured as the map
 def fig_distance_profile(all_raw, domains, out_path, reference_key=None):
-    """Distance-to-datum (or change-from-reference) per domain, one line
-    per shoreline, colored chronologically to match fig_spatial_map."""
     sort_keys = {k: v[1] for k, v in all_raw.items()}
     vmin, vmax = min(sort_keys.values()), max(sort_keys.values())
     norm = plt.Normalize(vmin=vmin, vmax=vmax if vmax > vmin else vmin + 1)
@@ -302,36 +283,7 @@ def fig_distance_profile(all_raw, domains, out_path, reference_key=None):
     print(f"  Saved: {out_path}")
 
 
-def save_change_table(all_raw, domains, reference_key, output_dir):
-    """Change-from-reference_key CSV for every shoreline, ready to feed
-    HAT_groin_effect_comparison.py's observed-change logic directly. Mirrors
-    HAT_duneline_geometric_distance.py / HAT_wetdry_geometric_distance.py's
-    combined-change-table format."""
-    if reference_key not in all_raw:
-        print(f"  REFERENCE_KEYS: '{reference_key}' not found among loaded "
-              f"shorelines -- skipping its change table.")
-        return None
-
-    ref_vals, _ = all_raw[reference_key]
-    df = pd.DataFrame({"Domain_ID": domains})
-    for label, (result, _) in sorted(all_raw.items(), key=lambda kv: kv[1][1]):
-        change = [
-            (result[d] - ref_vals[d])
-            if (result.get(d) is not None and ref_vals.get(d) is not None)
-            else np.nan
-            for d in domains
-        ]
-        df[f"change_from_{reference_key}_{label}_m"] = change
-
-    out_path = os.path.join(output_dir, f"Change_from_{reference_key}_D2_D12.csv")
-    df.to_csv(out_path, index=False)
-    print(f"  Saved: {out_path}")
-    return df
-
-
-# =============================================================================
-# MAIN
-# =============================================================================
+# Run: load, measure, validate, check seaward pairs, write tables and figures
 def main():
     print("=" * 78)
     print("GEOMETRIC DISTANCE + SANITY-CHECK FIGURES")
@@ -366,7 +318,7 @@ def main():
         print(f"  {label}: {n_ok}/{len(domains)} domains matched")
         all_raw[label] = (result, sort_key)
 
-    # --- Validation check ---
+    # Validate against the known-good series
     if VALIDATION_KEY and VALIDATION_KEY in all_raw and VALIDATION_KNOWN_GOOD:
         print(f"\nValidating '{VALIDATION_KEY}' against known-good values...")
         result, _ = all_raw[VALIDATION_KEY]
@@ -379,7 +331,7 @@ def main():
               f"-- {'OK' if max_diff <= VALIDATION_TOLERANCE_M else 'CHECK THIS'}")
         print(f"  Correlation: {np.corrcoef(rel, known)[0, 1]:.6f}")
 
-    # --- Seaward/landward pairwise checks ---
+    # Seaward/landward pairwise checks
     for seaward_key, ref_key in SEAWARD_CHECK_PAIRS:
         if seaward_key in all_raw and ref_key in all_raw:
             r1, _ = all_raw[seaward_key]
@@ -388,7 +340,7 @@ def main():
             ok = all(r1[d] < r2[d] for d in shared)
             print(f"\n'{seaward_key}' seaward of '{ref_key}' at all {len(shared)} shared domains: {ok}")
 
-    # --- Save combined raw-distance table ---
+    # Combined raw-distance table
     df = pd.DataFrame({"Domain_ID": domains})
     for label, (result, _) in all_raw.items():
         df[label] = [result.get(d) for d in domains]
@@ -396,12 +348,12 @@ def main():
     df.to_csv(csv_out, index=False)
     print(f"\nSaved: {csv_out}")
 
-    # --- Save change-from-reference tables (the actual plotting-ready shoreline_position_output) ---
+    # Change-from-reference tables, the plotting-ready output
     print("\nBuilding change-from-reference tables...")
     for ref_key in REFERENCE_KEYS:
         save_change_table(all_raw, domains, ref_key, OUTPUT_DIR)
 
-    # --- Figures ---
+    # Figures
     print("\nBuilding sanity-check figures...")
     fig_spatial_map(domain_polys, datum_line,
                     {k: v for k, v in shorelines.items()},

@@ -24,6 +24,18 @@ folders are hyphenated with a `HAT-groin-` prefix that matches nothing else.
 Both follow from this being a separate study, and neither is written down
 anywhere else, which is why it is written down here.
 
+**Its scripts follow `scripts/STYLE.md`**, like every other script in the
+repository: the header and author block, one-line comments, a CONFIG block,
+and the reasoning in the README of each folder. This has been the rule since
+2026-10-01, when the study's 29 scripts were brought in line. Until then the
+study's own conventions covered its code as well, and none of its scripts
+followed the guide. The layout departures above still stand: they are about
+where files live, not how a script is written.
+
+On the same day the precursor runs `1967_1997_run/` and `1967_1997_no_BE_run/`
+(5 scripts) were deleted, because neither `GROIN_PLAN.md` nor the fit cites
+them. `HAT-groin-buxton-output/README.md` records them.
+
 ## What to be careful of
 
 The trapping rate and the deterioration fraction are **fitted from different

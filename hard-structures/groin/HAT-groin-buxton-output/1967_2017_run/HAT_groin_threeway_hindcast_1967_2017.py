@@ -1,56 +1,18 @@
 """
-HAT_groin_threeway_hindcast_1967_2017.py
-================================
-Extended groin-DETERIORATION-test hindcast (1967-2017, GIS D2-D12). Built
-from HAT_groin_hindcast_1967_1997.py -- same inputs/conventions -- extended
-from a 30-year (1967-1997) groin-only test to a 51-year (1967-2017) test
-that also exercises the 1995->2003 deterioration ramp, which needs the
-longer window to actually play out (both dates fall after 1997, so the
-original 30-year test never reached them).
+The 1967-2017 groin rig in three runs: baseline, nourishment only, and nourishment plus groin.
 
-RUN_MODE = "three_way" (default, see Section 2) runs THREE hindcasts in one
-execution, driven by RUN_RECIPES: baseline (no groin, no nourishment),
-nourishment-only (no groin), and the full model (nourishment + groin) --
-all other parameters (storms, edge BE correction, groin M/fraction) held
-identical across all three. This is what feeds HAT_three_run_comparison.py
-directly. Set RUN_MODE = "single" to fall back to the old behavior (run
-whatever's in RUN_MATRIX, nourishment controlled by the single module-level
-ENABLE_HISTORICAL_NOURISHMENT flag) -- unchanged from before, and this is
-also what HAT_groin_sweep_single_combo.py still relies on internally when
-it calls run_one()/build_nourishment_arrays_from_manual_inputs() directly
-(those functions' default behavior is untouched; RUN_MODE only affects what
-main() does).
+    python HAT_groin_threeway_hindcast_1967_2017.py
 
-The "no_groin" recipes need nothing beyond your working base setup. The
-"groin" recipe additionally requires:
-  1. HAT_groin_module.py importable (same folder / on PYTHONPATH), and
-  2. the inert pre-AST hook in cascade.py (sets cascade._groin_callback).
-If the hook is missing, the groin run warns loudly (diagnostics stay empty)
-so you never mistake a no-op for a real groin run.
+RUN_MODE "three_way" runs the three RUN_RECIPES in one go for
+HAT_three_run_comparison.py; "single" runs RUN_MATRIX as the rig runner does.
+Inputs as HAT_groin_hindcast_1967_2017.py; writes to output/raw_runs/<run>/.
+M and the floor fraction are placeholders. Needs CASCADE (cascade_groin).
+Details: README.md beside this script.
 
-IMPORTANT -- END_YEAR CONVENTION: RUN_YEARS = END_YEAR - START_YEAR is
-EXCLUSIVE of END_YEAR (the original 1967-1997 run, with END_YEAR=1997, only
-ever simulated through 1996). To actually reach 2017 as the final modeled
-year, END_YEAR is set to 2018 below (51 model years, 1967-2017 inclusive) --
-matching the storm file built by HAT_build_1967_2017_storms.py.
-
-DETERIORATION (Section 2, GROIN_DETERIORATION_*): last repair 1995 (after
-Hurricane Gordon damage in 1994) -> linear decline -> Hurricane Isabel 2003
-locks in the new deteriorated state. GROIN_TRAPPING_RATE_M_YR and
-GROIN_DETERIORATION_FRACTION are marked <<< placeholder -- fill in your
-sensitivity sweep's actual winning combination before running the full-model
-recipe for real; the current values are just carried over from before the
-sweep existed.
-
-Historical beach nourishment (Section 2c: 1971, 1973) is now TOGGLABLE per
-run via build_nourishment_arrays_from_manual_inputs(enable=...) -- see that
-function and RUN_RECIPES for how the three-way comparison uses this. The
-single-run/RUN_MATRIX path still applies it identically to every run in the
-list by default, same as before.
-
-Plot with HAT_three_run_comparison.py (RUN_MODE="three_way", the default) or
-HAT_groin_effect_comparison.py (RUN_MODE="single", comparing exactly two
-named runs) -- see each script's own docstring.
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 import os
@@ -59,21 +21,14 @@ import sys
 import numpy as np
 import pandas as pd
 
-# ── Which Cascade to use ──────────────────────────────────────────────────────
-# While TESTING the groin, use a SANDBOX copy of cascade.py (named cascade_groin.py)
-# that lives INSIDE the cascade package folder, next to the real cascade.py, with
-# the 3-line groin hook added. Your real cascade.py stays untouched. Once the groin
-# is proven, fold the hook into the real cascade.py and set USE_SANDBOX_CASCADE=False.
+
+# --- CONFIG ------------------------------------------------------------------
+# Section 1: which Cascade (the sandbox cascade_groin.py carries the groin hook; README)
+
 USE_SANDBOX_CASCADE = True
 
-if USE_SANDBOX_CASCADE:
-    from cascade.cascade_groin import Cascade   # hooked sandbox copy
-else:
-    from cascade import Cascade                 # real package (hook folded in)
+# Section 2: domains (D2-D12)
 
-# =============================================================================
-# SECTION 1: DOMAIN CONFIGURATION  (D2-D12)
-# =============================================================================
 NUM_REAL_DOMAINS   = 11
 NUM_BUFFER_DOMAINS = 15
 FIRST_FILE_NUMBER  = 2
@@ -82,46 +37,19 @@ TOTAL_DOMAINS      = NUM_BUFFER_DOMAINS + NUM_REAL_DOMAINS + NUM_BUFFER_DOMAINS 
 START_REAL_INDEX   = NUM_BUFFER_DOMAINS                            # 15
 END_REAL_INDEX     = START_REAL_INDEX + NUM_REAL_DOMAINS           # 26
 
+# Section 3: which runs, and the groin
 
-def _gis_to_pad(gis_id):
-    """D2->15, D5->18, D6->19, D12->25."""
-    return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
+# Run keys for RUN_MODE "single": "no_groin", "groin" (needs the hook), "groin_be"
+RUN_MATRIX = ["groin"]              # RUN_MODE "single" only; ignored in "three_way"
 
-
-# =============================================================================
-# SECTION 2: WHICH RUNS + GROIN CONFIG
-# =============================================================================
-# Pick which run(s) to do. Put ONE in the list to run a single experiment at a
-# time; list several to run them in sequence. Names match the comparison folders and
-# the plotter's RUNS list.
-#   "no_groin"  -> HAT_1967_2018_M60_deterioration_no_groin   (erosive baseline)
-#   "groin"     -> HAT_1967_2018_M60_deterioration_groin      (dipole at D5/D6, WITH
-#                  deterioration; needs hook)
-#   "groin_be"  -> HAT_1967_2018_M60_deterioration_groin_be   (groin + background erosion)
-RUN_MATRIX = ["groin"]              # <- used by the OLD single-run path (still works,
-                                       # see main()'s RUN_MODE below); ignored when
-                                       # RUN_MODE = "three_way"
-
-# Three-run comparison mode for HAT_three_run_comparison.py: baseline (no
-# groin, no nourishment), nourishment-only (no groin), full model
-# (nourishment + groin). All other parameters (storms, edge BE correction,
-# groin M/fraction, etc.) stay identical across all three -- only nourishment
-# on/off and groin on/off vary, exactly matching what that figure needs.
-# Each entry: (label, run_key, enable_nourishment, run_name_suffix).
-# The baseline gets a DISTINCT suffix ("_no_BN") from the other two -- it
-# shares run_key="no_groin" with the nourishment-only run, and without a
-# distinct suffix the two would produce the identical run_name and overwrite
-# each other on disk.
+# (label, run_key, enable_nourishment, run_name_suffix); the baseline's suffix keeps its name distinct (README)
 RUN_RECIPES = [
     ("baseline (no groin, no nourishment)", "no_groin", False, "edge_calibrated_no_BN"),
     ("nourishment only",                    "no_groin", True,  "edge_calibrated"),
     ("full model (nourishment + groin)",    "groin",    True,  "edge_calibrated"),
 ]
 
-# RUN_MODE selects which path main() takes:
-#   "three_way" -> runs all three RUN_RECIPES entries above, in one execution
-#   "single"    -> old behavior, runs whatever's in RUN_MATRIX with the
-#                  module-level ENABLE_HISTORICAL_NOURISHMENT setting
+# "three_way" runs RUN_RECIPES; "single" runs RUN_MATRIX with ENABLE_HISTORICAL_NOURISHMENT
 RUN_MODE = "three_way"
 
 # Buxton groin: sits in D6 (source/accretion), starves D5 (sink/erosion).
@@ -130,166 +58,49 @@ GROIN_DOWNDRIFT_GIS = 5
 GROIN_TRAPPING_RATE_M_YR = 50.0    # <<< placeholder -- replace with your sweep's winning M
 GROIN_INSTALL_YEAR  = 1970         # inert before this (free 1967-69 control window)
 
-# Deterioration: last repair 1995 (after Hurricane Gordon, 1994) -> linear
-# decline -> Hurricane Isabel 2003 locks in the new deteriorated state.
-# Delay is relative to GROIN_INSTALL_YEAR (this script's own 1970, not the
-# true historical 1969), so the module resolves the right calendar years
-# regardless of which install-year convention this test uses.
+# Deterioration: last repair 1995, linear decline, Isabel 2003 locks it in; delay counts from install (README)
 GROIN_DETERIORATION_DELAY_YEARS = 1995 - GROIN_INSTALL_YEAR   # = 25
 GROIN_DETERIORATION_MODE        = "linear_ramp"
 GROIN_DETERIORATION_RAMP_YEARS  = 2003 - 1995                  # = 8
-# Floor fraction: originally M/3 (~0.333, Katherine's "one groin still
-# functional out of three" framing), but that removed too much of the groin
-# signal -- testing 0.5 (50% trapping retained) instead as a less severe
-# deterioration assumption. Still folded into the ramp itself (not run as a
-# separate standalone experiment) per the plan worked out with
-# Laura/Katherine for the Coastal Sediments 2027 abstract.
+# Floor fraction (history of the value: README)
 GROIN_DETERIORATION_FRACTION    = 0.90   # <<< placeholder -- replace with your sweep's winning fraction
 
-# Optional regional background erosion for a "groin_be" run (only used if that
-# key is in RUN_MATRIX). m/yr, negative = erosive.
+# Regional background erosion for a "groin_be" run, m/yr, negative = erosive
 REGIONAL_BE_RATE_M_YR = 0
 
-# =============================================================================
-# SECTION 2b: EDGE SOURCE/SINK CORRECTION (buffer-orientation boundary fix)
-# =============================================================================
-# Mirrors the main 1984-2024 hindcast's edge correction at GIS 1 / GIS 90: the
-# outermost REAL domains (here D2 and D12) sit directly against buffer padding,
-# and the buffer's flat/repeated orientation can introduce an artificial
-# alongshore-transport signal right at that boundary. Set a background_erosion
-# value (m/yr, same sign convention as REGIONAL_BE_RATE_M_YR: negative =
-# erosive) at the edge domain(s) to correct for it.
-#
-# This is a STRUCTURAL fix (same role as GIS 1 / 90 in the main script), not a
-# scientific choice like REGIONAL_BE_RATE_M_YR below -- so it's applied to
-# EVERY run in RUN_MATRIX (no_groin, groin, groin_be alike), and it STACKS
-# additively with REGIONAL_BE_RATE_M_YR on groin_be runs rather than being
-# overwritten by it. Set both edge values to 0.0 to disable.
+# Section 3b: edge source/sink correction at D2 and D12 (structural, every run; README)
+
 APPLY_EDGE_BE_CORRECTION = True
 EDGE_BE_RATES_GIS = {
     2:  5.0,   # D2  -- south edge, against buffer (solve for this)
     12: 10.0,   # D12 -- north edge, against buffer (solve for this)
 }
 
-# =============================================================================
-# SECTION 2c: HISTORICAL BEACH NOURISHMENT (1971, 1973)
-# =============================================================================
-# Two documented NPS nourishment projects fall within this 1967-2017 window,
-# both targeting the erosion embayment adjacent to the (Navy, 1969) groin
-# field this script already models. Applied to EVERY run in RUN_MATRIX
-# (no_groin, groin, groin_be alike) -- same treatment as the edge BE
-# correction above -- since these are real historical events, not a
-# scientific/experimental variable.
-#
-# SOURCES:
-#   - Machemehl (1973): reports the 1971 volume as 300,000 cy, sourced from a
-#     man-made lake at Cape Point, pumped via 14-in cutterhead dredge
-#     (JA LaPort Dredging Co.) ~3.5 mi to a discharge point near the Hatteras
-#     Court Motel, left to migrate south under normal littoral drift.
-#   - NPS (1980), pg 48: reports the 1971 volume as 200,000 cy (borrow
-#     material "proved insufficient to have any significant impact"); reports
-#     the 1973 volume as 1,300,000 cy from an interior Cape Point borrow area
-#     (basin still visible today as altered vegetation), discharged via a
-#     16-in dredge + 3 boosters ~4 mi north near the Hatteras Court Motel,
-#     widening the beach ~500 ft over a cited 5,000-ft reach.
-#   - Dolan, Hayden, Riddel & Ponton (1974), "1973 Buxton Beach Nourishment
-#     Project: An Annotated Photographic Atlas," NPS Contract No.
-#     CX5000031059 (the primary, station-surveyed source behind NPS 1980's
-#     1973 figures): independently confirms 200,000 cy for 1971 (agreeing
-#     with NPS 1980, not Machemehl); gives exact engineering stations for the
-#     1973 project (south limit STA 2235+00, explicitly excluding the groin
-#     cells -- "no material was pumped into the groin cells, southern
-#     sediment drift caused a build-up" -- north limit near STA 2164+80,
-#     MP41.0) and confirms the Navy's 1969 groin field is this script's
-#     modeled groin.
-#
-# VOLUME CHOICE: using NPS(1980)'s 200,000 cy for 1971 rather than
-# Machemehl's 300,000 cy -- two independent sources (NPS 1980, Dolan et al.
-# 1974) agree on 200,000 cy against one source for 300,000 cy.
-#
-# DOMAIN RANGE (derived, NOT yet confirmed against the project's own GIS
-# domain shapefile -- verify before treating these as final):
-#   1973: templated engineered fill, ~D6-D10. Anchored on the atlas's own
-#     station data (south limit STA 2235 ~= 0.24 domains north of the groin;
-#     north limit STA 2164+80 ~= 4.5 domains north of the groin), converted
-#     at 500 m/domain and 100 ft/station, using this script's GROIN_UPDRIFT/
-#     DOWNDRIFT_GIS (D5/D6) as the shared anchor point with the atlas's
-#     "Navy Groins" landmark.
-#   1971: NOT a templated fill -- the atlas gives no station range for it,
-#     only that it targeted the same "north embayment" and was discharged as
-#     a point source near the motels, then left to migrate south under
-#     natural littoral drift. Modeled here as a SINGLE-domain point
-#     injection at D8 (the motels, per the derived station crosswalk),
-#     deliberately NOT spread across a template -- letting BRIE's own
-#     alongshore transport carry it south is the same "extent is emergent,
-#     not prescribed" logic already used for the groin dipole, and matches
-#     what the historical record says actually happened.
+# Section 3c: historical nourishment, 1971 and 1973 (sources and domains: README)
+
+# Default for callers that pass no enable= to the schedule builder
 ENABLE_HISTORICAL_NOURISHMENT = True
 
 _CY_TO_M3       = 0.764555   # cubic yards -> cubic metres
 DOMAIN_LENGTH_M = 500        # alongshore width of one CASCADE domain (m)
 
-# REMINDER: every volume below is stored/printed in m^3, NOT cubic yards.
-# 1 cy = 0.764555 m^3, so the m^3 figures look ~24% SMALLER than the cy
-# numbers you'll find quoted in the source reports (e.g. 1973's "1,300,000
-# cy" becomes 993,921.5 m^3 total). If a number here looks low compared to
-# what you remember reading in a report, check units before assuming an
-# error -- it's very likely just cy vs m^3, not a mistake.
-
-# Calendar years of nourishment events - SORTED, one entry per distinct year
+# Fill years, sorted: 1971 point source near D8, 1973 template D6-D10 (volumes are m^3, not cy)
 HAT_BN_YEARS = [1971, 1973]
-#                 ^       ^
-#              point-source  templated fill
-#              near D8        D6-D10
 
-# HAT_BN_VOLUME_BY_DOMAIN
-# Key   : GIS domain ID (2-12)
-# Value : [volume_for_1971_m3, volume_for_1973_m3]
-#         0 = not nourished that year; non-zero = total m^3 for that domain
+# GIS domain -> [m^3 in 1971, m^3 in 1973]; 0 = not nourished that year
 HAT_BN_VOLUME_BY_DOMAIN = {
-    # --- 1971: single-domain point injection at D8 (Hatteras Court Motel) ---
-    #   200,000 cy x 0.764555 = 152,911.0 m^3, placed entirely in D8
+    # 1971: 200,000 cy, all in D8 (Hatteras Court Motel)
      8: [round(200_000 * _CY_TO_M3, 1), 0],
-    # --- 1973: templated fill, D6-D10 (5 domains, 1,300,000 cy) ---
-    #   1,300,000 / 5 x 0.764555 = 198,784.3 m^3/domain
+    # 1973: 1,300,000 cy over D6-D10, 198,784.3 m^3 per domain
      6: [0, round(1_300_000 / 5 * _CY_TO_M3, 1)],
      7: [0, round(1_300_000 / 5 * _CY_TO_M3, 1)],
      9: [0, round(1_300_000 / 5 * _CY_TO_M3, 1)],
     10: [0, round(1_300_000 / 5 * _CY_TO_M3, 1)],
 }
-# NOTE: D8 needs entries for BOTH years (1971 point injection AND its share of
-# the 1973 template), so its list is built by combining the two rather than
-# appearing twice as a dict key.
-HAT_BN_VOLUME_BY_DOMAIN[8][1] = round(1_300_000 / 5 * _CY_TO_M3, 1)
 
-# NOTE: unlike earlier versions of this script, ENABLE_HISTORICAL_NOURISHMENT
-# no longer empties HAT_BN_YEARS/HAT_BN_VOLUME_BY_DOMAIN at import time --
-# the full schedule stays intact here, and build_nourishment_arrays_from_
-# manual_inputs() below now takes an explicit enable= override so a single
-# script run (see main()'s RUN_RECIPES) can produce nourishment-on and
-# nourishment-off runs in the same execution, not just a fixed module-wide
-# setting. ENABLE_HISTORICAL_NOURISHMENT is still the DEFAULT used whenever
-# a caller doesn't pass an explicit override (e.g. HAT_groin_sweep_single_
-# combo.py, which is unaffected by this change).
+# Section 4: period and file paths
 
-# Per-domain flag passed to Cascade's beach_nourishment_module: True only for
-# domains that receive a nourishment event at some point in this window.
-# (Superseded per-run inside run_one(), which derives this fresh from
-# whatever schedule was actually passed to that call -- kept here only for
-# backward compatibility with anything that might reference it directly.)
-NOURISHMENT_MANAGEMENT_ON = [False] * TOTAL_DOMAINS
-for _gis_id in HAT_BN_VOLUME_BY_DOMAIN:
-    _pad_idx = _gis_to_pad(_gis_id)
-    if 0 <= _pad_idx < TOTAL_DOMAINS:
-        NOURISHMENT_MANAGEMENT_ON[_pad_idx] = True
-
-# =============================================================================
-# SECTION 3: PERIOD / FILE PATHS   (identical to base run)
-# =============================================================================
-# Derived, not hardcoded. This was `r"/"`, which silently resolved every data
-# path to the filesystem root -- the scripts imported fine and then reported
-# every input as missing. Walking up to pyproject.toml survives the repo
-# reorganisation that moved this tree from scripts/groin/ to hard-structures/.
+# Repo root, found by searching upward (ORGANIZATION.md rule 5)
 PROJECT_BASE_DIR = str(next(
     p for p in pathlib.Path(__file__).resolve().parents
     if (p / "pyproject.toml").exists()))
@@ -320,9 +131,8 @@ ISLAND_OFFSET_FILE = os.path.join(
 TOPO_DUNE_INIT_YEAR = "2009"
 TOPO_DUNE_SUBFOLDER = "2009"
 
-# =============================================================================
-# SECTION 4: SIMULATION PARAMETERS   (identical to base run)
-# =============================================================================
+# Section 5: simulation parameters
+
 BERM_ELEVATION = 1.7
 MHW_ELEVATION  = 0.36
 NUM_CORES      = 1
@@ -339,17 +149,39 @@ OVERWASH_FILTER_DEFAULT = 0.0
 
 RUN_NAME_SUFFIX = "edge_calibrated"    # -> HAT_1967_2018_M60_deterioration_{run_key}
 
-# Auto-generate + save figures into each run's folder when the run finishes.
+# Figures and a shoreline GIF saved into each run's folder when it finishes
 MAKE_FIGURES = True
 MAKE_RUN_GIF = True     # animate the modeled shoreline evolving over the run
+# -----------------------------------------------------------------------------
+
+
+# Pick the Cascade build
+if USE_SANDBOX_CASCADE:
+    from cascade.cascade_groin import Cascade   # hooked sandbox copy
+else:
+    from cascade import Cascade                 # real package (hook folded in)
+
+
+# GIS domain id -> padded index (D2->15, D5->18, D6->19, D12->25)
+def _gis_to_pad(gis_id):
+    return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
+
+
+# D8 takes both years: the 1971 point source and its share of the 1973 template
+HAT_BN_VOLUME_BY_DOMAIN[8][1] = round(1_300_000 / 5 * _CY_TO_M3, 1)
+
+# Module-wide flag kept for anything that reads it; run_one() derives its own per run (README)
+NOURISHMENT_MANAGEMENT_ON = [False] * TOTAL_DOMAINS
+for _gis_id in HAT_BN_VOLUME_BY_DOMAIN:
+    _pad_idx = _gis_to_pad(_gis_id)
+    if 0 <= _pad_idx < TOTAL_DOMAINS:
+        NOURISHMENT_MANAGEMENT_ON[_pad_idx] = True
 
 os.chdir(PROJECT_BASE_DIR)
 os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
 
 
-# =============================================================================
-# SECTION 5: LOADERS   (verbatim from base run)
-# =============================================================================
+# Stop if the storm, offset or parameter file is missing
 def check_inputs_exist():
     for label, path in [("STORM_FILE", STORM_FILE),
                         ("ISLAND_OFFSET_FILE", ISLAND_OFFSET_FILE),
@@ -362,6 +194,7 @@ def check_inputs_exist():
     print("  All required input files found.")
 
 
+# Island offset per padded domain, metres in the file, decameters out
 def load_island_offset_dam():
     offset_all = np.loadtxt(ISLAND_OFFSET_FILE, skiprows=1, delimiter=",")
     offset_dam = offset_all / 10.0
@@ -371,6 +204,7 @@ def load_island_offset_dam():
     return list(offset_dam)
 
 
+# Padded elevation and dune file lists, from the flat 2009 layout (README)
 def build_file_lists():
     elev, dune = [], []
     for _ in range(START_REAL_INDEX):
@@ -398,49 +232,8 @@ def build_file_lists():
     return elev, dune
 
 
-def get_x_s_TS(b3d):
-    if hasattr(b3d, "x_s_TS"):
-        return np.asarray(b3d.x_s_TS, dtype=float)
-    if hasattr(b3d, "_x_s_TS"):
-        return np.asarray(b3d._x_s_TS, dtype=float)
-    raise AttributeError("No x_s_TS / _x_s_TS on Barrier3D object.")
-
-
-def build_shoreline_matrix(cascade, to_meters=True):
-    b3d_list = cascade.barrier3d
-    ndom = len(b3d_list)
-    nt   = len(get_x_s_TS(b3d_list[0]))
-    shoreline = np.zeros((nt, ndom), dtype=float)
-    for j in range(ndom):
-        shoreline[:, j] = get_x_s_TS(b3d_list[j])
-    if to_meters:
-        shoreline *= 10.0
-    return shoreline
-
-
+# Per-year nourishment on/off and m^3/m arrays; enable=None uses ENABLE_HISTORICAL_NOURISHMENT
 def build_nourishment_arrays_from_manual_inputs(enable=None):
-    """
-    Build per-year nourishment-on and volume arrays for the CASCADE time loop,
-    from HAT_BN_YEARS + HAT_BN_VOLUME_BY_DOMAIN (Section 2c). Mirrors the main
-    1984-2024 hindcast's build_nourishment_arrays_from_manual_inputs() exactly.
-    Years outside [START_YEAR, END_YEAR] are silently skipped.
-
-    Parameters
-    ----------
-    enable : bool or None, optional
-        If None (default), falls back to the module-level
-        ENABLE_HISTORICAL_NOURISHMENT -- this is what every EXISTING caller
-        (e.g. HAT_groin_sweep_single_combo.py, which calls this with no
-        arguments) already gets, unchanged. Pass True/False explicitly to
-        override per-call -- e.g. main()'s RUN_RECIPES loop uses this to
-        produce a nourishment-off run and a nourishment-on run in the same
-        script execution, without needing two separate module-level settings.
-
-    Returns
-    -------
-    nourishment_on_by_year     : dict {year: np.ndarray[TOTAL_DOMAINS]}, 1/0
-    nourishment_volume_by_year : dict {year: list[TOTAL_DOMAINS]}, m^3/m
-    """
     if enable is None:
         enable = ENABLE_HISTORICAL_NOURISHMENT
     years = HAT_BN_YEARS if enable else []
@@ -496,14 +289,30 @@ def build_nourishment_arrays_from_manual_inputs(enable=None):
     return nourishment_on_by_year, nourishment_volume_by_year
 
 
-# =============================================================================
-# SECTION 6: RUN ONE  (base-run body + optional groin attachment)
-# =============================================================================
+# A Barrier3D object's shoreline time series, under either attribute name
+def get_x_s_TS(b3d):
+    if hasattr(b3d, "x_s_TS"):
+        return np.asarray(b3d.x_s_TS, dtype=float)
+    if hasattr(b3d, "_x_s_TS"):
+        return np.asarray(b3d._x_s_TS, dtype=float)
+    raise AttributeError("No x_s_TS / _x_s_TS on Barrier3D object.")
+
+
+# Shoreline matrix [year x padded domain], metres by default
+def build_shoreline_matrix(cascade, to_meters=True):
+    b3d_list = cascade.barrier3d
+    ndom = len(b3d_list)
+    nt   = len(get_x_s_TS(b3d_list[0]))
+    shoreline = np.zeros((nt, ndom), dtype=float)
+    for j in range(ndom):
+        shoreline[:, j] = get_x_s_TS(b3d_list[j])
+    if to_meters:
+        shoreline *= 10.0
+    return shoreline
+
+
+# Save the run's figures with HAT_plot_groin_runs.py's functions; never blocks the run
 def _save_run_figures(run_name, run_dir, shoreline_m):
-    """Generate + save this run's figures into its own folder, reusing the
-    plotting functions from HAT_plot_groin_runs.py (single source of truth --
-    no duplicated plot code). Single-run figures: position change, rate,
-    trajectories. Never blocks the run: any plotting error is caught + reported."""
     try:
         import matplotlib
         matplotlib.use("Agg")   # headless save, no popups from the run script
@@ -527,11 +336,8 @@ def _save_run_figures(run_name, run_dir, shoreline_m):
             print(f"  [figure '{maker.__name__}' skipped] {e}")
 
 
+# Animate D2-D12 year by year against the year-0 planform, ocean at bottom
 def _save_run_gif(run_name, run_dir, shoreline_m):
-    """Animate the modeled shoreline over the run (real domains D2-D12), year by
-    year, in POSITION mode matching the main hindcast: real planform relative to
-    the year-0 alongshore mean, ocean at bottom (seaward downward). Shows the
-    fillet growing at the groin against the real island orientation."""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -553,6 +359,7 @@ def _save_run_gif(run_name, run_dir, shoreline_m):
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
+    # One frame: year-0 reference, this year, shading between, the groin line
     def draw(t):
         ax.clear()
         # year-0 reference planform (dashed grey)
@@ -573,8 +380,8 @@ def _save_run_gif(run_name, run_dir, shoreline_m):
             ax.set_ylim(ymin - pad, ymax + pad)
         ax.set_xlabel(f"GIS Domain ID (D{FIRST_FILE_NUMBER}-D{LAST_FILE_NUMBER})")
         up_word = "landward" if OCEAN_AT_BOTTOM else "seaward"
-        ax.set_ylabel(f"Cross-shore position (m, rel. {START_YEAR} mean)  {up_word} \u25b2")
-        ax.set_title(f"{run_name}  \u2014  {START_YEAR + t}")
+        ax.set_ylabel(f"Cross-shore position (m, rel. {START_YEAR} mean)  {up_word} ▲")
+        ax.set_title(f"{run_name}  —  {START_YEAR + t}")
         ax.text(0.02, 0.06, str(START_YEAR + t), transform=ax.transAxes,
                 fontsize=22, fontweight="bold", color="#FF8C00", alpha=0.8)
         ax.grid(alpha=0.3)
@@ -590,19 +397,13 @@ def _save_run_gif(run_name, run_dir, shoreline_m):
         print(f"  [run GIF skipped] {e}")
 
 
+# One run: build Cascade, attach the groin if asked, step with the fills, save matrix, figures, logs
 def run_one(run_key, island_offset_dam, elevation_files, dune_files,
             historical_nourishment_on_by_year, historical_nourishment_volume_by_year):
     groin_on = run_key in ("groin", "groin_be")
     be_on    = run_key == "groin_be"
 
-    # Derived fresh from the schedule actually passed to THIS call, not the
-    # fixed module-level NOURISHMENT_MANAGEMENT_ON -- so a run built with an
-    # empty (nourishment-disabled) schedule correctly gets beach_nourishment_
-    # module=False everywhere too, not just zero volume. This matters: even
-    # with nourish_now never firing, beach_nourishment_module=True still runs
-    # the whole NourishmentManager.update() every year (narrow_break checks,
-    # beach-width tracking, etc.) -- a genuinely clean "no human intervention
-    # machinery at all" baseline needs this False, not just quietly zeroed.
+    # Nourishment module per domain from THIS call's schedule, so a no-fill run has it off entirely (README)
     nourishment_management_on = [False] * TOTAL_DOMAINS
     for _year_arr in historical_nourishment_on_by_year.values():
         for _idx, _flag in enumerate(_year_arr):
@@ -711,7 +512,7 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
         # Reset per-step nourishment flags so nothing carries over from prior year.
         cascade.nourish_now = np.zeros(TOTAL_DOMAINS)
 
-        # ── HISTORICAL BEACH NOURISHMENT (1971, 1973 -- see Section 2c) ────
+        # Historical fills, 1971 and 1973
         if current_year in historical_nourishment_on_by_year:
             nourish_now = np.asarray(
                 historical_nourishment_on_by_year[current_year], dtype=float
@@ -728,14 +529,7 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
                     if nourish_now[iB3D] != 1:
                         continue
 
-                    # IMPORTANT: must set Cascade's OWN nourishment_volume list,
-                    # NOT cascade.nourishments[iB3D]._nourishment_volume directly.
-                    # cascade.update() overwrites nourishments[iB3D].nourishment_volume
-                    # from cascade._nourishment_volume[iB3D] every single call (see
-                    # cascade_groin.py, right before nourishments[iB3D].update() is
-                    # called) -- setting the object's attribute directly gets
-                    # silently discarded the moment update() runs, which is exactly
-                    # why the requested volume never reached x_s.
+                    # Cascade's own nourishment_volume list; update() overwrites the object's attribute (README)
                     cascade.nourishment_volume[iB3D] = float(nourish_vol[iB3D])
 
                     gis_id = FIRST_FILE_NUMBER + (iB3D - START_REAL_INDEX)
@@ -800,9 +594,7 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
     return run_name
 
 
-# =============================================================================
-# SECTION 7: MAIN
-# =============================================================================
+# Run: check inputs, then the three recipes (or RUN_MATRIX in "single" mode)
 def main():
     global RUN_NAME_SUFFIX   # temporarily overridden per-recipe in three_way mode, restored after
 

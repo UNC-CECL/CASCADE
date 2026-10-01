@@ -1,29 +1,27 @@
+"""
+Did the 1971 and 1973 nourishments reach x_s in a saved rig run, or were they skipped inside CASCADE?
+
+    python HAT_check_nourishment_applied.py
+
+Reads the run's saved .npz (RUN_DIR, RUN_NAME) and compares the volume the
+runner requested with nourishment_volume_TS, which only the nourish branch
+writes. Prints the table; writes nothing.
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
+"""
+
 from pathlib import Path
-"""
-HAT_check_nourishment_applied.py
-==================================
-Checks whether historical beach nourishment (1971, 1973) actually reached
-x_s inside CASCADE, or was silently skipped by NourishmentManager's
-narrow_break early-return (beach_dune_manager.py line ~650) -- which exits
-BEFORE the nourish block, regardless of nourish_now/volume having been set
-correctly by the runner script.
-
-Console-log prints from the hindcast runner only confirm what the RUNNER
-requested (set before cascade.update() is called that year) -- they cannot
-see whether Cascade's internal update() actually executed the nourish
-branch. This script checks the one signal that can: nourishment_volume_TS,
-which is only written on the exact line inside the nourish branch, so a
-zero there when a nonzero volume was requested means it was blocked.
-
-Usage: point RUN_DIR at the saved run folder (the one containing the
-{run_name}.npz file), then run.
-"""
-
 import os
+
 import numpy as np
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+
+# --- CONFIG ------------------------------------------------------------------
+# Repo root, found by searching upward (ORGANIZATION.md rule 5)
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
@@ -34,22 +32,24 @@ START_YEAR = 1967
 NUM_BUFFER_DOMAINS = 15
 FIRST_FILE_NUMBER = 2
 
-# Domains and years to check (matches the historical nourishment schedule)
+# Domains and years to check (the historical nourishment schedule)
 CHECK_DOMAINS_GIS = [6, 7, 8, 9, 10]
 CHECK_YEARS = [1971, 1973]
 
-# Expected requested volumes (m^3/m), from the actual console log -- used
-# only to print a side-by-side comparison, not to change the check itself.
+# Requested volumes (m^3/m) from the run's console log; printed beside, never used in the check
 EXPECTED_VOLUME_M3_PER_M = {
     1971: {6: 0.0, 7: 0.0, 8: 305.8, 9: 0.0, 10: 0.0},
     1973: {6: 397.6, 7: 397.6, 8: 397.6, 9: 397.6, 10: 397.6},
 }
+# -----------------------------------------------------------------------------
 
 
+# GIS domain id -> padded index
 def _gis_to_pad(gis_id):
     return NUM_BUFFER_DOMAINS + (gis_id - FIRST_FILE_NUMBER)
 
 
+# Run: load the saved Cascade, print requested vs applied per domain and year
 def main():
     npz_path = os.path.join(RUN_DIR, f"{RUN_NAME}.npz")
     if not os.path.isfile(npz_path):

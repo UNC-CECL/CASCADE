@@ -1,56 +1,17 @@
 #!/usr/bin/env python3
-"""The Buxton groin's observed history, and how it maps onto the hindcast.
+"""
+The Buxton groin's observed fillet history, and the module's trapping schedule against it.
 
-One figure answering three questions that kept getting tangled:
-
-    WHEN did the groin affect the shoreline?
-        Continuously from 1969, but in two opposite regimes. It TRAPPED through
-        2004 and has been RELEASING since. The turning point coincides with the
-        2003 storm damage, not with anything in the model.
-
-    IS THERE A DIFFERENT SIGNAL IN EACH HINDCAST PERIOD?
-        Yes, and they have opposite sign. Period 1 (1984-2004) is still
-        accumulating; period 2 (2004-2024) is draining. Both rates are computed
-        here and quoted in the caption.
-
-    HOW DOES THE MODULE REPRESENT THAT?
-        `GroinCallback` carries an absolute calendar schedule -- install 1969,
-        deterioration onset 1996 (last repair), linear ramp to 2003 (storm),
-        then hold at M*f. The lower panel draws that schedule against the
-        observations, which is the clearest way to see that the module's
-        built-in timeline already matches the measured history, and where it
-        cannot follow.
-
-WHAT THE MODULE CANNOT DO, DRAWN RATHER THAN FOOTNOTED
-    Trapping is bounded at >= 0, so the groin can stop adding sand but cannot
-    actively drain the fillet. Period 2's observed release is therefore outside
-    what the parameterisation can produce at any (M, f), and the lower panel
-    hatches that region so the limitation is visible next to the data.
-
-DATA
-    Fillet is x_s[D5] - x_s[D6] against a fixed 1967 datum, from
-    `Change_from_wetdry_1967_D2_D12.csv` -- 24 dated wet/dry surveys produced by
-    the GIS analysis in HAT-groin-gis-analysis. Landward-positive, so a rising
-    curve means the updrift side is holding while the downdrift side retreats,
-    which is what a groin builds.
-
-STYLE, 2026-09-11
-    Drawn under the project house style (`scripts/site_layer/hat_figure_style.py`). Three
-    things changed beyond type and colour. The canvas is a 190 mm column
-    instead of 14 in, so its type survives a page. The phase washes are gone:
-    four overlapping shades on one panel (three phases plus two hindcast
-    windows) could not be told apart, so the phases are named with their rates
-    in the caption and the hindcast windows are a strip against the top edge.
-    And the title sentences and the footnote paragraph are in CAPTIONS.md
-    beside the image, with every number in them computed here rather than
-    written in.
-
-Usage:
     python HAT_groin_timeline_figure.py
 
-Writes groin_timeline_and_hindcast.png (and .pdf) beside this file.
+Reads the wet/dry change table (fillet = GIS 5 minus GIS 6 since 1967); writes
+groin_timeline_and_hindcast.png (and .pdf) beside this file, caption in CAPTIONS.md.
+Details: README.md beside this script.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -72,30 +33,28 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 
-# The structure's documented history. These are the values GroinCallback is
-# configured with, not fitted quantities.
+# The structure's documented history, as GroinCallback is configured (not fitted)
 INSTALL_YEAR = 1969
 LAST_REPAIR_YEAR = 1996
 STORM_YEAR = 2003
 
-# The chosen parameters. M is an EFFECTIVE, grid-specific rate -- see the
-# accompanying GROIN_PLAN.md for why it is not a sediment flux.
+# The chosen parameters; M is an effective, grid-specific rate (GROIN_PLAN.md)
 CHOSEN_M, CHOSEN_F = 60.0, 0.6
 
 PERIODS = ((1984, 2004, "hindcast period 1"), (2004, 2024, "hindcast period 2"))
 UPDRIFT_GIS, DOWNDRIFT_GIS = 6, 5
 
-# The schedule is the thing under test; the observations are the record it is
-# read against. The RdBu vintage pair is not used here -- nothing on this
-# figure is a 1984/1997 vintage.
+# The schedule under test in ACCENT; no RdBu, nothing here is a 1984/1997 vintage
 SCHEDULE_COLOR, SCHEDULE_FILL = C["ACCENT"], C["ACCENT_FILL"]
+# -----------------------------------------------------------------------------
 
 
+# {year: fillet in metres} against the fixed 1967 datum
 def observed_fillet():
-    """{year: fillet in metres} against the fixed 1967 datum."""
     frame = pd.read_csv(WETDRY_TABLE).set_index("Domain_ID")
     out = {}
     for column in frame.columns:
@@ -111,22 +70,8 @@ def observed_fillet():
     return dict(sorted(out.items()))
 
 
-def retreat_at(year):
-    """(updrift, downdrift) retreat since 1967, positive landward, one survey.
-
-    The caption's "175 m against 25 m" pair: read from the table rather than
-    written into the prose. The column is matched on its survey year, not
-    built by format -- the real names carry a trailing unit ("_m") and two of
-    them a month ("1972_july"), so a formatted name misses."""
-    frame = pd.read_csv(WETDRY_TABLE).set_index("Domain_ID")
-    pattern = re.compile(r"change_from_wetdry_1967_wetdry_{}(?:_|$)".format(year))
-    column = next(c for c in frame.columns if pattern.match(c))
-    return (float(frame.loc[UPDRIFT_GIS, column]),
-            float(frame.loc[DOWNDRIFT_GIS, column]))
-
-
+# M_eff for a calendar year, mirroring GroinCallback._effective_trapping_rate
 def effective_trapping(year, M=CHOSEN_M, f=CHOSEN_F):
-    """M_eff for a calendar year -- mirrors GroinCallback._effective_trapping_rate."""
     if year < INSTALL_YEAR:
         return 0.0
     if year < LAST_REPAIR_YEAR:
@@ -139,20 +84,8 @@ def effective_trapping(year, M=CHOSEN_M, f=CHOSEN_F):
     return M - taper * (M - floor)
 
 
-def phase(obs, start, end):
-    """(first survey, last survey, change, rate) inside [start, end]."""
-    years = sorted(y for y in obs if start <= y <= end)
-    first, last = years[0], years[-1]
-    delta = obs[last] - obs[first]
-    return first, last, delta, delta / (last - first)
-
-
+# The hindcast windows as a strip against the top edge, named once (README)
 def period_strip(axis, spans, frac=0.07, shade="0.94"):
-    """The hindcast windows as a band against the top edge, named once.
-
-    A strip rather than a full-height wash, for the same reason the phase
-    washes were dropped: several overlapping greys on one panel read as one.
-    The twin of this helper is in HAT_groin_two_shorelines_figure.py."""
     for start, end, label in spans:
         axis.add_patch(plt.Rectangle(
             (start, 1.0 - frac), end - start, frac,
@@ -163,6 +96,24 @@ def period_strip(axis, spans, frac=0.07, shade="0.94"):
                   va="center", fontsize=7, color=INK_MUTED, zorder=1)
 
 
+# (first survey, last survey, change, rate) inside [start, end]
+def phase(obs, start, end):
+    years = sorted(y for y in obs if start <= y <= end)
+    first, last = years[0], years[-1]
+    delta = obs[last] - obs[first]
+    return first, last, delta, delta / (last - first)
+
+
+# (updrift, downdrift) retreat since 1967 at one survey, landward-positive (README)
+def retreat_at(year):
+    frame = pd.read_csv(WETDRY_TABLE).set_index("Domain_ID")
+    pattern = re.compile(r"change_from_wetdry_1967_wetdry_{}(?:_|$)".format(year))
+    column = next(c for c in frame.columns if pattern.match(c))
+    return (float(frame.loc[UPDRIFT_GIS, column]),
+            float(frame.loc[DOWNDRIFT_GIS, column]))
+
+
+# Run: observed fillet above, module schedule below, then the caption and phase table
 def main():
     apply_style()
 
@@ -174,21 +125,20 @@ def main():
         2, 1, figsize=figsize("double", aspect=0.78), sharex=True,
         gridspec_kw=dict(height_ratios=[3, 2]), constrained_layout=True)
 
-    # ---- the structure's dated events, on both panels -------------------
+    # The structure's dated events, on both panels
     for axis in (top, bottom):
         for year in (INSTALL_YEAR, LAST_REPAIR_YEAR, STORM_YEAR):
             axis.axvline(year, color=INK_MUTED, linestyle=(0, (1, 2)),
                          linewidth=0.8, zorder=2)
 
-    # ---- (a) the observed fillet ----------------------------------------
+    # (a) The observed fillet
     top.plot(years, values, marker="o", markersize=3.4, color=INK,
              linewidth=1.6, zorder=5, label="observed fillet, wet/dry surveys")
 
     for year, label in ((INSTALL_YEAR, "built"),
                         (LAST_REPAIR_YEAR, "last repair"),
                         (STORM_YEAR, "storm damage")):
-        # Clear of the curve: at 0.025 the install label ran through the 1970
-        # survey, which reads as a label for the marker.
+        # Labels at 0.10, clear of the 1970 survey marker (README)
         top.text(year + 0.7, 0.10, "{} {}".format(label, year), rotation=90,
                  fontsize=7, color=INK_MUTED, va="bottom", zorder=6,
                  transform=top.get_xaxis_transform())
@@ -200,7 +150,7 @@ def main():
     open_frame(top)
     _title(top, 0, "the measured history")
 
-    # ---- (b) what the module actually applies ----------------------------
+    # (b) What the module actually applies
     span = np.arange(1967, 2025)
     m_eff = np.array([effective_trapping(y) for y in span])
     bottom.plot(span, m_eff, color=SCHEDULE_COLOR, linewidth=1.8, zorder=5,
@@ -210,8 +160,7 @@ def main():
     bottom.fill_between(span, 0, m_eff, color=SCHEDULE_FILL, alpha=0.45,
                         linewidth=0, zorder=3)
 
-    # The floor the module cannot go below, hatched rather than washed so it
-    # cannot be mistaken for another shaded period.
+    # The floor the module cannot go below, hatched so it is not read as a period
     bottom.axhline(0.0, color=INK, linewidth=0.8, zorder=4)
     bottom.fill_between([2004, 2024], -14, 0, facecolor="none",
                         edgecolor=C["BASE"], hatch="////", linewidth=0.0,
@@ -244,6 +193,7 @@ def main():
     period_strip(top, PERIODS)
     fig.legend(loc="outside lower center", ncol=2, frameon=False)
 
+    # Caption, every number computed here
     build = phase(obs, 1967, 1978)
     slow = phase(obs, 1978, 2004)
     one = phase(obs, 1984, 2004)
@@ -284,6 +234,7 @@ def main():
                     p1a=one[0], p1b=one[1], d1=one[2], r1=one[3],
                     p2a=two[0], p2b=two[1], d2=two[2], r2=two[3]))
 
+    # Write the figure and print the phase summary
     written = save(fig, HERE / "groin_timeline_and_hindcast.png", close=True)
     for path in written:
         print("wrote {}".format(path))

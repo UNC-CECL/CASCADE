@@ -2662,7 +2662,7 @@ same BRIE physics and the same wet/dry shoreline family. They are
 independent WINDOWS, not independent EVIDENCE.
 
 AND THE RIG RUNS 1967 OFF A 1984 ISLAND. RIG_TOPO_PRODUCT = "1984-start"
-(HAT_groin_hindcast_1967_2017.py:280) -- a deliberate 17-year anachronism
+(in HAT_groin_hindcast_1967_2017.py) -- a deliberate 17-year anachronism
 in the initial condition, accepted because the target is a shoreline
 OFFSET rather than an elevation. It belongs in any methods description of
 the rig. The rig also uses GROIN_INSTALL_YEAR = 1970 against the plan's

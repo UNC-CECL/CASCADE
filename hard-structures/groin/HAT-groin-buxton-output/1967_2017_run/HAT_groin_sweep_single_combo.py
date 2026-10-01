@@ -1,25 +1,18 @@
 """
-HAT_groin_sweep_single_combo.py
-=================================
-Runs ONE (M, fraction) combination of the groin sensitivity sweep, in its
-own fresh Python process, then exits. Meant to be launched as a subprocess
-by HAT_groin_sensitivity_sweep_v2.py, NOT run directly in a loop -- the
-whole point is that each combination gets a clean process, so accumulated
-state (Cascade/Barrier3D objects, joblib worker pools, whatever else builds
-up over 30 sequential simulations in one process) can never carry over from
-one combination to the next. That's the fix for the 0xC0000005 (Windows
-access violation) crash that showed up partway through an earlier
-in-process sweep -- process isolation guarantees a full OS-level cleanup
-between every single run, regardless of what the underlying cause was.
+One cell of the groin sweep: a single (M, fraction) rig run in its own process, scored against the 2018 wet/dry change.
 
-Prints exactly one line to stdout on success, in an easily-parsed format:
-    RESULT_RMSE=<value>
-Everything else printed is normal run_one() logging, which the orchestrator
-ignores. A non-zero exit code (including an access violation) is treated by
-the orchestrator as "this combination failed" -- it moves on rather than
-losing the whole sweep.
+    python HAT_groin_sweep_single_combo.py <M> <fraction>
 
-Usage: HAT_groin_sweep_single_combo.py <M> <fraction>
+Launched by HAT_groin_sensitivity_sweep.py, not by hand. Runs the "groin"
+key of HAT_groin_hindcast_1967_2017.py, saves the modelled D2-D12 profile to
+HAT-buxton-hindcast-groin-test/sensitivity_sweep/profiles/ and prints one
+line, RESULT_RMSE=<value>, for the sweep to parse.
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 import os
@@ -30,9 +23,9 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import HAT_groin_hindcast_1967_2017 as hc
 
-# =============================================================================
-# CONFIG -- must match HAT_groin_sensitivity_sweep_v2.py exactly
-# =============================================================================
+
+# --- CONFIG ------------------------------------------------------------------
+# Must match HAT_groin_sensitivity_sweep.py
 MODEL_FIT_YEAR    = 2017
 OBSERVED_FIT_YEAR = 2018
 FIT_DOMAINS_GIS = list(range(2, 13))   # D2-D12, full range
@@ -42,14 +35,17 @@ WETDRY_CHANGE_TABLE = os.path.join(
     "shoreline_position_output",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
+# -----------------------------------------------------------------------------
 
 
+# Observed change 1967 -> OBSERVED_FIT_YEAR per fit domain, landward-positive
 def load_observed_target():
     df = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
     col = f"change_from_wetdry_1967_wetdry_{OBSERVED_FIT_YEAR}_m"
     return np.array([df[col].get(d, np.nan) for d in FIT_DOMAINS_GIS])
 
 
+# RMSE over domains where both sides have a value
 def rmse(modeled, observed):
     mask = np.isfinite(modeled) & np.isfinite(observed)
     if not np.any(mask):
@@ -57,6 +53,7 @@ def rmse(modeled, observed):
     return float(np.sqrt(np.mean((modeled[mask] - observed[mask]) ** 2)))
 
 
+# Run: set M and fraction on the runner, run the groin key, score, save the profile, print the result
 def main():
     if len(sys.argv) != 3:
         sys.exit(f"Usage: {sys.argv[0]} <M> <fraction>")
@@ -94,11 +91,7 @@ def main():
     observed = load_observed_target()
     err = rmse(modeled, observed)
 
-    # Same tree the sweep script READS from. This said scripts/groin/ -- the
-    # pre-reorg location -- so every profile landed in a directory nothing
-    # looks at, and the best-fit / top-N figures silently plotted whatever
-    # stale arrays were left in the real one. The path is split across two
-    # lines, which is why the earlier bulk path fix missed it.
+    # The profiles folder the sweep reads (README)
     profile_dir = os.path.join(hc.PROJECT_BASE_DIR, "hard-structures", "groin",
                                 "HAT-buxton-hindcast-groin-test", "sensitivity_sweep", "profiles")
     os.makedirs(profile_dir, exist_ok=True)

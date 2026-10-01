@@ -1,24 +1,19 @@
+"""
+The 1967 island offset for the groin domains D2-D12: relative dune offset per domain, padded with hybrid slope-and-bridge buffers.
+
+    python island_offset_hybrid_1967.py
+
+Reads the 1967 raw dune-line offset CSV (data/hatteras_init/2-brie-offset/
+raw_offsets/); writes the unpadded, CASCADE-format and padded CSVs and a
+buffer diagnostic figure to OUTPUT_DIR. Needs numpy, pandas, matplotlib.
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
+"""
 from pathlib import Path
-"""
-Hatteras CASCADE Dune Offset Pipeline — subset-capable
-======================================================
-
-This script:
-1. Reads a single raw dune–baseline intersection CSV.
-2. Calculates the relative dune raw_offset per domain (meters, baseline = minimum
-   of the domains actually included in the run).
-3. Pads the result for CASCADE using a hybrid buffer strategy:
-     - inner buffer domains follow the local coastline slope extrapolated
-       outward from each real edge (anchored exactly at the edge domain),
-     - outer buffer domains are a linear bridge connecting the two slope
-       tails, keeping the wrap-around array continuous.
-4. Saves a diagnostic figure of the full padded raw_offset profile.
-
-Generalized for ANY contiguous domain subset via START_DOMAIN / END_DOMAIN.
-Current configuration: 1967, domains 2–12 (Cape Point → Buxton).
-
-Author: Hannah A. Henry (extrapolation buffer version, subset-capable)
-"""
 
 import os
 import pandas as pd
@@ -27,24 +22,17 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+# --- CONFIG ------------------------------------------------------------------
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
-
-# =============================================================================
-# 1. USER CONFIGURATION
-# =============================================================================
 
 YEAR = 1967
 RAW_FILE = str(_PATH_REPO / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets" / "1967_duneline_offset_raw.csv")
 
-OUTPUT_DIR      = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-buxton-hindcast-groin-test" / "groin_init")
+OUTPUT_DIR      = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-buxton-input" / "groin_init" / "island_offset")
 OUTPUT_BASENAME = "Island_Dune_Offsets_1967_D2_D12"
 
-# -------------------------------------------------------------------------
-# Domain range for this run (contiguous subset of the 1–90 island grid)
-# -------------------------------------------------------------------------
+# Domain range for this run (contiguous subset of the 1-90 island grid)
 START_DOMAIN = 2
 END_DOMAIN   = 12
 B3D_GRIDS    = list(range(START_DOMAIN, END_DOMAIN + 1))
@@ -54,30 +42,13 @@ N_REAL = END_DOMAIN - START_DOMAIN + 1                     # 11
 PADDING_ZEROS = 15                                          # buffers per side
 TARGET_LENGTH = N_REAL + 2 * PADDING_ZEROS                  # 11 + 30 = 41
 
-# Number of real domains from each edge used to fit the local extrapolation
-# trend. Must be <= N_REAL (clamped automatically with a warning).
-EXTRAP_FIT_DOMAINS = 5
+EXTRAP_FIT_DOMAINS = 5   # real domains per edge for the slope fit; clamped to N_REAL
 
-# Number of buffer domains on each side that follow the local coastline slope.
-# The remaining (PADDING_ZEROS - SLOPE_BUFFER_DOMAINS) buffer domains on each
-# side are filled by a linear bridge connecting the two slope tails.
-SLOPE_BUFFER_DOMAINS = 5
+SLOPE_BUFFER_DOMAINS = 5   # buffers per side on the slope; the rest are the bridge
 
-# Clip buffer offsets at zero. Relative offsets are >= 0 by construction for
-# real domains (baseline = minimum), but an outward extrapolation from the
-# edge that holds the run minimum will immediately go negative and be
-# flattened into an artificial zero-gradient shelf. For the D2-D12/1967 subset
-# the minimum sits on D12 (the northern edge), so this is set False: the north
-# buffer is allowed to go negative and continue the real D8-D12 trend.
-CLIP_BUFFERS_AT_ZERO = False
+CLIP_BUFFERS_AT_ZERO = False   # off: the north buffer may go negative (README)
 
-# Re-reference the PADDED array to its own minimum so the file CASCADE reads
-# is non-negative. The offsets are relative, so this is a uniform translation
-# of the whole array (real + buffers) and does not change any alongshore
-# gradient. Only takes effect if the padded array actually goes negative.
-# Set False to ship raw negatives if CASCADE tolerates them — in that case the
-# real-domain values stay exactly as they appear in the unpadded file.
-RE_REFERENCE_PADDED = True
+RE_REFERENCE_PADDED = True   # shift the padded array so its minimum is 0 (README)
 
 COL_MAP = {
     "Domain_ID": "domain_id",
@@ -85,9 +56,7 @@ COL_MAP = {
     "Transect":  "LineID",
 }
 
-# Community zone annotations for the diagnostic figure.
-# Defined on the FULL island (real domain numbers, 1-indexed). Zones are
-# automatically clipped/filtered to the START_DOMAIN–END_DOMAIN window.
+# Community zones on the full island, clipped to the run window for the figure
 COMMUNITY_ZONES = [
     (1,   6,  "Cape Point"),
     (7,   8,  "Buxton"),
@@ -97,25 +66,16 @@ COMMUNITY_ZONES = [
     (68, 83,  "Tri-Village"),
     (84, 90,  "Pea Island NWR"),
 ]
+# -----------------------------------------------------------------------------
 
-# =============================================================================
-# 2. FUNCTIONS
-# =============================================================================
 
+# Mean relative dune offset per domain (baseline = run minimum), every transect present
 def calculate_relative_offset(file_path, year, col_map, grids):
-    """
-    Compute mean relative dune raw_offset per domain from raw CSV.
-
-    For each domain in `grids`, every transect present is used; within a
-    transect the first record is taken. The domain value is the mean across
-    whatever transects exist — domains with fewer transects (e.g. partial
-    edge domains) are handled naturally and simply average fewer points.
-    """
     print(f"\n--- Processing {year} ---")
     print(f"Input file: {file_path}")
 
     try:
-        # utf-8-sig strips the BOM ArcGIS writes on the first column header.
+        # utf-8-sig strips the BOM ArcGIS writes on the first column header
         raw_df = pd.read_csv(file_path, encoding="utf-8-sig")
     except FileNotFoundError:
         print(f"ERROR: File not found: {file_path}")
@@ -142,8 +102,7 @@ def calculate_relative_offset(file_path, year, col_map, grids):
             print(f"  Warning: No data for domain {grid_id}.")
             continue
 
-        # Use whatever transects are actually present (robust to gaps and to
-        # partial edge domains with only one or two transects).
+        # Whatever transects are present, so gaps and thin edge domains still work
         transect_ids = sorted(subset["Transect"].dropna().unique())
         if not transect_ids:
             print(f"  Warning: No valid transect IDs for domain {grid_id}. Skipping.")
@@ -174,7 +133,7 @@ def calculate_relative_offset(file_path, year, col_map, grids):
     print(f"  Baseline distance = {baseline:.3f} m "
           f"(min mean, at domain {seen_domains[int(np.argmin(mean_distances))]}).")
 
-    # Per-domain transect coverage — flags thin edge domains explicitly.
+    # Per-domain transect coverage, flagging thin edge domains
     print("\n  Domain  n_transects   mean_dist (m)   rel_offset (m)")
     for d, n, md, ro in zip(seen_domains, n_transects, mean_distances, relative_offsets):
         flag = "  <- thin" if n < 3 else ""
@@ -183,54 +142,16 @@ def calculate_relative_offset(file_path, year, col_map, grids):
     return pd.DataFrame({"Domain_ID": seen_domains, str(year): relative_offsets})
 
 
+# Pad for CASCADE: slope buffers anchored on each real edge, a linear bridge between them (README)
 def pad_for_cascade(df, padding_zeros, target_length,
                     extrap_fit_domains=5, slope_buffer_domains=5,
                     clip_at_zero=True, re_reference=True, start_domain=1):
-    """
-    Pad raw_offset array for CASCADE using a hybrid buffer strategy.
-
-    Let D_first / D_last be the first and last REAL domains of the run
-    (south → north order), and n_pad = padding_zeros.
-
-      Left buffer (n_pad domains, outermost → D_first):
-        - Innermost `slope_buffer_domains` (closest to D_first): follow the
-          local coastline slope, anchored exactly at D_first so there is no
-          gap at the boundary.
-        - Remaining outer domains: linear bridge toward the right buffer.
-
-      Right buffer (n_pad domains, D_last → outermost):
-        - Innermost `slope_buffer_domains` (closest to D_last): follow the
-          local coastline slope, anchored exactly at D_last.
-        - Remaining outer domains: the same bridge, approached from the
-          other end.
-
-    This guarantees:
-      - No discontinuity at either real-domain boundary.
-      - The buffer interior is connected (no jumps anywhere).
-      - Behaviour in the outer buffer is irrelevant to the real simulation.
-
-    Index map (n_real real domains, n_slope slope, n_bridge bridge per side):
-        idx 0                     = outermost left buffer
-        idx [0, n_bridge)         = left bridge
-        idx [n_bridge, n_pad)     = left slope   (idx n_pad-1 touches D_first)
-        idx [n_pad, n_pad+n_real) = real domains
-        idx [n_pad+n_real, +n_slope)          = right slope (touches D_last)
-        idx [n_pad+n_real+n_slope, +n_bridge) = right bridge
-        idx target_length-1       = outermost right buffer
-
-    Returns
-    -------
-    padded : pd.DataFrame
-    diag   : dict  (arrays for diagnostic plot)
-    """
     data_columns = list(df.columns)
     col          = data_columns[0]
     values       = df[col].to_numpy(dtype=float)   # shape (n_real,)
     n_real       = len(values)
 
-    # ------------------------------------------------------------------ #
-    # 0. Guards — matter for short subset runs                            #
-    # ------------------------------------------------------------------ #
+    # Guards, which matter for short subset runs
     if slope_buffer_domains >= padding_zeros:
         raise ValueError(
             f"slope_buffer_domains ({slope_buffer_domains}) must be < "
@@ -253,9 +174,7 @@ def pad_for_cascade(df, padding_zeros, target_length,
     d_first = start_domain
     d_last  = start_domain + n_real - 1
 
-    # ------------------------------------------------------------------ #
-    # 1. Estimate local slopes at each edge                               #
-    # ------------------------------------------------------------------ #
+    # Local slope at each edge
     x_fit = np.arange(extrap_fit_domains, dtype=float)
 
     # Left edge slope (fit the first `extrap_fit_domains`, anchor at values[0])
@@ -264,17 +183,12 @@ def pad_for_cascade(df, padding_zeros, target_length,
     # Right edge slope (fit the last `extrap_fit_domains`, anchor at values[-1])
     m_right, _ = np.polyfit(x_fit, values[-extrap_fit_domains:], 1)
 
-    # ------------------------------------------------------------------ #
-    # 2. Left slope segment (innermost, closest to D_first)               #
-    #    Steps: -1 (adjacent to D_first) … -slope_buffer_domains          #
-    # ------------------------------------------------------------------ #
+    # Left slope segment, steps -1 (next to D_first) to -slope_buffer_domains
     left_slope_steps  = np.arange(-1, -(slope_buffer_domains + 1), -1, dtype=float)
     left_slope_raw    = values[0] + m_left * left_slope_steps
     left_slope_values = np.clip(left_slope_raw, 0.0, None) if clip_at_zero else left_slope_raw
 
-    # ------------------------------------------------------------------ #
-    # 3. Right slope segment (innermost, closest to D_last)               #
-    # ------------------------------------------------------------------ #
+    # Right slope segment, next to D_last outward
     right_slope_steps  = np.arange(1, slope_buffer_domains + 1, dtype=float)
     right_slope_raw    = values[-1] + m_right * right_slope_steps
     right_slope_values = np.clip(right_slope_raw, 0.0, None) if clip_at_zero else right_slope_raw
@@ -282,13 +196,7 @@ def pad_for_cascade(df, padding_zeros, target_length,
     n_clip_left  = int(np.sum(left_slope_raw  < 0.0)) if clip_at_zero else 0
     n_clip_right = int(np.sum(right_slope_raw < 0.0)) if clip_at_zero else 0
 
-    # ------------------------------------------------------------------ #
-    # 4. Linear bridge                                                    #
-    #    ONE linspace from the left slope TAIL to the right slope TAIL,   #
-    #    including both tails as endpoints, then split into the two outer #
-    #    buffer blocks. Left/right slope arrays are ordered inner-first,  #
-    #    so [-1] of each is the tail the bridge anchors to.               #
-    # ------------------------------------------------------------------ #
+    # Linear bridge: one linspace between the two slope tails, split into the outer blocks
     n_bridge_each = padding_zeros - slope_buffer_domains
 
     full_bridge = np.linspace(
@@ -303,33 +211,20 @@ def pad_for_cascade(df, padding_zeros, target_length,
     # Right bridge: [fb[2n], ..., fb[n+1]] — innermost to outermost
     right_bridge_values = full_bridge[2 * n_bridge_each:n_bridge_each:-1]
 
-    # ------------------------------------------------------------------ #
-    # 5. Assemble full left and right buffer arrays                       #
-    #  left_full  : idx 0 = outermost, idx -1 = adjacent to D_first       #
-    #  right_full : idx 0 = adjacent to D_last, idx -1 = outermost        #
-    # ------------------------------------------------------------------ #
+    # Full buffers: left outermost-first, right D_last-first
     left_full  = np.concatenate([left_bridge_values, left_slope_values[::-1]])
     right_full = np.concatenate([right_slope_values, right_bridge_values])
 
     left_block  = pd.DataFrame({col: left_full})
     right_block = pd.DataFrame({col: right_full})
 
-    # ------------------------------------------------------------------ #
-    # 6. Assemble and validate                                            #
-    # ------------------------------------------------------------------ #
+    # Assemble buffers and real domains
     padded = pd.concat(
         [left_block, df[[col]], right_block],
         ignore_index=True,
     )
 
-    # ------------------------------------------------------------------ #
-    # 6b. Re-reference to the padded minimum                              #
-    #     The offsets are relative, so adding a constant to every element #
-    #     (real AND buffer) is a uniform translation that leaves every    #
-    #     alongshore gradient untouched. This is what makes it safe to    #
-    #     let the edge extrapolation go negative: the trend at the        #
-    #     boundary is preserved, and the file CASCADE reads is still >=0. #
-    # ------------------------------------------------------------------ #
+    # Re-reference to the padded minimum, a uniform shift that keeps every gradient
     shift = 0.0
     if re_reference and padded[col].min() < 0.0:
         shift = float(-padded[col].min())
@@ -345,10 +240,7 @@ def pad_for_cascade(df, padding_zeros, target_length,
     print(f"  Bridge domains per side: {n_bridge_each}")
     print(f"  Edge slopes            : m_left={m_left:+.2f} m/domain  "
           f"m_right={m_right:+.2f} m/domain")
-    # Boundary step = the jump from the edge real domain into its adjacent
-    # buffer. Because the slope segment is anchored ON the edge domain, this
-    # should equal exactly one slope step (|m|), not zero — i.e. the buffer
-    # continues the local trend rather than repeating the edge value.
+    # Boundary step should be one slope step |m|, not zero (README)
     step_left  = abs(left_full[-1] - values[0])
     step_right = abs(right_full[0] - values[-1])
     print(f"  D{d_first} boundary step       : buffer={left_full[-1]:.2f}  "
@@ -398,8 +290,8 @@ def pad_for_cascade(df, padding_zeros, target_length,
     return padded, diag
 
 
+# Full-island zones clipped to the run's domain window
 def clip_zones_to_run(community_zones, start_domain, end_domain):
-    """Filter/clip full-island zone definitions to the run's domain window."""
     out = []
     for d_start, d_end, label in community_zones:
         s = max(d_start, start_domain)
@@ -409,17 +301,9 @@ def clip_zones_to_run(community_zones, start_domain, end_domain):
     return out
 
 
+# Diagnostic figure: the full padded profile, buffers shaded, zones on top, zooms on each edge
 def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
                            output_dir, output_basename):
-    """
-    Save a diagnostic figure of the full padded raw_offset profile.
-
-    Layout:
-      - Full profile across all padded indices
-      - Buffer zones shaded; slope vs bridge segments distinguished
-      - Real-domain zone annotations along the top
-      - Inset zoom panels for left and right buffer transitions
-    """
     lv = diag["left_values"]     # outermost first
     rv = diag["real_values"]     # D_first → D_last
     rb = diag["right_values"]    # D_last-adjacent first
@@ -450,9 +334,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     right_slope_v  = full[right_slope_x]
     right_bridge_v = full[right_bridge_x]
 
-    # ------------------------------------------------------------------ #
-    # Figure layout                                                        #
-    # ------------------------------------------------------------------ #
+    # Figure layout
     fig = plt.figure(figsize=(18, 7), facecolor="white")
     ref_note = (f"  |  re-referenced +{shift:.0f} m" if shift > 0 else "")
     fig.suptitle(
@@ -472,7 +354,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     REAL_COLOR   = "#2166ac"   # blue    — real domains
     ZOOM_COLOR   = "#d6604d"   # red     — inset
 
-    # ---- Main plot ---------------------------------------------------- #
+    # Main plot
     ax_main.axvspan(left_buf_x[0]  - 0.5, left_buf_x[-1]  + 0.5,
                     color=BUF_COLOR, alpha=0.10, zorder=0)
     ax_main.axvspan(right_buf_x[0] - 0.5, right_buf_x[-1] + 0.5,
@@ -541,7 +423,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     for spine in ["top", "right"]:
         ax_main.spines[spine].set_visible(False)
 
-    # ---- Left buffer zoom --------------------------------------------- #
+    # Left buffer zoom
     n_zoom_real = min(n_slope + 3, n_real)
     zoom_real_x = real_x[:n_zoom_real]
     zoom_real_v = rv[:n_zoom_real]
@@ -560,7 +442,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     for spine in ["top", "right"]:
         ax_left.spines[spine].set_visible(False)
 
-    # ---- Right buffer zoom -------------------------------------------- #
+    # Right buffer zoom
     zoom_real_x2 = real_x[-n_zoom_real:]
     zoom_real_v2 = rv[-n_zoom_real:]
 
@@ -578,7 +460,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     for spine in ["top", "right"]:
         ax_right.spines[spine].set_visible(False)
 
-    # ---- Save ---------------------------------------------------------- #
+    # Save
     fig_path = os.path.join(output_dir, f"{output_basename}_buffer_diagnostic.png")
     fig.savefig(fig_path, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -586,14 +468,11 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     return fig_path
 
 
-# =============================================================================
-# 3. MAIN
-# =============================================================================
-
+# Run: relative offsets, write unpadded, pad, write padded, draw the diagnostic
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # --- 3.1. Compute relative offsets ---
+    # Relative offsets
     result = calculate_relative_offset(
         file_path=RAW_FILE,
         year=YEAR,
@@ -605,8 +484,7 @@ def main():
         print("Offset calculation failed. Exiting.")
         return
 
-    # Hard stop if any requested domain is missing — a silently short array
-    # would misalign every downstream CASCADE domain.
+    # Stop if a domain is missing: a short array misaligns every CASCADE domain
     if len(result) != N_REAL:
         missing = sorted(set(B3D_GRIDS) - set(result["Domain_ID"]))
         print(f"\nERROR: expected {N_REAL} domains (D{START_DOMAIN}–D{END_DOMAIN}), "
@@ -625,7 +503,7 @@ def main():
     cascade_df.to_csv(cascade_unpadded_path, index=False)
     print(f"Unpadded CASCADE-format file saved to:\n  {cascade_unpadded_path}")
 
-    # --- 3.2. Pad with hybrid slope + linear bridge buffers ---
+    # Pad with hybrid slope and linear bridge buffers
     padded_df, diag = pad_for_cascade(
         df=cascade_df,
         padding_zeros=PADDING_ZEROS,
@@ -641,7 +519,7 @@ def main():
     padded_df.to_csv(padded_path, index=False)
     print(f"\nSUCCESS: Padded CASCADE input saved to:\n  {padded_path}")
 
-    # --- 3.3. Diagnostic figure ---
+    # Diagnostic figure
     plot_buffer_diagnostic(
         diag=diag,
         year=YEAR,

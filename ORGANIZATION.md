@@ -256,5 +256,6 @@ scripts/          all code
 data/hatteras_init/   every model input, numbered by stage 0-9
 output/               everything the model produced
 tests/                the suite
-hard-structures/      the groin study, which keeps its own conventions
+hard-structures/      the groin study: its own layout (data beside code),
+                      but scripts/STYLE.md for its scripts since 2026-10-01
 ```

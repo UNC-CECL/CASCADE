@@ -1,53 +1,17 @@
 #!/usr/bin/env python3
-"""The groin in one picture: two shorelines, and the gap between them.
+"""
+The groin in one picture: the two shorelines either side of it, and the gap between them.
 
-WHY THIS EXISTS ALONGSIDE THE TIMELINE FIGURE
-    The fillet is a DERIVED quantity -- a difference between two domains -- so
-    it needs a sentence of explanation before anyone can read it, and it invites
-    the wrong reading ("150 m of new beach") when it actually means "150 m of
-    relative position".
-
-    Plotting the two shorelines themselves needs no explanation. Both retreat.
-    One retreats far less. The gap between the lines IS the groin's effect, and
-    its width over time is the whole story:
-
-        widening gap  ->  the groin is trapping
-        closing gap   ->  the groin has stopped
-
-    Everything the timeline figure says is visible here without a definition.
-
-WHAT IT IS FOR
-    Deciding how to apply the module. The groin's job in the model is to hold
-    the updrift line above the downdrift one. Reading the gap tells you directly
-    what the module has to do in each hindcast period, and where it cannot help.
-
-DATA
-    Shoreline change since a fixed 1967 datum at the two domains flanking the
-    structure -- D5 downdrift, D6 updrift -- from 24 dated wet/dry surveys
-    (`Change_from_wetdry_1967_D2_D12.csv`, GIS analysis).
-
-    Plotted SEAWARD-POSITIVE so the lines fall as the shoreline retreats, which
-    is how a reader expects an eroding coast to look. The source table is
-    landward-positive, so it is negated here; the timeline figure keeps the
-    source convention, which is why its curve rises where these fall.
-
-STYLE, 2026-09-11
-    Drawn under the project house style (`scripts/site_layer/hat_figure_style.py`): a
-    190 mm column, so the 9 pt type on the canvas is 9 pt on the page rather
-    than the 4 pt a 13 in canvas reduced to. The sheltered side is the ACCENT
-    purple and the unprotected side BASE grey -- the RdBu red/blue pair is
-    reserved for the 1984/1997 vintages, and these two lines are places, not
-    vintages. Nothing on the canvas that belongs in a caption: the title
-    sentence and the two footnote paragraphs are now in CAPTIONS.md beside the
-    image, and the two gap widths they quoted as hand-written constants are
-    measured off the plotted series.
-
-Usage:
     python HAT_groin_two_shorelines_figure.py
 
-Writes groin_two_shorelines.png (and .pdf) beside this file.
+Reads the wet/dry change table (GIS 5 and 6 since 1967); writes
+groin_two_shorelines.png (and .pdf) beside this file, caption in CAPTIONS.md.
+Details: README.md beside this script.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -69,21 +33,22 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_figure_style import (apply_style, C, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save)
 
+# --- CONFIG ------------------------------------------------------------------
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 
 INSTALL_YEAR, LAST_REPAIR_YEAR, STORM_YEAR = 1969, 1996, 2003
 UPDRIFT_GIS, DOWNDRIFT_GIS = 6, 5
 
-# The sheltered side is the thing under test; the unprotected side is the
-# baseline it is read against, and the band between them is the effect.
+# Sheltered side under test, unprotected side as baseline, the band between is the effect
 UP_COLOR, DOWN_COLOR, GAP_FILL = C["ACCENT"], C["BASE"], C["ACCENT_FILL"]
 
 PERIODS = ((1984, 2004, "hindcast period 1"), (2004, 2024, "hindcast period 2"))
+# -----------------------------------------------------------------------------
 
 
+# {year: (updrift, downdrift)} change since 1967, seaward-positive
 def two_shorelines():
-    """{year: (updrift, downdrift)} change since 1967, SEAWARD-positive."""
     frame = pd.read_csv(WETDRY_TABLE).set_index("Domain_ID")
     out = {}
     for column in frame.columns:
@@ -99,26 +64,8 @@ def two_shorelines():
     return dict(sorted(out.items()))
 
 
-def endpoint_rate(years, series, start, end):
-    """Rate of `series` between the first and last survey inside [start, end].
-
-    Endpoints, not a regression: the two rates quoted for the hindcast periods
-    have always been endpoint differences, and the caption says so."""
-    inside = [y for y in years if start <= y <= end]
-    if len(inside) < 2:
-        return float("nan")
-    first, last = min(inside), max(inside)
-    order = list(years)
-    return ((series[order.index(last)] - series[order.index(first)])
-            / (last - first))
-
-
+# The hindcast windows as a strip against the top edge, named once (README)
 def period_strip(axis, spans, frac=0.062, shade="0.94"):
-    """The hindcast windows as a band against the top edge, named once.
-
-    A strip rather than a full-height wash: the panel already carries a fill
-    between the two shorelines, and two full-height greys on one panel cannot
-    be told apart."""
     for start, end, label in spans:
         axis.add_patch(plt.Rectangle(
             (start, 1.0 - frac), end - start, frac,
@@ -129,9 +76,22 @@ def period_strip(axis, spans, frac=0.062, shade="0.94"):
                   va="center", fontsize=7, color=INK_MUTED, zorder=1)
 
 
+# Endpoint rate of `series` between the first and last survey inside [start, end]
+def endpoint_rate(years, series, start, end):
+    inside = [y for y in years if start <= y <= end]
+    if len(inside) < 2:
+        return float("nan")
+    first, last = min(inside), max(inside)
+    order = list(years)
+    return ((series[order.index(last)] - series[order.index(first)])
+            / (last - first))
+
+
+# Run: read the two shorelines, draw them and the gap, write the figure and caption
 def main():
     apply_style()
 
+    # The two shorelines and the gap between them
     data = two_shorelines()
     years = np.array(sorted(data))
     updrift = np.array([data[y][0] for y in years])
@@ -154,6 +114,7 @@ def main():
             linewidth=1.6, zorder=4,
             label="updrift, sheltered by the structure, GIS domain {}".format(UPDRIFT_GIS))
 
+    # The structure's dated events
     for year, label in ((INSTALL_YEAR, "built"),
                         (LAST_REPAIR_YEAR, "last repair"),
                         (STORM_YEAR, "storm damage")):
@@ -166,12 +127,7 @@ def main():
     ax.axhline(0.0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
                zorder=1)
 
-    # The gap at its widest and at the last survey, measured off the series
-    # rather than written in: both were hand-set constants until 2026-09-11,
-    # and the widest is NOT where the constants put it. They read 2004, the end
-    # of period 1, at 150 m; the largest gap in the record is the 1995 survey
-    # at 155 m, a single-survey spike driven by the downdrift side. The label
-    # goes where the data is and the caption carries both numbers.
+    # Gap at its widest and at the last survey, measured off the series (README)
     widest = int(years[int(np.argmax(gap))])
     final = int(years[-1])
     for year, side in ([(widest, -1.0)] if widest == final
@@ -184,6 +140,7 @@ def main():
                 fontsize=7.5, color=UP_COLOR, va="center", zorder=6,
                 ha="right" if side < 0 else "left")
 
+    # Axes, strip and legend
     ax.set_xlim(years[0] - 1, years[-1] + 5)
     period_strip(ax, PERIODS)
     ax.set_xlabel("year")
@@ -194,6 +151,7 @@ def main():
     open_frame(ax)
     fig.legend(loc="outside lower center", ncol=3, frameon=False)
 
+    # Caption, every number computed here
     first = int(years[0])
     caption(fig,
             "Shoreline change at the two Barrier3D domains flanking the Buxton "
@@ -230,6 +188,7 @@ def main():
                     r1=endpoint_rate(years, gap, 1984, 2004),
                     r2=endpoint_rate(years, gap, 2004, final)))
 
+    # Write the figure and print the gap at four surveys
     written = save(fig, HERE / "groin_two_shorelines.png", close=True)
     for path in written:
         print("wrote {}".format(path))

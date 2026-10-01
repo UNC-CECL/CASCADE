@@ -1,67 +1,19 @@
 #!/usr/bin/env python3
-"""Stage 0 of the groin module test: audit BRIE's solve without running CASCADE.
+"""
+Stage 0 of the groin module test: BRIE's alongshore solve under a groin dipole, without CASCADE.
 
-WHY THIS EXISTS
-    Every claim about what a groin "does" in CASCADE is a claim about what
-    BRIE's implicit alongshore-diffusion solve does with the +/-M dipole that
-    `cascade.groin.GroinCallback` injects into `x_s_dt`. That solve is cheap:
-    one sparse tridiagonal-plus-corners system per year. Reproducing it here
-    WITHOUT Barrier3D means a 1,000-year, many-axis experiment costs seconds
-    instead of days, and -- more importantly -- it separates the groin's
-    alongshore behaviour from the cross-shore behaviour Barrier3D adds on top.
-    Anything the full rig shows that this does not is a Barrier3D feedback.
+    python HAT_groin_solver_audit.py [--years 200] [--outdir DIR]
 
-    This is an EMULATOR, not a reimplementation for production use. It mirrors
-    `brie.brie.Brie.update()` (the `if self._ast_model_on:` block, lines
-    ~1290-1330) exactly: the same `coast_diff` table, taken from a real Brie
-    instance rather than recomputed, the same row-scaled matrix assembly from
-    `_di`/`_dj`, the same periodic wrap, the same `np.maximum(0, ...)` clip on
-    the diffusion number. If BRIE changes, this must be re-checked against it.
+An emulator of BRIE's implicit shoreline-diffusion solve plus GroinCallback's
++/-M dipole, built from BRIE's own coast_diff table and sparse indices. Six
+audits: diffusivity, fillet vs M, closure vs f, domain count, groin fields, the
+chosen rig. Writes solver_audit_<audit>.csv. Needs brie, numpy, pandas, scipy.
+Details: README.md beside this script.
 
-WHAT IT MEASURES
-    1. DIFFUSIVITY AND SHUTDOWN ANGLE -- BRIE's diffusion number is clipped at
-                                         zero, and the wave-climate-averaged
-                                         diffusivity goes NEGATIVE past a
-                                         critical shoreline angle. Past that
-                                         angle a cell stops exchanging sand
-                                         with its neighbours and the dipole
-                                         accumulates without limit.
-    2. FILLET AMPLITUDE vs M          -- is the response linear in M, as
-                                         `groin.predict_fillet` asserts, and
-                                         where is the runaway boundary?
-    3. VOLUME CLOSURE vs f            -- the matrix is row-scaled by a
-                                         per-domain diffusion number, so its
-                                         column sums are not unity and the
-                                         scheme is NOT exactly conservative
-                                         once the shoreline is not straight.
-                                         This reports the spurious mean drift
-                                         against the drift the injected volume
-                                         actually implies.
-    4. DOMAIN-COUNT CONVERGENCE       -- the solve is PERIODIC in the
-                                         alongshore, so a short reach wraps the
-                                         fillet into its own downdrift notch.
-                                         This reports how few domains the
-                                         fillet tolerates and how badly the
-                                         mean drift is inflated by a short one.
-    5. GROIN FIELDS                   -- several dipoles at a given spacing.
-                                         Two questions: do they superpose (a
-                                         field of N reads as one groin of N*M),
-                                         and at what spacing does each
-                                         structure still hold its own fillet
-                                         rather than the field holding one?
-
-HOW TO READ "RUNAWAY"
-    A cell whose diffusion number has been clipped to zero keeps receiving its
-    share of the dipole and has no way to pass it on, so the reach translates at
-    roughly M metres per year indefinitely. In the full model this presents as a
-    barrier that migrates absurdly or drowns; in BRIE alone it eventually
-    presents as `IndexError: index 180 is out of bounds` from brie.py, because
-    the diffusivity lookup indexes `coast_diff` (length 180) with `90 - theta`
-    clipped to 180 rather than 179. That needs a 57 km offset across one 500 m
-    cell, which a runaway reaches in roughly 1,000 years at M = 60. It is the
-    runaway surfacing, not a separate coding mistake.
-
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -76,30 +28,20 @@ from scipy.sparse.linalg import spsolve
 
 from brie import Brie
 
+# --- CONFIG ------------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
+DY_M = 500.0                 # fixed by the CASCADE coupler ("do not change")
+DT_YR = 1.0                  # fixed by the CASCADE coupler ("do not change")
+DEFAULT_CLIMATE = dict(Hs=1.0, Tp=7.0, asym=0.8, ahf=0.2)    # CASCADE / Barrier3D default
+HATTERAS_CLIMATE = dict(Hs=2.5, Tp=9.0, asym=0.8, ahf=0.2)   # not interchangeable with the default (README)
+# -----------------------------------------------------------------------------
 
-# BRIE fixes both of these in the CASCADE coupler, whose comment says "do not
-# change", so they are constants here rather than arguments.
-DY_M = 500.0
-DT_YR = 1.0
-
-# Wave climate. The first is the CASCADE / Barrier3D default, the second is the
-# Hatteras hindcast setting. They are NOT interchangeable for this test: see
-# the diffusivity table, where they differ by a factor of four in the restoring
-# rate and therefore in the M a given fillet costs.
-DEFAULT_CLIMATE = dict(Hs=1.0, Tp=7.0, asym=0.8, ahf=0.2)
-HATTERAS_CLIMATE = dict(Hs=2.5, Tp=9.0, asym=0.8, ahf=0.2)
-
+# Diffusivity tables already built, by (Hs, Tp, asym, ahf, ny)
 _CD_CACHE: dict = {}
 
 
+# (coast_diff, di, dj) from a real Brie instance, so the audit cannot drift from BRIE
 def brie_diffusivity(Hs, Tp, asym, ahf, ny):
-    """Return (coast_diff, di, dj) from a real Brie instance.
-
-    The diffusivity table and the sparse index arrays are taken from BRIE
-    rather than recomputed, so this audit cannot quietly drift away from the
-    model it is auditing.
-    """
     key = (Hs, Tp, asym, ahf, ny)
     if key not in _CD_CACHE:
         brie = Brie(
@@ -121,52 +63,16 @@ def brie_diffusivity(Hs, Tp, asym, ahf, ny):
     return _CD_CACHE[key]
 
 
+# Shoreline angles (negative, positive cutoff, deg) bounding BRIE's positive-diffusivity band
 def shutdown_angle_deg(coast_diff):
-    """Shoreline angles bounding the band where BRIE's diffusivity is positive.
-
-    Outside that band the diffusion number is clipped to zero and the cell
-    decouples from its neighbours. Returns (negative_cutoff, positive_cutoff)
-    in degrees.
-    """
     theta = np.arange(-89, 90)
     idx = np.clip(np.round(90 - theta).astype(int), 1, 179)
     positive = theta[coast_diff[idx] > 0]
     return float(positive.min()), float(positive.max())
 
 
+# BRIE's shoreline diffusion with groin dipoles only, from a straight coast: (frame, shutdown_year, profiles)
 def solve_reach(ny, groins, years, climate, record_years=()):
-    """Integrate BRIE's shoreline diffusion with groin dipoles, nothing else.
-
-    Starts from a perfectly straight shoreline at x_s = 0, so every metre of
-    structure in the answer came from a dipole.
-
-    Parameters
-    ----------
-    ny : int
-        Domain count. The reach is PERIODIC, so this is a circumference.
-    groins : list of (updrift, downdrift, M, f)
-        One tuple per structure. `updrift` and `downdrift` are domain indices
-        and must be adjacent, matching `GroinCallback`'s own check. Sign
-        follows `cascade.groin`: the updrift cell gets -M (seaward advance),
-        the downdrift cell gets +M*f (landward retreat).
-    years : int
-        Run length.
-    climate : dict
-        Keys Hs, Tp, asym, ahf.
-    record_years : iterable of int
-        Years whose full shoreline profile to keep.
-
-    Returns
-    -------
-    frame : DataFrame
-        One row per year: fillet at each structure, reach mean, the mean a
-        conservative scheme would give, the closure error, and the minimum
-        diffusion number anywhere.
-    shutdown_year : int or None
-        First year the diffusion number hit zero anywhere.
-    profiles : dict
-        Shoreline profiles for `record_years`.
-    """
     coast_diff, di, dj = brie_diffusivity(
         climate["Hs"], climate["Tp"], climate["asym"], climate["ahf"], ny
     )
@@ -178,17 +84,14 @@ def solve_reach(ny, groins, years, climate, record_years=()):
             )
 
     x_s = np.zeros(ny)
-    # The net source the field injects per year, seaward-negative. A field with
-    # every f = 1 is volume neutral and must leave the reach mean alone.
+    # Net source the field injects per year, seaward-negative (zero when every f = 1)
     net_source = -sum(M * (1.0 - f) for _, _, M, f in groins)
 
     shutdown_year = None
     rows, profiles = [], {}
 
     for year in range(1, years + 1):
-        # BRIE's forward-difference shoreline angle, and the diffusion number it
-        # selects. The clip at zero is BRIE's, and it is what lets the scheme
-        # stop diffusing rather than go unstable.
+        # BRIE's forward-difference angle and the diffusion number it selects, clipped at zero as BRIE does
         theta = 180.0 * np.arctan2(x_s[np.r_[1:ny, 0]] - x_s, DY_M) / np.pi
         r_ipl = np.maximum(
             0.0,
@@ -230,17 +133,16 @@ def solve_reach(ny, groins, years, climate, record_years=()):
     return pd.DataFrame(rows), shutdown_year, profiles
 
 
+# A single structure at the middle of the reach, drift from high index
 def one_groin(ny, M, f):
-    """A single structure at the middle of the reach, drift from high index."""
     updrift = ny // 2
     return [(updrift, updrift - 1, M, f)]
 
 
-# ---------------------------------------------------------------------------
-# The five audits
-# ---------------------------------------------------------------------------
+# The audits, in the order main() runs them
+
+# Audit 1: diffusivity and shutdown angle for each wave climate
 def audit_diffusivity():
-    """Diffusivity and shutdown angle for each wave climate."""
     print("\n=== 1. DIFFUSIVITY AND SHUTDOWN ANGLE ===")
     print("The shutdown angle is a property of the ANGULAR wave distribution, not")
     print("of wave height: Hs scales the diffusivity, asym and ahf set its sign.")
@@ -250,6 +152,7 @@ def audit_diffusivity():
               f"{'r_ipl(0)':>9} {'shutdown':>10} {'offset/cell':>12}")
     rows = []
 
+    # Print and record one climate's row
     def line(Hs, Tp, asym, ahf):
         cd, _, _ = brie_diffusivity(Hs, Tp, asym, ahf, 41)
         lo, hi = shutdown_angle_deg(cd)
@@ -276,8 +179,8 @@ def audit_diffusivity():
     return pd.DataFrame(rows)
 
 
+# Audit 2: fillet against M across wave heights, flagging the runaway boundary
 def audit_amplitude_and_runaway(years, ny=41, f=0.6):
-    """Fillet against M across wave heights; flag the runaway boundary."""
     print(f"\n=== 2. FILLET vs M, AND THE RUNAWAY BOUNDARY ({ny} domains, "
           f"{years} yr, f={f}) ===")
     print("'RUN@yr' is the year the diffusion number first hit zero. The fillet")
@@ -310,8 +213,8 @@ def audit_amplitude_and_runaway(years, ny=41, f=0.6):
     return frame
 
 
+# Audit 3: fillet and volume closure against f, at fixed M
 def audit_sink_fraction(years, ny=41, M=60):
-    """Fillet and volume closure against f, at fixed M."""
     print(f"\n=== 3. FILLET AND VOLUME CLOSURE vs f ({ny} domains, {years} yr, "
           f"M={M}, Hatteras climate) ===")
     print("f scales the downdrift sink only, so f < 1 makes the groin a NET")
@@ -332,8 +235,8 @@ def audit_sink_fraction(years, ny=41, M=60):
     return pd.DataFrame(rows)
 
 
+# Audit 4: how the fillet and the mean drift depend on reach length
 def audit_domain_count(years, M=60, f=0.6):
-    """How the fillet and the mean drift depend on reach length."""
     print(f"\n=== 4. DOMAIN-COUNT CONVERGENCE ({years} yr, M={M}, f={f}, "
           f"Hatteras climate) ===")
     print("The solve is PERIODIC. A short reach wraps the fillet into its own")
@@ -358,23 +261,8 @@ def audit_domain_count(years, M=60, f=0.6):
     return pd.DataFrame(rows)
 
 
+# Audit 5: several structures, stacked, spaced and opposed: do they superpose, and when do they merge?
 def audit_groin_field(years, ny=121, M=60, f=0.6):
-    """Several structures: do they superpose, and at what spacing do they merge?
-
-    Two separate questions, deliberately kept apart.
-
-    STACKED. Several dipoles on the SAME pair of domains is the case
-    GROIN_PLAN calls "four groins, one dipole, deliberately" -- the real Buxton
-    field fits inside one 500 m cell. In a LINEAR solve N stacked dipoles of
-    amplitude M are exactly one dipole of amplitude N*M. The solve is not
-    linear, because the diffusion number depends on the shoreline angle, so
-    this measures how far from N*M the answer actually lands.
-
-    SPACED. Dipoles every `spacing` domains. A field whose structures are far
-    apart holds one fillet each; a field whose structures are close holds one
-    fillet for the whole field, with the interior ones doing nothing. The
-    interior-to-end fillet ratio says which regime a spacing is in.
-    """
     print(f"\n=== 5. GROIN FIELDS ({ny} domains, {years} yr, M={M}, f={f}, "
           f"Hatteras climate) ===")
     rows = []
@@ -449,25 +337,8 @@ def audit_groin_field(years, ny=121, M=60, f=0.6):
     return pd.DataFrame(rows)
 
 
+# Audit 6: the rig as designed (20 working domains, n_buffer per side): buffer size and runaway boundary
 def audit_chosen_rig(years=200, ny=40, n_buffer=10, f=0.6):
-    """The rig as designed: 20 working domains, `n_buffer` buffers per side.
-
-    Two things this has to establish, because the rig's width rests on them.
-
-    WHETHER THE BUFFER IS BIG ENOUGH. It is NOT an absorbing boundary -- BRIE's
-    solve is periodic, so a buffer separates the groin from the wrap, it does
-    not soak anything up. The diffusive reach of the dipole grows as
-    dy*sqrt(2*r_ipl*t) with no dependence on M, so the buffer is exceeded after
-    a time that depends only on the wave climate. Past that point the fillet's
-    own tail has come round the back. Section 4 of this audit says that costs
-    about 3% of the fillet, and rather more of the reach mean and of any attempt
-    to measure the alongshore extent.
-
-    WHERE THE RUNAWAY BOUNDARY FALLS ACROSS THE WAVE-HEIGHT RANGE. The fillet is
-    bought by M / r_ipl, so sweeping wave height IS sweeping the cost of M. This
-    prints the grid the CASCADE sweep should cover and flags which cells are
-    past the shutdown.
-    """
     print(f"\n=== 6. THE CHOSEN RIG: {ny} domains "
           f"({ny - 2 * n_buffer} working + {n_buffer} buffer per side), "
           f"{years} yr, f={f} ===")
@@ -505,6 +376,7 @@ def audit_chosen_rig(years=200, ny=40, n_buffer=10, f=0.6):
     return pd.DataFrame(rows)
 
 
+# Run: all six audits, then one CSV per audit
 def main():
     parser = argparse.ArgumentParser(
         description="Audit BRIE's alongshore solve under a groin dipole.")
@@ -515,6 +387,7 @@ def main():
     args = parser.parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
 
+    # Run every audit
     tables = {
         "diffusivity": audit_diffusivity(),
         "amplitude_runaway": audit_amplitude_and_runaway(args.years),
@@ -523,6 +396,7 @@ def main():
         "groin_field": audit_groin_field(args.years),
         "chosen_rig": audit_chosen_rig(args.years),
     }
+    # Write one CSV per audit
     print()
     for name, frame in tables.items():
         path = args.outdir / f"solver_audit_{name}.csv"

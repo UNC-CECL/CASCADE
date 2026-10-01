@@ -1,44 +1,35 @@
-from pathlib import Path
 #!/usr/bin/env python3
 """
-fix_cascade_yaml.py
-===================
-One-shot repair for a CASCADE parameter YAML that has been "poisoned" with
-NumPy scalar objects, e.g.:
+Repair a CASCADE parameter YAML that numpy scalars were serialised into, so yaml.full_load reads it again.
 
-    yaml.constructor.ConstructorError: could not determine a constructor for the
-    tag 'tag:yaml.org,2002:python/object/apply:numpy._core.multiarray.scalar'
-
-That happens when a numpy value (np.float64(...), etc.) got serialized into the
-file instead of a plain number. CASCADE reads the file with yaml.full_load,
-which refuses to reconstruct those objects, so every run crashes on load.
-
-This script loads the file with a loader that CAN rebuild the numpy objects,
-converts every numpy scalar/array back to a plain Python float/int/list, and
-rewrites the file with plain numbers only. A .bak copy is made first.
-
-USAGE
------
-Just run it. Edit PARAM_FILE below if your path differs.
     python fix_cascade_yaml.py
+
+Rewrites PARAM_FILE in place with plain numbers, after a .bak copy beside it.
+Needs numpy and PyYAML. Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
+from pathlib import Path
 
 import os
 import shutil
 import numpy as np
 import yaml
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
+# --- CONFIG ------------------------------------------------------------------
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# Path to the parameter YAML CASCADE is choking on (from your traceback).
+# The parameter YAML CASCADE fails to load
 PARAM_FILE = str(_PATH_REPO / "data" / "hatteras_init" / "Hatteras-CASCADE-parameters.yaml")
+# -----------------------------------------------------------------------------
 
 
+# Numpy scalars and arrays, recursively, back to plain Python types
 def to_plain(obj):
-    """Recursively convert numpy scalars/arrays to plain Python types."""
     if isinstance(obj, dict):
         return {k: to_plain(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
@@ -50,29 +41,28 @@ def to_plain(obj):
     return obj
 
 
+# Run: back up, load with numpy objects, strip them, rewrite, prove full_load works
 def main():
     if not os.path.isfile(PARAM_FILE):
         raise SystemExit(f"File not found: {PARAM_FILE}")
 
-    # 1. Back up the original first (never overwrite without a copy).
+    # Back up the original first
     backup = PARAM_FILE + ".bak"
     shutil.copyfile(PARAM_FILE, backup)
     print(f"Backup written: {backup}")
 
-    # 2. Load with UnsafeLoader -- unlike full_load, it can reconstruct the
-    #    numpy scalar objects (numpy must be importable, which it is here).
+    # Load with UnsafeLoader, which can rebuild the numpy objects (README)
     with open(PARAM_FILE, "r") as f:
         doc = yaml.load(f, Loader=yaml.UnsafeLoader)
 
-    # 3. Strip every numpy type back to a plain Python number.
+    # Strip every numpy type back to a plain Python number
     doc_clean = to_plain(doc)
 
-    # 4. Rewrite with safe_dump so only plain scalars are emitted. Key order is
-    #    preserved; CASCADE reads by key, so order/comments don't matter to it.
+    # Rewrite with safe_dump, plain scalars only, key order kept
     with open(PARAM_FILE, "w") as f:
         yaml.safe_dump(doc_clean, f, default_flow_style=False, sort_keys=False)
 
-    # 5. Prove it: full_load (what CASCADE uses) must now succeed.
+    # Prove it: full_load, which CASCADE uses, must now succeed
     with open(PARAM_FILE, "r") as f:
         yaml.full_load(f)
 

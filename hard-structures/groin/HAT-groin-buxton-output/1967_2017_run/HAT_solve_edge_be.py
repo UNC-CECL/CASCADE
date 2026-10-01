@@ -1,53 +1,18 @@
 #!/usr/bin/env python3
 """Solves the D2 / D12 edge background-erosion correction for the 1967 rig.
 
-WHY THIS EXISTS
-    `HAT_groin_hindcast_1967_2017.py` carries
-
-        EDGE_BE_RATES_GIS = {2: 5.0, 12: 10.0}   # "(solve for this)"
-
-    -- placeholders that were never solved. They are not a minor detail here.
-    The reduced reach is 11 real domains inside 41, so D2 sits THREE domains
-    from the groin pair at D5/D6: an imposed rate at the edge diffuses into the
-    pair within a few years and lands directly on the signal the sweep is
-    fitting. The observed edge rates over 1967-2023 are +1.18 and +1.35 m/yr,
-    so the placeholders are 4-7x too strong.
-
-WHAT IS SOLVED, AND AGAINST WHAT
-    The same method the production hindcast uses for GIS 1 / GIS 90 -- the site
-    config records those as "solved on the edgeBE road_bdm base run". A trial
-    edge rate is imposed, the base run is stepped, and the modelled change at
-    that domain is compared against the surveyed change from the fixed 1967
-    datum. The rate is then adjusted and the run repeated.
-
-    GROIN OFF, ALWAYS. If the edge were solved with the groin attached, the
-    correction could absorb groin signal and the sweep would afterwards be
-    fitting M against a background that had already eaten part of its effect.
-    The whole point of an edge correction is that it is STRUCTURAL -- a fix for
-    the buffer's artificial orientation -- so it must be solved with the
-    structure of interest switched off.
-
-    Both edges are solved together rather than one at a time. They are nearly
-    independent (opposite ends of the reach) but not exactly, since each one's
-    signal diffuses inward, so a joint secant step converges without pretending
-    the coupling is zero.
-
-METHOD
-    Secant iteration on each edge independently. The shoreline response to an
-    imposed background rate is close to linear over this range, so two
-    evaluations bracket the root and each further step refines it. Converges in
-    2-3 iterations; the cap exists so a non-convergent case stops rather than
-    spinning.
-
-Usage:
     python HAT_solve_edge_be.py [--max-iter 4] [--tol 1.0]
 
-Prints the solved rates and writes them to edge_be_solved.json for the sweep
-to read. Nothing else may run while this does -- every CASCADE construction
-writes the shared Hatteras-CASCADE-parameters.yaml, and concurrent writers
-corrupt it.
+Secant iteration on both edges at once, groin OFF, each trial a 1967-2024
+no-groin run of HAT_groin_hindcast_1967_2017.py scored against the 2023
+wet/dry change; writes edge_be_solved.json beside this script. Run nothing
+else meanwhile: every Cascade build writes the shared parameters YAML.
+Details: README.md beside this script.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -64,6 +29,8 @@ import pandas as pd
 sys.argv = [sys.argv[0]]          # hc parses nothing, but be explicit
 import HAT_groin_hindcast_1967_2017 as hc   # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 HERE = pathlib.Path(__file__).resolve().parent
 SOLVED_JSON = HERE / "edge_be_solved.json"
 
@@ -83,17 +50,13 @@ STORM_FILE_1967_2024 = (
     pathlib.Path(hc.PROJECT_BASE_DIR) / "hard-structures" / "groin"
     / "HAT-groin-buxton-input" / "groin_init" / "storms" / "1967_2024"
     / "1967_2024_groin_storms.npy")
+# -----------------------------------------------------------------------------
 
 
+# Surveyed change at each edge domain, 1967 -> FIT_YEAR, metres, landward-positive
 def observed_edge_change():
-    """Surveyed change at each edge domain, 1967 -> FIT_YEAR, in metres.
-
-    Returns:
-        {gis: change_m}, landward-positive.
-    """
     frame = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
-    # The SECOND year in the name is the survey year; the first is the 1967
-    # datum. Matching the first one silently returns the datum for every column.
+    # The survey year is the SECOND year in the column name; the first is the 1967 datum
     column = None
     for candidate in frame.columns:
         match = re.match(r"change_from_wetdry_1967_wetdry_(\d{4})", candidate)
@@ -105,15 +68,8 @@ def observed_edge_change():
     return {gis: float(frame.loc[gis, column]) for gis in EDGE_GIS}
 
 
+# One no-groin run at the given edge rates; its modelled change at each edge, metres
 def modelled_edge_change(edge_rates):
-    """Runs the no-groin base at `edge_rates` and returns its edge changes.
-
-    Args:
-        edge_rates: {gis: m/yr} imposed at the edge domains.
-
-    Returns:
-        {gis: modelled change in metres over the run}, landward-positive.
-    """
     hc.MAKE_FIGURES = False
     hc.MAKE_RUN_GIF = False
     hc.RUN_MATRIX = ["no_groin"]
@@ -125,13 +81,10 @@ def modelled_edge_change(edge_rates):
     hc.check_inputs_exist()
     offsets = hc.load_island_offset_dam()
     elevation_files, dune_files = hc.build_file_lists()
-    # The 1971/73 fills are history, applied to every run in the matrix -- the
-    # runner requires them, and omitting them would push their signal into the
-    # solved edge rate.
+    # The 1971/73 fills stay in, or their signal would land in the solved edge rate
     nourish_on, nourish_vol = hc.build_nourishment_arrays_from_manual_inputs()
 
-    # run_one returns a run NAME and writes the matrix to disk; it does not
-    # hand back a Cascade. Same extraction the sweep worker uses.
+    # run_one writes the matrix to disk and returns the run name, as the sweep worker reads it
     run_name = hc.run_one("no_groin", offsets, elevation_files, dune_files,
                           nourish_on, nourish_vol)
     matrix = np.load(pathlib.Path(hc.OUTPUT_BASE_DIR) / run_name
@@ -150,6 +103,7 @@ def modelled_edge_change(edge_rates):
     return {gis: float(change[gis_axis.index(gis)]) for gis in EDGE_GIS}
 
 
+# Run: target, two bracketing trials, secant steps to tolerance, write the solved rates
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--max-iter", type=int, default=4)

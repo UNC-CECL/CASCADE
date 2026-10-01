@@ -1,41 +1,20 @@
+"""
+The groin calibration target: observed dune-line position change and rate per domain, D2-D12, 1967-1997.
+
+    python HAT_target_shoreline_change.py
+
+Reads the raw ArcGIS dune-line offset files (data/hatteras_init/2-brie-offset/
+raw_offsets/); writes positions, change, quantified summary and fold-sum CSVs,
+the target curve, dashboard and trajectory figures and a GIF to OUT_DIR.
+Rates are + seaward. Needs numpy, pandas, matplotlib (pillow for the GIF).
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
+"""
 from pathlib import Path
-"""
-HAT_target_shoreline_change.py
-==============================
-Build the TARGET the groin module must reproduce: the observed dune-line
-POSITION CHANGE (and rate) across years, per domain, from the raw ArcGIS offset
-files. This is what you compare the CASCADE groin runs against.
-
-Why this exists
----------------
-The groin's job is to bend the modeled shoreline so it matches the historical
-1967->1997 differential (holding updrift, eroding downdrift). To calibrate M you
-need that historical signal as a per-domain curve. This script produces it.
-
-Key difference from island_offset_hybrid_1967.py
-------------------------------------------------
-That pipeline references EACH year to its OWN minimum -- correct for a single
-CASCADE input file, but it destroys cross-year comparability (every year gets a
-different zero). To compare POSITIONS across years, all years must share ONE
-baseline. This script:
-  1. extracts per-domain mean ORIG_LEN (raw cross-shore position, m) per year,
-  2. keeps them on a SHARED raw reference (no per-year re-zeroing),
-  3. computes position change between any two years, and the rate (m/yr),
-  4. optionally re-references the whole set to one year (e.g. 1967) or one
-     domain, purely for display -- differences/rates are reference-invariant.
-
-Sign convention
----------------
-ORIG_LEN increases LANDWARD (larger = more retreat), same as CASCADE x_s. So a
-POSITIVE position change = landward = EROSION. With FLIP_FOR_RATE=True the
-reported RATE is flipped to + = seaward/accretion, matching your hindcast plots.
-
-Output
-------
-  <OUT>_positions_by_year.csv   per-domain position each year (shared raw ref)
-  <OUT>_change_<A>_<B>.csv      position change + rate between year A and B
-  <OUT>_target_curve.png        the target rate curve (what the groin must match)
-"""
 
 import os
 import numpy as np
@@ -44,14 +23,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# --- CONFIG ------------------------------------------------------------------
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ============================== CONFIG ==============================
-
-# Raw ArcGIS dune-line offset files, keyed by year.
+# Raw ArcGIS dune-line offset files, keyed by year
 RAW_DIR = str(_PATH_REPO / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets")
 RAW_FILES = {
     1967: os.path.join(RAW_DIR, "1967_duneline_offset_raw.csv"),
@@ -60,47 +36,41 @@ RAW_FILES = {
     1997: os.path.join(RAW_DIR, "1997_duneline_offset_raw.csv"),
 }
 
-# Column names in the raw files (match island_offset_hybrid_1967.py COL_MAP).
+# Column names in the raw files (as island_offset_hybrid_1967.py COL_MAP)
 DOMAIN_COL   = "domain_id"
 POSITION_COL = "ORIG_LEN"     # cross-shore position (m); increases landward
 
-# Domain window to compare. D2-D12 is the range with 1967 coverage.
+# D2-D12 is the range with 1967 coverage
 START_DOMAIN = 2
 END_DOMAIN   = 12
 DOMAINS = list(range(START_DOMAIN, END_DOMAIN + 1))
 
-# The two years whose change is the primary groin TARGET.
+# The two years whose change is the primary groin target
 CHANGE_FROM = 1967
 CHANGE_TO   = 1997
 
-# Display reference (does NOT affect change/rate, only the positions plot):
-#   "none"        -> keep shared raw ORIG_LEN
-#   ("year", Y)   -> subtract year Y's positions (so Y becomes the zero line)
-#   ("domain", D) -> subtract each year's value at domain D
-DISPLAY_REFERENCE = ("year", 1967)
+DISPLAY_REFERENCE = ("year", 1967)   # "none", ("year", Y) or ("domain", D); positions plot only (README)
 
-# Report rate as + = seaward/accretion (matches your hindcast plots).
-FLIP_FOR_RATE = True
+FLIP_FOR_RATE = True   # report rate as + = seaward/accretion
 
-# --- Time-axis trajectory panel + GIF ---
+# Time-axis trajectory panel and GIF
 MAKE_TRAJECTORY_PANEL = True    # position-vs-year, one line per domain
 MAKE_GIF              = True    # proportional-duration animation of the snapshots
 GIF_SECONDS_PER_YEAR  = 0.18    # each real year of gap -> this many seconds of hold
 GIF_MIN_HOLD_S        = 1.2     # floor so even short gaps are readable
 GIF_FPS               = 10      # smoothness of the hold (frames are static repeats)
 
-# Groin annotation.
+# Groin annotation
 GROIN_BOUNDARY = 5.5
 GROIN_COLOR    = "#B71C1C"
 
-OUT_DIR      = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\groin_module\hindcast_groin_test\groin_init\target"
+OUT_DIR      = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-buxton-input" / "groin_init" / "target")
 OUT_BASENAME = "HAT_target_1967_1997"
+# -----------------------------------------------------------------------------
 
 
-# ============================ EXTRACTION ============================
-
+# Mean raw position per domain from one year's file, on the shared raw reference
 def per_domain_positions(path):
-    """Mean POSITION_COL per domain (raw, shared reference). Series indexed by domain."""
     df = pd.read_csv(path, encoding="utf-8-sig")
     for c in (DOMAIN_COL, POSITION_COL):
         if c not in df.columns:
@@ -109,8 +79,8 @@ def per_domain_positions(path):
     return df.groupby(DOMAIN_COL)[POSITION_COL].mean()
 
 
+# Raw position (m) per domain (rows) and year (columns)
 def build_position_table():
-    """DataFrame: index = domain (DOMAINS), columns = years, values = raw position (m)."""
     cols = {}
     for yr, path in RAW_FILES.items():
         if not os.path.isfile(path):
@@ -122,27 +92,8 @@ def build_position_table():
     return tbl.sort_index(axis=1)
 
 
-def apply_display_reference(tbl):
-    """Return a copy shifted per DISPLAY_REFERENCE (for the positions plot only)."""
-    ref = DISPLAY_REFERENCE
-    if ref == "none" or ref is None:
-        return tbl.copy()
-    kind, val = ref
-    if kind == "year":
-        if val not in tbl.columns:
-            print(f"  [WARN] display ref year {val} absent; showing raw positions.")
-            return tbl.copy()
-        return tbl.sub(tbl[val], axis=0)
-    if kind == "domain":
-        if val not in tbl.index:
-            print(f"  [WARN] display ref domain {val} absent; showing raw positions.")
-            return tbl.copy()
-        return tbl.sub(tbl.loc[val], axis=1)
-    raise ValueError(f"bad DISPLAY_REFERENCE: {ref!r}")
-
-
+# Position change and rate per domain between two years, reference-invariant
 def compute_change(tbl, yr_from, yr_to):
-    """Per-domain position change and rate between two years. Reference-invariant."""
     if yr_from not in tbl.columns or yr_to not in tbl.columns:
         raise ValueError(f"need both {yr_from} and {yr_to} in the position table.")
     span = yr_to - yr_from
@@ -160,12 +111,80 @@ def compute_change(tbl, yr_from, yr_to):
     return out
 
 
-# ============================== PLOT ==============================
+# A copy of the table shifted per DISPLAY_REFERENCE, for the plots only
+def apply_display_reference(tbl):
+    ref = DISPLAY_REFERENCE
+    if ref == "none" or ref is None:
+        return tbl.copy()
+    kind, val = ref
+    if kind == "year":
+        if val not in tbl.columns:
+            print(f"  [WARN] display ref year {val} absent; showing raw positions.")
+            return tbl.copy()
+        return tbl.sub(tbl[val], axis=0)
+    if kind == "domain":
+        if val not in tbl.index:
+            print(f"  [WARN] display ref domain {val} absent; showing raw positions.")
+            return tbl.copy()
+        return tbl.sub(tbl.loc[val], axis=1)
+    raise ValueError(f"bad DISPLAY_REFERENCE: {ref!r}")
 
+
+# Zone metrics and the fold-and-sum split (A = groin signal, B = background) across the groin
+def quantify(change_df):
+    rate = dict(zip(change_df["domain_id"], change_df["rate_m_per_yr"]))  # + = seaward
+    pos  = dict(zip(change_df["domain_id"], change_df["position_change_m"]))  # + = landward
+
+    up_doms = [d for d in DOMAINS if d > GROIN_BOUNDARY]
+    dn_doms = [d for d in DOMAINS if d < GROIN_BOUNDARY]
+    up_rate = [rate[d] for d in up_doms]
+    dn_rate = [rate[d] for d in dn_doms]
+
+    zone = {
+        "updrift_domains":   f"D{up_doms[0]}-D{up_doms[-1]}",
+        "downdrift_domains": f"D{dn_doms[0]}-D{dn_doms[-1]}",
+        "updrift_mean_rate_m_yr":   float(np.mean(up_rate)),
+        "downdrift_mean_rate_m_yr": float(np.mean(dn_rate)),
+        "updrift_rate_at_groin_D%d" % up_doms[0]: float(rate[up_doms[0]]),
+        "downdrift_peak_erosion_m_yr": float(min(dn_rate)),
+        "downdrift_peak_domain": f"D{dn_doms[int(np.argmin(dn_rate))]}",
+        "erosion_differential_ratio": float(np.mean(dn_rate) / np.mean(up_rate))
+                                      if np.mean(up_rate) != 0 else float("nan"),
+        "updrift_total_change_m":   float(np.sum([pos[d] for d in up_doms])),
+        "downdrift_total_change_m": float(np.sum([pos[d] for d in dn_doms])),
+    }
+
+    # Fold-and-sum: pair each updrift domain with its mirror across the groin
+    rows = []
+    for u in up_doms:
+        p = int(round(2 * GROIN_BOUNDARY - u))   # mirror domain
+        if p in rate:
+            A = (rate[u] - rate[p]) / 2.0        # groin's antisymmetric signal
+            B = (rate[u] + rate[p]) / 2.0        # background (groin removed)
+            rows.append({
+                "dist_from_groin": u - GROIN_BOUNDARY,
+                "updrift_domain": u, "downdrift_domain": p,
+                "updrift_rate": rate[u], "downdrift_rate": rate[p],
+                "A_groin_signal_m_yr": A,
+                "B_background_m_yr": B,
+            })
+    foldsum = pd.DataFrame(rows)
+
+    # Integrated groin signal (area under A vs distance), the number M reproduces
+    if not foldsum.empty:
+        zone["integrated_A_groin_signal_m_yr_per_domain"] = float(foldsum["A_groin_signal_m_yr"].sum())
+        zone["A_peak_m_yr"] = float(foldsum["A_groin_signal_m_yr"].max())
+        zone["B_mean_m_yr"] = float(foldsum["B_background_m_yr"].mean())
+        zone["B_range_m_yr"] = float(foldsum["B_background_m_yr"].max()
+                                     - foldsum["B_background_m_yr"].min())
+    return zone, foldsum
+
+
+# Two panels: positions by year, and the target rate curve the groin must match
 def plot_target(tbl_display, change_df):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9), constrained_layout=True)
 
-    # -- top: positions over time (display-referenced) --
+    # Top: positions over time (display-referenced)
     for yr in tbl_display.columns:
         ax1.plot(tbl_display.index, tbl_display[yr], marker="o", ms=4, lw=1.6,
                  label=str(yr))
@@ -179,7 +198,7 @@ def plot_target(tbl_display, change_df):
     ax1.grid(alpha=0.3); ax1.legend(title="Year", fontsize=8)
     ax1.invert_yaxis()  # landward down, so the plot reads like a map (sea at top)
 
-    # -- bottom: the TARGET rate curve --
+    # Bottom: the target rate curve
     ax2.plot(change_df["domain_id"], change_df["rate_m_per_yr"],
              marker="o", ms=5, lw=2, color="#08519C",
              label=f"Observed {CHANGE_FROM}-{CHANGE_TO}")
@@ -197,18 +216,109 @@ def plot_target(tbl_display, change_df):
     return fig
 
 
-# ========================= TRAJECTORY + GIF =========================
+# A(y), the groin signal M reproduces, and B(y), the background, against distance from the groin
+def plot_foldsum(foldsum):
+    fig, ax = plt.subplots(figsize=(9, 5), constrained_layout=True)
+    d = foldsum["dist_from_groin"]
+    ax.plot(d, foldsum["A_groin_signal_m_yr"], marker="o", ms=6, lw=2.2,
+            color="#08519C", label="A = groin signal (antisymmetric)")
+    ax.plot(d, foldsum["B_background_m_yr"], marker="s", ms=6, lw=2.2,
+            color="#B71C1C", ls="--", label="B = background (symmetric)")
+    ax.axhline(0, color="gray", ls=":", lw=1, alpha=0.7)
+    ax.set_xlabel("Distance from groin (domains)")
+    ax.set_ylabel("Rate (m/yr)")
+    ax.set_title("Fold-and-sum decomposition   |   A is the target your M reproduces\n"
+                 "(flat B would confirm uniform-background dipole model)")
+    # Label each updrift/downdrift pair
+    for _, r in foldsum.iterrows():
+        ax.annotate(f"D{int(r['updrift_domain'])}/D{int(r['downdrift_domain'])}",
+                    (r["dist_from_groin"], r["A_groin_signal_m_yr"]),
+                    textcoords="offset points", xytext=(0, 8),
+                    fontsize=7, ha="center", color="#08519C")
+    ax.grid(alpha=0.3); ax.legend(fontsize=8)
+    return fig
 
+
+# One-glance summary: per-domain rate bars, zone means with the ratio, and the A/B split
+def plot_quantification_dashboard(change_df, zone, foldsum):
+    rate = dict(zip(change_df["domain_id"], change_df["rate_m_per_yr"]))
+    doms = list(change_df["domain_id"])
+
+    fig = plt.figure(figsize=(13, 8), constrained_layout=True)
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.1, 1.0])
+    ax_bars = fig.add_subplot(gs[0, :])     # top: per-domain rate bars
+    ax_mean = fig.add_subplot(gs[1, 0])     # bottom-left: zone means
+    ax_fold = fig.add_subplot(gs[1, 1])     # bottom-right: A/B decomposition
+
+    # Top: per-domain rate bars, coloured by zone
+    colors = ["#B71C1C" if d < GROIN_BOUNDARY else "#08519C" for d in doms]
+    bars = ax_bars.bar(doms, [rate[d] for d in doms], color=colors,
+                       edgecolor="black", linewidth=0.5, width=0.7)
+    ax_bars.axhline(0, color="gray", lw=1)
+    ax_bars.axvline(GROIN_BOUNDARY, color=GROIN_COLOR, ls="--", lw=1.6, zorder=5)
+    ax_bars.text(GROIN_BOUNDARY, ax_bars.get_ylim()[1] * 0.9, " groin",
+                 color=GROIN_COLOR, fontsize=9, rotation=90, va="top")
+    for d in doms:
+        ax_bars.annotate(f"{rate[d]:+.1f}", (d, rate[d]),
+                         textcoords="offset points",
+                         xytext=(0, 4 if rate[d] >= 0 else -12),
+                         ha="center", fontsize=7)
+    ax_bars.set_xticks(doms)
+    ax_bars.set_xlabel(f"GIS Domain ID (D{DOMAINS[0]}-D{DOMAINS[-1]})")
+    ax_bars.set_ylabel("Rate (m/yr)  [+ seaward]")
+    ax_bars.set_title(f"Per-domain shoreline change rate  {CHANGE_FROM}-{CHANGE_TO}   "
+                      f"(red = downdrift / eroding, blue = updrift)")
+    ax_bars.grid(alpha=0.3, axis="y")
+
+    # Bottom left: zone means and the differential
+    means = [zone["downdrift_mean_rate_m_yr"], zone["updrift_mean_rate_m_yr"]]
+    labels = [f"Downdrift\n{zone['downdrift_domains']}", f"Updrift\n{zone['updrift_domains']}"]
+    b = ax_mean.bar(labels, means, color=["#B71C1C", "#08519C"],
+                    edgecolor="black", linewidth=0.5, width=0.6)
+    ax_mean.axhline(0, color="gray", lw=1)
+    for rect, v in zip(b, means):
+        ax_mean.annotate(f"{v:+.2f}", (rect.get_x() + rect.get_width() / 2, v),
+                         textcoords="offset points",
+                         xytext=(0, 6 if v >= 0 else -14), ha="center",
+                         fontsize=10, fontweight="bold")
+    ax_mean.set_ylabel("Mean rate (m/yr)")
+    ax_mean.set_title(f"Zone means  |  downdrift erodes "
+                      f"{zone['erosion_differential_ratio']:.1f}\u00d7 the updrift")
+    ax_mean.grid(alpha=0.3, axis="y")
+
+    # Bottom right: A/B decomposition
+    if not foldsum.empty:
+        d = foldsum["dist_from_groin"]
+        ax_fold.plot(d, foldsum["A_groin_signal_m_yr"], marker="o", ms=6, lw=2.2,
+                     color="#08519C", label="A = groin signal")
+        ax_fold.plot(d, foldsum["B_background_m_yr"], marker="s", ms=6, lw=2.2,
+                     color="#B71C1C", ls="--", label="B = background")
+        ax_fold.axhline(0, color="gray", ls=":", lw=1)
+        for _, r in foldsum.iterrows():
+            ax_fold.annotate(f"D{int(r['updrift_domain'])}/D{int(r['downdrift_domain'])}",
+                             (r["dist_from_groin"], r["A_groin_signal_m_yr"]),
+                             textcoords="offset points", xytext=(0, 8),
+                             fontsize=7, ha="center", color="#08519C")
+        b_flat = zone.get("B_range_m_yr", 0) < 1.5
+        ax_fold.set_title(f"Fold-sum: A=groin, B=background\n"
+                          f"(B {'flat -> uniform model OK' if b_flat else 'trends -> varies alongshore'})",
+                          fontsize=10)
+        ax_fold.set_xlabel("Distance from groin (domains)")
+        ax_fold.set_ylabel("Rate (m/yr)")
+        ax_fold.grid(alpha=0.3); ax_fold.legend(fontsize=8)
+    else:
+        ax_fold.text(0.5, 0.5, "no paired domains", ha="center", va="center")
+        ax_fold.axis("off")
+
+    return fig
+
+
+# Position against year, one line per domain, updrift validation domains D6-D10 in bold
 def plot_trajectories(tbl_display):
-    """Position vs YEAR, one line per domain -- the honest 'over time' view.
-    Years sit at their true spacing on the x-axis, so uneven gaps show correctly.
-    Updrift validation domains (D6-D10) are bold/saturated; downdrift (D2-D5,
-    not validated) and far-updrift edge (D11-D12) are muted."""
     years = list(tbl_display.columns)
     fig, ax = plt.subplots(figsize=(11, 6), constrained_layout=True)
 
-    # Distinct saturated colors for the updrift validation zone (D6-D10);
-    # muted grays for downdrift (not validated) and the D11-D12 edge.
+    # Saturated colours for the updrift validation zone, muted grey for the rest
     updrift_focus = [6, 7, 8, 9, 10]
     focus_colors = plt.cm.autumn(np.linspace(0.0, 0.75, len(updrift_focus)))
     focus_map = dict(zip(updrift_focus, focus_colors))
@@ -238,10 +348,8 @@ def plot_trajectories(tbl_display):
     return fig
 
 
+# GIF holding each snapshot in proportion to the real gap to the next; skips if pillow is missing
 def make_gif(tbl_display, out_path):
-    """Proportional-duration GIF: each snapshot is held for a time proportional
-    to the real gap to the NEXT snapshot, so uneven year spacing is respected.
-    Falls back gracefully (prints a note) if pillow isn't available."""
     try:
         from matplotlib.animation import FuncAnimation, PillowWriter
     except Exception as e:
@@ -251,8 +359,7 @@ def make_gif(tbl_display, out_path):
     years = list(tbl_display.columns)
     doms  = list(tbl_display.index)
 
-    # Build the frame schedule: repeat each year's frame in proportion to the
-    # gap to the next year (last year gets the same hold as the previous gap).
+    # Frame schedule: each year repeated in proportion to the gap to the next
     gaps = [years[i + 1] - years[i] for i in range(len(years) - 1)]
     gaps.append(gaps[-1] if gaps else 1)
     holds_s = [max(GIF_MIN_HOLD_S, g * GIF_SECONDS_PER_YEAR) for g in gaps]
@@ -261,7 +368,7 @@ def make_gif(tbl_display, out_path):
     for yr, n in zip(years, frames_per):
         frame_years.extend([yr] * n)
 
-    # Fixed axes so the animation doesn't jump.
+    # Fixed axes so the animation doesn't jump
     all_vals = tbl_display.values
     ymin, ymax = np.nanmin(all_vals), np.nanmax(all_vals)
     pad = 0.08 * (ymax - ymin if ymax > ymin else 1)
@@ -305,163 +412,7 @@ def make_gif(tbl_display, out_path):
         return False
 
 
-# ========================= QUANTIFICATION =========================
-
-def quantify(change_df):
-    """Reduce the per-domain target to defensible scalar metrics + a fold-and-sum
-    decomposition (A = groin signal, B = background) across the groin.
-
-    Returns (zone_summary_dict, foldsum_dataframe).
-    """
-    rate = dict(zip(change_df["domain_id"], change_df["rate_m_per_yr"]))  # + = seaward
-    pos  = dict(zip(change_df["domain_id"], change_df["position_change_m"]))  # + = landward
-
-    up_doms = [d for d in DOMAINS if d > GROIN_BOUNDARY]
-    dn_doms = [d for d in DOMAINS if d < GROIN_BOUNDARY]
-    up_rate = [rate[d] for d in up_doms]
-    dn_rate = [rate[d] for d in dn_doms]
-
-    zone = {
-        "updrift_domains":   f"D{up_doms[0]}-D{up_doms[-1]}",
-        "downdrift_domains": f"D{dn_doms[0]}-D{dn_doms[-1]}",
-        "updrift_mean_rate_m_yr":   float(np.mean(up_rate)),
-        "downdrift_mean_rate_m_yr": float(np.mean(dn_rate)),
-        "updrift_rate_at_groin_D%d" % up_doms[0]: float(rate[up_doms[0]]),
-        "downdrift_peak_erosion_m_yr": float(min(dn_rate)),
-        "downdrift_peak_domain": f"D{dn_doms[int(np.argmin(dn_rate))]}",
-        "erosion_differential_ratio": float(np.mean(dn_rate) / np.mean(up_rate))
-                                      if np.mean(up_rate) != 0 else float("nan"),
-        "updrift_total_change_m":   float(np.sum([pos[d] for d in up_doms])),
-        "downdrift_total_change_m": float(np.sum([pos[d] for d in dn_doms])),
-    }
-
-    # Fold-and-sum: pair updrift domain u with downdrift partner (mirror across groin).
-    rows = []
-    for u in up_doms:
-        p = int(round(2 * GROIN_BOUNDARY - u))   # mirror domain
-        if p in rate:
-            A = (rate[u] - rate[p]) / 2.0        # groin's antisymmetric signal
-            B = (rate[u] + rate[p]) / 2.0        # background (groin removed)
-            rows.append({
-                "dist_from_groin": u - GROIN_BOUNDARY,
-                "updrift_domain": u, "downdrift_domain": p,
-                "updrift_rate": rate[u], "downdrift_rate": rate[p],
-                "A_groin_signal_m_yr": A,
-                "B_background_m_yr": B,
-            })
-    foldsum = pd.DataFrame(rows)
-
-    # Integrated groin signal (area under A vs distance) -- the number M reproduces.
-    if not foldsum.empty:
-        zone["integrated_A_groin_signal_m_yr_per_domain"] = float(foldsum["A_groin_signal_m_yr"].sum())
-        zone["A_peak_m_yr"] = float(foldsum["A_groin_signal_m_yr"].max())
-        zone["B_mean_m_yr"] = float(foldsum["B_background_m_yr"].mean())
-        zone["B_range_m_yr"] = float(foldsum["B_background_m_yr"].max()
-                                     - foldsum["B_background_m_yr"].min())
-    return zone, foldsum
-
-
-def plot_foldsum(foldsum):
-    """Two-line figure: A(y) = groin signal (what M reproduces), B(y) = background."""
-    fig, ax = plt.subplots(figsize=(9, 5), constrained_layout=True)
-    d = foldsum["dist_from_groin"]
-    ax.plot(d, foldsum["A_groin_signal_m_yr"], marker="o", ms=6, lw=2.2,
-            color="#08519C", label="A = groin signal (antisymmetric)")
-    ax.plot(d, foldsum["B_background_m_yr"], marker="s", ms=6, lw=2.2,
-            color="#B71C1C", ls="--", label="B = background (symmetric)")
-    ax.axhline(0, color="gray", ls=":", lw=1, alpha=0.7)
-    ax.set_xlabel("Distance from groin (domains)")
-    ax.set_ylabel("Rate (m/yr)")
-    ax.set_title("Fold-and-sum decomposition   |   A is the target your M reproduces\n"
-                 "(flat B would confirm uniform-background dipole model)")
-    # annotate the pairing
-    for _, r in foldsum.iterrows():
-        ax.annotate(f"D{int(r['updrift_domain'])}/D{int(r['downdrift_domain'])}",
-                    (r["dist_from_groin"], r["A_groin_signal_m_yr"]),
-                    textcoords="offset points", xytext=(0, 8),
-                    fontsize=7, ha="center", color="#08519C")
-    ax.grid(alpha=0.3); ax.legend(fontsize=8)
-    return fig
-
-
-def plot_quantification_dashboard(change_df, zone, foldsum):
-    """One-glance summary of the quantified target: per-domain rate bars colored
-    by zone, a downdrift-vs-updrift mean comparison with the differential ratio,
-    and the A/B fold-sum decomposition."""
-    rate = dict(zip(change_df["domain_id"], change_df["rate_m_per_yr"]))
-    doms = list(change_df["domain_id"])
-
-    fig = plt.figure(figsize=(13, 8), constrained_layout=True)
-    gs = fig.add_gridspec(2, 2, height_ratios=[1.1, 1.0])
-    ax_bars = fig.add_subplot(gs[0, :])     # top: per-domain rate bars
-    ax_mean = fig.add_subplot(gs[1, 0])     # bottom-left: zone means
-    ax_fold = fig.add_subplot(gs[1, 1])     # bottom-right: A/B decomposition
-
-    # ── TOP: per-domain rate bars, colored by zone ──
-    colors = ["#B71C1C" if d < GROIN_BOUNDARY else "#08519C" for d in doms]
-    bars = ax_bars.bar(doms, [rate[d] for d in doms], color=colors,
-                       edgecolor="black", linewidth=0.5, width=0.7)
-    ax_bars.axhline(0, color="gray", lw=1)
-    ax_bars.axvline(GROIN_BOUNDARY, color=GROIN_COLOR, ls="--", lw=1.6, zorder=5)
-    ax_bars.text(GROIN_BOUNDARY, ax_bars.get_ylim()[1] * 0.9, " groin",
-                 color=GROIN_COLOR, fontsize=9, rotation=90, va="top")
-    for d in doms:
-        ax_bars.annotate(f"{rate[d]:+.1f}", (d, rate[d]),
-                         textcoords="offset points",
-                         xytext=(0, 4 if rate[d] >= 0 else -12),
-                         ha="center", fontsize=7)
-    ax_bars.set_xticks(doms)
-    ax_bars.set_xlabel(f"GIS Domain ID (D{DOMAINS[0]}-D{DOMAINS[-1]})")
-    ax_bars.set_ylabel("Rate (m/yr)  [+ seaward]")
-    ax_bars.set_title(f"Per-domain shoreline change rate  {CHANGE_FROM}-{CHANGE_TO}   "
-                      f"(red = downdrift / eroding, blue = updrift)")
-    ax_bars.grid(alpha=0.3, axis="y")
-
-    # ── BOTTOM-LEFT: zone means + differential ──
-    means = [zone["downdrift_mean_rate_m_yr"], zone["updrift_mean_rate_m_yr"]]
-    labels = [f"Downdrift\n{zone['downdrift_domains']}", f"Updrift\n{zone['updrift_domains']}"]
-    b = ax_mean.bar(labels, means, color=["#B71C1C", "#08519C"],
-                    edgecolor="black", linewidth=0.5, width=0.6)
-    ax_mean.axhline(0, color="gray", lw=1)
-    for rect, v in zip(b, means):
-        ax_mean.annotate(f"{v:+.2f}", (rect.get_x() + rect.get_width() / 2, v),
-                         textcoords="offset points",
-                         xytext=(0, 6 if v >= 0 else -14), ha="center",
-                         fontsize=10, fontweight="bold")
-    ax_mean.set_ylabel("Mean rate (m/yr)")
-    ax_mean.set_title(f"Zone means  |  downdrift erodes "
-                      f"{zone['erosion_differential_ratio']:.1f}\u00d7 the updrift")
-    ax_mean.grid(alpha=0.3, axis="y")
-
-    # ── BOTTOM-RIGHT: A/B decomposition ──
-    if not foldsum.empty:
-        d = foldsum["dist_from_groin"]
-        ax_fold.plot(d, foldsum["A_groin_signal_m_yr"], marker="o", ms=6, lw=2.2,
-                     color="#08519C", label="A = groin signal")
-        ax_fold.plot(d, foldsum["B_background_m_yr"], marker="s", ms=6, lw=2.2,
-                     color="#B71C1C", ls="--", label="B = background")
-        ax_fold.axhline(0, color="gray", ls=":", lw=1)
-        for _, r in foldsum.iterrows():
-            ax_fold.annotate(f"D{int(r['updrift_domain'])}/D{int(r['downdrift_domain'])}",
-                             (r["dist_from_groin"], r["A_groin_signal_m_yr"]),
-                             textcoords="offset points", xytext=(0, 8),
-                             fontsize=7, ha="center", color="#08519C")
-        b_flat = zone.get("B_range_m_yr", 0) < 1.5
-        ax_fold.set_title(f"Fold-sum: A=groin, B=background\n"
-                          f"(B {'flat -> uniform model OK' if b_flat else 'trends -> varies alongshore'})",
-                          fontsize=10)
-        ax_fold.set_xlabel("Distance from groin (domains)")
-        ax_fold.set_ylabel("Rate (m/yr)")
-        ax_fold.grid(alpha=0.3); ax_fold.legend(fontsize=8)
-    else:
-        ax_fold.text(0.5, 0.5, "no paired domains", ha="center", va="center")
-        ax_fold.axis("off")
-
-    return fig
-
-
-# ============================== MAIN ==============================
-
+# Run: positions, change, quantify, then write every table and figure
 def main():
     print("=" * 70)
     print("Building groin calibration target from dune-line positions")
@@ -481,7 +432,7 @@ def main():
     print(change_df[["domain_id", "position_change_m", "rate_m_per_yr"]]
           .to_string(index=False))
 
-    # ── Quantify ─────────────────────────────────────────────────────────────
+    # Quantify
     zone, foldsum = quantify(change_df)
     print("\n" + "-" * 60)
     print("QUANTIFIED TARGET")
@@ -503,6 +454,7 @@ def main():
               f"B range = {zone['B_range_m_yr']:.2f} m/yr "
               f"({'flat -> uniform-background model OK' if zone['B_range_m_yr'] < 1.5 else 'trends -> background varies alongshore'})")
 
+    # Tables and the target curve
     os.makedirs(OUT_DIR, exist_ok=True)
     pos_csv = os.path.join(OUT_DIR, f"{OUT_BASENAME}_positions_by_year.csv")
     chg_csv = os.path.join(OUT_DIR, f"{OUT_BASENAME}_change_{CHANGE_FROM}_{CHANGE_TO}.csv")
@@ -525,25 +477,25 @@ def main():
     if not foldsum.empty:
         print(f"  {fold_csv}")
 
-    # -- fold-and-sum figure --
+    # Fold-and-sum figure
     if not foldsum.empty:
         fold_png = os.path.join(OUT_DIR, f"{OUT_BASENAME}_foldsum.png")
         plot_foldsum(foldsum).savefig(fold_png, dpi=200, bbox_inches="tight")
         print(f"  {fold_png}")
 
-    # -- quantification dashboard (the one-glance summary figure) --
+    # Quantification dashboard
     dash_png = os.path.join(OUT_DIR, f"{OUT_BASENAME}_quantification_dashboard.png")
     plot_quantification_dashboard(change_df, zone, foldsum).savefig(
         dash_png, dpi=200, bbox_inches="tight")
     print(f"  {dash_png}")
 
-    # -- time-axis trajectory panel --
+    # Time-axis trajectory panel
     if MAKE_TRAJECTORY_PANEL:
         traj_png = os.path.join(OUT_DIR, f"{OUT_BASENAME}_trajectories.png")
         plot_trajectories(tbl_display).savefig(traj_png, dpi=200, bbox_inches="tight")
         print(f"  {traj_png}")
 
-    # -- proportional-duration GIF --
+    # Proportional-duration GIF
     if MAKE_GIF:
         gif_path = os.path.join(OUT_DIR, f"{OUT_BASENAME}_position_over_time.gif")
         make_gif(tbl_display, gif_path)

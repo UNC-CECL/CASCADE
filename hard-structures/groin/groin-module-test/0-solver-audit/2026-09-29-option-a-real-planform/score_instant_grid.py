@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
-"""Score the full-model groin grids (instant 2004 failure) on the observed gap.
-
-For every run under raw_runs/experiments/groin/2026-09-29-instant-2004-grid/
-(blocking b<b>_f<f>, dipole M<M>_f<f>) and the matrix no-groin baseline:
-
-  date RMSE    the D5 - D6 gap change since the window start, sampled at the
-               wet/dry table's own dates inside the window, against the
-               observed change (2010 start interpolated between 2008 and 2014).
-               The primary score: an OLS trend alone is matched by
-               build-then-collapse shapes the data do not show.
-  OLS change   trend x 14 yr, as observed_fillet_m builds its target.
-
-Both windows, both kinds; joint = RMS of the two windows' date RMSEs.
-Sign: landward-positive, + = downdrift sits further landward of updrift.
+"""
+Score the full-model groin grids (instant 2004 failure) on the observed D5-D6 gap.
 
     python score_instant_grid.py  ->  instant_grid_scores.csv + printed tables
 
-Author: Hannah A. Henry, UNC CECL
+Every blocking and dipole run of the 2026-09-29-instant-2004-grid experiment and
+the matrix no-groin baselines, scored by date RMSE (the gap change at the wet/dry
+dates in the window) and OLS change. Joint = RMS of the two windows' date RMSEs.
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -29,22 +25,25 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[4]
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path[:0] = [str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"),
                 str(REPO / "scripts" / "site_layer"), str(REPO / "scripts")]
 from HAT_groin_sweep_config import WETDRY_CHANGE_TABLE, observed_fillet_m  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW = REPO / "output" / "raw_runs"
 GRID = RAW / "experiments" / "groin" / "2026-09-29-instant-2004-grid"
 BASELINES = {
     1996: RAW / "matrix/1996_2010/edgeBE/HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin",
     2010: RAW / "matrix/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin",
 }
-UP, DOWN = 15 + 6 - 1, 15 + 5 - 1
+UP, DOWN = 15 + 6 - 1, 15 + 5 - 1      # GIS 6 / GIS 5 in the padded array
 YEARS = 14
+# -----------------------------------------------------------------------------
 
 
+# Observed D5 - D6 gap at each wet/dry date (mean of that year's columns)
 def observed_series():
     tab = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
     obs = {}
@@ -55,6 +54,7 @@ def observed_series():
     return pd.Series({y: np.mean(v) for y, v in obs.items()}).sort_index()
 
 
+# One run's date RMSE and OLS change against the observed gap in its window
 def score(x, start, obs):
     g = x[:, DOWN] - x[:, UP]
     g = g - g[0]
@@ -70,6 +70,7 @@ def score(x, start, obs):
                 observed_at_dates=" ".join(f"{v:+.0f}" for v in o))
 
 
+# Run: score the baselines and every grid run, write the CSV, print the tables
 def main():
     obs = observed_series()
     rows = []

@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
-"""Trajectory check for the instant-failure candidates (see failure_schedule_test.py).
+"""
+Trajectory check: score the instant-failure candidates against the observed gap at its own dates.
 
-An OLS trend can be matched by the wrong shape. The observed D5-D6 gap is FLAT
-1996-2004 and then declines; a dipole builds a fillet and then drops it. So the
-candidates are scored against the observed gap at its own dates, as change since
-the window start (the 2010 start is interpolated between 2008 and 2014), with
-the full-model no-groin offset spread linearly over the window.
+    python trajectory_check.py
+
+An OLS trend can be matched by the wrong shape, so each candidate's D5-D6 gap
+change is sampled at the wet/dry dates inside the window (full-model no-groin
+offset spread linearly) and compared with the observed change. Candidates as in
+failure_schedule_test.py. Writes trajectory_check.csv.
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 import re
 import sys
@@ -15,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[4]
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path[:0] = [str(HERE), str(HERE.parent),
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"),
@@ -24,6 +32,11 @@ import blocking_groin_emulator as bg  # noqa: E402
 import failure_schedule_test as fs  # noqa: E402
 from HAT_groin_sweep_config import WETDRY_CHANGE_TABLE  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
+FAIL = 2004                                # the instant failure year
+# -----------------------------------------------------------------------------
+
+# Observed D5-D6 gap per wet/dry date, and its value at each window start
 tab = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
 obs = {}
 for c in tab.columns:
@@ -33,13 +46,14 @@ for c in tab.columns:
 obs = pd.Series({y: np.mean(v) for y, v in obs.items()}).sort_index()
 start_gap = {1996: obs[1996], 2010: np.interp(2010, obs.index, obs.values)}
 
-FAIL = 2004
+# Candidates to score, (kind, strength, f); the instant schedule swapped into the emulator
 cands = ([("none", 0, 0)]
          + [("dipole", M, f) for M in (4, 6, 7, 8, 9, 10, 11, 12, 15) for f in (0.0, 0.1, 0.2, 0.3, 0.4, 0.5)]
          + [("blocking", round(b, 2), f) for b in np.arange(0.2, 1.01, 0.05)
             for f in (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6)])
 bg.b_of_year = lambda b0, f, year: b0 if year < FAIL else b0 * f
 
+# Score every candidate at the observed dates in both windows
 rows = []
 for start in (1996, 2010):
     x0 = bg.load_planform(start)
@@ -59,6 +73,7 @@ for start in (1996, 2010):
                          rmse_dates=float(np.sqrt(np.mean((model - o) ** 2))),
                          peak=float(g.max()), model=" ".join(f"{v:+.0f}" for v in model),
                          observed=" ".join(f"{v:+.0f}" for v in o)))
+# Write the table, print each window, then the joint ranking
 t = pd.DataFrame(rows)
 t.to_csv(HERE / "trajectory_check.csv", index=False)
 pd.set_option("display.width", 250, "display.max_colwidth", 60)

@@ -1,32 +1,19 @@
 #!/usr/bin/env python3
-"""Is the groin dipole stable under the option A wave climate, on the real coast?
+"""
+Is the groin dipole stable under the option A wave climate, on the real Hatteras coast?
 
-WHY THIS EXISTS
-    M = 60, f = 0.6 was fitted under the /10 planform at Hs 2.5 / Tp 8.0 /
-    asym 0.7 / high-angle 0.1. Option A (adopted 2026-09-27) is Hs 2.0 / Tp 7.5 /
-    asym 0.6 / high-angle 0.5 on the metres planform. The solver audit
-    (../HAT_groin_solver_audit.py) found the fillet is bought by M / r_ipl and
-    that the high-angle fraction sets where BRIE's diffusivity goes to zero, so
-    both changes bear directly on whether the old M is even runnable.
+    python groin_stability_option_a.py
 
-    The audit's rig starts from a STRAIGHT coast. Under option A BRIE's
-    diffusivity at 0 deg is -119 m^2/yr, so a straight rig shuts down in year 1
-    at any M and says nothing about Hatteras. This check starts instead from
-    the real BRIE shoreline of the adopted matrix runs (x_s after year 1), whose
-    local angles (median about -9 deg) are what set the diffusivity.
+The solver audit's emulator (BRIE's alongshore solve plus the dipole; no
+Barrier3D, source/sink or storms), started from the adopted matrix runs' BRIE
+shoreline after year 1, under the old /10 climate and option A. Writes
+stability_summary.csv and stability_traces.csv. Needs brie, numpy, pandas, scipy.
+Details: README.md beside this script.
 
-WHAT IT IS AND IS NOT
-    The same emulator as the audit: BRIE's own coast_diff table and sparse
-    indices, the same row-scaled implicit solve, the same clip at zero. It adds
-    only the groin dipole, with GroinCallback's linear-ramp deterioration
-    schedule. No Barrier3D, no source/sink, no storms: every number here is the
-    alongshore solve's response to the dipole alone, measured against a no-groin
-    run from the same planform. Anything a full CASCADE run does differently is
-    cross-shore feedback.
-
-    Nothing in the main code is changed; brie and the audit are imported as-is.
-
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -43,20 +30,17 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 from HAT_groin_solver_audit import brie_diffusivity, DY_M, DT_YR  # noqa: E402
 
-REPO = HERE.parents[4]
+# --- CONFIG ------------------------------------------------------------------
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
-# The adopted natural-dunes-with-road edgeBE runs; any matrix run gives the same
-# BRIE planform at year 1 to within the year's cross-shore change.
-PLANFORM_RUNS = {
+PLANFORM_RUNS = {                  # the adopted road_nobdm edgeBE runs (README)
     1996: MATRIX / "1996_2010/edgeBE/HAT_1996_2010_edgeBE_offsetmetres_road_nobdm_nogroin",
     2010: MATRIX / "2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_nobdm_nogroin",
 }
 RUN_YEARS = 14                     # 1996-2009 and 2010-2023, as the matrix runs them
 
-# GroinCallback wiring, as in HAT_groin_sweep_config: GIS 6 updrift, GIS 5
-# downdrift, 15 buffer domains, first GIS 1.
-NUM_BUFFER = 15
-UPDRIFT_PAD, DOWNDRIFT_PAD = NUM_BUFFER + 6 - 1, NUM_BUFFER + 5 - 1
+NUM_BUFFER = 15                    # GroinCallback wiring as in HAT_groin_sweep_config
+UPDRIFT_PAD, DOWNDRIFT_PAD = NUM_BUFFER + 6 - 1, NUM_BUFFER + 5 - 1   # GIS 6 updrift, GIS 5 downdrift
 REAL = slice(NUM_BUFFER, NUM_BUFFER + 90)
 INSTALL_YEAR, DETERIORATION_YEAR, RAMP_YEARS = 1969, 1996, 7
 
@@ -68,26 +52,19 @@ M_VALUES = (1, 2, 3, 5, 10, 20, 40, 60, 80, 120)
 F_VALUES = (0.6, 1.0)
 LONG_YEARS = 200                   # constant-M run for the stability boundary
 FILLET_TARGET_M = 22.11            # the period-1 fillet M = 60 was fitted to
+# -----------------------------------------------------------------------------
 
 
-def effective_M(M, f, year):
-    """GroinCallback._effective_trapping_rate, linear_ramp mode."""
-    if year < DETERIORATION_YEAR:
-        return M
-    taper = min(1.0, (year - DETERIORATION_YEAR) / RAMP_YEARS)
-    return M - taper * (M - M * f)
-
-
+# BRIE x_s (metres, landward +) after the first model year of a matrix run
 def load_planform(start):
-    """BRIE x_s (metres, landward +) after the first model year."""
     run = PLANFORM_RUNS[start]
     npz = np.load(run / f"{run.name}.npz", allow_pickle=True)
     brie = npz["cascade"][0].brie
     return np.asarray(brie._x_s_save, float)[:, 1].copy()
 
 
+# Emulated BRIE alongshore solve with one dipole; one row per year
 def solve(x0, climate, years, M_of_year):
-    """Emulated BRIE alongshore solve with one dipole; returns per-year rows."""
     ny = x0.size
     coast_diff, di, dj = brie_diffusivity(
         climate["Hs"], climate["Tp"], climate["asym"], climate["ahf"], ny)
@@ -119,8 +96,16 @@ def solve(x0, climate, years, M_of_year):
     return pd.DataFrame(rows)
 
 
+# GroinCallback._effective_trapping_rate, linear_ramp mode
+def effective_M(M, f, year):
+    if year < DETERIORATION_YEAR:
+        return M
+    taper = min(1.0, (year - DETERIORATION_YEAR) / RAMP_YEARS)
+    return M - taper * (M - M * f)
+
+
+# Groin run minus the no-groin run from the same planform
 def run_case(x0, climate, years, M_of_year, baseline):
-    """Groin run minus the no-groin run from the same planform."""
     g = solve(x0, climate, years, M_of_year)
     g["fillet_m"] = g.gap_m - baseline.gap_m.values
     g["updrift_advance_m"] = baseline.x_up.values - g.x_up
@@ -129,8 +114,8 @@ def run_case(x0, climate, years, M_of_year, baseline):
     return g
 
 
+# One row per case: end fillet, whether anything shut down, and when
 def summarise(g):
-    """One row: end fillet, whether anything shut down, when."""
     shut = g.loc[g.new_real_shut > 0, "t"]
     return dict(
         fillet_end_m=float(g.fillet_m.iloc[-1]),
@@ -145,13 +130,13 @@ def summarise(g):
     )
 
 
+# Run: every start x climate x window x M x f, then the tables
 def main():
     rows, traces = [], []
     for start in PLANFORM_RUNS:
         x_metres = load_planform(start)
         for cname, climate in CLIMATES.items():
-            # The old climate was calibrated on the /10 planform, so it is
-            # judged there: every alongshore difference one tenth as large.
+            # The old climate is judged on the /10 planform it was calibrated on
             x0 = x_metres / 10.0 if cname == "old_div10" else x_metres
             coast_diff, _, _ = brie_diffusivity(
                 climate["Hs"], climate["Tp"], climate["asym"], climate["ahf"], x0.size)
@@ -186,6 +171,7 @@ def main():
                         g.insert(0, "start", start)
                         traces.append(g)
 
+    # Write both tables and print each window
     table = pd.DataFrame(rows)
     table.to_csv(HERE / "stability_summary.csv", index=False)
     pd.concat(traces).to_csv(HERE / "stability_traces.csv", index=False)
@@ -198,8 +184,7 @@ def main():
         print(table.loc[table.window == window, cols].to_string(index=False,
                                                                  float_format="%.2f"))
 
-    # M that reproduces the period-1 fillet size, per climate, by interpolation
-    # over the stable hindcast cells at f = 0.6.
+    # M giving the period-1 fillet, by interpolation over the stable f = 0.6 cells
     print(f"\nM giving a {FILLET_TARGET_M} m fillet over 14 yr at f = 0.6 "
           "(linear interpolation, stable cells only):")
     for (start, cname), sub in table[(table.window == "hindcast") & (table.f == 0.6)

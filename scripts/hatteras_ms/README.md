@@ -2262,7 +2262,7 @@ Notes that were in the code:
 ```text
 The rig pads 11 real domains (D2-D12) with 15 buffer domains either side, so
 D2 -> 15 and D5 -> 18, D6 -> 19. This is _gis_to_pad() in
-HAT_groin_hindcast_1967_2017.py:76, restated rather than imported because
+HAT_groin_hindcast_1967_2017.py, restated rather than imported because
 importing that module builds a CASCADE run.
 ```
 
@@ -2375,7 +2375,7 @@ Notes that were in the code:
 ```text
 The rig pads 11 real domains (D2-D12) with 15 buffer either side: D2 -> 15,
 D5 -> 18, D6 -> 19, D12 -> 25. The RIG's convention, which differs from
-production's -- see HAT_groin_hindcast_1967_2017.py:76.
+production's -- see _gis_to_pad() in HAT_groin_hindcast_1967_2017.py.
 ```
 
 ```text
@@ -2883,7 +2883,7 @@ Notes that were in the code:
 ```text
 The rig pads 11 real domains (D2-D12) with 15 buffer either side, so D5 -> 18
 and D6 -> 19. This is the RIG's convention and differs from production's
-(D5 -> 19, D6 -> 20) -- see HAT_groin_hindcast_1967_2017.py:76.
+(D5 -> 19, D6 -> 20) -- see _gis_to_pad() in HAT_groin_hindcast_1967_2017.py.
 ```
 
 ```text

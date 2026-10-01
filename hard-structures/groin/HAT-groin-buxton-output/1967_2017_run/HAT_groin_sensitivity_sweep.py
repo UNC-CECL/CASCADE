@@ -1,52 +1,18 @@
 """
-HAT_groin_sensitivity_sweep.py
-================================
-Grid search over GROIN_TRAPPING_RATE_M_YR (M) and GROIN_DETERIORATION_FRACTION
-for the 1967-2017 groin hindcast, scored against the observed wet/dry 2018
-target (D2-D12, full range -- see FIT_DOMAINS_GIS below for why).
+Grid search over the groin's M and deterioration fraction on the 1967-2017 rig, scored against the 2018 wet/dry shoreline.
 
-REDESIGNED FOR CRASH-SAFETY: an earlier in-process version of this sweep
-(running all 30 simulations back-to-back inside ONE Python process) crashed
-partway through with a Windows access violation (0xC0000005) -- the
-signature of accumulated state (Cascade/Barrier3D objects, joblib worker
-pools, or similar) building up over many repeated simulations in a single
-long-lived process, not a bug in any individual run. Fix: EVERY (M,
-fraction) combination now runs in its OWN fresh subprocess
-(HAT_groin_sweep_single_combo.py), guaranteeing the OS fully reclaims
-memory/handles between every single simulation, and results are written to
-CSV IMMEDIATELY after each combo, not batched at the end -- so a crash
-costs you at most one combination's worth of time, not the whole sweep.
+    python HAT_groin_sensitivity_sweep.py
 
-RESUMABLE: if this script is interrupted (crash, closed terminal, etc.),
-just run it again. Already-successful combinations (found in the results
-CSV) are skipped; failed ones (recorded with RMSE=NaN) are retried
-automatically.
+A coarse grid, then a 3 x 3 fine grid around its best cell; every cell runs
+in its own process (HAT_groin_sweep_single_combo.py) and is appended to the
+results CSV at once, so a rerun resumes. Writes the CSV, a heatmap and two
+profile figures to HAT-buxton-hindcast-groin-test/sensitivity_sweep/.
+Details: README.md beside this script.
 
-FIT METRIC: RMSE over the FULL D2-D12 range (both updrift and downdrift) --
-matching the observed shoreline position as closely as possible overall,
-not isolating the groin's own signal specifically. Note that M and
-GROIN_DETERIORATION_FRACTION mainly move domains near the groin (roughly
-D5-D12); the downdrift domains furthest from it (D2-D4) are dominated by
-Cape Point dynamics the groin barely touches, so the "best" combo found
-here reflects a balance between the groin-sensitive domains and a residual
-error elsewhere that no groin parameter can fully close.
-
-STRATEGY -- efficient by construction, not brute force:
-  Stage 1: COARSE grid (few points per axis, wide range) to find the
-           promising region cheaply.
-  Stage 2: FINE grid, zoomed into the neighborhood of the coarse best.
-
-NOTE: this script has not been run end-to-end against a real CASCADE
-install (not available in the environment that built it) -- the resume/
-subprocess/incremental-save logic was tested with a mocked worker, but
-treat the first real run as a shakedown.
-
-Usage: run directly, in the same folder as HAT_groin_threeway_hindcast_1967_2017.py
-AND HAT_groin_sweep_single_combo.py. Produces:
-  - HAT_groin_sweep_results.csv    (every combination's RMSE, written
-                                     incrementally -- safe to inspect mid-run)
-  - HAT_groin_sweep_heatmap.png    (fine grid, M x fraction, colored by RMSE)
-  - prints the single best combination found
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 import os
@@ -61,24 +27,19 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import HAT_groin_hindcast_1967_2017 as hc
 
-# =============================================================================
-# CONFIG
-# =============================================================================
-# Stage 1: coarse grid -- wide range, few points. Edit to your own plausible
-# range (these are illustrative, not validated).
+
+# --- CONFIG ------------------------------------------------------------------
+# Stage 1: coarse grid, wide and sparse (illustrative ranges, not validated)
 COARSE_M_VALUES        = [20, 40, 60, 80, 100, 120]
 COARSE_FRACTION_VALUES = [0.1, 0.3, 0.5, 0.7, 0.9]
 
-# Stage 2: fine grid half-width/step around the coarse best. Narrowed to a
-# clean 3x3=9 (half-width == step, so it lands exactly on best-step/best/
-# best+step) -- down from the original 7x7=49, to cut total runtime roughly
-# in half (30 coarse + 9 fine = 39, vs 30 + 49 = 79).
+# Stage 2: fine grid around the coarse best; half-width == step gives 3 x 3 (README)
 FINE_M_HALF_WIDTH        = 10     # +/- around coarse best M
 FINE_M_STEP              = 10
 FINE_FRACTION_HALF_WIDTH = 0.1
 FINE_FRACTION_STEP       = 0.1
 
-# Validation target -- must match HAT_groin_sweep_single_combo.py exactly.
+# Validation target; must match HAT_groin_sweep_single_combo.py
 MODEL_FIT_YEAR    = 2017   # model's TRUE final simulated year
 OBSERVED_FIT_YEAR = 2018   # wet/dry column used for the observed target
 FIT_DOMAINS_GIS = list(range(2, 13))   # D2-D12, full range
@@ -98,20 +59,16 @@ PROFILE_DIR = os.path.join(OUTPUT_DIR, "profiles")   # must match the worker scr
 WORKER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "HAT_groin_sweep_single_combo.py")
 
-# Styling -- matches HAT_groin_effect_comparison.py's established conventions
+# Styling, as HAT_groin_effect_comparison.py
 MODEL_COLOR = "#FF8C00"
 GROIN_COLOR = "#B71C1C"
 GROIN_BOUNDARY_GIS = 5.5
 DOMAIN_TICK_STEP = 2
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# HELPERS
-# =============================================================================
+# Observed 2018 change per fit domain, for printing only (each worker loads its own)
 def load_observed_target():
-    """Reference copy for printing only -- each worker subprocess loads its
-    own copy independently, so this script never needs the real CASCADE
-    inputs itself."""
     if not os.path.isfile(WETDRY_CHANGE_TABLE):
         raise FileNotFoundError(f"Wet/dry change table not found:\n  {WETDRY_CHANGE_TABLE}")
     df = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
@@ -122,14 +79,8 @@ def load_observed_target():
     return np.array([df[col].get(d, np.nan) for d in FIT_DOMAINS_GIS])
 
 
+# Cells already done in an earlier (possibly crashed) sweep; typed empty frame otherwise (README)
 def load_existing_results():
-    """Resume support: load already-completed combos from a prior (possibly
-    crashed) run of this script. Dtypes are declared explicitly (not left
-    to infer from an empty frame) -- concatenating a real numeric row onto
-    an empty, dtype-unspecified DataFrame is exactly what triggers pandas'
-    "concatenation with empty/all-NA entries" FutureWarning, and silently
-    produces object-dtype columns even on pandas versions that no longer
-    warn about it."""
     if os.path.isfile(RESULTS_CSV):
         return pd.read_csv(RESULTS_CSV)
     return pd.DataFrame({
@@ -140,21 +91,16 @@ def load_existing_results():
     })
 
 
+# Append one cell's result and rewrite the CSV at once
 def append_result(results_df, M, fraction, rmse_val, stage):
-    """Append one result and immediately rewrite the CSV to disk -- progress
-    is never lost even if the very next combination crashes."""
     new_row = pd.DataFrame([dict(M=M, fraction=fraction, rmse=rmse_val, stage=stage)])
     updated = pd.concat([results_df, new_row], ignore_index=True)
     updated.to_csv(RESULTS_CSV, index=False)
     return updated
 
 
+# Run one (M, fraction) cell in a fresh process; (rmse, ok), ok False on any failure
 def run_one_combo_subprocess(M, fraction):
-    """Launch ONE (M, fraction) combination as a fresh subprocess. Returns
-    (rmse, ok). ok=False on ANY failure -- non-zero exit code (including an
-    access violation), or clean exit with unparseable output -- so the
-    caller can log it and move on to the next combination rather than
-    losing the whole sweep."""
     try:
         result = subprocess.run(
             [sys.executable, WORKER_SCRIPT, str(M), str(fraction)],
@@ -187,6 +133,7 @@ def run_one_combo_subprocess(M, fraction):
         return np.nan, False
 
 
+# Every cell of one grid, skipping cells already done
 def run_grid(m_values, fraction_values, stage_label, results_df):
     combos = list(itertools.product(m_values, fraction_values))
     print(f"\n{'=' * 70}\nSTAGE: {stage_label} ({len(m_values)} x "
@@ -212,6 +159,7 @@ def run_grid(m_values, fraction_values, stage_label, results_df):
     return results_df
 
 
+# The groin line and its label
 def _mark_groin(ax):
     ax.axvline(GROIN_BOUNDARY_GIS, color=GROIN_COLOR, lw=1.5, ls="--", alpha=0.9, zorder=5)
     yl = ax.get_ylim()
@@ -219,6 +167,7 @@ def _mark_groin(ax):
             color=GROIN_COLOR, fontsize=8, rotation=90, va="top", ha="left", alpha=0.9)
 
 
+# Light shading: downdrift (D5 and south) vs updrift (D6 and north)
 def _updrift_downdrift_shading(ax):
     ax.axvspan(FIT_DOMAINS_GIS[0] - 0.5, GROIN_BOUNDARY_GIS,
                alpha=0.06, color="firebrick", zorder=0)   # downdrift
@@ -226,20 +175,16 @@ def _updrift_downdrift_shading(ax):
                alpha=0.06, color="seagreen", zorder=0)     # updrift
 
 
+# A cell's saved modelled profile, or None if the worker never wrote one
 def load_profile(M, fraction):
-    """Load a combo's saved per-domain modeled profile (written by the
-    worker alongside its RMSE). Returns None if not found -- e.g. a combo
-    that failed before reaching the save step."""
     path = os.path.join(PROFILE_DIR, f"M{M:g}_frac{fraction:g}.npy")
     if not os.path.isfile(path):
         return None
     return np.load(path)
 
 
+# Best cell's modelled change against the observed, D2-D12
 def fig_best_fit_profile(best, observed):
-    """Modeled (best-fit) vs observed shoreline change, D2-D12 -- the direct
-    visual answer to 'how close does the best combo actually get', not just
-    its aggregate RMSE number."""
     modeled = load_profile(best.M, best.fraction)
     if modeled is None:
         print(f"  [figure] No saved profile for best combo M={best.M}, "
@@ -267,11 +212,8 @@ def fig_best_fit_profile(best, observed):
     print(f"Saved: {fig_out}")
 
 
+# The top-N cells' profiles over the observed: one winner, or a ridge of equals
 def fig_top_n_profiles(all_ok, observed, n=5):
-    """Overlay the top-N best combos' profiles against observed -- shows
-    whether there's one clear winner or a family of comparably-good fits
-    (i.e. M and fraction trading off against each other), which the
-    heatmap's single best-marker can't show on its own."""
     top = all_ok.sort_values("rmse").head(n)
     fig, ax = plt.subplots(figsize=(11, 6), constrained_layout=True)
     ax.plot(FIT_DOMAINS_GIS, observed, "s--", color="black", lw=2.5, ms=7,
@@ -307,9 +249,7 @@ def fig_top_n_profiles(all_ok, observed, n=5):
     print(f"Saved: {fig_out}")
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
+# Run: observed target, coarse grid, fine grid, best cell, heatmap and profile figures
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -325,7 +265,7 @@ def main():
         print(f"\nResuming from a previous run: {n_prev_ok} combination(s) "
               f"already completed successfully -- these will be skipped.")
 
-    # --- Stage 1: coarse grid ---
+    # Stage 1: coarse grid
     results_df = run_grid(COARSE_M_VALUES, COARSE_FRACTION_VALUES, "coarse", results_df)
 
     coarse_ok = results_df[(results_df["stage"] == "coarse") & results_df["rmse"].notna()]
@@ -336,7 +276,7 @@ def main():
     print(f"\nBest coarse combo: M={best_coarse.M}, fraction={best_coarse.fraction:.3f}, "
           f"RMSE={best_coarse.rmse:.2f} m")
 
-    # --- Stage 2: fine grid around the coarse best ---
+    # Stage 2: fine grid around the coarse best
     fine_M_values = list(range(
         max(0, int(best_coarse.M - FINE_M_HALF_WIDTH)),
         int(best_coarse.M + FINE_M_HALF_WIDTH) + 1,
@@ -370,7 +310,7 @@ def main():
               f"script to retry just those -- already-successful combos are "
               f"skipped automatically.")
 
-    # --- Heatmap (fine grid -- higher resolution near the optimum) ---
+    # Heatmap of the fine grid
     if len(fine_ok) > 0:
         fine_ok = fine_ok.copy()
         fine_ok["M"] = pd.to_numeric(fine_ok["M"])
@@ -397,7 +337,7 @@ def main():
     else:
         print("\nNo fine-grid combination succeeded -- skipping heatmap.")
 
-    # --- Profile comparison figures: modeled vs observed shoreline position ---
+    # Modelled vs observed profile figures
     fig_best_fit_profile(best, observed)
     fig_top_n_profiles(all_ok, observed, n=5)
 

@@ -1,80 +1,52 @@
+"""
+Storm file for the 1967-1997 groin test: real 1984-2004 storms resampled into a 30-year window.
+
+    python HAT_resample_grointest_storms.py
+
+Reads the 1984-2004 storm series (hat_env_forcings); writes SAVE_NAME as .npy
+(CASCADE input) and .csv (inspection) into SAVE_DIR. Storm timing is not
+historical. Needs numpy and pandas. Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
+"""
 from pathlib import Path
-"""
-HAT_resample_grointest_storms.py
-============================
-Build the storm file for the 1967-1997 groin TEST run by RESAMPLING an existing
-CASCADE storm series into a new N-year window. No new storm physics -- this is a
-reformat/retime of real events so the record covers the run length.
-
-Why resample instead of create new storms
-------------------------------------------
-The groin acts through BRIE's wave-driven alongshore transport, which is set by
-the WAVE CLIMATE parameters (wave_height, period, asymmetry), NOT by the storm
-file. The storm file drives Barrier3D overwash/dune response (cross-shore), which
-is very nearly orthogonal to the groin test. So we do not need a 1967-1997 storm
-climate -- we need a record of the right LENGTH with realistic event statistics.
-Resampling the real 1984-2004 events preserves their Rhigh/Rlow/period/duration
-distributions and per-year storm counts while retiming them into N years.
-
-Storm timing is therefore NOT historical for 1967-1997. State this in the run
-docstring; it is correct for a function test, not a forced hindcast.
-
-Format (matches historical_storm_creation_v3_HAT.py comparison)
------------------------------------------------------------
-Columns: time, Rhigh, Rlow, period, duration
-  time     : 1-based model year (1 .. N)
-  Rhigh    : max run-up  [decameters MHW]  (NAVD88 - MHW)/10, as in the creator
-  Rlow     : min run-up  [decameters MHW]
-  period   : wave period at peak TWL [s]
-  duration : storm duration [hrs]
-Saved as both .npy (CASCADE input) and .csv (inspection).
-"""
 
 import os
 import numpy as np
 import pandas as pd
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# --- CONFIG ------------------------------------------------------------------
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ============================== CONFIG ==============================
-
-# Source storm series to resample (your existing, validated 1984-2004 file).
+# Source storm series to resample: the validated 1984-2004 file
 import sys as _envsys
 from pathlib import Path as _EnvP
 _envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
                                 if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_env_forcings as _env  # noqa: E402
 SOURCE_NPY = str(_env.storm_series_file(1984, 2004))
-# Target run length. 1967->1997 = 30 model years; CASCADE indexes time 1..N.
-TARGET_YEARS = 30
+TARGET_YEARS = 30   # 1967->1997; CASCADE indexes time 1..N
 
-# How to build each target year's storms:
-#   "bootstrap_years" : for each target year, copy ALL storms from a randomly
-#                       chosen source year (preserves within-year clustering and
-#                       realistic annual counts). Recommended.
-#   "bootstrap_events": draw individual storms i.i.d. to hit a target annual count
-#                       (breaks within-year correlation; use only if you want a
-#                       smoother, less clustered series).
-RESAMPLE_MODE = "bootstrap_years"
+RESAMPLE_MODE = "bootstrap_years"   # or "bootstrap_events" (README)
 
-# For "bootstrap_events" only: mean storms/year (default = source mean).
-EVENTS_PER_YEAR = None
+EVENTS_PER_YEAR = None   # "bootstrap_events" only: mean storms/yr; None = source mean
 
 RANDOM_SEED = 1967   # reproducible
 
-# Duration cap (match your creator's max_storm_dur convention: TRUNCATE, do not
-# drop). Set None to leave source durations untouched.
+# Duration cap and floor, truncated as the creator does; None leaves durations alone
 MAX_STORM_DUR = 72
 MIN_STORM_DUR = 8
 
-SAVE_DIR  = r"/scripts/groin/HAT-buxton-hindcast-groin-test/groin_init/storms/1967_1997"
+SAVE_DIR  = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-buxton-input" / "groin_init" / "storms" / "1967_1997")
 SAVE_NAME = "1967_1997_grointest_storms"
+# -----------------------------------------------------------------------------
 
-# ============================ BUILD ============================
 
+# Load the source storm array, checking it is (N, 5)
 def _load_source(path):
     if not os.path.exists(path):
         raise FileNotFoundError(f"source storm file not found: {path}")
@@ -84,8 +56,8 @@ def _load_source(path):
     return arr
 
 
+# Source storms split by year: {year: rows of Rhigh, Rlow, period, duration}
 def _by_year(arr):
-    """Split source storms into {source_year: rows[:,1:] (Rhigh,Rlow,period,dur)}."""
     years = arr[:, 0].astype(int)
     out = {}
     for y in np.unique(years):
@@ -93,6 +65,7 @@ def _by_year(arr):
     return out
 
 
+# Resample the source into TARGET_YEARS model years, then cap and floor durations
 def build_storms():
     rng = np.random.default_rng(RANDOM_SEED)
     src = _load_source(SOURCE_NPY)
@@ -124,7 +97,7 @@ def build_storms():
 
     df = pd.DataFrame(rows, columns=["time", "Rhigh", "Rlow", "period", "duration"])
 
-    # Duration cap/floor — truncate to match the creator's convention.
+    # Duration cap and floor, truncating as the creator does
     if MAX_STORM_DUR is not None:
         df["duration"] = df["duration"].clip(upper=MAX_STORM_DUR)
     if MIN_STORM_DUR is not None:
@@ -134,6 +107,7 @@ def build_storms():
     return df, src
 
 
+# Run: resample, save .npy and .csv, report against the source
 def main():
     df, src = build_storms()
     os.makedirs(SAVE_DIR, exist_ok=True)
@@ -143,7 +117,7 @@ def main():
     np.save(npy_path, df.to_numpy())
     df.to_csv(csv_path, index=False)
 
-    # ── Report: does the resampled series resemble the source? ───────────────
+    # Report: does the resampled series resemble the source?
     def stats(a_rhigh, a_dur, label, nyears, n):
         print(f"  {label:<10} storms={n:4d}  storms/yr={n/nyears:5.2f}  "
               f"Rhigh[{a_rhigh.min():.3f},{a_rhigh.max():.3f}]  "

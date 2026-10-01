@@ -1,5 +1,25 @@
 # Groin stability under option A, on the real planform (2026-09-29)
 
+## The scripts
+
+| script | question | writes, beside the script |
+|---|---|---|
+| `groin_stability_option_a.py` | is the dipole stable under option A, on the real planform? | `stability_summary.csv`, `stability_traces.csv` |
+| `launch_groin_grid.py` | the full-model grid, through the unchanged runner | runs under `output/raw_runs/experiments/<study>/`, logs in `grid_logs/` |
+| `score_groin_grid.py` | the option A grid against the observed fillet change | `grid_scores.csv` |
+| `diagnose_no_groin_relaxation.py` | why the no-groin model erases the fillet | prints; saved as `diagnose_no_groin_relaxation.txt` |
+| `blocking_groin_emulator.py` | approach 1: a groin that blocks a fraction b of transport | `blocking_groin_scores.csv` |
+| `failure_schedule_test.py` | does an instant failure at the 2003 storm fit both windows? | `failure_schedule_scores.csv` |
+| `trajectory_check.py` | the instant-failure candidates, at the observed dates | `trajectory_check.csv` |
+| `score_instant_grid.py` | the full-model instant-2004 grids against the observed gap | `instant_grid_scores.csv` |
+
+The emulators import each other: `blocking_groin_emulator.py` takes the
+planform, climates and schedule constants from `groin_stability_option_a.py`,
+which takes the solve from `../HAT_groin_solver_audit.py`;
+`failure_schedule_test.py` and `trajectory_check.py` build on
+`blocking_groin_emulator.py`. `WHERE_WE_LEFT_OFF.md` is the hand-over note of
+2026-09-29.
+
 **Question.** M = 60, f = 0.6 was fitted with the /10 planform at Hs 2.5 / Tp 8.0 / asym 0.7 /
 high-angle 0.1. Is it still runnable under option A (Hs 2.0 / Tp 7.5 / asym 0.6 / high-angle 0.5,
 metres planform), and what M does the old fillet now cost?
@@ -173,3 +193,309 @@ observations' 11–14 m year-to-year scatter.
   (7% of the reach budget); dipole ≈ 113,000 m³/yr (19%). The blocking groin gets the same fit
   while moving ~2.5× less sand. (The earlier "M 3 ≈ 18,000 m³/yr" in this README used the
   wrong height; the runner reports 28,000.)
+
+## The scripts in detail
+
+The header of each script says what it does and how to run it; the reasoning
+behind it is here, with the original header kept word for word. Moved out of
+the scripts on 2026-10-01, when the groin study was brought in line with
+`scripts/STYLE.md`.
+
+### groin_stability_option_a.py
+
+Why it exists, what it is and is not, and the result are in the sections above
+("Question", "Method", "Result"). In the code:
+
+- `PLANFORM_RUNS` are the adopted natural-dunes-with-road (`road_nobdm`)
+  edgeBE runs. Any matrix run gives the same BRIE planform at year 1 to within
+  the year's cross-shore change.
+- The groin wiring is GroinCallback's, as in `HAT_groin_sweep_config`: GIS 6
+  updrift, GIS 5 downdrift, 15 buffer domains, first GIS 1.
+- The old climate was calibrated on the /10 planform, so it is judged there:
+  every alongshore difference one tenth as large.
+- The M that reproduces the period-1 fillet size is found per climate by
+  linear interpolation over the stable hindcast cells at f = 0.6.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Is the groin dipole stable under the option A wave climate, on the real coast?
+
+WHY THIS EXISTS
+    M = 60, f = 0.6 was fitted under the /10 planform at Hs 2.5 / Tp 8.0 /
+    asym 0.7 / high-angle 0.1. Option A (adopted 2026-09-27) is Hs 2.0 / Tp 7.5 /
+    asym 0.6 / high-angle 0.5 on the metres planform. The solver audit
+    (../HAT_groin_solver_audit.py) found the fillet is bought by M / r_ipl and
+    that the high-angle fraction sets where BRIE's diffusivity goes to zero, so
+    both changes bear directly on whether the old M is even runnable.
+
+    The audit's rig starts from a STRAIGHT coast. Under option A BRIE's
+    diffusivity at 0 deg is -119 m^2/yr, so a straight rig shuts down in year 1
+    at any M and says nothing about Hatteras. This check starts instead from
+    the real BRIE shoreline of the adopted matrix runs (x_s after year 1), whose
+    local angles (median about -9 deg) are what set the diffusivity.
+
+WHAT IT IS AND IS NOT
+    The same emulator as the audit: BRIE's own coast_diff table and sparse
+    indices, the same row-scaled implicit solve, the same clip at zero. It adds
+    only the groin dipole, with GroinCallback's linear-ramp deterioration
+    schedule. No Barrier3D, no source/sink, no storms: every number here is the
+    alongshore solve's response to the dipole alone, measured against a no-groin
+    run from the same planform. Anything a full CASCADE run does differently is
+    cross-shore feedback.
+
+    Nothing in the main code is changed; brie and the audit are imported as-is.
+
+Author: Hannah A. Henry, UNC CECL
+```
+
+<details><summary>Function notes (the original docstrings)</summary>
+
+**`effective_M()`**
+
+```text
+GroinCallback._effective_trapping_rate, linear_ramp mode.
+```
+
+**`load_planform()`**
+
+```text
+BRIE x_s (metres, landward +) after the first model year.
+```
+
+**`solve()`**
+
+```text
+Emulated BRIE alongshore solve with one dipole; returns per-year rows.
+```
+
+**`run_case()`**
+
+```text
+Groin run minus the no-groin run from the same planform.
+```
+
+**`summarise()`**
+
+```text
+One row: end fillet, whether anything shut down, when.
+```
+
+</details>
+
+### launch_groin_grid.py
+
+Why the runner and not `HAT_groin_sweep_worker.py`, what is set, and how cells
+are filed: see "Full-model grid" above and the original header below. In the
+code, `STUDY` and `KIND` default to the first grid (dipole, with the
+1996->2003 linear-ramp schedule the runner had until 2026-09-29); later studies pass
+`--study` and `--kind`. Cells run low M first in both windows, so an early
+stop still leaves the plausible end of the grid.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+The option A groin grid, M x f x window, run through the unchanged runner.
+
+WHY THE RUNNER AND NOT HAT_groin_sweep_worker. The worker is a second copy of
+the runner, and as of 2026-09-29 it is not the adopted model: it hardcodes the
+old waves (2.5 / 8 / 0.7 / 0.1), and its parameter-file repair restores a
+snapshot with no per-cell dune ceilings. Driving the runner means every cell
+is the adopted model by construction. Runs write their own parameters file,
+so they are safe alongside other sessions' runs (Hannah, 2026-09-29).
+
+WHAT IS SET. Only the groin and the filing; every other value is the code
+default (HAT_IGNORE_SETTINGS=1, stray HAT_* dropped, as HAT_run_all does):
+edgeBE, full_management without historical relocations, option A waves,
+v3_trim24 storms. M = 0 is not run: the paired baseline is the adopted matrix
+run with the same tokens, which the runner resolves by itself.
+    1996  HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin
+    2010  HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin
+
+The M = 2-5, f = 0.6 cells are the confirmation runs for the emulator in
+groin_stability_option_a.py.
+
+FILING. Run names carry `groin` but not M or f, so each cell is its own
+experiment member: raw_runs/experiments/groin/2026-09-29-option-a-grid/M<M>_f<f>/.
+A cell whose metadata already exists is skipped, so a relaunch resumes.
+
+    python launch_groin_grid.py [--streams 3] [--only 1996:3:0.6]
+
+Author: Hannah A. Henry, UNC CECL
+```
+
+### score_groin_grid.py
+
+The two readings and why both are kept: see "Grid result" above and the
+original header below. The sign is landward-positive throughout: + means the
+downdrift domain sits landward of the updrift one.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Score the option A groin grid against the observed Buxton fillet.
+
+Two readings, both reported, because they answer different questions:
+
+  groin_contribution_m   end-year (D5 - D6) of the groin run minus the same for
+                         its no-groin baseline. This is HAT_groin_sweep_config.
+                         measure_fillet, the metric the M = 60 fit ranked on.
+                         It is >= 0 for any trapping groin.
+  total_change_m         the groin run's OWN (D5 - D6) change over the window,
+                         OLS slope x window length. This is how the observation
+                         is built (observed_fillet_m: OLS across the wet/dry
+                         dates x window), so it is the like-for-like reading.
+                         It includes the relaxation the coast does with no
+                         groin, which is what an observed shrinking fillet needs.
+
+Both are scored against observed_fillet_m(period). The sign is landward-positive
+throughout: + = the downdrift domain sits landward of the updrift one.
+M = 0 is the adopted matrix no-groin run.
+
+Author: Hannah A. Henry, UNC CECL
+```
+
+### diagnose_no_groin_relaxation.py
+
+The diagnosis it supports is "Why the no-groin model erases the fillet" above.
+It has no `main()`: it runs top to bottom, from the repo root, because its
+paths are relative to the working directory. Part 2 imports
+`groin_stability_option_a.py` for the emulator.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Why the 1996 no-groin run erases the Buxton fillet (2026-09-29). Run from the repo root.
+Part 1: D5-D6 change across every adopted matrix run (edge forcing x management).
+Part 2: the same with alongshore diffusion alone (the emulator, no Barrier3D).
+```
+
+### blocking_groin_emulator.py
+
+The dipole groin imposes +/-M metres a year whatever the state, so it cannot
+hold the 256 m step BRIE flattens at GIS 5/6. A physical groin intercepts the
+transport arriving at it; this emulator removes a fraction b of the D5|D6
+face's share of BRIE's alongshore solve, in two implementations (exact, which
+needs a BRIE change, and callback, which does not). The full-model no-groin
+gap change in `FULL_NOGROIN` is from the adopted matrix road_bdm[_nourish]
+runs. In the solve, each row couples to both neighbours with its own r[i]
+(BRIE's row scaling): the face D|U is row D's upper link and row U's lower
+link. The matrix is assembled exactly as BRIE does, but from the two weight
+vectors, so the unblocked case reproduces BRIE's matrix term for term.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Approach 1: a groin that BLOCKS a fraction b of alongshore transport.
+
+The dipole groin (GroinCallback) imposes +/-M metres a year regardless of
+state, so it cannot hold the 256 m step BRIE flattens at GIS 5/6 (see the
+diagnosis in README.md). A physical groin intercepts the transport arriving at
+it. Here the groin removes a fraction b of the D5|D6 face's share of BRIE's
+alongshore solve, with b ramping b0 -> b0*f over 1996-2003 (the same schedule
+GroinCallback uses for M).
+
+TWO IMPLEMENTATIONS, because only one of them can go into CASCADE unchanged:
+
+  exact      Scales the face's coupling in BOTH halves of BRIE's
+             Crank-Nicolson step (the explicit Laplacian on the right-hand
+             side and the implicit matrix) by (1 - b). The upper bound on
+             what the idea can do. Needs a BRIE change.
+  callback   What GroinCallback's hook can do: a pre-solve x_s_dt correction.
+             It cancels b times the explicit estimate of the face's full
+             step, 2 * r_i * (x_j - x_i) on each side (the explicit half
+             doubled to stand in for the implicit half). Needs no BRIE change.
+
+SCORING. The D5-D6 gap change over 14 yr, OLS through 15 states (t = 0..14),
+against observed_fillet_m: -4.3 m (1996-2010), -60.4 m (2010-2024). The
+emulator has no Barrier3D and no nourishment, so each window also gets an
+ADJUSTED score: the emulator change plus (full-model no-groin minus emulator
+no-groin). That offset is +2 m in 1996 and +16 m in 2010, the 2010 one being
+the Buxton fills. It assumes those processes add linearly, which the
+full-model grid has to confirm.
+
+Author: Hannah A. Henry, UNC CECL
+```
+
+### failure_schedule_test.py
+
+Tests whether an intact groin that fails at once after the 2003 storm fits both
+windows, where the linear 1996->2003 wear-down put the decline inside the 1996
+window, in which the data show none.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Does an INSTANT failure at the 2003 storm let one groin fit both windows?
+
+The observed D5-D6 gap (wet/dry table, 24 dates) grows 1967-1995, holds at
+134-155 m through 2004, then falls to 125 (2008), 104 (2016), 63-74 (2019-23).
+That is an intact groin failing after the 2003 storm, NOT the linear
+1996 -> 2003 wear-down both groin emulators were given -- which puts the decline
+inside the 1996 window, where the data show none.
+
+Tests both representations under GroinCallback's existing "instant" mode (full
+strength until the failure year, x f from then on; no new code needed for the
+schedule):
+  blocking  approach 1, callback implementation (blocking_groin_emulator.py)
+  dipole    today's GroinCallback, M m/yr
+
+Scored as there: adjusted OLS gap change vs observed_fillet_m.
+
+Author: Hannah A. Henry, UNC CECL
+```
+
+<details><summary>Function notes (the original docstrings)</summary>
+
+**`dipole()`**
+
+```text
+GroinCallback's +/-M dipole on the same solve (x_s_dt only).
+```
+
+</details>
+
+### trajectory_check.py
+
+It has no `main()`: it runs top to bottom. It imports
+`blocking_groin_emulator.py` and `failure_schedule_test.py`, and swaps the
+instant schedule into the emulator's `b_of_year`.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Trajectory check for the instant-failure candidates (see failure_schedule_test.py).
+
+An OLS trend can be matched by the wrong shape. The observed D5-D6 gap is FLAT
+1996-2004 and then declines; a dipole builds a fillet and then drops it. So the
+candidates are scored against the observed gap at its own dates, as change since
+the window start (the 2010 start is interpolated between 2008 and 2014), with
+the full-model no-groin offset spread linearly over the window.
+```
+
+### score_instant_grid.py
+
+The scores behind "Full-model grid, instant 2004 failure" above.
+
+From the script's original header, as it stood before 2026-10-01, word for word:
+
+```text
+Score the full-model groin grids (instant 2004 failure) on the observed gap.
+
+For every run under raw_runs/experiments/groin/2026-09-29-instant-2004-grid/
+(blocking b<b>_f<f>, dipole M<M>_f<f>) and the matrix no-groin baseline:
+
+  date RMSE    the D5 - D6 gap change since the window start, sampled at the
+               wet/dry table's own dates inside the window, against the
+               observed change (2010 start interpolated between 2008 and 2014).
+               The primary score: an OLS trend alone is matched by
+               build-then-collapse shapes the data do not show.
+  OLS change   trend x 14 yr, as observed_fillet_m builds its target.
+
+Both windows, both kinds; joint = RMS of the two windows' date RMSEs.
+Sign: landward-positive, + = downdrift sits further landward of updrift.
+
+    python score_instant_grid.py  ->  instant_grid_scores.csv + printed tables
+
+Author: Hannah A. Henry, UNC CECL
+```

@@ -1,60 +1,18 @@
 #!/usr/bin/env python3
-"""How the module's logic produces (and fails to produce) the observed gap.
+"""
+How the groin module's arithmetic produces, and fails to produce, the observed gap.
 
-The two-shoreline figure shows WHAT happened. This one shows WHY the module can
-follow part of it and not the rest, by putting the mechanics next to the
-consequence.
-
-THE MECHANICS (left panel)
-    `GroinCallback` is four lines of arithmetic, applied once a year just
-    before BRIE's alongshore solve:
-
-        M_eff        = M, tapering to M*f between 1996 and 2003
-        dx_updrift   = -M_eff      seaward advance at D6
-        dx_downdrift = +M_eff      landward retreat at D5
-
-    So each year the module pushes the two sides APART by 2*M_eff, and BRIE's
-    diffusion immediately starts spreading that dipole back out. The modelled
-    gap is the balance of those two.
-
-WHY THAT MATTERS (right panel)
-    M_eff is bounded at >= 0. There is no value of M or f that makes the module
-    pull the two sides together. It can widen the gap, or -- at f = 0 -- stop
-    widening it and let diffusion slowly close it. It can never actively close
-    it.
-
-    The observations do close it after 2004. Diffusion alone manages a small
-    fraction of that; the fraction is computed here from the groin-off run and
-    quoted in the caption. So the post-2004 narrowing is outside the
-    parameterisation, and no choice of (M, f) reaches it. That is the single
-    fact that determines how the module should be applied.
-
-DATA
-    Observed gap from the wet/dry surveys; modelled gap from the continuous
-    1984-2024 sweep cells, which carry a full annual trajectory each.
-
-STYLE, 2026-09-11
-    Drawn under the project house style (`scripts/site_layer/hat_figure_style.py`): a
-    190 mm column rather than a 15 in canvas, the sheltered side in ACCENT
-    purple and the unprotected side in BASE grey to match the two-shoreline
-    figure, and the schematic's two shouted sentences and the three footnote
-    paragraphs moved into CAPTIONS.md beside the image.
-
-    The "about a tenth" that footnote asserted is now measured off the
-    groin-off run each time the figure is drawn, and it does NOT survive the
-    measurement as it was stated. Diffusion alone closes the gap by about a
-    sixth of the observed NET change across the window, which is where that
-    number came from; its post-2004 RATE is about a sixty-sixth of the observed
-    closure rate, which is what the sentence claimed. The caption carries both,
-    because they disagree by a factor of ten and the rate is the one the
-    argument rests on.
-
-Usage:
     python HAT_groin_module_logic_figure.py
 
-Writes groin_module_logic.png (and .pdf) beside this file.
+Reads the wet/dry change table and the 1984-2024 groin sweep cells
+(output/calibration/groin/fullperiod_1984_2024/); writes groin_module_logic.png
+(and .pdf) beside this file, caption in CAPTIONS.md.
+Details: README.md beside this script.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -76,16 +34,18 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 SWEEP_ROOT = REPO / "output" / "calibration" / "groin" / "fullperiod_1984_2024"
 
 UP_COLOR, DOWN_COLOR = C["ACCENT"], C["BASE"]
 STORM_YEAR = 2003
+# -----------------------------------------------------------------------------
 
 
+# {year: gap in metres} = D5 retreat minus D6 retreat, from the 1967 datum
 def observed_gap():
-    """{year: gap in metres} = D5 retreat minus D6 retreat, from 1967 datum."""
     frame = pd.read_csv(WETDRY_TABLE).set_index("Domain_ID")
     out = {}
     for column in frame.columns:
@@ -99,8 +59,52 @@ def observed_gap():
     return dict(sorted(out.items()))
 
 
+# Schematic: what the module adds to the two domains each year (layout notes in README)
+def draw_mechanics(axis):
+    axis.set_xlim(0, 10)
+    axis.set_ylim(0, 10)
+    axis.axis("off")
+
+    # Ocean and land reference bands
+    axis.axhspan(0.4, 2.4, color=C["WATER"], alpha=0.6, zorder=0)
+    axis.text(0.25, 0.75, "ocean", fontsize=7.5, color=INK_MUTED)
+    axis.axhspan(8.2, 9.8, color="0.93", zorder=0)
+    axis.text(0.25, 9.4, "land", fontsize=7.5, color=INK_MUTED)
+
+    # The structure
+    axis.plot([5, 5], [2.2, 8.0], color=INK, linewidth=3.4,
+              solid_capstyle="butt", zorder=5)
+    axis.text(5, 8.15, "groin", ha="center", fontsize=8, color=INK)
+
+    # The two shorelines, each labelled at its outer end, away from the arrows
+    axis.plot([0.8, 5], [6.2, 6.2], color=DOWN_COLOR, linewidth=2.4, zorder=4)
+    axis.text(0.8, 6.45, "downdrift (GIS 5)", fontsize=7.5, color=DOWN_COLOR,
+              va="bottom")
+    axis.plot([5, 9.2], [4.6, 4.6], color=UP_COLOR, linewidth=2.4, zorder=4)
+    axis.text(9.2, 4.3, "updrift (GIS 6)", fontsize=7.5, color=UP_COLOR,
+              ha="right", va="top")
+
+    # What the module applies each year, each label beyond its own arrowhead
+    axis.annotate("", xy=(4.3, 7.6), xytext=(4.3, 6.35),
+                  arrowprops=dict(arrowstyle="-|>", color=DOWN_COLOR, lw=1.8))
+    axis.text(4.05, 7.55, "+M_eff, retreat", fontsize=7.5, color=DOWN_COLOR,
+              ha="right", va="center")
+    axis.annotate("", xy=(5.7, 3.1), xytext=(5.7, 4.45),
+                  arrowprops=dict(arrowstyle="-|>", color=UP_COLOR, lw=1.8))
+    axis.text(5.95, 3.05, "-M_eff, advance", fontsize=7.5, color=UP_COLOR,
+              ha="left", va="center")
+
+    # Diffusion pushing back, across the structure
+    axis.annotate("", xy=(4.1, 5.4), xytext=(5.9, 5.4),
+                  arrowprops=dict(arrowstyle="<|-|>", color=INK_MUTED, lw=1.4,
+                                  linestyle="--"))
+    axis.text(5.0, 1.5, "alongshore diffusion spreads the dipole\n"
+                        "and works to close the gap",
+              ha="center", va="center", fontsize=7.5, color=INK_MUTED)
+
+
+# Modelled gap per year for one sweep cell, referenced to its own year 0
 def modelled_gap(combo):
-    """Modelled gap per year for one sweep cell, referenced to its own year 0."""
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as geometry
     path = SWEEP_ROOT / combo / "shoreline_matrix.npy"
     if not path.exists():
@@ -111,8 +115,8 @@ def modelled_gap(combo):
     return 1984 + np.arange(matrix.shape[0]), gap - gap[0]
 
 
+# Endpoint rate of `series` over the samples inside [start, end]
 def rate(years, series, start, end):
-    """Endpoint rate of `series` over the samples inside [start, end]."""
     years = np.asarray(years)
     inside = np.where((years >= start) & (years <= end))[0]
     if inside.size < 2:
@@ -121,61 +125,7 @@ def rate(years, series, start, end):
     return (series[last] - series[first]) / (years[last] - years[first])
 
 
-def draw_mechanics(axis):
-    """Schematic: what the module adds to the two domains each year.
-
-    Laid out for a HALF of a 190 mm column, which is about a quarter of the
-    canvas this panel had before 2026-09-11. Every label was rewritten short
-    and moved OUTWARD from the structure: at the printed width the old
-    full-width text ran through the groin and through its own arrows, and a
-    label touching an arrow reads as a label FOR that arrow."""
-    axis.set_xlim(0, 10)
-    axis.set_ylim(0, 10)
-    axis.axis("off")
-
-    # ocean / land reference
-    axis.axhspan(0.4, 2.4, color=C["WATER"], alpha=0.6, zorder=0)
-    axis.text(0.25, 0.75, "ocean", fontsize=7.5, color=INK_MUTED)
-    axis.axhspan(8.2, 9.8, color="0.93", zorder=0)
-    axis.text(0.25, 9.4, "land", fontsize=7.5, color=INK_MUTED)
-
-    # the structure
-    axis.plot([5, 5], [2.2, 8.0], color=INK, linewidth=3.4,
-              solid_capstyle="butt", zorder=5)
-    axis.text(5, 8.15, "groin", ha="center", fontsize=8, color=INK)
-
-    # the two shorelines, each labelled at its OUTER end and on the side away
-    # from the arrows
-    axis.plot([0.8, 5], [6.2, 6.2], color=DOWN_COLOR, linewidth=2.4, zorder=4)
-    axis.text(0.8, 6.45, "downdrift (GIS 5)", fontsize=7.5, color=DOWN_COLOR,
-              va="bottom")
-    axis.plot([5, 9.2], [4.6, 4.6], color=UP_COLOR, linewidth=2.4, zorder=4)
-    axis.text(9.2, 4.3, "updrift (GIS 6)", fontsize=7.5, color=UP_COLOR,
-              ha="right", va="top")
-
-    # What the module applies each year.
-    # Each label sits beyond its own arrowhead and on the SAME SIDE of the
-    # groin as its arrow, on one line: beside the shaft it landed at the same
-    # height as the shoreline label next to it, and on the far side it ran
-    # straight through the structure.
-    axis.annotate("", xy=(4.3, 7.6), xytext=(4.3, 6.35),
-                  arrowprops=dict(arrowstyle="-|>", color=DOWN_COLOR, lw=1.8))
-    axis.text(4.05, 7.55, "+M_eff, retreat", fontsize=7.5, color=DOWN_COLOR,
-              ha="right", va="center")
-    axis.annotate("", xy=(5.7, 3.1), xytext=(5.7, 4.45),
-                  arrowprops=dict(arrowstyle="-|>", color=UP_COLOR, lw=1.8))
-    axis.text(5.95, 3.05, "-M_eff, advance", fontsize=7.5, color=UP_COLOR,
-              ha="left", va="center")
-
-    # diffusion pushing back, across the structure
-    axis.annotate("", xy=(4.1, 5.4), xytext=(5.9, 5.4),
-                  arrowprops=dict(arrowstyle="<|-|>", color=INK_MUTED, lw=1.4,
-                                  linestyle="--"))
-    axis.text(5.0, 1.5, "alongshore diffusion spreads the dipole\n"
-                        "and works to close the gap",
-              ha="center", va="center", fontsize=7.5, color=INK_MUTED)
-
-
+# Run: schematic left, observed and modelled gap right, then the caption
 def main():
     apply_style()
 
@@ -189,9 +139,11 @@ def main():
         1, 2, figsize=figsize("double", aspect=0.44),
         gridspec_kw=dict(width_ratios=[1, 1.25]), constrained_layout=True)
 
+    # (a) The mechanics
     draw_mechanics(left)
     _title(left, 0, "what the module applies each year")
 
+    # (b) Observed gap against the groin-off and groin-on sweep cells
     right.axhline(0.0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
                   zorder=1)
     right.plot(years, values, marker="o", markersize=3.4, color=INK,
@@ -201,9 +153,7 @@ def main():
     for combo, style, label in (
             ("M0", dict(color=DOWN_COLOR, linestyle=(0, (1, 2)), linewidth=1.6),
              "modelled, groin off: diffusion only"),
-            # The chosen pair is (60, 0.6), but the continuous-window sweep's
-            # f grid runs 0.1/0.3/0.5/0.7/0.9, so f=0.6 was never run here.
-            # M60_f0.50 is its nearest neighbour and the label says so.
+            # M60_f0.50 stands in for the chosen (60, 0.6): f=0.6 was not on this grid (README)
             ("M60_f0.50", dict(color=UP_COLOR, linewidth=1.8),
              "modelled, groin on at M 60, f 0.5, the nearest cell run to the"
              " chosen f 0.6")):
@@ -228,6 +178,7 @@ def main():
 
     fig.legend(loc="outside lower center", ncol=3, frameon=False)
 
+    # Caption, assembled from the measured rates
     last = int(years[-1])
     obs_release = rate(years, values, 2004, last)
     caption_parts = [
@@ -250,11 +201,7 @@ def main():
         m0_release = rate(span0, gap0, 2004, 2024)
         rate_share = abs(m0_release / obs_release) if obs_release else float("nan")
         net_share = abs(gap0[-1] / values[-1]) if values[-1] else float("nan")
-        # BOTH comparisons, because they disagree by a factor of ten and the
-        # footnote this caption replaces quoted only the flattering one. It
-        # said diffusion manages "about a tenth" of the observed closure; that
-        # holds for the net change across the window ({net_share}), not for the
-        # post-2004 rate ({rate_share}), which is what the sentence claimed.
+        # Both shares quoted: net change and post-2004 rate disagree by ten (README)
         caption_parts.append(
             "; with the groin off, diffusion alone closes it by "
             "{m0_net:+.0f} m across the window, {net:.0%} of the observed "
@@ -282,6 +229,7 @@ def main():
         "the chosen f 0.6 was never run in it.")
     caption(fig, "".join(caption_parts))
 
+    # Write the figure and print the numbers behind the caption
     written = save(fig, HERE / "groin_module_logic.png", close=True)
     for path in written:
         print("wrote {}".format(path))

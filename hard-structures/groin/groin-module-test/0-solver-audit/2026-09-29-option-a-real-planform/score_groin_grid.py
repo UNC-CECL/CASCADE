@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""Score the option A groin grid against the observed Buxton fillet.
+"""
+Score the option A groin grid against the observed Buxton fillet change.
 
-Two readings, both reported, because they answer different questions:
+    python score_groin_grid.py
 
-  groin_contribution_m   end-year (D5 - D6) of the groin run minus the same for
-                         its no-groin baseline. This is HAT_groin_sweep_config.
-                         measure_fillet, the metric the M = 60 fit ranked on.
-                         It is >= 0 for any trapping groin.
-  total_change_m         the groin run's OWN (D5 - D6) change over the window,
-                         OLS slope x window length. This is how the observation
-                         is built (observed_fillet_m: OLS across the wet/dry
-                         dates x window), so it is the like-for-like reading.
-                         It includes the relaxation the coast does with no
-                         groin, which is what an observed shrinking fillet needs.
+Two readings per cell, against observed_fillet_m(period): groin_contribution_m
+(end-year gap of the groin run minus its baseline, the M = 60 fit's metric) and
+total_change_m (the run's own OLS gap change, built like the observation).
+M = 0 is the adopted matrix no-groin run. Writes grid_scores.csv.
+Details: README.md beside this script.
 
-Both are scored against observed_fillet_m(period). The sign is landward-positive
-throughout: + = the downdrift domain sits landward of the updrift one.
-M = 0 is the adopted matrix no-groin run.
-
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -30,12 +25,13 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[4]
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path[:0] = [str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"),
                 str(REPO / "scripts" / "site_layer"), str(REPO / "scripts")]
 from HAT_groin_sweep_config import observed_fillet_m  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW = REPO / "output" / "raw_runs"
 GRID = RAW / "experiments" / "groin" / "2026-09-29-option-a-grid"
 BASELINES = {
@@ -43,22 +39,27 @@ BASELINES = {
     2010: RAW / "matrix/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin",
 }
 UP, DOWN = 15 + 6 - 1, 15 + 5 - 1      # GIS 6 / GIS 5 in the padded array
+# -----------------------------------------------------------------------------
 
 
+# A run's shoreline matrix (years x padded domains)
 def load(run_dir):
     return np.load(run_dir / f"{run_dir.name}_shoreline_matrix.npy")
 
 
+# D5 - D6 gap per year, landward-positive
 def fillet_series(x):
     return x[:, DOWN] - x[:, UP]
 
 
+# Gap change over the run, OLS slope x run length
 def total_change(x):
     s = fillet_series(x)
     t = np.arange(s.size)
     return float(np.polyfit(t, s, 1)[0] * (s.size - 1))
 
 
+# Run: score the baselines and every grid cell, write the CSV, print the tables
 def main():
     rows = []
     for period, base_dir in BASELINES.items():

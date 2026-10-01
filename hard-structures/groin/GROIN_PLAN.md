@@ -27,8 +27,9 @@ comparison.
 
 The shoreline analysis that produced the input tables now sits in
 `HAT-groin-gis-analysis/HAT_groin_shoreline_analysis.py`, beside the outputs it
-writes. Its input and output paths are absolute and several are stale, so the
-move changed nothing about how it runs.
+writes. Its paths are found from the repo root (since the 2026-10-01 restyle; until
+then several were absolute and stale), so the move changed nothing about how
+it runs.
 
 **The one thing to keep straight:** the "fillet" is the GAP between the updrift
 and downdrift shorelines, not a volume of new beach. Both sides eroded; the

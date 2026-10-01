@@ -1,33 +1,19 @@
 #!/usr/bin/env python3
-"""Approach 1: a groin that BLOCKS a fraction b of alongshore transport.
+"""
+Approach 1: a groin that blocks a fraction b of alongshore transport, in two implementations.
 
-The dipole groin (GroinCallback) imposes +/-M metres a year regardless of
-state, so it cannot hold the 256 m step BRIE flattens at GIS 5/6 (see the
-diagnosis in README.md). A physical groin intercepts the transport arriving at
-it. Here the groin removes a fraction b of the D5|D6 face's share of BRIE's
-alongshore solve, with b ramping b0 -> b0*f over 1996-2003 (the same schedule
-GroinCallback uses for M).
+    python blocking_groin_emulator.py
 
-TWO IMPLEMENTATIONS, because only one of them can go into CASCADE unchanged:
+"exact" scales the D5|D6 face's coupling in both halves of BRIE's Crank-Nicolson
+step by (1 - b); "callback" is the pre-solve x_s_dt correction GroinCallback's
+hook can make. Scored as the 14-yr D5-D6 gap change against observed_fillet_m,
+raw and adjusted by the full-model no-groin offset. Writes blocking_groin_scores.csv.
+Details: README.md beside this script.
 
-  exact      Scales the face's coupling in BOTH halves of BRIE's
-             Crank-Nicolson step (the explicit Laplacian on the right-hand
-             side and the implicit matrix) by (1 - b). The upper bound on
-             what the idea can do. Needs a BRIE change.
-  callback   What GroinCallback's hook can do: a pre-solve x_s_dt correction.
-             It cancels b times the explicit estimate of the face's full
-             step, 2 * r_i * (x_j - x_i) on each side (the explicit half
-             doubled to stand in for the implicit half). Needs no BRIE change.
-
-SCORING. The D5-D6 gap change over 14 yr, OLS through 15 states (t = 0..14),
-against observed_fillet_m: -4.3 m (1996-2010), -60.4 m (2010-2024). The
-emulator has no Barrier3D and no nourishment, so each window also gets an
-ADJUSTED score: the emulator change plus (full-model no-groin minus emulator
-no-groin). That offset is +2 m in 1996 and +16 m in 2010, the 2010 one being
-the Buxton fills. It assumes those processes add linearly, which the
-full-model grid has to confirm.
-
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -47,16 +33,20 @@ from groin_stability_option_a import (CLIMATES, DOWNDRIFT_PAD, UPDRIFT_PAD,  # n
                                       DETERIORATION_YEAR, RAMP_YEARS,
                                       load_planform)
 
-OBSERVED = {1996: -4.271846470814432, 2010: -60.41482698917628}
-# Full-model no-groin gap change (OLS), adopted matrix road_bdm[_nourish] runs.
-FULL_NOGROIN = {1996: -73.9, 2010: -58.8}
+# --- CONFIG ------------------------------------------------------------------
+OBSERVED = {1996: -4.271846470814432, 2010: -60.41482698917628}   # observed_fillet_m, m
+FULL_NOGROIN = {1996: -73.9, 2010: -58.8}  # full-model no-groin gap change (OLS), adopted matrix road_bdm[_nourish]
 YEARS = 14
 B_VALUES = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 F_VALUES = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0)
+# -----------------------------------------------------------------------------
+
+# The groin face: downdrift and updrift cells, which must be neighbours
 D, U = DOWNDRIFT_PAD, UPDRIFT_PAD          # 19 (GIS 5), 20 (GIS 6)
 assert U == D + 1
 
 
+# Blocked fraction in a year: b0, ramping to b0*f over 1996-2003 (GroinCallback's schedule)
 def b_of_year(b0, f, year):
     if year < DETERIORATION_YEAR:
         return b0
@@ -64,6 +54,7 @@ def b_of_year(b0, f, year):
     return b0 - taper * (b0 - b0 * f)
 
 
+# BRIE's alongshore solve, blocked at the D|U face by mode "exact" or "callback"; one state per year
 def solve(x0, start, b0, f, mode, climate=CLIMATES["optionA"]):
     ny = x0.size
     coast_diff, di, dj = brie_diffusivity(
@@ -77,9 +68,7 @@ def solve(x0, start, b0, f, mode, climate=CLIMATES["optionA"]):
                        * DT_YR / 2.0 / DY_M ** 2)
         up_nb = x[np.r_[1:ny, 0]]          # x[i+1]
         dn_nb = x[np.r_[ny - 1, 0:ny - 1]]  # x[i-1]
-        # Per-row neighbour weights, BRIE's row scaling: row i couples to both
-        # neighbours with r[i]. The face D|U is row D's upper link and row U's
-        # lower link.
+        # Per-row neighbour weights, BRIE's row scaling; the face is D's upper and U's lower link
         w_up = r.copy()
         w_dn = r.copy()
         x_s_dt = np.zeros(ny)
@@ -89,8 +78,7 @@ def solve(x0, start, b0, f, mode, climate=CLIMATES["optionA"]):
         elif mode == "callback":
             x_s_dt[D] -= b * 2.0 * r[D] * (x[U] - x[D])
             x_s_dt[U] -= b * 2.0 * r[U] * (x[D] - x[U])
-        # Assemble exactly as BRIE does, but from the two weight vectors, so
-        # the unblocked case reproduces BRIE's matrix term for term.
+        # Assemble as BRIE does, from the two weight vectors (b = 0 reproduces BRIE term for term)
         rows = np.r_[np.arange(ny), np.arange(ny), np.arange(ny)]
         cols = np.r_[np.arange(ny), np.r_[1:ny, 0], np.r_[ny - 1, 0:ny - 1]]
         vals = np.r_[1.0 + w_up + w_dn, -w_up, -w_dn]
@@ -100,12 +88,14 @@ def solve(x0, start, b0, f, mode, climate=CLIMATES["optionA"]):
     return np.array(states)
 
 
+# D5-D6 gap change over the run, OLS slope x run length
 def gap_change(states):
     g = states[:, D] - states[:, U]
     t = np.arange(g.size)
     return float(np.polyfit(t, g, 1)[0] * (g.size - 1))
 
 
+# Run: every mode x b0 x f in both windows, then the tables
 def main():
     rows = []
     for start in (1996, 2010):
@@ -132,6 +122,7 @@ def main():
                                      max_far_field_m=float(far.max())))
         print(f"{start}: emulator no-groin {base:+.1f} m, full model {FULL_NOGROIN[start]:+.1f}, "
               f"offset {offset:+.1f}")
+    # Write the table, then print each mode's grid and best joint cells
     t = pd.DataFrame(rows)
     t.to_csv(HERE / "blocking_groin_scores.csv", index=False)
 
