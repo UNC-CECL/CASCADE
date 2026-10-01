@@ -47,8 +47,8 @@ Grouped by job since 2026-09-18. Before that the folders were split by file
 type (`observations/`, `figures/`, `tables/`), which put the footprint
 comparison's figures in `figures/vs-footprint/` and its tables in a separate
 top-level `vs-footprint/`. Resolve every path through
-`scripts/site_layer/hat_overwash.py`; do not type them. The two
-model-comparison scripts in `scripts/analyze_output/overwash/` read the
+`scripts/site_layer/hat_overwash.py`; do not type them. The
+model-comparison script in `scripts/analyze_output/overwash/` reads the
 workbook through it too.
 
 Period 1 rows are the Hapke and Henderson (2007) delineations; Period 2

@@ -17,13 +17,10 @@ compare_runs/            comparisons of finished runs, one subfolder per
     adoption_2026-09-28/     the matrix before/after the 09-28 adoption
     offset_source/           dune-line vs shoreline island offset
 overwash/
-    compare_overwash_figures.py   a run's overwash (Qow) against the observed
-    compare_overwash_observed.py  record; both resolve their run through
-                                  run_registry (HAT_1984_2004_calibBE_road_bdm_groin,
-                                  read from raw_runs/archive/2026-09-24-pre-metres/
-                                  since 2026-09-30) -> comparisons/overwash/
-    superseded_20260918/          plot_overwash.py (dead absolute path) and an
-                                  early copy of Roya's Pea Island script
+    compare_overwash_figures.py   a run's overwash (Qow) against the imagery
+                                  record: stacked, contingency, spatial figures.
+                                  Reads the archived 1984-2004 calibBE run
+                                  -> comparisons/overwash/ (details in its README)
 smoothing_vs_cascade/
     smoothing_vs_cascade.py   what the LOWESS smoothing does to the
                              comparison. Names HAT_1984_2004_SQ_BE_Hs2p0, which
@@ -62,94 +59,10 @@ a file changing depth.
 The compare_runs scripts' details moved on 2026-09-30 into the README of the
 subfolder each now lives in: `compare_runs/README.md` is the map.
 
-### overwash/compare_overwash_observed.py and overwash/compare_overwash_figures.py
+### overwash/
 
-A run's overwash (Qow) against the observed record from the imagery. Both
-read one run's `.npz` and the observation workbook (`Overwash_Matrix` sheet,
-resolved by `site_layer/hat_overwash.py`) and write to
-`output/comparisons/overwash/`. `compare_overwash_figures.py` is the fuller
-of the two: the same two figures in a revised palette, plus the spatial
-figures. The two are largely duplicates, and a future cleanup could keep one.
-
-| figure | switch | shows |
-|---|---|---|
-| 1, stacked | `PLOT_STACKED` | model Qow heatmap above (every model year, imagery years highlighted), observed overwash below (binary, imagery years; hatched where there is no image); shared domain axis and island-section bar |
-| 2, contingency | `PLOT_CONTINGENCY` | each image x domain classified hit / miss / false alarm / correct rejection; summary statistics printed |
-| 3 and 4, spatial | `PLOT_SPATIAL` (figures script only) | overwash frequency alongshore, model (mean with IQR shading) against observed (bars): normalised on one panel, and as two panels |
-
-**The run:** `HAT_1984_2004_calibBE_road_bdm_groin`, 1984-2004, calibBE,
-resolved through `cascade_pipeline.run_registry`. *Fixed 2026-09-30:* the run
-moved to `raw_runs/archive/2026-09-24-pre-metres/` when the matrix was
-archived on 2026-09-24, and both scripts crashed on import until they were
-pointed at it there (`RUN_KIND`, `RUN_TAG`). Whether to compare a current
-matrix run instead is an open choice.
-
-**Threshold:** a model cell counts as overwash if Qow > `QOW_THRESHOLD`
-(dam³/yr). Start at 0 (any non-zero flux) and raise it if there are too many
-false alarms.
-
-**Imagery-year remap** (figures script): some imagery post-dates the storm it
-captures, so `YEAR_REMAP` maps an image year to the model year that best
-represents the event visible in it. The May 2004 imagery shows Hurricane
-Isabel's (September 2003) deposits, so 2004 is remapped to 2003. 1996 imagery
-is flagged as poor quality (`POOR_QUALITY_YEARS`).
-
-**Palette** (figures script): muted coastal earth and ocean tones, with
-consistent warmth across all elements; the section bar uses desaturated
-versions of the warm and cool families in the contingency legend. Section
-bar: warm linen #CABB9E for villages, dusty maritime blue #8DAFC2 between
-them. Contingency: hit deep maritime green #2E7D5A, miss deep maritime blue
-#2A5F8F, false alarm warm brick #A85840, correct rejection warm cream #F2EFE9,
-no imagery warm greige #BEB9B4. Observed overwash uses the same brick as a
-false alarm. The look was modelled on AGU / Nature Geoscience figures.
-
-**To use on another run:** set `RUN_NAME`, `RUN_PERIOD`, `RUN_PRESET` (and
-`RUN_KIND`/`RUN_TAG` if it is not in the matrix), then adjust `START_YEAR`,
-`END_YEAR`, the domain constants and `SECTIONS` to match it, and choose
-`QOW_THRESHOLD`. If the run is not where you say, `find_run_dir` raises naming
-where it *is* on disk.
-
-**History:** the paths used to be absolute literals under a folder spelling
-that no longer exists (`input_preperation`), so the scripts could not read
-their observations and crashed on the first save; they are anchored on the
-repo root now. The workbook left `scripts/input_prep/8-overwash-analysis/`
-on 2026-09-10 and is resolved by `site_layer/hat_overwash.py` since
-2026-09-18. The `.npz` loader substitutes stand-in classes for anything the
-pickled model references but cannot import, and is duplicated from
-`plot_overwash.py` so each script stands alone.
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`plot_contingency()`**
-
-```
-For each imagery year × domain where obs data exists, classify as:
-  Hit (H)             : Qow > T  AND  obs = 1   (green)
-  Miss (M)            : Qow <= T AND  obs = 1   (blue)
-  False Alarm (FA)    : Qow > T  AND  obs = 0   (orange)
-  Correct Rejection(C): Qow <= T AND  obs = 0   (light grey)
-  Not Assessed (NA)   : obs = NaN               (medium grey)
-Rows: imagery years only. Columns: all 90 domains.
-```
-
-</details>
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`compute_spatial_data()`**
-
-```
-Returns per-domain summary arrays used by both spatial profile figures.
-
-qow_mean  : mean annual Qow per domain across all model years (dam³/yr)
-qow_p25   : 25th percentile of annual Qow per domain
-qow_p75   : 75th percentile of annual Qow per domain
-obs_freq  : fraction of assessed imagery years with overwash per domain
-            (NaN where no assessed imagery exists for that domain)
-bar_colors: colour per domain based on section type (village vs inter-village)
-```
-
-</details>
+Moved on 2026-10-01 into `overwash/README.md`, when the folder was cut down to
+one script.
 
 ### smoothing_vs_cascade/smoothing_vs_cascade.py
 

@@ -3,14 +3,14 @@ Model overwash (Qow) against the imagery record: stacked, contingency and spatia
 
     python scripts/analyze_output/overwash/compare_overwash_figures.py
 
-compare_overwash_observed.py plus the spatial (normalised and dual-panel)
-figures. Reads one run's .npz and the overwash observation workbook; writes to
-output/comparisons/overwash/. Details: scripts/analyze_output/README.md.
+Reads one run's .npz (RUN_NAME, resolved by run_registry) and the overwash
+observation workbook; writes to output/comparisons/overwash/.
+Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-18
+Version: 2026-10-01
 """
 import os, io, pickle, zipfile, warnings
 import numpy as np
