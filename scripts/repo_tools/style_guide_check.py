@@ -68,9 +68,12 @@ def check(path: Path) -> list[str]:
         if ds and len(d.body) > 1:
             out.append(f"line {d.lineno}: {d.name}() still has a docstring")
 
+    # Settings: upper-case constants of a runnable script (__main__ guard), the repo-root finder excepted
+    runnable = re.search(r"""^if __name__ == ["']__main__["']""", src, re.M)
     upper = [n for n in tree.body if isinstance(n, ast.Assign) and any(
-        isinstance(t, ast.Name) and t.id.isupper() for t in n.targets)]
-    if upper and not any(l.startswith("# --- CONFIG") for l in lines):
+        isinstance(t, ast.Name) and t.id.isupper() for t in n.targets)
+        and "pyproject.toml" not in (ast.get_source_segment(src, n) or "")]
+    if runnable and upper and not any(l.startswith("# --- CONFIG") for l in lines):
         out.append(f"{len(upper)} module constants but no CONFIG block")
     for i, l in enumerate(lines[1:], 2):
         if l.startswith("# --- CONFIG") and lines[i - 2].startswith("# "):
