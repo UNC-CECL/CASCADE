@@ -164,10 +164,18 @@ def twin(member):
 # A run's rates and scores
 def scores(d, period):
     rates = common.run_rates(d)
-    sc = common.alongshore_scores(rates, common.coastsat_target(period))
     idx = json.loads(next(d.glob("*_run_metadata.json")).read_text(encoding="utf-8"))["index row"]
-    return rates, dict(bias=float(idx["mean_bias_interior_m_yr"]),
-                       rmse=float(idx["rmse_interior_m_yr"]), ve=sc["variance_explained"],
+    # Rebuilt at the runs' own window, all four numbers must reproduce the runner's
+    run_target = common.coastsat_target(period, lowess_domains=common.RUN_TARGET_DOMAINS)
+    for k, v in common.rate_skill(d, run_target).items():
+        if not np.isclose(v, float(idx[k]), rtol=1e-3, atol=1e-6):
+            raise ValueError(f"{d}: {k} against the rebuilt target does not match the runner's")
+    # Then scored against the current target (common.SMOOTH_DOMAINS)
+    target = common.coastsat_target(period)
+    skill = common.rate_skill(d, target)
+    sc = common.alongshore_scores(rates, target)
+    return rates, dict(bias=skill["mean_bias_interior_m_yr"],
+                       rmse=skill["rmse_interior_m_yr"], ve=sc["variance_explained"],
                        r=sc["r_alongshore"])
 
 

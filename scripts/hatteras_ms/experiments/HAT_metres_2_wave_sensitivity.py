@@ -301,6 +301,7 @@ def cmd_score(a):
     index = index[index["tag"].astype(str).str.startswith(STUDY_TAG + "/")
                   & (index["status"] == "current")]
     targets = {p: common.coastsat_target(p) for p in PERIODS}
+    run_targets = {p: common.coastsat_target(p, lowess_domains=common.RUN_TARGET_DOMAINS) for p in PERIODS}
     runs = []
     for _, r in index.iterrows():
         run_dir = (RAW_RUNS / "experiments" / r["tag"]
@@ -334,16 +335,21 @@ def cmd_score(a):
             r, run_dir, md, _ = match[0]
             if md["scenario"]["shoreline offset"] != "metres":
                 raise ValueError(f"{run_dir}: offset mode {md['scenario']['shoreline offset']!r}")
+            # Rebuilt at the runs' own window, all four numbers must reproduce the runner's
+            for k, v in common.rate_skill(run_dir, run_targets[period]).items():
+                if not np.isclose(v, float(r[k]), rtol=1e-3, atol=1e-6):
+                    raise ValueError(f"{run_dir}: {k} against the rebuilt target does not "
+                                     f"match the runner's")
+            # Then scored against the current target (common.SMOOTH_DOMAINS)
+            skill = common.rate_skill(run_dir, targets[period])
             sc = common.alongshore_scores(common.run_rates(run_dir), targets[period])
-            if not np.isclose(sc.pop("_rmse"), float(r["rmse_interior_m_yr"]), rtol=1e-3):
-                raise ValueError(f"{run_dir}: RMSE against the rebuilt target does not "
-                                 f"match the runner's")
+            assert np.isclose(sc.pop("_rmse"), skill["rmse_interior_m_yr"])
             # Which Barrier3D: a run without this field ran on the unfixed model
             fix = md["identity"].get("barrier3d_route_overwash_fix")
             rec["barrier3d_route_overwash_fix"] = bool(fix[0] if isinstance(fix, list) else fix)                 if fix is not None else False
             rec.update(status="scored", island_offset_version=md["identity"]["island_offset_version"],
-                       mean_bias_interior_m_yr=float(r["mean_bias_interior_m_yr"]),
-                       rmse_interior_m_yr=float(r["rmse_interior_m_yr"]), **sc,
+                       mean_bias_interior_m_yr=skill["mean_bias_interior_m_yr"],
+                       rmse_interior_m_yr=skill["rmse_interior_m_yr"], **sc,
                        roads_drowned=r["roads_drowned"], run_name=r["run_name"],
                        run_dir=str(run_dir.relative_to(STUDY_DIR)).replace("\\", "/"))
         else:
