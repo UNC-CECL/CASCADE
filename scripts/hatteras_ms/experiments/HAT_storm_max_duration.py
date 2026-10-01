@@ -40,6 +40,7 @@ BUILDER = PROJECT_ROOT / "scripts" / "input_prep" / "3-env-forcings" / "3-storms
 TAG = "storms-and-overwash/2026-09-28-storm-max-duration"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
+CONTROL_MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"   # where the 72 h controls compared here now live
 
 WINDOWS = ((1996, 2010), (2010, 2024))
 VARIANTS = {"72": 72, "96": 96, "120": 120, "240": 240, "nocap": 10 ** 6, "72trim": 72}
@@ -281,6 +282,7 @@ def diagnose():
 # Each variant against its matrix control: change, overwash, skill, hit rate
 def compare():
     import importlib.util
+    import HAT_storm_length_selection as S              # here, not at the top: it imports this module
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
     path = PROJECT_ROOT / "scripts" / "input_prep" / "8-overwash-analysis" / "4-vs-model" / "overwash_vs_model.py"
@@ -308,19 +310,19 @@ def compare():
                         for t in range(1, q.shape[0]) if t in largest)
                 rows.append(dict(gis=gis, observed=o.get(gis, np.nan), model=int(m)))
         sc = ovm.scores(pd.DataFrame(rows))
-        sk = meta.get("skill", {})
+        sk = S.rescored_skill(run_path)                     # today's LOWESS window, checked against the runner
         return dict(mean_net_change_m=float(-(xs[-1] - xs[0])[rp].mean()),
                     domain_years_overwash=int((q[1:, rp] > 0).sum()),
                     total_overwash_m3_per_m=float(q[1:, rp].sum()),
                     obs_hit_rate=sc["hit_rate"], obs_both=sc["both"], obs_observed_only=sc["observed_only"],
                     obs_model_only=sc["model_only"],
-                    rmse_interior_m_yr=float(sk.get("rmse_interior_m_yr", "nan")),
-                    mean_bias_interior_m_yr=float(sk.get("mean_bias_interior_m_yr", "nan")))
+                    rmse_interior_m_yr=sk["rmse_interior_m_yr"],
+                    mean_bias_interior_m_yr=sk["mean_bias_interior_m_yr"])
 
     out = []
     for w in WINDOWS:
         for s in SCENARIOS:
-            ctrl = MATRIX / wtag(w) / "edgeBE" / CONTROLS[(w[0], s)]
+            ctrl = CONTROL_MATRIX / wtag(w) / "edgeBE" / CONTROLS[(w[0], s)]
             summ = EXP_DIR / "storms" / wtag(w) / f"{wtag(w)}_storms_v3_72_summary.csv"
             out.append(dict(window=wtag(w), scenario=s, variant="72 (matrix)", **one(ctrl, w, summ)))
             for v in RUN_VARIANTS:

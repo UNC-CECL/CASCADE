@@ -37,7 +37,7 @@ WORKTREE = PROJECT_ROOT.parent / "Barrier3D-overwashfix"
 FIX_BRANCH = "fix/overwash-gaps-momentum"
 TAG = "code-checks/2026-09-28-barrier3d-overwash-gap-momentum-fix"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
-MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
+MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"   # the controls, archived when the matrix moved on
 
 # member -> (start year, scenario, control run name)
 MEMBERS = {
@@ -141,6 +141,7 @@ def observed_scores(ovm, c, start, obs):
 
 # Fixed against control per member: the tables, then the figure
 def compare():
+    import HAT_storm_length_selection as S
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
     from site_layer import hat_overwash as ow
     ovm = _overwash_module()
@@ -153,7 +154,7 @@ def compare():
             c, meta = load_run(d)
             xs = np.array([np.asarray(b.x_s_TS) for b in c.barrier3d]).T * 10
             q = np.array([np.asarray(b.QowTS) for b in c.barrier3d]).T
-            sk = meta.get("skill", {})
+            sk = {**S.rescored_skill(d), "lrr_r2_median": meta["skill"]["lrr_r2_median"]}   # today's LOWESS window
             out[arm] = dict(
                 net=-(xs[-1] - xs[0])[rp],                      # + seaward, m
                 qow=q[1:, rp],

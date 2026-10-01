@@ -42,6 +42,7 @@ import HAT_storm_max_duration as MD  # noqa: E402  (builder functions, launcher)
 TAG = "storms-and-overwash/2026-09-28-storm-length-selection"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
+CONTROL_MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"   # where the drop72 controls scored here now live
 WINDOWS = MD.WINDOWS
 TRIMS = (24, 36, 48, 72, 96, 120, 168)
 VARIANTS = ["drop72"] + [f"trim{L}" for L in TRIMS] + ["full"]
@@ -226,12 +227,37 @@ def overwash_scores(cells, thr=THRESHOLD):
                 model_cells=int(m.sum()), observed_cells=int(o.sum()))
 
 
-# A run's interior skill against CoastSat, from its metadata
-def shoreline_scores(d):
+_TARGETS = {}                        # (start year, LOWESS domains) -> CoastSat target, built once
+
+
+# The CoastSat LRR target for a start year at a LOWESS window, cached
+def _target(start, lowess_domains):
+    import HAT_metres_1_offset_units as O
+    if (start, lowess_domains) not in _TARGETS:
+        _TARGETS[(start, lowess_domains)] = O.coastsat_target(start, lowess_domains=lowess_domains)
+    return _TARGETS[(start, lowess_domains)]
+
+
+# Interior bias and RMSE (LRR and endpoint) at today's window, after the run's stored ones are reproduced at its own
+def rescored_skill(d):
+    import re
+    import HAT_metres_1_offset_units as O
     meta = json.loads((d / f"{d.name}_run_metadata.json").read_text(encoding="utf-8"))
-    sk = meta.get("skill", {})
-    return dict(rmse_interior_m_yr=float(sk.get("rmse_interior_m_yr", "nan")),
-                bias_interior_m_yr=float(sk.get("mean_bias_interior_m_yr", "nan")))
+    sk = meta["skill"]
+    start = int(re.match(r"HAT_(\d{4})_", d.name).group(1))
+    window = int(re.search(r"(\d+)-domain", sk["target"]).group(1))
+    for k, v in O.rate_skill(d, _target(start, window)).items():
+        if not np.isclose(v, float(sk[k]), rtol=1e-3, atol=5e-5):      # metadata stores 4 decimals
+            raise ValueError(f"{d}: {k} against the rebuilt {window}-domain target does not "
+                             f"match the runner's -- not the same target")
+    return O.rate_skill(d, _target(start, O.SMOOTH_DOMAINS))
+
+
+# A run's interior skill against CoastSat, at today's LOWESS window
+def shoreline_scores(d):
+    sk = rescored_skill(d)
+    return dict(rmse_interior_m_yr=sk["rmse_interior_m_yr"],
+                bias_interior_m_yr=sk["mean_bias_interior_m_yr"])
 
 
 # Score one stage's runs: overwash against the imagery, then shoreline
@@ -248,7 +274,7 @@ def score(stage="1"):
             summ = pd.read_csv(summary_csv(w, v))
             for s in SCENARIOS:
                 if stage == "1":
-                    d = (MATRIX / wtag(w) / "edgeBE" / CONTROLS[(w[0], s)]) if v == "drop72" else run_path(v, s, w)
+                    d = (CONTROL_MATRIX / wtag(w) / "edgeBE" / CONTROLS[(w[0], s)]) if v == "drop72" else run_path(v, s, w)
                 else:
                     d = run_path(v, s, w, ends="solved")
                 if d is None:

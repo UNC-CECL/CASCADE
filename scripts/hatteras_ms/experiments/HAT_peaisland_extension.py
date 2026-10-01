@@ -144,11 +144,13 @@ def solve_history(member):
 
 # (member, step) from a run's tag
 def _member_step(tag):
-    parts = tag.split("/")
-    if len(parts) == 2 and parts[1] in MEMBERS:
-        return parts[1], 0
-    if len(parts) == 3 and parts[1] in MEMBERS and parts[2].startswith("step"):
-        return parts[1], int(parts[2][4:])
+    if not tag.startswith(TAG + "/"):
+        return None, None
+    parts = tag[len(TAG) + 1:].split("/")             # relative to TAG, which carries the theme since 09-25
+    if len(parts) == 1 and parts[0] in MEMBERS:
+        return parts[0], 0
+    if len(parts) == 2 and parts[0] in MEMBERS and parts[1].startswith("step"):
+        return parts[0], int(parts[1][4:])
     return None, None
 
 
@@ -258,6 +260,9 @@ BASELINE_RUNS = {
     "edgeBE": "HAT_1996_2010_edgeBE_road_bdm_nogroin",
 }
 NEAR_END_GIS = (80, 90)     # the domains reported beside the interior score
+BASELINE_ARCHIVE = "2026-09-24-pre-metres/matrix"   # where the 09-16 matrix baselines now live
+RUN_TARGET_DOMAINS = 10     # the LOWESS window the runner scored these runs at (2026-09-16)
+SMOOTH_DOMAINS = 7          # today's LOWESS window, the group range
 
 
 # A run's LRR per GIS domain
@@ -269,13 +274,13 @@ def _rates(run_dir, run_name):
 
 
 # The CoastSat target as the runner builds it
-def _target(extended=False):
+def _target(extended=False, lowess_domains=SMOOTH_DOMAINS):
     from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
                                                  build_coastsat_series)
     from cascade_pipeline.domains import DEFAULT_DOMAINS, DomainGeometry
     from cascade_pipeline.hindcast import build_target_table
     from site_layer.hat_observed_rates import lrr_csv, lrr_csv_ext
-    lowess = LowessConfig(window_domains=(7,), skip_southern_domains=10)  # 10 until 2026-09-28
+    lowess = LowessConfig(window_domains=(lowess_domains,), skip_southern_domains=10)
     if extended:
         first, last = GEOMETRIES["n115"]
         domains = DomainGeometry(num_real_domains=last - first + 1, first_gis_id=first)
@@ -286,7 +291,7 @@ def _target(extended=False):
         [CoastSatDataset(label="extended" if extended else "surveyed",
                          period_start=PERIOD, csv_path=str(csv_path))],
         PERIOD, lowess, domains=domains)
-    table = build_target_table(series[0], lowess, domains, 7)
+    table = build_target_table(series[0], lowess, domains, lowess_domains)
     return table.set_index("gis_domain")["target_lrr_m_yr"]
 
 
@@ -310,15 +315,15 @@ def collect():
         rows.append(dict(member=member, step=step, preset=r["source_sink_preset"],
                          geometry=MEMBERS[member][0], mode=MEMBERS[member][1],
                          row=r, lrr=_rates(run_dir, r["run_name"])))
-    base = index[(index["kind"] == "matrix") & (index["status"] == "current")
+    base = index[(index["kind"] == "archive") & (index["tag"] == BASELINE_ARCHIVE)
                  & (index["start_year"].astype(str) == str(PERIOD))]
     for preset, name in BASELINE_RUNS.items():
         hit = base[base["run_name"] == name]
         if hit.empty:
-            print(f"  no current matrix run {name}")
+            print(f"  no archived matrix run {name} in {BASELINE_ARCHIVE}")
             continue
         r = hit.iloc[-1]
-        run_dir = find_run_dir(RAW_RUNS, name, (PERIOD, 2010), preset)
+        run_dir = find_run_dir(RAW_RUNS, name, (PERIOD, 2010), preset, kind="archive", tag=BASELINE_ARCHIVE)
         rows.append(dict(member="base-asrun", step=0, preset=preset, geometry="base",
                          mode="asrun", row=r, lrr=_rates(run_dir, name)))
     return rows
@@ -334,6 +339,42 @@ def final_runs(rows):
     return out
 
 
+# Interior bias and RMSE (surveyed target, GIS 2-89) and the reach RMSE (the run's own target, ends dropped)
+def _skill(d, lowess_domains):
+    import numpy as np
+    first, last = GEOMETRIES[d["geometry"]]
+    surveyed = _cached_target(False, lowess_domains)
+    reach = surveyed if d["geometry"] == BASE_GEOMETRY else _cached_target(True, lowess_domains)
+    ri = np.array([d["lrr"].get(g, np.nan) - surveyed.get(g, np.nan) for g in range(2, 90)])
+    rr = np.array([d["lrr"].get(g, np.nan) - reach.get(g, np.nan) for g in range(first + 1, last)])
+    ri, rr = ri[np.isfinite(ri)], rr[np.isfinite(rr)]
+    return {"mean_bias_interior_m_yr": float(ri.mean()), "rmse_interior_m_yr": float(np.sqrt((ri ** 2).mean())),
+            "rmse_reach_interior_m_yr": float(np.sqrt((rr ** 2).mean()))}
+
+
+_TARGETS = {}               # (extended, LOWESS domains) -> CoastSat target, built once
+
+
+# The surveyed or extended target at a LOWESS window, built once
+def _cached_target(extended, lowess_domains):
+    if (extended, lowess_domains) not in _TARGETS:
+        _TARGETS[(extended, lowess_domains)] = _target(extended, lowess_domains)
+    return _TARGETS[(extended, lowess_domains)]
+
+
+# The scores at today's window, once the runner's stored ones are reproduced at the window it used
+def _rescored(d):
+    import numpy as np
+    for k, v in _skill(d, RUN_TARGET_DOMAINS).items():
+        stored = d["row"].get(k, "")
+        if stored in ("", None) or not np.isfinite(float(stored)):
+            continue
+        if not np.isclose(v, float(stored), rtol=1e-3, atol=5e-5):     # stored values may carry 4 decimals
+            raise ValueError(f"{d['member']} {d['preset']}: {k} {v:.4f} against the rebuilt "
+                             f"{RUN_TARGET_DOMAINS}-domain target != the runner's {float(stored):.4f}")
+    return _skill(d, SMOOTH_DOMAINS)
+
+
 # Score the final run of every member and write RESULTS.md and the figures
 def cmd_score(a):
     import numpy as np
@@ -347,7 +388,7 @@ def cmd_score(a):
         return float(v) if v not in ("", None) else float("nan")
 
     lines = [f"# {TAG}: results", "",
-             "Interior RMSE is GIS 2-89 against the surveyed CoastSat target in "
+             f"Interior RMSE is GIS 2-89 against the surveyed CoastSat target (LOWESS {SMOOTH_DOMAINS} domains) in "
              "every geometry. End values are what the run imposed (m/yr). "
              f"\"near-end\" is the RMSE over GIS {lo}-{hi} against the same target. "
              "Stage 0 is zeroBE; the solved rows are the last Newton probe.", "",
@@ -360,14 +401,14 @@ def cmd_score(a):
             d = finals.get((member, preset))
             if d is None:
                 continue
-            r = d["row"]
+            r, sk = d["row"], _rescored(d)
             first, last = GEOMETRIES[d["geometry"]]
             resid = np.array([d["lrr"].get(g, np.nan) - target.get(g, np.nan) for g in near])
             near_rmse = float(np.sqrt(np.nanmean(resid ** 2)))
             lines.append(
                 f"| {member} | {d['geometry']} | {d['mode']} | {preset} | {d['step']} "
-                f"| {num(r, 'rmse_interior_m_yr'):.4f} | {num(r, 'mean_bias_interior_m_yr'):+.4f} "
-                f"| {num(r, 'rmse_reach_interior_m_yr'):.4f} | {near_rmse:.4f} "
+                f"| {sk['rmse_interior_m_yr']:.4f} | {sk['mean_bias_interior_m_yr']:+.4f} "
+                f"| {sk['rmse_reach_interior_m_yr']:.4f} | {near_rmse:.4f} "
                 f"| {num(r, f'be_rate_gis{first}_m_yr'):+.1f} | {num(r, f'be_rate_gis{last}_m_yr'):+.1f} |")
     lines += ["", f"## Rates on GIS {lo}-{hi}, m/yr (model LRR; target is the surveyed LOWESS)", "",
               "| GIS | target | " + " | ".join(f"{m} {p}" for m in order for p in ("zeroBE", "edgeBE")
