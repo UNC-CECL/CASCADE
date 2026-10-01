@@ -188,7 +188,8 @@ def cmd_run(a):
 # Target and alongshore scores, rebuilt as the runner does and checked against its RMSE
 
 # The CoastSat LRR target, GIS 1-90, as the runner builds it
-def coastsat_target(start=PERIOD, end=None):
+def coastsat_target(start=PERIOD, end=None, lowess_domains=None):
+    lowess_domains = lowess_domains or SMOOTH_DOMAINS
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS
     from cascade_pipeline.hindcast import build_target_table
@@ -199,10 +200,10 @@ def coastsat_target(start=PERIOD, end=None):
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
                          csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
-    cfg = LowessConfig(window_domains=(SMOOTH_DOMAINS,), skip_southern_domains=10)
+    cfg = LowessConfig(window_domains=(lowess_domains,), skip_southern_domains=10)
     cs = build_coastsat_series([ds], active_period_start=start, lowess_config=cfg,
                                domains=HATTERAS_DOMAINS)[0]
-    return build_target_table(cs, cfg, HATTERAS_DOMAINS, SMOOTH_DOMAINS).set_index(
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, lowess_domains).set_index(
         "gis_domain")["target_lrr_m_yr"]
 
 
@@ -221,6 +222,19 @@ def run_rates(run_dir):
 
 
 SMOOTH_DOMAINS = 7                   # the CoastSat target's LOWESS window; 10 until 2026-09-28
+RUN_TARGET_DOMAINS = 10              # the window this study's runs were scored at by the runner (2026-09-24)
+
+
+# Mean bias and RMSE (model minus target) over the interior, for the LRR and the endpoint rate, as the runner computes them
+def rate_skill(run_dir, target):
+    import pandas as pd
+    t = pd.read_csv(Path(run_dir) / "tables" / "shoreline_change_rate.csv").set_index("gis_domain")
+    out = {}
+    for col, key in (("lrr_m_yr", ""), ("change_rate_m_yr", "endpoint_")):
+        r = (interior(t[col]) - interior(target)).dropna()
+        out[f"{key}mean_bias_interior_m_yr"] = float(r.mean())
+        out[f"{key}rmse_interior_m_yr"] = float(np.sqrt((r ** 2).mean()))
+    return out
 
 
 # A model series (per GIS domain) smoothed as the CoastSat target is
@@ -267,6 +281,7 @@ def cmd_score(a):
 
     rebuild_run_index(RAW_RUNS)
     target = coastsat_target()
+    run_target = coastsat_target(lowess_domains=RUN_TARGET_DOMAINS)
     index = load_run_index(RAW_RUNS / "run_index.csv")
     index = index[index["tag"].astype(str).str.startswith(STUDY + "/")
                   & (index["status"] == "current")]
@@ -311,19 +326,21 @@ def cmd_score(a):
                 break
         if match:
             run_dir, r, md = match
+            # Rebuilt at the runs' own window, all four numbers must reproduce the runner's
+            for k, v in rate_skill(run_dir, run_target).items():
+                if not np.isclose(v, float(r[k]), rtol=1e-3, atol=1e-6):
+                    raise ValueError(f"{run_dir}: {k} against the rebuilt target does "
+                                     f"not match the runner's -- not the same target")
+            # Then scored against the current target (SMOOTH_DOMAINS)
+            skill = rate_skill(run_dir, target)
             scores = alongshore_scores(run_rates(run_dir), target)
-            if not np.isclose(scores.pop("_rmse"), float(r["rmse_interior_m_yr"]), rtol=1e-3):
-                raise ValueError(f"{run_dir}: RMSE against the rebuilt target does "
-                                 f"not match the runner's -- not the same target")
+            assert np.isclose(scores.pop("_rmse"), skill["rmse_interior_m_yr"])
             rec.update(scores)
+            rec.update(skill)
             rec.update({
                 "status": "scored",
                 "island_offset_version": md["identity"]["island_offset_version"],
                 "wave_period_s": float(md["wave climate"]["wave_period_s"]),
-                "mean_bias_interior_m_yr": r["mean_bias_interior_m_yr"],
-                "rmse_interior_m_yr": r["rmse_interior_m_yr"],
-                "endpoint_mean_bias_interior_m_yr": r["endpoint_mean_bias_interior_m_yr"],
-                "endpoint_rmse_interior_m_yr": r["endpoint_rmse_interior_m_yr"],
                 "lrr_r2_median": r["lrr_r2_median"],
                 "roads_drowned": r["roads_drowned"],
                 "run_name": r["run_name"],
