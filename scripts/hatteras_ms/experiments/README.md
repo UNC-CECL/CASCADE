@@ -180,6 +180,8 @@ runs made before and after the target change compare on equal terms.
 
 Do a Hatteras dune ceiling and a rebuild that never lowers dunes fix the excess overwash?
 
+Note (2026-09-30): the `figures` action in the original header below no longer exists; `main()` accepts `run` and `score`.
+
 From the script's original header:
 
 ```text
@@ -2644,6 +2646,8 @@ gap_h None = no split (reproduces trim24).
 ### HAT_storm_height_test.py
 
 Are the storm water levels too low for Hatteras?
+
+Note (2026-09-30): the `slope` action in the original header below no longer exists; the slope0p10 series is built by `build`, and `main()` accepts `gauges`, `build`, `run` and `score`.
 
 From the script's original header:
 
