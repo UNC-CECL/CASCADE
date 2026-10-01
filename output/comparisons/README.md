@@ -23,7 +23,9 @@ relocation/             does the model relocate NC-12 where and when history
                         versions, and the 20 m rebuild clearance
 scenario_grid/          every preset and management scenario on one page
 offset_source/          dune line vs shoreline as BRIE's island offset: how much
-                        the model changes, and whether orientation drives it (09-28)
+                        the model changes, and whether orientation drives it (09-28);
+                        shoreline_v1_vs_v2/ inside it: the shoreline offset's
+                        averaging window, calendar vs DEM-centred (10-01)
 ```
 
 | folder | script | runs |
@@ -35,6 +37,7 @@ offset_source/          dune line vs shoreline as BRIE's island offset: how much
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/scenario_grid.py` | every matrix arm, both periods |
 | `offset_source/` | `scripts/analyze_output/compare_runs/offset_source/offset_source_comparison.py` | the full-management duneline/shoreline pairs of `experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a`, 1996 and 2010, `tables/summary.csv` |
+| `offset_source/shoreline_v1_vs_v2/` | `scripts/analyze_output/compare_runs/offset_source/shoreline_v1_vs_v2_comparison.py` | the full-management shoreline_v1/shoreline_v2 pairs of `experiments/island-offset/2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup`, 1996 and 2010, `tables/summary.csv` |
 
 ## Layout rule
 

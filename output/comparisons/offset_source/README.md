@@ -71,3 +71,43 @@ offset_source_orientation_vs_model_full_management.png   scatter: angle vs turni
 tables/summary.csv, tables/per_domain.csv, tables/vs_projected.csv
 supporting/CAPTIONS.md, supporting/*.pdf
 ```
+
+## shoreline_v1_vs_v2/ - does the shoreline offset's averaging window matter? (added 2026-10-01)
+
+Hannah, 2026-10-01: the model-output comparison of shoreline offset **v1**
+(CoastSat mean over calendar 1995-1997 / 2009-2011) against **v2** (mean over
++/-1 yr of the start DEM's lidar flights, CURRENT since 09-29).
+
+| | |
+|---|---|
+| script | `scripts/analyze_output/compare_runs/offset_source/shoreline_v1_vs_v2_comparison.py` |
+| runs | the full-management `shoreline_v1` / `shoreline_v2` pair of each period in `raw_runs/experiments/island-offset/2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup/` (listed in `tables/summary.csv`); no new runs |
+| settings | adopted setup, option A waves, zeroBE ends, relocations and groins off; within a pair only the offset's averaging window differs |
+| input-side comparison | the offsets themselves: `data/hatteras_init/2-brie-offset/<year>/shoreline/v2/offset_<year>_v1_vs_v2.png` |
+
+| interior GIS 2-89, v2 minus v1 | 1996-2010 | 2010-2024 |
+|---|---|---|
+| r between the two runs | 0.99 | 0.99 |
+| mean \|difference\| | 0.8 m | 1.4 m |
+| largest difference | 3.7 m at GIS 5 | 5.7 m at GIS 79 |
+| sd of difference / sd of the model profile | 0.10 | 0.13 |
+| island-wide mean difference | -0.1 m | +0.1 m |
+| offset difference, sd (max) | 2.8 m (8.4 m) | 4.8 m (12.9 m) |
+| r, turning difference vs change difference | +0.74 | +0.74 |
+| bias / RMS vs projected target, v1 then v2 | -7.4 / 16.8, -7.4 / 16.8 m | -6.9 / 19.7, -6.9 / 19.7 m |
+
+- The averaging window moves the offset by a few metres alongshore (up to
+  8-13 m in one domain). The model passes on about a third of that, at most
+  5.7 m. It does not move the mean or the pattern (r 0.99), and the
+  projected-target scores agree to 0.1 m.
+- As with the dune-line/shoreline pair, what the model responds to is the
+  change in **turning**: a new local embayment fills in, and a new local bulge
+  is cut back. The change difference is therefore anti-correlated with the
+  offset difference itself (r -0.58, -0.59).
+
+```
+shoreline_v1_vs_v2/shoreline_v1_vs_v2_difference_full_management.png        profiles: change + target, offset difference, change difference
+shoreline_v1_vs_v2/shoreline_v1_vs_v2_offset_vs_model_full_management.png    scatter: offset vs turning as the predictor
+shoreline_v1_vs_v2/tables/summary.csv, per_domain.csv, vs_projected.csv
+shoreline_v1_vs_v2/supporting/CAPTIONS.md, supporting/*.pdf
+```

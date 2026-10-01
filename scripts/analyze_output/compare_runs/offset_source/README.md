@@ -8,6 +8,7 @@ the model; the study's runs are made by
 | script | writes to `output/comparisons/` |
 |---|---|
 | `offset_source_comparison.py` | `offset_source/` |
+| `shoreline_v1_vs_v2_comparison.py` | `offset_source/shoreline_v1_vs_v2/` |
 
 ## The scripts in detail
 
@@ -61,6 +62,17 @@ Output, `output/comparisons/offset_source/`:
 | `offset_source_difference_full_management.png` | profiles |
 | `offset_source_orientation_vs_model_full_management.png` | scatter |
 | `tables/summary.csv`, `per_domain.csv`, `vs_projected.csv` | the numbers |
+
+## shoreline_v1_vs_v2_comparison.py
+
+Asked by Hannah on 2026-10-01: the same comparison for shoreline offset v1
+(calendar window) against v2 (DEM-centred window), from the full-management
+pairs of `output/raw_runs/experiments/island-offset/2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup/`.
+It imports its offsets, orientation and projected target from
+`offset_source_comparison.py`, so the two use the same definitions. It checks
+each run's metadata offset version against the arm it is filed under. It writes two
+figures (profiles with the target on top; scatter against offset and turning
+difference) and three tables to `output/comparisons/offset_source/shoreline_v1_vs_v2/`.
 
 <details><summary>Function notes (the original docstrings)</summary>
 
