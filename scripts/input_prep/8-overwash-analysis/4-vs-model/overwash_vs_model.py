@@ -1,50 +1,10 @@
 """
-overwash_vs_model.py
-==============================================================================
-Does the model overwash where and when the imagery shows washover? The
-observed presence/absence record (1-observations/overwash_observations.csv)
-against the overwash Barrier3D records in the hindcast runs, for the two
-current windows, 1996-2010 and 2010-2024.
+Does the model overwash where and when the imagery shows washover?
 
     python scripts/input_prep/8-overwash-analysis/4-vs-model/overwash_vs_model.py
 
-Writes to data/hatteras_init/8-overwash-analysis/4-vs-model/ (figures) and
-tables/ inside it (hat_overwash.VS_MODEL, VS_MODEL_TABLES).
-
-HOW AN IMAGE IS MATCHED TO THE MODEL
-    An image shows the washover left by the storms since the previous image.
-    So each image is compared with the model's overwash between the previous
-    image's date and its own (the window is cut at the run's start, and such
-    images are flagged "partial"). Images after the last modelled storm year
-    are left out.
-
-    Barrier3D records overwash per domain per MODEL YEAR (QowTS, m3/m), not
-    per storm. A model year's overwash is dated by that year's LARGEST storm
-    (the storm file's EndTime), because every storm in a year is tested
-    against the same dune crest (storm_replay.py): if any storm overwashed a
-    domain, the largest one did. Smaller storms that year may also have, so
-    `model_any_storm` is the upper bound that dates the year's overwash by
-    every storm in it.
-
-    Storm dates take the same 7-day grace the observed record's storm table
-    uses (overwash_data.assign_capture): a storm counts toward the first image
-    dated on or after its last hour above the berm LESS 7 days, because a
-    storm's tail runs to dissipation and image dates are approximate. Without
-    it, the model's Irene (ends 2011-08-28) falls one day after the 2011-08-27
-    image that shows Irene's washover (storms_by_image.csv maps it there).
-
-    A cell counts as modelled overwash when QowTS > the threshold; the
-    headline uses 0 (any overwash), and tables/ carries 1 and 5 m3/m too.
-
-WHAT IS AND IS NOT A MISMATCH
-    Washover fades and images are months to years apart, so "observed 0,
-    model 1" can be real washover the image no longer shows. Both directions
-    are reported; neither is discounted.
-
-THE RUNS
-    The managed runs are the comparison (the imagery is the managed island):
-    edgeBE, road + beach/dune manager (+ fills in 2010-2024), no groin. The
-    natural runs (no road, no manager) are in the tables for contrast.
+The observed record against Barrier3D's overwash in the 1996-2010 and 2010-2024
+hindcast runs, each image against the storms since the previous one. Details: scripts/input_prep/8-overwash-analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -77,6 +37,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
 WINDOWS = {
     (1996, 2010): {"managed": "HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin",
@@ -85,6 +46,7 @@ WINDOWS = {
                    "natural": "HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
 }
 THRESHOLDS = (0.0, 1.0, 5.0)        # m3/m
+# -----------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "1-observations"))
 from overwash_data import CAPTURE_GRACE_DAYS  # noqa: E402
 GRACE = pd.Timedelta(days=CAPTURE_GRACE_DAYS)   # the observed storm table's own rule
@@ -96,6 +58,7 @@ CLASS_COLOURS = ["0.2", C["ACCENT"], C["ADDED"], "0.93", "white"]
 CLASS_LABELS = ["both", "observed only", "model only", "neither", "not assessed"]
 
 
+# A run's overwash per model year and domain (QowTS, m3/m), and its name
 def load_qow(window, arm):
     name = WINDOWS[window][arm]
     path = MATRIX / f"{window[0]}_{window[1]}" / "edgeBE" / name / f"{name}.npz"
@@ -104,8 +67,8 @@ def load_qow(window, arm):
     return q, name
 
 
+# Per model year: the end date of its largest storm, and of every storm
 def storm_dates(window):
-    """Per model year t: the end date of its largest storm, and of every storm."""
     f = env.storm_summary_file(*window)          # the series the matrix runs on
     s = pd.read_csv(f, parse_dates=["StartTime", "EndTime"])
     s["dated"] = s.EndTime - GRACE
@@ -114,8 +77,8 @@ def storm_dates(window):
     return largest, every, f
 
 
+# Images whose storms the run covers, each with its comparison window
 def images_in(window, obs):
-    """Images whose storms the run covers, each with its comparison window."""
     start = pd.Timestamp(f"{window[0]}-01-01")
     end = pd.Timestamp(f"{window[1]}-01-01")        # the last modelled storm year ends here
     imgs = (obs[["Obs_ID", "Imagery_Date"]].drop_duplicates()
@@ -128,6 +91,7 @@ def images_in(window, obs):
     return keep.reset_index(drop=True)
 
 
+# Observed against modelled overwash per image and domain, for one window, arm and threshold
 def compare(window, arm, obs, thr):
     q, name = load_qow(window, arm)
     largest, every, _ = storm_dates(window)
@@ -150,6 +114,7 @@ def compare(window, arm, obs, thr):
     return pd.DataFrame(rows)
 
 
+# Hits, misses, false alarms and correct negatives, per cell and per domain
 def scores(df, model_col="model"):
     a = df.dropna(subset=["observed"])
     o, m = a.observed.astype(int), a[model_col].astype(int)
@@ -162,12 +127,14 @@ def scores(df, model_col="model"):
                 domains_both_ever=int(((ever.o == 1) & (ever.m == 1)).sum()))
 
 
+# A cell's agreement class for the matrix figure
 def cell_class(o, m):
     if np.isnan(o):
         return UNASSESSED
     return {(1, 1): BOTH, (1, 0): OBS_ONLY, (0, 1): MOD_ONLY, (0, 0): NEITHER}[(int(o), int(m))]
 
 
+# The image x domain agreement matrix for one window (managed, headline threshold)
 def figure(df, window):
     d = df[(df.window == f"{window[0]}-{window[1]}") & (df.arm == "managed") & (df.threshold == HEADLINE_THR)]
     imgs = d[["obs_id", "image", "since", "partial"]].drop_duplicates().reset_index(drop=True)
@@ -241,6 +208,7 @@ def figure(df, window):
     return out
 
 
+# Run: every window, arm and threshold, the tables and the figures
 def main():
     apply_style()
     obs = pd.read_csv(ow.OBSERVATIONS / "overwash_observations.csv")

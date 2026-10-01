@@ -1,35 +1,10 @@
 """
-overwash_data.py
-==============================================================================
-The overwash observation record, read off `Hatteras_Overwash_Data.xlsx` in
-data/hatteras_init/8-overwash-analysis/1-observations/, in the shape the two
-figure scripts need. Nothing is plotted here.
+The overwash observation record, read off Hatteras_Overwash_Data.xlsx, in the shape the figures need.
 
-WHAT THE WORKBOOK HOLDS
-    Overwash_Matrix   one row per imagery date assessed (28 as of 2026-09-10),
-                      one column per CASCADE domain 1..90: 1 = overwash
-                      present, 0 = assessed and absent, blank = the image does
-                      not cover that domain. Period 1 rows are Hapke and
-                      Henderson's delineations; Period 2 rows are Google Earth.
-    Storm_Reference   the named storms the imagery search was organised
-                      around, with a date range and a "search after" date.
+    from overwash_data import load_observations, load_storms, assign_capture, SECTIONS
 
-WHAT IS DERIVED HERE, AND WHY
-    Whether an image shows a storm is decided from DATES, not from the flags
-    the old script carried by hand: the 1985, 1991 and 1992 flags said the
-    storms were visible when the image of that year was taken before them
-    (Aug 23 1985 vs Gloria in late Sep; Oct 19 1991 vs the Perfect Storm on
-    Oct 28; Oct 2 1992 vs the Dec nor'easter). The rule is: the image that
-    shows a storm is the first image taken on or after the storm's last day,
-    with a 7-day grace because the reference sheet's ranges run to dissipation
-    (Emily's range ends Sep 6 1993 but its closest approach was Aug 31, and
-    the image is Sep 2; Irene's image is landfall day). One hand override
-    remains, Hannah's own routing of the May 2022 nor'easter to the Fall 2023
-    image (her note: "first good imagery since").
-
-USAGE
-    from overwash_data import load_observations, load_storms, SECTIONS
-==============================================================================
+One row per image and one column per domain; a storm is matched to the first image
+taken after it (7-day grace). Nothing is plotted here. Details: scripts/input_prep/8-overwash-analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -53,22 +28,19 @@ import sys  # noqa: E402
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_overwash as ow  # noqa: E402
 
-# Every folder is resolved by site_layer/hat_overwash.py (2026-09-18, when the
-# data folder was regrouped by job). OUT_DIR stays the name the three sibling
-# scripts import; it is the root, where CAPTIONS.md and the README live.
+# Folders resolved by site_layer/hat_overwash.py; OUT_DIR is the root the siblings import
 OUT_DIR = ow.OVERWASH_ROOT
-# The workbook is the hand-digitised record, so it lives with the data, not
-# the code (moved 2026-09-10). Edit it there.
+# The hand-digitised workbook lives with the data, not the code
 XLSX = ow.WORKBOOK
 
+# --- CONFIG ------------------------------------------------------------------
 PERIODS = {
     "period1": (1984, 2004),
     "period2": (2004, 2024),
     "combined": (1984, 2024),
 }
 
-# Matches ANN_TOWN_SPANS in the CASCADE site configuration. "Tri-Village" is
-# Rodanthe, Waves and Salvo.
+# Matches ANN_TOWN_SPANS in the site config; Tri-Village is Rodanthe, Waves and Salvo
 SECTIONS = [
     ("Cape Point",                 1,  6, "inter"),
     ("Buxton",                     7,  8, "village"),
@@ -79,9 +51,7 @@ SECTIONS = [
     ("Pea Island",                84, 90, "inter"),
 ]
 
-# Images Hannah flagged as poor or partial, by (year, season). The
-# Image_Quality column is free text ("Medium and cloudy", "Imagery stopped at
-# domain 17?"), so the judgement is kept here rather than parsed.
+# Images flagged poor or partial, by (year, season); Image_Quality is free text, so not parsed
 POOR_QUALITY = {
     (1996, "Fall"),     # poor image quality
     (2006, "Summer"),   # medium-to-poor image quality
@@ -89,14 +59,12 @@ POOR_QUALITY = {
     (2024, "Spring"),   # coverage starts at ~domain 17
 }
 
-# Storm id -> (year, season) of the image that shows it, where the date rule
-# is overruled on purpose. See the module docstring.
+# Storm id -> (year, season) of the image that shows it, where the date rule is overruled (README)
 CAPTURE_OVERRIDE = {
     "NOR-2022-052": (2023, "Fall"),
 }
 
-# Storms that are not in the reference sheet but were in the old figure
-# script, kept so the figure does not lose them. End date = last day near NC.
+# Storms missing from the reference sheet but kept from the old figure script
 EXTRA_STORMS = [
     dict(id="STM-2009-IDA", name="Ida (extratropical)", cat="TS",
          end=pd.Timestamp("2009-11-13"), approx=False),
@@ -104,20 +72,13 @@ EXTRA_STORMS = [
          end=pd.Timestamp("2024-08-09"), approx=False),
 ]
 
-# Days of grace between a storm's listed last day and an image, see docstring.
+# Days of grace between a storm's listed last day and an image (README)
 CAPTURE_GRACE_DAYS = 7
+# -----------------------------------------------------------------------------
 
 
+# The record: (image table, domain ids 1..90, image x domain matrix of 1 / 0 / NaN)
 def load_observations():
-    """
-    (obs, domains, matrix)
-
-    obs      DataFrame, one row per image, sorted by Imagery_Date, with
-             Obs_ID, Imagery_Date, Year, Season, Image_Quality, Source,
-             Linked_Event_ID, poor (bool).
-    domains  int array, 1..90 in ascending order.
-    matrix   float (n_obs, 90): 1, 0 or NaN, columns in `domains` order.
-    """
     df = pd.read_excel(XLSX, sheet_name="Overwash_Matrix", skiprows=3, header=0)
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
     df = df.dropna(subset=["Year"]).copy()
@@ -141,8 +102,8 @@ def load_observations():
     return obs, domains, matrix
 
 
+# Storm category from the sheet: 'H4' stays, 'Class 5' -> 'NE 5', '~Class 3' -> 'NE 3'
 def _category(raw: str) -> str:
-    """'H4' stays; 'Class 5' -> 'NE 5'; '~Class 3' -> 'NE 3'; 'Class 4-5' -> 'NE 4'."""
     s = str(raw).strip()
     if s.startswith("H") and s[1:2].isdigit():
         return s[:2]
@@ -156,13 +117,8 @@ def _category(raw: str) -> str:
     return s
 
 
+# Every storm in the reference sheet plus EXTRA_STORMS, sorted by end date
 def load_storms():
-    """
-    List of dicts, one per storm, sorted by end date:
-        id, name, cat ('H1'..'H5', 'NE 3'..'NE 5', 'TS', 'ET'),
-        end (Timestamp, the reference sheet's Search_GE_After),
-        approx (True when the sheet gives only a month), year, month.
-    """
     df = pd.read_excel(XLSX, sheet_name="Storm_Reference", skiprows=2, header=0)
     df = df.dropna(subset=["Event_ID"])
     out = []
@@ -183,15 +139,8 @@ def load_storms():
     return sorted(out, key=lambda s: s["end"])
 
 
+# For each storm, the image that shows it: the first on or after its end less the grace
 def assign_capture(storms, obs):
-    """
-    For every storm, the index into `obs` of the image that shows it, or None.
-
-    The first image on or after (end - CAPTURE_GRACE_DAYS), CAPTURE_OVERRIDE
-    winning where set. Prints the rows whose Linked_Event_ID disagrees with
-    the rule, so a change in the sheet is noticed rather than silently
-    absorbed.
-    """
     dates = obs["Imagery_Date"].to_numpy()
     grace = np.timedelta64(CAPTURE_GRACE_DAYS, "D")
     for s in storms:
@@ -217,8 +166,8 @@ def assign_capture(storms, obs):
     return storms
 
 
+# Long table: one row per image and domain
 def observations_long(obs, domains, matrix) -> pd.DataFrame:
-    """Long table: Obs_ID, Imagery_Date, Year, Season, domain, overwash."""
     recs = []
     for i, r in obs.iterrows():
         for j, d in enumerate(domains):
@@ -230,8 +179,8 @@ def observations_long(obs, domains, matrix) -> pd.DataFrame:
                                        "Season", "domain", "overwash"])
 
 
+# One row per storm: which image the figures decided shows it
 def storms_table(storms, obs) -> pd.DataFrame:
-    """One row per storm: what the figures decided about which image shows it."""
     recs = []
     for s in storms:
         cap = s.get("capture")
@@ -247,28 +196,19 @@ def storms_table(storms, obs) -> pd.DataFrame:
     return pd.DataFrame(recs)
 
 
-# ================================================================= captions
+# Captions
 CAPTIONS_HEADER = (
     "# Figure captions\n\n"
     "Written by the scripts in `scripts/input_prep/8-overwash-analysis/`. "
     "Each heading names the figure and the folder it is in. The "
     "figures carry no in-image titles or footnotes on purpose; use these "
     "under them.\n")
-# Order of the folders in the file, whatever order the scripts ran in: the
-# order of hat_overwash.CAPTION_FOLDERS, keyed by the label a heading carries.
+# Folder order in CAPTIONS.md, whatever order the scripts ran in
 _FOLDER_RANK = {label: i for i, label in enumerate(ow.CAPTION_FOLDERS.values())}
 
 
+# Replace or add the entry for <name> in CAPTIONS.md
 def upsert_caption(name: str, folder: str, text: str) -> Path:
-    """Replace or add the entry for <name> in CAPTIONS.md.
-
-    `folder` is the short name ("heatmaps", "map", "vs-footprint"); the
-    heading carries its path from hat_overwash.CAPTION_FOLDERS.
-
-    Every script owns only its own entries; the others are kept as they are,
-    and the file is re-sorted by folder so the order never depends on which
-    script ran last.
-    """
     p = ow.CAPTIONS
     old = p.read_text(encoding="utf-8") if p.exists() else CAPTIONS_HEADER
     parts = re.split(r"(?m)^(?=## )", old)
@@ -288,8 +228,8 @@ def upsert_caption(name: str, folder: str, text: str) -> Path:
     return p
 
 
+# Drop the entry for a figure that no longer exists
 def remove_caption(name: str) -> None:
-    """Drop the entry for a figure that no longer exists."""
     p = ow.CAPTIONS
     if not p.exists():
         return

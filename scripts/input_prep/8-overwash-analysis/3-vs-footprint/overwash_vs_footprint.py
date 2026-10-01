@@ -1,62 +1,10 @@
 """
-overwash_vs_footprint.py
-==============================================================================
-Does the observed overwash of 1984–1997 line up with the rows the 1984
-reconstruction adds and removes?
+Does the observed overwash of 1984-1997 line up with the rows the 1984 reconstruction adds and removes?
 
-    python overwash_vs_footprint.py
+    python scripts/input_prep/8-overwash-analysis/3-vs-footprint/overwash_vs_footprint.py
 
-THE TWO RECORDS
-    The footprint (2-domain-reconstruction-1984/2-extent/footprint_1984_by_domain.csv)
-    gives every domain the median shift between the digitised 1984 and 1997
-    dune lines, positive where the 1984 line lay seaward, and the row count the
-    10 m rule keeps of it: rows ADDED where the dune retreated over the window,
-    rows REMOVED where it advanced.
-
-    The overwash record (1-observations/Hatteras_Overwash_Data.xlsx) gives every
-    domain, per image, whether washover was visible.
-
-THE WINDOW (Hannah, 2026-09-10: strictly between the line dates)
-    Both dune lines were digitised from the same USGS photographs the overwash
-    record uses: the 1984 line from the 19 Sep 1984 frame, the 1997 line from
-    the 12 Oct 1997 frame. So the images that can speak to the shift are the
-    ones taken AFTER the 1984 frame and UP TO AND INCLUDING the 1997 frame:
-    nine images, Aug 1985 to Oct 1997. The Diana image is out (the 1984 line
-    was drawn on it, so that overwash predates the line); the Bonnie image is
-    out (it postdates the 1997 line).
-
-WHAT COUNTS AS AGREEMENT (Hannah: show both readings, do not blame absence)
-    Physically, overwash flattens the dune and pushes the vegetation break
-    landward, so overwash should go with rows ADDED. Overwash in a rows-REMOVED
-    domain is the disagreement worth a look. A rows-added domain with NO
-    overwash in the window is listed as unexplained, not as a mismatch: the
-    nine images are two to four years apart and washover fades from imagery
-    within a few years, so absence is weak evidence. Both readings are
-    reported: "given overwash, which action?" and "given the action, was
-    there overwash?".
-
-FLAGS (kept, not dropped)
-    SPREAD_STRADDLES_ZERO from the footprint (the p10–p90 of the shift
-    crosses zero); the erosion hotspots and jetties from domains.geojson;
-    NC-12 relocated 1984–2004 (road_relocation_1978_2008.csv); and shoreline
-    erosion faster than ERODE_THRESH by the CoastSat 1984–2004 LRR, with the
-    DSAS 1978–1997 mean rate carried beside it because it sits closer to the
-    window. Erosion retreats the dune line without any overwash, which is
-    why the last flag exists.
-
-OUTPUT   data/hatteras_init/8-overwash-analysis/3-vs-footprint/tables/
-    overwash_vs_footprint_by_domain.csv    the joined table, one row per domain
-    overwash_vs_footprint_contingency.csv  overwashed x action, all and unflagged
-    overwash_vs_footprint_summary.txt      the readings in words, with the lists
-    ../  (3-vs-footprint/, the figures)
-        overwash_vs_footprint_alongshore.png   images, footprint bars, flags, by domain
-        overwash_vs_footprint_summary.png      shift by overwash status; share overwashed per action
-        overwash_vs_footprint_map.png          three alongshore sections, zoomed, each with
-                                               the three layers: overwash, footprint, reading
-        overwash_vs_footprint_map_island.png   the whole island, the same three layers
-    The map reads the domain boxes and coastline from the repository, through
-    overwash_map_periods.load_geometry (off the D: drive since 2026-09-18).
-==============================================================================
+Nine images strictly between the dune-line frames, against the footprint's
+added and removed rows; tables, figures and captions. Details: scripts/input_prep/8-overwash-analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -79,13 +27,7 @@ REPO = next(
     _p for _p in HERE.parents
     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-# overwash_data.py is the stage's shared module -- the observation record,
-# SECTIONS, PERIODS and the loaders. It sits in 1-observations/ because that
-# is the step it builds. Anchored on REPO, never counted from HERE (rule 5),
-# so this survives the file changing depth.
-# This one draws on TWO earlier steps: the record from 1-observations and the
-# shared colours and geometry from the 2-record figures. Both folders go on
-# the path, anchored on REPO (rule 5), never counted from this file.
+# Draws on two earlier steps, 1-observations and 2-record, both found from the repo root
 _STAGE = REPO / "scripts" / "input_prep" / "8-overwash-analysis"
 for _step in ("1-observations", "2-record"):
     sys.path.insert(0, str(_STAGE / _step))
@@ -110,14 +52,14 @@ from site_layer.hat_observed_rates import DSAS_ROOT, SMOOTH_METHOD_COMPARISON  #
 COASTSAT = (SMOOTH_METHOD_COMPARISON / "03_cascade_inputs"
             / "cascade_lrr_inputs_transect_based.csv")
 DSAS = DSAS_ROOT / "dsas_1978_1997_domain_means.csv"
-# The repository copy (identical to D:/Hatteras_GIS/domains.geojson in
-# geometry and every attribute, hotspot and armor included; 2026-09-18).
+# The repository copy of the domain boxes, identical to the drive's
 from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 
 from site_layer import hat_overwash as ow  # noqa: E402
 VS_DIR = ow.VS_FOOTPRINT_TABLES
 FIG_DIR = ow.VS_FOOTPRINT
 
+# --- CONFIG ------------------------------------------------------------------
 LINE_1984 = pd.Timestamp("1984-09-19")     # the frame the 1984 dune line was drawn on
 LINE_1997 = pd.Timestamp("1997-10-12")     # the frame the 1997 dune line was drawn on
 ERODE_THRESH = -2.0                        # m/yr, CoastSat LRR 1984–2004, "eroding fast"
@@ -129,17 +71,19 @@ HOTSPOT_FALLBACK = {10: "Buxton", 11: "Buxton", 12: "Buxton", 13: "Buxton",
 # (the geojson also names "Rodanthe 'S' Curves"; read from the drive when present)
 ARMOR_FALLBACK = {6: "3 jetties, from 1930s and 1970s"}
 
-# The footprint bars take the LIGHTER RdBu pair so they cannot be read as the
-# overwash accent red of panel (a); the overwash marker in (b) is the accent.
+# Footprint bars in the lighter RdBu pair, so they never read as the overwash accent
 CLR_ADD = "#d6604d"       # rows added (1984 line seaward)
 CLR_REMOVE = "#4393c3"    # rows removed
 CLR_NONE = "#9a9a9a"
 CLR_OW = C["ACCENT"]
 CLR_INK = INK
 ACTION_CLR = {"add": CLR_ADD, "remove": CLR_REMOVE, "none": CLR_NONE}
+# -----------------------------------------------------------------------------
 
 
-# =================================================================== inputs
+# Inputs
+
+# Everything compared: the record in the window, footprint, relocation, rates and flags
 def load_inputs():
     obs, domains, matrix = load_observations()
     win = (obs["Imagery_Date"] > LINE_1984) & (obs["Imagery_Date"] <= LINE_1997)
@@ -174,6 +118,7 @@ def load_inputs():
     return obs, domains, matrix, idx, fp, rel, cs, ds, hotspot, armor
 
 
+# One row per domain: overwash in the window, the footprint shift and action, the flags
 def build_table(obs, domains, matrix, idx, fp, rel, cs, ds, hotspot, armor):
     sub = matrix[idx]
     labels = [f"{obs.loc[i, 'Imagery_Date']:%Y-%m}" for i in idx]
@@ -217,7 +162,9 @@ def build_table(obs, domains, matrix, idx, fp, rel, cs, ds, hotspot, armor):
     return t[order]
 
 
-# ================================================================= readings
+# Readings
+
+# Overwashed x action counts for one subset of the table
 def contingency(t, label):
     ct = pd.crosstab(t["overwashed"].map({True: "overwashed", False: "not seen"}),
                      t["action"]).reindex(index=["overwashed", "not seen"],
@@ -226,8 +173,8 @@ def contingency(t, label):
     return ct
 
 
+# Fisher exact test on overwashed x (add vs remove), 'none' left out; small counts
 def fisher(t):
-    """overwashed x (add vs remove), 'none' left out. Small counts: report, do not lean on."""
     try:
         from scipy.stats import fisher_exact
     except ImportError:
@@ -241,6 +188,7 @@ def fisher(t):
     return dict(a=a, b=b, c=c, d=d, odds=odds, p=p)
 
 
+# The readings in words, with the domain lists
 def summary_text(t, idx, obs):
     lines = []
     dates = [f"{obs.loc[i, 'Imagery_Date']:%d %b %Y}" for i in idx]
@@ -309,9 +257,10 @@ def summary_text(t, idx, obs):
     return "\n".join(lines) + "\n"
 
 
-# =================================================================== figures
+# Figures
+
+# PNG for slides and a PDF beside it for the manuscript (house `save`)
 def write(fig, out):
-    """PNG for slides and a PDF beside it for the manuscript (house `save`)."""
     save(fig, out, close=True)
     print(f"  wrote {out.relative_to(REPO)} (+ .pdf)")
 
@@ -339,20 +288,21 @@ READING_LABEL = {
 }
 
 
+# Size class of a row count: 1, 2-3, or more
 def _row_class(n):
     a = abs(int(n))
     return 0 if a == 1 else (1 if a <= 3 else 2)
 
 
+# A frameless legend at a given height
 def _frameless_legend(ax, handles, ncol, y=-0.012, fontsize=7.0):
     ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.0, y), ncol=ncol,
               fontsize=fontsize, frameon=False, handlelength=1.4, handleheight=1.0,
               columnspacing=1.3, borderaxespad=0, labelspacing=0.5)
 
 
+# Three stacked panels on one domain axis, at the double-column width
 def fig_alongshore(t, obs, domains, matrix, idx, out):
-    """Three stacked panels on one domain axis, at the double-column width:
-    the images, the footprint, the flags."""
     n_img = len(idx)
     x0, x1 = domains[0] - 0.5, domains[-1] + 0.5
     ticks = [d for d in domains if d == 1 or d % 10 == 0]
@@ -434,8 +384,7 @@ def fig_alongshore(t, obs, domains, matrix, idx, out):
     ax_r.spines["right"].set_visible(True)
     _title(ax_bar, 1, "dune-line shift 1984 to 1997")
 
-    # (c) flags
-    # The straddle is not a row here: it is already the hatching in (b).
+    # (c) flags; the straddle is already the hatching in (b)
     flag_rows = [
         ("NC-12 relocated, 1984 to 2004", t.road_relocated_1984_2004, C["ROAD"]),
         # erosion in warm colours, infrastructure in black and grey
@@ -463,8 +412,7 @@ def fig_alongshore(t, obs, domains, matrix, idx, out):
     _title(ax_fl, 2, "management and erosion context")
     ax_fl.set_xlabel(DOMAIN_AXIS_LABEL, labelpad=3)
 
-    # one key under the figure: the panels are full of data and the village
-    # names have the top of (a)
+    # One key under the figure: the panels are full
     fig.legend(handles=[
         mpatches.Patch(fc=CLR_OW, label="overwash present (a)"),
         mpatches.Patch(fc=CLR_PART_FACE, ec=CLR_PART_EDGE, hatch="....", lw=0,
@@ -482,6 +430,7 @@ def fig_alongshore(t, obs, domains, matrix, idx, out):
     write(fig, out)
 
 
+# Shift by overwash status, and the share overwashed per action
 def fig_summary(t, out):
     fig = plt.figure(figsize=figsize("double", aspect=0.46))
     ax_a = fig.add_axes([0.095, 0.21, 0.35, 0.66])
@@ -544,6 +493,7 @@ def fig_summary(t, out):
     write(fig, out)
 
 
+# The whole island with the three layers: overwash, footprint, reading
 def fig_map_island(t, geo, out):
     dom, land, road, bounds = geo
     yspan = (bounds[3] - bounds[1]) + PAD_S + PAD_N
@@ -611,8 +561,8 @@ def fig_map_island(t, geo, out):
     write(fig, out)
 
 
+# The three fills the maps share
 def _layers(t):
-    """The three fills the maps share: (title, fill_of, alpha_of, legend handles)."""
     vmax = max(int(t.n_images_overwash.max()), 1)
     cols = count_cmap(vmax)
     fill_a = {int(d): cols[int(n) - 1] for d, n in zip(t.domain, t.n_images_overwash) if n > 0}
@@ -649,8 +599,8 @@ def _layers(t):
             ("reading", fill_c, {}, h_c)]
 
 
+# Three alongshore sections, each zoomed, each with the three layers
 def fig_map_sections(t, geo, out):
-    """Three alongshore sections, each zoomed, each with the three layers."""
     dom, land, road, bounds = geo
     layers = _layers(t)[:2]          # overwash seen, dune-line shift; the reading is in the tables
     PAD_NS, pad_w, pad_e = 500.0, 900.0, 1000.0
@@ -682,8 +632,7 @@ def fig_map_sections(t, geo, out):
         for li, (lname, fill, alpha, handles) in enumerate(layers):
             ax = fig.add_axes([x / fig_w, (BM + LG) / fig_h, g["w"] / fig_w, H / fig_h])
             first = li == 0
-            # the panel is one column wide: the letter alone goes above it and
-            # the legend beneath names the layer
+            # One column wide: the letter above, the legend beneath names the layer
             draw_island(ax, g["dom"], land, road, g["b"], fill, next(letters), "",
                         reach_labels=first, pad_w=pad_w, alpha_of=alpha, pad_e=pad_e,
                         pad_s=PAD_NS, pad_n=PAD_NS, label_every=5,
@@ -698,8 +647,7 @@ def fig_map_sections(t, geo, out):
                  (BM + LG + H + 0.30) / fig_h,
                  g["title"], ha="center", va="bottom", fontsize=9, color=CLR_INK)
 
-    # one legend per layer, side by side under the figure: the panels are a
-    # single column wide, too narrow to carry a legend under each of them
+    # One legend per layer, side by side under the figure
     for (lname, _, _, handles), lx in zip(layers, (LM / fig_w, 0.42)):
         fig.legend(handles=handles, loc="upper left",
                    bbox_to_anchor=(lx, (BM + LG - 0.06) / fig_h),
@@ -710,7 +658,9 @@ def fig_map_sections(t, geo, out):
     write(fig, out)
 
 
-# ================================================================== captions
+# Captions
+
+# The CAPTIONS.md entries for every figure
 def captions(t, idx, obs):
     ow = t[t.overwashed]
     n_add, n_rem = int((t.action == "add").sum()), int((t.action == "remove").sum())
@@ -775,7 +725,9 @@ def captions(t, idx, obs):
     return [(FIG_ALONG, along), (FIG_SUMMARY, summ), (FIG_MAP, secs), (FIG_MAP_ISLAND, mp)]
 
 
-# ===================================================================== main
+# Main
+
+# Run: the joined table, contingency, summary, figures and captions
 def main():
     apply_style()
     VS_DIR.mkdir(parents=True, exist_ok=True)

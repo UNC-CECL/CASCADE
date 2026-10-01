@@ -1,46 +1,11 @@
 """
-overwash_map_periods.py
-==============================================================================
-Where on Hatteras Island overwash was observed, and when, for the two model
-periods, drawn on the island outline.
+Where on Hatteras Island overwash was observed, and when, for the two model periods.
 
-    python overwash_map_periods.py            # one figure per period
-    python overwash_map_periods.py --both     # plus the two-period figure
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_map_periods.py   # one figure per period
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_map_periods.py --both   # plus the two-period figure
 
-PANELS
-    (a) the island (NC 1:80k coastline) for the period, with the
-        90 CASCADE domain boxes, each clipped to land and shaded by the number
-        of images in the period that show it overwashed. NC-12 as a thin dark
-        line. Domain numbers every ten on the ocean side, reach names on the
-        sound side.
-    (b) [and (d)]: one column per image assessed in the period, in date order,
-        registered to the same northing as the island beside it, so a purple
-        cell sits level with the domain it belongs to. Column heads (under
-        the strip) carry the image date and the named storm(s) that image is
-        the first to show.
-
-INPUTS
-    hat_map_layers.DOMAIN_BOXES                     the domain boxes (EPSG:3725)
-    hat_map_layers.NC_COAST                         the coastline, NC 1:80k clipped
-    (both in the repository since 2026-09-18; they were read off D:/Hatteras_GIS)
-    data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset/2008/nc12_2008.geojson
-    data/hatteras_init/8-overwash-analysis/1-observations/Hatteras_Overwash_Data.xlsx
-    via overwash_data.py
-
-OUTPUT
-    data/hatteras_init/8-overwash-analysis/2-record/map/overwash_map_period1.png (+ .pdf)
-    data/hatteras_init/8-overwash-analysis/2-record/map/overwash_map_period2.png (+ .pdf)
-    (overwash_map_periods.png with --both) and their entries in CAPTIONS.md.
-
-STYLE
-    hat_figure_style, drawn at the double-column width (figsize("double")):
-    the island panel takes the height the width allows, capped at a page.
-    Overwash is C["ACCENT"]; the island's count classes are the matching
-    Purples ramp so the two panels read as one colour.
-
-The domain boxes live on the external drive; the script stops with a
-message if the drive is not there rather than drawing without them.
-==============================================================================
+The island with its 90 domains shaded by images showing overwash, beside one
+column per image. Details: scripts/input_prep/8-overwash-analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -67,10 +32,7 @@ REPO = next(
     _p for _p in HERE.parents
     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-# overwash_data.py is the stage's shared module -- the observation record,
-# SECTIONS, PERIODS and the loaders. It sits in 1-observations/ because that
-# is the step it builds. Anchored on REPO, never counted from HERE (rule 5),
-# so this survives the file changing depth.
+# The stage's shared module and its siblings are found from the repo root
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "8-overwash-analysis"
                        / "1-observations"))
 
@@ -90,6 +52,7 @@ COAST_FILE = _ml.NC_COAST
 from site_layer.hat_topo_version import road_line_file  # noqa: E402
 ROAD_FILE = road_line_file(2008)
 
+# --- CONFIG ------------------------------------------------------------------
 CLR_OW = C["ACCENT"]
 CLR_WATER = "#eef4f8"
 CLR_LAND = "#e9e5dc"
@@ -110,9 +73,12 @@ SCALEBAR_M = 5000.0
 
 # Reach names broken for the sound side of a column-width island panel.
 REACH_LABEL = {"Rodanthe–Waves–Salvo": "Rodanthe–\nWaves–Salvo"}
+# -----------------------------------------------------------------------------
 
 
-# =================================================================== inputs
+# Inputs
+
+# The domain boxes, the land around them and NC-12, clipped to one window
 def load_geometry():
     if not DOMAIN_FILE.exists():
         raise SystemExit(f"\n{DOMAIN_FILE} is missing.")
@@ -130,31 +96,18 @@ def load_geometry():
     return dom, land, road, b
 
 
-# ================================================================== drawing
+# Drawing
+
+# Discrete purples for 1..vmax, the family of C["ACCENT"]; 0 is bare land
 def count_cmap(vmax):
-    """Discrete purples for 1..vmax, the family of C["ACCENT"]; 0 is drawn
-    as bare land."""
     cols = [cm.Purples(0.30 + 0.65 * (i - 1) / max(vmax - 1, 1)) for i in range(1, vmax + 1)]
     return cols
 
 
+# The island with the domain boxes clipped to land
 def draw_island(ax, dom, land, road, bounds, fill_of, letter, title,
                 reach_labels=True, pad_w=None, alpha_of=None, pad_e=None,
                 pad_s=None, pad_n=None, label_every=10, reach_rotation=0):
-    """The island with the domain boxes clipped to land.
-
-    fill_of        {domain: colour}; domains not in it are drawn as bare land.
-    alpha_of       {domain: alpha}, optional, for a paler fill on flagged domains.
-    pad_*          metres of water to leave around `bounds`; pad_w defaults to
-                   PAD_W (room for the reach names) or 1500 without them.
-    label_every    domain numbers at 1 and every N.
-    reach_rotation 90 writes the reach names along the sound side, which is
-                   what a zoomed section needs, where the panel is narrow.
-    letter         the panel letter, "a", "b", ...; drawn bold at the left of
-                   the title by hat_figure_style._title.
-    Only the domains in `dom` are drawn and labelled, so pass a subset to
-    draw a section.
-    """
     b = bounds
     alpha_of = alpha_of or {}
     if pad_w is None:
@@ -213,18 +166,14 @@ def draw_island(ax, dom, land, road, bounds, fill_of, letter, title,
     _title(ax, ord(letter) - ord("a"), title)
 
 
+# The house scale bar and north arrow (hat_figure_style), for a map panel without coordinate ticks
 def scalebar_and_north(ax, length_m=SCALEBAR_M):
-    """The house scale bar and north arrow (hat_figure_style), for a map
-    panel without coordinate ticks."""
     _scalebar(ax, length_m, show_cells=False)
     _north_arrow(ax)
 
 
+# The column-head strings of the strip
 def strip_heads(obs, obs_idx, storm_names, one_line=False):
-    """The column-head strings of the strip: date (* poor image) and, above
-    it, the named storm the image is the first to show (+n more). `one_line`
-    joins the two, for a strip whose columns are narrower than two lines of
-    rotated type."""
     heads = []
     for i in obs_idx:
         r = obs.loc[i]
@@ -237,10 +186,9 @@ def strip_heads(obs, obs_idx, storm_names, one_line=False):
     return heads
 
 
+# One column per image, level with the island beside it
 def draw_strips(ax, dom, obs_idx, obs, matrix, domains, storm_names,
                 bounds, letter, title, one_line_heads=False):
-    """One column per image; rows are the domain boxes' northing spans. The
-    column heads hang below the strip, reading upward into it."""
     b = bounds
     ybox = {int(r["domain_id"]): (r.geometry.bounds[1], r.geometry.bounds[3])
             for _, r in dom.iterrows()}
@@ -284,8 +232,8 @@ def draw_strips(ax, dom, obs_idx, obs, matrix, domains, storm_names,
     _title(ax, ord(letter) - ord("a"), title)
 
 
+# Inches the rotated column heads need below the strip
 def head_band_in(obs, per, storm_names, tags, one_line=False):
-    """Inches the rotated column heads need below the strip."""
     longest = 0
     for t in tags:
         for head, _ in strip_heads(obs, per[t]["idx"], storm_names, one_line):
@@ -293,7 +241,9 @@ def head_band_in(obs, per, storm_names, tags, one_line=False):
     return max(1.45, 0.055 * longest + 0.15)
 
 
-# ================================================================== caption
+# Caption
+
+# The CAPTIONS.md entry for the figure of the given periods
 def caption_text(tags, per):
     one = len(tags) == 1
     span = {"period1": "1984–2004", "period2": "2004–2024"}
@@ -332,17 +282,17 @@ def caption_text(tags, per):
         f"periods. {top}")
 
 
+# Write one figure's entry into CAPTIONS.md
 def write_caption(name, text):
     p = upsert_caption(name, "map", text)
     print(f"  wrote {p.relative_to(REPO)}  ({name})")
 
 
-# =================================================================== render
+# Render
+
+# One figure at double-column width: per period, the island panel and its image strip side by side
 def render(tags, out_name, geo, per, cols, vmax, obs, matrix, domains,
            storm_names):
-    """One figure at the double-column width: for each period tag an island
-    panel and its image strip, side by side. With two periods the islands
-    give up width to the strips, and the reach names go with it."""
     dom, land, road, bounds = geo
     span = {"period1": "1984–2004", "period2": "2004–2024"}
     n_per = len(tags)
@@ -354,15 +304,13 @@ def render(tags, out_name, geo, per, cols, vmax, obs, matrix, domains,
     ratio = yspan / xspan
     fig_w = figsize("double")[0]
     LM, G, GG, RM, TM, BM = 0.20, 0.10, 0.70, 0.32, 0.40, 0.08
-    # Two periods do not leave a column two lines of rotated type wide, so
-    # their heads run as one line and the band below the strips grows instead.
+    # Two periods: the column heads run as one line, and the band below grows
     HEAD = head_band_in(obs, per, storm_names, tags, one_line=pair)
     LG = 0.40 if pair else 0.0                        # a legend row, when two periods
     n_img_tot = sum(per[t]["n_img"] for t in tags)
     chrome = LM + RM + n_per * G + GG * (n_per - 1)
 
-    # The island is as tall as the page allows; if that leaves the image
-    # columns thinner than their own labels, the islands give width back.
+    # The island is as tall as the page allows, giving width back if the columns get too thin
     map_h = FIG_H_MAX - BM - LG - TM - HEAD
     map_w = map_h / ratio
     w_col = min(STRIP_IN_MAX, (fig_w - chrome - n_per * map_w) / n_img_tot)
@@ -425,14 +373,10 @@ def render(tags, out_name, geo, per, cols, vmax, obs, matrix, domains,
     write_caption(out_name, caption_text(tags, per))
 
 
-# ===================================================================== main
+# Main
+
+# Run: one figure per period; --both adds the two-period figure
 def main(argv):
-    """
-    Default: one figure per period (overwash_map_period1.png,
-    overwash_map_period2.png). `--both` adds the two-period figure
-    (overwash_map_periods.png), the two island-and-strip pairs side by side.
-    The shade scale is shared either way.
-    """
     apply_style()
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     obs, domains, matrix = load_observations()
