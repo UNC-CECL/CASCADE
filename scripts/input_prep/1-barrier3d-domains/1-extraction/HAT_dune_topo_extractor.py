@@ -695,7 +695,7 @@ def suggest_window(prof_arr: np.ndarray, start_beach: np.ndarray,
     return i0, i1, crest_el, overlaps
 
 
-# (median crest, % of profiles whose argmax pins at i1-1, is a higher cell sitting just outside the ...
+# (median crest, % of profiles pinned at i1-1, higher cell just outside the landward edge?)
 def window_diagnostics(prof_arr, start_beach, i0, i1):
     elev, loc = find_dunes(prof_arr, start_beach, i0, i1)
     ok = loc >= 0
@@ -1853,7 +1853,7 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
     return canvas, np.array(starts), [n for n, _ in use], road_canvas
 
 
-# Plan view of the processed dune + interior for domains 1-90 at the measured offsets, on the terrain ...
+# Plan view of the processed dune and interior for domains 1-90 at the measured offsets, one per mode
 def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
     recs = sorted([(domain_number(r["stem"]), r) for r in summary
                    if domain_number(r["stem"]) is not None])

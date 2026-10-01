@@ -75,7 +75,7 @@ def _town_bands_alongshore_y(ax, lo, hi):
                 zorder=1, clip_on=True)
 
 
-# Months between the centre of the shoreline averaging window and the dune line's survey date, or ...
+# Months between the shoreline window's centre and the dune line's survey date, or None
 def _window_gap_months(year, shoreline_version=None):
     try:
         sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "lib"))
@@ -126,7 +126,7 @@ def _vintage_label(source, year, version=None):
     return "CoastSat shoreline ({0} – {1} mean)".format(lo.isoformat(), hi.isoformat())
 
 
-# The 90-domain file the model would read from one source's build (CURRENT unless a version is ...
+# The 90-domain file the model would read from one source's build, zeroed on its most seaward domain
 def _unpadded(year, source, version=None):
     path = _tv.offset_file(year, "unpadded", source=source, version=version)
     if not path.is_file():

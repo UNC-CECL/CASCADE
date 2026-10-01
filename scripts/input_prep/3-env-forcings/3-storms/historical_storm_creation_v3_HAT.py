@@ -135,7 +135,7 @@ def find_time_gaps(df, col_name):
     print(missing_data_ranges)
 
 
-# This function loads the data, combines everything into a single dataframe with the specified start ...
+# Load the records into one dataframe over start..stop, with rows holding NaNs dropped
 def load_data(
     start_time,
     end_time,

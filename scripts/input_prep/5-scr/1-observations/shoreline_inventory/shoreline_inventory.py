@@ -141,7 +141,7 @@ def fix_crs(gdf: gpd.GeoDataFrame, fallback: str = PROJECTED_CRS) -> gpd.GeoData
         return gdf.set_crs(fallback, allow_override=True)
 
 
-# Load a shapefile/GeoJSON defining the study area and return a single buffered polygon used as the ...
+# The study area as one buffered polygon, the spatial filter for every source (polygons or lines)
 def load_study_area_filter(path: str, buffer_m: float):
     print(f"Loading study area filter: {os.path.basename(path)}")
     gdf = gpd.read_file(path)
@@ -222,7 +222,7 @@ def parse_date_column(series: pd.Series, col_name: str = "") -> pd.Series:
     return pd.to_datetime(series, errors="coerce")
 
 
-# Load a shoreline shapefile/GeoJSON, spatially filter to the study area, and extract observation ...
+# A shoreline file filtered to the study area: its observation dates and alongshore extent
 def load_shapefile_dates(path: str,
                           date_col: str,
                           filter_polygon: gpd.GeoDataFrame,
@@ -580,7 +580,7 @@ def plot_inventory(observations: pd.DataFrame,
 
 # Visualization: shoreline reconstruction & spatial plots
 
-# Pick N CoastSat dates that (a) span the full temporal record and (b) each have high transect ...
+# N CoastSat dates that span the record and each have high transect coverage, one per time bin
 def pick_representative_coastsat_dates(per_date_summary: pd.DataFrame,
                                        n_snapshots: int,
                                        min_transects: int) -> pd.DataFrame:
@@ -619,7 +619,7 @@ def pick_representative_coastsat_dates(per_date_summary: pd.DataFrame,
     return result
 
 
-# Return unit direction vector (dx, dy) from a transect LineString's origin (first vertex) to its ...
+# Unit direction vector (dx, dy) of a transect, from its first vertex to its last
 def get_transect_direction(geom):
     if geom.geom_type == "MultiLineString":
         geom = geom.geoms[0]
@@ -633,7 +633,7 @@ def get_transect_direction(geom):
     return dx / length, dy / length
 
 
-# For each (date, transect_id) in target_dates, compute the shoreline point (x, y) in the projected ...
+# The shoreline point (x, y) of each (date, transect), walked chainage_m along the transect
 def reconstruct_coastsat_shoreline_points(raw_obs: pd.DataFrame,
                                           transect_geoms: gpd.GeoDataFrame,
                                           target_dates: pd.Series) -> pd.DataFrame:
@@ -679,7 +679,7 @@ def reconstruct_coastsat_shoreline_points(raw_obs: pd.DataFrame,
                 "chainage_m", "origin_x", "origin_y"]]
 
 
-# Assign each CoastSat transect an alongshore position (m) — cumulative distance from the ...
+# Each CoastSat transect's alongshore position (m), walked north from the southernmost origin
 def compute_alongshore_position(transect_geoms: gpd.GeoDataFrame) -> pd.DataFrame:
     if len(transect_geoms) == 0:
         return pd.DataFrame(columns=["transect_id", "origin_x", "origin_y",

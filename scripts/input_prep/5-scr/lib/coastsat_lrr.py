@@ -75,7 +75,7 @@ def filter_dates(df: pd.DataFrame, start: str | None, end: str | None) -> pd.Dat
     return df.reset_index(drop=True)
 
 
-# Retain only CoastSat observations that fall within ±window_days of one or more specific USGS ...
+# Keep only CoastSat observations within +/- window_days of the given survey dates
 def filter_to_dates(df: pd.DataFrame,
                     survey_dates: list[str],
                     window_days: int = 30) -> pd.DataFrame:

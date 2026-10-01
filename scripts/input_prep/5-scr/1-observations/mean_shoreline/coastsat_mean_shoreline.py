@@ -344,7 +344,7 @@ def ribbon_extent(vertices):
             vertices["x"].min() - land, vertices["x"].max() + sea)
 
 
-# Km ticks in the same words as the diagnostic's panel (a), but easting increasing DOWN (Hannah, ...
+# Km ticks as in the diagnostic's panel (a), easting increasing down: a north-up map turned clockwise
 def ribbon_axes(ax, ext):
     n0, n1, e0, e1 = ext
     ax.set_xlim(n0, n1)

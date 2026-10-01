@@ -119,7 +119,7 @@ def _f(v) -> float:
 
 # The figure - the grid as the model would hold it
 
-# The communities as a bar along the BOTTOM of the strip, names below it and village ticks above it, ...
+# The communities as a bar along the bottom of the strip: names below, village ticks above
 def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
     ann = off.HATTERAS_ANNOTATIONS
     for name, (lo, hi) in ann.town_spans.items():

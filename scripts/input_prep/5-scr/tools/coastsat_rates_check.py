@@ -111,7 +111,7 @@ def load_data():
 
 # Check 1 — NaN audit
 
-# How many transects are missing LRR values? A large number here usually means transect IDs didn't ...
+# How many transects are missing LRR values? (Many usually means IDs did not match the CSV names)
 def check_nan_lrr(t):
     section("CHECK 1 — Missing LRR values (NaN audit)")
 
@@ -162,7 +162,7 @@ def check_nan_lrr(t):
 
 # Check 2 — Domain mean consistency
 
-# Does the mean_lrr in domain_lrr_summary.csv equal the manual mean of lrr_m_yr values for each ...
+# Does each domain's mean_lrr in the summary equal the mean of its transects' lrr_m_yr?
 def check_domain_means(t, d):
     section("CHECK 2 — Domain mean consistency")
 
@@ -208,7 +208,7 @@ def check_domain_means(t, d):
 
 # Check 3 — Transect count consistency
 
-# Does n_transects in domain_lrr_summary.csv match the actual count of rows per domain in ...
+# Does n_transects in the summary match the rows per domain in transect_lrr_full.csv?
 def check_transect_counts(t, d):
     section("CHECK 3 — Transect count per domain")
 

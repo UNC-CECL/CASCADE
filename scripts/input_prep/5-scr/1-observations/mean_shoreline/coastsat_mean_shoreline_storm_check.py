@@ -54,7 +54,7 @@ CHECK_DIR = "storm_check"
 
 # The storm record, 1984-2024
 
-# Every event of 1984-2024, one row each, with its peak hour, Rhigh (m MHW), hours above the berm ...
+# Every event of 1984-2024 with its peak hour, Rhigh (m MHW), hours above the berm and storm type
 def load_events(variant):
     forcing = sf.load_forcing()
     parts = []
@@ -124,7 +124,7 @@ def storm_hours_2yr(events, step_days=30):
 
 # The shoreline
 
-# Every CoastSat position of the window's included transects over the context span, as the anomaly ...
+# Every CoastSat position of the window's transects over the context span, as anomaly from the mean
 def load_positions(window, context_lo, context_hi):
     means = pd.read_csv(mean_shoreline_csv(*window.key))
     means = means[means.included]

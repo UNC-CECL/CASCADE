@@ -81,7 +81,7 @@ def run_env(member, preset, override="", overwrite=False):
     return env
 
 
-# One hindcast run, filed under experiments/<TAG>/<member>/ (stage 0) or ...
+# One hindcast run, filed under experiments/<TAG>/<member>/ (stage 0) or its step<k>/ (a probe)
 def launch(member, preset, step=None, override="", overwrite=False, dry_run=False):
     tag_member = member if step is None else f"{member}/step{step}"
     env = run_env(member, preset, override, overwrite)
@@ -127,7 +127,7 @@ def cmd_probe(a):
                        overwrite=a.overwrite, dry_run=a.dry_run) else 1
 
 
-# (run_name, preset, tag) of the member's stage-0 run and every probe on disk, oldest first, read off ...
+# (run_name, preset, tag) of the member's stage-0 run and every probe, oldest first, from the folder
 def solve_history(member):
     from cascade_pipeline.run_registry import load_run_index
     index = load_run_index(RAW_RUNS / "run_index.csv")
@@ -152,7 +152,7 @@ def _member_step(tag):
     return None, None
 
 
-# A SOLVED file in the member folder naming the step that is the solved run, for a reader who is not ...
+# A SOLVED file in the member folder naming the solved step, for a reader who won't parse the index
 def mark_solved(member, step):
     (EXPERIMENT_DIR / member).mkdir(parents=True, exist_ok=True)
     (EXPERIMENT_DIR / member / "SOLVED").write_text(f"step{step}\n", encoding="utf-8")

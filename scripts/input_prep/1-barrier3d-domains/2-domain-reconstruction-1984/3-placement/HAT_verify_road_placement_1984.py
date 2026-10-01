@@ -102,7 +102,7 @@ def load_profiles() -> pd.DataFrame:
     return m
 
 
-# Nearest distance from samples along the 1984 dune line (inside the domain box) to the 1984 NC-12 ...
+# Distance from the 1984 dune line to the 1984 NC-12 centreline, minus the half width, frame-free
 def perpendicular(gdf, line84, road84, d: int) -> dict:
     box = gdf[gdf["domain_id"].astype(int) == d].geometry.iloc[0]
     seg = line84.intersection(box)
@@ -204,7 +204,7 @@ def check(tab: pd.DataFrame, prof: pd.DataFrame, gdf, line84, road84, topo_v2: P
 
 # Figure, one domain: map beside grid
 
-# A cross-shore band over rows r0..r1 (relative to row 0, inclusive) on every profile of the domain, ...
+# A cross-shore band over rows r0..r1 (from row 0, inclusive) on every profile, as one polygon
 def _band(ax, pr: pd.DataFrame, r0: float, r1: float, **kw):
     pr = pr.sort_values("interior_y")
     y = pr["interior_y"].to_numpy()

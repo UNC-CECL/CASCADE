@@ -351,7 +351,7 @@ def _fig_method_removal(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -
     return p
 
 
-# The method in three stages, one domain, all in the MODEL's frame (dune rows on top, then the ...
+# The method in three stages for one domain, in the model's frame: as extracted, blank rows, filled
 def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
     if a["n"] < 0:
         return _fig_method_removal(d, a, dune_dir, rows_shown)

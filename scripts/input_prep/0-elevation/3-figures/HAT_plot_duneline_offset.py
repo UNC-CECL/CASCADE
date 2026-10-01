@@ -477,7 +477,7 @@ def fig_ribbon(samples, rows, gdf):
     return p
 
 
-# True-scale panels on the reaches where the offset is largest, plus a quiet control - since ...
+# True-scale panels on the reaches where the offset is largest, plus a quiet control
 def fig_zooms(elev, extent, gdf, lines, rows, reaches=None, out=None,
               half_width=None, rows_by_domain=None):
     # A hand-given --zoom-note is the only note drawn under a panel title
@@ -1149,7 +1149,7 @@ def _epsg(crs):
         return str(crs)[:40]
 
 
-# The 90 domain boxes, from `domains.geojson` if it is reachable and from the resampled rasters if it ...
+# The 90 domain boxes, from domains.geojson if reachable (it lives on D:), else from the rasters
 def load_domains():
     if m.DOMAIN_FILE.exists():
         g = gpd.read_file(m.DOMAIN_FILE).sort_values("domain_id")

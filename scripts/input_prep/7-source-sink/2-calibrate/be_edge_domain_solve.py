@@ -75,7 +75,7 @@ def load_target(start_year, end_year, window=None):
                     [float(r) for r in table["target_lrr_m_yr"]]))
 
 
-# The dune-line endpoint rate per domain, seaward positive, read at each end domain raw or as a ...
+# The dune-line endpoint rate per domain (seaward positive), read raw or as a three-domain end mean
 def load_dune_target(start_year, end_year, smooth):
     from site_layer.hat_observed_rates import dune_endpoint_csv
     dom = pd.read_csv(dune_endpoint_csv(start_year, end_year, "domain"))

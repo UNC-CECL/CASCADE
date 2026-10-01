@@ -260,7 +260,7 @@ def add_geo_annotations(ax, orientation="horizontal", label_side="top",
 
 # Analysis
 
-# For every domain, compute LRR, sign consistency, and variability for Period 1, Period 2, and the ...
+# LRR, sign consistency and variability per domain for Period 1, Period 2 and the full record
 def compute_domain_metrics(ts_dict, transect_order, domain_per_transect):
     domains = sorted(set(domain_per_transect))
     rows = []

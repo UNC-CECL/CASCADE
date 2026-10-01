@@ -112,7 +112,7 @@ def downsample(arr, block, method):
     raise ValueError(f"unknown AGGREGATION: {method!r}")
 
 
-# Survey year for the SAME four cells bilinear actually reads, so the flag describes the value that ...
+# Survey year for the same four cells bilinear reads, so the flag describes the value written
 def downsample_survey(survey, block):
     h, w = survey.shape
     b = survey.reshape(h // block, block, w // block, block)

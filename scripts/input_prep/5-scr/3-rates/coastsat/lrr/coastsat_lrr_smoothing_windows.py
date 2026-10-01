@@ -139,7 +139,7 @@ def structure(stem, vals, smooth_windows=SMOOTH_WINDOWS):
     )
 
 
-# The y bound of every LRR window figure, so this one matches the figure already beside it ...
+# The y bound of every LRR window figure, so this one matches the figure beside it
 def lrr_half():
     frames = [pd.read_csv(COASTSAT_LRR_ROOT / f"{s}_{e}" / "domain_lrr_summary.csv")
               for s, e in windows()]

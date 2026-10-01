@@ -176,7 +176,7 @@ def caption_text(windows, half: float, grid: bool) -> str:
 
 # Figures
 
-# PNG in the folder, PDF under supporting/ -- the house save() does that itself since 2026-09-15 (it ...
+# PNG in the folder and PDF under supporting/, which the house save() does itself
 def _save(fig, stem):
     out = save(fig, OUT_DIR / stem)
     plt.close(fig)
@@ -251,7 +251,7 @@ HALF_COLOURS = [C["BASE"], INK]
 FILL_BAR_C = INK
 
 
-# (year, first_gis, last_gis) of every ENABLED model-input fill placed inside the window, read from ...
+# (year, first_gis, last_gis) of every enabled model-input fill inside the window, from the config
 def fills_in(start: int, end: int):
     return sorted((p.year, min(p.gis_domains), max(p.gis_domains))
                   for p in HATTERAS_NOURISHMENT_PROJECTS
@@ -280,7 +280,7 @@ SHOAL_EDGE_ALPHA = 0.55
 SHOAL_TEXT = "#8a620e"       # the label colour of the other shoal figures
 
 
-# Each shoal zone of the site config as a hatched, outlined box the full height of the panel, behind ...
+# Each shoal zone as a hatched, outlined box the panel's full height behind the data, named if asked
 def draw_shoals(ax, label: bool = True, label_pt: float = STRUCTURE_LABEL_PT):
     matplotlib.rcParams["hatch.linewidth"] = SHOAL_HATCH_LW
     for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
@@ -385,7 +385,7 @@ def overlay_figure(long_w, halves, frames, half, shared):
     return _save_both(fig, f"{a}_{b}", f"lrr_{a}_{b}_halves"), fills
 
 
-# Into the comparison folder, and published to output/figures/2-observations/shoreline/ (finished ...
+# Into the comparison folder and published to output/figures/2-observations/shoreline/, captioned
 def _save_both(fig, window, stem):
     out = save(fig, OUT_DIR / window / stem)
     out += save(fig, figure_dir("observations", "shoreline") / stem)

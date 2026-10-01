@@ -31,7 +31,7 @@ SOURCE_YEAR = {1996: 1984, 2010: 2004}
 # -----------------------------------------------------------------------------
 
 
-# measured/<year>/ for the sources, derived/<year>/ for the outputs -- ...
+# measured/<year>/ for the sources, derived/<year>/ for the outputs, as ROAD_SETBACK_KIND decides
 def setback_path(year: int) -> Path:
     return road_setback_file(year)
 

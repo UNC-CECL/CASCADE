@@ -193,7 +193,7 @@ def burn(road_gdf, src):
     )
 
 
-# (n_along, n_cross) with index 0 = ocean, matching what the extractor works in after ...
+# (n_along, n_cross) with index 0 = ocean, as the extractor holds it; display only
 def ocean_first(arr):
     if OCEAN_LOC == "right":
         return arr[:, ::-1]

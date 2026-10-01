@@ -123,7 +123,7 @@ def year_mean(df, year):
     return (float(sel.mean()), int(sel.size)) if sel.size else (np.nan, 0)
 
 
-# The product's rate turned into a distance over `start`-`end`, beside the observed change over the ...
+# The product's rate as a distance over start-end, beside the observed change over the same years
 def build(start: int, end: int, cache: dict, prod: Product = TOTAL) -> dict:
     years = end - start
     rs, re_ = prod.rate_window(start, end)
@@ -248,13 +248,13 @@ def figure(r) -> list:
     return out
 
 
-# One alongshore LOWESS pass at transect resolution, averaged to domains, with GIS 1..SPLICE_DOMAINS ...
+# One alongshore LOWESS pass at transect resolution, averaged to domains, GIS 1..SPLICE_DOMAINS raw
 def _smooth_series(dom_ids, along_m, values, window):
     return spliced_lowess_series(dom_ids, along_m, values, window,
                                 skip=SPLICE_DOMAINS)
 
 
-# The rate-vs-observed comparison repeated under the model target's alongshore LOWESS, at each window ...
+# The rate-vs-observed comparison under the target's LOWESS at each window; window 0 is raw
 def smooth(r, windows=SMOOTH_WINDOWS) -> dict:
     t = r["t"].sort_values(["domain_number", "transect_id"]).reset_index(drop=True)
     tt, x_dom = rf._along(t)                                 # x in domain units, for the dots

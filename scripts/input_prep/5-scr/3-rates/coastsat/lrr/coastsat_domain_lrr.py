@@ -103,7 +103,7 @@ def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
     return csv_map
 
 
-# For every transect in the lookup table, find its CSV, compute LRR, and return a merged DataFrame ...
+# LRR for every transect in the lookup table, merged with its domain assignment
 def compute_all_lrr(lookup: pd.DataFrame, csv_map: dict,
                     start: str, end: str, min_obs: int) -> pd.DataFrame:
     records = []

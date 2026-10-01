@@ -118,7 +118,7 @@ def test_sampling(dom_index_sample=12):
     return pd.DataFrame(rows)
 
 
-# Does the independent dune line show the same reversal? Stored tables only -- both endpoint products ...
+# Does the independent dune line show the same reversal? From the stored tables, nothing refitted
 def test_duneline():
     rows = []
     for window, label, role in DUNE_PAIRS:

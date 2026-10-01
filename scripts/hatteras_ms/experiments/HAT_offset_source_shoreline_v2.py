@@ -192,7 +192,7 @@ def diff_table():
         print(t.round(2).to_string(index=False))
 
 
-# The house figures (full management, both periods), once per shoreline version, and the v2-minus-v1 ...
+# The house figures (full management, both periods) per shoreline version, and v2 minus v1
 def cmd_plot(_=None):
     FIG.mkdir(parents=True, exist_ok=True)
     note_base = ("Option A waves (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5); island "

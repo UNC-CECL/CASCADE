@@ -398,7 +398,7 @@ def load_transect_data(ds):
     return domain_ids, lrr_values, along_coast_m
 
 
-# Apply LOWESS at transect resolution using physical along-coast distance (m), then aggregate ...
+# LOWESS at transect resolution over along-coast distance, averaged to GIS domains (None on failure)
 def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
     window_km = window_domains * DOMAIN_SPACING_M / 1000.0
     spacing_m = estimate_transect_spacing(along_coast_m)

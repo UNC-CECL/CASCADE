@@ -138,7 +138,7 @@ OVERSHOOT_TABLE = [
 
 # Barrier3d's own definitions
 
-# barrier3d.py FindWidths(), verbatim -- including the `- 1` and the clamp at zero, so it cannot ...
+# barrier3d.py FindWidths(), verbatim (the `- 1` and the clamp at zero), so it cannot drift
 def find_widths(interior: np.ndarray, sl: float = SL_DAM):
     domain_width = int(np.shape(interior)[0])
     n_along = int(np.shape(interior)[1])
@@ -173,7 +173,7 @@ def land_behind_first_water(interior: np.ndarray, sl: float = SL_DAM):
     return beyond, gap
 
 
-# Reproduce roadway_manager.bulldoze()'s indexing, its drown test, and what it does to the road's own ...
+# Reproduce roadway_manager.bulldoze()'s indexing, drown test and effect on the road, without running it
 def predict_bulldoze(interior: np.ndarray, setback_m: float,
                      interior_width_arr: np.ndarray | None = None):
     domain_width = int(np.shape(interior)[0])

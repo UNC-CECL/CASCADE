@@ -555,7 +555,7 @@ def _town_spans(lo, hi):
             if not (z + 0.5 < lo - 0.5 or a - 0.5 > hi + 0.5)]
 
 
-# Village spans against a VERTICAL alongshore axis, as ...
+# Village spans against a vertical alongshore axis, as compare_offset_sources draws them
 def _town_bands_y(ax, lo, hi):
     try:
         from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS

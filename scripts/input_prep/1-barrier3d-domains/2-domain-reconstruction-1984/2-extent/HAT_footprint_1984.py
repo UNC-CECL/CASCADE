@@ -304,7 +304,7 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
     return p
 
 
-# Rows per domain, signed, on its own - the communities banded along the axis so a domain can be ...
+# Rows per domain, signed, with the communities banded along the axis so a domain can be placed
 def fig_rows(tab: pd.DataFrame) -> Path:
     off.apply_style()
     doms = tab.index.to_numpy()
@@ -336,7 +336,7 @@ def fig_rows(tab: pd.DataFrame) -> Path:
 ROAD_HALF_WIDTH_M = 10.0      # NC-12 geojson is a centreline; the model road is 20 m
 
 
-# The footprint in plan view, in the layout of the dune-line figure ...
+# The footprint in plan view, in the three-panel layout of the dune-line island figure
 def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
     from shapely.geometry import box as _box
     off.apply_style()

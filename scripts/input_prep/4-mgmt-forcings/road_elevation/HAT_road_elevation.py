@@ -296,7 +296,7 @@ def buffer_sweep(line, clips: dict) -> list:
     return out
 
 
-# What is actually under the 1984 alignment where the road was relocated? The case for using the 2004 ...
+# What is under the 1984 alignment where the road was relocated, measured on the 11 disputed domains
 def relocation_bracket(clips: dict, rows: list) -> dict | None:
     if BRACKET_LINE is None or not Path(BRACKET_LINE).exists():
         return None

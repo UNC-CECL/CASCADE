@@ -610,7 +610,7 @@ def plot_domain_window_comparison(d1984, d2004, out_path, method=""):
 
 # Transect-space figures (produced only in "transect" mode)
 
-# Raw transect scatter + LOWESS smoothed curve in along-coast space, with domain-averaged LRR ...
+# Raw transect scatter and the LOWESS curve along the coast, with domain-averaged LRR overlaid
 def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
     configs   = [(t1984, d1984, "1984–2004", C_1984),
                  (t2004, d2004, "2004–2024", C_1997)]

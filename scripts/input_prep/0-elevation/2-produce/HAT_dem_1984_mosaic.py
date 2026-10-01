@@ -134,7 +134,7 @@ def ocean_side_mask(road_geom, shape, transform, min_rows=10):
 
 # The diagnostic the window origin depends on
 
-# Median over the alongshore profiles of the extractor's start_beach, in metres from the ocean edge ...
+# Median of the extractor's start_beach over the profiles, in m from the window's ocean edge
 def start_beach_median_m(arr):
     z = arr[:, ::-1] - MHW_ELEVATION
     z = np.where(np.isnan(z), WATER_CLAMP_M, z)

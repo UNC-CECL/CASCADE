@@ -60,7 +60,7 @@ KNOWN_SURVEY_DATES = {1984: "1984-09-19", 1997: "1997-10-12",
 
 # Dune side
 
-# Mean ORIG_LEN per GIS domain, first row per transect, as the hindcast loader ...
+# Mean ORIG_LEN per GIS domain (first row per transect), as the hindcast loader reads it
 def dune_position_by_domain(year: int) -> pd.Series:
     path = dune_raw_file_for_year(year)     # the vintage that stands for `year`
     raw = pd.read_csv(path, encoding="utf-8-sig")
@@ -312,7 +312,7 @@ def _chains(windows):
     return chains
 
 
-# Every model window on ONE y axis, one full-width panel per window in chain order ...
+# Every model window on one y axis, one panel per window in chain order or a 2 x 2 by period
 def four_windows_figure(layout: str = "column") -> Path:
     import matplotlib.pyplot as plt
 

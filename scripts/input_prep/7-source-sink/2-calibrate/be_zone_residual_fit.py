@@ -466,7 +466,7 @@ def lowess_smooth(values, frac=LOWESS_FRAC):
     return out
 
 
-# LOWESS-smooth a domain-indexed OBSERVED shoreline change rate, excluding domains 1..exclude_through ...
+# LOWESS-smooth an observed rate, the groin zone (1..exclude_through) left out and passed through raw
 def smooth_shoreline_rate(raw_rate, exclude_through=GROIN_EXCLUDE_THROUGH_DOMAIN,
                           window_domains=LOWESS_WINDOW_DOMAINS):
     n_valid = len(raw_rate) - exclude_through
@@ -481,7 +481,7 @@ def smooth_shoreline_rate(raw_rate, exclude_through=GROIN_EXCLUDE_THROUGH_DOMAIN
 
 # Zone identification
 
-# Find contiguous runs of domains where |smoothed_residual| > threshold and the run is at least ...
+# Contiguous runs of domains with |smoothed_residual| > threshold, at least min_width wide
 def identify_correction_zones(smoothed_residual, min_width=MIN_ZONE_WIDTH,
                                threshold=SIGNIFICANCE_THRESHOLD):
     domains  = np.arange(1, NUM_REAL_DOMAINS + 1)
@@ -709,7 +709,7 @@ def annotate_ax(ax, ylim, villages=True, wimble=True, thresholds=True,
                    zorder=2)
 
 
-# Collapse a per-domain physical_zone Series into contiguous (start_domain, end_domain, zone_name) ...
+# Collapse a per-domain physical_zone Series into (start_domain, end_domain, zone_name) runs
 def find_zone_runs(zone_series, domains):
     runs = []
     current_zone = None
@@ -736,7 +736,7 @@ def _contiguous(domains):
     return runs
 
 
-# Place one centered text label per zone run directly on the strip, shrinking that label's own font ...
+# One centred label per zone run on the strip, its font shrunk until it fits the zone's width
 def label_zone_runs(ax, fig, runs, y=0.5, fontsize_start=FONT_STRIP,
                     fontsize_min=6.5, pad_frac=0.90):
     renderer = fig.canvas.get_renderer()

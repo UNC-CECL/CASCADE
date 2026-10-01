@@ -84,7 +84,7 @@ def photo_label(im):
     return f"{d.day} {d:%B %Y}"
 
 
-# Was this photograph flown inside the window? By date since 2026-09-29, when windows stopped being ...
+# Was this photograph flown inside the window? By date, or by year where the source knows only that
 def _inside(im, window):
     d = PHOTO_SOURCES.get(im.year, {}).get("date", im.date)
     try:
@@ -200,7 +200,7 @@ def draw_line(ax, df, b, lw=1.3, edges=True):
             path_effects=[pe.withStroke(linewidth=lw + 1.7, foreground="white")])
 
 
-# The Barrier3D domain boxes crossing the window, each labelled at its landward (west) side, clear of ...
+# The domain boxes crossing the window, each labelled on its landward (west) side
 def draw_domains(ax, boxes, b, lw=0.8, labels=True):
     x0, y0, x1, y1 = b
     bd = boxes.bounds
@@ -350,7 +350,7 @@ ISLAND_LAND_M, ISLAND_SEA_M = 900.0, 600.0
 ISLAND_PANEL_H_IN = 8.2                   # the segments are 15 km tall; this sets the scale
 
 
-# Three north-up segments side by side at one scale, on one year's photos, with the site windows of ...
+# Three north-up segments at one scale on one year's photos, zoom windows outlined; drawn twice
 def island_figure(df, boxes, im, sites, window, out_dir):
     ext = []
     for _, lo, hi in SEGMENTS:

@@ -65,7 +65,7 @@ pd.set_option("display.max_rows", 200)
 
 # Reading
 
-# The seven CSVs of one per-version comparison set, plus the 'generated' stamp of the report beside ...
+# The seven CSVs of one per-version comparison set, plus its report's 'generated' stamp
 def read_set(version: str, set_name: str) -> dict:
     d = COMP / version / set_name
     if not d.is_dir():

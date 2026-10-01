@@ -329,7 +329,7 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
     return ReachArt(road_c=road_c, village_out_m=village_out_m)
 
 
-# The five village names on one line along the sound side of the reach, a leader from each down to ...
+# The five village names in one row along the sound side, each with a leader down to its domains
 def village_row(ax, frame, dom, vector, clear_m=1300.0, leader_gap_m=700.0,
                 pad_m=600.0):
     sea = frame.seaward
@@ -467,7 +467,7 @@ def regional_inset(ax, outline, vector=True, lat_side="right"):
     spines_for_image(ax)
 
 
-# A double-column figure whose height is set by the window's aspect, so an equal-aspect map panel ...
+# A double-column figure whose height follows the window's aspect, so an equal-aspect map fills it
 def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
     x0, x1, y0, y1 = window
     aspect = (x1 - x0) / (y1 - y0)
@@ -716,7 +716,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     return out[0]
 
 
-# The study-area imagery and the domain framework as one two-panel figure on one frame, for a ...
+# Study-area imagery and the domain framework as one two-panel figure, one map of the reach
 def fig_site_overview(dom, outline, roads, frame, vector):
     window = frame.window(dom, pad_along_km=3.5, pad_sea_km=7.5, pad_sound_km=13.0)
     x0, x1, y0, y1 = window
@@ -1664,7 +1664,7 @@ def fig_management_footprint(dom, outline, roads, frame):
 
 # Figure 9: the reach at 10 m, both products
 
-# Domains lo..hi of one extraction as one (cross-shore, alongshore) mosaic, m NAVD88, water -10, ...
+# Domains lo..hi of one extraction as one mosaic (m NAVD88, water -10), ocean at the top, cropped
 def reach_mosaic(product, dom, lo, hi, margin_cells=8):
     d, _ = tv.npy_dirs(product)
     boxes = dom[(dom.ID >= lo) & (dom.ID <= hi)]

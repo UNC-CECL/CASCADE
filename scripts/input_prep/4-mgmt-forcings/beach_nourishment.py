@@ -229,7 +229,7 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
     return save(fig, OUT_DIR / "nourishment_when_where", close=True)[0]
 
 
-# '1984–2004 and 1996–2010 carry no fill, 2004–2024 and 2010–2024 carry all three', computed from the ...
+# The sentence saying which windows carry which fills, computed from the config so it cannot go stale
 def _windows_sentence(windows, fill_years):
     def n_in(s, e):
         return sum(s <= y <= e for y in fill_years)

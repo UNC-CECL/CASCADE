@@ -69,7 +69,7 @@ HISTORICAL_STORMS = [
 
 # Convenience
 
-# Return catalog entries whose START year falls in [begin_year, end_year], with 'start_ts'/'end_ts' ...
+# Catalog entries whose start year falls in [begin_year, end_year], with start_ts/end_ts added
 def storms_in_period(begin_year, end_year, catalog=None):
     cat = catalog if catalog is not None else HISTORICAL_STORMS
     out = []

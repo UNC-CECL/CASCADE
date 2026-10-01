@@ -43,7 +43,7 @@ from HAT_imagery_review_gui import Data, CACHE_DIR, YEAR_COLOUR  # noqa: E402   
 TITLE_SIZE, TITLE_PAD = 10.5, 6                           # one title style for every panel
 
 
-# The photographs' window made SQUARE about its centre, so that the panel boxes are equal squares ...
+# The photographs' window made square about its centre, so the panel boxes are equal squares
 def _square_window(pr, pl, bounds):
     x_lo, x_hi, y_lo, y_hi = _domain_window_orig(pr, pl, bounds)
     side = max(x_hi - x_lo, y_hi - y_lo)
@@ -104,7 +104,7 @@ ROAD_REF = 1984                                          # every offset is to th
 LINE_PAIR = {1984: (1984, ROAD_REF), 1997: (1997, ROAD_REF)}   # photo year -> (dune line year, NC-12 line year)
 
 
-# The offset between that year's dune line and that year's NC-12, from the geojsons, along the 50 ...
+# Median offset between that year's dune line and its NC-12 pavement edge, over the 50 profiles
 def line_offsets(pr: pd.DataFrame, lines: dict, roads: dict, box) -> dict:
     from shapely.geometry import LineString
     area = box.buffer(80.0)
@@ -164,7 +164,7 @@ def _points(g) -> list:
 C_WINDOW = "#ffd92f"              # the dune search window, on the DEM panel only
 
 
-# The extractor's picked dune search window for one domain, (i0, i1) as cross-shore cells of the ...
+# The extractor's picked dune search window (i0, i1) for one domain, in profile cells; None if unpicked
 def search_window(frames, d: int) -> tuple[int, int] | None:
     try:
         _ro, _ext, windows = frames._extractor()
@@ -217,7 +217,7 @@ def draw_crest_tick(ax, year: int, meas: dict, o: dict, slot: int = 0) -> None:
             zorder=13, path_effects=halo)                    # below the tick; the bracket's label sits above
 
 
-# One bracket between the two dune lines on the middle profile, labelled with the median shift and ...
+# One bracket between the two dune lines on the middle profile, labelled with the median shift and rows
 def draw_shift_bracket(ax, pr: pd.DataFrame, meas: dict, shift: float, n: int) -> None:
     if not np.isfinite(shift):
         return

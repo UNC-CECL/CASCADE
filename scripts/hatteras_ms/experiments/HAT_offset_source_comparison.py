@@ -421,7 +421,7 @@ LOWESS_DOMAINS = 7
 SKIP_SOUTHERN = 10
 
 
-# The CoastSat LRR target built as the runner builds it, at LOWESS_DOMAINS, the rate fitted on ...
+# The CoastSat LRR target as the runner builds it, at LOWESS_DOMAINS, fitted on `window`
 def coastsat_target_lowess(start, window):
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS

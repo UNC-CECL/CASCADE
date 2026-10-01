@@ -126,7 +126,7 @@ def load_domains(path: str, id_col: str) -> gpd.GeoDataFrame:
     return gdf
 
 
-# Pre-filter the global transect dataset to only those within a buffered bounding box around the ...
+# Transects within a buffered box around the domain extent, so the global file joins in reasonable time
 def clip_transects_to_study_area(transects: gpd.GeoDataFrame,
                                   domains: gpd.GeoDataFrame,
                                   buffer_deg: float) -> gpd.GeoDataFrame:

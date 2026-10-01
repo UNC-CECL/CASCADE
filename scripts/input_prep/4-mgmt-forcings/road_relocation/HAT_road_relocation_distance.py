@@ -751,7 +751,7 @@ LABEL_NOT_PRESCRIBED = "no prescribed move in the model"
 SHADE_NO_EDIT, SHADE_REDIG = "0.93", "0.84"
 
 
-# Group sorted domain numbers into runs, allowing gaps up to `max_gap` so a single unmeasured domain ...
+# Group sorted domain numbers into runs, bridging gaps up to `max_gap` so one site stays one site
 def contiguous_runs(numbers, max_gap=1):
 
     runs = []

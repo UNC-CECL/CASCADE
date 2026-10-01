@@ -209,7 +209,7 @@ def beach_width():
     return t, d
 
 
-# The PICK_WIDTH-domain reach outside the named sites with the largest mean |net dune change| ...
+# The PICK_WIDTH-domain reach outside the named sites with the largest mean |net dune change|
 def pick_reach(named):
     from site_layer.hat_observed_rates import dune_endpoint_csv
     ch = (pd.read_csv(dune_endpoint_csv(1996, 2024, "domain"))
@@ -291,7 +291,7 @@ def _nice_bar(span_m):
     return 5000
 
 
-# Letter and title left-aligned on one line, so a narrow map panel cannot overlap them (the house ...
+# Letter and title left-aligned on one line, so a narrow map panel cannot overlap them
 def _panel_title(ax, i, text):
     ax.set_title(f"({chr(97 + i)})  {text}", loc="left", fontsize=9,
                  fontweight="normal", pad=4)

@@ -463,7 +463,7 @@ def lowess_smooth(x: np.ndarray, y: np.ndarray, frac: float) -> np.ndarray:
 
 # Geographic annotation (Section 4b style)
 
-# Apply the full geographic annotation suite to an axes object, matching the Section 4b style used ...
+# The full geographic annotation suite on one axes, in the style every CoastSat figure uses
 def draw_annotations(ax, domains, show_labels: bool = True):
     d_min, d_max = int(domains.min()), int(domains.max())
 

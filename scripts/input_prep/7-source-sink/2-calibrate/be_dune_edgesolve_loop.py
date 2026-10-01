@@ -99,7 +99,7 @@ def merge_override(override, last):
     return ",".join(f"{g}={pairs[g]}" for g in sorted(pairs, key=int))
 
 
-# [(run_name, 'experiment', tag, run_dir), ...] for every FINISHED step already on disk, oldest ...
+# Every finished step already on disk as (run_name, 'experiment', tag, run_dir), oldest first
 def existing_steps(exp, start, smooth):
     out, k = [], 1
     while True:

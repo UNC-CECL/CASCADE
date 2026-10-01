@@ -110,7 +110,7 @@ SURVEY_NODATA = 65535   # unused sentinel; 0 is a real value here, not nodata
 
 # Geometry - the domain window, snapped to the DEM's own grid
 
-# Polygon bounds -> integer window on the source grid, trimmed to whole `block`-sized blocks so the ...
+# Polygon bounds as an integer window on the source grid, trimmed to whole blocks; returns the shift
 def snap_window(bounds, transform, res_x, res_y, block):
     minx, miny, maxx, maxy = bounds
     left, top = transform.c, transform.f
@@ -137,7 +137,7 @@ def pad_window(win, pad_px):
                   win.width + 2 * pad_px, win.height + 2 * pad_px)
 
 
-# Boundless so a domain hanging off the DEM edge yields nodata, not an error - the domains do ...
+# Read a domain window boundless, so a domain off the DEM edge gives nodata rather than an error
 def read_window(src, win, nodata_in):
     fill = nodata_in if nodata_in is not None else NODATA_OUT
     arr = src.read(1, window=win, boundless=True, fill_value=fill).astype(np.float64)
@@ -254,7 +254,7 @@ def estimate_bias(base, fill, fill_mask, ring_px):
     return float(np.nanmedian(base[both] - fill[both])), n
 
 
-# Locally-consistent continuation of the 2009 surface into the fill area, used only as the blend ...
+# Continuation of the 2009 surface into the fill area: the blend target at the seam, so no hard step
 def boundary_extrapolation(base, fill_mask, buffer_px):
     dil = binary_dilation(fill_mask, iterations=buffer_px)
     border = dil & ~fill_mask & ~np.isnan(base)
@@ -294,7 +294,7 @@ def write_raster(arr, transform, crs, path, dtype, nodata):
         dst.write(arr.astype(dtype), 1)
 
 
-# The DEM is a COMPOUND CRS (EPSG:3725 + NAVD88), whose to_epsg() is None, so a plain `gdf.crs != ...
+# The DEM's compound CRS compared properly, since a plain `!=` reports a no-op reprojection
 def resolve_crs(src, gdf):
     if src.crs is None:
         print("  WARNING: DEM has no CRS; assuming domains already match.")

@@ -170,7 +170,7 @@ def calculate_relative_offset(file_path, year, col_map, grids):
     return pd.DataFrame({"Domain_ID": seen_domains, str(year): relative_offsets})
 
 
-# The angle BRIE reads between each padded domain and the next, wrapping from the last back to the ...
+# The angle BRIE reads between each padded domain and the next, wrapping last to first
 def shoreline_angles_deg(padded):
     return np.degrees(np.arctan2(np.diff(np.r_[padded, padded[0]]), DOMAIN_SPACING_M))
 

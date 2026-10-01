@@ -49,7 +49,7 @@ LINE_PROPS = ("feature_type", "year", "imagery_date", "source_type", "method",
 # -----------------------------------------------------------------------------
 
 
-# Print a step's output on whatever console this is (Windows cp1252 included) without dying on a ...
+# Print a step's output on any console (Windows cp1252 included) without dying on a character
 def _echo(text):
     enc = sys.stdout.encoding or "utf-8"
     sys.stdout.write(text.encode(enc, errors="replace").decode(enc))

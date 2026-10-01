@@ -96,7 +96,7 @@ G = 9.81   # gravitational acceleration [m/s²]
 
 # Step 1 — noaa tide gauge: download, tidal decomposition, surge separation
 
-# Download hourly NOAA water levels and decompose into tidal prediction (eta_A) and non-tidal ...
+# Hourly NOAA water levels split into tidal prediction (eta_A) and non-tidal residual (eta_NTR)
 def load_noaa_water_levels(station_id: str, begin: str, end: str,
                             datum: str, lat: float) -> pd.DataFrame:
     print(f"\n{'='*70}")

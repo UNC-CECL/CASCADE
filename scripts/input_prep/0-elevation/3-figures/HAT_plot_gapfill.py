@@ -238,7 +238,7 @@ def load_roads(dst_crs, clip_to=None):
     return out
 
 
-# BOTH casings first, then both lines in ROAD_ORDER so the dashed 1984 lands on top of the solid 2004 ...
+# Both casings first, then both lines in ROAD_ORDER, so the dashed 1984 lands on top of the 2004
 def draw_roads(ax, roads, scale=1.0):
     for yr in ROAD_ORDER:
         if yr not in roads:

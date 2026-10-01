@@ -123,7 +123,7 @@ def correlations(sweep, windows):
 
 # Figures
 
-# x and rate for one window, in alongshore order, NaN where no fit, so the line breaks instead of ...
+# x and rate for one window in alongshore order, NaN where there is no fit so the line breaks
 def _profile(frame):
     frame = frame.sort_values("x_domain")
     return frame["x_domain"].to_numpy(), frame["lrr_m_yr"].to_numpy()

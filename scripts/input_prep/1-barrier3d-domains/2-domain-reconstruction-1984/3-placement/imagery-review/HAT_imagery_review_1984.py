@@ -177,7 +177,7 @@ class Imagery:
     def covering(self, win) -> list[Path]:
         return [p for p, (g, _) in zip(self.files, self.foot) if g.intersects(win)]
 
-    # Distance to the nearest no-photograph pixel, in metres, on a coarse overview of one file ...
+    # Distance to the nearest no-photograph pixel, in m, on a coarse overview of one file (cached)
     def _edge_distance(self, path: Path):
         if not hasattr(self, "_dist"):
             self._dist = {}
