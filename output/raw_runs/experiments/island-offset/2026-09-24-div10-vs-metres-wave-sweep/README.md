@@ -4,6 +4,15 @@ Step 1 of 3 in the 2026-09-24 chain: `../../2026-09-24-metres-INDEX.md`.
 Filed as `experiments/2026-09-24-island-offset-scale-wave-tuning/` until the
 2026-09-24 reorganisation (runs retagged).
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored on 2026-09-24 against the
+CoastSat target smoothed over 10 domains; the group range is 7. `score` now rebuilds the
+10-domain target, checks it reproduces every run's stored bias and RMSE, then scores
+against the 7-domain one; the figures are redrawn from that. RMSE rises by about
+0.07 m/yr on average (the 7-domain target keeps more alongshore detail); bias moves
+by at most 0.004; the best settings are unchanged except the metres offset's best
+asymmetry, 0.8 -> 0.6. The 10-domain tables and figures are kept in
+`superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones.
+
 ## The question
 
 BRIE's shoreline position (`brie.x_s`) is in metres, and so is the island-offset
