@@ -109,7 +109,9 @@ def cmd_score(_=None):
     from cascade_pipeline.run_registry import load_run_index, rebuild_run_index
     rebuild_run_index(grid.RAW_RUNS)
     idx = load_run_index(grid.RAW_RUNS / "run_index.csv")
-    idx = idx[idx["tag"].astype(str).str.startswith(TAG + "/") & (idx["status"] == "current")]
+    # This period's runs only: the 2010 runs share the group and wave keys and would replace them
+    idx = idx[idx["tag"].astype(str).str.startswith(TAG + "/") & (idx["status"] == "current")
+              & (idx["start_year"].astype(int) == PERIOD)]
     target = common.coastsat_target(PERIOD)
     runs = {}
     for _, r in idx.iterrows():
