@@ -362,7 +362,7 @@ def load_transect_data(ds):
     id_col     = ds.get("transect_id_col", "transect_id")
 
     if not os.path.exists(csv_path):
-        print(f"  ⚠️  Transect CSV not found: {csv_path}")
+        print(f"  Warning: Transect CSV not found: {csv_path}")
         return None, None, None
 
     df = pd.read_csv(csv_path)
@@ -392,7 +392,7 @@ def load_transect_data(ds):
     along_coast_m = df["along_coast_m"].values.astype(float)
 
     spacing = estimate_transect_spacing(along_coast_m)
-    print(f"  ✓ {ds['label']}: {len(df)} transects  "
+    print(f"  {ds['label']}: {len(df)} transects  "
           f"est. spacing {spacing:.0f} m  "
           f"LRR range {np.nanmin(lrr_values):+.2f}–{np.nanmax(lrr_values):+.2f} m/yr")
     return domain_ids, lrr_values, along_coast_m
@@ -407,7 +407,7 @@ def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_dom
 
     valid = np.isfinite(lrr)
     if valid.sum() < 5:
-        print(f"  ⚠️  Too few valid transects ({valid.sum()}) — skipping LOWESS")
+        print(f"  Warning: Too few valid transects ({valid.sum()}) — skipping LOWESS")
         return None, None, frac
 
     result            = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
@@ -450,7 +450,7 @@ def load_all_coastsat(active_start_year):
             )
             if gis_x is None:
                 continue
-            print(f"  ✓ LOWESS window={w} dom "
+            print(f"  LOWESS window={w} dom "
                   f"({w * DOMAIN_SPACING_M / 1000.0:.1f} km)  "
                   f"frac={frac:.3f}  ({ds['label']})")
             windows.append(dict(window=w, gis_x=gis_x, smoothed=smoothed, frac=frac))
@@ -673,7 +673,7 @@ def plot_yearly_relative_shoreline_and_bn(
         plt.close(fig)
         png_files.append(fig_out)
 
-    print(f"\nSaved {len(png_files)} yearly relative-shoreline PNGs → {yearly_dir}")
+    print(f"\nSaved {len(png_files)} yearly relative-shoreline PNGs -> {yearly_dir}")
     if make_gif and png_files:
         _save_gif(png_files, output_dir, filename_prefix, gif_duration_seconds)
     return png_files
@@ -829,7 +829,7 @@ def plot_yearly_absolute_shoreline_and_bn(
         plt.close(fig)
         png_files.append(fig_out)
 
-    print(f"\nSaved {len(png_files)} yearly absolute-shoreline PNGs → {yearly_dir}")
+    print(f"\nSaved {len(png_files)} yearly absolute-shoreline PNGs -> {yearly_dir}")
     if make_gif and png_files:
         _save_gif(png_files, output_dir, filename_prefix, gif_duration_seconds)
     return png_files
@@ -1021,7 +1021,7 @@ def main():
         try:
             cascade = load_cascade_from_npz(npz_path)
             cascades_by_label[label] = cascade
-            print(f"  ✓ {label}")
+            print(f"  {label}")
         except FileNotFoundError as e:
             print(f"  SKIPPED (not found): {label}\n    {e}")
         except Exception as e:

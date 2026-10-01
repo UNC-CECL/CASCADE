@@ -136,7 +136,7 @@ def load_noaa_water_levels(station_id: str, begin: str, end: str,
     valid_water = df['water_level'][valid_mask].values
 
     print(f"\nTotal valid records: {valid_mask.sum():,} / {len(df):,}")
-    print(f"Date range: {valid_time.min()} → {valid_time.max()}")
+    print(f"Date range: {valid_time.min()} -> {valid_time.max()}")
 
     print("Solving tidal constituents with utide (this may take ~1–2 min)...")
     coef = utide.solve(
@@ -175,7 +175,7 @@ def load_wis_data(filepath: Path) -> pd.DataFrame:
     }, index=df.index)
 
     print(f"  Loaded {len(out):,} rows")
-    print(f"  Date range: {out.index.min()} → {out.index.max()}")
+    print(f"  Date range: {out.index.min()} -> {out.index.max()}")
     print(f"  Hs: {out['Hs'].min():.2f}–{out['Hs'].max():.2f} m  "
           f"| Tp: {out['Tp'].min():.2f}–{out['Tp'].max():.2f} s")
     return out
@@ -382,7 +382,7 @@ def cap_storms_per_year(readable: pd.DataFrame, max_storms: int,
         print(f"  Years trimmed:")
         for yi, n in trimmed_years.items():
             print(f"    Year_Index {int(yi):2d} ({int(yi)+start_year}): "
-                  f"{n} → {min(n, max_storms)} storms kept")
+                  f"{n} -> {min(n, max_storms)} storms kept")
     else:
         print("  No years exceeded the cap — all storms retained.")
     return capped
@@ -573,51 +573,51 @@ def validate_storm_array(arr: np.ndarray, readable: pd.DataFrame,
     # Rlow < Rhigh
     bad = arr[:, 2] >= arr[:, 1]
     if bad.any():
-        print(f"  ❌ {bad.sum()} storm(s) with Rlow >= Rhigh")
+        print(f"  ERROR: {bad.sum()} storm(s) with Rlow >= Rhigh")
         passed = False
     else:
-        print(f"  ✓ All Rlow < Rhigh")
+        print(f"  All Rlow < Rhigh")
 
     # Rlow >= MHW
     below_mhw = arr[:, 2] < mhw_dam
     if below_mhw.any():
-        print(f"  ❌ {below_mhw.sum()} storm(s) with Rlow < MHW ({mhw_dam:.4f} dam)")
+        print(f"  ERROR: {below_mhw.sum()} storm(s) with Rlow < MHW ({mhw_dam:.4f} dam)")
         passed = False
     else:
-        print(f"  ✓ All Rlow >= MHW ({mhw_dam:.4f} dam)")
+        print(f"  All Rlow >= MHW ({mhw_dam:.4f} dam)")
 
     # No negatives
     if (arr[:, 1:3] < 0).any():
-        print(f"  ❌ Negative Rhigh or Rlow found")
+        print(f"  ERROR: Negative Rhigh or Rlow found")
         passed = False
     else:
-        print(f"  ✓ No negative Rhigh/Rlow")
+        print(f"  No negative Rhigh/Rlow")
 
     # Duration cap
     over_dur = arr[:, 4] > max_dur
     if over_dur.any():
-        print(f"  ❌ {over_dur.sum()} storm(s) exceed duration cap ({max_dur} h)")
+        print(f"  ERROR: {over_dur.sum()} storm(s) exceed duration cap ({max_dur} h)")
         passed = False
     else:
-        print(f"  ✓ All durations <= {max_dur} h")
+        print(f"  All durations <= {max_dur} h")
 
     # Per-year count
     by_year  = readable.groupby('Year_Index').size()
     over_lim = by_year[by_year > 5]
     if len(over_lim) > 0:
-        print(f"  ❌ {len(over_lim)} year(s) exceed Barrier3D ~5 storm limit")
+        print(f"  ERROR: {len(over_lim)} year(s) exceed Barrier3D ~5 storm limit")
         passed = False
     else:
-        print(f"  ✓ All years within Barrier3D limit (max={by_year.max()} storms/year)")
+        print(f"  All years within Barrier3D limit (max={by_year.max()} storms/year)")
 
     # Rlow_m / Rlow_dam consistency
     expected = (readable['Rlow_m'] / 10).round(4)
     mismatch = ~np.isclose(readable['Rlow_dam'], expected, rtol=0.01)
     if mismatch.any():
-        print(f"  ❌ {mismatch.sum()} row(s) where Rlow_dam != Rlow_m/10")
+        print(f"  ERROR: {mismatch.sum()} row(s) where Rlow_dam != Rlow_m/10")
         passed = False
     else:
-        print(f"  ✓ Rlow_dam = Rlow_m/10 for all {len(readable)} rows")
+        print(f"  Rlow_dam = Rlow_m/10 for all {len(readable)} rows")
 
     # Isabel 2003 check
     isabel = readable[readable['Calendar_Year'] == 2003]
@@ -625,11 +625,11 @@ def validate_storm_array(arr: np.ndarray, readable: pd.DataFrame,
         max_yr  = readable.loc[readable['Rhigh_m'].idxmax(), 'Calendar_Year']
         max_val = readable['Rhigh_m'].max()
         if max_yr == 2003:
-            print(f"  ✓ Isabel 2003 is max Rhigh ({max_val:.3f} m) — as expected")
+            print(f"  Isabel 2003 is max Rhigh ({max_val:.3f} m) — as expected")
         else:
-            print(f"  ⚠ Max Rhigh is {max_val:.3f} m in {max_yr}, not 2003 — verify")
+            print(f"  Warning: Max Rhigh is {max_val:.3f} m in {max_yr}, not 2003 — verify")
     else:
-        print(f"  ⚠ No 2003 storms found — Isabel should appear in 1984–2004 record")
+        print(f"  Warning: No 2003 storms found — Isabel should appear in 1984–2004 record")
 
     # Rlow/Rhigh ratio
     ratio = arr[:, 2] / arr[:, 1]
@@ -639,9 +639,9 @@ def validate_storm_array(arr: np.ndarray, readable: pd.DataFrame,
 
     print()
     if passed:
-        print("  ✅ All checks passed — storm file ready for CASCADE.")
+        print("  All checks passed — storm file ready for CASCADE.")
     else:
-        print("  ❌ Validation issues found — resolve before running CASCADE.")
+        print("  ERROR: Validation issues found — resolve before running CASCADE.")
     return passed
 
 
@@ -649,7 +649,7 @@ def validate_storm_array(arr: np.ndarray, readable: pd.DataFrame,
 def main():
     print("\n" + "="*70)
     print("HAT_create_storm_file.py — CASCADE Storm File Generator")
-    print(f"Period:           {BEGIN_DATE} → {END_DATE}  |  Start year: {START_YEAR}")
+    print(f"Period:           {BEGIN_DATE} -> {END_DATE}  |  Start year: {START_YEAR}")
     print(f"Surge multiplier: {SURGE_MULTIPLIER}x")
     print(f"Threshold:        {STORM_THRESHOLD} m  |  Min gap: {MIN_INTER_STORM_GAP_HR} h")
     print(f"Duration cap:     {MAX_STORM_DURATION_HR} h  |  Year cap: {MAX_STORMS_PER_YEAR} storms/yr")
@@ -706,21 +706,21 @@ def main():
 
     # 7. Save — only if all validation checks pass
     if not passes:
-        print("\n⚠️  Save skipped — resolve validation issues first.")
+        print("\nWarning: Save skipped — resolve validation issues first.")
         return None
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     out_path = OUTPUT_DIR / OUTPUT_NAME
     np.save(out_path, storm_arr_capped)
-    print(f"\n✓ Saved NPY: {out_path}")
+    print(f"\nSaved NPY: {out_path}")
     print(f"  Shape: {storm_arr_capped.shape}  |  dtype: {storm_arr_capped.dtype}")
     print(f"  Columns: [Year_Index, Rhigh_dam, Rlow_dam, Wave_Period_s, Duration_h]")
 
     csv_name = OUTPUT_NAME.replace('.npy', '_readable.csv')
     csv_path = OUTPUT_DIR / csv_name
     storm_readable_capped.to_csv(csv_path, index=False)
-    print(f"\n✓ Saved CSV: {csv_path}")
+    print(f"\nSaved CSV: {csv_path}")
     print(f"  Raw_Duration_h = actual exceedance length before duration cap (QA only)")
     print(f"  Rlow_m  = still water level at peak TWL, floored at MHW ({MHW_M} m)")
     print(f"  Rlow_dam = Rlow_m / 10 — consistent with stored .npy values")

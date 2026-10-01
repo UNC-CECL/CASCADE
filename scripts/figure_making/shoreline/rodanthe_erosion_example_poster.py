@@ -276,7 +276,7 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     print("=" * 60)
     print(f"Rodanthe Erosion Trends  (Domains {DOMAIN_MIN}–{DOMAIN_MAX})")
-    print(f"Period: {START_DATE} → {END_DATE}")
+    print(f"Period: {START_DATE} -> {END_DATE}")
     print("=" * 60)
 
     df_all = load_data(

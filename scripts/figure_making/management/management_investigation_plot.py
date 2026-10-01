@@ -177,15 +177,15 @@ def load_cascade(run_folder):
     run_name = os.path.basename(os.path.normpath(run_folder))
     npz_path = resolve_run_file(run_folder, "archive", run_name)
     if not npz_path.is_file():
-        print(f"  ❌ {npz_path.name} not found in: {run_folder}")
+        print(f"  ERROR: {npz_path.name} not found in: {run_folder}")
         return None
     try:
         data = np.load(npz_path, allow_pickle=True)
         cascade = data["cascade.npy"].item()
-        print(f"  ✓ Loaded: {os.path.basename(run_folder)}")
+        print(f"  Loaded: {os.path.basename(run_folder)}")
         return cascade
     except Exception as e:
-        print(f"  ❌ Failed to load {npz_path}: {e}")
+        print(f"  ERROR: Failed to load {npz_path}: {e}")
         return None
 
 
@@ -238,7 +238,7 @@ def build_bn_arrays():
 # CoastSat transect LRR aggregated to domain means
 def load_coastsat():
     if not COASTSAT_CSV or not os.path.exists(COASTSAT_CSV):
-        print(f"  ⚠️  CoastSat CSV not found: {COASTSAT_CSV}")
+        print(f"  Warning: CoastSat CSV not found: {COASTSAT_CSV}")
         return None, None
     try:
         cs_df = pd.read_csv(COASTSAT_CSV)
@@ -252,11 +252,11 @@ def load_coastsat():
         means["domain_number"] = means["domain_number"].astype(int)
         x    = np.array([_gis_to_pad(g) for g in means["domain_number"]])
         rate = means["lrr_m_yr"].values
-        print(f"  ✓ CoastSat: {len(rate)} domain means  "
+        print(f"  CoastSat: {len(rate)} domain means  "
               f"(rate {rate.min():.2f}–{rate.max():.2f} m/yr)")
         return x, rate
     except Exception as e:
-        print(f"  ⚠️  CoastSat load failed: {e}")
+        print(f"  Warning: CoastSat load failed: {e}")
         return None, None
 
 
@@ -363,7 +363,7 @@ def plot_shoreline_change_rates(rate_profiles, coastsat_x, coastsat_rate):
     out = os.path.join(OUTPUT_DIR,
                        f"HAT_{START_YEAR}_{END_YEAR}_management_shoreline_rates.png")
     fig.savefig(out, dpi=300, bbox_inches="tight")
-    print(f"  ✓ Saved: {out}")
+    print(f"  Saved: {out}")
     plt.show()
 
 
@@ -471,7 +471,7 @@ def plot_yearly_relative_shoreline(sc_by_label, bn_vol_by_year):
         plt.close(fig)
         png_files.append(fig_out)
 
-    print(f"  ✓ Saved {len(png_files)} yearly frames to: {yearly_dir}")
+    print(f"  Saved {len(png_files)} yearly frames to: {yearly_dir}")
 
     if MAKE_YEARLY_GIF and png_files:
         try:
@@ -481,7 +481,7 @@ def plot_yearly_relative_shoreline(sc_by_label, bn_vol_by_year):
                                    f"HAT_{START_YEAR}_{END_YEAR}_yearly.gif")
             imageio.mimsave(gif_out, images,
                             duration=GIF_DURATION_SECONDS, loop=0)
-            print(f"  ✓ Saved GIF: {gif_out}")
+            print(f"  Saved GIF: {gif_out}")
         except ImportError:
             print("  imageio not installed — GIF skipped (pip install imageio)")
 
@@ -496,15 +496,15 @@ def main():
     for label, folder in RUN_PATHS.items():
         cascade = load_cascade(folder)
         if cascade is None:
-            print(f"  ❌ Could not load '{label}' — skipping")
+            print(f"  ERROR: Could not load '{label}' — skipping")
             continue
         cascades[label] = cascade
 
     if not cascades:
-        print("❌ No runs loaded successfully. Check RUN_PATHS.")
+        print("ERROR: No runs loaded successfully. Check RUN_PATHS.")
         sys.exit(1)
 
-    print(f"\n✓ Loaded {len(cascades)} run(s): {list(cascades.keys())}\n")
+    print(f"\nLoaded {len(cascades)} run(s): {list(cascades.keys())}\n")
 
     # Load CoastSat
     print("Loading CoastSat data...")
@@ -538,7 +538,7 @@ def main():
                   f"{real_rate[np.isfinite(real_rate)].min():.2f}–"
                   f"{real_rate[np.isfinite(real_rate)].max():.2f} m/yr")
         except Exception as e:
-            print(f"  ❌ Could not compute rates for '{label}': {e}")
+            print(f"  ERROR: Could not compute rates for '{label}': {e}")
 
     print()
 
@@ -550,7 +550,7 @@ def main():
     print("Generating yearly frames...")
     plot_yearly_relative_shoreline(sc_by_label, bn_vol_by_year)
 
-    print("\n✓ Management investigation plots complete.")
+    print("\nManagement investigation plots complete.")
     print(f"  All outputs saved to: {OUTPUT_DIR}")
 
 

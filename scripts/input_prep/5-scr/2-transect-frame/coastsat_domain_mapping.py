@@ -91,7 +91,7 @@ def load_transects(path: str, id_col: str) -> gpd.GeoDataFrame:
 
     # The transect origin as the only geometry column
     if gdf.geom_type.isin(["LineString", "MultiLineString"]).any():
-        print("  → LineString detected; extracting origin point as active geometry.")
+        print("  -> LineString detected; extracting origin point as active geometry.")
         origin_pts = gdf.geometry.apply(
             lambda g: Point(g.coords[0]) if g.geom_type == "LineString"
                       else Point(g.geoms[0].coords[0])
@@ -139,8 +139,8 @@ def clip_transects_to_study_area(transects: gpd.GeoDataFrame,
     in_bbox = transects_wgs84.within(study_bbox)
     clipped = transects[in_bbox].copy().reset_index(drop=True)
 
-    print(f"  Study area bbox: ({minx:.3f}, {miny:.3f}) → ({maxx:.3f}, {maxy:.3f})")
-    print(f"  Clipped {len(transects):,} → {len(clipped):,} transects\n")
+    print(f"  Study area bbox: ({minx:.3f}, {miny:.3f}) -> ({maxx:.3f}, {maxy:.3f})")
+    print(f"  Clipped {len(transects):,} -> {len(clipped):,} transects\n")
 
     if len(clipped) == 0:
         raise RuntimeError(

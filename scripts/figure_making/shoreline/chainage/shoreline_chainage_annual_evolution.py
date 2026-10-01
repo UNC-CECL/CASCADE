@@ -368,7 +368,7 @@ def main():
         fig.savefig(out_path, dpi=180, bbox_inches="tight", facecolor=BG_COLOR)
         panel_frame_paths.append(out_path)
         plt.close(fig)
-        print(f"    Saved → {out_path}")
+        print(f"    Saved -> {out_path}")
 
     # Decadal GIF: cycle through the four panel PNGs slowly
     if panel_frame_paths:
@@ -384,7 +384,7 @@ def main():
             duration=int(GIF_DECADAL_DURATION * 500),  # *500 corrects Pillow doubling bug
             loop=0,
         )
-        print(f"  Decadal GIF saved → {decadal_gif_path}")
+        print(f"  Decadal GIF saved -> {decadal_gif_path}")
 
     # Part B: GIF of spring (Apr-May) and fall (Oct-Nov) profiles per year
     print("\n" + "=" * 60)
@@ -543,7 +543,7 @@ def main():
             duration=int(GIF_SEASONAL_DURATION * 500),  # *500 corrects Pillow doubling bug
             loop=0,
         )
-        print(f"  GIF saved → {gif_path}")
+        print(f"  GIF saved -> {gif_path}")
     else:
         print("  No valid frames — GIF not created.")
 

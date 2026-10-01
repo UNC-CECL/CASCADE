@@ -55,10 +55,10 @@ actual_domains = set(df['domain_id'].unique())
 missing_domains = expected_domains - actual_domains
 
 if missing_domains:
-    print(f"\n⚠️  WARNING: Missing {len(missing_domains)} domains!")
+    print(f"\nWarning: WARNING: Missing {len(missing_domains)} domains!")
     print(f"Missing: {sorted(missing_domains)}")
 else:
-    print(f"\n✓ All {len(expected_domains)} domains present")
+    print(f"\nAll {len(expected_domains)} domains present")
 
 # Extract relevant columns
 
@@ -117,12 +117,12 @@ print(f"  Max:    {output_df['n_transects'].max():>5.0f}")
 
 # Save full version with all statistics
 output_df.to_csv(OUTPUT_DOMAIN_CSV, index=False)
-print(f"\n✓ Saved full comparison: {OUTPUT_DOMAIN_CSV}")
+print(f"\nSaved full comparison: {OUTPUT_DOMAIN_CSV}")
 
 # Also save simplified version (just domain_id and rate) for quick use
 simple_output = OUTPUT_DOMAIN_CSV.replace('.csv', '_SIMPLE.csv')
 output_df[['domain_id', 'annual_rate_m_per_yr']].to_csv(simple_output, index=False)
-print(f"✓ Saved simple comparison: {simple_output}")
+print(f"Saved simple comparison: {simple_output}")
 
 # Preview output
 print("\n" + "="*70)

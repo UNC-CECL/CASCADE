@@ -62,7 +62,7 @@ df_clean = df[[TRANSECT_ID_COL, DOMAIN_ID_COL, YEAR_COL, DISTANCE_COL]].dropna()
 duplicates = df_clean.groupby([TRANSECT_ID_COL, YEAR_COL]).size()
 duplicates = duplicates[duplicates > 1]
 if len(duplicates) > 0:
-    print(f"⚠ Found {len(duplicates)} transect-year combos with multiple intersections")
+    print(f"Warning: Found {len(duplicates)} transect-year combos with multiple intersections")
     print(f"  (Shorelines crossing transects twice - will average)")
 
 # Handle duplicates by averaging
@@ -116,7 +116,7 @@ domain_rates['Domain'] = domain_rates.index
 
 # Save results
 domain_rates.to_csv('domain_shoreline_change_rates.csv', index=False)
-print(f"\n✓ Saved: domain_shoreline_change_rates.csv")
+print(f"\nSaved: domain_shoreline_change_rates.csv")
 
 
 # Part 2: create publication-quality visualizations
@@ -156,7 +156,7 @@ ax.set_xlim(domain_rates['Domain'].min() - 1, domain_rates['Domain'].max() + 1)
 
 plt.tight_layout()
 plt.savefig('v1_sequential_colors.png', dpi=300, bbox_inches='tight')
-print("✓ Saved: v1_sequential_colors.png")
+print("Saved: v1_sequential_colors.png")
 plt.close()
 
 
@@ -184,7 +184,7 @@ axes[-1].set_xticks(range(0, int(domain_rates['Domain'].max()) + 10, 5), minor=T
 fig.suptitle('Shoreline Change Rates by Time Period', fontsize=16, fontweight='bold', y=0.995)
 plt.tight_layout()
 plt.savefig('v2_faceted.png', dpi=300, bbox_inches='tight')
-print("✓ Saved: v2_faceted.png")
+print("Saved: v2_faceted.png")
 plt.close()
 
 
@@ -226,7 +226,7 @@ ax2.set_xticks(range(0, int(domain_rates['Domain'].max()) + 10, 5), minor=True)
 
 plt.tight_layout()
 plt.savefig('v3_early_vs_recent.png', dpi=300, bbox_inches='tight')
-print("✓ Saved: v3_early_vs_recent.png")
+print("Saved: v3_early_vs_recent.png")
 plt.close()
 
 
@@ -257,7 +257,7 @@ if 'EPR_1978_1997' in domain_rates.columns and 'EPR_1997_2019' in domain_rates.c
     
     plt.tight_layout()
     plt.savefig('v4_calibration_periods.png', dpi=300, bbox_inches='tight')
-    print("✓ Saved: v4_calibration_periods.png")
+    print("Saved: v4_calibration_periods.png")
     plt.close()
 
 

@@ -294,7 +294,7 @@ def plot_trajectory_map(domain_gdf, outline_gdf, metrics, out_path):
 
     fig.savefig(out_path, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(f"  Trajectory map saved → {out_path}")
+    print(f"  Trajectory map saved -> {out_path}")
 
 
 # Figure 2 — LRR magnitude map, Period 1 vs Period 2
@@ -353,7 +353,7 @@ def plot_lrr_map(domain_gdf, outline_gdf, metrics, out_path):
 
     fig.savefig(out_path, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(f"  LRR map saved → {out_path}")
+    print(f"  LRR map saved -> {out_path}")
 
 
 # Figure 3 — ΔLRR difference map (P2 − P1)
@@ -419,7 +419,7 @@ def plot_delta_lrr_map(domain_gdf, outline_gdf, metrics, out_path):
 
     fig.savefig(out_path, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(f"  Delta LRR map saved → {out_path}")
+    print(f"  Delta LRR map saved -> {out_path}")
 
 
 # Run: both maps

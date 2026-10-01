@@ -395,14 +395,14 @@ def main():
         fig.savefig(out_path, dpi=180, bbox_inches="tight", facecolor=BG_COLOR)
         panel_frame_paths.append(out_path)
         plt.close(fig)
-        print(f"    Saved → {out_path}")
+        print(f"    Saved -> {out_path}")
 
     # Decadal GIF
     if panel_frame_paths:
         print("\n  Assembling decadal GIF …")
         decadal_gif_path = os.path.join(OUTPUT_DIR, "HAT_shoreline_decadal.gif")
         save_gif_pil(panel_frame_paths, decadal_gif_path, GIF_DECADAL_DURATION)
-        print(f"  Decadal GIF saved → {decadal_gif_path}")
+        print(f"  Decadal GIF saved -> {decadal_gif_path}")
 
     # Part B: GIF of every individual CoastSat observation date
     print("\n" + "=" * 60)
@@ -514,7 +514,7 @@ def main():
         print(f"\n  Assembling {len(frame_paths)}-frame GIF …")
         gif_path = os.path.join(OUTPUT_DIR, "HAT_shoreline_evolution_allobs.gif")
         save_gif_pil(frame_paths, gif_path, GIF_ALL_DATES_DURATION)
-        print(f"  GIF saved → {gif_path}")
+        print(f"  GIF saved -> {gif_path}")
     else:
         print("  No valid frames — GIF not created.")
 

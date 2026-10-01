@@ -163,15 +163,15 @@ def load_study_area_filter(path: str, buffer_m: float):
     if has_lines or has_points:
         # Need to buffer to create an area
         filter_geom = merged.buffer(buffer_m)
-        print(f"  Detected line/point features → buffered by {buffer_m} m")
+        print(f"  Detected line/point features -> buffered by {buffer_m} m")
     elif has_polygons and buffer_m > 0:
         # Polygons with optional buffer
         filter_geom = merged.buffer(buffer_m)
-        print(f"  Detected polygon features → buffered by {buffer_m} m")
+        print(f"  Detected polygon features -> buffered by {buffer_m} m")
     else:
         # Polygons, no buffer
         filter_geom = merged
-        print(f"  Detected polygon features → used as-is (no buffer)")
+        print(f"  Detected polygon features -> used as-is (no buffer)")
 
     filter_gdf = gpd.GeoDataFrame(geometry=[filter_geom], crs=PROJECTED_CRS)
     print(f"  Filter polygon area: {filter_geom.area / 1e6:.2f} km²")
@@ -208,7 +208,7 @@ def parse_date_column(series: pd.Series, col_name: str = "") -> pd.Series:
         # Milliseconds since epoch: |values| roughly 10^10 to 10^13
         if abs_max > 1e9:
             print(f"  Date column '{col_name}' looks like Unix milliseconds "
-                  f"since epoch → parsing with unit='ms'")
+                  f"since epoch -> parsing with unit='ms'")
             return pd.to_datetime(series, unit="ms", errors="coerce")
 
         # Fallback: treat as generic numeric
@@ -283,11 +283,11 @@ def load_shapefile_dates(path: str,
     per_date["year"] = per_date["date"].dt.year
     per_date = per_date[["source", "date", "year", "extent_m", "n_segments"]]
 
-    print(f"  → {n_features_raw} raw segments collapsed to "
+    print(f"  -> {n_features_raw} raw segments collapsed to "
           f"{len(per_date)} unique-date observations, "
           f"{per_date['year'].nunique()} unique years")
     if len(per_date) > 0:
-        print(f"  → total shoreline length: "
+        print(f"  -> total shoreline length: "
               f"{per_date['extent_m'].sum() / 1000:.1f} km "
               f"(mean per observation: "
               f"{per_date['extent_m'].mean() / 1000:.2f} km, "
@@ -429,12 +429,12 @@ def load_coastsat_dates(transect_geom_path: str,
     raw = raw.rename(columns={"date_key": "date"})
     raw["date"] = pd.to_datetime(raw["date"])
 
-    print(f"  → {len(per_date):,} unique observation dates spanning "
+    print(f"  -> {len(per_date):,} unique observation dates spanning "
           f"{per_date['year'].min()}–{per_date['year'].max()}")
     n_well = (per_date["n_transects_covered"] >= min_transects_well_covered).sum()
-    print(f"  → {n_well:,} well-covered dates "
-          f"(≥{min_transects_well_covered} transects)")
-    print(f"  → {len(raw):,} raw per-transect observations retained\n")
+    print(f"  -> {n_well:,} well-covered dates "
+          f"(>={min_transects_well_covered} transects)")
+    print(f"  -> {len(raw):,} raw per-transect observations retained\n")
     return per_date, raw, transect_geoms
 
 
@@ -574,7 +574,7 @@ def plot_inventory(observations: pd.DataFrame,
         fontsize=13, fontweight="bold", y=0.99,
     )
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
-    print(f"→ saved {output_path}")
+    print(f"-> saved {output_path}")
     plt.close(fig)
 
 
@@ -1015,7 +1015,7 @@ def plot_shoreline_map(wet_dry_gdf: gpd.GeoDataFrame,
                  fontsize=14, fontweight="bold", y=0.965)
 
     plt.savefig(output_path, dpi=200, bbox_inches="tight")
-    print(f"→ saved {output_path}")
+    print(f"-> saved {output_path}")
     plt.close(fig)
 
 
@@ -1181,7 +1181,7 @@ def plot_shoreline_map_detailed(wet_dry_gdf: gpd.GeoDataFrame,
                  fontsize=13, fontweight="bold", y=0.98)
 
     plt.savefig(output_path, dpi=200, bbox_inches="tight")
-    print(f"→ saved {output_path}")
+    print(f"-> saved {output_path}")
     plt.close(fig)
 
 
@@ -1388,7 +1388,7 @@ def plot_shoreline_map_zoomed_regions(wet_dry_gdf: gpd.GeoDataFrame,
                  fontsize=13, fontweight="bold", y=0.98)
 
     plt.savefig(output_path, dpi=200, bbox_inches="tight")
-    print(f"→ saved {output_path}")
+    print(f"-> saved {output_path}")
     plt.close(fig)
 
 
@@ -1453,7 +1453,7 @@ def plot_alongshore_profile(coastsat_recon: pd.DataFrame,
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
-    print(f"→ saved {output_path}")
+    print(f"-> saved {output_path}")
     plt.close(fig)
 
 
@@ -1546,8 +1546,8 @@ def main():
     all_obs_sorted = all_obs.sort_values(["date", "source"]).reset_index(drop=True)
     all_obs_sorted.to_csv(obs_out, index=False)
     year_summary.to_csv(year_out, index=False)
-    print(f"\n→ saved {obs_out}")
-    print(f"→ saved {year_out}")
+    print(f"\n-> saved {obs_out}")
+    print(f"-> saved {year_out}")
 
     plot_out = os.path.join(OUTPUT_DIR, "shoreline_inventory_timeline.png")
     plot_inventory(all_obs, year_summary,
@@ -1593,7 +1593,7 @@ def main():
         print("\nComputing alongshore positions for CoastSat transects...")
         coastsat_alongshore = compute_alongshore_position(coastsat_transects)
         if len(coastsat_alongshore) > 0:
-            print(f"  Alongshore extent: 0 → "
+            print(f"  Alongshore extent: 0 -> "
                   f"{coastsat_alongshore['alongshore_m'].max() / 1000:.1f} km")
 
         # Map view
@@ -1656,7 +1656,7 @@ def main():
         if gaps:
             print(f"Gaps > 3 years with no data from any source:")
             for start, end, gap in gaps:
-                print(f"  {start} → {end}  ({gap} years, no observations)")
+                print(f"  {start} -> {end}  ({gap} years, no observations)")
         else:
             print("No gaps > 3 years — good temporal coverage across sources")
 

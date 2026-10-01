@@ -82,7 +82,7 @@ from coastsat_lrr import (
 def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
     csv_map = {}
     if not os.path.isdir(root_dir):
-        print(f"⚠️  ROOT_DATA_DIR not found: {root_dir}")
+        print(f"Warning: ROOT_DATA_DIR not found: {root_dir}")
         return csv_map
 
     subfolders = [
@@ -98,7 +98,7 @@ def collect_csv_map(root_dir: str, site_filter: str = "") -> dict:
         for fpath in csvs:
             stem = os.path.splitext(os.path.basename(fpath))[0]
             csv_map[stem] = fpath
-        print(f"  {os.path.basename(sf):40s}  →  {len(csvs)} CSVs")
+        print(f"  {os.path.basename(sf):40s}  ->  {len(csvs)} CSVs")
 
     return csv_map
 
@@ -135,7 +135,7 @@ def compute_all_lrr(lookup: pd.DataFrame, csv_map: dict,
         })
 
     if missing:
-        print(f"\n  ⚠️  {len(missing)} transects in lookup not found in CSVs.")
+        print(f"\n  Warning: {len(missing)} transects in lookup not found in CSVs.")
         print(f"     First few: {missing[:5]}")
 
     return pd.DataFrame(records)
@@ -290,7 +290,7 @@ def main():
     print(f"Found {len(csv_map)} time-series CSVs in data folders.\n")
 
     # Compute LRR for all transects
-    print(f"Computing LRR for period: {START_DATE} → {END_DATE}")
+    print(f"Computing LRR for period: {START_DATE} -> {END_DATE}")
     print("-" * 55)
     transect_df = compute_all_lrr(lookup, csv_map, START_DATE, END_DATE, MIN_OBS)
 

@@ -284,7 +284,7 @@ def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
     real = real.sort_values(RUN_DOMAIN_COL)
 
     if len(real) != NUM_REAL_DOMAINS:
-        print(f"  ⚠️  '{run_name}': expected {NUM_REAL_DOMAINS} real-domain rows, "
+        print(f"  Warning: '{run_name}': expected {NUM_REAL_DOMAINS} real-domain rows, "
               f"got {len(real)} — results may be incomplete.")
 
     gis_ids   = real[RUN_DOMAIN_COL].values.astype(int)
@@ -309,7 +309,7 @@ def load_transect_data(ds):
     id_col     = ds.get("transect_id_col", "transect_id")
 
     if not os.path.exists(csv_path):
-        print(f"  ⚠️  Transect CSV not found: {csv_path}")
+        print(f"  Warning: Transect CSV not found: {csv_path}")
         return None, None, None
 
     df = pd.read_csv(csv_path)
@@ -342,7 +342,7 @@ def load_transect_data(ds):
     along_coast_m = df["along_coast_m"].values.astype(float)
 
     spacing = estimate_transect_spacing(along_coast_m)
-    print(f"  ✓ {ds['label']}: {len(df)} transects  "
+    print(f"  {ds['label']}: {len(df)} transects  "
           f"est. spacing {spacing:.0f} m  "
           f"LRR range {np.nanmin(lrr_values):+.2f}–{np.nanmax(lrr_values):+.2f} m/yr")
     return domain_ids, lrr_values, along_coast_m
@@ -357,7 +357,7 @@ def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_dom
 
     valid = np.isfinite(lrr)
     if valid.sum() < 5:
-        print(f"  ⚠️  Too few valid transects ({valid.sum()}) for LOWESS — skipping")
+        print(f"  Warning: Too few valid transects ({valid.sum()}) for LOWESS — skipping")
         return None, None, frac
 
     result            = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
@@ -494,7 +494,7 @@ def plot_diagnostic(run_data, cs_series, active_period, out_path, comparison_nam
 
     fig.savefig(out_path, dpi=300, facecolor="white")
     plt.close(fig)
-    print(f"✓ Saved diagnostic:  {os.path.basename(out_path)}")
+    print(f"Saved diagnostic:  {os.path.basename(out_path)}")
 
 
 # One panel: CoastSat scatter and LOWESS, then every run
@@ -649,7 +649,7 @@ def plot_annotated(run_data, cs_series, active_period, out_path, comparison_name
 
     fig.savefig(out_path, dpi=300, facecolor="white")
     plt.close(fig)
-    print(f"✓ Saved annotated:   {os.path.basename(out_path)}")
+    print(f"Saved annotated:   {os.path.basename(out_path)}")
 
 
 # 1984-start runs left, 2004-start right, shared y axis
@@ -664,7 +664,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
         panels.append((2004, runs_2004, "2004-2024"))
 
     if not panels:
-        print("  ⚠️  No runs with a recognized start_year — skipping two-period figure.")
+        print("  Warning: No runs with a recognized start_year — skipping two-period figure.")
         return
 
     n_panels = len(panels)
@@ -777,7 +777,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
     # The figure's own bounds, not "tight": margins are already reserved
     fig.savefig(out_path, dpi=300, facecolor="white")
     plt.close(fig)
-    print(f"✓ Saved two-period:  {os.path.basename(out_path)}")
+    print(f"Saved two-period:  {os.path.basename(out_path)}")
 
 
 # Each run minus the active CoastSat LOWESS
@@ -787,7 +787,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
         (cs for cs in cs_series if cs["period_start"] == active_period), None
     )
     if active_cs is None:
-        print("  ⚠️  No active CoastSat series found — skipping residuals plot.")
+        print("  Warning: No active CoastSat series found — skipping residuals plot.")
         return
 
     # Select the configured residuals window; fall back to the last (widest) if missing
@@ -850,7 +850,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
 
     fig.savefig(out_path, dpi=300, facecolor="white")
     plt.close(fig)
-    print(f"✓ Saved residuals:   {os.path.basename(out_path)}")
+    print(f"Saved residuals:   {os.path.basename(out_path)}")
     for run, _, mae, rmse in run_stats:
         print(f"    {run['label']:<20s} MAE={mae:.3f} m/yr   RMSE={rmse:.3f} m/yr")
 
@@ -905,15 +905,15 @@ def main():
                 rates      = rates,
                 run_dir    = run_dir,
             ))
-            print(f"  ✓ {run_cfg['label']:<20s}  "
+            print(f"  {run_cfg['label']:<20s}  "
                   f"rate range {rates.min():.2f}–{rates.max():.2f} m/yr  "
                   f"color={run_cfg['color']}  "
                   f"({run_dir})")
         except FileNotFoundError as e:
-            print(f"  ❌ SKIPPED '{run_cfg['run_name']}': {e}")
+            print(f"  ERROR: SKIPPED '{run_cfg['run_name']}': {e}")
 
     if not run_data:
-        print("\n❌ No valid runs loaded — RUNS_TO_COMPARE is empty "
+        print("\nERROR: No valid runs loaded — RUNS_TO_COMPARE is empty "
               "or every entry failed to resolve. See Section 3.")
         sys.exit(1)
 
@@ -933,7 +933,7 @@ def main():
             )
             if gis_x is None:
                 continue
-            print(f"  ✓ LOWESS applied: window={w} domains "
+            print(f"  LOWESS applied: window={w} domains "
                   f"({w * DOMAIN_SPACING_M / 1000.0:.1f} km)  "
                   f"frac={frac:.3f}  ({ds['label']})")
             windows.append(dict(window=w, gis_x=gis_x, smoothed=smoothed, frac=frac))
@@ -947,7 +947,7 @@ def main():
         ))
 
     if not cs_series:
-        print("  ⚠️  No CoastSat data loaded — plots will show model lines only.")
+        print("  Warning: No CoastSat data loaded — plots will show model lines only.")
     else:
         # Stop if a run's CoastSat period failed to load, rather than compare against the wrong one
         loaded_periods = {cs["period_start"] for cs in cs_series}
@@ -994,7 +994,7 @@ def main():
             comparison_name,
         )
 
-    print(f"\n✓ All figures saved to:\n  {out_dir}")
+    print(f"\nAll figures saved to:\n  {out_dir}")
     print("=" * 70)
 
 

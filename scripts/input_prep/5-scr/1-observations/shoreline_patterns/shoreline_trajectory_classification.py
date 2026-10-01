@@ -462,7 +462,7 @@ def plot_classification_bar(metrics, out_path):
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Figure 1 saved → {out_path}")
+    print(f"  Figure 1 saved -> {out_path}")
 
 
 # Figure 2 — P1 vs P2 LRR scatter
@@ -551,7 +551,7 @@ def plot_lrr_scatter(metrics, out_path):
     fig.tight_layout(rect=[0, 0.08, 1, 0.95])
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Figure 2 saved → {out_path}")
+    print(f"  Figure 2 saved -> {out_path}")
 
 
 # Figure 3 — Hovmöller heatmap with classification overlay
@@ -683,7 +683,7 @@ def plot_hovmoller(metrics, out_path):
 
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Figure 3 saved → {out_path}")
+    print(f"  Figure 3 saved -> {out_path}")
 
 
 # Run: load, classify every domain, write metrics and figures
@@ -726,7 +726,7 @@ def main():
     # 4. Save CSV
     csv_out = os.path.join(OUTPUT_DIR, "domain_trajectory_metrics.csv")
     metrics.drop(columns=["_ann_full"]).to_csv(csv_out)
-    print(f"  Metrics CSV saved → {csv_out}")
+    print(f"  Metrics CSV saved -> {csv_out}")
 
     # Print summary
     print("\n  Trajectory class counts:")
