@@ -1,5 +1,7 @@
 # topography-and-domains/2026-09-16-pea-island-domain-extension
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Interior RMSE at 7: n115 extension 1.24 (edgeBE) vs base 1.28 (was 1.087 vs 1.129); the ordering is unchanged. The score step's run lookup (broken since the 09-25 tag reorganisation) was fixed first.
+
 *Renamed 2026-09-25 from `2026-09-16-peaisland-ext` and filed under `topography-and-domains/` (Hannah: names say what was tested, grouped by theme).*
 
 > **Re-run 2026-09-19 on the re-digitized 1997 line** (1996 offsets v1, `ext/n115`

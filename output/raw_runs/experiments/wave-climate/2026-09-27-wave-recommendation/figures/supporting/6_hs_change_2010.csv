@@ -1,5 +1,5 @@
 scenario,setting,raw_pct,rmse,bias,gis1_end,gis90_end,run_dir
-full_management,"same as 1996-2010, Hs 2.0",-135.40314571803057,2.2464898718313218,-1.6364125580507718,18.8,24.5,runs/target_full_management/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin_waveHs2Tp7p5asym0p6ahf0p5
-full_management,Hs 2.5,-122.12155443232673,2.182195651102111,-1.5477222408155966,8.0,40.4,runs/final_full_management/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin_waveTp7p5asym0p6ahf0p5
-natural,"same as 1996-2010, Hs 2.0",-698.6253893532224,4.137803764085617,-3.8511874110167175,18.8,24.5,runs/target_natural/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin_waveHs2Tp7p5asym0p6ahf0p5
-natural,Hs 2.5,-537.5781665594327,3.6971328133876,-3.4146609340074776,8.0,40.4,runs/final_natural/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin_waveTp7p5asym0p6ahf0p5
+full_management,"same as 1996-2010, Hs 2.0",-121.80287824009075,2.31498483171339,-1.6578284399393055,18.8,24.5,runs/target_full_management/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin_waveHs2Tp7p5asym0p6ahf0p5
+full_management,Hs 2.5,-109.35232580003608,2.2490725035177825,-1.5691381227041306,8.0,40.4,runs/final_full_management/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin_waveTp7p5asym0p6ahf0p5
+natural,"same as 1996-2010, Hs 2.0",-621.6350604797866,4.175643118965981,-3.872603292905252,18.8,24.5,runs/target_natural/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin_waveHs2Tp7p5asym0p6ahf0p5
+natural,Hs 2.5,-479.4183038641761,3.741628511396239,-3.4360768158960115,8.0,40.4,runs/final_natural/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin_waveTp7p5asym0p6ahf0p5

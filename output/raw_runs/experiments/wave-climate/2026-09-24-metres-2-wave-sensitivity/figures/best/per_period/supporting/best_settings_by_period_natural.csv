@@ -1,3 +1,3 @@
 period,scenario,hs,wave_period_s,wave_asymmetry,wave_angle_high_fraction,variance_explained,bias_m_yr,rmse_m_yr,run_dir
-1996-2010,natural,1.25,10.0,0.8,0.45,0.1812677480099901,-0.3927639209924054,1.0625068652695446,runs/grid_wave_height_x_wave_period/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1p25Tp10asym0p8ahf0p45
-2010-2024,natural,2.0,8.0,0.8,0.55,-7.3934676116069955,-3.858797836569832,4.24198416866703,runs/grid_wave_height_x_high_angle/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs2asym0p8ahf0p55
+1996-2010,natural,1.25,10.0,0.8,0.45,0.1792681428627722,-0.3891571649220928,1.2061012713406658,runs/grid_wave_height_x_wave_period/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1p25Tp10asym0p8ahf0p45
+2010-2024,natural,2.0,8.0,0.8,0.55,-6.597921125404955,-3.8802137184583656,4.284616455559674,runs/grid_wave_height_x_high_angle/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs2asym0p8ahf0p55

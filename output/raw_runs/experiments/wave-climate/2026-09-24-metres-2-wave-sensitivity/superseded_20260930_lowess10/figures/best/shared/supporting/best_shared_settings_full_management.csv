@@ -1,0 +1,3 @@
+period,scenario,hs,wave_period_s,wave_asymmetry,wave_angle_high_fraction,variance_explained,bias_m_yr,rmse_m_yr,run_dir
+1996-2010,full_management,1.25,8.0,0.8,0.45,0.1504674612849226,-0.1236122136101133,1.0823078401061608,runs/full_management_wave_height/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1p25asym0p8ahf0p45
+2010-2024,full_management,1.25,8.0,0.8,0.45,-1.9698504731792177,-1.9178945301139003,2.523281048402185,runs/full_management_wave_height/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin_waveHs1p25asym0p8ahf0p45

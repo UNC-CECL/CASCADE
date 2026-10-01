@@ -1,5 +1,5 @@
 period,scenario,wave_asymmetry,wave_angle_high_fraction,variance_explained,bias_m_yr,rmse_m_yr,run_dir
-2010-2024,natural,0.8,0.45,-10.080590062567616,-4.467950944137905,4.873935503748747,runs/baseline/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1asym0p8ahf0p45
-2010-2024,natural,0.7,0.4,-10.13854580176558,-4.586591845147767,4.8866651569615085,runs/combos/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1ahf0p4
-2010-2024,full_management,0.8,0.45,-2.124418414377237,-1.869698880696436,2.5881111768478826,runs/baseline_full_management/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin_waveHs1asym0p8ahf0p45
-2010-2024,full_management,0.7,0.4,-2.22642550418474,-1.9247650461552503,2.6300206287032566,runs/full_management_combos/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin_waveHs1ahf0p4
+2010-2024,natural,0.8,0.45,-8.947721513635623,-4.489366826026438,4.902598978229234,runs/baseline/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1asym0p8ahf0p45
+2010-2024,natural,0.7,0.4,-8.997819255555697,-4.608007727036301,4.914928469261127,runs/combos/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1ahf0p4
+2010-2024,full_management,0.8,0.45,-1.9069981528458144,-1.89111476258497,2.650250584274757,runs/baseline_full_management/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin_waveHs1asym0p8ahf0p45
+2010-2024,full_management,0.7,0.4,-1.9850327102949403,-1.9461809280437845,2.6855862722441146,runs/full_management_combos/2010_2024/zeroBE/HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin_waveHs1ahf0p4

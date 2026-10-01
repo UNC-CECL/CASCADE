@@ -1,5 +1,7 @@
 # 2026-09-28 — dune line vs shoreline as the island offset, option A waves, 1996–2010
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. The shoreline offset still matches or beats the dune line (smoothed VE, full management 0.23 vs 0.16, natural 0.24 vs 0.21).
+
 Hannah, 2026-09-28: does the 09-25 result
 (`../2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8/`) hold at the waves
 adopted on 09-27?

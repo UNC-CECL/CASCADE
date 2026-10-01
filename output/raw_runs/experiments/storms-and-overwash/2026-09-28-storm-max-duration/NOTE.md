@@ -1,5 +1,7 @@
 # Storm series maximum duration: why longer series failed, and what they do (2026-09-28)
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. The variant ranking per window and scenario is unchanged.
+
 **Question (Hannah).** The storm series keeps events of 8–72 h. Longer limits were abandoned because "the barriers kept drowning and the simulation would end". Why? And what do the longer series do now?
 
 **Background.** The builder (`historical_storm_creation_v3_HAT.py`) groups hours above the berm into one event when they fall less than 24 h apart. It then DROPS any event longer than the limit; it does not shorten it. At 72 h that removes 29 events from 1996–2024, among them:

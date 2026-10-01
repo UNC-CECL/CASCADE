@@ -1,5 +1,7 @@
 # 2026-09-24 — how much does the Barrier3D route_overwash fix move the results?
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Bias and RMSE were copied at 10 while variance explained was computed at 7; all are at 7 now. The fix's effect on RMSE stays below 0.005 m/yr.
+
 Step 3 of 3 in the 2026-09-24 chain: `../../2026-09-24-metres-INDEX.md`.
 Filed as `experiments/2026-09-24-overwash-fix/` until the 2026-09-24
 reorganisation.

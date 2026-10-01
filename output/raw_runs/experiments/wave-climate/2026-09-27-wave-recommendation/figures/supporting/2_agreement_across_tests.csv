@@ -1,11 +1,11 @@
 test,scenario,hs,wave_period_s,wave_asymmetry,wave_angle_high_fraction,raw_pct
-"Step 2: one parameter at a time (ends zero, 09-24)",full_management,1.0,8.0,0.8,0.45,16.93219403300809
-"Step 2: one parameter at a time (ends zero, 09-24)",natural,1.25,10.0,0.8,0.45,18.12677480099901
-"Four-parameter grid (ends zero, 09-25)",full_management,1.75,9.0,0.6,0.5,17.20489221844264
-"Four-parameter grid (ends zero, 09-25)",natural,1.75,10.0,0.6,0.5,22.33157639983266
+"Step 2: one parameter at a time (ends zero, 09-24)",full_management,1.0,8.0,0.6,0.45,14.88167038885712
+"Step 2: one parameter at a time (ends zero, 09-24)",natural,1.25,10.0,0.8,0.45,17.92681428627722
+"Four-parameter grid (ends zero, 09-25)",full_management,1.75,9.0,0.6,0.5,16.4752656244407
+"Four-parameter grid (ends zero, 09-25)",natural,1.75,10.0,0.6,0.5,22.14968970582214
 "Shortlist, ends solved for each setting (09-26)",full_management,1.75,9.0,0.6,0.5,19.69446509576257
 "Shortlist, ends solved for each setting (09-26)",natural,1.75,10.0,0.6,0.5,24.87407169462093
-"Grid, ends fixed (solved at Hs 1, 09-27)",full_management,2.0,7.5,0.6,0.5,24.555228496143034
-"Grid, ends fixed (solved at Hs 1, 09-27)",natural,1.75,10.0,0.6,0.5,25.84403169359881
-"Targeted, ends fixed (solved at adopted waves)",full_management,2.0,9.0,0.6,0.5,20.61585226972436
-"Targeted, ends fixed (solved at adopted waves)",natural,2.0,7.5,0.6,0.5,24.492438015773573
+"Grid, ends fixed (solved at Hs 1, 09-27)",full_management,2.0,7.5,0.6,0.5,23.90695105606134
+"Grid, ends fixed (solved at Hs 1, 09-27)",natural,1.75,10.0,0.6,0.5,25.009853008082228
+"Targeted, ends fixed (solved at adopted waves)",full_management,3.0,7.5,0.6,0.5,28.46183268298233
+"Targeted, ends fixed (solved at adopted waves)",natural,2.75,7.5,0.6,0.5,30.18782362642455

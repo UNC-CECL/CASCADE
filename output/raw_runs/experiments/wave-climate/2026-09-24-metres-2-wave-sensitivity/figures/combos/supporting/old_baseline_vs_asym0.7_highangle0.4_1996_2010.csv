@@ -1,5 +1,5 @@
 period,scenario,wave_asymmetry,wave_angle_high_fraction,variance_explained,bias_m_yr,rmse_m_yr,run_dir
-1996-2010,natural,0.8,0.45,0.0565632331195932,-0.4443788169259642,1.1405575248715132,runs/baseline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1asym0p8ahf0p45
-1996-2010,natural,0.7,0.4,-0.199071241589877,-0.5741062692746826,1.2858292150022532,runs/combos/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1ahf0p4
-1996-2010,full_management,0.8,0.45,0.1693219403300809,-0.0443707751845131,1.0702301102566816,runs/baseline_full_management/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1asym0p8ahf0p45
-1996-2010,full_management,0.7,0.4,0.0339926976465962,-0.175548497840784,1.1541200880719849,runs/full_management_combos/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1ahf0p4
+1996-2010,natural,0.8,0.45,0.0602721523990736,-0.4407720608556516,1.2905777637732267,runs/baseline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1asym0p8ahf0p45
+1996-2010,natural,0.7,0.4,-0.0447323847083775,-0.57049951320437,1.36077292082512,runs/combos/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin_waveHs1ahf0p4
+1996-2010,full_management,0.8,0.45,0.1362027482949473,-0.0407640191142005,1.237339959803613,runs/baseline_full_management/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1asym0p8ahf0p45
+1996-2010,full_management,0.7,0.4,0.1063645078475586,-0.1719417417704715,1.258529309817967,runs/full_management_combos/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1ahf0p4

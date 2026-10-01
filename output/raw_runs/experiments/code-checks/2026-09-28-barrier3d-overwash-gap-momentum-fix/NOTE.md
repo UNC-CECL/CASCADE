@@ -1,5 +1,7 @@
 # Barrier3D overwash fixes: gap cells and inundation momentum (2026-09-28)
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Only the shoreline-skill columns of tables/comparison.csv changed; the overwash numbers are the 2026-09-28 ones (re-running the overwash scoring today would change them, unrelated to smoothing).
+
 **Question.** How much do three overwash fixes change the hindcast?
 
 **The fixes** are on Barrier3D branch `fix/overwash-gaps-momentum` (2.0.2.dev1, commit db0ba30). They are local only and have not been pushed (Hannah, 2026-09-28). The storm replay found all three (`scripts/figure_making/model/storm_replay.py`, `output/figures/model/storm_routing_*.png`):

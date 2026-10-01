@@ -1,5 +1,7 @@
 # 2026-09-27 — recommended hindcast wave climate
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Figures redrawn from the re-scored tables. The recommendation (option A, Hs 2 / Tp 7.5 / asym 0.6 / ahf 0.5) was made from the 10-domain scores; the re-scored grids move their best asymmetry toward 0.6. The wave shortlist (per-setting end solves at 10) cannot be re-scored, only re-solved.
+
 > **Adopted 2026-09-27: option A** is now the model default (waves in `HAT_hindcast_config` / `hat_run.yaml`, ends in `hatteras_site_config.HATTERAS_BE_EDGE_ONLY`). Option B is recorded as `HATTERAS_WAVE_OPTION_B` in the site config, not wired.
 
 Synthesis of every wave test of 24–27 September (no new runs except the

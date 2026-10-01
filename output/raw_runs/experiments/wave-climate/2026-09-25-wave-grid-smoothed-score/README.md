@@ -1,5 +1,7 @@
 # 2026-09-25 — four-parameter wave grid, scored on the smoothed model
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. The best asymmetry moves down (0.7-0.8 -> 0.6) for the 1996 bests; 2010 natural best ahf 0.50 -> 0.55, 2010 managed Tp 7 -> 8. `rescore-step2` and the figures are redone.
+
 > **Record (zeroBE, smoothed score).** The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
 
 Follow-up to `wave-climate/2026-09-24-metres-2-wave-sensitivity/` (see `2026-09-24-metres-INDEX.md`):

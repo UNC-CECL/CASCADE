@@ -1,5 +1,7 @@
 # 2026-09-27 — the wave grid with the end domains fixed
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Best settings unchanged. The fixed end values themselves came from a 10-domain solve and are an input, left as they were.
+
 > **Read the last section** ("Final — ends re-solved at the adopted waves, targeted reruns"). The earlier sections ran on the Hs-1 ends and are kept as the record; those runs are archived under `raw_runs/archive/2026-09-27-fixed-ends-*`. The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
 
 Hannah, 2026-09-26/27: sweep the four wave parameters with the end

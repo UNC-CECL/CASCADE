@@ -1,5 +1,7 @@
 # 2026-09-25 — dune line vs shoreline as the island offset, 1996–2010
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. The shoreline offset still matches or beats the dune line; under full management its lead widens (smoothed VE 0.21 vs 0.14). The score step also had a bug since the 2010 runs were added (it could take a 2010 run for a 1996 cell); fixed before re-scoring.
+
 Hannah, 2026-09-25: how much does setting the island's planform orientation
 from the dune line, rather than the CoastSat shoreline, change the output?
 

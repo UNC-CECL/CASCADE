@@ -1,0 +1,17 @@
+window,variant,scenario,years_run,years_planned,n_drowned,status
+1996_2010,96,natural,14,14,0,ran to the end
+1996_2010,96,full_management,14,14,0,ran to the end
+1996_2010,120,natural,14,14,0,ran to the end
+1996_2010,120,full_management,14,14,0,ran to the end
+1996_2010,240,natural,14,14,0,ran to the end
+1996_2010,240,full_management,14,14,0,ran to the end
+1996_2010,72trim,natural,14,14,0,ran to the end
+1996_2010,72trim,full_management,14,14,0,ran to the end
+2010_2024,96,natural,14,14,0,ran to the end
+2010_2024,96,full_management,14,14,0,ran to the end
+2010_2024,120,natural,14,14,0,ran to the end
+2010_2024,120,full_management,14,14,0,ran to the end
+2010_2024,240,natural,14,14,0,ran to the end
+2010_2024,240,full_management,14,14,0,ran to the end
+2010_2024,72trim,natural,14,14,0,ran to the end
+2010_2024,72trim,full_management,14,14,0,ran to the end

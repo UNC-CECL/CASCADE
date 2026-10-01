@@ -1,0 +1,5 @@
+parameter,setting,n_survived,n_values,effect,best_value,best_variance_explained,rule,chosen_for_grid,grid_values
+wave_height,hs,8,8,11.046019994875376,1.25,0.0859194014980898,range of variance explained over runs that survived in 1996-2010,True,"0.75, 1, 1.25, 1.5, 2"
+high_angle,wave_angle_high_fraction,7,7,3.497641102169579,0.45,0.0565632331195932,range of variance explained over runs that survived in 1996-2010,True,"0.3, 0.4, 0.45, 0.5, 0.55"
+wave_period,wave_period_s,4,5,1.935737371305466,7.0,0.1255973400670377,range of variance explained over runs that survived in 1996-2010,False,
+asymmetry,wave_asymmetry,7,7,0.5515818684389769,0.8,0.0565632331195932,range of variance explained over runs that survived in 1996-2010,False,

@@ -1,5 +1,7 @@
 # Storm length selection: which duration rule matches the observed overwash? (2026-09-28)
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Only the shoreline-skill columns of tables/stage1_scores.csv changed; the overwash scores, which chose trim24, are the 2026-09-28 ones. The best-RMSE variant is unchanged in all four window/scenario pairs.
+
 **Question (Hannah).** Which storm series should the hindcast use? The first priority is that the model's overwash matches the observed record.
 
 **Candidates.** Every candidate keeps every event, including Isabel, March 2018 and Florence. `trimL` cuts any event longer than L hours to the L hours around its peak total water level. The control is `drop72`, the committed series, which drops events over 72 h; its runs are the matrix runs. `full` trims nothing: the longest event in 1996–2024 is 193 h, so it equals a 240 h limit.

@@ -1,5 +1,7 @@
 # Wave-climate sensitivity in metres, natural and full management (2026-09-24)
 
+**Re-scored at 7 domains (2026-09-30).** The runs were scored against the CoastSat target smoothed over 10 domains; the group range is 7. The shoreline skill is now computed against the 7-domain target, after checking the 10-domain rebuild reproduces each run's stored scores; the same runs are scored. The 10-domain tables and figures are kept in `superseded_20260930_lowess10/`. Numbers quoted below this note are the 10-domain ones. Best 1996 natural still Hs 1.25 / Tp 10 / asym 0.8 / ahf 0.45 (VE 17.9%); best 1996 managed moves from the baseline (asym 0.8, 16.9%) to asym 0.6 (14.9%); the stage-2 grid choice (wave height x high-angle) is unchanged.
+
 > **Record (one parameter at a time, zeroBE).** The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
 
 Step 2 of 3 in the 2026-09-24 chain: `../../2026-09-24-metres-INDEX.md`. Step 1
