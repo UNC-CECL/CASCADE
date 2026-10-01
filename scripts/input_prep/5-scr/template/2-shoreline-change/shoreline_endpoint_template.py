@@ -60,9 +60,8 @@ def load_lookup(path: Path) -> dict[str, str]:
     return dict(zip(t.iloc[:, 0].str.strip(), t.iloc[:, 1].str.strip()))
 
 
-# End windows as whole calendar years
+# End windows as whole calendar years: (lo, hi, centre) per end, lo inclusive, hi exclusive
 def calendar_ends(start_year: int, end_year: int, n: int):
-    """(lo, hi, centre) for each end; lo inclusive, hi exclusive."""
     if 2 * n > end_year - start_year + 1:
         raise SystemExit(f"{n}-year end windows overlap")
     def win(y):

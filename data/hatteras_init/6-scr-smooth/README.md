@@ -8,7 +8,9 @@ method_comparison/    transect-based against domain-averaged smoothing, and
                       the inputs each produces
     01_transect_based/  02_domain_averaged/  03_cascade_inputs/  04_method_comparison/
 dsas_vs_coastsat/     CoastSat against DSAS, both smoothed, on the retired
-                      1978-1997 and 1997-2019 windows
+                      1978-1997 and 1997-2019 windows. Its script,
+                      lowess_dsas_vs_coastsat.py, was deleted 2026-10-01;
+                      these products were kept (see the scripts README)
 ```
 
 Until 2026-09-18 these were `lowess_method_comparison_output/` and

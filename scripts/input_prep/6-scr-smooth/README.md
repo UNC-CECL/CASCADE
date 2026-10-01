@@ -21,10 +21,9 @@ run. See "What the hindcast actually runs" below.
 
 ```
 lowess_method_comparison.py   CURRENT. Transect-first vs domain-first smoothing.
-lowess_dsas_vs_coastsat.py    Side question: DSAS vs CoastSat as sources.
 ```
 
-Both scripts run from anywhere - every path is anchored on the `pyproject.toml`
+The script runs from anywhere - every path is anchored on the `pyproject.toml`
 at the repo root, not typed as an absolute literal.
 
 Every script here is `lowess_<what it compares>`. The `HAT_` prefix they carried
@@ -107,61 +106,6 @@ hindcast scores against the 10-domain curve. Its `cs_lrr_smooth_*` columns are
 blank across domains 1-10 like everything else; the raw columns are complete.
 Treat it as a table to read, not as an input to a run.
 
-### lowess_dsas_vs_coastsat.py
-
-A different question - not method, but **source**: does DSAS agree with CoastSat?
-It runs on the older **1978-1997 / 1997-2019** period pair (from
-`5-scr/archive/coastsat_lrr_superseded_20260810/`), domain-level only, at a fixed
-`LOWESS_FRAC = 0.15`. Not part of the 1984-2024 lineage; keep the period
-difference in mind before reading its figures next to the others. The legends
-name the periods and nothing else - they used to say "Calibration Period" and
-"Validation Period", which name the hindcast's split, not this pair - and both
-two-panel figures carry a footnote saying which pair they are.
-
-**What it shows.** DSAS reads systematically more accretional than CoastSat in
-1978-1997: +1.74 m/yr averaged over all 90 domains, r = 0.64. The offset
-largely closes in 1997-2019 (-0.69 m/yr, r = 0.90). The disagreement is
-structured, not noise.
-
-Three ways these figures used to mislead, each now marked:
-
-- **DSAS has no 1997-2019 data for domains 1-7** (83 of 90). Its line simply
-  started late beside a full-span CoastSat line, which reads as agreement
-  rather than absence. `shade_missing_dsas()` hatches and labels the gap on
-  every panel that draws DSAS. It finds the runs from the data, so it stays
-  correct if coverage changes, and draws nothing when a period is complete. It
-  matters most on the difference panels, where an absent bar reads as *zero
-  difference* - a meaningful value on that axis.
-
-- **The smoothed scatter panel is not an agreement statistic.** Both series are
-  LOWESS-smoothed along the same domain order, so neighbouring smoothed values
-  come from overlapping windows and are not independent samples: r goes
-  0.64 -> 0.87 in 1978-1997 without either source having moved. The bias does
-  *not* shrink under smoothing (+1.74 -> +1.95 m/yr), which is the tell - the
-  offset is real and only the apparent scatter is manufactured. Both panels now
-  carry their r; the smoothed one also carries the raw r and a count of
-  effectively independent spans (a window holds `frac*n` domains, so there are
-  about `1/frac` of them, ~7 here, not the 90 points plotted).
-
-- **LOWESS extrapolates at the southern edge.** It is a local *linear* fit, so
-  at the very edge it runs past the data: CoastSat 1978-1997 smoothed to
-  -6.21 m/yr at domain 1, where the raw value is -0.59 and the whole local
-  spread over domains 1-6 is -7.01..-0.59. `SKIP_SOUTHERN_DOMAINS = 10`
-  withholds the smoothed curves there - the same guard, at the same width, as
-  the hindcast's `LowessConfig(skip_southern_domains=10)`, and for the same
-  reason: Oregon Inlet dominates that zone. Display only, as it is there. The
-  fit still runs over all 90 domains, so the southern data still pulls the
-  values just north of the cut; only the result is withheld, and the raw series
-  still plots across the whole island. The smoothed-only figures, which would
-  otherwise be blank there, draw the raw domain means as a dotted line. Set it
-  to `0` to smooth everywhere.
-
-`comparison_table_smoothed.csv` follows the figures rather than the fit: its
-three `*_smooth` columns are blank across domains 1-10, so the table cannot be
-read as evidence the plots withheld. Raw columns are complete at 90 of 90 -
-except DSAS 1997-2019 at 83, which is that source's real coverage gap and not
-the guard.
-
 ## What the hindcast actually runs
 
 `scripts/cascade_pipeline/coastsat_lowess.py`, imported by
@@ -219,226 +163,30 @@ likely, and the description as the reliable part.
 The current script is that last one plus the method-comparison plots and the
 5/7/10 domain window set that the hindcast's `(7, 10)` came from.
 
+## Deleted 2026-10-01
+
+`lowess_dsas_vs_coastsat.py` asked a side question: did DSAS agree with
+CoastSat as a rate source? It ran on the retired 1978-1997 / 1997-2019 window
+pair, at a fixed LOWESS fraction of 0.15. Nothing imported it. Hannah deleted
+it after the style check flagged it, rather than restyle a script on windows
+no longer in use. The current DSAS-vs-CoastSat comparison is
+`5-scr/4-comparisons/dsas_vs_coastsat/`.
+
+Its products are still in `data/hatteras_init/6-scr-smooth/dsas_vs_coastsat/`.
+They are git-ignored and were kept, because retired data is not deleted with
+its code (ORGANIZATION.md rule 4). To recover the script:
+
+```
+git log --diff-filter=D --oneline -- scripts/input_prep/6-scr-smooth/lowess_dsas_vs_coastsat.py
+git show <commit>^:scripts/input_prep/6-scr-smooth/lowess_dsas_vs_coastsat.py
+```
+
 ## The scripts in detail
 
 Each script's header says what it does and how to run it. Below, for each,
 is its original header and any notes that were in its code, kept word for
 word when the scripts were brought in line with `scripts/STYLE.md`
 (2026-09-30).
-
-### lowess_dsas_vs_coastsat.py
-
-DSAS against CoastSat LRR per domain, raw and LOWESS-smoothed, for the two DSAS windows.
-
-From the script's original header:
-
-```text
-DSAS vs CoastSat LRR Comparison — Hatteras Island  (SMOOTHED VERSION)
-Extends the original comparison script with LOWESS smoothing and
-multiple visualization options for collaborator review.
-
-New outputs (saved to OUTPUT_DIR)
-  overview_smoothed.png          – 2-panel both periods, raw + LOWESS overlay
-  smoothed_only_comparison.png   – 2-panel both periods, smoothed lines only
-  smoothing_sensitivity.png      – 3-panel showing frac=0.10, 0.15, 0.20 side by side
-  combined_sources.png           – single panel combining both periods + both sources
-  scatter_smoothed_1978_1997.png – scatter of smoothed values, period 1
-  scatter_smoothed_1997_2019.png – scatter of smoothed values, period 2
-
-All original outputs are also regenerated.
-
-comparison_table_smoothed.csv carries the raw values for every domain, but its
-LOWESS columns are blank across the southern boundary zone (domains
-1..SKIP_SOUTHERN_DOMAINS), matching what the figures draw and why.
-
-Smoothing method: LOWESS (locally weighted scatterplot smoothing)
-  - Applied independently to each series (DSAS and CoastSat)
-  - Preserves large-scale spatial patterns while removing per-domain noise
-```
-
-Notes that were in the code:
-
-```text
-pathlib must be imported before the CONFIG block because every path below is
-built from PROJECT_BASE_DIR at module level.
-```
-
-```text
-Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-Rule 5 of ORGANIZATION.md.
-```
-
-```text
-ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
-output one had lost its drive (str(_PATH_REPO / "scripts" / "input_prep" / "...")) and so wrote its
-figures to C:\scripts\ instead of into the repository, and the input ones
-still spelled the folder "input_preperation" and pointed at a CoastSat tree
-that has since moved under 5-scr. Anchoring on the pyproject.toml at the repo
-root makes all of them follow the checkout and survive this file changing
-depth.
-```
-
-```text
---- CoastSat CSVs ---
-The retired windows. old_time_periods/ became superseded_20260810/ and
-these two had not resolved since.
-```
-
-```text
---- LOWESS bandwidth (fraction of data used per local fit) ---
-0.10 = ~9 domains  → more local, preserves more variation
-0.167 = ~15 domains → recommended default (1.5km smoothing window)
-0.20 = ~18 domains → smoother, loses finer spatial patterns
-```
-
-```text
---- Southern boundary guard ---
-Domains 1..N are dropped from the SMOOTHED curves. Oregon Inlet dominates
-that zone, and LOWESS is a local linear fit, so at the very edge it
-extrapolates: CoastSat 1978-1997 smooths to -6.21 m/yr at domain 1 where
-the raw value is -0.59 and the local raw spread is -7.01..-0.59. The
-smoothed value lands outside the data it claims to summarise.
-
-Same guard, same width as the hindcast's
-cascade_pipeline/coastsat_lowess.py: LowessConfig(skip_southern_domains=10).
-DISPLAY ONLY, as it is there -- the LOWESS still fits over all 90 domains,
-so the southern data still pulls the values just north of the cut; only the
-result is withheld. Set to 0 to show LOWESS everywhere.
-```
-
-```text
---- Output ---
-Products live under data/hatteras_init/<stage>/, beside every other
-input_prep stage's output; only the scripts live under scripts/. Resolved
-through hat_observed_rates.py since 2026-09-18, when the folder was renamed
-from lowess_dsas_vs_coastsat_output/.
-```
-
-```text
-Windows consoles default to cp1252, which cannot encode the arrows and
-en-dashes in the closing summary -- the run died there after writing every
-figure. UTF-8 here, matching lowess_method_comparison.py.
-```
-
-```text
-HOUSE STYLE: one typeface and one palette across every figure in this
-project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-found by searching upward (ORGANIZATION.md rule 5). This file drew in
-matplotlib's defaults until 2026-09-17 -- it never called apply_style().
-```
-
-```text
-Town labels sit in this band, measured down from the top of the axes; the
-stats boxes start below it. Both are in axes fractions so they cannot drift
-into each other when ylim changes.
-```
-
-```text
-Backed in white like the town labels: on the difference panels the
-mean-difference line runs straight through this text otherwise.
-```
-
-```text
-txt = (f"Raw:     R²={s_raw['r2']:.2f}  RMSE={s_raw['rmse']:.2f} m/yr  "
-f"Bias={s_raw['bias']:+.2f} m/yr\n"
-f"Smoothed: R²={s_smooth['r2']:.2f}  RMSE={s_smooth['rmse']:.2f} m/yr  "
-f"Bias={s_smooth['bias']:+.2f} m/yr")
-ax.text(0.01, 0.97, txt, transform=ax.transAxes, fontsize=8.5,
-va="top", family="monospace",
-bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
-```
-
-```text
-DSAS only: this is the presentation figure, and two dotted series
-across the withheld zone read as clutter rather than as context.
-```
-
-```text
-DSAS only, one line per period. Four dotted series across the
-withheld zone was clutter on a panel already carrying four curves.
-```
-
-```text
-Both panels carry their r. The smoothed one also carries the raw r
-and a count of independent spans, because its own r is not a
-like-for-like improvement: LOWESS runs along domain order, so
-neighbouring smoothed values are built from overlapping windows and
-are not independent samples. A window holds frac*n domains, so the
-number of effectively independent spans is about 1/frac -- roughly
-6 here, not the 90 points plotted.
-```
-
-```text
-Same guard as the figures, so the table cannot be read as evidence
-the plots withheld. The three *_smooth columns are therefore EMPTY
-across domains 1..SKIP_SOUTHERN_DOMAINS; the raw columns are not,
-and still cover the whole island.
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`mask_southern_smoothed()`**
-
-```text
-Blank the smoothed columns across the southern boundary zone.
-
-Applied after the fit, never before: the LOWESS still sees every domain,
-matching how the hindcast splices this zone out. Raw columns are
-untouched, so the raw series still plots across the whole island.
-```
-
-**`draw_raw_in_guard_zone()`**
-
-```text
-Raw domain values across the withheld zone, so it is not simply blank.
-
-Matches the hindcast, which omits the LOWESS line across the southern
-domains and shows the raw values there rather than nothing. Only the
-smoothed-only figures need this; the others already draw raw everywhere.
-```
-
-**`shade_missing_dsas()`**
-
-```text
-Hatch the domains where DSAS has no data, so absence is not read as agreement.
-
-The 1997-2019 DSAS export covers domains 8-90; without this the DSAS
-series simply starts late while CoastSat runs the full span, which reads
-as the two sources agreeing rather than as one of them being absent.
-
-Runs are found from the data, so this stays correct if the DSAS coverage
-changes. Only the first run is labelled, to keep one legend entry.
-```
-
-**`plot_overview_smoothed()`**
-
-```text
-2-panel figure: raw lines (faded) + LOWESS overlay (bold).
-This is the recommended figure for collaborator review.
-```
-
-**`plot_smoothed_only()`**
-
-```text
-2-panel: LOWESS smoothed lines only, no raw data.
-Cleanest version for presentations or dissertation figures.
-```
-
-**`plot_smoothing_sensitivity()`**
-
-```text
-3-panel showing effect of different LOWESS bandwidths.
-Helps collaborators understand smoothing choice.
-```
-
-**`plot_combined_sources()`**
-
-```text
-Single panel: all 4 smoothed series together.
-Good for seeing overall pattern and period differences simultaneously.
-```
-
-</details>
 
 ### lowess_method_comparison.py
 
