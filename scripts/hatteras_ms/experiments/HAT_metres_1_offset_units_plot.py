@@ -106,7 +106,7 @@ def scale_handles():
 def caption_common():
     return ("1996-2010 hindcast, no background erosion, full management, no "
             "groin, relocations off. Scores are the modelled LRR shoreline-change "
-            "rate against the CoastSat LRR target (LOWESS, 10 domains) over the "
+            "rate against the CoastSat LRR target (LOWESS, 7 domains) over the "
             "interior domains GIS 2-89. The tuned parameters are fitted on the "
             "window they are scored on, so a best value is a band, not a "
             "calibrated value.")
@@ -375,7 +375,7 @@ def fig_alongshore(df, target):
     d = df[df.scored & (df.offset_source == "duneline")]
     fig, ax = plt.subplots(figsize=figsize("double", height=3.6), constrained_layout=True)
     gis = target.index.values
-    ax.plot(gis, target.values, color=C_1997, lw=2.0, label="CoastSat LRR (LOWESS, 10 domains)",
+    ax.plot(gis, target.values, color=C_1997, lw=2.0, label="CoastSat LRR (LOWESS, 7 domains)",
             zorder=4)
     rows = []
     for scale in SCALES:
@@ -562,10 +562,10 @@ PARAMETERS = {
 }
 
 
-# Observed position change per domain, 10-domain smoothing
+# Observed position change per domain, 7-domain smoothing (the group range)
 def observed_change():
     t = pd.read_csv(OBSERVED_CHANGE)
-    return t[t.window_domains == 10].set_index("domain_number")["observed_m"]
+    return t[t.window_domains == 7].set_index("domain_number")["observed_m"]
 
 
 # A table row's rate table
@@ -591,7 +591,7 @@ def fig_alongshore_sensitivity(df, target, obs_change, scale, param):
     gis = target.index.values
     ax_r.plot(gis, target.values, color=C_1997, lw=2.2, zorder=6)
     ax_p.plot(obs_change.index, obs_change.values, color=C_1997, lw=2.2, zorder=6)
-    handles = [Line2D([], [], color=C_1997, lw=2.2, label="CoastSat (LOWESS, 10 domains)")]
+    handles = [Line2D([], [], color=C_1997, lw=2.2, label="CoastSat (LOWESS, 7 domains)")]
     table = []
     for _, row in g.iterrows():
         v = row[spec["column"]]
