@@ -83,6 +83,13 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
 .notes { color: var(--muted); font-size: 0.82rem; max-width: 80ch; display: grid; gap: 6px; }
 .notes p { margin: 0; }
 #status { color: var(--muted); }
+.figures { display: grid; gap: 18px; }
+.figures h2 { font-size: 1.15rem; font-weight: 600; margin: 6px 0 0; }
+.fig { margin: 0; padding: 14px; display: grid; gap: 10px; }
+.fig h3 { font-size: 1rem; font-weight: 600; margin: 0; text-wrap: balance; }
+.fig a { display: block; background: #ffffff; border-radius: 4px; }
+.fig img { display: block; width: 100%; height: auto; max-width: 100%; }
+.fig figcaption { color: var(--muted); font-size: 0.84rem; max-width: 95ch; }
 @media (max-width: 760px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   .map canvas { height: 300px; }
@@ -156,6 +163,10 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
       </div>
     </div>
   </div>
+
+  <section class="figures" id="figures" hidden aria-labelledby="figs-h">
+    <h2 id="figs-h">Figures</h2>
+  </section>
 </div>
 
 <script>
@@ -420,6 +431,23 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
     sel = picks.length ? picks[0][1] : 0;
     computeMap(); setCutoff(cutoff); drawMap();
   }
+
+  // The static figures, if this copy of the page was published with them
+  fetch("figures/figures.json")
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (list) {
+      var sec = $("figures");
+      list.forEach(function (f) {
+        var fig = document.createElement("figure"); fig.className = "card fig";
+        var h = document.createElement("h3"); h.textContent = f.title;
+        var a = document.createElement("a"); a.href = "figures/" + f.file; a.target = "_blank"; a.rel = "noopener";
+        var img = document.createElement("img"); img.src = "figures/" + f.file; img.alt = f.title; img.loading = "lazy";
+        var cap = document.createElement("figcaption"); cap.textContent = f.caption;
+        a.appendChild(img); fig.appendChild(h); fig.appendChild(a); fig.appendChild(cap); sec.appendChild(fig);
+      });
+      sec.hidden = list.length === 0;
+    })
+    .catch(function () { /* no figures published alongside: the section stays hidden */ });
 
   fetch("split_windows_data.json")
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })

@@ -17,6 +17,7 @@ Version: 2026-10-02
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -72,6 +73,10 @@ STEM_MAIN = "split_windows_{0}".format(CUTOFF)
 STEM_MAIN_NO_MAP = "split_windows_{0}_no_map".format(CUTOFF)
 STEM_CUTOFFS = "split_windows_cutoffs"
 INTERACTIVE_DIR = "interactive"
+# The static figures shown under the explorer on the page and website
+PAGE_FIGURES_DIR = "figures"
+PAGE_FIGURES = [(STEM_MAIN, "Eight transects, cut at {0}".format(CUTOFF)),
+                (STEM_CUTOFFS, "Four transects, four cutoffs")]
 
 # The locator map beside the cutoff grid
 MAP_CRS = "EPSG:26918"
@@ -317,7 +322,7 @@ def share_position_axis(axes, picks, series, headroom, year_step):
 
 
 MAP_CAPTION = ("Rows run north (top) to south (bottom); the map at left numbers each "
-               "row's transect on Hatteras Island, north up, 1 at Buxton to 8 at Rodanthe.")
+               "row's transect on Hatteras Island, north up, 1 at Buxton to {0} at Rodanthe.")
 
 
 # The eight picks, cut at CUTOFF
@@ -348,7 +353,7 @@ def draw_main(picks, fits, series, out_dir):
         "is fitted to it. Position is CoastSat chainage on an origin that is "
         "arbitrary per transect; every panel shares one y-axis, so slopes "
         "compare between rows. {3} Groups and ranks are in "
-        "split_windows_picks.csv.".format(REF_START, REF_END, CUTOFF, MAP_CAPTION))
+        "split_windows_picks.csv.".format(REF_START, REF_END, CUTOFF, MAP_CAPTION.format(len(picks))))
     return paths[0]
 
 
@@ -482,7 +487,7 @@ def draw_cutoffs(picks, fits, series, out_dir):
         "{4} Where the red and blue slopes change with the column, the rate "
         "depends on where the record is cut."
         .format(REF_START, REF_END, CUTOFF, ", ".join(str(c) for c in CUTOFFS),
-                MAP_CAPTION))
+                MAP_CAPTION.format(len(picks))))
     return paths[0]
 
 
@@ -570,7 +575,32 @@ def publish_site(out_dir, site):
         + page[:cut].strip() + "\n<style>body { margin: 0; }</style>\n</head>\n<body>\n"
         + page[cut:].strip() + "\n</body>\n</html>\n", encoding="utf-8")
     shutil.copyfile(src / "split_windows_data.json", site / "split_windows_data.json")
+    shutil.copytree(src / PAGE_FIGURES_DIR, site / PAGE_FIGURES_DIR, dirs_exist_ok=True)
     print("site updated: {0} (commit and push there to publish)".format(site))
+
+
+# The figures the page shows under the explorer, with their captions from CAPTIONS.md
+def write_page_figures(out_dir):
+    out_dir = Path(out_dir)
+    captions = (fs.support_dir(out_dir) / "CAPTIONS.md").read_text(encoding="utf-8")
+    dest = out_dir / INTERACTIVE_DIR / PAGE_FIGURES_DIR
+    dest.mkdir(parents=True, exist_ok=True)
+    entries = []
+    for stem, title in PAGE_FIGURES:
+        name = stem + ".png"
+        m = re.search(r"^\*\*`" + re.escape(name) + r"`\.\*\* (.*?)(?=\n\n\*\*`|\Z)",
+                      captions, re.S | re.M)
+        if m is None:
+            raise SystemExit("no caption for {0} in CAPTIONS.md".format(name))
+        shutil.copyfile(out_dir / name, dest / name)
+        caption = " ".join(m.group(1).split())
+        # File names mean nothing on the web page
+        caption = caption.replace(" Groups and ranks are in split_windows_picks.csv.", "")
+        caption = caption.replace("split_windows_{0}.png".format(CUTOFF), "the figure above")
+        entries.append({"file": name, "title": title, "caption": caption})
+    (dest / "figures.json").write_text(json.dumps(entries, ensure_ascii=False, indent=1),
+                                       encoding="utf-8")
+    return dest
 
 
 # Run: score, pick, draw, export
@@ -611,6 +641,7 @@ def main():
     print(draw_main_no_map(picks, fits, series, out))
     print(draw_cutoffs(picks, fits, series, out))
     print(write_interactive_data(t, picks, series, out))
+    print(write_page_figures(out))
     if args.site:
         publish_site(out, args.site)
 
