@@ -451,7 +451,9 @@ def draw_locator(ax, picks, pts):
 # One pick per group, one row each, cut at each of CUTOFFS
 def draw_cutoffs(picks, fits, series, out_dir):
     fs.apply_style()
-    picks = picks[picks["domain_number"].isin(CUTOFF_GRID_DOMAINS)]
+    picks = picks[picks["domain_number"].isin(CUTOFF_GRID_DOMAINS)].copy()
+    # Numbered 1-4 within this figure, still from the Buxton end (Hannah, 2026-10-02)
+    picks["map_number"] = picks["domain_number"].rank(method="first").astype(int)
     fig, axes, picks = map_and_rows(picks, len(CUTOFFS), [MAP_WIDTH] + [1.0] * len(CUTOFFS),
                                     height=CUTOFF_GRID_HEIGHT)
     nrow = len(picks)
@@ -471,8 +473,8 @@ def draw_cutoffs(picks, fits, series, out_dir):
     paths = fs.save(fig, Path(out_dir) / STEM_CUTOFFS, close=True)
     fs.record_caption(paths[0],
         "Four of the eight transects of split_windows_{2}.png, one per behaviour "
-        "group and spread along the island, keeping their numbers from that "
-        "figure; one row each, with the record cut at {3}. In each panel purple is the {0}–{1} rate, red the "
+        "group and spread along the island, numbered 1 (Buxton) to 4 (Rodanthe) "
+        "within this figure; one row each, with the record cut at {3}. In each panel purple is the {0}–{1} rate, red the "
         "first window from {0} to the cut and blue the second from the cut to "
         "{1}; the cut year belongs to both, and the dotted line marks it. Rates "
         "in m/yr, seaward positive, fitted to every raw CoastSat position in the "
