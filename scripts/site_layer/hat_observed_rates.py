@@ -101,6 +101,8 @@ COASTSAT_WINDOW_CONVERGENCE_ROOT = COASTSAT_RATES / "window_convergence"
 WINDOW_PROFILES_DIR = "1-rate_profiles"
 WINDOW_SCORES_DIR = "2-r_bias_rmse"
 SETTLING_WINDOW_DIR = "3-settling_window"
+# Per-transect positions with the long-term fit and the two halves (Hannah, 2026-10-02)
+SPLIT_WINDOWS_DIR = "4-split_windows"
 WINDOW_EXPERIMENTS_DIR = "experiments"
 
 # The settling sweep's three scales, keyed as its --scale choices are
@@ -161,6 +163,11 @@ def window_scores_dir(direction=None, anchor_year=None) -> Path:
         return base
     _check_direction(direction)
     return base / "{0}_from_{1}".format(direction, int(anchor_year))
+
+
+def split_windows_dir() -> Path:
+    """The per-transect split-window figures and picks, under `4-split_windows/`."""
+    return COASTSAT_WINDOW_CONVERGENCE_ROOT / SPLIT_WINDOWS_DIR
 
 
 def _check_direction(direction):

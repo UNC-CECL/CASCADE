@@ -40,6 +40,12 @@ Because every window sits inside 1996–2024, every curve reaches the reference
     backward_from_2024/                       transects (supporting figure)
                            b-every_transect/  tables behind the figure
                            c-domain_means/    tables, averaged to 90 domains
+
+4-split_windows/       What do the two HALVES look like at one transect?
+                       positions through time at eight transects picked by
+                       behaviour, the 1996–2024 line and the two windows
+                       either side of a cutoff (2010, and 2005/2015/2020);
+                       interactive/ = all 906, with a cutoff slider
 ```
 
 **The three scores in 2-r_bias_rmse**, each window against 1996–2024 over all
@@ -103,6 +109,9 @@ settling windows were 1996–2015 (20 yr) forward and 2002–2020 (19 yr) backwa
    model's 15 years marked.
 4. [`3-settling_window/forward_from_1996/a-eight_sites/shoreline_position_window_fits_forward_from_1996.png`](3-settling_window/forward_from_1996/a-eight_sites/shoreline_position_window_fits_forward_from_1996.png)
    shows why, at eight places: the raw positions with the fits drawn on them.
+5. [`4-split_windows/split_windows_2010.png`](4-split_windows/split_windows_2010.png)
+   shows the model's two halves at eight transects picked by behaviour (agree,
+   disagree, sign flip, 2021 step) against the 1996–2024 line.
 
 Each direction folder has a `backward` twin. Captions are in each folder's
 `supporting/CAPTIONS.md`.
@@ -114,6 +123,7 @@ scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/
     coastsat_window_profiles.py      -> 1-rate_profiles/   (fits every window; slow)
     coastsat_window_r_bias_rmse.py   -> 2-r_bias_rmse/     (reads 1-'s transects CSV; no refit)
     coastsat_window_convergence.py   -> 3-settling_window/
+    coastsat_split_windows.py        -> 4-split_windows/   (reads 1-'s transects CSV)
 ```
 
 Run 1- before 2- after any change to the fits. The layout is resolved in
