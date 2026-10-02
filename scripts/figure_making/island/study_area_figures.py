@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.legend_handler import HandlerBase
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.patches import Patch, Polygon, Rectangle
 from matplotlib.transforms import Affine2D
 from shapely.affinity import rotate as shp_rotate, translate as shp_translate
 from shapely.geometry import LineString, MultiLineString
@@ -205,6 +205,42 @@ def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
     ax.text(*lab, "N", transform=ax.transAxes, ha="center", va="center", fontsize=8.5,
             fontweight="bold", color=INK, zorder=20,
             bbox=dict(facecolor="white", alpha=0.8, edgecolor="none", boxstyle="square,pad=0.1"))
+
+
+# A black/white segmented scale bar, with a north-arrow glyph pointing to true north just above it
+def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.075, arrow_m=2000.0):
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    h = 0.013 * (y1 - y0)
+    bx, by = x0 + x * (x1 - x0), y0 + y * (y1 - y0)
+    seg = length_m / segments
+    # a white keyline so the black segment reads on dark water
+    ax.add_patch(Rectangle((bx, by), length_m, h, facecolor="none", edgecolor="white", lw=2.2,
+                           zorder=11))
+    for i in range(segments):
+        ax.add_patch(Rectangle((bx + i * seg, by), seg, h, facecolor=INK if i % 2 == 0 else "white",
+                               edgecolor=INK, lw=0.6, zorder=12))
+    for i in range(segments + 1):
+        km = i * seg / 1000
+        lab = f"{km:g} km" if i == segments else f"{km:g}"
+        ax.text(bx + i * seg, by - 0.6 * h, lab, ha="center", va="top", fontsize=8, color=INK,
+                zorder=12, path_effects=HALO)
+    # The arrow: a split dart, tip toward north, its "N" beyond the tip
+    n = frame.north()
+    perp = np.array([-n[1], n[0]])
+    c = np.array([bx + 0.5 * arrow_m, by + h + 0.075 * (y1 - y0)])
+    tip, back = c + n * arrow_m / 2, c - n * arrow_m / 2
+    notch = c - n * arrow_m * 0.22
+    w = 0.28 * arrow_m
+    ax.add_patch(Polygon([tip, back + perp * w, notch, back - perp * w], closed=True, facecolor="none",
+                         edgecolor="white", lw=2.2, zorder=11))
+    ax.add_patch(Polygon([tip, back + perp * w, notch], closed=True, facecolor=INK, edgecolor=INK,
+                         lw=0.6, zorder=12))
+    ax.add_patch(Polygon([tip, notch, back - perp * w], closed=True, facecolor="white", edgecolor=INK,
+                         lw=0.6, zorder=12))
+    lab = tip + n * 0.40 * arrow_m
+    ax.text(lab[0], lab[1], "N", ha="center", va="center", fontsize=8.5, fontweight="bold", color=INK,
+            zorder=12, path_effects=HALO)
 
 
 # Imagery
@@ -417,7 +453,7 @@ INSET_LAT = (33.4, 37.3)
 
 
 # The south-eastern US coast with the reach marked
-def regional_inset(ax, outline, vector=True, lat_side="right"):
+def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True):
     states = gpd.read_file(NE_STATES)
     lon0, lon1 = INSET_LON
     lat0, lat1 = INSET_LAT
@@ -454,6 +490,11 @@ def regional_inset(ax, outline, vector=True, lat_side="right"):
         ax.axhline(y, color="white", lw=0.5, zorder=3)
     ax.set_xlim(lon0, lon1)
     ax.set_ylim(lat0, lat1)
+    if not tick_labels:
+        ax.set_xticks([])
+        ax.set_yticks([])
+        spines_for_image(ax)
+        return
     ax.set_xticks(lons)
     ax.set_xticklabels([f"{abs(x)}°W" for x in lons], fontsize=8)
     ax.set_yticks(lats)
@@ -485,22 +526,27 @@ def fig_study_area(dom, outline, roads, frame, vector):
     window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
     fig, ax = reach_figure(window)
     fw, fh = fig.get_size_inches()
-    road_c = draw_reach(ax, frame, dom, outline, roads[2008], vector, window, arrow_xy=(0.965, 0.88),
-                        piers=False).road_c
-    # the regional inset sits over the open sound; square in inches
-    ih = 0.46
-    ax_in = fig.add_axes([0.30, 0.52, ih * fh / fw, ih])
-    regional_inset(ax_in, outline, vector)
+    road_c = draw_reach(ax, frame, dom, outline, roads[2008], vector, window, piers=False,
+                        scalebar=False, arrow=False).road_c
+    scale_and_north(ax, frame)
+    # the regional inset in the upper right, over the open sound; square in inches
+    ih, edge = 0.42, 0.012
+    iw = ih * fh / fw
+    ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
+    regional_inset(ax_in, outline, vector, tick_labels=False)
     letter_corner(ax, 0)
     letter_corner(ax_in, 1)
     handles = [
-        Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore\n(every tenth numbered)"),
+        Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
         Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment"),
         Line2D([], [], marker="|", ms=7, mew=1.4, color=INK, ls="none", label="Buxton groin field"),
     ]
-    ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.505, 0.985), ncol=1, frameon=True,
-              framealpha=0.85, edgecolor="none", facecolor="white", fontsize=8, handlelength=1.6,
-              labelspacing=0.5)
+    # the legend immediately left of the inset, top aligned with it
+    in_left = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[0]
+    in_top = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p1))[1]
+    ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - 0.008, in_top), ncol=1,
+              frameon=True, framealpha=0.72, edgecolor="none", facecolor="white", fontsize=8,
+              handlelength=1.4, labelspacing=0.3, borderpad=0.4, borderaxespad=0.0, handletextpad=0.5)
     out = save(fig, fig_path("study_area"), vector=False, dpi=300)
     record_caption(out[0],
         f"Study area. (a) The modelled reach, rotated so it runs south to north from left to right: "
@@ -509,7 +555,8 @@ def fig_study_area(dom, outline, roads, frame, vector):
         "NC-12 centreline as digitised on 2008 imagery; the villages of Buxton, Avon, Salvo, Waves and "
         "Rodanthe; the Buxton groin field (bar, drawn offshore). The map is turned "
         "a quarter turn, north to the right, so the UTM-aligned boxes are level and the reach steps down the "
-        "page where the coast bends. (b) Hatteras Island on the North Carolina coast; the box marks the reach. "
+        "page where the coast bends. (b) Hatteras Island on the North Carolina coast; the box marks the reach; "
+        "the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N). "
         + ("Land is the island outline shapefile. " if vector else "Basemap: Esri World Imagery. ")
         + "Inset: Natural Earth 10 m coastline and state boundaries.")
     plt.close(fig)
