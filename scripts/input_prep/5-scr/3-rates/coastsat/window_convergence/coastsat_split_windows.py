@@ -75,7 +75,11 @@ INTERACTIVE_DIR = "interactive"
 
 # The locator map beside the cutoff grid
 MAP_CRS = "EPSG:26918"
-MAP_WIDTH = 1.3                         # the map column, in panel widths
+MAP_WIDTH = 0.9                         # the map column, in panel widths
+# ONE PICK PER GROUP IN THE CUTOFF GRID, spread along the island (Hannah, 2026-10-02):
+# sign flip GIS 11, 2021 step GIS 33, agree GIS 56, disagree GIS 81
+CUTOFF_GRID_DOMAINS = (11, 33, 56, 81)
+CUTOFF_GRID_HEIGHT = 6.6
 MAP_WIDTH_MAIN = 0.30                   # the same, beside the one wide 2010 column
 MAP_WATER, MAP_LAND, MAP_LAND_EDGE = "#e9eff4", "#ede9df", "0.55"
 MAP_PLACES = {"Buxton": ANN.town_spans["Buxton"], "Avon": ANN.town_spans["Avon"],
@@ -265,11 +269,11 @@ def add_legend(fig, cutoff_text):
 
 
 # The map column and one row per pick, north at the top; returns the panel axes
-def map_and_rows(picks, ncol, width_ratios):
+def map_and_rows(picks, ncol, width_ratios, height=fs.FIG_H_MAX):
     # ROWS RUN NORTH (top) TO SOUTH (bottom), as on the map (Hannah, 2026-10-02)
     picks = picks.sort_values(["domain_number", "transect_id"], ascending=False)
     nrow = len(picks)
-    fig = plt.figure(figsize=fs.figsize("double", height=fs.FIG_H_MAX), layout="constrained")
+    fig = plt.figure(figsize=fs.figsize("double", height=height), layout="constrained")
     gs = fig.add_gridspec(nrow, ncol + 1, width_ratios=width_ratios)
     axes = np.empty((nrow, ncol), dtype=object)
     for r in range(nrow):
@@ -288,7 +292,7 @@ def map_and_rows(picks, ncol, width_ratios):
 # Row label: the map number (1 at Buxton), the group, the transect
 def row_label(ax, r, nrow, p):
     ax.set_ylabel("{0} · {1}\nGIS {2} · {3}".format(
-        nrow - r, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
+        p.map_number, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
         fontsize=6.5)
 
 
@@ -415,7 +419,7 @@ def draw_locator(ax, picks, pts):
     # The picks on the shoreline, their numbers stacked offshore with leaders
     sel = pts.loc[picks["transect_id"]].copy()
     # Numbered south to north, 1 at the Buxton end, as the domains are
-    sel["num"] = np.arange(len(sel), 0, -1)
+    sel["num"] = picks["map_number"].to_numpy()
     sel = sel.sort_values("n")
     gap = 0.035 * (n1 - n0)
     ys = list(sel["n"])
@@ -444,15 +448,17 @@ def draw_locator(ax, picks, pts):
     fs.north_arrow(ax, x=0.16, y=0.88, length=0.03)
 
 
-# The same eight, one row each, cut at each of CUTOFFS
+# One pick per group, one row each, cut at each of CUTOFFS
 def draw_cutoffs(picks, fits, series, out_dir):
     fs.apply_style()
-    fig, axes, picks = map_and_rows(picks, len(CUTOFFS), [MAP_WIDTH] + [1.0] * len(CUTOFFS))
+    picks = picks[picks["domain_number"].isin(CUTOFF_GRID_DOMAINS)]
+    fig, axes, picks = map_and_rows(picks, len(CUTOFFS), [MAP_WIDTH] + [1.0] * len(CUTOFFS),
+                                    height=CUTOFF_GRID_HEIGHT)
     nrow = len(picks)
     for r, p in enumerate(picks.itertuples(index=False)):
         for c, cutoff in enumerate(CUTOFFS):
             ax = axes[r, c]
-            draw_panel(ax, series[p.transect_id], fits, p.transect_id, cutoff, 5.0)
+            draw_panel(ax, series[p.transect_id], fits, p.transect_id, cutoff, 6.0)
             if r == 0:
                 ax.set_title("cut at {0}".format(cutoff))
             if c == 0:
@@ -464,8 +470,9 @@ def draw_cutoffs(picks, fits, series, out_dir):
     add_legend(fig, "cut")
     paths = fs.save(fig, Path(out_dir) / STEM_CUTOFFS, close=True)
     fs.record_caption(paths[0],
-        "The eight transects of split_windows_{2}.png, one row each, with the "
-        "record cut at {3}. In each panel purple is the {0}–{1} rate, red the "
+        "Four of the eight transects of split_windows_{2}.png, one per behaviour "
+        "group and spread along the island, keeping their numbers from that "
+        "figure; one row each, with the record cut at {3}. In each panel purple is the {0}–{1} rate, red the "
         "first window from {0} to the cut and blue the second from the cut to "
         "{1}; the cut year belongs to both, and the dotted line marks it. Rates "
         "in m/yr, seaward positive, fitted to every raw CoastSat position in the "
@@ -590,6 +597,8 @@ def main():
     t = score_transects(fits, series)
     t.to_csv(fs.support_dir(out) / "split_windows_transects.csv", index=False)
     picks = pick(t)
+    # Numbered south to north, 1 at the Buxton end, as the domains are
+    picks["map_number"] = picks["domain_number"].rank(method="first").astype(int)
     picks.to_csv(out / "split_windows_picks.csv", index=False)
     print(picks[["group", "rank_in_group", "domain_number", "transect_id",
                  "lrr_first_m_yr", "lrr_second_m_yr", "lrr_whole_m_yr",

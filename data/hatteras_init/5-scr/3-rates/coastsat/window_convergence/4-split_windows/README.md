@@ -10,9 +10,11 @@ split_windows_2010.png       eight transects, cut at 2010 (the model's two legs)
                              north at top, shared y-axis, locator map numbering 1 (Buxton) to 8
 split_windows_2010_no_map.png
                              the same, without the map: a 4 x 2 grid by group, each panel autoscaled
-split_windows_cutoffs.png    the same eight, one row each (north at top), cut at 2005 / 2010 / 2015 / 2020,
-                             with a locator map numbering each row 1 (Buxton) to 8 (Rodanthe)
-split_windows_picks.csv      the eight: group, rank in the group, the three rates, the 2021 step
+split_windows_cutoffs.png    four of the eight, one per group and spread along the island (1 sign flip
+                             GIS 11, 3 2021 step GIS 33, 5 agree GIS 56, 8 disagree GIS 81; numbers
+                             as in the 2010 figure), north at top, cut at 2005 / 2010 / 2015 / 2020
+split_windows_picks.csv      the eight: group, rank in the group, the three rates, the 2021 step,
+                             map_number (1 at Buxton to 8 at Rodanthe)
 supporting/                  PDFs, CAPTIONS.md, split_windows_transects.csv (every transect scored)
 interactive/                 split_windows_explorer.html + split_windows_data.json:
                              all 906 transects, a map picker and a cutoff slider
