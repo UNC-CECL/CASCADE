@@ -472,7 +472,7 @@ INSET_LAT = (33.4, 37.3)
 
 # The south-eastern US coast with the reach marked
 def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True,
-                   locator_c=LOCATOR_C):
+                   locator_c=LOCATOR_C, locator_lw=1.6):
     states = gpd.read_file(NE_STATES)
     lon0, lon1 = INSET_LON
     lat0, lat1 = INSET_LAT
@@ -483,7 +483,7 @@ def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True,
     states.plot(ax=ax, facecolor=LAND, edgecolor="white", lw=0.5, zorder=1)      # state borders in white
     states.dissolve().plot(ax=ax, facecolor="none", edgecolor=LAND_EDGE, lw=0.4, zorder=2)   # the coast
     o = outline.to_crs("EPSG:4326")
-    o.plot(ax=ax, facecolor=locator_c, edgecolor=locator_c, lw=1.6, zorder=4)
+    o.plot(ax=ax, facecolor=locator_c, edgecolor=locator_c, lw=locator_lw, zorder=4)
     bx0, by0, bx1, by1 = o.total_bounds
     pad = 0.18
     ax.add_patch(Rectangle((bx0 - pad, by0 - pad), bx1 - bx0 + 2 * pad, by1 - by0 + 2 * pad,
@@ -633,10 +633,13 @@ def fig_study_area(dom, outline, roads, frame, vector):
     study_area_labels(ax, frame, dom, vector, outline)
     scale_and_north(ax, frame)
     # the regional inset in the upper right, over the open sound; square in inches
-    ih, edge = 0.58, 0.012
+    ih, edge = 0.58, 0.018
     iw = ih * fh / fw
     ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=INK)   # red is the groins here
+    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c="#1b7f8c", locator_lw=2.4)
+    # red is the groins here; the equal-aspect inset is pinned to the corner, then measured
+    ax_in.set_anchor("NE")
+    ax_in.apply_aspect()
     letter_corner(ax, 0, x=0.012)        # in the water left of the island's north end
     letter_corner(ax_in, 1)
     handles = [
@@ -658,7 +661,7 @@ def fig_study_area(dom, outline, roads, frame, vector):
         "NC-12 centreline as digitised on 2008 imagery; the villages of Buxton, Avon, Salvo, Waves and "
         "Rodanthe; the Buxton groin field (red, white-edged bar drawn just offshore, labelled Buxton groins). The map is turned "
         "a quarter turn, north to the right, so the UTM-aligned boxes are level and the reach steps down the "
-        "page where the coast bends. (b) Hatteras Island (charcoal) on the North Carolina coast; the box marks the reach; "
+        "page where the coast bends. (b) Hatteras Island (teal) on the North Carolina coast; the box marks the reach; "
         "the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N). "
         + ("Land is the island outline shapefile. " if vector else "Basemap: Esri World Imagery. ")
         + "Inset: Natural Earth 10 m coastline and state boundaries.")
