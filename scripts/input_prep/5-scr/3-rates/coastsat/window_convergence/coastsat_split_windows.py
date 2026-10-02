@@ -72,7 +72,7 @@ INTERACTIVE_DIR = "interactive"
 
 # The locator map beside the cutoff grid
 MAP_CRS = "EPSG:26918"
-MAP_WIDTH = 1.5                         # the map column, in panel widths
+MAP_WIDTH = 1.3                         # the map column, in panel widths
 MAP_WATER, MAP_LAND, MAP_LAND_EDGE = "#e9eff4", "#ede9df", "0.55"
 MAP_PLACES = {"Buxton": ANN.town_spans["Buxton"], "Avon": ANN.town_spans["Avon"],
               "Salvo": (ANN.village_lines["Salvo"],) * 2,
@@ -308,8 +308,9 @@ def transect_points():
 
 # The island, north up, each pick a numbered marker and the villages named
 def draw_locator(ax, picks, pts):
-    n0, n1 = pts["n"].min() - 1500, pts["n"].max() + 1500
-    e0, e1 = pts["e"].min() - 4200, pts["e"].max() + 2600
+    # Cropped to the ocean shoreline the transects sit on, so the island fills the column
+    n0, n1 = pts["n"].min() - 900, pts["n"].max() + 900
+    e0, e1 = pts["e"].min() - 2200, pts["e"].max() + 1300
     ax.set_facecolor(MAP_WATER)
     land = gpd.read_file(ml.ISLAND_OUTLINE).to_crs(MAP_CRS)
     land = land.geometry.intersection(box(e0 - 20000, n0 - 20000, e1 + 20000, n1 + 20000))
@@ -323,7 +324,8 @@ def draw_locator(ax, picks, pts):
 
     # The picks on the shoreline, their numbers stacked offshore with leaders
     sel = pts.loc[picks["transect_id"]].copy()
-    sel["num"] = np.arange(1, len(sel) + 1)
+    # Numbered south to north, 1 at the Buxton end, as the domains are
+    sel["num"] = np.arange(len(sel), 0, -1)
     sel = sel.sort_values("n")
     gap = 0.035 * (n1 - n0)
     ys = list(sel["n"])
@@ -331,7 +333,7 @@ def draw_locator(ax, picks, pts):
         ys[k] = max(ys[k], ys[k - 1] + gap)
     shift = max(0.0, ys[-1] - (n1 - gap))
     ys = [y - shift for y in ys]
-    e_lab = pts["e"].max() + 1500
+    e_lab = pts["e"].max() + 750
     for (tid, r), y in zip(sel.iterrows(), ys):
         ax.plot([r["e"], e_lab], [r["n"], y], color=fs.C["INK_MUTED"], lw=0.5, zorder=3)
         ax.plot(r["e"], r["n"], "o", ms=3.0, color=fs.C["INK"], zorder=4)
@@ -343,7 +345,7 @@ def draw_locator(ax, picks, pts):
     # Villages on the sound side, the south end named
     for name, (d0, d1) in MAP_PLACES.items():
         sub = pts[(pts["domain_number"] >= d0) & (pts["domain_number"] <= d1)]
-        ax.text(sub["e"].min() - 900, sub["n"].mean(), name, ha="right", va="center",
+        ax.text(sub["e"].min() - 450, sub["n"].mean(), name, ha="right", va="center",
                 fontsize=5.8, fontstyle="italic", color=fs.C["INK"], zorder=5,
                 path_effects=fs._halo(1.5))
     south = pts.loc[pts["n"].idxmin()]
@@ -380,7 +382,7 @@ def draw_cutoffs(picks, fits, series, out_dir):
                 ax.set_title("cut at {0}".format(cutoff))
             if c == 0:
                 ax.set_ylabel("{0} · {1}\nGIS {2} · {3}".format(
-                    r + 1, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
+                    nrow - r, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
                     fontsize=6.5)
             if r == nrow - 1:
                 ax.set_xlabel("year")
