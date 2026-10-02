@@ -2,6 +2,7 @@
 Shoreline position per transect, with the 1996-2024 rate and the two halves cut at a year.
 
     python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_split_windows.py
+    python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_split_windows.py --site ../hatteras-shoreline-windows
 
 Picks eight transects by behaviour (two per group), draws them cut at 2010 and
 at four cutoffs, and writes every transect's record for the interactive page.
@@ -16,6 +17,7 @@ Version: 2026-10-02
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -543,12 +545,32 @@ def write_interactive_data(t, picks, series, out_dir):
     return path
 
 
+# Copy the page and its data into the website repo (index.html at its root)
+def publish_site(out_dir, site):
+    site = Path(site)
+    if not (site / ".git").is_dir():
+        raise SystemExit("--site {0} is not a git repo; clone or init it first".format(site))
+    src = Path(out_dir) / INTERACTIVE_DIR
+    shutil.copyfile(src / "split_windows_explorer.html", site / "index.html")
+    shutil.copyfile(src / "split_windows_data.json", site / "split_windows_data.json")
+    print("site updated: {0} (commit and push there to publish)".format(site))
+
+
 # Run: score, pick, draw, export
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    ap.parse_args()
+    ap.add_argument("--site", help="website repo to copy the page and data into "
+                    "(e.g. ../hatteras-shoreline-windows)")
+    ap.add_argument("--site-only", action="store_true",
+                    help="only copy the existing page and data to --site, no refit")
+    args = ap.parse_args()
     out = obs.split_windows_dir()
     out.mkdir(parents=True, exist_ok=True)
+    if args.site_only:
+        if not args.site:
+            raise SystemExit("--site-only needs --site")
+        publish_site(out, args.site)
+        return
 
     # Fits and raw series
     fits = load_fits()
@@ -570,6 +592,8 @@ def main():
     print(draw_main_no_map(picks, fits, series, out))
     print(draw_cutoffs(picks, fits, series, out))
     print(write_interactive_data(t, picks, series, out))
+    if args.site:
+        publish_site(out, args.site)
 
 
 if __name__ == "__main__":

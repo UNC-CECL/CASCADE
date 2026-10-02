@@ -76,3 +76,18 @@ reads `1-rate_profiles/*/window_profiles_transects.csv`, so run
 producer rewrites the data file. To update the page, republish
 `interactive/split_windows_explorer.html` to the same URL with the data file
 alongside it.
+
+## Website
+
+The page is also published from its own repo, `hatteras-shoreline-windows`
+(private until launch; GitHub Pages at launch). That repo sits beside this one
+and only receives copies. This folder stays the source.
+
+```
+# refit, redraw and copy the page + data into the site repo
+python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_split_windows.py --site ../hatteras-shoreline-windows
+# page-only change: copy without refitting
+python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_split_windows.py --site ../hatteras-shoreline-windows --site-only
+```
+
+Then commit and push in the site repo. Its README covers going public.
