@@ -737,29 +737,44 @@ def letter_at(ax, i: int, x: float, y: float, ha: str = "left") -> None:
 
 
 def top_row(ax, ax_in, handles, letter: int | None = 0, letter_x: float = 0.012, gap: float = 0.008,
-            north=None, arrow_gap_m: float = 3200.0, arrow_m: float = 2000.0, legend_kw=None):
+            north=None, arrow_gap_m: float = 3200.0, arrow_m: float = 2000.0, legend_kw=None,
+            text_kw=None):
     """The top row of a map with an inset in its upper right: the legend top-aligned
     immediately left of the inset, the panel letter at the left edge on the same top line,
     and (given `north`) the north arrow just left of the legend, centred on it. `ax_in`
     is pinned to its upper-right corner first, so the measured top is the drawn top.
-    Returns the legend."""
+    With `handles=None` there is no legend and the arrow sits just left of the inset,
+    level with its upper part. Returns the legend (or None)."""
     fig = ax.figure
     ax_in.set_anchor("NE")
     ax_in.apply_aspect()
     to_ax = ax.transAxes.inverted()
     in_left = to_ax.transform(fig.transFigure.transform(ax_in.get_position().p0))[0]
     in_top = to_ax.transform(fig.transFigure.transform(ax_in.get_position().p1))[1]
-    leg = ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - gap, in_top),
-                    ncol=1, **{**MAP_LEGEND, **(legend_kw or {})})
+    leg = None
+    if handles is not None:
+        leg = ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - gap, in_top),
+                        ncol=1, **{**MAP_LEGEND, **(legend_kw or {})})
     if letter is not None:
         # the letter box's own padding, so its edge and the inset's share one line
         pad = 1.5 / 72 / (ax.get_position().height * fig.get_size_inches()[1])
         letter_at(ax, letter, letter_x, in_top - pad)
-    if north is not None:
+    if north is not None and leg is not None:
         fig.canvas.draw()
         lb = leg.get_window_extent().transformed(ax.transData.inverted())
-        north_dart(ax, (lb.x0 - arrow_gap_m, (lb.y0 + lb.y1) / 2), north=north, arrow_m=arrow_m)
+        north_dart(ax, (lb.x0 - arrow_gap_m, (lb.y0 + lb.y1) / 2), north=north, arrow_m=arrow_m,
+                   text_kw=text_kw)
+    elif north is not None:
+        x_d, y_d = ax.transData.inverted().transform(ax.transAxes.transform((in_left, in_top)))
+        y_lo = ax.transData.inverted().transform(ax.transAxes.transform((in_left, in_top - 0.25)))[1]
+        north_dart(ax, (x_d - arrow_gap_m, (y_d + y_lo) / 2), north=north, arrow_m=arrow_m,
+                   text_kw=text_kw)
     return leg
+
+
+def axes_point(ax, x: float, y: float):
+    """An axes-fraction point in data units, for placing `north_dart` by eye."""
+    return ax.transData.inverted().transform(ax.transAxes.transform((x, y)))
 
 
 # The style sheet: output/figures/style/, and STYLE.md beside the figure code
