@@ -1,6 +1,6 @@
 # Hatteras figure style
 
-Written 2026-09-29 23:00 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
+Written 2026-10-01 22:48 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
 module is the source, this page is its rendering. `HAT_figure_style_sheet.png`
 beside it shows every colour, the elevation classes, a chart and a map drawn
 under the rules.
@@ -33,7 +33,7 @@ from it.
 | legends | frameless (a faint white backing when inside), outside the axes where the layout allows: `fig.legend(handles, loc="outside lower center", ncol=n, frameon=False)` under `constrained_layout` |
 | vintages | the earlier line or surface is red `#b2182b`, the later blue `#2166ac`, everywhere the two are drawn together; the light fills `#f4a582` / `#92c5de` are the band between them |
 | semantic colours | `C["BASE"]` #7f7f7f unmodified input · `C["ACCENT"]` #7b3294 the modification under test · `C["ROAD"]` #1a1a1a NC-12 · `C["ADDED"]` #c8880f fabricated ground · `C["WATER"]` #a8c8e0 · `C["REF"]` #2c6e49 a reference value |
-| elevation | classes, not a ramp: `elevation_cmap()` breaks at 0, 0.5, 1, 1.5, 2, 3, 4 m MHW with water below 0. The terrain colormap of `HAT_plot_1984_mosaic` is the one deliberate exception, on the 1984-start DEM panels |
+| elevation | terrain, everywhere domain topography is drawn (since 2026-10-01; classes before): `elevation_cmap()` gives water below 0 m MHW one colour, terrain's navy `#333399`, and land the terrain ramp from 0 to 4 m, higher ground its top colour; colorbar ticks at 0, 0.5, 1, 1.5, 2, 3, 4 m |
 | error surfaces | greyscale, no hue: `error_cmap()` (dark is worse; `reverse=True` where high is better). A scalar error or cost over a parameter grid is BACKGROUND, and all colour is reserved for what is marked on top of it -- the best cell, the chosen pair, a constraint, an iso-product curve |
 | the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in `supporting/CAPTIONS.md` beside the figure. ONE exception since 2026-09-22: a figure comparing two different measurements may carry a `compare_header()` line saying WHAT each side is and over what dates - a naming line, never a result. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
 | the folder | a figure folder shows figures: PNGs at the top level and nothing else. The PDFs, `CAPTIONS.md`, any table or `PROVENANCE.md` a figure script writes go under `supporting/` (`save()` and `record_caption()` do this; a script's own files use `support_dir(folder)`). Since 2026-09-15 |

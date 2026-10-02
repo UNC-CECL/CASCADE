@@ -32,7 +32,7 @@ from cascade_pipeline.plotting.shoreline_gif import (
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
 from site_layer.hat_figure_style import (
-    C, C_1997, DOMAIN_AXIS_LABEL, GRID_C, apply_style, elevation_cmap,
+    C, C_1997, DOMAIN_AXIS_LABEL, GRID_C, apply_style,
 )
 from site_layer.hat_figure_style import INK as _HOUSE_INK
 from site_layer.hat_figure_style import INK_MUTED as _HOUSE_INK_MUTED
@@ -48,7 +48,7 @@ COLOR_BAY = C["WATER"]                  # the sound edge
 # A prescribed move gets its own colour: it is a different claim from a module-triggered one
 COLOR_PRESCRIBED = C["ACCENT"]
 # The barrier interior: the house 0.5-1.0 m elevation class
-COLOR_LAND = elevation_cmap()[0].colors[2]
+COLOR_LAND = "#f0e6bf"     # a flat land fill, not topography: the sand of the retired elevation classes
 
 
 # Figure style

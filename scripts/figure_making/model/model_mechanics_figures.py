@@ -35,7 +35,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, INK, INK_MUTED, CELL_M, DOMAIN_AXIS_LABEL,
     figsize, figure_dir, save, record_caption, _title, open_frame,
-    elevation_cmap, town_bands,
+    elevation_cmap, ELEV_WATER, town_bands,
 )
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -947,7 +947,7 @@ def draw_island(ax, c, t, pads, alpha_pad=0.35, borders=False):
             ax.axvline(x0, color="white", lw=0.8, zorder=3)
     xs_line = np.array([c.barrier3d[p].x_s_TS[t] for p in pads]) * DAM
     ax.plot((np.asarray(pads) - gis0) * 0.5 + 0.25, xs_line, color=INK, lw=0.8, zorder=4)
-    ax.set_facecolor(C["WATER"])
+    ax.set_facecolor(ELEV_WATER)
 
 
 # (5) CASCADE: the island as the coupled model holds it

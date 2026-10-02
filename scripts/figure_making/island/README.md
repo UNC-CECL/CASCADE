@@ -52,7 +52,9 @@ supporting/, through the house `save()`. Three figures per folder:
 ...for each of the four hindcast starts (1984, 1996, 2004, 2010) in each of
 the two elevation treatments (classes, terrain): 24 figures from two
 topography loads. The views are the same data placed different ways, and each
-caption points at its companions.
+caption points at its companions. SINCE 2026-10-01 TERRAIN ONLY: the house
+style switched domain topography from classes to terrain, so the classes/
+treatment was dropped (12 figures, <year>/terrain/).
 
 ONE FOLDER PER START, THEN PER TREATMENT
     Two dozen figures in one folder read as two dozen unrelated images; the

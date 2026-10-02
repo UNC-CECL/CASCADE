@@ -39,7 +39,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, C_1984_FILL, C_1997_FILL, INK, INK_MUTED, GRID_C, CELL_M,
     DOMAIN_AXIS_LABEL, FIG_W_DOUBLE, FIG_W_SINGLE,
     figsize, save, record_caption, _title, _letter_inside, _scalebar, _halo, _north_arrow,
-    spines_for_image, open_frame, elevation_cmap, town_bands, structures,
+    spines_for_image, open_frame, elevation_cmap, ELEV_WATER, town_bands, structures,
 )
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
@@ -94,6 +94,7 @@ WATER_MAP = "#e9eff4"
 LAND = "#ede9df"
 LAND_EDGE = "0.55"
 ROAD_ON_IMAGERY = "#ffd23f"   # a road-map yellow: legible on sand and asphalt
+PROFILE_GROUND = "#cdb26f"    # a cross-shore profile's ground fill: a profile, not a topography map, so not terrain
 ROLE = {                       # fills for domain_framework
     "boundary": "0.40",        # the end domains: dark, few, the boundary condition
     "community": "#e6b39a",    # the community zones: the settlement tint of a topographic map
@@ -863,7 +864,7 @@ def fig_domain_grid(dom, roads, vector, gis=EXAMPLE_GIS):
 
     # (c) the mean cross-shore profile
     x = (np.arange(ncol) + 0.5) * CELL_M
-    ax_c.fill_between(x, -1.0, np.nan_to_num(prof, nan=-1.0), color=cmap(4), lw=0, zorder=1)
+    ax_c.fill_between(x, -1.0, np.nan_to_num(prof, nan=-1.0), color=PROFILE_GROUND, lw=0, zorder=1)
     ax_c.plot(x, prof, color=INK, lw=1.0, zorder=3)
     ax_c.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
     rx0, rx1 = road_cols.min() * CELL_M, (road_cols.max() + 1) * CELL_M
@@ -1720,7 +1721,7 @@ def fig_reach_elevation(dom):
             strip, (top, bottom) = mosaics[((lo, hi), product)]
             im = ax.imshow(strip, cmap=cmap, norm=norm, extent=(lo - 0.5, hi + 0.5, bottom, top),
                            interpolation="nearest", aspect="auto", zorder=1)
-            ax.set_facecolor(C["WATER"])
+            ax.set_facecolor(ELEV_WATER)
             ax.set_ylim(bottom, bottom + rows[(lo, hi)] * CELL_M)
             ax.set_yticks([])
             ax.set_xlim(lo - 0.5, hi + 0.5)

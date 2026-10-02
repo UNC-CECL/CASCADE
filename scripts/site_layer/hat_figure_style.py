@@ -326,19 +326,32 @@ def apply_style() -> None:
 
 # Elevation classes
 
-# Elevation classes, m MHW. The first edge is the water break.
+# Elevation, m MHW: the terrain ramp over land, one colour for water (Hannah, 2026-10-01)
+# The tick edges of the old classes; callers use them for colorbar ticks and legends
 ELEV_BOUNDS = [-99.0, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 99.0]
-_ELEV_COLOURS = [
-    C["WATER"],
-    "#fbf7e3", "#f0e6bf", "#e0cf96",
-    "#cdb26f", "#b3904f", "#8f6b36", "#5f4520",
-]
+ELEV_MAX_M = 4.0                 # the top of the land ramp; higher ground takes its colour
+ELEV_WATER = "#333399"           # plt.cm.terrain(0.0), terrain's own navy
+_TERRAIN_SEA_POS = 0.35          # where terrain's land colours begin on its 0-1 scale
+_ELEV_STEPS = 256
 
 
 def elevation_cmap():
-    """(cmap, norm, bounds) for the discrete elevation scale."""
-    cmap = ListedColormap(_ELEV_COLOURS)
-    return cmap, BoundaryNorm(ELEV_BOUNDS, cmap.N), ELEV_BOUNDS
+    """(cmap, norm, bounds) for domain topography: land on the terrain ramp from 0
+    to ELEV_MAX_M m MHW, anything higher the top colour, and water below 0 m
+    terrain's navy, as the colormap's under colour. A MASKED cell stays
+    transparent, as before: a panel that masks water sets its background to
+    ELEV_WATER. `bounds` are colorbar tick positions, not bins.
+
+    Until 2026-10-01 this returned seven brown classes; Hannah asked for terrain
+    everywhere domain topography is drawn, as on the inputs overview. A plain
+    Normalize, not a fine BoundaryNorm: the colorbar drew a tick at every step."""
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import Normalize
+    land = plt.cm.terrain(_np_linspace(_TERRAIN_SEA_POS, 1.0, _ELEV_STEPS))
+    cmap = ListedColormap(land, name="hat_elevation")
+    cmap.set_under(ELEV_WATER)
+    cmap.set_over(land[-1])
+    return cmap, Normalize(vmin=0.0, vmax=ELEV_MAX_M), ELEV_BOUNDS
 
 
 # Error and cost surfaces
@@ -659,7 +672,7 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     ax.set_yticks([])
     ax.set_xlabel("elevation (m above MHW)")
     spines_for_image(ax)
-    _title(ax, 1, "elevation in classes")
+    _title(ax, 1, "elevation: terrain")
 
     # (c) the error ramp, in its own strip
     axe = fig.add_subplot(gs[1, 1])
@@ -746,7 +759,7 @@ from it.
 | legends | frameless (a faint white backing when inside), outside the axes where the layout allows: `fig.legend(handles, loc="outside lower center", ncol=n, frameon=False)` under `constrained_layout` |
 | vintages | the earlier line or surface is red `{C_1984}`, the later blue `{C_1997}`, everywhere the two are drawn together; the light fills `{C_1984_FILL}` / `{C_1997_FILL}` are the band between them |
 | semantic colours | `C["BASE"]` {C["BASE"]} unmodified input · `C["ACCENT"]` {C["ACCENT"]} the modification under test · `C["ROAD"]` {C["ROAD"]} NC-12 · `C["ADDED"]` {C["ADDED"]} fabricated ground · `C["WATER"]` {C["WATER"]} · `C["REF"]` {C["REF"]} a reference value |
-| elevation | classes, not a ramp: `elevation_cmap()` breaks at {", ".join(f"{b:g}" for b in ELEV_BOUNDS[1:-1])} m MHW with water below 0. The terrain colormap of `HAT_plot_1984_mosaic` is the one deliberate exception, on the 1984-start DEM panels |
+| elevation | terrain, everywhere domain topography is drawn (since 2026-10-01; classes before): `elevation_cmap()` gives water below 0 m MHW one colour, terrain's navy `{ELEV_WATER}`, and land the terrain ramp from 0 to {ELEV_MAX_M:g} m, higher ground its top colour; colorbar ticks at {", ".join(f"{b:g}" for b in ELEV_BOUNDS[1:-1])} m |
 | error surfaces | greyscale, no hue: `error_cmap()` (dark is worse; `reverse=True` where high is better). A scalar error or cost over a parameter grid is BACKGROUND, and all colour is reserved for what is marked on top of it -- the best cell, the chosen pair, a constraint, an iso-product curve |
 | the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in `supporting/CAPTIONS.md` beside the figure. ONE exception since 2026-09-22: a figure comparing two different measurements may carry a `compare_header()` line saying WHAT each side is and over what dates - a naming line, never a result. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
 | the folder | a figure folder shows figures: PNGs at the top level and nothing else. The PDFs, `CAPTIONS.md`, any table or `PROVENANCE.md` a figure script writes go under `{SUPPORT_DIR}/` (`save()` and `record_caption()` do this; a script's own files use `support_dir(folder)`). Since 2026-09-15 |

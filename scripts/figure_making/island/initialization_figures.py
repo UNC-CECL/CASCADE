@@ -3,8 +3,8 @@ The island as the model starts it: the t=0 elevation surface of every domain, on
 
     python scripts/figure_making/island/initialization_figures.py
 
-Detrended and absolute-placement maps, each in two elevation treatments
-(classes, terrain); topography and offsets resolved per start year. Writes to
+Detrended and absolute-placement maps on the terrain elevation ramp;
+topography and offsets resolved per start year. Writes to
 output/figures/3-model-inputs/1-domains/initial_island/<year>/<scheme>/. Details: scripts/figure_making/island/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -26,8 +26,8 @@ import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
-from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED, GRID_C,
-                              DOMAIN_AXIS_LABEL, FIG_W_DOUBLE, elevation_cmap,
+from site_layer.hat_figure_style import (apply_style, INK, INK_MUTED, GRID_C,
+                              DOMAIN_AXIS_LABEL, FIG_W_DOUBLE,
                               figsize, record_caption, save, spines_for_image,
                               open_frame, _title)
 apply_style()
@@ -214,8 +214,8 @@ def _map_panel(ax, canvas, xlim, cmap, norm, water, top_km=None,
     return im
 
 
-# Two treatments: classes (house rule) and the terrain ramp, in separate folders (README)
-SCHEMES = ("classes", "terrain")
+# Terrain only since 2026-10-01, the house rule for domain topography; classes were the second treatment
+SCHEMES = ("terrain",)
 
 # One water rule for both schemes; the terrain ramp is truncated to land (README)
 SEA_LEVEL_POS = PLAN_VIEW.sea_level_pos          # 0.35, the old sea-level pin
@@ -223,29 +223,21 @@ SEA_LEVEL_POS = PLAN_VIEW.sea_level_pos          # 0.35, the old sea-level pin
 # The terrain scheme keeps terrain's own navy for water (README)
 WATER_TERRAIN = "#333399"        # plt.cm.terrain(0.0)
 
-SCHEME_WATER = {"classes": C["WATER"], "terrain": WATER_TERRAIN}
+SCHEME_WATER = {"terrain": WATER_TERRAIN}
 
 # Lines over water take the water's contrast colour in each scheme
-SCHEME_MARK = {"classes": INK, "terrain": "white"}
+SCHEME_MARK = {"terrain": "white"}
 
 SCHEME_NOTE = {
-    "classes": ("in the elevation classes of the house style, m MHW, water "
-                "(below 0 m) one colour"),
     "terrain": ("on a continuous terrain ramp over the land range 0-"
                 f"{ELEV_MAX_M:g} m MHW, with water (below 0 m) a single deeper "
-                "blue under the same rule the class scheme uses"),
+                "blue"),
 }
 
 
 # (cmap, norm, colourbar ticks, water colour) for one elevation treatment
 def scheme_colours(scheme):
     water = SCHEME_WATER[scheme]
-    if scheme == "classes":
-        cmap, norm, bounds = elevation_cmap()
-        cmap = cmap.copy()
-        cmap.set_bad(water)
-        # Ticks start at the 0 m break; the water class is no longer reached
-        return cmap, norm, bounds[1:-1], water
     if scheme == "terrain":
         land = plt.cm.terrain(np.linspace(SEA_LEVEL_POS, 1.0, 256))
         cmap = ListedColormap(land, name="hat_terrain_land")
@@ -324,7 +316,7 @@ def figure_for_year(year, scheme):
     ax_b.set_xlabel(DOMAIN_AXIS_LABEL)
     _title(ax_b, 2, "")
 
-    # the shared elevation scale, in classes
+    # the shared elevation scale
     y += _MAP_H + xlab + cbar_gap
     cax = fig.add_axes([(_MARGIN_L + 0.30 * _AXW_FULL) / FIG_W_DOUBLE,
                         (fh - y - cbar_h) / fh,

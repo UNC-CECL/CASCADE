@@ -68,7 +68,7 @@ FAQ = [
     ("Shoreline change vs dune-line change?", "2-observations/shoreline_vs_duneline/coastsat_endpoint_vs_duneline_1996_2010_2024_stacked.png"),
     ("What does the 1996-2010 run read, all on one page?", "3-model-inputs/inputs_overview_1996_2010.png"),
     ("What does the 2010-2024 run read, all on one page?", "3-model-inputs/inputs_overview_2010_2024.png"),
-    ("What island does the model start from?", "3-model-inputs/1-domains/initial_island/1996/classes/island_1996.png"),
+    ("What island does the model start from?", "3-model-inputs/1-domains/initial_island/1996/terrain/island_1996.png"),
     ("How is the island planform (BRIE offset) built?", "3-model-inputs/2-brie-offset/offset_build_1996.png"),
     ("Which storms reach the model?", "3-model-inputs/3-forcing/storm_events_by_duration.png"),
     ("When and where was the reach managed?", "3-model-inputs/4-management/timeline_1996_2024.png"),
