@@ -217,20 +217,32 @@ def draw_panel(ax, series, fits, transect_id, cutoff, fontsize):
     ax.grid(True, axis="y", alpha=0.6)
 
 
-# The legend both figures share
+# The legend both figures share: the data on the top row, the three fits below
 def legend_handles(cutoff_text):
-    return [
+    data = [
         Line2D([], [], color="none", marker="o", ms=3.5, mfc=fs.C["BASE"], mec="none",
                label="CoastSat position"),
-        Line2D([], [], color=fs.C["INK_MUTED"], lw=0.9, marker="o", ms=2.0, mfc="white",
-               mew=0.5, label="annual median"),
-        Line2D([], [], color=fs.C["ACCENT"], lw=2.0,
-               label="{0}–{1} rate".format(REF_START, REF_END)),
-        Line2D([], [], color=fs.C["EARLY"], lw=1.6,
-               label="first window, {0}–{1}".format(REF_START, cutoff_text)),
-        Line2D([], [], color=fs.C["LATE"], lw=1.6,
-               label="second window, {0}–{1}".format(cutoff_text, REF_END)),
+        Line2D([], [], color=fs.C["INK_MUTED"], lw=0.9, marker="o", ms=2.6, mfc="white",
+               mew=0.6, label="annual median"),
+        Line2D([], [], color=fs.C["INK_MUTED"], lw=0.8, ls=(0, (2, 2)),
+               label="cutoff year (in both windows)"),
     ]
+    fits = [
+        Line2D([], [], color=fs.C["ACCENT"], lw=2.0,
+               label="{0}–{1}, long-term".format(REF_START, REF_END)),
+        Line2D([], [], color=fs.C["EARLY"], lw=2.0,
+               label="{0}–{1}, first window".format(REF_START, cutoff_text)),
+        Line2D([], [], color=fs.C["LATE"], lw=2.0,
+               label="{0}–{1}, second window".format(cutoff_text, REF_END)),
+    ]
+    # Matplotlib fills legend columns first, so interleave to get the two rows
+    return [h for pair in zip(data, fits) for h in pair]
+
+
+# The shared legend, two rows of three under the panels
+def add_legend(fig, cutoff_text):
+    fig.legend(handles=legend_handles(cutoff_text), loc="outside lower center", ncol=3,
+               handlelength=2.4, columnspacing=2.2, handletextpad=0.7)
 
 
 # The eight picks, cut at CUTOFF
@@ -246,7 +258,7 @@ def draw_main(picks, fits, series, out_dir):
             ax.set_ylabel("shoreline position (m)")
         if i >= 6:
             ax.set_xlabel("year")
-    fig.legend(handles=legend_handles(str(CUTOFF)), loc="outside lower center", ncol=3)
+    add_legend(fig, str(CUTOFF))
     paths = fs.save(fig, Path(out_dir) / STEM_MAIN, close=True)
     fs.record_caption(paths[0],
         "Shoreline position through time at eight transects, two from each of "
@@ -288,7 +300,7 @@ def draw_cutoffs(picks, fits, series, out_dir):
             if r == nrow - 1:
                 ax.set_xlabel("year")
             ax.tick_params(labelsize=6)
-    fig.legend(handles=legend_handles("cut"), loc="outside lower center", ncol=3)
+    add_legend(fig, "cut")
     paths = fs.save(fig, Path(out_dir) / STEM_CUTOFFS, close=True)
     fs.record_caption(paths[0],
         "The eight transects of split_windows_{2}.png, one row each, with the "
