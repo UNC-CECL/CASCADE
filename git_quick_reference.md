@@ -59,6 +59,42 @@ If you need more detail, add a blank line then a longer explanation:
 git commit -m "Fix storm window bug" -m "Window was using inclusive end index, causing overlap between periods."
 ```
 
+### The full style
+
+**Subject line**
+- An instruction: "Add", "Fix", "Move", "Remove" (not "Added" or "Adds")
+- No folder or topic prefix: `Add example data to the 5-scr templates`, not `templates: add example data`
+- No period at the end; aim for under ~72 characters
+
+**Body** (optional, after a blank line)
+- 2-5 plain lines on what changed and why
+- Changes are instructions too: "Add 35 transects so the templates can be tested", not "Added 35 transects..."
+- Reasons stay as plain statements: "Nothing imported it any more."
+
+**Leave out**
+- "I", "we", or anyone's name
+- Claude references of any kind (no `Co-Authored-By`, no `Claude-Session` lines)
+- Shorthand only you'd recognize ("rule 4", "option A", version codes like `v3_split12_trim24`)
+- Check results and numbers ("15 scripts pass", "r=0.69")
+- Long reasoning or methodology arguments: those go in the folder's README
+- Commit hashes: they change if history is ever rewritten
+
+Before and after:
+```
+Template follows STYLE.md; delete lowess_dsas_vs_coastsat.py
+
+shoreline_endpoint_template.py: calendar_ends() docstring folded into its
+one-line comment (proven equivalent). ... deleted (Hannah) and recorded in
+the 6-scr-smooth README. ... (rule 4: data is not deleted with its code).
+```
+```
+Tidy the endpoint template and delete lowess_dsas_vs_coastsat.py
+
+Fold the template's docstring into a one-line comment. The DSAS vs
+CoastSat side study used retired windows and nothing imported it; keep
+its data products and record the deletion in the README.
+```
+
 Rule of thumb: someone (including future-you) should be able to read `git log --oneline` and understand what happened without opening any files.
 
 ---
