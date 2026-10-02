@@ -17,6 +17,9 @@
   --second: #2166ac;
   --focus: #c8880f;
   --sand: #e9e2d0;
+  --water: #e9eff4;
+  --land: #ede9df;
+  --land-edge: #8c8c8c;
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
@@ -24,13 +27,13 @@
   :root:not([data-theme="light"]) {
     --bg: #12171b; --panel: #1a2126; --ink: #e4e9ec; --muted: #9aa6af; --rule: #303a41;
     --pts: #77838c; --median: #c2cbd1; --whole: #c48ddb; --first: #ef7a72; --second: #6eaeea;
-    --focus: #e3a83a; --sand: #3a3529; color-scheme: dark;
+    --focus: #e3a83a; --sand: #3a3529; --water: #17222b; --land: #3a3a33; --land-edge: #6f6f66; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12171b; --panel: #1a2126; --ink: #e4e9ec; --muted: #9aa6af; --rule: #303a41;
   --pts: #77838c; --median: #c2cbd1; --whole: #c48ddb; --first: #ef7a72; --second: #6eaeea;
-  --focus: #e3a83a; --sand: #3a3529; color-scheme: dark;
+  --focus: #e3a83a; --sand: #3a3529; --water: #17222b; --land: #3a3a33; --land-edge: #6f6f66; color-scheme: dark;
 }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
 .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 22px 32px; display: grid; gap: 18px; }
@@ -143,7 +146,7 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
       </div>
 
       <div class="card picks">
-        <span class="label">The eight transects in the static figures</span>
+        <span class="label">The eight transects in the static figures, numbered 1 (Buxton) to 8 (Rodanthe)</span>
         <div class="chips" id="chips"></div>
       </div>
 
@@ -307,22 +310,55 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
     var ox = (r.width - (maxx - minx) * sc) / 2, oy = (r.height - (maxy - miny) * sc) / 2;
     proj = function (ll) { return [ox + (ll[0] * k - minx) * sc, r.height - oy - (ll[1] - miny) * sc]; };
     var lim = LIM[metric];
+
+    // Water, then the island outline
+    ctx.fillStyle = css("--water"); ctx.fillRect(0, 0, r.width, r.height);
+    ctx.fillStyle = css("--land"); ctx.strokeStyle = css("--land-edge"); ctx.lineWidth = 0.7;
+    (D.outline || []).forEach(function (ring) {
+      ctx.beginPath();
+      ring.forEach(function (ll, j) { var q = proj(ll); if (j) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+
+    // Every transect, coloured by the measure
+    var east = -Infinity;
     T.forEach(function (tr, i) {
-      var q = proj(tr.ll);
+      var q = proj(tr.ll); if (q[0] > east) east = q[0];
       ctx.fillStyle = divColor(mapVals[i], lim);
       ctx.beginPath(); ctx.arc(q[0], q[1], 2.6, 0, 2 * Math.PI); ctx.fill();
     });
-    T.forEach(function (tr) {
-      if (!tr.g) return;
-      var q = proj(tr.ll);
-      ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(q[0], q[1], 5, 0, 2 * Math.PI); ctx.stroke();
+
+    // The eight picks, numbered offshore as on the figures (1 at Buxton)
+    var ink = css("--ink"), panel = css("--panel");
+    var picks = T.filter(function (tr) { return tr.num; })
+      .map(function (tr) { return { q: proj(tr.ll), num: tr.num }; })
+      .sort(function (a, b) { return b.q[1] - a.q[1]; });
+    var lx = Math.min(east + 18, r.width - 10), prev = Infinity;
+    picks.forEach(function (pk) {
+      var ly = Math.min(pk.q[1], prev - 17); prev = ly;
+      ctx.strokeStyle = css("--muted"); ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(pk.q[0] + 5, pk.q[1]); ctx.lineTo(lx - 7, ly); ctx.stroke();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(pk.q[0], pk.q[1], 5, 0, 2 * Math.PI); ctx.stroke();
+      ctx.fillStyle = panel; ctx.beginPath(); ctx.arc(lx, ly, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = ink; ctx.font = "600 10px " + css("--font-body");
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(pk.num), lx, ly + 0.5);
     });
+
+    // Villages on the sound side
+    ctx.fillStyle = css("--muted"); ctx.font = "italic 11px " + css("--font-body");
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    (D.places || []).forEach(function (pl) { var q = proj(pl.ll); ctx.fillText(pl.name, q[0] - 10, q[1]); });
+    var south = T.reduce(function (a, b) { return b.ll[1] < a.ll[1] ? b : a; });
+    var sq = proj(south.ll); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("Cape Point", sq[0] + 4, sq[1] + 6);
+
     var q = proj(T[sel].ll);
     ctx.strokeStyle = css("--focus"); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(q[0], q[1], 8, 0, 2 * Math.PI); ctx.stroke();
     ctx.fillStyle = css("--muted"); ctx.font = "11px " + css("--font-data");
-    ctx.fillText("N ↑", r.width - 34, 18);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("N ↑", 10, 18);
     $("maplabel").textContent = metric === "diff" ? "Second − first window, cut " + cutoff : "1996–2024 rate";
     $("legendbar").style.background = "linear-gradient(90deg," + divColor(-lim, lim) + "," + divColor(0, lim) + "," + divColor(lim, lim) + ")";
     $("lt0").textContent = "≤ −" + lim; $("lt1").textContent = "≥ +" + lim;
@@ -344,7 +380,7 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
     var s = $("transect");
     T.forEach(function (tr, i) {
       var o = document.createElement("option"); o.value = i;
-      o.textContent = "GIS " + tr.gis + " · " + tr.id + (tr.g ? "  ★" : "");
+      o.textContent = "GIS " + tr.gis + " · " + tr.id + (tr.num ? "  (" + tr.num + ")" : "");
       s.appendChild(o);
     });
     [2005, 2010, 2015, 2020].forEach(function (y) {
@@ -353,12 +389,11 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
       $("quick").appendChild(b);
     });
     var picks = T.map(function (tr, i) { return [tr, i]; }).filter(function (p) { return p[0].g; });
-    var order = Object.keys(D.groups);
-    picks.sort(function (a, b) { return order.indexOf(a[0].g) - order.indexOf(b[0].g); });
+    picks.sort(function (a, b) { return a[0].num - b[0].num; });
     picks.forEach(function (p) {
       var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.i = p[1];
       b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = D.groups[p[0].g];
+      b.querySelector("b").textContent = p[0].num + " · " + D.groups[p[0].g];
       b.querySelector("span").textContent = "GIS " + p[0].gis + " · " + p[0].id;
       b.addEventListener("click", function () { select(p[1]); });
       $("chips").appendChild(b);

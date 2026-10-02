@@ -488,10 +488,34 @@ def transect_midpoints(ids):
     return out
 
 
+# The island outline and village anchors for the page's map, in lon/lat
+def map_layers_lonlat():
+    pts = transect_points()
+    win = box(pts["e"].min() - 3000, pts["n"].min() - 3000,
+              pts["e"].max() + 3000, pts["n"].max() + 3000)
+    land = gpd.read_file(ml.ISLAND_OUTLINE).to_crs(MAP_CRS).geometry.intersection(win)
+    land = gpd.GeoSeries(land[~land.is_empty], crs=MAP_CRS).simplify(15).to_crs("EPSG:4326")
+    rings = []
+    for geom in land:
+        for poly in getattr(geom, "geoms", [geom]):
+            if poly.geom_type == "Polygon":
+                rings.append([[round(x, 5), round(y, 5)] for x, y in poly.exterior.coords])
+    places = []
+    for name, (d0, d1) in MAP_PLACES.items():
+        sub = pts[(pts["domain_number"] >= d0) & (pts["domain_number"] <= d1)]
+        ll = gpd.GeoSeries(gpd.points_from_xy([sub["e"].min()], [sub["n"].mean()]),
+                           crs=MAP_CRS).to_crs("EPSG:4326").iloc[0]
+        places.append({"name": name, "ll": [round(ll.x, 5), round(ll.y, 5)]})
+    return rings, places
+
+
 # Every transect's raw record, for the interactive page
 def write_interactive_data(t, picks, series, out_dir):
     mids = transect_midpoints(t["transect_id"])
     group = dict(zip(picks["transect_id"], picks["group"]))
+    # Pick numbers as on the figures: 1 at the Buxton end, rising north
+    order = picks.sort_values(["domain_number", "transect_id"])["transect_id"]
+    number = dict((tid, k) for k, tid in enumerate(order, start=1))
     rows = []
     for r in t.itertuples(index=False):
         s = series[r.transect_id]
@@ -503,15 +527,18 @@ def write_interactive_data(t, picks, series, out_dir):
             "gis": r.domain_number,
             "ll": mids.get(r.transect_id),
             "g": group.get(r.transect_id),
+            "num": number.get(r.transect_id),
             "t": [round(float(v), 4) for v in year],
             "x": [round(float(v), 1) for v in s["chainage_m"]],
         })
+    rings, places = map_layers_lonlat()
     d = Path(out_dir) / INTERACTIVE_DIR
     d.mkdir(parents=True, exist_ok=True)
     path = d / "split_windows_data.json"
     path.write_text(json.dumps({
         "ref": [REF_START, REF_END], "min_obs": MIN_OBS, "cutoff": CUTOFF,
-        "groups": dict(GROUPS), "transects": rows}, separators=(",", ":")),
+        "groups": dict(GROUPS), "outline": rings, "places": places,
+        "transects": rows}, separators=(",", ":")),
         encoding="utf-8")
     return path
 
