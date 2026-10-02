@@ -9,7 +9,7 @@ hindcast runs, each image against the storms since the previous one. Details: sc
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-01
 """
 
 from __future__ import annotations
@@ -32,10 +32,11 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_overwash as ow  # noqa: E402
 from site_layer import hat_env_forcings as env  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
-    apply_style, C, DOMAIN_AXIS_LABEL, figsize, save, record_caption,
-    _title, open_frame, town_bands,
+    apply_style, C, INK_MUTED, figsize, save, record_caption,
+    _title, open_frame, spines_for_image, _scalebar, _north_arrow,
 )
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
@@ -49,13 +50,17 @@ THRESHOLDS = (0.0, 1.0, 5.0)        # m3/m
 # -----------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "1-observations"))
 from overwash_data import CAPTURE_GRACE_DAYS  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "2-record"))
+from overwash_map_periods import draw_island, load_geometry  # noqa: E402
 GRACE = pd.Timedelta(days=CAPTURE_GRACE_DAYS)   # the observed storm table's own rule
 HEADLINE_THR = 0.0
 
-# cell classes for the matrix figure
+# cell classes: teal = the model overwashed (dark when the image confirms it), amber = it missed one
 BOTH, OBS_ONLY, MOD_ONLY, NEITHER, UNASSESSED = 0, 1, 2, 3, 4
-CLASS_COLOURS = ["0.2", C["ACCENT"], C["ADDED"], "0.93", "white"]
-CLASS_LABELS = ["both", "observed only", "model only", "neither", "not assessed"]
+CLASS_COLOURS = ["#01665e", "#e6ab02", "#80cdc1", "#ececec", "white"]
+CLASS_LABELS = ["Observed and modelled", "Observed, not modelled", "Modelled, not observed",
+                "Neither", "Not assessed"]
+C_OBS, C_MOD = "0.15", "#01665e"       # observed and modelled lines and bars
 
 
 # A run's overwash per model year and domain (QowTS, m3/m), and its name
@@ -134,77 +139,120 @@ def cell_class(o, m):
     return {(1, 1): BOTH, (1, 0): OBS_ONLY, (0, 1): MOD_ONLY, (0, 0): NEITHER}[(int(o), int(m))]
 
 
-# The image x domain agreement matrix for one window (managed, headline threshold)
-def figure(df, window):
+# A domain's class over the whole window: agreed at least once, else missed, else model only
+def domain_class(g):
+    a = g.dropna(subset=["observed"])
+    if a.empty:
+        return UNASSESSED
+    o, m = a.observed.astype(int), a.model.astype(int)
+    if ((o == 1) & (m == 1)).any():
+        return BOTH
+    if (o == 1).any():
+        return OBS_ONLY
+    if (m == 1).any():
+        return MOD_ONLY
+    return NEITHER
+
+
+# Village spans as brackets beside a GIS-up axis, so they do not tint the cells
+def town_rows(ax):
+    tr = ax.get_yaxis_transform()
+    for name, (lo, hi) in HATTERAS_ANNOTATIONS.town_spans.items():
+        ax.plot([1.015, 1.015], [lo - 0.4, hi + 0.4], transform=tr, color=INK_MUTED, lw=0.8,
+                clip_on=False, solid_capstyle="butt")
+        ax.text(1.03, (lo + hi) / 2, name, transform=tr, rotation=90, ha="left", va="center",
+                fontsize=6.5, color=INK_MUTED)
+
+
+# Map + per-image counts + image-by-domain matrix, for one window (managed, headline threshold)
+def figure(df, window, geom):
     d = df[(df.window == f"{window[0]}-{window[1]}") & (df.arm == "managed") & (df.threshold == HEADLINE_THR)]
     imgs = d[["obs_id", "image", "since", "partial"]].drop_duplicates().reset_index(drop=True)
-    grid = np.full((len(imgs), 90), UNASSESSED)
+    n = len(imgs)
+    grid = np.full((90, n), UNASSESSED)
     for i, im in imgs.iterrows():
         sub = d[d.obs_id == im.obs_id].set_index("gis")
         for g in range(1, 91):
-            grid[i, g - 1] = cell_class(sub.observed[g], sub.model[g])
-    cmap = ListedColormap(CLASS_COLOURS)
-    norm = BoundaryNorm(np.arange(-0.5, 5.5), cmap.N)
+            grid[g - 1, i] = cell_class(sub.observed[g], sub.model[g])
+    cmap = ListedColormap(CLASS_COLOURS[:4])
+    norm = BoundaryNorm(np.arange(-0.5, 4.5), cmap.N)
 
-    fig = plt.figure(figsize=figsize("double", height=2.2 + 0.24 * len(imgs) + 1.8), constrained_layout=True)
-    gs = fig.add_gridspec(2, 2, width_ratios=[1, 0.18], height_ratios=[0.24 * len(imgs) + 0.6, 1.5])
-    ax = fig.add_subplot(gs[0, 0])
-    ax.imshow(grid, cmap=cmap, norm=norm, aspect="auto", interpolation="nearest",
-              extent=(0.5, 90.5, len(imgs) - 0.5, -0.5))
-    ax.set_yticks(range(len(imgs)))
-    ax.set_yticklabels([f"{im.image:%Y-%m-%d}" + (" *" if im.partial else "") for _, im in imgs.iterrows()],
-                       fontsize=7)
-    ax.set_xlim(0.5, 90.5)
-    ax.tick_params(labelbottom=False)
-    for y in np.arange(len(imgs)) + 0.5:
-        ax.axhline(y, color="white", lw=0.6)
-    _title(ax, 0, f"Each image against the model since the previous image, {window[0]}-{window[1]}")
+    fig = plt.figure(figsize=figsize("double", height=8.6), constrained_layout=True)
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.0, 1.9], height_ratios=[1, 6.2])
 
-    ax_n = fig.add_subplot(gs[0, 1], sharey=ax)
+    # (a) the island, each domain by how it scored over the window
+    dom, land, road, bounds = geom
+    per = {g: domain_class(sub) for g, sub in d.groupby("gis")}
+    ax_m = fig.add_subplot(gs[:, 0])
+    draw_island(ax_m, dom, land, road, bounds, {g: CLASS_COLOURS[c] for g, c in per.items()}, "a",
+                "Whole window", reach_labels=False, pad_w=2500, pad_e=2600, pad_s=5000)
+    _scalebar(ax_m, 5000)
+    _north_arrow(ax_m, x=0.85, y=0.06)
+    cnt = {c: sum(v == c for v in per.values()) for c in range(5)}
+
+    # (c) every image against the model since the previous image; GIS runs up the page like the map
+    ax = fig.add_subplot(gs[1, 1])
+    ax.add_patch(plt.Rectangle((-0.5, 0.5), n, 90, fc="white", ec="0.75", hatch="////", lw=0, zorder=0))
+    ax.imshow(np.ma.masked_equal(grid, UNASSESSED), cmap=cmap, norm=norm, aspect="auto",
+              interpolation="nearest", origin="lower", extent=(-0.5, n - 0.5, 0.5, 90.5), zorder=1)
+    for x in np.arange(n - 1) + 0.5:
+        ax.axvline(x, color="white", lw=1.2, zorder=2)
+    town_rows(ax)
+    ax.set_xticks(range(n))
+    ax.set_xticklabels([f"{im.image:%b %Y}" + (" *" if im.partial else "") for _, im in imgs.iterrows()],
+                       rotation=55, ha="right", rotation_mode="anchor", fontsize=7)
+    ax.set_xlim(-0.5, n - 0.5)
+    ax.set_ylim(0.5, 90.5)
+    ax.set_yticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
+    ax.set_ylabel("GIS domain (south → north)")
+    ax.set_xlabel("Image date")
+    spines_for_image(ax)
+    _title(ax, 2, "Each image, domain by domain")
+
+    # (b) how many domains each image shows overwashed, and the model
+    ax_n = fig.add_subplot(gs[0, 1], sharex=ax)
     n_o = [np.nansum(d[d.obs_id == im.obs_id].observed) for _, im in imgs.iterrows()]
     n_m = [d[(d.obs_id == im.obs_id) & d.observed.notna()].model.sum() for _, im in imgs.iterrows()]
-    y = np.arange(len(imgs))
-    ax_n.barh(y - 0.2, n_o, height=0.38, color=C["ACCENT"], label="observed")
-    ax_n.barh(y + 0.2, n_m, height=0.38, color=C["ADDED"], label="model")
-    ax_n.tick_params(labelleft=False)
-    ax_n.set_xlabel("domains")
+    x = np.arange(n)
+    ax_n.bar(x - 0.19, n_o, width=0.36, color=C_OBS, label="Observed")
+    ax_n.bar(x + 0.19, n_m, width=0.36, color=C_MOD, label="Modelled")
+    ax_n.set_ylim(0, 90)
+    ax_n.set_yticks([0, 45, 90])
+    ax_n.set_ylabel("domains")
+    ax_n.tick_params(labelbottom=False)
+    ax_n.grid(axis="y", color="0.9", lw=0.5)
     open_frame(ax_n)
-    ax_n.legend(frameon=False, fontsize=7, loc="lower right")
-    _title(ax_n, 1, "count")
+    ax_n.legend(loc="upper right", frameon=False, fontsize=6.8, ncol=2)
+    _title(ax_n, 1, "Domains with overwash")
 
-    ax_f = fig.add_subplot(gs[1, 0], sharex=ax)
-    a = d.dropna(subset=["observed"])
-    by = a.groupby("gis").agg(o=("observed", "mean"), m=("model", "mean"))
-    ax_f.plot(by.index, by.o, color=C["ACCENT"], lw=1.3, label="observed")
-    ax_f.plot(by.index, by.m, color=C["ADDED"], lw=1.3, label="model (largest storm)")
-    anyst = a.groupby("gis").model_any_storm.mean()
-    ax_f.plot(anyst.index, anyst, color=C["ADDED"], lw=0.8, ls=(0, (2, 1.5)), label="model (any storm, upper bound)")
-    ax_f.set_ylabel("share of images\nwith overwash")
-    ax_f.set_xlabel(DOMAIN_AXIS_LABEL)
-    ax_f.set_ylim(0, 1)
-    town_bands(ax_f)
-    open_frame(ax_f)
-    ax_f.legend(frameon=False, fontsize=7, ncol=3, loc="upper left")
-    _title(ax_f, 2, "How often each domain overwashes")
-    fig.legend(handles=[Patch(fc=c_, ec="0.6", lw=0.4, label=l_) for c_, l_ in zip(CLASS_COLOURS, CLASS_LABELS)],
-               loc="outside lower center", ncol=5, frameon=False, fontsize=7.5)
+    fig.legend(handles=[Patch(fc=c_, ec="0.6", lw=0.4, label=l_)
+                        for c_, l_ in zip(CLASS_COLOURS[:4], CLASS_LABELS[:4])]
+               + [Patch(fc="white", ec="0.6", hatch="////", lw=0.4, label=CLASS_LABELS[4]),
+                  plt.Line2D([], [], color=C["ROAD"], lw=0.8, label="NC-12")],
+               loc="outside lower center", ncol=6, frameon=False, fontsize=7, handlelength=1.4,
+               columnspacing=1.2)
 
     ow.VS_MODEL.mkdir(parents=True, exist_ok=True)
     out = save(fig, ow.VS_MODEL / f"overwash_vs_model_{window[0]}_{window[1]}.png")
     plt.close(fig)
     s = scores(d)
     record_caption(out[0],
-        f"Observed washover against modelled overwash, {window[0]}-{window[1]}, the managed run "
-        f"({d.run.iloc[0]}). (a) One row per image (* = its window starts before the run, so the model covers "
-        "only part of it); one column per GIS domain. Each image is compared with the model's overwash "
-        "since the previous image; a model year's overwash is dated by its largest storm, with the 7-day grace of the observed storm table. Dark: both show "
-        "overwash; purple: observed only; amber: model only; light grey: neither; white: domain not "
-        "assessed in that image. (b) Domains with overwash per image. (c) The share of images with overwash "
-        "per domain; the dashed line dates each model year's overwash by every storm in it instead of the "
-        f"largest, an upper bound. Of {s['cells']} assessed image-domain cells: {s['both']} both, "
-        f"{s['observed_only']} observed only, {s['model_only']} model only; the model catches "
-        f"{s['hit_rate']:.0%} of observed overwash. Washover fades and images are months to years apart, so "
-        "'model only' is not by itself a model error. GIS 1 is Cape Point, GIS 90 Pea Island.")
+        f"Washover seen in the imagery against overwash in the model, {window[0]}-{window[1]}, the managed "
+        f"run ({d.run.iloc[0]}, storm series {env.DEFAULT_STORM_VARIANT}). Teal means the model overwashed a "
+        "domain: dark when the image also shows washover there, light when it does not. Amber is washover "
+        "the model missed. Light grey: neither; hatched: domain not assessed in that image. "
+        "(a) Each domain over the whole window: dark teal if model and image agreed in at least one image, "
+        "else amber if washover was ever seen, else light teal if only the model overwashed "
+        f"({cnt[BOTH]}, {cnt[OBS_ONLY]} and {cnt[MOD_ONLY]} domains; {cnt[NEITHER]} neither). A domain "
+        "agreeing in one image can still be missed in others: (c) shows each image. NC-12 in black. (b) Domains with overwash in each image, observed and modelled. "
+        "(c) One column per image, one row per domain; each image is scored against the model's overwash "
+        "since the previous image (* = that interval starts before the run, so the model covers only part "
+        "of it). A model year's overwash is dated by its largest storm, with the 7-day grace of the observed "
+        "storm table. Brackets on the right mark Buxton, Avon and the Tri-Village. "
+        f"Of {s['cells']} assessed image-domain cells: {s['both']} both, "
+        f"{s['observed_only']} observed only, {s['model_only']} modelled only; the model catches "
+        f"{s['hit_rate']:.0%} of observed washover. Washover fades and images are months to years apart, so "
+        "'modelled, not observed' is not by itself a model error. GIS 1 is Cape Point, GIS 90 Pea Island.")
     return out
 
 
@@ -228,8 +276,9 @@ def main():
     summ.to_csv(ow.VS_MODEL_TABLES / "overwash_vs_model_summary.csv", index=False)
     with pd.option_context("display.width", 200, "display.max_columns", 30):
         print(summ.round(2).to_string(index=False))
+    geom = load_geometry()
     for window in WINDOWS:
-        out = figure(df, window)
+        out = figure(df, window, geom)
         print(" ->", out[0].relative_to(REPO))
 
 

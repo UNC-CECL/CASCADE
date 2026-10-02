@@ -615,3 +615,14 @@ THE RUNS
     edgeBE, road + beach/dune manager (+ fills in 2010-2024), no groin. The
     natural runs (no road, no manager) are in the tables for contrast.
 ```
+
+**The figure (2026-10-01).** One per window: (a) an island map, each domain
+coloured by its class over the whole window (agreed in at least one image,
+else missed, else model only); (b) domains with overwash per image; (c) the
+image x domain grid, GIS 1 at the bottom so it reads like the map, villages
+bracketed on the right. Colours: teal = the model overwashed (dark if the
+image confirms it, light if not), amber = washover the model missed, grey =
+neither, hatched = not assessed. The per-domain share panel was dropped at
+Hannah's request; the any-storm upper bound is still in tables/. The map
+layers come from the repo (map_elements, HAT_domains.json), so the D: drive
+is not needed.
