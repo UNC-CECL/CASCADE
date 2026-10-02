@@ -551,7 +551,15 @@ def publish_site(out_dir, site):
     if not (site / ".git").is_dir():
         raise SystemExit("--site {0} is not a git repo; clone or init it first".format(site))
     src = Path(out_dir) / INTERACTIVE_DIR
-    shutil.copyfile(src / "split_windows_explorer.html", site / "index.html")
+    # The source page is a fragment (the Claude viewer adds the document around it);
+    # a plain web server sends it as-is, so give it its own document and charset
+    page = (src / "split_windows_explorer.html").read_text(encoding="utf-8")
+    cut = page.index("</style>") + len("</style>")
+    (site / "index.html").write_text(
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        + page[:cut].strip() + "\n<style>body { margin: 0; }</style>\n</head>\n<body>\n"
+        + page[cut:].strip() + "\n</body>\n</html>\n", encoding="utf-8")
     shutil.copyfile(src / "split_windows_data.json", site / "split_windows_data.json")
     print("site updated: {0} (commit and push there to publish)".format(site))
 
