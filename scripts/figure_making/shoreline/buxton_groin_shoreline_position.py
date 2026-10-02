@@ -2,9 +2,11 @@
 Observed CoastSat shoreline position through time either side of the Buxton groin field.
 
     python scripts/figure_making/shoreline/buxton_groin_shoreline_position.py
+    python scripts/figure_making/shoreline/buxton_groin_shoreline_position.py --site-map
 
 Inputs: the CoastSat transect series and transect layer under 5-scr, the domain boxes,
 the groin position from hatteras_site_config and the Buxton fill from nourishment_projects.csv.
+--site-map draws only the reach, groin field and village on imagery, for the website.
 Basemap tiles need the network the first time (cached after). Needs geopandas, contextily, rasterio.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -15,6 +17,7 @@ Version: 2026-10-02
 
 from __future__ import annotations
 
+import argparse
 import sys
 import tempfile
 from pathlib import Path
@@ -63,6 +66,11 @@ CLIM = 80.0                        # colour limit, m
 RATE_CLIM = 2.5                    # rate colour limit, m/yr; every transect falls inside it
 OUT = figure_dir("observations", "shoreline")
 STEM = "buxton_groin_shoreline_position"
+# The website site map: imagery and labels only, nothing from the CoastSat analysis
+SITE_MAP_OUT = Path(r"C:\Users\hanna\PycharmProjects\hannahaline-alfolio\assets\img\research"
+                    r"\buxton_groin_site_map.jpg")
+SITE_MAP_BOUNDS = (450300.0, 3900550.0, 453600.0, 3902750.0)   # 3.3 x 2.2 km, north up
+SITE_MAP_GROIN_X0 = 452640.0       # where the groin-field line starts, just off the beach
 # -----------------------------------------------------------------------------
 
 
@@ -228,6 +236,47 @@ def draw_sides(ax, tr, pos, fill):
     open_frame(ax)
 
 
+# The website site map: imagery, groin field, Buxton, north arrow, scale bar
+def site_map() -> None:
+    apply_style()
+    y_groin, _ = groin_northing()
+    x0, y0, x1, y1 = SITE_MAP_BOUNDS
+    fig, ax = plt.subplots(figsize=figsize("double", (y1 - y0) / (x1 - x0)), layout="constrained")
+    img, ext = basemap(SITE_MAP_BOUNDS)
+    ax.imshow(img, extent=ext, zorder=0, interpolation="bilinear")
+    halo = [pe.withStroke(linewidth=2.6, foreground="0.1")]
+    ax.plot([SITE_MAP_GROIN_X0, x1], [y_groin, y_groin], color="white", lw=1.4, ls=LS_GROIN, zorder=5)
+    ax.plot([x1 - 0.025 * (x1 - x0)], [y_groin], marker="<", ms=8, color="white", mec=INK,
+            mew=0.6, zorder=6, ls="none")
+    ax.text(SITE_MAP_GROIN_X0 + 120, y_groin + 45, "Buxton groin field", ha="left", va="bottom",
+            fontsize=9, color="white", zorder=7, path_effects=halo)
+    import geopandas as gpd
+    boxes = gpd.read_file(DOMAIN_BOXES).to_crs(CRS)
+    lo, hi = HATTERAS_ANNOTATIONS.town_spans["Buxton"]
+    yb = boxes.geometry.centroid.y.iloc[lo - 1:hi].mean()
+    ax.text(SITE_MAP_GROIN_X0 - 330, yb, "Buxton", ha="center", va="center", fontsize=10,
+            fontstyle="italic", color="white", zorder=7, path_effects=halo)
+    ax.text(0.97, 0.72, "ATLANTIC OCEAN", transform=ax.transAxes, ha="right", va="center",
+            fontsize=8, color="white", alpha=0.9, zorder=7)
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(y0, y1)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    spines_for_image(ax)
+    _scalebar(ax, 500.0, show_cells=False)
+    ax.add_patch(Rectangle((0.025, 0.79), 0.05, 0.165, transform=ax.transAxes, facecolor="white",
+                           alpha=0.8, edgecolor="none", zorder=19))
+    _north_arrow(ax, x=0.05, y=0.81, length=0.08)
+    ax.text(0.99, 0.015, "Imagery: Esri World Imagery", transform=ax.transAxes, ha="right",
+            va="bottom", fontsize=6.5, color=INK_MUTED, zorder=25,
+            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", boxstyle="square,pad=0.15"))
+    SITE_MAP_OUT.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(SITE_MAP_OUT, dpi=200, pil_kwargs={"quality": 90})
+    plt.close(fig)
+    print(f"wrote {SITE_MAP_OUT}")
+
+
 # Run: data, three panels, caption, save
 def main() -> None:
     apply_style()
@@ -310,4 +359,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    ap.add_argument("--site-map", action="store_true",
+                    help="write only the website site map (no analysis) to SITE_MAP_OUT")
+    if ap.parse_args().site_map:
+        site_map()
+    else:
+        main()
