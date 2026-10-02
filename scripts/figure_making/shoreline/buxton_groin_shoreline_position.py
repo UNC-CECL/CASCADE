@@ -21,17 +21,19 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.patheffects as pe  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.patches import Rectangle  # noqa: E402
 
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "5-scr" / "1-observations" / "mean_shoreline"))
 import scr_paths  # noqa: E402,F401
-from coastsat_lrr import load_timeseries  # noqa: E402
+from coastsat_lrr import compute_lrr, filter_dates, load_timeseries  # noqa: E402
 from coastsat_mean_shoreline import timeseries_file, transect_geometry  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     INK, INK_MUTED, _north_arrow, _scalebar, apply_style, caption,
@@ -50,14 +52,15 @@ NOURISHMENT = REPO / "data" / "hatteras_init" / "4-mgmt-forcing" / "nourishment"
 FILL_NAME = "Buxton shore protection"
 TILE_ZOOM = 16
 TILE_CACHE = Path(tempfile.gettempdir()) / "hat_tile_cache"
-MAP_PAD_X = (550.0, 650.0)         # metres landward / seaward of the shoreline on the map
-C_SOUTH, C_NORTH = "#d95f02", "#7570b3"
+MAP_PAD_X = (350.0, 850.0)         # metres landward / seaward of the shoreline on the map
+C_SOUTH, C_NORTH = "#4d9221", "#e69f00"   # green south, amber north: clear of the red-blue scales
 CMAP = "RdBu"                      # red landward, blue seaward
 C_BASE_LINE, C_END_LINE = "0.35", "0.05"   # neutral: red and blue mean landward/seaward here
 LS_BASE = (0, (3, 1.5))
 LS_GROIN = (0, (5, 2, 1, 2))
 FILL_STYLE = dict(color=INK, lw=1.2, ls=":")
 CLIM = 80.0                        # colour limit, m
+RATE_CLIM = 2.5                    # rate colour limit, m/yr; every transect falls inside it
 OUT = figure_dir("observations", "shoreline")
 STEM = "buxton_groin_shoreline_position"
 # -----------------------------------------------------------------------------
@@ -96,10 +99,12 @@ def annual_positions(tr: pd.DataFrame) -> pd.DataFrame:
         g = g[g["count"] >= MIN_OBS_PER_YEAR]
         base = obs.loc[obs["year"].between(*BASE_YEARS), "chainage_m"].median()
         end = obs.loc[obs["year"].between(*END_YEARS), "chainage_m"].median()
+        lrr = compute_lrr(filter_dates(obs, f"{YEARS[0]}-01-01", f"{YEARS[1]}-12-31"))
         for y, r in g.iterrows():
             rows.append(dict(transect_id=t.transect_id, year=int(y), n=int(r["count"]),
                              median_chainage_m=r["median"], base_chainage_m=base,
-                             end_chainage_m=end))
+                             end_chainage_m=end, lrr_m_yr=lrr["lrr_m_yr"],
+                             lrr_unc95_m_yr=lrr["unc_m_yr"], lrr_n_obs=lrr["n_obs"]))
     out = pd.DataFrame(rows)
     out["change_m"] = out["median_chainage_m"] - out["base_chainage_m"]
     return out
@@ -112,6 +117,8 @@ def alongshore(tr: pd.DataFrame, pos: pd.DataFrame, y_groin: float) -> pd.DataFr
     tr = tr.copy()
     tr["base"] = tr["transect_id"].map(base)
     tr["end"] = tr["transect_id"].map(end)
+    for k in ("lrr_m_yr", "lrr_unc95_m_yr", "lrr_n_obs"):
+        tr[k] = tr["transect_id"].map(pos.groupby("transect_id")[k].first())
     tr["bx"], tr["by"] = tr.x0 + tr.base * tr.ux, tr.y0 + tr.base * tr.uy
     tr["ex"], tr["ey"] = tr.x0 + tr.end * tr.ux, tr.y0 + tr.end * tr.uy
     s = np.r_[0.0, np.cumsum(np.hypot(np.diff(tr.bx), np.diff(tr.by)))]
@@ -138,19 +145,23 @@ def basemap(b):
     return cx.warp_tiles(img, ext, t_crs=CRS)
 
 
-# (a) the reach on imagery: transects by side, the two shorelines, the groin field
+# (a) the reach on imagery: transects by rate, the two shorelines, the groin field
 def draw_map(ax, tr, y_groin):
     x0 = tr[["bx", "ex"]].min().min() - MAP_PAD_X[0]
     x1 = tr[["bx", "ex"]].max().max() + MAP_PAD_X[1]
     y0, y1 = tr.by.min() - 60, tr.by.max() + 60
     img, ext = basemap((x0, y0, x1, y1))
     ax.imshow(img, extent=ext, zorder=0, interpolation="bilinear")
+    norm = plt.Normalize(-RATE_CLIM, RATE_CLIM)
+    cmap = plt.get_cmap(CMAP)
     for t in tr.itertuples():
-        ax.plot([t.bx - 160 * t.ux, t.bx + 220 * t.ux], [t.by - 160 * t.uy, t.by + 220 * t.uy],
-                color="white", lw=0.6, alpha=0.9, zorder=2)
+        xs = [t.bx - 160 * t.ux, t.bx + 220 * t.ux]
+        ys = [t.by - 160 * t.uy, t.by + 220 * t.uy]
+        ax.plot(xs, ys, color=cmap(norm(t.lrr_m_yr)), lw=1.0, zorder=2,
+                path_effects=[pe.withStroke(linewidth=1.6, foreground="0.1")])
     ax.plot(tr.bx, tr.by, color=C_BASE_LINE, lw=1.3, ls=LS_BASE, zorder=4)
     ax.plot(tr.ex, tr.ey, color=C_END_LINE, lw=1.3, zorder=4)
-    ax.plot([x0 + 0.62 * (x1 - x0), x1], [y_groin, y_groin], color="white", lw=1.0,
+    ax.plot([np.interp(y_groin, tr.by, tr.bx) + 60, x1], [y_groin, y_groin], color="white", lw=1.0,
             ls=LS_GROIN, zorder=5)
     ax.plot([x1 - 0.04 * (x1 - x0)], [y_groin], marker="<", ms=6, color="white", mec=INK,
             mew=0.6, zorder=6, ls="none")
@@ -162,9 +173,21 @@ def draw_map(ax, tr, y_groin):
     spines_for_image(ax)
     _scalebar(ax, 500.0, show_cells=False)
     _north_arrow(ax, x=0.12, y=0.86)
-    ax.text(0.985, 0.012, "Imagery: Esri World Imagery", transform=ax.transAxes, ha="right",
+    ax.text(0.985, 0.008, "Imagery: Esri World Imagery", transform=ax.transAxes, ha="right",
             va="bottom", fontsize=6.5, color=INK_MUTED, zorder=25,
             bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", boxstyle="square,pad=0.15"))
+    return plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+
+
+# The rate scale for (a), inset over open water in the lower right
+def rate_bar(ax, sm):
+    ax.add_patch(Rectangle((0.505, 0.115), 0.48, 0.205, transform=ax.transAxes, facecolor="white",
+                           alpha=0.88, edgecolor="none", zorder=20))
+    cax = ax.inset_axes([0.56, 0.275, 0.37, 0.026], zorder=21)
+    cb = plt.colorbar(sm, cax=cax, orientation="horizontal", ticks=[-2, -1, 0, 1, 2])
+    cb.ax.tick_params(labelsize=7, length=2, pad=1)
+    cb.set_label("Shoreline change\nrate (m/yr)\n← landward | seaward →", fontsize=6.5, labelpad=2)
+    cb.outline.set_linewidth(0.5)
 
 
 # (b) change from the reference position, transect by transect, through time
@@ -223,13 +246,14 @@ def main() -> None:
     ax_s = fig.add_subplot(gs[1, 1], sharex=ax_h)
 
     # Draw
-    draw_map(ax_map, tr, y_groin)
+    sm = draw_map(ax_map, tr, y_groin)
     m = draw_hovmoller(ax_h, tr, pos, fill, 0.0)
     draw_sides(ax_s, tr, pos, fill)
     plt.setp(ax_h.get_xticklabels(), visible=False)
     cb = fig.colorbar(m, ax=ax_h, location="right", shrink=0.95, aspect=18, pad=0.02, extend="both")
     cb.set_label("Change (m)\n← landward | seaward →", fontsize=8)
     cb.outline.set_linewidth(0.5)
+    rate_bar(ax_map, sm)
     title(ax_map, 0, "Buxton, GIS 3–8")
     title(ax_h, 1, "Each transect")
     title(ax_s, 2, "Each side")
@@ -248,12 +272,23 @@ def main() -> None:
     # Table of what is drawn
     table = pos.merge(tr[["transect_id", "dist_m", "side"]], on="transect_id")
     table.round(2).to_csv(support_dir(OUT) / f"{STEM}_annual.csv", index=False)
+    rates = tr[["transect_id", "domain_number", "side", "dist_m", "lrr_m_yr", "lrr_unc95_m_yr",
+                "lrr_n_obs"]]
+    rates.round(4).to_csv(support_dir(OUT) / f"{STEM}_lrr.csv", index=False)
+    med_s = tr.loc[tr.side == "south", "lrr_m_yr"].median()
+    med_n = tr.loc[tr.side == "north", "lrr_m_yr"].median()
+    print(f"LRR {tr.lrr_m_yr.min():.2f} to {tr.lrr_m_yr.max():.2f} m/yr; "
+          f"median south {med_s:.2f}, north {med_n:.2f}")
 
     caption(fig, (
         f"Observed shoreline position near the Buxton groin field, Hatteras Island, from the CoastSat "
         f"satellite-derived shoreline record ({YEARS[0]}–{YEARS[1]}). (a) The reach (GIS domains "
         f"{GIS_RANGE[0]}–{GIS_RANGE[1]}) on Esri World Imagery, north up: the {len(tr)} CoastSat "
-        f"transects used (white), {n_s} south and {n_n} north of the groin field; the "
+        f"transects used, {n_s} south and {n_n} north of the groin field, each coloured by its "
+        f"shoreline change rate: the linear regression rate (ordinary least-squares slope of all "
+        f"CoastSat positions against time, 1 January {YEARS[0]} to 31 December {YEARS[1]}, m/yr, "
+        f"positive seaward), red landward and blue seaward, the scale clipped at ±{RATE_CLIM:g} m/yr "
+        f"(no transect reaches it); the "
         f"shoreline as the median of each transect's positions over {BASE_YEARS[0]}–{BASE_YEARS[1]} "
         f"(dashed charcoal) and {END_YEARS[0]}–{END_YEARS[1]} (solid near-black); the dash-dot "
         f"white line and arrowhead mark "
@@ -267,7 +302,7 @@ def main() -> None:
         f"{fill['year']} Buxton beach fill (GIS {fill['first_gis']}–{fill['last_gis']}, from the "
         f"management record), which begins at the groin field and extends north past this view. "
         f"(c) The median of (b) over the transects on each side, south of the groin field "
-        f"orange and north purple, with the interquartile range across them shaded; the dotted "
+        f"green and north amber, with the interquartile range across them shaded; the dotted "
         f"line is the fill year. Positions are CoastSat's chainages "
         f"along each transect, not referenced to a vertical or survey datum beyond CoastSat's own "
         f"processing; annual medians still carry tide, wave and season noise of several metres."))
