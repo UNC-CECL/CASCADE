@@ -208,7 +208,7 @@ def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
 
 
 # A black/white segmented scale bar, with a north-arrow glyph pointing to true north just above it
-def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.075, arrow_m=2000.0):
+def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.085, arrow_m=2000.0):
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
     h = 0.013 * (y1 - y0)
@@ -223,8 +223,7 @@ def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.075, ar
     for i in range(segments + 1):
         km = i * seg / 1000
         lab = f"{km:g} km" if i == segments else f"{km:g}"
-        ax.text(bx + i * seg, by - 0.6 * h, lab, ha="center", va="top", fontsize=8, color=INK,
-                zorder=12, path_effects=HALO)
+        ax.text(bx + i * seg, by - 1.5 * h, lab, ha="center", va="top", **{**STUDY_TEXT, "zorder": 12})
     # The arrow: a split dart, tip toward north, its "N" beyond the tip
     n = frame.north()
     perp = np.array([-n[1], n[0]])
@@ -239,8 +238,8 @@ def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.075, ar
     ax.add_patch(Polygon([tip, notch, back - perp * w], closed=True, facecolor="white", edgecolor=INK,
                          lw=0.6, zorder=12))
     lab = tip + n * 0.40 * arrow_m
-    ax.text(lab[0], lab[1], "N", ha="center", va="center", fontsize=8.5, fontweight="bold", color=INK,
-            zorder=12, path_effects=HALO)
+    ax.text(lab[0], lab[1], "N", ha="center", va="center", fontweight="bold",
+            **{**STUDY_TEXT, "fontsize": 8.5, "zorder": 12})
 
 
 # Imagery
@@ -313,7 +312,7 @@ class ReachArt(typing.NamedTuple):
 def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
                label_every=10, label_villages=True, water_labels=True, box_lw=0.35,
                arrow_xy=(0.965, 0.20), ocean_x=0.55, sound_x=0.20, piers=True, scalebar=True,
-               numbers=True, arrow=True, show_road=True):
+               numbers=True, arrow=True, show_road=True, water=None, ends=True, groin=True):
     map_axes(ax, window)
     x0, x1, y0, y1 = window
     if vector:
@@ -322,8 +321,12 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
         box_c, road_c, water_c = INK, C["ROAD"], INK_MUTED
     else:
         img, (l, r, b, t) = tiles(frame.unrotate_bounds(x0, x1, y0, y1), zoom, imagery_source())
-        ax.imshow(img, extent=(l, r, b, t), transform=frame.image_transform(ax), zorder=0,
-                  interpolation="bilinear")
+        im = ax.imshow(img, extent=(l, r, b, t), transform=frame.image_transform(ax), zorder=0,
+                       interpolation="bilinear")
+        if water is not None:
+            # one flat water colour; the imagery shows only inside the island outline
+            ax.set_facecolor(water)
+            im.set_clip_path(outline_patch(ax, frame, outline))
         box_c, road_c, water_c = "white", ROAD_ON_IMAGERY, "white"
         credit(ax, "Imagery: Esri World Imagery")
 
@@ -341,18 +344,19 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
     village_out_m = 0.0
     if label_villages:
         village_out_m = village_row(ax, frame, dom, vector)
-    for name, pos in ANN.groins.items():
+    for name, pos in (ANN.groins.items() if groin else ()):
         p = frame.along(pos)[0] + sea * 1150          # in the water, just off the box edge
         ax.plot(p[0], p[1], marker="|", ms=7, mew=1.4, color=INK, zorder=9, ls="none")
     for name, (pos, _) in (ANN.piers.items() if piers else ()):
         p = frame.along(pos)[0]
         ax.plot(p[0], p[1], marker="o", ms=3.2, mfc="white", mec=INK, mew=0.8, zorder=9, ls="none")
-    p = cen[0] + np.array([-700, 0]) + sea * 1500
-    ax.text(p[0], p[1], "Cape\nPoint", ha="right", va="center", fontsize=8, color=INK, zorder=8,
-            path_effects=HALO)
-    p = cen[-1] + np.array([700, 0]) - sea * 1500
-    ax.text(p[0], p[1], "Pea\nIsland", ha="left", va="center", fontsize=8, color=INK, zorder=8,
-            path_effects=HALO)
+    if ends:
+        p = cen[0] + np.array([-700, 0]) + sea * 1500
+        ax.text(p[0], p[1], "Cape\nPoint", ha="right", va="center", fontsize=8, color=INK, zorder=8,
+                path_effects=HALO)
+        p = cen[-1] + np.array([700, 0]) - sea * 1500
+        ax.text(p[0], p[1], "Pea\nIsland", ha="left", va="center", fontsize=8, color=INK, zorder=8,
+                path_effects=HALO)
     if water_labels:
         ocean_y, sound_y = (0.05, 0.95) if sea[1] < 0 else (0.95, 0.05)
         ax.text(ocean_x, ocean_y, "ATLANTIC OCEAN", transform=ax.transAxes, ha="center", va="center",
@@ -366,9 +370,22 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
     return ReachArt(road_c=road_c, village_out_m=village_out_m)
 
 
+# The island outline as a clip path in the rotated frame
+def outline_patch(ax, frame, outline):
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path as MPath
+    paths = []
+    for g in frame.geoms(outline.geometry):
+        for poly in getattr(g, "geoms", [g]):
+            for ring in [poly.exterior, *poly.interiors]:
+                paths.append(MPath(np.asarray(ring.coords)[:, :2], closed=True))
+    return PathPatch(MPath.make_compound_path(*paths), transform=ax.transData, facecolor="none",
+                     edgecolor="none")
+
+
 # The five village names in one row along the sound side, each with a leader down to its domains
 def village_row(ax, frame, dom, vector, clear_m=1300.0, leader_gap_m=700.0,
-                pad_m=600.0):
+                pad_m=600.0, text_kw=None):
     sea = frame.seaward
     rdom = frame.geoms(dom.geometry)
     x0, y0, x1, y1 = rdom.total_bounds
@@ -390,8 +407,9 @@ def village_row(ax, frame, dom, vector, clear_m=1300.0, leader_gap_m=700.0,
     separate_x(ax, placed, pad_m)
     out = -sea[1]                      # +1/-1 in y, away from the reach
     for d in placed:
+        kw = {"color": INK, "path_effects": HALO, **(text_kw or {})}
         ax.text(d["x"], y_row, d["name"], ha="center", va="center", fontsize=8,
-                color=INK, zorder=8, fontstyle="italic", path_effects=HALO)
+                zorder=8, fontstyle="italic", **kw)
         if abs(y_row - d["edge"]) > leader_gap_m:
             ax.plot([d["x"], d["anchor_x"]],
                     [y_row - out * 330, d["edge"] - out * 80],
@@ -521,13 +539,56 @@ def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
 
 # Figure 1: study area
 
+STUDY_WATER = "#3e5c6b"            # one muted water colour outside the island (study area only)
+STUDY_HALO = [mpl.patheffects.withStroke(linewidth=1.2, foreground="0.12")]
+STUDY_TEXT = dict(color="white", fontsize=8, zorder=8, path_effects=STUDY_HALO)
+GROIN_STYLE = dict(marker="|", ms=11, mew=2.4, color="0.1", ls="none",
+                   path_effects=[mpl.patheffects.withStroke(linewidth=4.4, foreground="white")])
+
+
+# Water bodies in upright letter-spaced capitals
+def spaced_caps(text):
+    return "   ".join(" ".join(w.upper()) for w in text.split())
+
+
+# The study-area labels: one rule, white type with a thin dark halo
+def study_area_labels(ax, frame, dom, vector):
+    sea = frame.seaward
+    cen = frame.pts(frame.centroids)
+    for i, g in enumerate(dom.ID.values):
+        if g == FIRST or g % 10 == 0:
+            p = cen[i] + sea * 1500
+            ax.text(p[0], p[1], str(g), ha="center", va="center", **STUDY_TEXT)
+    village_row(ax, frame, dom, vector, text_kw=dict(color="white", path_effects=STUDY_HALO))
+    p = cen[0] + np.array([-700, 0]) + sea * 1500
+    ax.text(p[0], p[1], "Cape\nPoint", ha="right", va="center", fontstyle="italic", **STUDY_TEXT)
+    p = cen[-1] + np.array([700, 0]) - sea * 1500
+    ax.text(p[0], p[1], "Pea\nIsland", ha="left", va="center", fontstyle="italic", **STUDY_TEXT)
+    ocean_y, sound_y = (0.05, 0.95) if sea[1] < 0 else (0.95, 0.05)
+    ax.text(0.55, ocean_y, spaced_caps("Atlantic Ocean"), transform=ax.transAxes, ha="center",
+            va="center", **STUDY_TEXT)
+    ax.text(0.20, sound_y, spaced_caps("Pamlico Sound"), transform=ax.transAxes, ha="center",
+            va="center", **STUDY_TEXT)
+    # The groin field: a white-edged bar off the beach, its name out in the ocean on a leader
+    for name, pos in ANN.groins.items():
+        p = frame.along(pos)[0] + sea * 1150
+        ax.plot(p[0], p[1], zorder=9, **GROIN_STYLE)
+        lab = p + sea * 3600
+        ax.text(lab[0], lab[1], "Buxton groins", ha="left", va="center", fontstyle="italic",
+                **STUDY_TEXT)
+        ax.plot([p[0], p[0], lab[0] + 250], [p[1] + sea[1] * 450, lab[1], lab[1]], color="white",
+                lw=0.5, zorder=7)
+
 # The reach on imagery with domains, NC-12, villages and the regional inset
 def fig_study_area(dom, outline, roads, frame, vector):
     window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
     fig, ax = reach_figure(window)
     fw, fh = fig.get_size_inches()
     road_c = draw_reach(ax, frame, dom, outline, roads[2008], vector, window, piers=False,
-                        scalebar=False, arrow=False).road_c
+                        scalebar=False, arrow=False, numbers=False, label_villages=False,
+                        water_labels=False, ends=False, groin=False,
+                        water=None if vector else STUDY_WATER).road_c
+    study_area_labels(ax, frame, dom, vector)
     scale_and_north(ax, frame)
     # the regional inset in the upper right, over the open sound; square in inches
     ih, edge = 0.42, 0.012
@@ -539,7 +600,7 @@ def fig_study_area(dom, outline, roads, frame, vector):
     handles = [
         Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
         Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment"),
-        Line2D([], [], marker="|", ms=7, mew=1.4, color=INK, ls="none", label="Buxton groin field"),
+        Line2D([], [], label="Buxton groins", **{**GROIN_STYLE, "ms": 9, "mew": 2.0}),
     ]
     # the legend immediately left of the inset, top aligned with it
     in_left = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[0]
@@ -553,11 +614,13 @@ def fig_study_area(dom, outline, roads, frame, vector):
         f"{LAST - FIRST + 1} Barrier3D domains (GIS 1 at Cape Point, GIS 90 at the southern end of Pea "
         "Island), each a 500 m alongshore by 2000 m cross-shore box in UTM 18N, numbered every tenth; the "
         "NC-12 centreline as digitised on 2008 imagery; the villages of Buxton, Avon, Salvo, Waves and "
-        "Rodanthe; the Buxton groin field (bar, drawn offshore). The map is turned "
+        "Rodanthe; the Buxton groin field (white-edged bar drawn just offshore, labelled Buxton groins). The map is turned "
         "a quarter turn, north to the right, so the UTM-aligned boxes are level and the reach steps down the "
         "page where the coast bends. (b) Hatteras Island on the North Carolina coast; the box marks the reach; "
         "the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N). "
-        + ("Land is the island outline shapefile. " if vector else "Basemap: Esri World Imagery. ")
+        + ("Land is the island outline shapefile. " if vector else
+           "Basemap: Esri World Imagery, shown inside the island outline only; the sound and ocean "
+           "are drawn as one flat colour. ")
         + "Inset: Natural Earth 10 m coastline and state boundaries.")
     plt.close(fig)
     return out[0]
