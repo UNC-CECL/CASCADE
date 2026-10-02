@@ -1,0 +1,12 @@
+1996_2010 control   full_management  exit 0 set=True 9.6 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 pattern   full_management  exit 0 set=True 10.1 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 measured  full_management  exit 0 set=True 10.8 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 control   full_management  exit 0 set=True 10.9 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 measured  full_management  exit 0 set=True 13.8 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 control   natural          exit 0 set=True 5.3 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 pattern   full_management  exit 0 set=True 7.8 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 pattern   natural          exit 0 set=True 6.6 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 measured  natural          exit 0 set=True 8.5 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 control   natural          exit 0 set=True 6.7 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 pattern   natural          exit 0 set=True 7.8 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 measured  natural          exit 0 set=True 11.7 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True

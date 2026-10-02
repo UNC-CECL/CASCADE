@@ -1,0 +1,16 @@
+1996_2010 rec050   full_management  exit 0 7.2 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 rec030   full_management  exit 0 7.3 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 rec015   full_management  exit 0 7.4 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 control  full_management  exit 0 7.7 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 control  full_management  exit 0 9.5 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 rec050   full_management  exit 0 8.9 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 control  natural          exit 0 8.7 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 rec030   full_management  exit 0 9.2 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 rec015   full_management  exit 0 9.6 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 rec015   natural          exit 0 9.0 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 rec050   natural          exit 0 7.5 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+1996_2010 rec030   natural          exit 0 7.6 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 rec015   natural          exit 0 9.5 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 rec030   natural          exit 0 8.1 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 control  natural          exit 0 10.2 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True
+2010_2024 rec050   natural          exit 0 4.0 min  BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True

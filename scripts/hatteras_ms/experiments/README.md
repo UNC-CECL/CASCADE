@@ -12,7 +12,7 @@ are separate so a finished sweep can be re-scored without re-running.
 | Wave climate | `HAT_wave_grid_smoothed_score.py` (+ `_plot`), `HAT_wave_grid_fixed_ends.py`, `HAT_wave_shortlist_ends_solved.py`, `HAT_wave_recommendation_figures.py`, `HAT_metres_2_wave_sensitivity.py` (+ `_plot`) |
 | Island offset | `HAT_metres_1_offset_units.py` (+ `_plot`), `HAT_offset_source_comparison.py` (and its `_div10`, `_option_a` variants), `HAT_offset_source_shoreline_v2.py`, `HAT_offset_source_0922_figures.py` |
 | End domains | `HAT_resolve_ends_metres.py`, `HAT_resolve_ends_on_position_change.py`, `HAT_position_change_ends_figure.py` |
-| Storms and overwash | `HAT_storm_max_duration.py`, `HAT_storm_length_selection.py`, `HAT_storm_event_splitting.py`, `HAT_storm_height_test.py`, `HAT_trim_length_adopted.py`, `HAT_excess_overwash_diagnosis.py`, `HAT_dune_ceiling_rebuild.py`, `HAT_dune_ceiling_per_domain.py` |
+| Storms and overwash | `HAT_storm_max_duration.py`, `HAT_storm_length_selection.py`, `HAT_storm_event_splitting.py`, `HAT_storm_height_test.py`, `HAT_storm_rlow_duration.py`, `HAT_storm_runup_by_slope.py`, `HAT_trim_length_adopted.py`, `HAT_excess_overwash_diagnosis.py`, `HAT_dune_recovery_diagnosis.py`, `HAT_dune_recovery_rate.py`, `HAT_dune_ceiling_rebuild.py`, `HAT_dune_ceiling_per_domain.py` |
 | Code checks | `HAT_metres_3_overwash_fix.py` (+ `_plot_explained`), `HAT_barrier3d_gap_momentum_fix.py`, `HAT_adopt_dune_ceiling_check.py` |
 | Topography and domains | `HAT_peaisland_extension.py`, `HAT_run_crest_experiment.py`, `HAT_plot_crest_experiment.py` |
 | Road relocation | `HAT_relocation_comparison.py`, `HAT_relocation_period_compare.py`, `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`, `HAT_score_road_position.py`; conclusions in `RELOCATION_COMPARISON_RESULTS.md` |
@@ -105,6 +105,69 @@ WHERE: output/raw_runs/experiments/code-checks/2026-09-28-barrier3d-overwash-gap
 USAGE
     python HAT_barrier3d_gap_momentum_fix.py run [--workers 4]
     python HAT_barrier3d_gap_momentum_fix.py compare
+```
+
+### HAT_dune_recovery_diagnosis.py
+
+Why do breached dunes never rebuild in the model?
+
+```text
+WHY (Hannah, 2026-10-01: "look into why the breached dunes never rebuild").
+storms_vs_overwash_1996_2024.png showed false-alarm hotspots at GIS 1-6 and
+78-84, where the model's lowest dune crest sits at the berm for most of a run.
+
+READ-ONLY on the four matrix runs (1996/2010 x managed/natural); no runs.
+Per domain: cells flattened (crest < 0.5 m above the berm), per-cell ceilings,
+regrowth years from DuneRestart to a typical year's largest storm (logistic, as
+Barrier3D), shoreline cell moves, road management and dune rebuilds, and the
+managed run's false alarms (storms_vs_overwash.cells). Each domain is given the
+dominant cause: regrowth slower than the storms, ceiling below a typical
+storm, progradation resetting the dune rows, or retreat bringing low interior
+into them.
+
+    python HAT_dune_recovery_diagnosis.py
+
+WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-dune-recovery-diagnosis/
+(NOTE.md has the findings, tables/dune_recovery_by_domain.csv the numbers)
+```
+
+### HAT_dune_recovery_rate.py
+
+Does a dune that recovers from flat, instead of regrowing in proportion to its height, improve the overwash skill?
+
+```text
+WHY (Hannah, 2026-10-01: "test the first two together", after
+HAT_dune_recovery_diagnosis.py). A flattened dune cell restarts at 7.5 cm and
+grows as r*D*(1 - D/ceiling), so it needs 8-9 years to clear a typical year's
+storm and is reset every year. The second fix proposed with it, a ceiling
+floored at the alongshore neighbours' median, was dropped before running (Hannah:
+"recovery only"): the 2010 north-end lows are whole low stretches of the 2009
+lidar, so a +-5..25-cell floor moved the share of cells capped below a typical
+storm only from 15% to 10-12% island-wide.
+
+THE CHANGE (in-process only, Barrier3d.DuneGrowth replaced in the run's own
+process): the adopted growth plus A * max(0, 1 - D/ceiling) per year, A to the
+front dune row and A/3 to the back row (the same Cf = 3 decay). It adds a
+fixed amount each year that tapers to zero at the cell's ceiling; the volume
+counts in Qdg like the rest of dune growth.
+    control  A = 0 (the adopted model; must reproduce the matrix)
+    rec015   A = 0.15 m/yr
+    rec030   A = 0.30 m/yr
+    rec050   A = 0.50 m/yr
+
+RUNS: full_management and natural, both windows, edgeBE, site-config ends,
+the adopted storm series. 16 runs.
+SCORES: overwash hit rate, false-alarm rate and skill by
+storms_vs_overwash's rule (the run's own QowTS swapped into overwash_vs_model),
+false alarms by zone (Cape Point, community, road), the share of dune
+cell-years flattened, interior RMSE/bias vs LOWESS-7.
+
+NOTHING IN THE MAIN CODE CHANGES.
+
+    python HAT_dune_recovery_rate.py run
+    python HAT_dune_recovery_rate.py score
+
+WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-dune-recovery-rate/
 ```
 
 ### HAT_dune_ceiling_per_domain.py
@@ -2913,6 +2976,91 @@ overwash hit rate with each run dated by ITS OWN storm file.
 ```
 
 </details>
+
+### HAT_storm_rlow_duration.py
+
+Do Rlow and duration, defined as Barrier3D expects them, improve the model?
+
+```text
+WHY (Hannah, 2026-10-01: "set up the Rlow + duration experiment", after a
+review of the storm builder). Two storm columns do not mean what Barrier3D
+assumes they mean.
+  Rlow      the builder takes min(TWL) over the event. An event is TWL above
+            the berm, so the median Rlow is 1.36 m MHW, the berm itself.
+            Barrier3D uses Rlow only to choose the overwash regime
+            (inundation when Rlow > a gap's mean crest, barrier3d.py:1520).
+            Upstream MSSM (UNC-CECL/MSSM_RENCI, multivariateSeaStorm_NCB.m)
+            sets hourly Rlow = TWL - S/2, Stockdon swash S, and the storm's
+            Rlow is its maximum.
+  duration  Barrier3D holds the peak Rexcess for every hour of `duration`
+            (Discharge[:, 0, gap] = Qdune for the whole storm). Upstream
+            yearly_storms halves the duration for that reason; the adopted
+            series trims each event to the 24 h around its peak instead.
+
+THE SERIES (all split12: 24 h grouping, split at >= 12 h below the berm)
+    split12     the adopted series (v3_split12_trim24): the control. Rebuilt
+                here and checked identical in both windows.
+    rlow        Rlow = max(TWL - S/2) over the event; trim 24 h as adopted.
+    dureq       Rlow as the control; duration = the hours at the peak level
+                that pass the same Rexcess^1.5 flow over the berm as the
+                whole event, sum((TWL - berm)^1.5) / (Rhigh - berm)^1.5,
+                rounded, >= 1. No 24 h cap: the event is not trimmed.
+    rlow_dureq  both.
+The berm is the lowest crest a gap can have, so dureq is the longest the
+equivalent duration can be; a higher crest makes the flow more peaked.
+
+RUNS: full_management and natural, both windows, edgeBE, the site config's
+end rates (not re-solved), the unchanged runner with the storm file swapped in
+its own process (HAT_storm_max_duration._launch). 16 runs.
+SCORES: as the event-splitting check (overwash vs imagery: POD, POFD, PSS,
+timing and space r; interior RMSE/bias vs LOWESS-7; total overwash), plus the
+share of storm-gaps Barrier3D routed as inundation (_InundationCount).
+
+NOTHING IN THE MAIN CODE CHANGES.
+
+    python HAT_storm_rlow_duration.py build   # 3 series + tables/series.csv
+    python HAT_storm_rlow_duration.py run     # 16 runs, 5 at a time
+    python HAT_storm_rlow_duration.py score   # tables/scores.csv
+
+WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-rlow-and-duration/
+```
+
+### HAT_storm_runup_by_slope.py
+
+Does storm run-up from each domain's own beach slope improve the overwash skill?
+
+```text
+WHY (Hannah, 2026-10-01: "test the spatially varying runup with beach slope").
+Every domain sees the same storm: one gauge, one WIS point, one slope (0.06).
+After the storm input, duration and dune recovery were ruled out, what is left
+is the height the water reaches at each place against the dunes there.
+
+SLOPES: per domain on the 2009 lidar (0-elevation/2009-2014/1-gapfill-1m), along
+each east-west row from the ocean-side MHW crossing (0.36 m NAVD88) to the first
+cell at the berm (1.7 m), corrected for the shoreline's angle to the rows,
+median over rows. Both windows read the 2009 lidar: the 1996 graft
+(2009-2014-1996) left 19 domains unmeasurable and gave slopes to 0.72. Clipped
+to Stockdon's range (0.01-0.16), then a 5-domain running median.
+
+THE SERIES (same events and hours as the adopted v3_split12_trim24; only
+Rhigh and Rlow change, recomputed hour by hour with the domain's slope)
+    control   0.06 everywhere: checked identical to the adopted file, all 90
+    measured  each domain's slope (median 0.075, 0.05-0.13)
+    pattern   the measured slopes rescaled to median 0.06: the spatial pattern
+              without the shift in the mean
+Each domain's series is set on its Barrier3D object after build_cascade, in the
+run's own process (CASCADE itself takes one storm file for all domains).
+
+RUNS: full_management and natural, both windows, edgeBE, site-config ends. 12.
+SCORES: hit rate, false-alarm rate, skill, false alarms and misses by zone,
+alongshore r of overwash frequency, interior RMSE/bias vs LOWESS-7.
+
+NOTHING IN THE MAIN CODE CHANGES.
+
+    python HAT_storm_runup_by_slope.py slopes | build | run | score
+
+WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-runup-by-slope/
+```
 
 ### HAT_trim_length_adopted.py
 

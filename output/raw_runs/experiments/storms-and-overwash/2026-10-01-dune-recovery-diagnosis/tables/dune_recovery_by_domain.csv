@@ -1,0 +1,361 @@
+window,arm,gis,typical_storm_m_mhw,start_low_crest_m_mhw,start_median_crest_m_mhw,ceiling_low_m_mhw,ceiling_median_m_mhw,share_cells_ceiling_below_storm,share_cell_years_flat,cells_ever_flat,share_end_flat,median_regrowth_years_flat_cells,share_flat_cells_never_clear,accretion_cells,retreat_cells,road_managed,dune_rebuilds,false_alarms,cause
+1996_2010,managed,1,2.75,2.606,3.709,2.61,3.713,0.18,0.716,50,1.0,7.5,0.18,3,0,False,0,4.0,progradation resets the dune rows
+1996_2010,managed,2,2.75,3.194,4.291,3.198,4.295,0.0,0.039,6,0.12,6.5,0.0,0,1,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,3,2.75,3.016,4.391,3.02,4.395,0.0,0.053,7,0.14,7.0,0.0,0,0,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,4,2.75,3.279,4.304,3.283,4.308,0.0,0.221,50,1.0,6.5,0.0,2,0,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,5,2.75,2.831,3.653,2.835,3.657,0.0,0.857,50,1.0,7.0,0.0,3,0,False,0,4.0,progradation resets the dune rows
+1996_2010,managed,6,2.75,1.418,5.287,1.84,5.291,0.16,0.213,23,0.46,7.0,0.348,0,6,False,0,5.0,regrowth slower than the storms
+1996_2010,managed,7,2.75,5.607,6.643,5.611,6.647,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+1996_2010,managed,8,2.75,3.508,5.009,3.512,5.013,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,9,2.75,3.691,5.39,3.695,5.394,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,10,2.75,3.587,5.04,3.591,5.044,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,11,2.75,3.078,5.226,3.082,5.23,0.0,0.0,0,0.0,,,0,1,True,2,1.0,no flattened cells
+1996_2010,managed,12,2.75,4.556,6.418,4.56,6.422,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,13,2.75,5.098,5.648,5.102,5.652,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+1996_2010,managed,14,2.75,4.434,5.81,4.438,5.814,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,15,2.75,5.508,6.49,5.512,6.494,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,16,2.75,4.147,4.767,4.151,4.771,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,17,2.75,3.768,6.028,3.772,6.032,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,18,2.75,5.152,6.4,5.156,6.404,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,19,2.75,6.604,7.942,6.608,7.946,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,20,2.75,4.885,6.924,4.889,6.928,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,21,2.75,4.975,5.917,4.979,5.921,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,22,2.75,4.801,5.646,4.805,5.65,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,23,2.75,4.65,6.063,4.654,6.067,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,24,2.75,4.968,6.063,4.972,6.067,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,25,2.75,4.58,5.674,4.584,5.678,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,26,2.75,4.228,5.246,4.232,5.25,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,27,2.75,3.999,6.2,4.003,6.204,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+1996_2010,managed,28,2.75,4.756,6.271,4.76,6.275,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,29,2.75,2.943,5.43,2.947,5.434,0.0,0.01,1,0.02,8.0,0.0,0,0,False,0,2.0,regrowth slower than the storms
+1996_2010,managed,30,2.75,3.68,5.886,3.684,5.89,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,31,2.75,3.402,5.354,3.406,5.358,0.0,0.0,0,0.0,,,0,0,False,0,2.0,no flattened cells
+1996_2010,managed,32,2.75,2.959,3.91,2.963,3.914,0.0,0.0,0,0.0,,,0,0,True,2,2.0,no flattened cells
+1996_2010,managed,33,2.75,4.255,4.848,4.259,4.852,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,34,2.75,3.968,4.7,3.972,4.704,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,35,2.75,2.916,4.099,2.92,4.103,0.0,0.0,0,0.0,,,0,3,True,2,2.0,no flattened cells
+1996_2010,managed,36,2.75,2.826,3.746,2.83,3.75,0.0,0.0,0,0.0,,,0,1,True,2,2.0,no flattened cells
+1996_2010,managed,37,2.75,2.671,4.927,2.675,4.931,0.02,0.0,0,0.0,,,0,1,True,2,3.0,no flattened cells
+1996_2010,managed,38,2.75,3.601,5.476,3.605,5.48,0.0,0.0,0,0.0,,,0,1,True,0,2.0,no flattened cells
+1996_2010,managed,39,2.75,4.899,6.297,4.903,6.301,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,40,2.75,4.178,6.025,4.182,6.029,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,41,2.75,4.556,6.0,4.56,6.004,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,42,2.75,4.598,6.582,4.602,6.586,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,43,2.75,5.039,6.131,5.043,6.135,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,44,2.75,4.214,5.726,4.218,5.73,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+1996_2010,managed,45,2.75,3.741,4.496,3.745,4.5,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,46,2.75,2.53,3.438,2.534,3.442,0.06,0.0,0,0.0,,,0,1,True,3,3.0,no flattened cells
+1996_2010,managed,47,2.75,3.362,4.421,3.366,4.425,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+1996_2010,managed,48,2.75,2.569,4.79,2.573,4.794,0.1,0.0,0,0.0,,,0,1,True,3,3.0,no flattened cells
+1996_2010,managed,49,2.75,3.297,3.731,3.301,3.735,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+1996_2010,managed,50,2.75,3.102,3.65,3.106,3.654,0.0,0.0,0,0.0,,,0,1,True,1,1.0,no flattened cells
+1996_2010,managed,51,2.75,2.947,5.038,2.951,5.042,0.0,0.0,0,0.0,,,0,1,True,2,2.0,no flattened cells
+1996_2010,managed,52,2.75,3.976,5.627,3.98,5.631,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,53,2.75,2.912,4.169,2.916,4.173,0.0,0.0,0,0.0,,,0,0,True,2,1.0,no flattened cells
+1996_2010,managed,54,2.75,2.768,3.5,2.772,3.504,0.0,0.001,1,0.0,9.0,0.0,0,0,True,2,2.0,regrowth slower than the storms
+1996_2010,managed,55,2.75,4.272,5.5,4.276,5.504,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+1996_2010,managed,56,2.75,2.587,5.136,2.591,5.14,0.06,0.001,1,0.0,inf,1.0,0,1,True,3,2.0,ceiling below a typical year's storm
+1996_2010,managed,57,2.75,2.469,5.027,2.473,5.031,0.08,0.0,0,0.0,,,0,0,True,4,4.0,no flattened cells
+1996_2010,managed,58,2.75,4.149,5.52,4.153,5.524,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,59,2.75,4.071,5.567,4.075,5.571,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,60,2.75,5.374,5.908,5.378,5.912,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,61,2.75,5.525,6.249,5.529,6.253,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,62,2.75,4.718,5.65,4.722,5.654,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,63,2.75,4.869,5.757,4.873,5.761,0.0,0.0,0,0.0,,,0,2,True,0,1.0,no flattened cells
+1996_2010,managed,64,2.75,4.613,5.727,4.617,5.731,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,65,2.75,4.632,5.606,4.636,5.61,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+1996_2010,managed,66,2.75,4.348,5.277,4.352,5.281,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,67,2.75,3.597,4.658,3.601,4.662,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+1996_2010,managed,68,2.75,3.625,4.656,3.629,4.66,0.0,0.0,0,0.0,,,0,0,False,0,2.0,no flattened cells
+1996_2010,managed,69,2.75,4.18,5.487,4.184,5.491,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,70,2.75,4.988,5.54,4.992,5.544,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,71,2.75,4.432,5.283,4.436,5.287,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,72,2.75,4.357,5.976,4.361,5.98,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,73,2.75,4.648,5.786,4.652,5.79,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,74,2.75,3.932,5.533,3.936,5.537,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,75,2.75,4.757,6.136,4.761,6.14,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+1996_2010,managed,76,2.75,5.39,6.937,5.394,6.941,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+1996_2010,managed,77,2.75,4.714,5.546,4.718,5.55,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+1996_2010,managed,78,2.75,2.841,4.127,2.845,4.131,0.0,0.144,25,0.5,7.0,0.0,0,2,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,79,2.75,2.736,3.101,2.74,3.105,0.04,0.274,26,0.52,9.0,0.077,0,0,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,80,2.75,2.558,3.175,2.562,3.179,0.24,0.397,43,0.86,8.0,0.279,0,0,False,0,3.0,regrowth slower than the storms
+1996_2010,managed,81,2.75,2.471,3.839,2.475,3.843,0.16,0.173,21,0.4,8.0,0.381,0,0,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,82,2.75,2.313,3.169,2.317,3.173,0.2,0.194,24,0.48,10.0,0.375,0,0,False,0,4.0,regrowth slower than the storms
+1996_2010,managed,83,2.75,2.598,4.239,2.602,4.243,0.06,0.131,11,0.22,10.0,0.273,0,0,False,0,3.0,regrowth slower than the storms
+1996_2010,managed,84,2.75,3.278,4.083,3.282,4.087,0.0,0.003,1,0.02,9.0,0.0,0,2,True,1,3.0,regrowth slower than the storms
+1996_2010,managed,85,2.75,3.942,4.952,3.946,4.956,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,86,2.75,2.724,3.741,2.728,3.745,0.02,0.003,1,0.0,inf,1.0,0,0,True,2,1.0,ceiling below a typical year's storm
+1996_2010,managed,87,2.75,3.835,5.647,3.839,5.651,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,88,2.75,5.003,6.598,5.007,6.602,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,89,2.75,5.44,6.977,5.444,6.981,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+1996_2010,managed,90,2.75,6.187,7.515,6.191,7.519,0.0,0.0,0,0.0,,,2,1,True,2,0.0,no flattened cells
+1996_2010,natural,1,2.75,2.606,3.709,2.61,3.713,0.18,0.716,50,1.0,7.5,0.18,3,0,False,0,,progradation resets the dune rows
+1996_2010,natural,2,2.75,3.194,4.291,3.198,4.295,0.0,0.039,6,0.12,6.5,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,3,2.75,3.016,4.391,3.02,4.395,0.0,0.053,7,0.14,7.0,0.0,0,0,False,0,,regrowth slower than the storms
+1996_2010,natural,4,2.75,3.279,4.304,3.283,4.308,0.0,0.221,50,1.0,6.5,0.0,2,0,False,0,,regrowth slower than the storms
+1996_2010,natural,5,2.75,2.831,3.653,2.835,3.657,0.0,0.857,50,1.0,7.0,0.0,3,0,False,0,,progradation resets the dune rows
+1996_2010,natural,6,2.75,1.418,5.287,1.84,5.291,0.16,0.213,23,0.46,7.0,0.348,0,6,False,0,,regrowth slower than the storms
+1996_2010,natural,7,2.75,5.607,6.643,5.611,6.647,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,8,2.75,3.508,5.009,3.512,5.013,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,9,2.75,3.691,5.39,3.695,5.394,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,10,2.75,3.587,5.04,3.591,5.044,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,11,2.75,3.078,5.226,3.082,5.23,0.0,0.063,8,0.16,7.5,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,12,2.75,4.556,6.418,4.56,6.422,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,13,2.75,5.098,5.648,5.102,5.652,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,14,2.75,4.434,5.81,4.438,5.814,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,15,2.75,5.508,6.49,5.512,6.494,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,16,2.75,4.147,4.767,4.151,4.771,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,17,2.75,3.768,6.028,3.772,6.032,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,18,2.75,5.152,6.4,5.156,6.404,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,19,2.75,6.604,7.942,6.608,7.946,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,20,2.75,4.885,6.924,4.889,6.928,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,21,2.75,4.975,5.917,4.979,5.921,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,22,2.75,4.801,5.646,4.805,5.65,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,23,2.75,4.65,6.063,4.654,6.067,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,24,2.75,4.968,6.063,4.972,6.067,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,25,2.75,4.58,5.674,4.584,5.678,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,26,2.75,4.228,5.246,4.232,5.25,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,27,2.75,3.999,6.2,4.003,6.204,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,28,2.75,4.756,6.271,4.76,6.275,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,29,2.75,2.943,5.43,2.947,5.434,0.0,0.013,2,0.04,8.5,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,30,2.75,3.68,5.886,3.684,5.89,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,31,2.75,3.402,5.354,3.406,5.358,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,32,2.75,2.959,3.91,2.963,3.914,0.0,0.164,22,0.44,7.0,0.0,0,0,False,0,,regrowth slower than the storms
+1996_2010,natural,33,2.75,4.255,4.848,4.259,4.852,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,34,2.75,3.968,4.7,3.972,4.704,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,35,2.75,2.916,4.099,2.92,4.103,0.0,0.333,50,1.0,6.5,0.0,0,5,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,36,2.75,2.826,3.746,2.83,3.75,0.0,0.1,17,0.34,7.0,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,37,2.75,2.671,4.927,2.675,4.931,0.02,0.033,4,0.08,7.0,0.25,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,38,2.75,3.601,5.476,3.605,5.48,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,39,2.75,4.899,6.297,4.903,6.301,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,40,2.75,4.178,6.025,4.182,6.029,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,41,2.75,4.556,6.0,4.56,6.004,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,42,2.75,4.598,6.582,4.602,6.586,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,43,2.75,5.039,6.131,5.043,6.135,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,44,2.75,4.214,5.726,4.218,5.73,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,45,2.75,3.741,4.496,3.745,4.5,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,46,2.75,2.53,3.438,2.534,3.442,0.06,0.261,34,0.68,7.0,0.088,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,47,2.75,3.362,4.421,3.366,4.425,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,48,2.75,2.569,4.79,2.573,4.794,0.1,0.126,11,0.22,7.0,0.455,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,49,2.75,3.297,3.731,3.301,3.735,0.0,0.077,15,0.3,7.0,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,50,2.75,3.102,3.65,3.106,3.654,0.0,0.173,24,0.46,7.0,0.0,0,2,False,0,,regrowth slower than the storms
+1996_2010,natural,51,2.75,2.947,5.038,2.951,5.042,0.0,0.094,12,0.24,8.0,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,52,2.75,3.976,5.627,3.98,5.631,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,53,2.75,2.912,4.169,2.916,4.173,0.0,0.11,15,0.28,7.0,0.0,0,0,False,0,,regrowth slower than the storms
+1996_2010,natural,54,2.75,2.768,3.5,2.772,3.504,0.0,0.277,33,0.66,8.0,0.0,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,55,2.75,4.272,5.5,4.276,5.504,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,56,2.75,2.587,5.136,2.591,5.14,0.06,0.099,9,0.18,8.0,0.333,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,57,2.75,2.469,5.027,2.473,5.031,0.08,0.104,9,0.18,10.0,0.444,0,0,False,0,,regrowth slower than the storms
+1996_2010,natural,58,2.75,4.149,5.52,4.153,5.524,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,59,2.75,4.071,5.567,4.075,5.571,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,60,2.75,5.374,5.908,5.378,5.912,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,61,2.75,5.525,6.249,5.529,6.253,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,62,2.75,4.718,5.65,4.722,5.654,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,63,2.75,4.869,5.757,4.873,5.761,0.0,0.0,0,0.0,,,0,2,False,0,,no flattened cells
+1996_2010,natural,64,2.75,4.613,5.727,4.617,5.731,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,65,2.75,4.632,5.606,4.636,5.61,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,66,2.75,4.348,5.277,4.352,5.281,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,67,2.75,3.597,4.658,3.601,4.662,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,68,2.75,3.625,4.656,3.629,4.66,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,69,2.75,4.18,5.487,4.184,5.491,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,70,2.75,4.988,5.54,4.992,5.544,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,71,2.75,4.432,5.283,4.436,5.287,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,72,2.75,4.357,5.976,4.361,5.98,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,73,2.75,4.648,5.786,4.652,5.79,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,74,2.75,3.932,5.533,3.936,5.537,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,75,2.75,4.757,6.136,4.761,6.14,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,76,2.75,5.39,6.937,5.394,6.941,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,77,2.75,4.714,5.546,4.718,5.55,0.0,0.0,0,0.0,,,0,2,False,0,,no flattened cells
+1996_2010,natural,78,2.75,2.841,4.127,2.845,4.131,0.0,0.374,44,0.88,7.0,0.0,0,5,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,79,2.75,2.736,3.101,2.74,3.105,0.04,0.3,36,0.7,7.5,0.056,0,3,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,80,2.75,2.558,3.175,2.562,3.179,0.24,0.381,43,0.86,8.0,0.279,0,3,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,81,2.75,2.471,3.839,2.475,3.843,0.16,0.344,47,0.88,7.0,0.17,0,5,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,82,2.75,2.313,3.169,2.317,3.173,0.2,0.374,50,0.96,7.0,0.2,0,3,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,83,2.75,2.598,4.239,2.602,4.243,0.06,0.184,29,0.54,8.0,0.103,0,3,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,84,2.75,3.278,4.083,3.282,4.087,0.0,0.18,29,0.58,7.0,0.0,0,3,False,0,,retreat brings low interior into the dune rows
+1996_2010,natural,85,2.75,3.942,4.952,3.946,4.956,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+1996_2010,natural,86,2.75,2.724,3.741,2.728,3.745,0.02,0.21,28,0.56,8.0,0.036,0,1,False,0,,regrowth slower than the storms
+1996_2010,natural,87,2.75,3.835,5.647,3.839,5.651,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,88,2.75,5.003,6.598,5.007,6.602,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,89,2.75,5.44,6.977,5.444,6.981,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+1996_2010,natural,90,2.75,6.187,7.515,6.191,7.519,0.0,0.857,50,0.0,6.0,0.0,2,1,False,0,,regrowth slower than the storms
+2010_2024,managed,1,3.09,1.98,4.553,1.987,4.56,0.32,0.869,50,1.0,8.0,0.32,8,0,False,0,3.0,progradation resets the dune rows
+2010_2024,managed,2,3.09,2.022,2.76,2.029,2.767,0.52,0.561,37,0.74,inf,0.703,0,0,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,3,3.09,2.363,4.071,2.37,4.078,0.16,0.301,27,0.54,8.0,0.296,0,0,False,0,3.0,regrowth slower than the storms
+2010_2024,managed,4,3.09,2.199,4.427,2.206,4.434,0.16,0.227,22,0.44,8.5,0.364,1,0,False,0,3.0,regrowth slower than the storms
+2010_2024,managed,5,3.09,2.446,4.428,2.453,4.435,0.06,0.15,16,0.32,8.0,0.188,1,0,False,0,3.0,regrowth slower than the storms
+2010_2024,managed,6,3.09,1.973,3.84,1.98,3.847,0.24,0.307,24,0.48,inf,0.5,0,2,False,0,1.0,ceiling below a typical year's storm
+2010_2024,managed,7,3.09,3.854,4.541,3.861,4.548,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,8,3.09,2.645,4.106,2.652,4.113,0.06,0.104,14,0.28,9.0,0.214,0,0,False,0,2.0,regrowth slower than the storms
+2010_2024,managed,9,3.09,1.994,2.662,2.001,2.669,0.92,0.0,0,0.0,,,0,0,True,6,2.0,no flattened cells
+2010_2024,managed,10,3.09,3.282,4.295,3.289,4.302,0.0,0.001,1,0.0,10.0,0.0,0,0,True,3,2.0,regrowth slower than the storms
+2010_2024,managed,11,3.09,3.705,4.892,3.712,4.899,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,12,3.09,2.675,4.089,2.682,4.096,0.12,0.0,0,0.0,,,0,0,True,5,2.0,no flattened cells
+2010_2024,managed,13,3.09,2.301,3.594,2.308,3.601,0.32,0.0,0,0.0,,,0,0,True,9,3.0,no flattened cells
+2010_2024,managed,14,3.09,2.587,3.43,2.594,3.437,0.36,0.359,47,0.94,9.0,0.383,0,0,True,3,1.0,regrowth slower than the storms
+2010_2024,managed,15,3.09,4.129,5.708,4.136,5.715,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+2010_2024,managed,16,3.09,4.605,5.735,4.612,5.742,0.0,0.0,0,0.0,,,0,2,True,0,0.0,no flattened cells
+2010_2024,managed,17,3.09,3.995,5.869,4.002,5.876,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+2010_2024,managed,18,3.09,5.554,7.463,5.561,7.47,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,19,3.09,7.508,8.828,7.515,8.835,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,20,3.09,4.1,6.926,4.107,6.933,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,21,3.09,5.625,6.531,5.632,6.538,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,22,3.09,2.316,5.654,2.323,5.661,0.06,0.031,4,0.08,inf,0.5,0,0,False,0,2.0,ceiling below a typical year's storm
+2010_2024,managed,23,3.09,4.195,5.122,4.202,5.129,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,24,3.09,3.813,4.945,3.82,4.952,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,25,3.09,4.001,4.854,4.008,4.861,0.0,0.0,0,0.0,,,0,1,False,0,0.0,no flattened cells
+2010_2024,managed,26,3.09,3.295,4.549,3.302,4.556,0.0,0.029,5,0.1,8.0,0.0,0,0,False,0,1.0,regrowth slower than the storms
+2010_2024,managed,27,3.09,3.384,5.861,3.391,5.868,0.0,0.0,0,0.0,,,0,0,False,0,2.0,no flattened cells
+2010_2024,managed,28,3.09,4.214,7.133,4.221,7.14,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,29,3.09,3.949,6.704,3.956,6.711,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+2010_2024,managed,30,3.09,2.666,4.239,2.673,4.246,0.16,0.169,21,0.42,9.0,0.333,0,0,False,0,2.0,regrowth slower than the storms
+2010_2024,managed,31,3.09,4.149,5.651,4.156,5.658,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+2010_2024,managed,32,3.09,3.189,4.718,3.196,4.725,0.0,0.0,0,0.0,,,0,0,True,1,3.0,no flattened cells
+2010_2024,managed,33,3.09,2.372,4.574,2.379,4.581,0.12,0.001,1,0.0,inf,1.0,0,1,True,8,3.0,ceiling below a typical year's storm
+2010_2024,managed,34,3.09,3.271,4.839,3.278,4.846,0.0,0.0,0,0.0,,,0,1,True,1,2.0,no flattened cells
+2010_2024,managed,35,3.09,2.233,4.072,2.24,4.079,0.12,0.0,0,0.0,,,0,2,True,9,3.0,no flattened cells
+2010_2024,managed,36,3.09,2.337,3.95,2.344,3.957,0.06,0.003,2,0.0,inf,1.0,0,1,True,5,3.0,ceiling below a typical year's storm
+2010_2024,managed,37,3.09,2.639,4.218,2.646,4.225,0.08,0.003,1,0.02,inf,1.0,0,1,True,3,3.0,ceiling below a typical year's storm
+2010_2024,managed,38,3.09,3.833,5.261,3.84,5.268,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+2010_2024,managed,39,3.09,4.784,7.519,4.791,7.526,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,40,3.09,5.132,6.347,5.139,6.354,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,41,3.09,4.997,7.219,5.004,7.226,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,42,3.09,6.642,8.318,6.649,8.325,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,43,3.09,6.08,7.968,6.087,7.975,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,44,3.09,6.421,7.761,6.428,7.768,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,45,3.09,3.85,6.825,3.857,6.832,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,46,3.09,2.717,3.911,2.724,3.918,0.22,0.0,0,0.0,,,0,1,True,4,3.0,no flattened cells
+2010_2024,managed,47,3.09,3.774,5.2,3.781,5.207,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+2010_2024,managed,48,3.09,3.57,4.74,3.577,4.747,0.0,0.0,0,0.0,,,0,1,True,0,2.0,no flattened cells
+2010_2024,managed,49,3.09,3.948,5.496,3.955,5.503,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+2010_2024,managed,50,3.09,3.878,5.112,3.885,5.119,0.0,0.0,0,0.0,,,0,1,True,0,1.0,no flattened cells
+2010_2024,managed,51,3.09,2.564,4.077,2.571,4.084,0.16,0.003,2,0.0,inf,1.0,0,0,True,6,3.0,ceiling below a typical year's storm
+2010_2024,managed,52,3.09,2.913,3.532,2.92,3.539,0.02,0.016,11,0.0,9.0,0.0,0,2,True,2,2.0,regrowth slower than the storms
+2010_2024,managed,53,3.09,2.336,3.03,2.343,3.037,0.54,0.001,1,0.0,inf,1.0,0,0,True,8,3.0,ceiling below a typical year's storm
+2010_2024,managed,54,3.09,2.509,4.392,2.516,4.399,0.24,0.001,1,0.0,inf,1.0,0,1,True,7,3.0,ceiling below a typical year's storm
+2010_2024,managed,55,3.09,2.584,4.41,2.591,4.417,0.3,0.0,0,0.0,,,0,1,True,7,3.0,no flattened cells
+2010_2024,managed,56,3.09,4.285,6.532,4.292,6.539,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,57,3.09,3.053,5.858,3.06,5.865,0.02,0.0,0,0.0,,,0,0,True,0,2.0,no flattened cells
+2010_2024,managed,58,3.09,4.446,5.918,4.453,5.925,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,59,3.09,4.519,6.267,4.526,6.274,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,60,3.09,5.712,6.775,5.719,6.782,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,61,3.09,5.575,6.84,5.582,6.847,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,62,3.09,4.557,5.729,4.564,5.736,0.0,0.0,0,0.0,,,0,1,True,0,0.0,no flattened cells
+2010_2024,managed,63,3.09,4.249,5.461,4.256,5.468,0.0,0.0,0,0.0,,,0,0,True,0,1.0,no flattened cells
+2010_2024,managed,64,3.09,3.028,4.216,3.035,4.223,0.02,0.0,0,0.0,,,0,0,True,0,2.0,no flattened cells
+2010_2024,managed,65,3.09,2.699,4.582,2.706,4.589,0.04,0.003,1,0.0,inf,1.0,0,0,True,3,2.0,ceiling below a typical year's storm
+2010_2024,managed,66,3.09,2.204,3.425,2.211,3.432,0.36,0.0,0,0.0,,,0,0,True,12,3.0,no flattened cells
+2010_2024,managed,67,3.09,1.99,4.432,1.997,4.439,0.26,0.0,0,0.0,,,0,0,True,13,4.0,no flattened cells
+2010_2024,managed,68,3.09,4.152,5.681,4.159,5.688,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,69,3.09,3.926,5.691,3.933,5.698,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,70,3.09,4.888,6.026,4.895,6.033,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,71,3.09,3.782,4.926,3.789,4.933,0.0,0.0,0,0.0,,,0,0,False,0,3.0,no flattened cells
+2010_2024,managed,72,3.09,3.902,4.966,3.909,4.973,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+2010_2024,managed,73,3.09,4.823,6.596,4.83,6.603,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,74,3.09,4.11,7.014,4.117,7.021,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,75,3.09,4.285,6.239,4.292,6.246,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,76,3.09,5.668,7.269,5.675,7.276,0.0,0.0,0,0.0,,,0,0,False,0,0.0,no flattened cells
+2010_2024,managed,77,3.09,2.642,4.225,2.649,4.232,0.1,0.194,14,0.28,10.5,0.357,0,0,False,0,3.0,regrowth slower than the storms
+2010_2024,managed,78,3.09,1.94,2.845,1.947,2.852,0.64,0.623,48,0.08,inf,0.667,0,2,False,0,2.0,ceiling below a typical year's storm
+2010_2024,managed,79,3.09,2.369,4.021,2.376,4.028,0.16,0.164,21,0.2,9.0,0.381,0,2,False,0,3.0,regrowth slower than the storms
+2010_2024,managed,80,3.09,1.885,2.518,1.892,2.525,0.86,0.654,50,1.0,inf,0.86,0,3,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,81,3.09,1.983,2.732,1.99,2.739,0.68,0.637,41,0.14,inf,0.829,0,1,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,82,3.09,2.461,3.126,2.468,3.133,0.46,0.67,48,0.9,11.0,0.479,0,0,False,0,4.0,regrowth slower than the storms
+2010_2024,managed,83,3.09,1.395,1.97,1.84,1.977,0.94,0.8,50,0.02,inf,0.94,0,2,False,0,4.0,ceiling below a typical year's storm
+2010_2024,managed,84,3.09,1.361,1.433,1.84,1.84,1.0,0.073,50,1.0,inf,1.0,0,0,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,85,3.09,1.801,2.047,1.84,2.054,0.96,0.071,50,1.0,inf,0.96,0,0,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,86,3.09,1.937,2.158,1.944,2.165,0.98,0.073,49,0.98,inf,0.98,0,0,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,87,3.09,2.256,2.794,2.263,2.801,0.62,0.079,48,0.96,inf,0.604,0,0,False,0,3.0,ceiling below a typical year's storm
+2010_2024,managed,88,3.09,3.8,5.209,3.807,5.216,0.0,0.0,0,0.0,,,0,0,False,0,1.0,no flattened cells
+2010_2024,managed,89,3.09,4.305,7.091,4.312,7.098,0.0,0.0,0,0.0,,,0,0,True,0,0.0,no flattened cells
+2010_2024,managed,90,3.09,5.204,8.622,5.211,8.629,0.0,0.0,0,0.0,,,5,0,True,4,0.0,no flattened cells
+2010_2024,natural,1,3.09,1.98,4.553,1.987,4.56,0.32,0.869,50,1.0,8.0,0.32,8,0,False,0,,progradation resets the dune rows
+2010_2024,natural,2,3.09,2.022,2.76,2.029,2.767,0.52,0.561,37,0.74,inf,0.703,0,0,False,0,,ceiling below a typical year's storm
+2010_2024,natural,3,3.09,2.363,4.071,2.37,4.078,0.16,0.301,27,0.54,8.0,0.296,0,0,False,0,,regrowth slower than the storms
+2010_2024,natural,4,3.09,2.199,4.427,2.206,4.434,0.16,0.227,22,0.44,8.5,0.364,1,0,False,0,,regrowth slower than the storms
+2010_2024,natural,5,3.09,2.446,4.428,2.453,4.435,0.06,0.15,16,0.32,8.0,0.188,1,0,False,0,,regrowth slower than the storms
+2010_2024,natural,6,3.09,1.973,3.84,1.98,3.847,0.24,0.457,47,0.94,8.0,0.255,0,6,False,0,,retreat brings low interior into the dune rows
+2010_2024,natural,7,3.09,3.854,4.541,3.861,4.548,0.0,0.0,0,0.0,,,0,2,False,0,,no flattened cells
+2010_2024,natural,8,3.09,2.645,4.106,2.652,4.113,0.06,0.121,17,0.34,8.0,0.176,0,1,False,0,,regrowth slower than the storms
+2010_2024,natural,9,3.09,1.994,2.662,2.001,2.669,0.92,0.797,50,0.72,inf,0.92,0,5,False,0,,ceiling below a typical year's storm
+2010_2024,natural,10,3.09,3.282,4.295,3.289,4.302,0.0,0.073,7,0.14,8.0,0.0,0,1,False,0,,regrowth slower than the storms
+2010_2024,natural,11,3.09,3.705,4.892,3.712,4.899,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,12,3.09,2.675,4.089,2.682,4.096,0.12,0.189,15,0.26,9.0,0.4,0,1,False,0,,regrowth slower than the storms
+2010_2024,natural,13,3.09,2.301,3.594,2.308,3.601,0.32,0.399,39,0.68,9.0,0.41,0,4,False,0,,retreat brings low interior into the dune rows
+2010_2024,natural,14,3.09,2.587,3.43,2.594,3.437,0.36,0.317,19,0.38,inf,0.842,0,2,False,0,,ceiling below a typical year's storm
+2010_2024,natural,15,3.09,4.129,5.708,4.136,5.715,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,16,3.09,4.605,5.735,4.612,5.742,0.0,0.0,0,0.0,,,0,2,False,0,,no flattened cells
+2010_2024,natural,17,3.09,3.995,5.869,4.002,5.876,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,18,3.09,5.554,7.463,5.561,7.47,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,19,3.09,7.508,8.828,7.515,8.835,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,20,3.09,4.1,6.926,4.107,6.933,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,21,3.09,5.625,6.531,5.632,6.538,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,22,3.09,2.316,5.654,2.323,5.661,0.06,0.023,3,0.02,inf,0.667,0,1,False,0,,ceiling below a typical year's storm
+2010_2024,natural,23,3.09,4.195,5.122,4.202,5.129,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,24,3.09,3.813,4.945,3.82,4.952,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,25,3.09,4.001,4.854,4.008,4.861,0.0,0.0,0,0.0,,,0,2,False,0,,no flattened cells
+2010_2024,natural,26,3.09,3.295,4.549,3.302,4.556,0.0,0.03,6,0.12,8.0,0.0,0,0,False,0,,regrowth slower than the storms
+2010_2024,natural,27,3.09,3.384,5.861,3.391,5.868,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,28,3.09,4.214,7.133,4.221,7.14,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,29,3.09,3.949,6.704,3.956,6.711,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,30,3.09,2.666,4.239,2.673,4.246,0.16,0.099,11,0.22,inf,0.545,0,1,False,0,,ceiling below a typical year's storm
+2010_2024,natural,31,3.09,4.149,5.651,4.156,5.658,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,32,3.09,3.189,4.718,3.196,4.725,0.0,0.029,7,0.14,8.0,0.0,0,0,False,0,,regrowth slower than the storms
+2010_2024,natural,33,3.09,2.372,4.574,2.379,4.581,0.12,0.121,15,0.3,9.0,0.4,0,1,False,0,,regrowth slower than the storms
+2010_2024,natural,34,3.09,3.271,4.839,3.278,4.846,0.0,0.02,4,0.08,6.5,0.0,0,1,False,0,,regrowth slower than the storms
+2010_2024,natural,35,3.09,2.233,4.072,2.24,4.079,0.12,0.26,26,0.52,8.0,0.231,0,3,False,0,,retreat brings low interior into the dune rows
+2010_2024,natural,36,3.09,2.337,3.95,2.344,3.957,0.06,0.297,36,0.72,8.0,0.083,0,2,False,0,,regrowth slower than the storms
+2010_2024,natural,37,3.09,2.639,4.218,2.646,4.225,0.08,0.156,18,0.36,8.0,0.222,0,2,False,0,,regrowth slower than the storms
+2010_2024,natural,38,3.09,3.833,5.261,3.84,5.268,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,39,3.09,4.784,7.519,4.791,7.526,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,40,3.09,5.132,6.347,5.139,6.354,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,41,3.09,4.997,7.219,5.004,7.226,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,42,3.09,6.642,8.318,6.649,8.325,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,43,3.09,6.08,7.968,6.087,7.975,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,44,3.09,6.421,7.761,6.428,7.768,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,45,3.09,3.85,6.825,3.857,6.832,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,46,3.09,2.717,3.911,2.724,3.918,0.22,0.374,25,0.48,11.0,0.44,0,2,False,0,,regrowth slower than the storms
+2010_2024,natural,47,3.09,3.774,5.2,3.781,5.207,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,48,3.09,3.57,4.74,3.577,4.747,0.0,0.009,1,0.02,8.0,0.0,0,1,False,0,,regrowth slower than the storms
+2010_2024,natural,49,3.09,3.948,5.496,3.955,5.503,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,50,3.09,3.878,5.112,3.885,5.119,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,51,3.09,2.564,4.077,2.571,4.084,0.16,0.316,32,0.64,8.5,0.25,0,2,False,0,,regrowth slower than the storms
+2010_2024,natural,52,3.09,2.913,3.532,2.92,3.539,0.02,0.589,49,0.84,8.0,0.02,0,6,False,0,,retreat brings low interior into the dune rows
+2010_2024,natural,53,3.09,2.336,3.03,2.343,3.037,0.54,0.597,50,1.0,inf,0.54,0,3,False,0,,ceiling below a typical year's storm
+2010_2024,natural,54,3.09,2.509,4.392,2.516,4.399,0.24,0.233,23,0.46,inf,0.522,0,2,False,0,,ceiling below a typical year's storm
+2010_2024,natural,55,3.09,2.584,4.41,2.591,4.417,0.3,0.261,23,0.46,inf,0.652,0,2,False,0,,ceiling below a typical year's storm
+2010_2024,natural,56,3.09,4.285,6.532,4.292,6.539,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,57,3.09,3.053,5.858,3.06,5.865,0.02,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,58,3.09,4.446,5.918,4.453,5.925,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,59,3.09,4.519,6.267,4.526,6.274,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,60,3.09,5.712,6.775,5.719,6.782,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,61,3.09,5.575,6.84,5.582,6.847,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,62,3.09,4.557,5.729,4.564,5.736,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,63,3.09,4.249,5.461,4.256,5.468,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,64,3.09,3.028,4.216,3.035,4.223,0.02,0.01,3,0.06,8.0,0.333,0,0,False,0,,regrowth slower than the storms
+2010_2024,natural,65,3.09,2.699,4.582,2.706,4.589,0.04,0.107,14,0.28,8.0,0.143,0,0,False,0,,regrowth slower than the storms
+2010_2024,natural,66,3.09,2.204,3.425,2.211,3.432,0.36,0.443,28,0.54,inf,0.643,0,1,False,0,,ceiling below a typical year's storm
+2010_2024,natural,67,3.09,1.99,4.432,1.997,4.439,0.26,0.264,16,0.32,inf,0.812,0,1,False,0,,ceiling below a typical year's storm
+2010_2024,natural,68,3.09,4.152,5.681,4.159,5.688,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,69,3.09,3.926,5.691,3.933,5.698,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,70,3.09,4.888,6.026,4.895,6.033,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,71,3.09,3.782,4.926,3.789,4.933,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,72,3.09,3.902,4.966,3.909,4.973,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,73,3.09,4.823,6.596,4.83,6.603,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,74,3.09,4.11,7.014,4.117,7.021,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,75,3.09,4.285,6.239,4.292,6.246,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,76,3.09,5.668,7.269,5.675,7.276,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,77,3.09,2.642,4.225,2.649,4.232,0.1,0.24,23,0.46,9.0,0.217,0,2,False,0,,regrowth slower than the storms
+2010_2024,natural,78,3.09,1.94,2.845,1.947,2.852,0.64,0.807,50,1.0,inf,0.64,0,6,False,0,,ceiling below a typical year's storm
+2010_2024,natural,79,3.09,2.369,4.021,2.376,4.028,0.16,0.451,46,0.92,8.0,0.174,0,7,False,0,,retreat brings low interior into the dune rows
+2010_2024,natural,80,3.09,1.885,2.518,1.892,2.525,0.86,0.88,50,1.0,inf,0.86,0,6,False,0,,ceiling below a typical year's storm
+2010_2024,natural,81,3.09,1.983,2.732,1.99,2.739,0.68,0.744,50,0.9,inf,0.68,0,6,False,0,,ceiling below a typical year's storm
+2010_2024,natural,82,3.09,2.461,3.126,2.468,3.133,0.46,0.696,50,0.94,10.0,0.46,0,6,False,0,,retreat brings low interior into the dune rows
+2010_2024,natural,83,3.09,1.395,1.97,1.84,1.977,0.94,0.883,50,1.0,inf,0.94,0,8,False,0,,ceiling below a typical year's storm
+2010_2024,natural,84,3.09,1.361,1.433,1.84,1.84,1.0,0.984,50,1.0,inf,1.0,0,6,False,0,,ceiling below a typical year's storm
+2010_2024,natural,85,3.09,1.801,2.047,1.84,2.054,0.96,0.879,50,0.78,inf,0.96,0,5,False,0,,ceiling below a typical year's storm
+2010_2024,natural,86,3.09,1.937,2.158,1.944,2.165,0.98,0.874,50,0.9,inf,0.98,0,5,False,0,,ceiling below a typical year's storm
+2010_2024,natural,87,3.09,2.256,2.794,2.263,2.801,0.62,0.6,41,0.82,inf,0.707,0,3,False,0,,ceiling below a typical year's storm
+2010_2024,natural,88,3.09,3.8,5.209,3.807,5.216,0.0,0.0,0,0.0,,,0,1,False,0,,no flattened cells
+2010_2024,natural,89,3.09,4.305,7.091,4.312,7.098,0.0,0.0,0,0.0,,,0,0,False,0,,no flattened cells
+2010_2024,natural,90,3.09,5.204,8.622,5.211,8.629,0.0,1.0,50,1.0,7.0,0.0,4,0,False,0,,progradation resets the dune rows

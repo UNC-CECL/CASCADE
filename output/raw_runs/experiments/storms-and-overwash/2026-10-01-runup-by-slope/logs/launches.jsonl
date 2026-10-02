@@ -1,0 +1,12 @@
+{"window": "1996_2010", "variant": "control", "scenario": "full_management", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 9.6}
+{"window": "1996_2010", "variant": "pattern", "scenario": "full_management", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 10.1}
+{"window": "1996_2010", "variant": "measured", "scenario": "full_management", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 10.8}
+{"window": "2010_2024", "variant": "control", "scenario": "full_management", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 10.9}
+{"window": "2010_2024", "variant": "measured", "scenario": "full_management", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 13.8}
+{"window": "1996_2010", "variant": "control", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 5.3}
+{"window": "2010_2024", "variant": "pattern", "scenario": "full_management", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 7.8}
+{"window": "1996_2010", "variant": "pattern", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 6.6}
+{"window": "1996_2010", "variant": "measured", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 8.5}
+{"window": "2010_2024", "variant": "control", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 6.7}
+{"window": "2010_2024", "variant": "pattern", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 7.8}
+{"window": "2010_2024", "variant": "measured", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "series_set": true, "minutes": 11.7}
