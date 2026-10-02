@@ -95,6 +95,8 @@ C = {
     "LATE": C_1997,
     "EARLY_FILL": C_1984_FILL,
     "LATE_FILL": C_1997_FILL,
+    "LOCATOR": "#1b7f8c",     # the study area on a locator inset: teal, never the groin red
+    "GROIN": "#d7191c",       # the Buxton groin field marker on maps
 }
 
 # An ordered variable (the smoothing width) gets a light-to-dark blue ramp, not the vintage pair
@@ -627,6 +629,139 @@ def record_caption(png_path: Path, text: str) -> Path:
     return md
 
 
+# Maps: the house map elements (from the study-area map, 2026-10-02)
+
+# One label rule on maps: white type, a thin dark halo, 8 pt
+MAP_HALO = [pe.withStroke(linewidth=1.2, foreground="0.12")]
+MAP_TEXT = dict(color="white", fontsize=8, zorder=8, path_effects=MAP_HALO)
+# The same rule for a light map (an outline on a pale canvas): ink type, a thin white halo
+MAP_TEXT_DARK = dict(color=INK, fontsize=8, zorder=8,
+                     path_effects=[pe.withStroke(linewidth=1.2, foreground="white")])
+# The groin field: a red bar with a white edge
+GROIN_MARKER = dict(marker="|", ms=11, mew=2.4, color=C["GROIN"], ls="none",
+                    path_effects=[pe.withStroke(linewidth=4.4, foreground="white")])
+
+
+def spaced_caps(text: str) -> str:
+    """Water-body names in upright letter-spaced capitals: 'P A M L I C O   S O U N D'."""
+    return "   ".join(" ".join(w.upper()) for w in text.split())
+
+
+def water_label(ax, x, y, text, text_kw=None, **kw):
+    """A water body (sound, ocean, inlet): upright letter-spaced capitals, centred."""
+    return ax.text(x, y, spaced_caps(text), **{"ha": "center", "va": "center",
+                                               **(text_kw or MAP_TEXT), **kw})
+
+
+def place_label(ax, x, y, text, text_kw=None, **kw):
+    """A village or place name (Buxton, Cape Point, Pea Island): italic."""
+    return ax.text(x, y, text, **{"ha": "center", "va": "center", "fontstyle": "italic",
+                                  **(text_kw or MAP_TEXT), **kw})
+
+
+def map_label(ax, x, y, text, text_kw=None, **kw):
+    """Anything else on a map (domain numbers, scale figures): plain."""
+    return ax.text(x, y, text, **{"ha": "center", "va": "center", **(text_kw or MAP_TEXT), **kw})
+
+
+def scale_bar_km(ax, length_m: float = 10_000, segments: int = 2, x: float = 0.035,
+                 y: float = 0.085, text_kw=None, unit: str = "km") -> None:
+    """A cartographic scale bar: alternating black and white segments with a white keyline,
+    labelled 0, 5, 10 km below with a clear gap. `x`, `y` place its left end in axes
+    fraction; drawn in data units, so the map must be equal-aspect in metres. `unit="m"`
+    labels the ticks in metres (for a bar under 1 km)."""
+    from matplotlib.patches import Rectangle
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    h = 0.013 * (y1 - y0)
+    bx, by = x0 + x * (x1 - x0), y0 + y * (y1 - y0)
+    seg = length_m / segments
+    # a white keyline so the black segment reads on dark water
+    ax.add_patch(Rectangle((bx, by), length_m, h, facecolor="none", edgecolor="white", lw=2.2,
+                           zorder=11))
+    for i in range(segments):
+        ax.add_patch(Rectangle((bx + i * seg, by), seg, h, facecolor=INK if i % 2 == 0 else "white",
+                               edgecolor=INK, lw=0.6, zorder=12))
+    div = 1000.0 if unit == "km" else 1.0
+    for i in range(segments + 1):
+        v = i * seg / div
+        lab = f"{v:g} {unit}" if i == segments else f"{v:g}"
+        ax.text(bx + i * seg, by - 1.5 * h, lab, ha="center", va="top",
+                **{**(text_kw or MAP_TEXT), "zorder": 12})
+
+
+def north_dart(ax, c, north=(0.0, 1.0), arrow_m: float = 2000.0, text_kw=None) -> None:
+    """A split-dart north arrow, half black and half white with a white keyline, its "N"
+    beyond the tip. `c` is its centre in data units; `north` is the unit vector of true
+    north in the map's own frame (a quarter-turned map passes its rotation's north)."""
+    from matplotlib.patches import Polygon
+    n = np.asarray(north, float)
+    perp = np.array([-n[1], n[0]])
+    c = np.asarray(c, float)
+    tip, back = c + n * arrow_m / 2, c - n * arrow_m / 2
+    notch = c - n * arrow_m * 0.22
+    w = 0.28 * arrow_m
+    ax.add_patch(Polygon([tip, back + perp * w, notch, back - perp * w], closed=True, facecolor="none",
+                         edgecolor="white", lw=2.2, zorder=11))
+    ax.add_patch(Polygon([tip, back + perp * w, notch], closed=True, facecolor=INK, edgecolor=INK,
+                         lw=0.6, zorder=12))
+    ax.add_patch(Polygon([tip, notch, back - perp * w], closed=True, facecolor="white", edgecolor=INK,
+                         lw=0.6, zorder=12))
+    lab = tip + n * 0.40 * arrow_m
+    ax.text(lab[0], lab[1], "N", ha="center", va="center", fontweight="bold",
+            **{**(text_kw or MAP_TEXT), "fontsize": 8.5, "zorder": 12})
+
+
+def groin_marker(ax, x, y, **kw):
+    """The groin field at (x, y): the red, white-edged bar."""
+    return ax.plot(x, y, **{"zorder": 9, **GROIN_MARKER, **kw})
+
+
+def groin_handle(label: str = "Buxton groins"):
+    """The legend entry for `groin_marker`, a little smaller than on the map."""
+    from matplotlib.lines import Line2D
+    return Line2D([], [], label=label, **{**GROIN_MARKER, "ms": 9, "mew": 2.0})
+
+
+# The house map legend: translucent white, no frame, 8 pt, tight
+MAP_LEGEND = dict(frameon=True, framealpha=0.72, edgecolor="none", facecolor="white", fontsize=8,
+                  handlelength=1.4, labelspacing=0.3, borderpad=0.4, borderaxespad=0.0,
+                  handletextpad=0.5)
+
+
+def letter_at(ax, i: int, x: float, y: float, ha: str = "left") -> None:
+    """The bold panel letter in its white box, top-left corner at (x, y) in axes fraction."""
+    ax.text(x, y, f"({chr(ord('a') + i)})", transform=ax.transAxes, ha=ha, va="top",
+            fontsize=10, fontweight="bold", color=INK, zorder=20,
+            bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
+
+
+def top_row(ax, ax_in, handles, letter: int | None = 0, letter_x: float = 0.012, gap: float = 0.008,
+            north=None, arrow_gap_m: float = 3200.0, arrow_m: float = 2000.0, legend_kw=None):
+    """The top row of a map with an inset in its upper right: the legend top-aligned
+    immediately left of the inset, the panel letter at the left edge on the same top line,
+    and (given `north`) the north arrow just left of the legend, centred on it. `ax_in`
+    is pinned to its upper-right corner first, so the measured top is the drawn top.
+    Returns the legend."""
+    fig = ax.figure
+    ax_in.set_anchor("NE")
+    ax_in.apply_aspect()
+    to_ax = ax.transAxes.inverted()
+    in_left = to_ax.transform(fig.transFigure.transform(ax_in.get_position().p0))[0]
+    in_top = to_ax.transform(fig.transFigure.transform(ax_in.get_position().p1))[1]
+    leg = ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - gap, in_top),
+                    ncol=1, **{**MAP_LEGEND, **(legend_kw or {})})
+    if letter is not None:
+        # the letter box's own padding, so its edge and the inset's share one line
+        pad = 1.5 / 72 / (ax.get_position().height * fig.get_size_inches()[1])
+        letter_at(ax, letter, letter_x, in_top - pad)
+    if north is not None:
+        fig.canvas.draw()
+        lb = leg.get_window_extent().transformed(ax.transData.inverted())
+        north_dart(ax, (lb.x0 - arrow_gap_m, (lb.y0 + lb.y1) / 2), north=north, arrow_m=arrow_m)
+    return leg
+
+
 # The style sheet: output/figures/style/, and STYLE.md beside the figure code
 
 def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
@@ -653,6 +788,8 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
                 ("C['BASE']  unmodified input", C["BASE"]), ("C['ACCENT']  modification", C["ACCENT"]),
                 ("C['ADDED']  fabricated ground", C["ADDED"]), ("C['WATER']", C["WATER"]),
                 ("C['REF']  reference value", C["REF"]), ("C['ROAD']  NC-12", C["ROAD"]),
+                ("C['GROIN']  groin field on maps", C["GROIN"]),
+                ("C['LOCATOR']  study area on an inset", C["LOCATOR"]),
                 ("INK", INK), ("INK_MUTED", INK_MUTED)]
     for k, (name, col) in enumerate(swatches):
         y = len(swatches) - 1 - k
@@ -717,9 +854,14 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     ax.set_xticks([])
     ax.set_yticks([])
     spines_for_image(ax)
-    _scalebar(ax, 100.0)
-    _north_arrow(ax)
-    _title(ax, 4, "a map: frame, scale bar, north arrow")
+    ax.set_xlim(0, 800)
+    ax.set_ylim(0, 600)
+    scale_bar_km(ax, 200.0, unit="m", y=0.10)
+    north_dart(ax, (60, 470), arrow_m=60.0)
+    groin_marker(ax, 690, 60)
+    place_label(ax, 560, 400, "a village")
+    water_label(ax, 400, 40, "Ocean")
+    _title(ax, 4, "a map: scale bar, arrow, labels")
 
     swatch = save(fig, out_dir / "HAT_figure_style_sheet.png", close=True)[0]
 
@@ -739,6 +881,10 @@ from site_layer.hat_figure_style import apply_style, C, C_1984, C_1997, INK, INK
 apply_style()                 # before any figure is made
 ```
 
+A map also takes the map elements: `scale_bar_km`, `north_dart`, `water_label`,
+`place_label`, `map_label`, `groin_marker`, `groin_handle`, `top_row`, `MAP_TEXT`.
+`figure_making/island/study_area_figures.py` (`fig_study_area`) is the worked example.
+
 Every figure script under `scripts/` that draws for this project calls
 `apply_style()` first. `0-elevation/3-figures/HAT_plot_duneline_offset.py` also
 re-exports these names, so `import HAT_plot_duneline_offset as off` still gives
@@ -754,7 +900,10 @@ from it.
 | alongshore axis | one label, `DOMAIN_AXIS_LABEL` = "{DOMAIN_AXIS_LABEL}"; villages as light bands named once by `town_bands(ax)`; the endpoints (1 at Cape Point, 90 at Pea Island) go in the caption |
 | ink | text and axes `{INK}`, secondary text and rulers `{INK_MUTED}`, grid `{GRID_C}`; axes 0.6 pt |
 | panels | a bold letter at the left of the title, the title centred (`_title(ax, i, text)`); inside the corner when the title is wide (`_letter_inside`) |
-| maps | closed frame (`spines_for_image`), no coordinate ticks, a scale bar (`_scalebar`, says the cell count under 1 km) and a north arrow (`_north_arrow`); a labelled UTM frame needs neither |
+| maps | closed frame (`spines_for_image`), no coordinate ticks. Since 2026-10-02 the house map is the study-area map: a segmented scale bar, `scale_bar_km(ax)` (black and white segments with a white keyline, 0 / 5 / 10 km below it with a clear gap; `unit="m"` under 1 km), and the split-dart north arrow `north_dart(ax, c, north=...)`, half black and half white, pointing to true north in the map's own frame (a rotated map passes its rotation's north). `_scalebar` (says the cell count under 1 km) and `_north_arrow` remain for the model-grid panels. A labelled UTM frame needs neither |
+| map labels | one rule, `MAP_TEXT`: white 8 pt type with a thin dark halo (1.2 pt). Water bodies upright in letter-spaced capitals (`water_label`, `spaced_caps`), villages and places italic (`place_label`), domain numbers and scale figures plain (`map_label`). On a pale map (an outline on a light canvas) the same rule in ink with a thin white halo, `MAP_TEXT_DARK`. A name never sits on land: a short leader takes it out over water |
+| map corners | with an inset in the upper right, `top_row(ax, ax_in, handles, north=...)` puts the legend (`MAP_LEGEND`: translucent white, no frame, 8 pt, tight) top-aligned immediately left of the inset, the panel letter at the left edge on the same top line, and the north arrow just left of the legend; the scale bar sits alone in the lower left |
+| map symbols | the Buxton groin field is `groin_marker` (red `{C["GROIN"]}` bar with a white edge; `groin_handle()` for the legend, labelled "Buxton groins"); the study area on a locator inset is teal `{C["LOCATOR"]}`, never red, so it cannot be read as the groins; NC-12 on imagery is road yellow `#ffd23f`; a locator inset carries a light graticule without labels, its spacing in the caption |
 | charts | top and right spines off (`open_frame`), hairline grid on the value axis only when it helps |
 | legends | frameless (a faint white backing when inside), outside the axes where the layout allows: `fig.legend(handles, loc="outside lower center", ncol=n, frameon=False)` under `constrained_layout` |
 | vintages | the earlier line or surface is red `{C_1984}`, the later blue `{C_1997}`, everywhere the two are drawn together; the light fills `{C_1984_FILL}` / `{C_1997_FILL}` are the band between them |

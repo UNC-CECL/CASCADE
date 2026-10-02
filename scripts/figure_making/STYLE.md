@@ -1,6 +1,6 @@
 # Hatteras figure style
 
-Written 2026-10-01 22:48 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
+Written 2026-10-02 18:28 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
 module is the source, this page is its rendering. `HAT_figure_style_sheet.png`
 beside it shows every colour, the elevation classes, a chart and a map drawn
 under the rules.
@@ -12,6 +12,10 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_figure_style import apply_style, C, C_1984, C_1997, INK, INK_MUTED, _title, _scalebar, _north_arrow, caption
 apply_style()                 # before any figure is made
 ```
+
+A map also takes the map elements: `scale_bar_km`, `north_dart`, `water_label`,
+`place_label`, `map_label`, `groin_marker`, `groin_handle`, `top_row`, `MAP_TEXT`.
+`figure_making/island/study_area_figures.py` (`fig_study_area`) is the worked example.
 
 Every figure script under `scripts/` that draws for this project calls
 `apply_style()` first. `0-elevation/3-figures/HAT_plot_duneline_offset.py` also
@@ -28,7 +32,10 @@ from it.
 | alongshore axis | one label, `DOMAIN_AXIS_LABEL` = "GIS domain (south → north)"; villages as light bands named once by `town_bands(ax)`; the endpoints (1 at Cape Point, 90 at Pea Island) go in the caption |
 | ink | text and axes `0.15`, secondary text and rulers `0.42`, grid `0.88`; axes 0.6 pt |
 | panels | a bold letter at the left of the title, the title centred (`_title(ax, i, text)`); inside the corner when the title is wide (`_letter_inside`) |
-| maps | closed frame (`spines_for_image`), no coordinate ticks, a scale bar (`_scalebar`, says the cell count under 1 km) and a north arrow (`_north_arrow`); a labelled UTM frame needs neither |
+| maps | closed frame (`spines_for_image`), no coordinate ticks. Since 2026-10-02 the house map is the study-area map: a segmented scale bar, `scale_bar_km(ax)` (black and white segments with a white keyline, 0 / 5 / 10 km below it with a clear gap; `unit="m"` under 1 km), and the split-dart north arrow `north_dart(ax, c, north=...)`, half black and half white, pointing to true north in the map's own frame (a rotated map passes its rotation's north). `_scalebar` (says the cell count under 1 km) and `_north_arrow` remain for the model-grid panels. A labelled UTM frame needs neither |
+| map labels | one rule, `MAP_TEXT`: white 8 pt type with a thin dark halo (1.2 pt). Water bodies upright in letter-spaced capitals (`water_label`, `spaced_caps`), villages and places italic (`place_label`), domain numbers and scale figures plain (`map_label`). On a pale map (an outline on a light canvas) the same rule in ink with a thin white halo, `MAP_TEXT_DARK`. A name never sits on land: a short leader takes it out over water |
+| map corners | with an inset in the upper right, `top_row(ax, ax_in, handles, north=...)` puts the legend (`MAP_LEGEND`: translucent white, no frame, 8 pt, tight) top-aligned immediately left of the inset, the panel letter at the left edge on the same top line, and the north arrow just left of the legend; the scale bar sits alone in the lower left |
+| map symbols | the Buxton groin field is `groin_marker` (red `#d7191c` bar with a white edge; `groin_handle()` for the legend, labelled "Buxton groins"); the study area on a locator inset is teal `#1b7f8c`, never red, so it cannot be read as the groins; NC-12 on imagery is road yellow `#ffd23f`; a locator inset carries a light graticule without labels, its spacing in the caption |
 | charts | top and right spines off (`open_frame`), hairline grid on the value axis only when it helps |
 | legends | frameless (a faint white backing when inside), outside the axes where the layout allows: `fig.legend(handles, loc="outside lower center", ncol=n, frameon=False)` under `constrained_layout` |
 | vintages | the earlier line or surface is red `#b2182b`, the later blue `#2166ac`, everywhere the two are drawn together; the light fills `#f4a582` / `#92c5de` are the band between them |

@@ -40,6 +40,8 @@ from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, FIG_W_DOUBLE, FIG_W_SINGLE,
     figsize, save, record_caption, _title, _letter_inside, _scalebar, _halo, _north_arrow,
     spines_for_image, open_frame, elevation_cmap, ELEV_WATER, town_bands, structures,
+    MAP_HALO, MAP_TEXT, MAP_TEXT_DARK, GROIN_MARKER, MAP_LEGEND, spaced_caps, water_label, place_label,
+    map_label, scale_bar_km, north_dart, groin_marker, groin_handle, letter_at, top_row,
 )
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
@@ -205,44 +207,6 @@ def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
     ax.text(*lab, "N", transform=ax.transAxes, ha="center", va="center", fontsize=8.5,
             fontweight="bold", color=INK, zorder=20,
             bbox=dict(facecolor="white", alpha=0.8, edgecolor="none", boxstyle="square,pad=0.1"))
-
-
-# A black/white segmented scale bar
-def scale_bar(ax, length_m=10_000, segments=2, x=0.035, y=0.085):
-    x0, x1 = ax.get_xlim()
-    y0, y1 = ax.get_ylim()
-    h = 0.013 * (y1 - y0)
-    bx, by = x0 + x * (x1 - x0), y0 + y * (y1 - y0)
-    seg = length_m / segments
-    # a white keyline so the black segment reads on dark water
-    ax.add_patch(Rectangle((bx, by), length_m, h, facecolor="none", edgecolor="white", lw=2.2,
-                           zorder=11))
-    for i in range(segments):
-        ax.add_patch(Rectangle((bx + i * seg, by), seg, h, facecolor=INK if i % 2 == 0 else "white",
-                               edgecolor=INK, lw=0.6, zorder=12))
-    for i in range(segments + 1):
-        km = i * seg / 1000
-        lab = f"{km:g} km" if i == segments else f"{km:g}"
-        ax.text(bx + i * seg, by - 1.5 * h, lab, ha="center", va="top", **{**STUDY_TEXT, "zorder": 12})
-
-
-# A split-dart north arrow pointing to true north, its "N" beyond the tip, centred on c (data units)
-def north_dart(ax, frame, c, arrow_m=2000.0):
-    n = frame.north()
-    perp = np.array([-n[1], n[0]])
-    c = np.asarray(c, float)
-    tip, back = c + n * arrow_m / 2, c - n * arrow_m / 2
-    notch = c - n * arrow_m * 0.22
-    w = 0.28 * arrow_m
-    ax.add_patch(Polygon([tip, back + perp * w, notch, back - perp * w], closed=True, facecolor="none",
-                         edgecolor="white", lw=2.2, zorder=11))
-    ax.add_patch(Polygon([tip, back + perp * w, notch], closed=True, facecolor=INK, edgecolor=INK,
-                         lw=0.6, zorder=12))
-    ax.add_patch(Polygon([tip, notch, back - perp * w], closed=True, facecolor="white", edgecolor=INK,
-                         lw=0.6, zorder=12))
-    lab = tip + n * 0.40 * arrow_m
-    ax.text(lab[0], lab[1], "N", ha="center", va="center", fontweight="bold",
-            **{**STUDY_TEXT, "fontsize": 8.5, "zorder": 12})
 
 
 # Imagery
@@ -543,17 +507,6 @@ def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
 
 # Figure 1: study area
 
-STUDY_HALO = [mpl.patheffects.withStroke(linewidth=1.2, foreground="0.12")]
-STUDY_TEXT = dict(color="white", fontsize=8, zorder=8, path_effects=STUDY_HALO)
-GROIN_STYLE = dict(marker="|", ms=11, mew=2.4, color="#d7191c", ls="none",
-                   path_effects=[mpl.patheffects.withStroke(linewidth=4.4, foreground="white")])
-
-
-# Water bodies in upright letter-spaced capitals
-def spaced_caps(text):
-    return "   ".join(" ".join(w.upper()) for w in text.split())
-
-
 # Village names just above their own domains on the sound side, shifted off any land, short leaders
 def study_area_villages(ax, frame, dom, land, clear_m=1500.0, pad_m=500.0, row=("Salvo", "Waves", "Rodanthe"),
                         shift_m=None):
@@ -590,7 +543,7 @@ def study_area_villages(ax, frame, dom, land, clear_m=1500.0, pad_m=500.0, row=(
                 break
             d["x"] += 250.0
     for d in placed:
-        ax.text(d["x"], d["y"], d["name"], ha="center", va="center", fontstyle="italic", **STUDY_TEXT)
+        ax.text(d["x"], d["y"], d["name"], ha="center", va="center", fontstyle="italic", **MAP_TEXT)
         lx = min(max(d["anchor_x"], d["x"] - d["hw"]), d["x"] + d["hw"])
         ax.plot([lx, d["anchor_x"]], [d["y"] - out * (d["hh"] + 120), d["anchor_y"] + out * 60],
                 color="white", lw=0.5, zorder=7)
@@ -604,24 +557,24 @@ def study_area_labels(ax, frame, dom, vector, outline):
     for i, g in enumerate(dom.ID.values):
         if g == FIRST or g % 10 == 0:
             p = cen[i] + sea * 1500
-            ax.text(p[0], p[1], str(g), ha="center", va="center", **STUDY_TEXT)
+            ax.text(p[0], p[1], str(g), ha="center", va="center", **MAP_TEXT)
     study_area_villages(ax, frame, dom, land, shift_m={"Buxton": 4000.0})
     p = cen[0] + np.array([-700, 0]) + sea * 1500
-    ax.text(p[0], p[1], "Cape\nPoint", ha="right", va="center", fontstyle="italic", **STUDY_TEXT)
+    ax.text(p[0], p[1], "Cape\nPoint", ha="right", va="center", fontstyle="italic", **MAP_TEXT)
     p = cen[-1] + np.array([700, 0]) - sea * 1500
-    ax.text(p[0], p[1], "Pea\nIsland", ha="left", va="center", fontstyle="italic", **STUDY_TEXT)
+    ax.text(p[0], p[1], "Pea\nIsland", ha="left", va="center", fontstyle="italic", **MAP_TEXT)
     ocean_y, sound_y = (0.05, 0.95) if sea[1] < 0 else (0.95, 0.05)
     ax.text(0.55, ocean_y, spaced_caps("Atlantic Ocean"), transform=ax.transAxes, ha="center",
-            va="center", **STUDY_TEXT)
+            va="center", **MAP_TEXT)
     ax.text(0.20, sound_y, spaced_caps("Pamlico Sound"), transform=ax.transAxes, ha="center",
-            va="center", **STUDY_TEXT)
+            va="center", **MAP_TEXT)
     # The groin field: a white-edged bar off the beach, its name out in the ocean on a leader
     for name, pos in ANN.groins.items():
         p = frame.along(pos)[0] + sea * 1150
-        ax.plot(p[0], p[1], zorder=9, **GROIN_STYLE)
+        groin_marker(ax, p[0], p[1])
         end = p + sea * 2700
         ax.text(end[0], end[1] + sea[1] * 250, "Buxton groins", ha="center",
-                va="top" if sea[1] < 0 else "bottom", fontstyle="italic", **STUDY_TEXT)
+                va="top" if sea[1] < 0 else "bottom", fontstyle="italic", **MAP_TEXT)
         ax.plot([p[0], end[0]], [p[1] + sea[1] * 450, end[1]], color="white", lw=0.5, zorder=7)
 
 # The reach on imagery with domains, NC-12, villages and the regional inset
@@ -633,35 +586,20 @@ def fig_study_area(dom, outline, roads, frame, vector):
                         scalebar=False, arrow=False, numbers=False, label_villages=False,
                         water_labels=False, ends=False, groin=False).road_c
     study_area_labels(ax, frame, dom, vector, outline)
-    scale_bar(ax)
+    scale_bar_km(ax)
     # the regional inset in the upper right, over the open sound; square in inches
     ih, edge = 0.58, 0.018
     iw = ih * fh / fw
     ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c="#1b7f8c", locator_lw=2.4)
-    # red is the groins here; the equal-aspect inset is pinned to the corner, then measured
-    ax_in.set_anchor("NE")
-    ax_in.apply_aspect()
+    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=C["LOCATOR"], locator_lw=2.4)
     letter_corner(ax_in, 1)
     handles = [
         Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
         Line2D([], [], color=road_c, lw=1.2, label="NC-12"),
-        Line2D([], [], label="Buxton groins", **{**GROIN_STYLE, "ms": 9, "mew": 2.0}),
+        groin_handle(),
     ]
-    # the legend immediately left of the inset, top aligned with it
-    in_left = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[0]
-    in_top = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p1))[1]
-    leg = ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - 0.008, in_top), ncol=1,
-                    frameon=True, framealpha=0.72, edgecolor="none", facecolor="white", fontsize=8,
-                    handlelength=1.4, labelspacing=0.3, borderpad=0.4, borderaxespad=0.0,
-                    handletextpad=0.5)
-    # (a) at the left edge, in the water, its top on the line of the legend and inset tops
-    pad = 1.5 / 72 / (ax.get_position().height * fh)     # the letter box's own padding, in axes fraction
-    letter_corner(ax, 0, x=0.012, y=in_top - pad)
-    # the north arrow just left of the legend, centred on it, in the open sound
-    fig.canvas.draw()
-    lb = leg.get_window_extent().transformed(ax.transData.inverted())
-    north_dart(ax, frame, (lb.x0 - 3200.0, (lb.y0 + lb.y1) / 2))
+    # legend left of the inset, (a) and the north arrow on the same top line
+    top_row(ax, ax_in, handles, letter=0, north=frame.north())
     out = save(fig, fig_path("study_area"), vector=False, dpi=300)
     record_caption(out[0],
         f"Study area. (a) The modelled reach, rotated so it runs south to north from left to right: "
