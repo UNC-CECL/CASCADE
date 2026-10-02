@@ -21,12 +21,10 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.patheffects as pe  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
-from matplotlib.patches import Patch  # noqa: E402
 
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
@@ -36,7 +34,7 @@ import scr_paths  # noqa: E402,F401
 from coastsat_lrr import load_timeseries  # noqa: E402
 from coastsat_mean_shoreline import timeseries_file, transect_geometry  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
-    C_1984, C_1997, INK, INK_MUTED, _north_arrow, _scalebar, apply_style, caption,
+    INK, INK_MUTED, _north_arrow, _scalebar, apply_style, caption,
     figsize, figure_dir, open_frame, save, spines_for_image, support_dir, title)
 from site_layer.hat_observed_rates import DOMAIN_BOXES, transect_lookup  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
@@ -54,7 +52,11 @@ TILE_ZOOM = 16
 TILE_CACHE = Path(tempfile.gettempdir()) / "hat_tile_cache"
 MAP_PAD_X = (550.0, 650.0)         # metres landward / seaward of the shoreline on the map
 C_SOUTH, C_NORTH = "#d95f02", "#7570b3"
-CMAP = "BrBG"                      # brown landward, teal seaward
+CMAP = "RdBu"                      # red landward, blue seaward
+C_BASE_LINE, C_END_LINE = "0.35", "0.05"   # neutral: red and blue mean landward/seaward here
+LS_BASE = (0, (3, 1.5))
+LS_GROIN = (0, (5, 2, 1, 2))
+FILL_STYLE = dict(color=INK, lw=1.2, ls=":")
 CLIM = 80.0                        # colour limit, m
 OUT = figure_dir("observations", "shoreline")
 STEM = "buxton_groin_shoreline_position"
@@ -143,15 +145,13 @@ def draw_map(ax, tr, y_groin):
     y0, y1 = tr.by.min() - 60, tr.by.max() + 60
     img, ext = basemap((x0, y0, x1, y1))
     ax.imshow(img, extent=ext, zorder=0, interpolation="bilinear")
-    halo = [pe.withStroke(linewidth=2.4, foreground="white")]
     for t in tr.itertuples():
-        c = C_SOUTH if t.side == "south" else C_NORTH
         ax.plot([t.bx - 160 * t.ux, t.bx + 220 * t.ux], [t.by - 160 * t.uy, t.by + 220 * t.uy],
-                color=c, lw=0.7, alpha=0.95, zorder=2)
-    ax.plot(tr.bx, tr.by, color=C_1984, lw=1.3, zorder=4, path_effects=halo)
-    ax.plot(tr.ex, tr.ey, color=C_1997, lw=1.3, zorder=4, path_effects=halo)
+                color="white", lw=0.6, alpha=0.9, zorder=2)
+    ax.plot(tr.bx, tr.by, color=C_BASE_LINE, lw=1.3, ls=LS_BASE, zorder=4)
+    ax.plot(tr.ex, tr.ey, color=C_END_LINE, lw=1.3, zorder=4)
     ax.plot([x0 + 0.62 * (x1 - x0), x1], [y_groin, y_groin], color="white", lw=1.0,
-            ls=(0, (4, 2)), zorder=5)
+            ls=LS_GROIN, zorder=5)
     ax.plot([x1 - 0.04 * (x1 - x0)], [y_groin], marker="<", ms=6, color="white", mec=INK,
             mew=0.6, zorder=6, ls="none")
     ax.set_xlim(x0, x1)
@@ -177,9 +177,8 @@ def draw_hovmoller(ax, tr, pos, fill, y_fill_lo):
     edges_y = np.r_[years - 0.5, years[-1] + 0.5]
     m = ax.pcolormesh(edges_y, edges_d, np.ma.masked_invalid(grid.to_numpy()), cmap=CMAP,
                       vmin=-CLIM, vmax=CLIM, shading="flat", rasterized=True)
-    ax.axhline(0.0, color=INK, lw=0.9, ls=(0, (4, 2)))
-    ax.plot([fill["year"], fill["year"]], [y_fill_lo, edges_d[-1]], color=INK, lw=1.6,
-            solid_capstyle="butt", clip_on=False)
+    ax.axhline(0.0, color=INK, lw=0.9, ls=LS_GROIN)
+    ax.plot([fill["year"], fill["year"]], [y_fill_lo, edges_d[-1]], **FILL_STYLE)
     ax.set_ylim(edges_d[0], edges_d[-1])
     ax.set_xlim(edges_y[0], edges_y[-1])
     ax.set_ylabel("Alongshore distance\nfrom groin field (km)")
@@ -193,7 +192,7 @@ def draw_hovmoller(ax, tr, pos, fill, y_fill_lo):
 def draw_sides(ax, tr, pos, fill):
     p = pos.merge(tr[["transect_id", "side"]], on="transect_id")
     ax.axhline(0.0, color=INK_MUTED, lw=0.6)
-    ax.axvspan(fill["year"] - 0.5, fill["year"] + 0.5, color="0.9", lw=0, zorder=0)
+    ax.axvline(fill["year"], zorder=0, **FILL_STYLE)
     for side, c in (("south", C_SOUTH), ("north", C_NORTH)):
         g = p[p.side == side].groupby("year")["change_m"]
         med, q1, q3 = g.median(), g.quantile(0.25), g.quantile(0.75)
@@ -236,12 +235,11 @@ def main() -> None:
     title(ax_s, 2, "Each side")
 
     # One legend for the whole figure
-    halo = [pe.withStroke(linewidth=2.4, foreground="white")]
     handles = [Line2D([], [], color=C_SOUTH, lw=1.4), Line2D([], [], color=C_NORTH, lw=1.4),
-               Line2D([], [], color=C_1984, lw=1.3, path_effects=halo),
-               Line2D([], [], color=C_1997, lw=1.3, path_effects=halo),
-               Line2D([], [], color=INK, lw=0.9, ls=(0, (4, 2))),
-               Patch(facecolor="0.9", edgecolor="none")]
+               Line2D([], [], color=C_BASE_LINE, lw=1.3, ls=LS_BASE),
+               Line2D([], [], color=C_END_LINE, lw=1.3),
+               Line2D([], [], color=INK, lw=0.9, ls=LS_GROIN),
+               Line2D([], [], **FILL_STYLE)]
     labels = ["South of groin field", "North of groin field",
               f"Shoreline {BASE_YEARS[0]}–{BASE_YEARS[1]}", f"Shoreline {END_YEARS[0]}–{END_YEARS[1]}",
               "Groin field", f"Beach fill {fill['year']} (GIS {fill['first_gis']}–{fill['last_gis']})"]
@@ -255,19 +253,22 @@ def main() -> None:
         f"Observed shoreline position near the Buxton groin field, Hatteras Island, from the CoastSat "
         f"satellite-derived shoreline record ({YEARS[0]}–{YEARS[1]}). (a) The reach (GIS domains "
         f"{GIS_RANGE[0]}–{GIS_RANGE[1]}) on Esri World Imagery, north up: the {len(tr)} CoastSat "
-        f"transects used, {n_s} south (orange) and {n_n} north (purple) of the groin field; the "
+        f"transects used (white), {n_s} south and {n_n} north of the groin field; the "
         f"shoreline as the median of each transect's positions over {BASE_YEARS[0]}–{BASE_YEARS[1]} "
-        f"(red) and {END_YEARS[0]}–{END_YEARS[1]} (blue); the dashed white line and arrowhead mark "
+        f"(dashed charcoal) and {END_YEARS[0]}–{END_YEARS[1]} (solid near-black); the dash-dot "
+        f"white line and arrowhead mark "
         f"the groin field at the model's groin position (GIS {gis_pos}, the boundary between "
         f"domains 5 and 6). (b) Change in each transect's annual median position from its "
         f"{BASE_YEARS[0]}–{BASE_YEARS[1]} median, along the transect, positive seaward, by alongshore "
         f"distance from the groin field measured along the {BASE_YEARS[0]}–{BASE_YEARS[1]} "
-        f"shoreline (positive north); years with fewer than {MIN_OBS_PER_YEAR} satellite positions "
-        f"are blank; the colour scale is clipped at ±{CLIM:.0f} m. The vertical bar marks the "
+        f"shoreline (positive north), red landward and blue seaward, white near zero; the dash-dot "
+        f"line is the groin field; years with fewer than {MIN_OBS_PER_YEAR} satellite positions "
+        f"are blank; the colour scale is clipped at ±{CLIM:.0f} m. The dotted vertical line marks the "
         f"{fill['year']} Buxton beach fill (GIS {fill['first_gis']}–{fill['last_gis']}, from the "
         f"management record), which begins at the groin field and extends north past this view. "
-        f"(c) The median of (b) over the transects on each side, with the interquartile range "
-        f"across them shaded; the grey band is the fill year. Positions are CoastSat's chainages "
+        f"(c) The median of (b) over the transects on each side, south of the groin field "
+        f"orange and north purple, with the interquartile range across them shaded; the dotted "
+        f"line is the fill year. Positions are CoastSat's chainages "
         f"along each transect, not referenced to a vertical or survey datum beyond CoastSat's own "
         f"processing; annual medians still carry tide, wave and season noise of several metres."))
     save(fig, OUT / STEM, close=True)
