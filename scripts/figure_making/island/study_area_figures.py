@@ -471,7 +471,8 @@ INSET_LAT = (33.4, 37.3)
 
 
 # The south-eastern US coast with the reach marked
-def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True):
+def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True,
+                   locator_c=LOCATOR_C):
     states = gpd.read_file(NE_STATES)
     lon0, lon1 = INSET_LON
     lat0, lat1 = INSET_LAT
@@ -482,7 +483,7 @@ def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True)
     states.plot(ax=ax, facecolor=LAND, edgecolor="white", lw=0.5, zorder=1)      # state borders in white
     states.dissolve().plot(ax=ax, facecolor="none", edgecolor=LAND_EDGE, lw=0.4, zorder=2)   # the coast
     o = outline.to_crs("EPSG:4326")
-    o.plot(ax=ax, facecolor=LOCATOR_C, edgecolor=LOCATOR_C, lw=1.6, zorder=4)
+    o.plot(ax=ax, facecolor=locator_c, edgecolor=locator_c, lw=1.6, zorder=4)
     bx0, by0, bx1, by1 = o.total_bounds
     pad = 0.18
     ax.add_patch(Rectangle((bx0 - pad, by0 - pad), bx1 - bx0 + 2 * pad, by1 - by0 + 2 * pad,
@@ -539,10 +540,9 @@ def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
 
 # Figure 1: study area
 
-STUDY_WATER = "#3e5c6b"            # one muted water colour outside the island (study area only)
 STUDY_HALO = [mpl.patheffects.withStroke(linewidth=1.2, foreground="0.12")]
 STUDY_TEXT = dict(color="white", fontsize=8, zorder=8, path_effects=STUDY_HALO)
-GROIN_STYLE = dict(marker="|", ms=11, mew=2.4, color="0.1", ls="none",
+GROIN_STYLE = dict(marker="|", ms=11, mew=2.4, color="#d7191c", ls="none",
                    path_effects=[mpl.patheffects.withStroke(linewidth=4.4, foreground="white")])
 
 
@@ -551,15 +551,58 @@ def spaced_caps(text):
     return "   ".join(" ".join(w.upper()) for w in text.split())
 
 
+# Village names just above their own domains on the sound side, shifted off any land, short leaders
+def study_area_villages(ax, frame, dom, land, clear_m=1500.0, pad_m=500.0, row=("Salvo", "Waves", "Rodanthe"),
+                        shift_m=None):
+    from shapely.geometry import box as shp_box
+    sea = frame.seaward
+    out = -sea[1]                      # +1/-1 in y, toward the sound
+    rdom = frame.geoms(dom.geometry)
+    names = {"Buxton": ANN.town_spans["Buxton"], "Avon": ANN.town_spans["Avon"],
+             "Salvo": (ANN.village_lines["Salvo"],) * 2, "Waves": (ANN.village_lines["Waves"],) * 2,
+             "Rodanthe": (ANN.village_lines["Rodanthe"],) * 2}
+    sized = measure_m(ax, list(names), fontsize=8, fontstyle="italic")
+    placed = []
+    for (name, (lo, hi)), (hw, hh) in zip(names.items(), sized):
+        bx0, by0, bx1, by1 = rdom[(dom.ID >= lo) & (dom.ID <= hi)].total_bounds
+        # the sound-side edge of the boxes around the village, so the name clears its neighbours too
+        near = rdom[(dom.ID >= lo - 3) & (dom.ID <= hi + 3)].total_bounds
+        edge = near[3] if out > 0 else near[1]
+        placed.append(dict(x=(bx0 + bx1) / 2, hw=hw, hh=hh, name=name, anchor_x=(bx0 + bx1) / 2,
+                           anchor_y=by1 if out > 0 else by0, y=edge + out * clear_m))
+    # the three close villages share one row
+    y_row = max(d["y"] * out for d in placed if d["name"] in row) * out
+    for d in placed:
+        if d["name"] in row:
+            d["y"] = y_row
+    # the Cape landmass around Buxton is wider than the island outline: a set shift off it
+    for d in placed:
+        d["x"] += (shift_m or {}).get(d["name"], 0.0)
+    separate_x(ax, placed, pad_m)
+    # no part of a name on land: slide it toward open water (to the right, along the reach)
+    for d in placed:
+        for _ in range(60):
+            b = shp_box(d["x"] - d["hw"] - 150, d["y"] - d["hh"], d["x"] + d["hw"] + 150, d["y"] + d["hh"])
+            if not b.intersects(land):
+                break
+            d["x"] += 250.0
+    for d in placed:
+        ax.text(d["x"], d["y"], d["name"], ha="center", va="center", fontstyle="italic", **STUDY_TEXT)
+        lx = min(max(d["anchor_x"], d["x"] - d["hw"]), d["x"] + d["hw"])
+        ax.plot([lx, d["anchor_x"]], [d["y"] - out * (d["hh"] + 120), d["anchor_y"] + out * 60],
+                color="white", lw=0.5, zorder=7)
+
+
 # The study-area labels: one rule, white type with a thin dark halo
-def study_area_labels(ax, frame, dom, vector):
+def study_area_labels(ax, frame, dom, vector, outline):
+    land = frame.geoms(outline.geometry).union_all()
     sea = frame.seaward
     cen = frame.pts(frame.centroids)
     for i, g in enumerate(dom.ID.values):
         if g == FIRST or g % 10 == 0:
             p = cen[i] + sea * 1500
             ax.text(p[0], p[1], str(g), ha="center", va="center", **STUDY_TEXT)
-    village_row(ax, frame, dom, vector, text_kw=dict(color="white", path_effects=STUDY_HALO))
+    study_area_villages(ax, frame, dom, land, shift_m={"Buxton": 4000.0})
     p = cen[0] + np.array([-700, 0]) + sea * 1500
     ax.text(p[0], p[1], "Cape\nPoint", ha="right", va="center", fontstyle="italic", **STUDY_TEXT)
     p = cen[-1] + np.array([700, 0]) - sea * 1500
@@ -586,20 +629,19 @@ def fig_study_area(dom, outline, roads, frame, vector):
     fw, fh = fig.get_size_inches()
     road_c = draw_reach(ax, frame, dom, outline, roads[2008], vector, window, piers=False,
                         scalebar=False, arrow=False, numbers=False, label_villages=False,
-                        water_labels=False, ends=False, groin=False,
-                        water=None if vector else STUDY_WATER).road_c
-    study_area_labels(ax, frame, dom, vector)
+                        water_labels=False, ends=False, groin=False).road_c
+    study_area_labels(ax, frame, dom, vector, outline)
     scale_and_north(ax, frame)
     # the regional inset in the upper right, over the open sound; square in inches
-    ih, edge = 0.42, 0.012
+    ih, edge = 0.58, 0.012
     iw = ih * fh / fw
     ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False)
-    letter_corner(ax, 0)
+    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=INK)   # red is the groins here
+    letter_corner(ax, 0, x=0.012)        # in the water left of the island's north end
     letter_corner(ax_in, 1)
     handles = [
         Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
-        Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment"),
+        Line2D([], [], color=road_c, lw=1.2, label="NC-12"),
         Line2D([], [], label="Buxton groins", **{**GROIN_STYLE, "ms": 9, "mew": 2.0}),
     ]
     # the legend immediately left of the inset, top aligned with it
@@ -614,13 +656,11 @@ def fig_study_area(dom, outline, roads, frame, vector):
         f"{LAST - FIRST + 1} Barrier3D domains (GIS 1 at Cape Point, GIS 90 at the southern end of Pea "
         "Island), each a 500 m alongshore by 2000 m cross-shore box in UTM 18N, numbered every tenth; the "
         "NC-12 centreline as digitised on 2008 imagery; the villages of Buxton, Avon, Salvo, Waves and "
-        "Rodanthe; the Buxton groin field (white-edged bar drawn just offshore, labelled Buxton groins). The map is turned "
+        "Rodanthe; the Buxton groin field (red, white-edged bar drawn just offshore, labelled Buxton groins). The map is turned "
         "a quarter turn, north to the right, so the UTM-aligned boxes are level and the reach steps down the "
-        "page where the coast bends. (b) Hatteras Island on the North Carolina coast; the box marks the reach; "
+        "page where the coast bends. (b) Hatteras Island (charcoal) on the North Carolina coast; the box marks the reach; "
         "the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N). "
-        + ("Land is the island outline shapefile. " if vector else
-           "Basemap: Esri World Imagery, shown inside the island outline only; the sound and ocean "
-           "are drawn as one flat colour. ")
+        + ("Land is the island outline shapefile. " if vector else "Basemap: Esri World Imagery. ")
         + "Inset: Natural Earth 10 m coastline and state boundaries.")
     plt.close(fig)
     return out[0]
