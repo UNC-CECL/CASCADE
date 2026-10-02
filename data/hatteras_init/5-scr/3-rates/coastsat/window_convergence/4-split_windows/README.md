@@ -7,7 +7,8 @@ whether the halves the model is run on agree with the long-term rate.
 
 ```
 split_windows_2010.png       eight transects, cut at 2010 (the model's two legs)
-split_windows_cutoffs.png    the same eight, one row each, cut at 2005 / 2010 / 2015 / 2020
+split_windows_rate_vs_cutoff.png
+                             the same eight: both window rates against every cutoff 2000-2020
 split_windows_picks.csv      the eight: group, rank in the group, the three rates, the 2021 step
 supporting/                  PDFs, CAPTIONS.md, split_windows_transects.csv (every transect scored)
 interactive/                 split_windows_explorer.html + split_windows_data.json:
@@ -61,8 +62,20 @@ groups would show the same transects.
   long-term rate is near zero and matches neither window.
 - **2021 step** (GIS 33, 18): +44 to +50 m between 2019 and 2021. This roughly
   doubles the second-window rate while the first window agrees with 1996–2024.
-- In `split_windows_cutoffs.png`, a cut at 2020 leaves a five-year second
-  window that the 2021 step dominates, and its rate swings by several m/yr.
+- **Rate against cutoff** (`split_windows_rate_vs_cutoff.png`). Only the
+  agree pair has red and blue both on the purple line, and only for cuts from
+  about 2008 to 2015 (at GIS 56 the first window runs +0.5 to +0.8 m/yr high
+  for cuts 2002–2007). At the disagree and sign-flip transects, red and blue
+  sit on opposite sides of purple for every cut up to about 2017, so no cut
+  gives a half that matches the long-term rate. Cuts after about 2017 leave a
+  short second window that the 2021 step dominates, so the blue rate swings
+  by several m/yr and its band widens.
+
+**Retired 2026-10-02:** `split_windows_cutoffs.png`, a 32-panel grid (eight
+transects × cuts at 2005/2010/2015/2020) with the rates printed in every
+panel. It was too busy to read (Hannah), and the rate-vs-cutoff figure
+replaces it with every cut. The 2005/2015/2020 position views are still on
+the interactive page.
 
 ## Producer
 

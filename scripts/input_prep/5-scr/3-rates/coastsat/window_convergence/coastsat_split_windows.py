@@ -4,7 +4,8 @@ Shoreline position per transect, with the 1996-2024 rate and the two halves cut 
     python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_split_windows.py
 
 Picks eight transects by behaviour (two per group), draws them cut at 2010 and
-at four cutoffs, and writes every transect's record for the interactive page.
+their two window rates against every cutoff, and writes every transect's record
+for the interactive page.
 Reads the fits in 1-rate_profiles/ (run coastsat_window_profiles.py first) and
 the raw CoastSat series. Details: the 4-split_windows/ README.
 
@@ -42,7 +43,7 @@ from matplotlib.lines import Line2D                   # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 REF_START, REF_END = 1996, 2024
 CUTOFF = 2010                          # the model's two legs
-CUTOFFS = [2005, 2010, 2015, 2020]     # the sensitivity figure's columns
+MIN_WINDOW_YEARS = 5                   # the sensitivity sweep keeps both windows this long
 MIN_OBS = 10                           # as the window fits
 
 # The four behaviour groups, in the order they are filled
@@ -62,7 +63,7 @@ MIN_DOMAIN_GAP = 2          # picks at least this many domains apart
 STEP_FROM, STEP_TO = 2019, 2021
 
 STEM_MAIN = "split_windows_{0}".format(CUTOFF)
-STEM_CUTOFFS = "split_windows_cutoffs"
+STEM_CUTOFFS = "split_windows_rate_vs_cutoff"
 INTERACTIVE_DIR = "interactive"
 # -----------------------------------------------------------------------------
 
@@ -278,39 +279,71 @@ def draw_main(picks, fits, series, out_dir):
     return paths[0]
 
 
-# The same eight, one row each, cut at each of CUTOFFS
-def draw_cutoffs(picks, fits, series, out_dir):
+# Every cutoff that leaves both windows MIN_WINDOW_YEARS long
+def sweep_cutoffs():
+    return list(range(REF_START + MIN_WINDOW_YEARS - 1, REF_END - MIN_WINDOW_YEARS + 2))
+
+
+# One transect's two window rates at every cutoff, with their 95% intervals
+def rates_by_cutoff(fits, transect_id):
+    sub = fits[fits["transect_id"] == transect_id].set_index("window")
+    rows = []
+    for c in sweep_cutoffs():
+        a = sub.loc["{0}_{1}".format(REF_START, c)]
+        b = sub.loc["{0}_{1}".format(c, REF_END)]
+        rows.append((c, a["lrr_m_yr"], a["unc_m_yr"], b["lrr_m_yr"], b["unc_m_yr"]))
+    return pd.DataFrame(rows, columns=["cutoff", "first", "first_unc", "second", "second_unc"])
+
+
+# The eight picks: both window rates against the cutoff year
+def draw_cutoffs(picks, fits, out_dir):
     fs.apply_style()
-    nrow, ncol = len(picks), len(CUTOFFS)
-    fig, axes = plt.subplots(nrow, ncol, figsize=fs.figsize("double", height=fs.FIG_H_MAX),
+    fig, axes = plt.subplots(4, 2, figsize=fs.figsize("double", height=8.0),
                              sharex=True, layout="constrained")
-    for r, p in enumerate(picks.itertuples(index=False)):
-        for c, cutoff in enumerate(CUTOFFS):
-            ax = axes[r, c]
-            draw_panel(ax, series[p.transect_id], fits, p.transect_id, cutoff, 5.0)
-            if c > 0:
-                ax.sharey(axes[r, 0])
-                ax.tick_params(labelleft=False)
-            if r == 0:
-                ax.set_title("cut at {0}".format(cutoff))
-            if c == 0:
-                ax.set_ylabel("{0}\nGIS {1} · {2}".format(
-                    p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
-                    fontsize=6.5)
-            if r == nrow - 1:
-                ax.set_xlabel("year")
-            ax.tick_params(labelsize=6)
-    add_legend(fig, "cut")
+    for i, (ax, p) in enumerate(zip(axes.ravel(), picks.itertuples(index=False))):
+        r = rates_by_cutoff(fits, p.transect_id)
+        ax.axhline(0, color=fs.C["INK_MUTED"], lw=0.6, zorder=1)
+        ax.axvline(CUTOFF, color=fs.C["INK_MUTED"], lw=0.8, ls=(0, (2, 2)), zorder=1)
+        ax.axhline(p.lrr_whole_m_yr, color=fs.C["ACCENT"], lw=2.0, zorder=3)
+        for key, colour in (("first", fs.C["EARLY"]), ("second", fs.C["LATE"])):
+            ax.fill_between(r["cutoff"], r[key] - r[key + "_unc"], r[key] + r[key + "_unc"],
+                            color=colour, alpha=0.13, lw=0, zorder=2)
+            ax.plot(r["cutoff"], r[key], color=colour, lw=1.8, marker="o", ms=2.6, zorder=4)
+        fs._title(ax, i, "{0} · GIS {1} · {2}".format(
+            p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")))
+        ax.grid(True, axis="y", alpha=0.6)
+        if i % 2 == 0:
+            ax.set_ylabel("rate (m/yr)")
+        if i >= 6:
+            ax.set_xlabel("cutoff year")
+    axes[0, 0].set_xlim(sweep_cutoffs()[0] - 0.5, sweep_cutoffs()[-1] + 0.5)
+    axes[0, 0].set_xticks(range(2000, sweep_cutoffs()[-1] + 1, 5))
+    handles = [
+        Line2D([], [], color=fs.C["EARLY"], lw=1.8, marker="o", ms=2.6,
+               label="first window, {0}–cutoff".format(REF_START)),
+        Line2D([], [], color=fs.C["LATE"], lw=1.8, marker="o", ms=2.6,
+               label="second window, cutoff–{0}".format(REF_END)),
+        Line2D([], [], color=fs.C["ACCENT"], lw=2.0,
+               label="{0}–{1}, long-term".format(REF_START, REF_END)),
+        Line2D([], [], color=fs.C["INK_MUTED"], lw=0.8, ls=(0, (2, 2)),
+               label="{0}, the model's cutoff".format(CUTOFF)),
+    ]
+    fig.legend(handles=handles, loc="outside lower center", ncol=2,
+               handlelength=2.4, columnspacing=2.2, handletextpad=0.7)
     paths = fs.save(fig, Path(out_dir) / STEM_CUTOFFS, close=True)
     fs.record_caption(paths[0],
-        "The eight transects of split_windows_{2}.png, one row each, with the "
-        "record cut at {3}. In each panel purple is the {0}–{1} rate, red the "
-        "first window from {0} to the cut and blue the second from the cut to "
-        "{1}; the cut year belongs to both, and the dotted line marks it. Rates "
-        "in m/yr, seaward positive, fitted to every raw CoastSat position in the "
-        "window. Each row shares one y-axis. Where the red and blue slopes "
-        "change with the column, the rate depends on where the record is cut."
-        .format(REF_START, REF_END, CUTOFF, ", ".join(str(c) for c in CUTOFFS)))
+        "How much each window's rate depends on where the record is cut, at the "
+        "eight transects of split_windows_{2}.png. For every cutoff year from {3} "
+        "to {4} (both windows at least {5} years), red is the OLS rate over {0} "
+        "to the cutoff and blue over the cutoff to {1}, each with its 95% "
+        "interval shaded; the cutoff year belongs to both windows. Purple is the "
+        "{0}–{1} rate, which does not depend on the cut. The dotted line marks "
+        "{2}, the model's cutoff. Where red and blue sit on purple, either half "
+        "recovers the long-term rate; where they move with the cutoff, the "
+        "rate depends on the cut. Rates in m/yr, seaward positive, fitted to "
+        "every raw CoastSat position; each panel has its own y-axis."
+        .format(REF_START, REF_END, CUTOFF, sweep_cutoffs()[0], sweep_cutoffs()[-1],
+                MIN_WINDOW_YEARS))
     return paths[0]
 
 
@@ -379,7 +412,7 @@ def main():
 
     # Figures, then the page's data
     print(draw_main(picks, fits, series, out))
-    print(draw_cutoffs(picks, fits, series, out))
+    print(draw_cutoffs(picks, fits, out))
     print(write_interactive_data(t, picks, series, out))
 
 

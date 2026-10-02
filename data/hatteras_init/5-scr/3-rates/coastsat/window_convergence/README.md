@@ -44,7 +44,8 @@ Because every window sits inside 1996–2024, every curve reaches the reference
 4-split_windows/       What do the two HALVES look like at one transect?
                        positions through time at eight transects picked by
                        behaviour, the 1996–2024 line and the two windows
-                       either side of a cutoff (2010, and 2005/2015/2020);
+                       either side of a cutoff (2010), and both window rates
+                       against every cutoff 2000–2020;
                        interactive/ = all 906, with a cutoff slider
 ```
 
