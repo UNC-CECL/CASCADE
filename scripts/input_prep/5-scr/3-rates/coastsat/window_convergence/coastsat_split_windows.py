@@ -67,12 +67,14 @@ MIN_DOMAIN_GAP = 2          # picks at least this many domains apart
 STEP_FROM, STEP_TO = 2019, 2021
 
 STEM_MAIN = "split_windows_{0}".format(CUTOFF)
+STEM_MAIN_NO_MAP = "split_windows_{0}_no_map".format(CUTOFF)
 STEM_CUTOFFS = "split_windows_cutoffs"
 INTERACTIVE_DIR = "interactive"
 
 # The locator map beside the cutoff grid
 MAP_CRS = "EPSG:26918"
 MAP_WIDTH = 1.3                         # the map column, in panel widths
+MAP_WIDTH_MAIN = 0.30                   # the same, beside the one wide 2010 column
 MAP_WATER, MAP_LAND, MAP_LAND_EDGE = "#e9eff4", "#ede9df", "0.55"
 MAP_PLACES = {"Buxton": ANN.town_spans["Buxton"], "Avon": ANN.town_spans["Avon"],
               "Salvo": (ANN.village_lines["Salvo"],) * 2,
@@ -196,7 +198,7 @@ LINE_STYLE = {
 
 
 # One panel: points, the annual median, the three lines, the rates
-def draw_panel(ax, series, fits, transect_id, cutoff, fontsize):
+def draw_panel(ax, series, fits, transect_id, cutoff, fontsize, inline=False):
     ax.scatter(series["date"], series["chainage_m"], s=2.0, color=fs.C["BASE"],
                alpha=0.18, lw=0, zorder=1)
     yrs, med = annual_median(series)
@@ -223,7 +225,8 @@ def draw_panel(ax, series, fits, transect_id, cutoff, fontsize):
     lo, hi = ax.get_ylim()
     ax.set_ylim(lo, hi + 0.42 * (hi - lo))
     for k, (text, colour) in enumerate(lines):
-        ax.text(0.02, 0.97 - k * 0.105, text, transform=ax.transAxes, ha="left",
+        xy = (0.01 + k * 0.16, 0.95) if inline else (0.02, 0.97 - k * 0.105)
+        ax.text(xy[0], xy[1], text, transform=ax.transAxes, ha="left",
                 va="top", fontsize=fontsize, color=colour, zorder=12,
                 path_effects=fs._halo(2.0))
     ax.set_xlim(pd.Timestamp("{0}-01-01".format(REF_START), tz="UTC"),
@@ -259,8 +262,92 @@ def add_legend(fig, cutoff_text):
                handlelength=2.4, columnspacing=2.2, handletextpad=0.7)
 
 
+# The map column and one row per pick, north at the top; returns the panel axes
+def map_and_rows(picks, ncol, width_ratios):
+    # ROWS RUN NORTH (top) TO SOUTH (bottom), as on the map (Hannah, 2026-10-02)
+    picks = picks.sort_values(["domain_number", "transect_id"], ascending=False)
+    nrow = len(picks)
+    fig = plt.figure(figsize=fs.figsize("double", height=fs.FIG_H_MAX), layout="constrained")
+    gs = fig.add_gridspec(nrow, ncol + 1, width_ratios=width_ratios)
+    axes = np.empty((nrow, ncol), dtype=object)
+    for r in range(nrow):
+        for c in range(ncol):
+            axes[r, c] = fig.add_subplot(gs[r, c + 1],
+                                         sharex=axes[0, 0] if (r or c) else None,
+                                         sharey=axes[0, 0] if (r or c) else None)
+            if r < nrow - 1:
+                axes[r, c].tick_params(labelbottom=False)
+            if c > 0:
+                axes[r, c].tick_params(labelleft=False)
+    draw_locator(fig.add_subplot(gs[:, 0]), picks, transect_points())
+    return fig, axes, picks
+
+
+# Row label: the map number (1 at Buxton), the group, the transect
+def row_label(ax, r, nrow, p):
+    ax.set_ylabel("{0} · {1}\nGIS {2} · {3}".format(
+        nrow - r, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
+        fontsize=6.5)
+
+
+# ONE Y-AXIS FOR EVERY PANEL, so slopes compare between rows (Hannah, 2026-10-02)
+def share_position_axis(axes, picks, series, headroom, year_step):
+    pos = np.concatenate([series[t]["chainage_m"].to_numpy() for t in picks["transect_id"]])
+    lo, hi = 25 * np.floor(pos.min() / 25), 25 * np.ceil(pos.max() / 25)
+    axes[0, 0].set_xticks([pd.Timestamp("{0}-01-01".format(y), tz="UTC")
+                           for y in range(REF_START, REF_END + 1, year_step)])
+    axes[0, 0].xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+    for ax in axes.ravel():
+        ax.set_ylim(lo, hi + headroom * (hi - lo))
+        ax.set_yticks(np.arange(0, hi + 1, 50))
+    # One y label for the whole grid, down the right side, centred on the rows
+    nrow = axes.shape[0]
+    # on a twin, so it never replaces the row label of a one-column figure
+    mid = axes[nrow // 2 - 1, -1].twinx()
+    mid.set_yticks([])
+    mid.set_ylabel("shoreline position (m)", rotation=270, va="bottom")
+    mid.yaxis.set_label_coords(1.02 if axes.shape[1] == 1 else 1.04,
+                               0.0 if nrow % 2 == 0 else 0.5)
+
+
+MAP_CAPTION = ("Rows run north (top) to south (bottom); the map at left numbers each "
+               "row's transect on Hatteras Island, north up, 1 at Buxton to 8 at Rodanthe.")
+
+
 # The eight picks, cut at CUTOFF
 def draw_main(picks, fits, series, out_dir):
+    fs.apply_style()
+    fig, axes, picks = map_and_rows(picks, 1, [MAP_WIDTH_MAIN, 1.0])
+    nrow = len(picks)
+    for r, p in enumerate(picks.itertuples(index=False)):
+        ax = axes[r, 0]
+        draw_panel(ax, series[p.transect_id], fits, p.transect_id, CUTOFF, 6.0, inline=True)
+        row_label(ax, r, nrow, p)
+        ax.tick_params(labelsize=6)
+    axes[-1, 0].set_xlabel("year")
+    share_position_axis(axes, picks, series, 0.22, 4)
+    add_legend(fig, str(CUTOFF))
+    paths = fs.save(fig, Path(out_dir) / STEM_MAIN, close=True)
+    fs.record_caption(paths[0],
+        "Shoreline position through time at eight transects, two from each of "
+        "four behaviour groups: both halves agree with the long-term rate, the "
+        "halves disagree most (same sign), the halves have opposite signs, and "
+        "the largest 2021 step outside nourished domains. Grey dots are every "
+        "CoastSat position, {0} to {1}, and the open circles their annual "
+        "median. Each straight line is an OLS fit to the raw positions in its "
+        "window, drawn over the dates it saw: purple {0}–{1}, red the first "
+        "window {0}–{2}, blue the second {2}–{1}; {2} belongs to both (calendar "
+        "years, inclusive), and the dotted line marks it. Rates in m/yr, "
+        "seaward positive. The annual median is a guide for the eye; no line "
+        "is fitted to it. Position is CoastSat chainage on an origin that is "
+        "arbitrary per transect; every panel shares one y-axis, so slopes "
+        "compare between rows. {3} Groups and ranks are in "
+        "split_windows_picks.csv.".format(REF_START, REF_END, CUTOFF, MAP_CAPTION))
+    return paths[0]
+
+
+# The eight picks, cut at CUTOFF, by group in a 4 x 2 grid without the map
+def draw_main_no_map(picks, fits, series, out_dir):
     fs.apply_style()
     fig, axes = plt.subplots(4, 2, figsize=fs.figsize("double", height=8.8),
                              sharex=True, layout="constrained")
@@ -273,9 +360,10 @@ def draw_main(picks, fits, series, out_dir):
         if i >= 6:
             ax.set_xlabel("year")
     add_legend(fig, str(CUTOFF))
-    paths = fs.save(fig, Path(out_dir) / STEM_MAIN, close=True)
+    paths = fs.save(fig, Path(out_dir) / STEM_MAIN_NO_MAP, close=True)
     fs.record_caption(paths[0],
-        "Shoreline position through time at eight transects, two from each of "
+        "The same as split_windows_{2}.png without the locator map, grouped by "
+        "behaviour rather than ordered alongshore. Shoreline position through time at eight transects, two from each of "
         "four behaviour groups: both halves agree with the long-term rate, the "
         "halves disagree most (same sign), the halves have opposite signs, and "
         "the largest 2021 step outside nourished domains. Grey dots are every "
@@ -357,50 +445,20 @@ def draw_locator(ax, picks, pts):
 # The same eight, one row each, cut at each of CUTOFFS
 def draw_cutoffs(picks, fits, series, out_dir):
     fs.apply_style()
-    # ROWS RUN NORTH (top) TO SOUTH (bottom), as on the map (Hannah, 2026-10-02)
-    picks = picks.sort_values(["domain_number", "transect_id"], ascending=False)
-    pts = transect_points()
-    nrow, ncol = len(picks), len(CUTOFFS)
-    fig = plt.figure(figsize=fs.figsize("double", height=fs.FIG_H_MAX), layout="constrained")
-    gs = fig.add_gridspec(nrow, ncol + 1, width_ratios=[MAP_WIDTH] + [1.0] * ncol)
-    axes = np.empty((nrow, ncol), dtype=object)
-    for r in range(nrow):
-        for c in range(ncol):
-            axes[r, c] = fig.add_subplot(gs[r, c + 1],
-                                         sharex=axes[0, 0] if (r or c) else None,
-                                         sharey=axes[0, 0] if (r or c) else None)
-            if r < nrow - 1:
-                axes[r, c].tick_params(labelbottom=False)
-    draw_locator(fig.add_subplot(gs[:, 0]), picks, pts)
+    fig, axes, picks = map_and_rows(picks, len(CUTOFFS), [MAP_WIDTH] + [1.0] * len(CUTOFFS))
+    nrow = len(picks)
     for r, p in enumerate(picks.itertuples(index=False)):
         for c, cutoff in enumerate(CUTOFFS):
             ax = axes[r, c]
             draw_panel(ax, series[p.transect_id], fits, p.transect_id, cutoff, 5.0)
-            if c > 0:
-                ax.tick_params(labelleft=False)
             if r == 0:
                 ax.set_title("cut at {0}".format(cutoff))
             if c == 0:
-                ax.set_ylabel("{0} · {1}\nGIS {2} · {3}".format(
-                    nrow - r, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
-                    fontsize=6.5)
+                row_label(ax, r, nrow, p)
             if r == nrow - 1:
                 ax.set_xlabel("year")
             ax.tick_params(labelsize=6)
-    # ONE Y-AXIS FOR EVERY PANEL, so slopes compare between rows (Hannah, 2026-10-02)
-    pos = np.concatenate([series[t]["chainage_m"].to_numpy() for t in picks["transect_id"]])
-    lo, hi = 25 * np.floor(pos.min() / 25), 25 * np.ceil(pos.max() / 25)
-    axes[0, 0].set_xticks([pd.Timestamp("{0}-01-01".format(y), tz="UTC")
-                           for y in range(REF_START, REF_END + 1, 8)])
-    axes[0, 0].xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-    for ax in axes.ravel():
-        ax.set_ylim(lo, hi + 0.42 * (hi - lo))
-        ax.set_yticks(np.arange(0, hi + 1, 50))
-    # One y label for the whole grid, down the right side, centred on the rows
-    mid = axes[nrow // 2 - 1, -1]
-    mid.yaxis.set_label_position("right")
-    mid.set_ylabel("shoreline position (m)", rotation=270, va="bottom")
-    mid.yaxis.set_label_coords(1.04, 0.0 if nrow % 2 == 0 else 0.5)
+    share_position_axis(axes, picks, series, 0.42, 8)
     add_legend(fig, "cut")
     paths = fs.save(fig, Path(out_dir) / STEM_CUTOFFS, close=True)
     fs.record_caption(paths[0],
@@ -409,9 +467,11 @@ def draw_cutoffs(picks, fits, series, out_dir):
         "first window from {0} to the cut and blue the second from the cut to "
         "{1}; the cut year belongs to both, and the dotted line marks it. Rates "
         "in m/yr, seaward positive, fitted to every raw CoastSat position in the "
-        "window. Every panel shares one y-axis, so slopes compare between rows. Rows run north (top) to south (bottom); the map at left numbers each row's transect on Hatteras Island, north up. Where the red and blue slopes "
-        "change with the column, the rate depends on where the record is cut."
-        .format(REF_START, REF_END, CUTOFF, ", ".join(str(c) for c in CUTOFFS)))
+        "window. Every panel shares one y-axis, so slopes compare between rows. "
+        "{4} Where the red and blue slopes change with the column, the rate "
+        "depends on where the record is cut."
+        .format(REF_START, REF_END, CUTOFF, ", ".join(str(c) for c in CUTOFFS),
+                MAP_CAPTION))
     return paths[0]
 
 
@@ -480,6 +540,7 @@ def main():
 
     # Figures, then the page's data
     print(draw_main(picks, fits, series, out))
+    print(draw_main_no_map(picks, fits, series, out))
     print(draw_cutoffs(picks, fits, series, out))
     print(write_interactive_data(t, picks, series, out))
 

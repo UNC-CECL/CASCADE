@@ -6,7 +6,10 @@ transects, with year on x and shoreline position on y. Each panel shows the
 whether the halves the model is run on agree with the long-term rate.
 
 ```
-split_windows_2010.png       eight transects, cut at 2010 (the model's two legs)
+split_windows_2010.png       eight transects, cut at 2010 (the model's two legs): one row each,
+                             north at top, shared y-axis, locator map numbering 1 (Buxton) to 8
+split_windows_2010_no_map.png
+                             the same, without the map: a 4 x 2 grid by group, each panel autoscaled
 split_windows_cutoffs.png    the same eight, one row each (north at top), cut at 2005 / 2010 / 2015 / 2020,
                              with a locator map numbering each row 1 (Buxton) to 8 (Rodanthe)
 split_windows_picks.csv      the eight: group, rank in the group, the three rates, the 2021 step
