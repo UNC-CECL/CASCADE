@@ -48,6 +48,7 @@ STEPS = [
     ("3-model-inputs", "4 management rules", [S + "figure_making/management/management_rules_table_figure.py"]),
     ("3-model-inputs", "5 observed target", [S + "figure_making/pipeline/5-scr/observed_target_figures.py"]),
     ("3-model-inputs", "7 source/sink", [S + "figure_making/pipeline/7-source-sink/be_method_figures.py"]),
+    ("3-model-inputs", "inputs overview", [S + "figure_making/pipeline/inputs_overview_figure.py"]),
     ("4-model-mechanics", "model mechanics", [S + "figure_making/model/model_mechanics_figures.py"]),
     ("4-model-mechanics", "storm routing", [S + "figure_making/model/overwash_routing_figures.py"]),
     ("5-results", "hindcast edgeBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "edgeBE"]),

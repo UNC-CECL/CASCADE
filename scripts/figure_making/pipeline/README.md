@@ -13,6 +13,7 @@ writes to `output/figures/3-model-inputs/<step>/`. All are redrawn by
 4-mgmt-forcings/road_setback_figures.py           how the NC-12 setback is measured
 5-scr/observed_target_figures.py                  how the observed shoreline target is built
 7-source-sink/be_method_figures.py                how the source/sink end rates are solved
+inputs_overview_figure.py                         every input the 1996 and 2010 runs read, one page each
 ```
 
 What not to trust: nothing here regenerates an input. The extraction and
