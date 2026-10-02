@@ -207,8 +207,8 @@ def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
             bbox=dict(facecolor="white", alpha=0.8, edgecolor="none", boxstyle="square,pad=0.1"))
 
 
-# A black/white segmented scale bar, with a north-arrow glyph pointing to true north just above it
-def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.085, arrow_m=2000.0):
+# A black/white segmented scale bar
+def scale_bar(ax, length_m=10_000, segments=2, x=0.035, y=0.085):
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
     h = 0.013 * (y1 - y0)
@@ -224,10 +224,13 @@ def scale_and_north(ax, frame, length_m=10_000, segments=2, x=0.035, y=0.085, ar
         km = i * seg / 1000
         lab = f"{km:g} km" if i == segments else f"{km:g}"
         ax.text(bx + i * seg, by - 1.5 * h, lab, ha="center", va="top", **{**STUDY_TEXT, "zorder": 12})
-    # The arrow: a split dart, tip toward north, its "N" beyond the tip
+
+
+# A split-dart north arrow pointing to true north, its "N" beyond the tip, centred on c (data units)
+def north_dart(ax, frame, c, arrow_m=2000.0):
     n = frame.north()
     perp = np.array([-n[1], n[0]])
-    c = np.array([bx + 0.5 * arrow_m, by + h + 0.075 * (y1 - y0)])
+    c = np.asarray(c, float)
     tip, back = c + n * arrow_m / 2, c - n * arrow_m / 2
     notch = c - n * arrow_m * 0.22
     w = 0.28 * arrow_m
@@ -616,11 +619,10 @@ def study_area_labels(ax, frame, dom, vector, outline):
     for name, pos in ANN.groins.items():
         p = frame.along(pos)[0] + sea * 1150
         ax.plot(p[0], p[1], zorder=9, **GROIN_STYLE)
-        lab = p + sea * 3600
-        ax.text(lab[0], lab[1], "Buxton groins", ha="left", va="center", fontstyle="italic",
-                **STUDY_TEXT)
-        ax.plot([p[0], p[0], lab[0] + 250], [p[1] + sea[1] * 450, lab[1], lab[1]], color="white",
-                lw=0.5, zorder=7)
+        end = p + sea * 2700
+        ax.text(end[0], end[1] + sea[1] * 250, "Buxton groins", ha="center",
+                va="top" if sea[1] < 0 else "bottom", fontstyle="italic", **STUDY_TEXT)
+        ax.plot([p[0], end[0]], [p[1] + sea[1] * 450, end[1]], color="white", lw=0.5, zorder=7)
 
 # The reach on imagery with domains, NC-12, villages and the regional inset
 def fig_study_area(dom, outline, roads, frame, vector):
@@ -631,7 +633,7 @@ def fig_study_area(dom, outline, roads, frame, vector):
                         scalebar=False, arrow=False, numbers=False, label_villages=False,
                         water_labels=False, ends=False, groin=False).road_c
     study_area_labels(ax, frame, dom, vector, outline)
-    scale_and_north(ax, frame)
+    scale_bar(ax)
     # the regional inset in the upper right, over the open sound; square in inches
     ih, edge = 0.58, 0.018
     iw = ih * fh / fw
@@ -650,9 +652,14 @@ def fig_study_area(dom, outline, roads, frame, vector):
     # the legend immediately left of the inset, top aligned with it
     in_left = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[0]
     in_top = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p1))[1]
-    ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - 0.008, in_top), ncol=1,
-              frameon=True, framealpha=0.72, edgecolor="none", facecolor="white", fontsize=8,
-              handlelength=1.4, labelspacing=0.3, borderpad=0.4, borderaxespad=0.0, handletextpad=0.5)
+    leg = ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(in_left - 0.008, in_top), ncol=1,
+                    frameon=True, framealpha=0.72, edgecolor="none", facecolor="white", fontsize=8,
+                    handlelength=1.4, labelspacing=0.3, borderpad=0.4, borderaxespad=0.0,
+                    handletextpad=0.5)
+    # the north arrow just left of the legend, centred on it, in the open sound
+    fig.canvas.draw()
+    lb = leg.get_window_extent().transformed(ax.transData.inverted())
+    north_dart(ax, frame, (lb.x0 - 3200.0, (lb.y0 + lb.y1) / 2))
     out = save(fig, fig_path("study_area"), vector=False, dpi=300)
     record_caption(out[0],
         f"Study area. (a) The modelled reach, rotated so it runs south to north from left to right: "
