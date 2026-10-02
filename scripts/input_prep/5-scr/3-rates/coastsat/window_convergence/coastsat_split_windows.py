@@ -289,7 +289,6 @@ def draw_cutoffs(picks, fits, series, out_dir):
             ax = axes[r, c]
             draw_panel(ax, series[p.transect_id], fits, p.transect_id, cutoff, 5.0)
             if c > 0:
-                ax.sharey(axes[r, 0])
                 ax.tick_params(labelleft=False)
             if r == 0:
                 ax.set_title("cut at {0}".format(cutoff))
@@ -300,6 +299,17 @@ def draw_cutoffs(picks, fits, series, out_dir):
             if r == nrow - 1:
                 ax.set_xlabel("year")
             ax.tick_params(labelsize=6)
+    # ONE Y-AXIS FOR EVERY PANEL, so slopes compare between rows (Hannah, 2026-10-02)
+    pos = np.concatenate([series[t]["chainage_m"].to_numpy() for t in picks["transect_id"]])
+    lo, hi = 25 * np.floor(pos.min() / 25), 25 * np.ceil(pos.max() / 25)
+    for ax in axes.ravel():
+        ax.set_ylim(lo, hi + 0.42 * (hi - lo))
+        ax.set_yticks(np.arange(0, hi + 1, 50))
+    # One y label for the whole grid, down the right side, centred on the rows
+    mid = axes[nrow // 2 - 1, -1]
+    mid.yaxis.set_label_position("right")
+    mid.set_ylabel("shoreline position (m)", rotation=270, va="bottom")
+    mid.yaxis.set_label_coords(1.04, 0.0 if nrow % 2 == 0 else 0.5)
     add_legend(fig, "cut")
     paths = fs.save(fig, Path(out_dir) / STEM_CUTOFFS, close=True)
     fs.record_caption(paths[0],
@@ -308,7 +318,7 @@ def draw_cutoffs(picks, fits, series, out_dir):
         "first window from {0} to the cut and blue the second from the cut to "
         "{1}; the cut year belongs to both, and the dotted line marks it. Rates "
         "in m/yr, seaward positive, fitted to every raw CoastSat position in the "
-        "window. Each row shares one y-axis. Where the red and blue slopes "
+        "window. Every panel shares one y-axis, so slopes compare between rows. Where the red and blue slopes "
         "change with the column, the rate depends on where the record is cut."
         .format(REF_START, REF_END, CUTOFF, ", ".join(str(c) for c in CUTOFFS)))
     return paths[0]
