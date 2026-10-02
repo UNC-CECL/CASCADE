@@ -642,7 +642,6 @@ def fig_study_area(dom, outline, roads, frame, vector):
     # red is the groins here; the equal-aspect inset is pinned to the corner, then measured
     ax_in.set_anchor("NE")
     ax_in.apply_aspect()
-    letter_corner(ax, 0, x=0.012)        # in the water left of the island's north end
     letter_corner(ax_in, 1)
     handles = [
         Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
@@ -656,6 +655,9 @@ def fig_study_area(dom, outline, roads, frame, vector):
                     frameon=True, framealpha=0.72, edgecolor="none", facecolor="white", fontsize=8,
                     handlelength=1.4, labelspacing=0.3, borderpad=0.4, borderaxespad=0.0,
                     handletextpad=0.5)
+    # (a) at the left edge, in the water, its top on the line of the legend and inset tops
+    pad = 1.5 / 72 / (ax.get_position().height * fh)     # the letter box's own padding, in axes fraction
+    letter_corner(ax, 0, x=0.012, y=in_top - pad)
     # the north arrow just left of the legend, centred on it, in the open sound
     fig.canvas.draw()
     lb = leg.get_window_extent().transformed(ax.transData.inverted())
