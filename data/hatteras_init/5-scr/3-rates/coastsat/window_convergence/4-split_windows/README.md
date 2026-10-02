@@ -90,4 +90,8 @@ python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_spl
 python scripts/input_prep/5-scr/3-rates/coastsat/window_convergence/coastsat_split_windows.py --site ../hatteras-shoreline-windows --site-only
 ```
 
-Then commit and push in the site repo. Its README covers going public.
+Then commit and push in the site repo. Step-by-step reference for updating,
+previewing, going public, taking it down and troubleshooting is in that repo's
+`PUBLISHING.md`
+(https://github.com/hannahaline/hatteras-shoreline-windows/blob/main/PUBLISHING.md).
+At launch the site is https://hannahaline.github.io/hatteras-shoreline-windows/.
