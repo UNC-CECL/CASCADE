@@ -21,6 +21,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import box
 
 # Rule 5: find the root by searching upward.
 _REPO = next(_p for _p in Path(__file__).resolve().parents
@@ -28,6 +30,8 @@ _REPO = next(_p for _p in Path(__file__).resolve().parents
 sys.path.insert(0, str(_REPO / "scripts"))
 from site_layer import hat_observed_rates as obs      # noqa: E402
 from site_layer import hat_figure_style as fs         # noqa: E402
+from site_layer import hat_map_layers as ml           # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS as ANN  # noqa: E402
 
 sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
 import scr_paths  # noqa: E402,F401
@@ -36,6 +40,7 @@ import coastsat_lrr as cl                             # noqa: E402
 import matplotlib                                     # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt                       # noqa: E402
+import matplotlib.dates                               # noqa: E402
 from matplotlib.lines import Line2D                   # noqa: E402
 
 
@@ -64,6 +69,15 @@ STEP_FROM, STEP_TO = 2019, 2021
 STEM_MAIN = "split_windows_{0}".format(CUTOFF)
 STEM_CUTOFFS = "split_windows_cutoffs"
 INTERACTIVE_DIR = "interactive"
+
+# The locator map beside the cutoff grid
+MAP_CRS = "EPSG:26918"
+MAP_WIDTH = 1.5                         # the map column, in panel widths
+MAP_WATER, MAP_LAND, MAP_LAND_EDGE = "#e9eff4", "#ede9df", "0.55"
+MAP_PLACES = {"Buxton": ANN.town_spans["Buxton"], "Avon": ANN.town_spans["Avon"],
+              "Salvo": (ANN.village_lines["Salvo"],) * 2,
+              "Waves": (ANN.village_lines["Waves"],) * 2,
+              "Rodanthe": (ANN.village_lines["Rodanthe"],) * 2}
 # -----------------------------------------------------------------------------
 
 
@@ -278,12 +292,84 @@ def draw_main(picks, fits, series, out_dir):
     return paths[0]
 
 
+# Every transect's midpoint in UTM, with its domain
+def transect_points():
+    lookup = pd.read_csv(obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv").dropna(
+        subset=["domain_number"])
+    mids = transect_midpoints(lookup["transect_id"])
+    pts = gpd.GeoDataFrame(
+        lookup, crs="EPSG:4326",
+        geometry=gpd.points_from_xy([mids[t][0] for t in lookup["transect_id"]],
+                                    [mids[t][1] for t in lookup["transect_id"]]))
+    pts = pts.to_crs(MAP_CRS)
+    pts["e"], pts["n"] = pts.geometry.x, pts.geometry.y
+    return pts.set_index("transect_id")
+
+
+# The island, north up, each pick a numbered marker and the villages named
+def draw_locator(ax, picks, pts):
+    n0, n1 = pts["n"].min() - 1500, pts["n"].max() + 1500
+    e0, e1 = pts["e"].min() - 4200, pts["e"].max() + 2600
+    ax.set_facecolor(MAP_WATER)
+    land = gpd.read_file(ml.ISLAND_OUTLINE).to_crs(MAP_CRS)
+    land = land.geometry.intersection(box(e0 - 20000, n0 - 20000, e1 + 20000, n1 + 20000))
+    gpd.GeoSeries(land[~land.is_empty], crs=MAP_CRS).plot(
+        ax=ax, facecolor=MAP_LAND, edgecolor=MAP_LAND_EDGE, lw=0.4, zorder=1)
+    ax.set_xlim(e0, e1)
+    ax.set_ylim(n0, n1)
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.set_xticks([]); ax.set_yticks([])
+    fs.spines_for_image(ax)
+
+    # The picks on the shoreline, their numbers stacked offshore with leaders
+    sel = pts.loc[picks["transect_id"]].copy()
+    sel["num"] = np.arange(1, len(sel) + 1)
+    sel = sel.sort_values("n")
+    gap = 0.035 * (n1 - n0)
+    ys = list(sel["n"])
+    for k in range(1, len(ys)):
+        ys[k] = max(ys[k], ys[k - 1] + gap)
+    shift = max(0.0, ys[-1] - (n1 - gap))
+    ys = [y - shift for y in ys]
+    e_lab = pts["e"].max() + 1500
+    for (tid, r), y in zip(sel.iterrows(), ys):
+        ax.plot([r["e"], e_lab], [r["n"], y], color=fs.C["INK_MUTED"], lw=0.5, zorder=3)
+        ax.plot(r["e"], r["n"], "o", ms=3.0, color=fs.C["INK"], zorder=4)
+        ax.text(e_lab, y, str(r["num"]), ha="center", va="center", fontsize=6.5,
+                fontweight="bold", color=fs.C["INK"], zorder=6,
+                bbox=dict(boxstyle="circle,pad=0.25", facecolor="white",
+                          edgecolor=fs.C["INK"], lw=0.6))
+
+    # Villages on the sound side, the south end named
+    for name, (d0, d1) in MAP_PLACES.items():
+        sub = pts[(pts["domain_number"] >= d0) & (pts["domain_number"] <= d1)]
+        ax.text(sub["e"].min() - 900, sub["n"].mean(), name, ha="right", va="center",
+                fontsize=5.8, fontstyle="italic", color=fs.C["INK"], zorder=5,
+                path_effects=fs._halo(1.5))
+    south = pts.loc[pts["n"].idxmin()]
+    ax.text(south["e"] + 300, south["n"] - 500, "Cape Point", ha="left", va="top",
+            fontsize=5.8, color=fs.C["INK"], zorder=5, path_effects=fs._halo(1.5))
+    fs.north_arrow(ax, x=0.16, y=0.88, length=0.03)
+
+
 # The same eight, one row each, cut at each of CUTOFFS
 def draw_cutoffs(picks, fits, series, out_dir):
     fs.apply_style()
+    # ROWS RUN NORTH (top) TO SOUTH (bottom), as on the map (Hannah, 2026-10-02)
+    picks = picks.sort_values(["domain_number", "transect_id"], ascending=False)
+    pts = transect_points()
     nrow, ncol = len(picks), len(CUTOFFS)
-    fig, axes = plt.subplots(nrow, ncol, figsize=fs.figsize("double", height=fs.FIG_H_MAX),
-                             sharex=True, layout="constrained")
+    fig = plt.figure(figsize=fs.figsize("double", height=fs.FIG_H_MAX), layout="constrained")
+    gs = fig.add_gridspec(nrow, ncol + 1, width_ratios=[MAP_WIDTH] + [1.0] * ncol)
+    axes = np.empty((nrow, ncol), dtype=object)
+    for r in range(nrow):
+        for c in range(ncol):
+            axes[r, c] = fig.add_subplot(gs[r, c + 1],
+                                         sharex=axes[0, 0] if (r or c) else None,
+                                         sharey=axes[0, 0] if (r or c) else None)
+            if r < nrow - 1:
+                axes[r, c].tick_params(labelbottom=False)
+    draw_locator(fig.add_subplot(gs[:, 0]), picks, pts)
     for r, p in enumerate(picks.itertuples(index=False)):
         for c, cutoff in enumerate(CUTOFFS):
             ax = axes[r, c]
@@ -293,8 +379,8 @@ def draw_cutoffs(picks, fits, series, out_dir):
             if r == 0:
                 ax.set_title("cut at {0}".format(cutoff))
             if c == 0:
-                ax.set_ylabel("{0}\nGIS {1} · {2}".format(
-                    p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
+                ax.set_ylabel("{0} · {1}\nGIS {2} · {3}".format(
+                    r + 1, p.group_label, p.domain_number, p.transect_id.replace("usa_NC_", "")),
                     fontsize=6.5)
             if r == nrow - 1:
                 ax.set_xlabel("year")
@@ -302,6 +388,9 @@ def draw_cutoffs(picks, fits, series, out_dir):
     # ONE Y-AXIS FOR EVERY PANEL, so slopes compare between rows (Hannah, 2026-10-02)
     pos = np.concatenate([series[t]["chainage_m"].to_numpy() for t in picks["transect_id"]])
     lo, hi = 25 * np.floor(pos.min() / 25), 25 * np.ceil(pos.max() / 25)
+    axes[0, 0].set_xticks([pd.Timestamp("{0}-01-01".format(y), tz="UTC")
+                           for y in range(REF_START, REF_END + 1, 8)])
+    axes[0, 0].xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
     for ax in axes.ravel():
         ax.set_ylim(lo, hi + 0.42 * (hi - lo))
         ax.set_yticks(np.arange(0, hi + 1, 50))
@@ -318,7 +407,7 @@ def draw_cutoffs(picks, fits, series, out_dir):
         "first window from {0} to the cut and blue the second from the cut to "
         "{1}; the cut year belongs to both, and the dotted line marks it. Rates "
         "in m/yr, seaward positive, fitted to every raw CoastSat position in the "
-        "window. Every panel shares one y-axis, so slopes compare between rows. Where the red and blue slopes "
+        "window. Every panel shares one y-axis, so slopes compare between rows. Rows run north (top) to south (bottom); the map at left numbers each row's transect on Hatteras Island, north up. Where the red and blue slopes "
         "change with the column, the rate depends on where the record is cut."
         .format(REF_START, REF_END, CUTOFF, ", ".join(str(c) for c in CUTOFFS)))
     return paths[0]

@@ -7,7 +7,8 @@ whether the halves the model is run on agree with the long-term rate.
 
 ```
 split_windows_2010.png       eight transects, cut at 2010 (the model's two legs)
-split_windows_cutoffs.png    the same eight, one row each, cut at 2005 / 2010 / 2015 / 2020
+split_windows_cutoffs.png    the same eight, one row each (north at top), cut at 2005 / 2010 / 2015 / 2020,
+                             with a locator map numbering each row on the island
 split_windows_picks.csv      the eight: group, rank in the group, the three rates, the 2021 step
 supporting/                  PDFs, CAPTIONS.md, split_windows_transects.csv (every transect scored)
 interactive/                 split_windows_explorer.html + split_windows_data.json:
