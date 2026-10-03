@@ -51,9 +51,45 @@ SPACING_M = HATTERAS_DOMAINS.domain_spacing_m
 N_DOMAINS = HATTERAS_DOMAINS.num_real_domains
 YEAR_LO, YEAR_HI = 1984, 2024
 
-# Vintage colours: the earlier fill red, the later blue
-YEAR_COLOUR = {2014: (C_1984, C_1984_FILL), 2022: (C_1997, C_1997_FILL)}
+# Fill-year colours in time order: the earliest red, the latest blue, one between purple
+_YEAR_PALETTE = [(C_1984, C_1984_FILL), (C["ACCENT"], C["ACCENT_FILL"]), (C_1997, C_1997_FILL)]
+_FILL_YEARS = sorted({p.year for p in HATTERAS_NOURISHMENT_PROJECTS})
+if len(_FILL_YEARS) > len(_YEAR_PALETTE):
+    raise ValueError(f"{len(_FILL_YEARS)} fill years but {len(_YEAR_PALETTE)} colours; extend _YEAR_PALETTE")
+_PICK = {1: [0], 2: [0, 2], 3: [0, 1, 2]}[len(_FILL_YEARS)]
+YEAR_COLOUR = {y: _YEAR_PALETTE[i] for y, i in zip(_FILL_YEARS, _PICK)}
 # -----------------------------------------------------------------------------
+
+
+# One legend patch per fill year, named for its projects
+def year_handles(lw, suffix=""):
+    handles = []
+    for y, (dark, light) in YEAR_COLOUR.items():
+        names = [p.name.split()[0] for p in HATTERAS_NOURISHMENT_PROJECTS if p.year == y]
+        handles.append(Patch(facecolor=light, edgecolor=dark, lw=lw,
+                             label=f"{y}: {' + '.join(names)}{suffix}"))
+    return handles
+
+
+# Domains filled by more than one project, with the years
+def refilled_domains():
+    years = {}
+    for p in HATTERAS_NOURISHMENT_PROJECTS:
+        for g in p.gis_domains:
+            years.setdefault(g, []).append(p.year)
+    return {g: sorted(ys) for g, ys in years.items() if len(ys) > 1}
+
+
+# The sentence naming each stretch filled more than once
+def _refill_sentence():
+    by_years = {}
+    for g, ys in refilled_domains().items():
+        by_years.setdefault(tuple(ys), []).append(g)
+    times = {2: "twice", 3: "three times"}
+    parts = [f"domains {min(gs)}–{max(gs)} are filled {times.get(len(ys), f'{len(ys)} times')} "
+             f"({', '.join(map(str, ys))})"
+             for ys, gs in by_years.items()]
+    return "; ".join(parts)
 
 
 # The two sources
@@ -192,9 +228,7 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
     open_frame(ax)
     town_bands(ax, where="bottom", strip=0.045)
 
-    handles = [
-        Patch(facecolor=C_1984_FILL, edgecolor=C_1984, lw=0.7, label="2014 fill, model input extent"),
-        Patch(facecolor=C_1997_FILL, edgecolor=C_1997, lw=0.7, label="2022 fills, model input extent"),
+    handles = year_handles(0.7, ", model input extent") + [
         Patch(facecolor=INK, label="extent flagged in the management record"),
         Line2D([], [], marker=">", ls="none", markerfacecolor="white",
                markeredgecolor=INK, markersize=5,
@@ -206,6 +240,10 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
     r = record[record.in_modelled_reach].set_index("year")
     n_off = int((~record.in_modelled_reach).sum())
     off_years = ", ".join(str(y) for y in off.year)
+    # Model projects the record flags nothing for in their year
+    unflagged = [f"{n} {int(row.year)}" for n, row in m.iterrows() if int(row.year) not in r.index]
+    unflagged_text = (f" The record flags nothing for {', '.join(unflagged)}: the project is missing from "
+                      "it (nourishment/datasets/README.md), so it has no inner bar." if unflagged else "")
     caption(fig, (
         f"Beach nourishment on the modelled reach, {YEAR_LO}–{YEAR_HI}, by year placed (vertical) "
         f"and GIS domain (horizontal, south to north, {SPACING_M:.0f} m each). Each filled bar is one "
@@ -213,13 +251,13 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
         + "; ".join(f"{n} {int(row.year)}, domains {int(row.first_gis)}–{int(row.last_gis)} "
                     f"({row.n_domains} domains, {row.length_km:.1f} km, {row.volume_cy/1e6:.1f} M cy)"
                     for n, row in m.iterrows())
-        + ". Red is the earlier fill, blue the later ones. The dark inner bar is the footprint flagged for "
+        + ". Colour is the year placed, red the earliest and blue the latest. The dark inner bar is the footprint flagged for "
           "the same project in Hatteras_Management_Timelines.xlsx (Nourishment_Timeline sheet): "
         + "; ".join(f"{int(y)} domains {int(row.first_gis)}–{int(row.last_gis)}" for y, row in r.iterrows())
         + ". Where the two differ the site-config extent was re-derived from the project description "
           "(Rodanthe: 2 mi north of the village, stopping short of the locked boundary domain 90; "
           "Avon: Due East Road to Askins Creek North Drive) and the record's flags are kept as drawn, "
-          "not reconciled. Hollow markers at the right are the {n_off} Pea Island / Oregon Inlet "
+          "not reconciled." + unflagged_text + " Hollow markers at the right are the {n_off} Pea Island / Oregon Inlet "
           f"navigation and emergency fills the record lists ({off_years}); they lie north of domain 90 "
           f"and no run sees them. Brackets at the left are the {len(windows)} hindcast windows; a run "
           "fires whatever falls inside its window, so "
@@ -251,15 +289,22 @@ def fig_volume_alongshore(model: pd.DataFrame) -> Path:
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
     per_domain = np.zeros(N_DOMAINS + 1)
-    for p in HATTERAS_NOURISHMENT_PROJECTS:
+    refilled = refilled_domains()
+    # Stacked in time order, so a refilled domain's later fill sits on its earlier one
+    for p in sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda q: q.year):
         v = p.volume_m3_per_m(SPACING_M)
         dark, light = YEAR_COLOUR[p.year]
         gis = np.array(p.gis_domains)
-        ax.bar(gis, [v] * len(gis), width=0.86, facecolor=light, edgecolor=dark,
-               lw=0.6, zorder=3)
+        base = per_domain[gis].copy()
+        ax.bar(gis, [v] * len(gis), bottom=base, width=0.86, facecolor=light,
+               edgecolor=dark, lw=0.6, zorder=3)
         per_domain[gis] += v
-        ax.text(gis.mean(), v + 12, f"{p.name.split()[0]} {p.year}\n{v:.0f} m³/m",
-                ha="center", va="bottom", fontsize=7.5, color=INK, zorder=6)
+        # Above the bar, unless a later fill is stacked on it: then inside
+        covered = any(refilled.get(int(g), [p.year])[-1] > p.year for g in gis)
+        y, va = (base.max() + v / 2, "center") if covered else (base.max() + v + 12, "bottom")
+        ax.text(gis.mean(), y, f"{p.name.split()[0]} {p.year}\n{v:.0f} m³/m",
+                ha="center", va=va, fontsize=7.5, color=INK, zorder=6,
+                path_effects=_halo(2.0))
 
     ax.set_xlim(0.5, N_DOMAINS + 0.5)
     ax.set_ylim(0, per_domain.max() * 1.32)
@@ -273,20 +318,30 @@ def fig_volume_alongshore(model: pd.DataFrame) -> Path:
     # Fixed structures the footprints were measured from.
     for name, x in HATTERAS_ANNOTATIONS.groins.items():
         ax.axvline(x, color=INK, lw=0.8, ls=(0, (2, 2)), zorder=2)
-        ax.text(x + 0.4, per_domain.max() * 0.92, name, rotation=90, ha="left",
+        # South of the line: the footprints were measured north from it
+        ax.text(x - 0.4, per_domain.max() * 0.92, name, rotation=90, ha="right",
                 va="top", fontsize=6.5, color=INK_MUTED)
     for name, (x, _) in HATTERAS_ANNOTATIONS.piers.items():
         ax.plot([x], [0], marker="^", ms=5, color=INK, clip_on=False, zorder=7)
         ax.text(x + 0.4, per_domain.max() * 0.04, name, rotation=90, ha="left",
                 va="bottom", fontsize=6.5, color=INK_MUTED, zorder=7)
 
-    handles = [
-        Patch(facecolor=C_1984_FILL, edgecolor=C_1984, lw=0.6, label="placed 2014"),
-        Patch(facecolor=C_1997_FILL, edgecolor=C_1997, lw=0.6, label="placed 2022"),
+    handles = year_handles(0.6) + [
         Line2D([], [], color=INK, lw=0.8, ls=(0, (2, 2)), label="groin"),
         Line2D([], [], marker="^", ls="none", color=INK, markersize=5, label="pier"),
     ]
-    fig.legend(handles=handles, loc="outside lower center", ncol=4, frameon=False)
+    fig.legend(handles=handles, loc="outside lower center", ncol=len(handles), frameon=False)
+
+    refill = _refill_sentence()
+    refill_text = (f" Bars are stacked by year placed: {refill}, so the top of a stack is the "
+                   f"{YEAR_LO}–{YEAR_HI} cumulative, {per_domain.max():.0f} m³/m at most."
+                   if refill else f" No domain is filled twice, so the bars are also the "
+                                  f"{YEAR_LO}–{YEAR_HI} cumulative.")
+    dens = sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda q: q.volume_m3_per_m(SPACING_M))
+    lo, hi = dens[0], dens[-1]
+    dens_text = (f" The densest fill, {hi.name.split()[0]} {hi.year}, put "
+                 f"{hi.volume_m3_per_m(SPACING_M) / lo.volume_m3_per_m(SPACING_M):.1f} times as much "
+                 f"sand per metre as the thinnest, {lo.name.split()[0]} {lo.year}.")
 
     parts = []
     for p in HATTERAS_NOURISHMENT_PROJECTS:
@@ -298,10 +353,9 @@ def fig_volume_alongshore(model: pd.DataFrame) -> Path:
         "by year placed. A project's reported total (cubic yards, from the permitting record) is "
         f"converted to cubic metres and spread evenly over its domains of {SPACING_M:.0f} m: "
         + "; ".join(parts)
-        + ". Even spreading is an assumption; real fill templates taper at their ends. No domain is "
-          "filled twice, so the bars are also the 1984–2024 cumulative. The 2014 Rodanthe fill is "
-          "about twice as dense as the 2022 fills because it put more sand into a shorter reach. "
-          "The dotted line is the Buxton groin field, from which the Buxton footprint was measured "
+        + ". Even spreading is an assumption; real fill templates taper at their ends."
+        + refill_text + dens_text
+        + " The dotted line is the Buxton groin field, from which the Buxton footprint was measured "
           "north; triangles are the piers, and the Avon footprint was placed about the pier. Named "
           "bands along the top are the villages: the Buxton and Rodanthe footprints extend out of "
           "their villages into the road corridor, the Avon footprint stays inside its village."
@@ -328,11 +382,24 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
 
     strip = to_strip(domains)
     strip_outline = to_strip(outline)
-    year_of = {}
-    for p in HATTERAS_NOURISHMENT_PROJECTS:
+    from shapely.geometry import box
+
+    years_of = {}
+    for p in sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda q: q.year):
         for g in p.gis_domains:
-            year_of[g] = p.year
-    strip["fill_year"] = strip["domain_id"].map(year_of)
+            years_of.setdefault(g, []).append(p.year)
+    year_of = years_of
+
+    # A domain filled k times is cut into k cross-shore bands, the earliest fill on the ocean side
+    pieces = []
+    for _, row in strip[strip.domain_id.isin(years_of)].iterrows():
+        ys = years_of[int(row.domain_id)]
+        x0, y0, x1, y1 = row.geometry.bounds
+        h = (y1 - y0) / len(ys)
+        for k, y in enumerate(ys):
+            pieces.append(dict(fill_year=y, geometry=row.geometry.intersection(
+                box(x0, y0 + k * h, x1, y0 + (k + 1) * h))))
+    bands = gpd.GeoDataFrame(pieces, geometry="geometry", crs=strip.crs)
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.36),
                            constrained_layout=True)
@@ -340,7 +407,7 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     strip_outline.plot(ax=ax, facecolor="0.93", edgecolor="none", zorder=0)
     strip.plot(ax=ax, facecolor="none", edgecolor="0.6", linewidth=0.35, zorder=1)
     for year, (dark, light) in YEAR_COLOUR.items():
-        sub = strip[strip.fill_year == year]
+        sub = bands[bands.fill_year == year]
         if not sub.empty:
             sub.plot(ax=ax, facecolor=light, edgecolor=dark, linewidth=0.9, zorder=3)
 
@@ -370,13 +437,22 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
                     color=INK if is_site else INK_MUTED,
                     fontweight="bold" if is_site else "normal")
 
-    for _, p in model.iterrows():
-        b = strip[strip.domain_id.between(p.first_gis, p.last_gis)].total_bounds
+    # One bracket per stretch: projects on the same domains share it
+    spans = {}
+    for _, p in model.sort_values("year").iterrows():
+        spans.setdefault((int(p.first_gis), int(p.last_gis)), []).append(p)
+    keys = sorted(spans)
+    for a, b_ in zip(keys, keys[1:]):
+        if b_[0] <= a[1]:
+            raise ValueError(f"footprints {a} and {b_} overlap without matching; label them by hand")
+    for (first, last), ps in spans.items():
+        b = strip[strip.domain_id.between(first, last)].total_bounds
         ax.annotate("", xy=(b[0], maxy + 0.30 * dy), xytext=(b[2], maxy + 0.30 * dy),
                     arrowprops=dict(arrowstyle="|-|", linewidth=1.0, color=INK,
                                     mutation_scale=3), annotation_clip=False)
         ax.text((b[0] + b[2]) / 2, maxy + 0.34 * dy,
-                f"{p['name'].split()[0]} {int(p.year)}\ndomains {int(p.first_gis)}–{int(p.last_gis)}",
+                f"{ps[0]['name'].split()[0]} {' + '.join(str(int(p.year)) for p in ps)}"
+                f"\ndomains {first}–{last}",
                 ha="center", va="bottom", fontsize=8, color=INK)
 
     ax.text(minx, miny - 0.16 * dy, "Cape Point (south)", ha="left", va="top",
@@ -398,12 +474,13 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     ax.text((ax0 + ax1) / 2, by + 0.05 * dy, "N", ha="center", va="bottom",
             fontsize=8.5, fontweight="bold", color=INK)
 
-    handles = [
-        Patch(facecolor=C_1984_FILL, edgecolor=C_1984, lw=0.9, label="nourished 2014"),
-        Patch(facecolor=C_1997_FILL, edgecolor=C_1997, lw=0.9, label="nourished 2022"),
+    handles = year_handles(0.9) + [
         Patch(facecolor="white", edgecolor="0.6", lw=0.35, label="domain, never nourished"),
     ]
-    fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False)
+    fig.legend(handles=handles, loc="outside lower center", ncol=len(handles), frameon=False)
+    refill = _refill_sentence()
+    refill_text = (f" A domain filled more than once is split across the island into one band per "
+                   f"fill, the earliest on the ocean side: {refill}." if refill else "")
 
     n_filled = len(year_of)
     caption(fig, (
@@ -411,7 +488,7 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
         "to the left, north to the right and the Atlantic at the bottom; rotation preserves distance, "
         f"so the scale bar holds. The {n_filled} domains that receive a nourishment project in the "
         "hindcast are filled by the year it was placed, with the site-config extents of Figure 1; "
-        "grey is the island outline and white domains are never nourished. Every tenth domain and "
+        "grey is the island outline and white domains are never nourished." + refill_text + " Every tenth domain and "
         "the ends of each footprint are numbered along the top. The Pea Island / Oregon Inlet fills "
         "in the management record lie beyond the north end of the strip."
     ))

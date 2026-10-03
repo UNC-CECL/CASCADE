@@ -724,6 +724,14 @@ HATTERAS_NOURISHMENT_PROJECTS = (
         note="Mirlo Beach S-curves, ~2 mi N of Rodanthe; GIS 84-89 carry NC-12",
     ),
     NourishmentProject(
+        name="Buxton beach nourishment",
+        year=2017,
+        # Placed 2017-06-21 to 2018-02-27 (~46% by Nov 2017); fired in the start year. Same 2.9 mi as 2022
+        gis_domains=tuple(range(6, 16)),
+        volume_cubic_yards=2_600_000,
+        note="Haulover Day Use Area to the lighthouse groin, 2.9 mi; Outer Banks Voice 2018-03-01",
+    ),
+    NourishmentProject(
         name="Buxton shore protection",
         year=2022,
         # 4.7 km north of the lighthouse groin (GIS 5.5); density already matched the record

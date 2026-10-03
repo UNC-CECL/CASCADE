@@ -44,6 +44,7 @@ POST = (2021, 2024)
 
 # NOURISHMENT, as the hindcast receives it (hatteras_site_config .HATTERAS_NOURISHMENT_PROJECTS
 NOURISHED = {"Rodanthe 2014": (2014, range(84, 90)),
+             "Buxton 2017": (2017, range(6, 16)),
              "Buxton 2022": (2022, range(6, 16)),
              "Avon 2022": (2022, range(21, 29))}
 NOURISHED_DOMAINS = sorted({d for _y, ds in NOURISHED.values() for d in ds})

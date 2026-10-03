@@ -65,13 +65,17 @@ _FILL_PROSE = {
         "Rodanthe",
         "Emergency fill at the Mirlo Beach S-curves following storm erosion, "
         "placed north of Rodanthe village along the NC-12 corridor"),
+    "Buxton beach nourishment": (
+        "Buxton",
+        "Dare County nourishment, the Haulover Day Use Area south to the lighthouse "
+        "groin field; placed June 2017 to February 2018, fired in 2017"),
     "Buxton shore protection": (
         "Buxton",
-        "USACE shore-protection project, extending north from the lighthouse "
+        "Dare County renourishment of the 2017 footprint, extending north from the lighthouse "
         "groin field past the village into the road corridor"),
     "Avon shore protection": (
         "Avon",
-        "USACE shore-protection project, Due East Road south to Askins Creek "
+        "Dare County shore-protection project, Due East Road south to Askins Creek "
         "North Drive, within the Avon community zone"),
 }
 

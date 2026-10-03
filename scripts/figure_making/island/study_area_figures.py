@@ -1772,11 +1772,14 @@ def fig_management_footprint(dom, outline, roads, frame):
                handleheight=1.25, columnspacing=1.6, labelspacing=0.6,
                handler_map={HalfBox: HalfBoxHandler()})
     out = save(fig, fig_path("management_footprint"), vector=True, dpi=300)
+    shown = sorted((p_ for p_ in HATTERAS_NOURISHMENT_PROJECTS if p_.enabled), key=lambda q: q.year)
     record_caption(out[0],
         "Where the reach has been managed, as the model prescribes it, on one reach in two "
-        "panels. (a) The three beach-nourishment projects in the record (Rodanthe 2014, Buxton "
-        "and Avon 2022), each tinted across the domains it was spread over, with the reported "
-        "project total; NC-12 is not drawn in (a), though it is why the Buxton and Rodanthe "
+        f"panels. (a) The {len(shown)} beach-nourishment projects the model receives ("
+        + ", ".join(f"{p_.name.split()[0]} {p_.year}" for p_ in shown)
+        + "), each tinted across the domains it was spread over, with the reported "
+        "project total; a stretch filled more than once is tinted darker and carries one label per fill. "
+        "NC-12 is not drawn in (a), though it is why the Buxton and Rodanthe "
         "fills run past their villages, along the road corridor. (b) NC-12: the "
         f"{early_start} (red) and {late_start} (blue) alignments, digitised from the 1978 and "
         "2008 imagery, each carrying the relocations that precede its period start \u2014 so the "
