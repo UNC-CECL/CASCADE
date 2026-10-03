@@ -1,0 +1,154 @@
+done  candidate-windows/2026-10-02-candidate-windows/runs/2010_2026_edgeBE_step0
+  CoastSat 2010: 906 transects  est. spacing 50 m  LRR range -3.78-+13.12 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 2010)
+
+==========================================================================
+END-DOMAIN SOLVE   2010-2026   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 2010-2026: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +10.030 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +95.92    +8.454    -1.576
+  d(LRR)/d(BE) 0.1050   (nominal gain, no second run to take a secant through)
+  next         +110.9 m/yr   (step +15.0 to close -1.576)
+
+GIS 90   target +1.953 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +20.25    +1.344    -0.609
+  d(LRR)/d(BE) 0.1050   (nominal gain, no second run to take a secant through)
+  next         +26.1 m/yr   (step +5.8 to close -0.609)
+
+next probe:
+  HAT_BE_OVERRIDE="1=110.9,90=26.1"
+
+
+done  candidate-windows/2026-10-02-candidate-windows/runs/2010_2026_edgeBE_step1
+  CoastSat 2010: 906 transects  est. spacing 50 m  LRR range -3.78-+13.12 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 2010)
+
+==========================================================================
+END-DOMAIN SOLVE   2010-2026   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 2010-2026: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +10.030 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +95.92    +8.454    -1.576
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +110.93    +8.782    -1.248
+  d(LRR)/d(BE) 0.0219   (local secant through the last two runs)
+  next         +168.0 m/yr   (step +57.1 to close -1.248)
+
+GIS 90   target +1.953 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +20.25    +1.344    -0.609
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +26.05    +2.221    +0.267
+  d(LRR)/d(BE) 0.1511   (local secant through the last two runs)
+  next         +24.3 m/yr   (step -1.8 to close +0.267)
+
+next probe:
+  HAT_BE_OVERRIDE="1=168.0,90=24.3"
+
+
+done  candidate-windows/2026-10-02-candidate-windows/runs/2010_2026_edgeBE_step2
+  CoastSat 2010: 906 transects  est. spacing 50 m  LRR range -3.78-+13.12 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 2010)
+
+==========================================================================
+END-DOMAIN SOLVE   2010-2026   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 2010-2026: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +10.030 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +95.92    +8.454    -1.576
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +110.93    +8.782    -1.248
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +168.02   +10.076    +0.046
+  d(LRR)/d(BE) 0.0227   (local secant through the last two runs)
+  next         +166.0 m/yr   (step -2.0 to close +0.046)
+
+GIS 90   target +1.953 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +20.25    +1.344    -0.609
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +26.05    +2.221    +0.267
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +24.28    +2.005    +0.051
+  d(LRR)/d(BE) 0.1221   (local secant through the last two runs)
+  next         +23.9 m/yr   (step -0.4 to close +0.051)
+
+next probe:
+  HAT_BE_OVERRIDE="1=166.0,90=23.9"
+
+
+done  candidate-windows/2026-10-02-candidate-windows/runs/2010_2026_edgeBE_step3
+  CoastSat 2010: 906 transects  est. spacing 50 m  LRR range -3.78-+13.12 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 2010)
+
+==========================================================================
+END-DOMAIN SOLVE   2010-2026   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 2010-2026: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +10.030 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +95.92    +8.454    -1.576
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +110.93    +8.782    -1.248
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +168.02   +10.076    +0.046
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +166.01   +10.095    +0.065
+  d(LRR)/d(BE) -0.0094   (local secant through the last two runs)
+  next         +172.9 m/yr   (step +6.9 to close +0.065)
+
+GIS 90   target +1.953 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +20.25    +1.344    -0.609
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +26.05    +2.221    +0.267
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +24.28    +2.005    +0.051
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +23.86    +1.897    -0.056
+  d(LRR)/d(BE) 0.2561   (local secant through the last two runs)
+  next         +24.1 m/yr   (step +0.2 to close -0.056)
+
+next probe:
+  HAT_BE_OVERRIDE="1=172.9,90=24.1"
+
+
+done  candidate-windows/2026-10-02-candidate-windows/runs/2010_2026_edgeBE_step4
+  CoastSat 2010: 906 transects  est. spacing 50 m  LRR range -3.78-+13.12 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 2010)
+
+==========================================================================
+END-DOMAIN SOLVE   2010-2026   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 2010-2026: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +10.030 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +95.92    +8.454    -1.576
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +110.93    +8.782    -1.248
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +168.02   +10.076    +0.046
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +166.01   +10.095    +0.065
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou   +172.89   +10.027    -0.003
+  d(LRR)/d(BE) -0.0098   (local secant through the last two runs)
+  next         +172.6 m/yr   (step -0.3 to close -0.003)
+  CONVERGED at this tolerance; another step is noise
+
+GIS 90   target +1.953 m/yr
+  run                                              imposed     model  residual
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +20.25    +1.344    -0.609
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +26.05    +2.221    +0.267
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +24.28    +2.005    +0.051
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +23.86    +1.897    -0.056
+  HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nou    +24.08    +1.937    -0.017
+  d(LRR)/d(BE) 0.1798   (local secant through the last two runs)
+  next         +24.2 m/yr   (step +0.1 to close -0.017)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=172.6,90=24.2"
+
+
+solved
+final step: candidate-windows/2026-10-02-candidate-windows/runs/2010_2026_edgeBE_step4

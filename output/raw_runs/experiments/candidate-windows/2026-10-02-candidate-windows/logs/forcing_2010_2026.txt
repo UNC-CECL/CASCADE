@@ -1,0 +1,190 @@
+
+HAT_download_water_levels.py
+Station 8651370 | NAVD | GMT | 1984-01-01 -> 2025-12-31
+
+==========================================================================
+STEP 1: Monthly download — station 8651370 (1984-01-01 -> 2025-12-31)
+==========================================================================
+  cache: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\1-records\water_level\noaa_cache_8651370
+  months to cover:   504
+  already cached:    492
+  to download:       12
+  rough runtime:     0-1 min (longer if CO-OPS is retrying)
+  safe to interrupt: each month is cached as it lands; re-run resumes
+
+  known short months (confirmed gauge outages, not re-fetched): 9
+
+  198601: SHORT — 641/744 hours (86%)  [confirmed outage, from cache]
+  198602: SHORT — 583/672 hours (87%)  [confirmed outage, from cache]
+  198712: SHORT — 92/744 hours (12%)  [confirmed outage, from cache]
+  198801: SHORT — 628/744 hours (84%)  [confirmed outage, from cache]
+  198910: SHORT — 653/744 hours (88%)  [confirmed outage, from cache]
+  199910: SHORT — 489/744 hours (66%)  [confirmed outage, from cache]
+  200009: SHORT — 444/720 hours (62%)  [confirmed outage, from cache]
+  201201: SHORT — 482/744 hours (65%)  [confirmed outage, from cache]
+  201211: SHORT — 31/720 hours (4%)  [confirmed outage, from cache]
+  202501: downloading...
+  202502: downloading...
+  202503: downloading...
+  202504: downloading...
+  202505: downloading...
+  202506: downloading...
+  202507: downloading...
+  202508: downloading...
+  202509: downloading...
+  202510: downloading...
+  202511: downloading...
+  202512: downloading...
+
+  months from cache: 492  |  fetched: 12  (of which re-fetched as stale: 0)
+  short months: 9  |  empty months: 0
+
+==========================================================================
+STEP 2: Hourly grid, gap report, conservative fill
+==========================================================================
+  Grid hours:       368,184
+  Missing pre-fill: 2,595  (0.70%)
+  Gap runs: 8  |  longer than 3 h: 8
+
+  Longest gaps (NOT filled — left as NaN):
+    1987-12-04 20:00 -> 1988-01-05 19:00  (768 h)
+    2012-10-29 10:00 -> 2012-11-29 16:00  (751 h)
+    2012-01-20 21:00 -> 2012-01-31 18:00  (262 h)
+    1999-10-04 01:00 -> 1999-10-14 15:00  (255 h)
+    1986-01-27 17:00 -> 1986-02-04 16:00  (192 h)
+    2000-09-14 01:00 -> 2000-09-21 16:00  (184 h)
+    2000-09-22 01:00 -> 2000-09-25 20:00  (92 h)
+    1989-10-05 16:00 -> 1989-10-09 10:00  (91 h)
+
+  Restored NaN across 8 gap(s) > 3 h (no partial shoulder fill)
+  Filled gaps <= 3 h  |  remaining NaN: 2,595 (0.70%)
+  Remaining NaNs stay NaN by design — v3's load_data() drops those hours,
+  which is correct provided none sit on a storm peak (checked next).
+
+==========================================================================
+STEP 3: Coverage during known storms
+==========================================================================
+  OK  Gloria 1985      49/49 hours   peak WL 0.690 m
+  OK  Halloween 1991   73/73 hours   peak WL 1.214 m
+  OK  Emily 1993       37/37 hours   peak WL 0.769 m
+  OK  Floyd 1999       49/49 hours   peak WL 0.737 m
+  OK  Isabel 2003      61/61 hours   peak WL 1.700 m
+  OK  Irene 2011       61/61 hours   peak WL 0.925 m
+  XX  Sandy 2012       34/61 hours (56%)  — MISSING (acknowledged)
+
+  Acknowledged gaps (documented, not blocking):
+    Sandy 2012: Duck gauge offline 2012-10-29 -> 2012-11-29 (751 h). CO-OPS has no record; five retries returned an identical 34/61 hours. Options if Sandy matters for Period 2: splice Oregon Inlet (8652587) with an raw_offset/amplitude correction fit on overlapping Duck data, reconstruct from predicted tide only (loses surge, biases Rhigh low), or document as a known omission. Ask Laura.
+
+==========================================================================
+SHORT MONTHS (9) — likely real gauge outages, re-fetch did not improve them:
+  198601: 641/744 (86%)
+  198602: 583/672 (87%)
+  198712: 92/744 (12%)
+  198801: 628/744 (84%)
+  198910: 653/744 (88%)
+  199910: 489/744 (66%)
+  200009: 444/720 (62%)
+  201201: 482/744 (65%)
+  201211: 31/720 (4%)
+Saved: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\1-records\water_level\8651370_DUCK_19840101_20251231_NAVD.csv
+  Rows: 368,184  |  valid: 365,589
+  WL range: -1.393 to 1.700 m NAVD88
+  Columns: t, v  ->  in v3_HAT.py set:
+      water_levels_file = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\1-records\water_level\8651370_DUCK_19840101_20251231_NAVD.csv"
+      t_name_water = "t"
+      water_name   = "v"
+==========================================================================
+WIS: 359413 export rows + 8748 archive rows -> ST63228_19840101_20251231_export_plus_archive.csv (1984-01-01 00:00:00 to 2025-12-31 23:00:00)
+water_level column is missing the following date ranges
+           start date            end date  days  hours
+0 2012-01-20 21:00:00 2012-01-31 18:00:00    10   22.0
+1 2012-10-29 10:00:00 2012-11-29 16:00:00    31    7.0
+2 2026-01-01 00:00:00 2026-12-31 23:00:00   364   24.0
+Hs column is missing the following date ranges
+   start date            end date  days  hours
+0  2024-02-01 2024-02-01 00:00:00     0    1.0
+1  2024-03-01 2024-03-01 00:00:00     0    1.0
+2  2024-04-01 2024-04-01 00:00:00     0    1.0
+3  2024-05-01 2024-05-01 00:00:00     0    1.0
+4  2024-06-01 2024-06-01 00:00:00     0    1.0
+5  2024-07-01 2024-07-01 00:00:00     0    1.0
+6  2024-08-01 2024-08-01 00:00:00     0    1.0
+7  2024-09-01 2024-09-01 00:00:00     0    1.0
+8  2024-10-01 2024-10-01 00:00:00     0    1.0
+9  2024-11-01 2024-11-01 00:00:00     0    1.0
+10 2024-12-01 2024-12-01 00:00:00     0    1.0
+11 2025-01-01 2025-01-01 00:00:00     0    1.0
+12 2025-02-01 2025-02-01 00:00:00     0    1.0
+13 2025-03-01 2025-03-01 00:00:00     0    1.0
+14 2025-04-01 2025-04-01 00:00:00     0    1.0
+15 2025-05-01 2025-05-01 00:00:00     0    1.0
+16 2025-06-01 2025-06-01 00:00:00     0    1.0
+17 2025-07-01 2025-07-01 00:00:00     0    1.0
+18 2025-08-01 2025-08-01 00:00:00     0    1.0
+19 2025-09-01 2025-09-01 00:00:00     0    1.0
+20 2025-10-01 2025-10-01 00:00:00     0    1.0
+21 2025-11-01 2025-11-01 00:00:00     0    1.0
+22 2025-12-01 2025-12-01 00:00:00     0    1.0
+23 2026-01-01 2026-12-31 23:00:00   364   24.0
+Tp column is missing the following date ranges
+   start date            end date  days  hours
+0  2024-02-01 2024-02-01 00:00:00     0    1.0
+1  2024-03-01 2024-03-01 00:00:00     0    1.0
+2  2024-04-01 2024-04-01 00:00:00     0    1.0
+3  2024-05-01 2024-05-01 00:00:00     0    1.0
+4  2024-06-01 2024-06-01 00:00:00     0    1.0
+5  2024-07-01 2024-07-01 00:00:00     0    1.0
+6  2024-08-01 2024-08-01 00:00:00     0    1.0
+7  2024-09-01 2024-09-01 00:00:00     0    1.0
+8  2024-10-01 2024-10-01 00:00:00     0    1.0
+9  2024-11-01 2024-11-01 00:00:00     0    1.0
+10 2024-12-01 2024-12-01 00:00:00     0    1.0
+11 2025-01-01 2025-01-01 00:00:00     0    1.0
+12 2025-02-01 2025-02-01 00:00:00     0    1.0
+13 2025-03-01 2025-03-01 00:00:00     0    1.0
+14 2025-04-01 2025-04-01 00:00:00     0    1.0
+15 2025-05-01 2025-05-01 00:00:00     0    1.0
+16 2025-06-01 2025-06-01 00:00:00     0    1.0
+17 2025-07-01 2025-07-01 00:00:00     0    1.0
+18 2025-08-01 2025-08-01 00:00:00     0    1.0
+19 2025-09-01 2025-09-01 00:00:00     0    1.0
+20 2025-10-01 2025-10-01 00:00:00     0    1.0
+21 2025-11-01 2025-11-01 00:00:00     0    1.0
+22 2025-12-01 2025-12-01 00:00:00     0    1.0
+23 2026-01-01 2026-12-31 23:00:00   364   24.0
+                     water_level        Hs        Tp
+2010-01-01 00:00:00        0.438  1.140625  6.343750
+2010-01-01 01:00:00        0.388  1.156250  6.515625
+2010-01-01 02:00:00        0.182  1.164062  6.640625
+2010-01-01 03:00:00       -0.111  1.187500  6.718750
+2010-01-01 04:00:00       -0.375  1.210938  6.765625
+...                          ...       ...       ...
+2025-12-31 19:00:00       -0.321  0.695312  5.453125
+2025-12-31 20:00:00       -0.099  0.695312  5.460938
+2025-12-31 21:00:00        0.018  0.718750  5.453125
+2025-12-31 22:00:00        0.045  0.726562  5.406250
+2025-12-31 23:00:00       -0.056  0.726562  5.179688
+
+[139220 rows x 3 columns]
+                     water_level        Hs        Tp        R2       TWL
+2010-01-01 00:00:00        0.438  1.140625  6.343750  0.544767  0.982767
+2010-01-01 01:00:00        0.388  1.156250  6.515625  0.563346  0.951346
+2010-01-01 02:00:00        0.182  1.164062  6.640625  0.576090  0.758090
+2010-01-01 03:00:00       -0.111  1.187500  6.718750  0.588706  0.477706
+2010-01-01 04:00:00       -0.375  1.210938  6.765625  0.598635  0.223635
+...                          ...       ...       ...       ...       ...
+2025-12-31 19:00:00       -0.321  0.695312  5.453125  0.365619  0.044619
+2025-12-31 20:00:00       -0.099  0.695312  5.460938  0.366143  0.267143
+2025-12-31 21:00:00        0.018  0.718750  5.453125  0.371730  0.389730
+2025-12-31 22:00:00        0.045  0.726562  5.406250  0.370532  0.415532
+2025-12-31 23:00:00       -0.056  0.726562  5.179688  0.355004  0.299004
+
+[139220 rows x 5 columns]
+dataframes saved to C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\3-storms\hindcast_storms\2010_2026
+{
+  "window": "2010_2026",
+  "slope_m_yr": 0.005477200979886496,
+  "ci95_m_yr": 0.0020479845572428804,
+  "n_months": 192,
+  "config_m_yr": 0.005
+}
