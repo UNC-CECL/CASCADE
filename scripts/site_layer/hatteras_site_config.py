@@ -158,18 +158,19 @@ HATTERAS_PERIODS = {
 
     # Two overlapping periods (2026-09-11); the end year is a boundary, not a simulated year
     1996: {
-        "end_year": 2010,
-        # 0.00402 m/yr fitted over 1996-2010 (Duck gauge)
+        # 1996-2015 since 2026-10-02 (was 1996-2010: end 2010, RSLR 0.004)
+        "end_year": 2015,
+        # 0.00376 m/yr fitted over 1996-2015 (Duck gauge)
         "sea_level_rise_rate": 0.004,
-        "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2010)),
+        "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2015)),
         # Derived, not surveyed: built from the 1997 dune line
         "island_offset_file": _island_offset_file(1996),
         # Derived: the 1984 setbacks with the 1989 Pea Island relocation applied
         "road_setback_file": road_setback_relpath(1996),
         "topo_product": YEAR_PRODUCT[1996],
-        # No project in HATTERAS_NOURISHMENT_PROJECTS falls in 1996-2009.
-        "enable_nourishment": False,
-        "nourishment_volume": 0,  # m^3/m
+        # Rodanthe 2014 falls inside 1996-2014 (none did in 1996-2009)
+        "enable_nourishment": True,
+        "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
     2010: {
         # 2010-2026 since 2026-10-02 (was 2010-2024: end 2024, RSLR 0.007)
@@ -430,8 +431,8 @@ HATTERAS_BE_EDGE_ONLY = {
     # Option A values on the LOWESS-10 target
     # /10-offset solve, 1996, superseded 2026-09-27
 
-    # 1996: three Newton steps, gains inside the range of the other periods
-    1996: (+4.3888, +19.0935),  # split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
+    # 1996: 1996-2015, five Newton steps (candidate-windows experiment, 2026-10-02)
+    1996: (+3.39, +37.60),  # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # /10-offset solve, 2010, superseded 2026-09-27
 

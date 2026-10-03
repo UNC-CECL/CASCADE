@@ -254,6 +254,9 @@ def already_done(manifest, key):
     row = manifest.get(key)
     if not (row and row.get("ok") is True):
         return False
+    # A recorded skip is not a result: applicability is re-decided every invocation, and a window can gain a fill
+    if row.get("skipped"):
+        return False
     # The key names the start year only; a row from the same start's earlier window is a different job
     name, period = row.get("run_name"), row.get("period")
     if name and period in END_YEAR and not name.startswith(f"HAT_{period}_{END_YEAR[period]}_"):
@@ -371,7 +374,7 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
             _m, _f = _fit_values(preset)
             key = job_key(stage, period, preset, scenario, groin, reloc,
                           _m, _f, args.hs)
-            if not already_done(manifest, key) and not args.dry_run:
+            if key not in manifest and not args.dry_run:
                 # Recorded ok (no retry) with skipped=True, so the summary tells it from a real success
                 record(dict(key=key, stage=stage, period=period,
                             preset=preset, scenario=scenario, groin=groin,
