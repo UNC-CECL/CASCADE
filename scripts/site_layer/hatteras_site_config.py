@@ -172,16 +172,17 @@ HATTERAS_PERIODS = {
         "nourishment_volume": 0,  # m^3/m
     },
     2010: {
-        "end_year": 2024,
-        # 0.00651 m/yr fitted over 2010-2024 (Duck gauge)
-        "sea_level_rise_rate": 0.007,
-        "storm_file": _env.init_relpath(_env.storm_series_file(2010, 2024)),
+        # 2010-2026 since 2026-10-02 (was 2010-2024: end 2024, RSLR 0.007)
+        "end_year": 2026,
+        # 0.00548 m/yr fitted over 2010-2026 (Duck gauge, record extended through 2025)
+        "sea_level_rise_rate": 0.005,
+        "storm_file": _env.init_relpath(_env.storm_series_file(2010, 2026)),
         # Derived, not surveyed: built from the 2009 dune line (no 2010 imagery)
         "island_offset_file": _island_offset_file(2010),
         # A copy of the 2004 file: same topography, same road line, no relocation between
         "road_setback_file": road_setback_relpath(2010),
         "topo_product": YEAR_PRODUCT[2010],
-        # Rodanthe 2014 and both 2022 projects fall inside 2010-2023.
+        # Rodanthe 2014, Buxton 2017 and both 2022 projects fall inside 2010-2025; the 2026 fills come after
         "enable_nourishment": True,
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
@@ -434,8 +435,8 @@ HATTERAS_BE_EDGE_ONLY = {
 
     # /10-offset solve, 2010, superseded 2026-09-27
 
-    # 2010: three Newton steps, the same protocol as 1996
-    2010: (+8.0405, +21.2582),  # split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
+    # 2010: 2010-2026, five Newton steps (candidate-windows experiment, 2026-10-02); GIS 1 gain fell to ~0.01 near the top
+    2010: (+172.89, +24.08),  # 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
 # Option B (2010-2024 at Hs 2.5 with its own ends): recorded, not wired

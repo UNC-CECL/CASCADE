@@ -252,7 +252,13 @@ def record(row):
 # True only if the job is recorded AND recorded as having succeeded
 def already_done(manifest, key):
     row = manifest.get(key)
-    return bool(row) and row.get("ok") is True
+    if not (row and row.get("ok") is True):
+        return False
+    # The key names the start year only; a row from the same start's earlier window is a different job
+    name, period = row.get("run_name"), row.get("period")
+    if name and period in END_YEAR and not name.startswith(f"HAT_{period}_{END_YEAR[period]}_"):
+        return False
+    return True
 
 
 # Running one hindcast
@@ -400,8 +406,9 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
                                       and scenario == SEED_SCENARIO)
 
         # A `reloc` token only where the arm carries one, matching how the runner derives RUN_NAME in 7.5
+        # The window, not just the start: 2010-2026 must not overwrite the 2010-2024 logs
         label = "_".join(
-            [str(period), preset, scenario]
+            [f"{period}_{END_YEAR[period]}", preset, scenario]
             + (["reloc"] if reloc else [])
             + ["groin" if groin else "nogroin"])
         print(f"  [{index:>2}/{len(jobs)}] {period} {preset:<7} "

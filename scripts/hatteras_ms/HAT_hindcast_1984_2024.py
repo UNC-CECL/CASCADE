@@ -933,14 +933,16 @@ COASTSAT_DATASETS = [
     ),
     # Every window loads on every run
     CoastSatDataset(
-        label="CoastSat LRR (1996-2010)",
+        label=f"CoastSat LRR (1996-{HATTERAS_PERIODS[1996]['end_year']})",
         period_start=1996,
-        csv_path=str(COASTSAT_BASE_DIR / "1996_2010" / "transect_lrr_full.csv"),
+        csv_path=str(COASTSAT_BASE_DIR / f"1996_{HATTERAS_PERIODS[1996]['end_year']}"
+                     / "transect_lrr_full.csv"),
     ),
     CoastSatDataset(
-        label="CoastSat LRR (2010-2024)",
+        label=f"CoastSat LRR (2010-{HATTERAS_PERIODS[2010]['end_year']})",
         period_start=2010,
-        csv_path=str(COASTSAT_BASE_DIR / "2010_2024" / "transect_lrr_full.csv"),
+        csv_path=str(COASTSAT_BASE_DIR / f"2010_{HATTERAS_PERIODS[2010]['end_year']}"
+                     / "transect_lrr_full.csv"),
     ),
 ]
 
