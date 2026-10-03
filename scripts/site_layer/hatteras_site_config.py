@@ -722,7 +722,7 @@ HATTERAS_NOURISHMENT_PROJECTS = (
         year=2014,
         # Mirlo Beach S-curves emergency fill, north of Rodanthe; stops short of the locked GIS 90
         gis_domains=tuple(range(84, 90)),
-        volume_cubic_yards=1_600_000,
+        volume_cubic_yards=1_620_000,
         note="Mirlo Beach S-curves, ~2 mi N of Rodanthe; GIS 84-89 carry NC-12",
     ),
     NourishmentProject(
