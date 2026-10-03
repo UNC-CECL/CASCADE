@@ -38,6 +38,8 @@ COASTSAT_TIMESERIES = OBSERVATIONS / "coastsat_timeseries"
 COASTSAT_RATES = RATES / "coastsat"
 DUNELINE_RATES = RATES / "duneline"
 COASTSAT_LRR_ROOT = COASTSAT_RATES / "lrr"
+# The lrr field smoothed alongshore at two LOWESS widths, per window (coastsat_lrr_smoothed.py)
+COASTSAT_LRR_SMOOTHED_ROOT = COASTSAT_RATES / "lrr_smoothed"
 
 # What each window is: two chains and one context window; the one definition (WINDOWS.md is written from it)
 CURRENT_CHAIN = (1996, 2010, 2024)

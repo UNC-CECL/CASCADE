@@ -41,6 +41,7 @@ coastsat/                      the satellite waterline
     lrr/<window>/              OLS rate per transect and per domain       MODEL TARGET
     endpoint/<window>/         net change between ±6-month means at the dune-line dates
     5yr_bins/<window>/         OLS in successive 5-year bins
+    lrr_smoothed/<window>/     the lrr field LOWESS-smoothed alongshore at 5 and 7 domains, side by side
     total_change/<window>/     the window's OWN LRR x window length (metres), beside the observed calendar-year change
     projected/<window>/        the 1996-2024 LRR x 14 yr, carried onto a window it was NOT fitted on
 duneline/                      the digitized dune line
@@ -54,6 +55,7 @@ duneline/                      the digitized dune line
 | `coastsat/total_change` | per transect, the window's OWN LRR x (end - start) years — the rate evaluated over the window it was fitted on, so nothing is extrapolated; beside it the OBSERVED change, mean position over the whole end calendar year minus the whole start calendar year (same span); per domain the means | m | 1996_2024, 1996_2010, 2010_2024 | `3-rates/coastsat/total_change/coastsat_total_change.py` (tables, figure and PROVENANCE in one run) | — (advisor's total-change view, 2026-09-19) |
 | `coastsat/projected` | the same, but the 1996–2024 LRR x 14 yr carried onto a window it was **not** fitted on. 1996_2024 is absent on purpose: there the rate window IS the change window, so the answer is `total_change` | m | 1996_2010, 2010_2024 | `3-rates/coastsat/total_change/coastsat_total_change.py --product projected` | — (the observations-only twin of `target_comparison/projected/`) |
 | `coastsat/5yr_bins` | the lrr fit, repeated inside successive 5-year bins (bins under 3.75 yr dropped, \|rate\| > 50 m/yr dropped) | m/yr | 1996_2010, 2010_2024, 1996_2024 | `3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py` | `coastsat_5yr_bins_figure.py` |
+| `coastsat/lrr_smoothed` | the lrr transect rates LOWESS-smoothed alongshore at 5 and 7 domains (raw domain means kept over GIS 1–10), beside the unsmoothed domain means and their difference; one figure per window with both widths | m/yr | 1996_2015, 2010_2026, 1996_2026 | `3-rates/coastsat/lrr_smoothed/coastsat_lrr_smoothed.py` | — (the 5 vs 7 width test, 2026-10-02) |
 | `duneline/endpoint` | per 100 m transect, the start line's distance from the offshore datum minus the end line's; per domain the mean | m and m/yr | the four model windows + 1996_2024 | `3-rates/duneline/duneline_endpoint.py` | `rate_windows.py`, the dune edge solve, `net_change_vs_duneline.py` |
 
 **Naming (Hannah, by interview, 2026-09-21).** A rate turned into a distance

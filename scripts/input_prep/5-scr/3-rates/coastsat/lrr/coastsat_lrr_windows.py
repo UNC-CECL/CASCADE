@@ -152,7 +152,8 @@ def draw_panel(ax, df: pd.DataFrame, half: float, label: bool = True,
 
 
 # The caption for a set of windows
-def caption_text(windows, half: float, grid: bool) -> str:
+def caption_text(windows, half: float, grid: bool,
+                 bound_over: str = "the four windows") -> str:
     wins = ", ".join(f"{a}–{b}" for a, b in windows)
     if grid:
         head = ("Observed shoreline change rate by GIS domain (1 at Cape "
@@ -170,7 +171,7 @@ def caption_text(windows, half: float, grid: bool) -> str:
             "are shaded; the solid hairline is the Buxton groin and the "
             "dotted hairlines are the Avon and Rodanthe piers. The y axis is "
             f"held at ±{half:g} m/yr on every panel, the largest |mean| over "
-            "the four windows plus 1 m rounded up, so the panels are directly "
+            f"{bound_over} plus 1 m rounded up, so the panels are directly "
             "comparable.")
 
 
@@ -184,15 +185,143 @@ def _save(fig, stem):
 
 
 # One window's panel as its own figure
-def single_figure(start, end, df, half):
+def single_figure(start, end, df, half, bound_over="the four windows",
+                  title=None):
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.36),
                            constrained_layout=True)
     draw_panel(ax, df, half)
-    ax.set_title(f"{start}–{end}", loc="center")
+    ax.set_title(title or f"{start}–{end}", loc="center")
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_ylabel(Y_LABEL)
-    caption(fig, caption_text([(start, end)], half, grid=False))
+    caption(fig, caption_text([(start, end)], half, grid=False,
+                              bound_over=bound_over))
     return _save(fig, f"{start}_{end}/lrr_{start}_{end}")
+
+
+# Candidate windows over a reference (--candidates, Hannah 2026-10-02)
+
+# The reference is grey and filled; the candidates are lines, so sign colours stay off them
+REF_LINE_C = C["BASE"]
+# Points between the frame and a title, clearing the fill bars and their labels
+TITLE_PAD_FILLS = 22
+# Every figure of the candidate study shares one y axis, taken over all of these
+CANDIDATE_STUDY_WINDOWS = ((1996, 2015), (2010, 2026), (1996, 2026), (2010, 2020))
+
+
+# The candidate study's shared y bound, and the windows it was taken over as text
+def candidate_half():
+    half = shared_bounds([load_window(*w) for w in CANDIDATE_STUDY_WINDOWS])
+    over = ", ".join(f"{a}–{b}" for a, b in CANDIDATE_STUDY_WINDOWS)
+    return half, over
+REF_FILL_C = C["BASE_FILL"]
+CANDIDATE_COLOURS = [INK, C["ACCENT"]]
+
+
+# The last CoastSat date any transect in the window reaches
+def record_end(start: int, end: int) -> str:
+    t = pd.read_csv(domain_csv(start, end).parent / "transect_lrr_full.csv",
+                    usecols=["end_date"])
+    return str(t["end_date"].max())
+
+
+# The candidates' caption
+def candidates_caption(ref, cands, half, fills) -> str:
+    (a, b) = ref
+    lines = " and ".join(f"{s}–{e} ({n})" for (s, e), n
+                         in zip(cands, ["black", "purple"]))
+    # Name any end year the record covers less than half of
+    ends = sorted({(e, d) for s, e in [ref] + cands
+                   if (d := record_end(s, e)) < f"{e}-07-01"})
+    end_txt = "".join(
+        f" The record ends {d}, so a window to {e} holds only that much of {e}."
+        for e, d in ends)
+    fill_txt = "; ".join(f"{y} at GIS {lo}–{hi}" for y, lo, hi in fills)
+    return ("Observed shoreline change rate by GIS domain (1 at Cape Point, "
+            f"90 at Pea Island) for the candidate windows {lines}, over the "
+            f"{a}–{b} rate (grey, filled). Each line is the mean linear "
+            "regression rate of the CoastSat transects inside each 500 m "
+            "domain (domain_lrr_summary.csv), fitted over the calendar window "
+            "(1 January of the first year to 31 December of the last), "
+            "seaward positive; the spread across transects is in the domain "
+            "tables, not drawn." + end_txt
+            + (f" Black bars above the frame mark the beach fills placed inside "
+               f"{a}–{b} at the footprint the hindcast uses ({fill_txt}); the "
+               "rates there include the placed sand." if fills else "")
+            + " The hatched amber boxes mark the offshore shoals ("
+            + "; ".join(f"{n} GIS {lo}–{hi}" for n, (lo, hi)
+                        in HATTERAS_ANNOTATIONS.shoal_zones.items())
+            + "). Village spans are shaded; the solid hairline is the Buxton "
+            "groin and the dotted hairlines are the Avon and Rodanthe piers. "
+            f"The y axis is ±{half:g} m/yr, the largest |mean| over "
+            f"{candidate_half()[1]} plus 1 m rounded up, shared by every figure "
+            "of the candidate windows.")
+
+
+# One panel: the reference filled grey, each candidate a line on top
+def candidates_figure(ref, cands, frames, half):
+    df_ref, *df_cands = frames
+    fills = fills_in(*ref)
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
+                           constrained_layout=True)
+    ax.set_xlim(0.5, N_DOMAINS + 0.5)
+    ax.set_ylim(-half, half)
+    town_bands(ax, label=True)
+    ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
+    x = df_ref["domain_number"].to_numpy(float)
+    y = df_ref["mean_lrr"].to_numpy(float)
+    ax.fill_between(x, 0, y, where=~np.isnan(y), interpolate=True,
+                    color=REF_FILL_C, lw=0, zorder=3)
+    (h_ref,) = ax.plot(x, y, color=REF_LINE_C, lw=0.9, zorder=4,
+                       label=f"{ref[0]}–{ref[1]}")
+    handles = [h_ref]
+    for (s, e), df, col in zip(cands, df_cands, CANDIDATE_COLOURS):
+        (ln,) = ax.plot(df["domain_number"], df["mean_lrr"], color=col,
+                        lw=1.2, zorder=6, label=f"{s}–{e}")
+        handles.append(ln)
+    structures(ax, True, STRUCTURE_LABEL_PT)
+    draw_shoals(ax, label=True)
+    if fills:
+        draw_fills(ax, fills, half)
+    ax.xaxis.set_major_locator(MultipleLocator(10))
+    ax.xaxis.set_minor_locator(MultipleLocator(5))
+    ax.yaxis.set_major_locator(MultipleLocator(Y_TICK_M))
+    ax.yaxis.grid(True, zorder=0)
+    ax.set_axisbelow(True)
+    open_frame(ax)
+    ax.set_title("Shoreline change rate, "
+                 + " and ".join(f"{s}–{e}" for s, e in cands)
+                 + f", against the {ref[0]}–{ref[1]} rate", loc="center",
+                 pad=TITLE_PAD_FILLS if fills else None)
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_ylabel(Y_LABEL)
+    fig.legend(handles=handles, loc="outside lower center", ncol=len(handles),
+               frameon=False)
+    caption(fig, candidates_caption(ref, cands, half, fills))
+    stem = "_and_".join(f"{s}_{e}" for s, e in cands)
+    return _save(fig, f"{ref[0]}_{ref[1]}/lrr_{stem}_over_{ref[0]}_{ref[1]}")
+
+
+# Each window on its own, then the candidates over the reference, all on one y axis
+def run_candidates(cand_specs, ref_spec):
+    cands = [tuple(int(v) for v in w.split("_")) for w in cand_specs]
+    ref = tuple(int(v) for v in ref_spec.split("_"))
+    frames = [load_window(*ref)] + [load_window(*w) for w in cands]
+    half, over = candidate_half()
+    written = []
+    for (a, b), df in zip([ref] + cands, frames):
+        written += single_figure(a, b, df, half, bound_over=over,
+                                 title=f"Shoreline change rate, {a}–{b}")
+    written += candidates_figure(ref, cands, frames, half)
+
+    table = pd.DataFrame({"domain_number": np.arange(1, N_DOMAINS + 1)})
+    for (a, b), df in zip([ref] + cands, frames):
+        table[f"mean_{a}_{b}"] = df["mean_lrr"].round(3)
+    stem = "_and_".join(f"{s}_{e}" for s, e in cands)
+    table.to_csv(support_dir(OUT_DIR / f"{ref[0]}_{ref[1]}")
+                 / f"lrr_{stem}_over_{ref[0]}_{ref[1]}.csv", index=False)
+    print(f"y bounds  +/-{half:g} m/yr")
+    for p in written:
+        print("wrote    ", p.relative_to(_REPO))
 
 
 # Windows linked end-to-start, each chain sorted by start, chains by their first start
@@ -423,7 +552,19 @@ def main(argv=None):
     ap.add_argument("--overlay", metavar="START_END",
                     help="a long window drawn over the default windows that "
                          "chain across it, e.g. 1996_2024; draws only that")
+    ap.add_argument("--candidates", nargs="+", metavar="START_END",
+                    help="candidate windows, each drawn alone and then over "
+                         "--reference, e.g. 1996_2015 2010_2026")
+    ap.add_argument("--reference", metavar="START_END",
+                    help="the long window the candidates are drawn over")
     args = ap.parse_args(argv)
+
+    if args.candidates:
+        if not args.reference:
+            sys.exit("--candidates needs --reference")
+        apply_style()
+        run_candidates(args.candidates, args.reference)
+        return
 
     if args.overlay:
         # --overlay retired 2026-09-19 (see lrr/chains/)
