@@ -16,6 +16,7 @@ are separate so a finished sweep can be re-scored without re-running.
 | Code checks | `HAT_metres_3_overwash_fix.py` (+ `_plot_explained`), `HAT_barrier3d_gap_momentum_fix.py`, `HAT_adopt_dune_ceiling_check.py` |
 | Topography and domains | `HAT_peaisland_extension.py`, `HAT_run_crest_experiment.py`, `HAT_plot_crest_experiment.py` |
 | Road relocation | `HAT_relocation_comparison.py`, `HAT_relocation_period_compare.py`, `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`, `HAT_score_road_position.py`; conclusions in `RELOCATION_COMPARISON_RESULTS.md` |
+| Management | `HAT_buxton_2017_fill.py` (+ `_plot`), `HAT_nourishment_volume_check.py` |
 
 Several scripts import another study's module and re-point its folders (the
 `_div10` / `_option_a` variants, the storm studies' shared `MD` / `S`), so
@@ -105,6 +106,36 @@ WHERE: output/raw_runs/experiments/code-checks/2026-09-28-barrier3d-overwash-gap
 USAGE
     python HAT_barrier3d_gap_momentum_fix.py run [--workers 4]
     python HAT_barrier3d_gap_momentum_fix.py compare
+```
+
+### HAT_buxton_2017_fill.py
+
+Does adding the 2017 Buxton fill improve the 2010-2026 hindcast?
+
+```text
+Runs 2010-2026 edgeBE full_management twice: with the fill list as committed
+(with2017, which must reproduce the matrix run) and with Buxton 2017 dropped
+from HATTERAS_NOURISHMENT_PROJECTS in the run's own process (without2017).
+Scored against the CoastSat 2010-2026 LOWESS-7 target over the interior and
+over the fill footprint, GIS 6-15.
+
+NOTHING IN THE MAIN CODE CHANGES.
+
+    python HAT_buxton_2017_fill.py run
+    python HAT_buxton_2017_fill.py score
+
+WHERE: output/raw_runs/experiments/management/2026-10-03-buxton-2017-fill/
+```
+
+### HAT_buxton_2017_fill_plot.py
+
+The before-and-after figure for HAT_buxton_2017_fill.py: model rates with and
+without the fill against CoastSat over GIS 1-30, and the residual per domain.
+`--smoothed` passes the model rates through the target's own smoothing first
+(7-domain LOWESS, raw at GIS 1-10).
+
+```text
+    python HAT_buxton_2017_fill_plot.py [--smoothed]
 ```
 
 ### HAT_dune_recovery_diagnosis.py
@@ -880,6 +911,25 @@ so the swapped read, row 12, lies below the end of the grid.
 ```
 
 </details>
+
+### HAT_nourishment_volume_check.py
+
+Are the beach nourishment volumes applied as intended, for every fill in both windows?
+
+```text
+Follows each fill from Hatteras_BN_data.xlsx to the model shoreline: sheet
+volume and length against the site config, cubic yards to m^3/m, the volume
+each BeachDuneManager recorded against the schedule, the shoreline step
+against 2V / (2 h_b + D_sf), and the total placed. Reads saved
+full_management runs (1996-2015 from its own folder, 2010-2026 from the
+Buxton experiment); runs nothing. A step larger than the formula in a
+community domain is overwash the filter returned to the shoreface in the
+same model step, not a fill error.
+
+    python HAT_nourishment_volume_check.py
+
+WHERE: output/raw_runs/experiments/management/2026-10-03-nourishment-volume-check/
+```
 
 ### HAT_offset_source_0922_figures.py
 
