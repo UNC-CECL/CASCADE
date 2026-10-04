@@ -325,7 +325,8 @@ def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
         proc = subprocess.run(
             [sys.executable, str(HINDCAST)],
             env=env, cwd=str(PROJECT_BASE_DIR),
-            capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=RUN_TIMEOUT_S)
     except subprocess.TimeoutExpired:
         return False, time.perf_counter() - t0, f"timeout after {RUN_TIMEOUT_S}s"
 
@@ -555,7 +556,8 @@ def stage_joint_fit(args):
         return {}
     proc = subprocess.run([sys.executable, str(JOINT_FIT)],
                           cwd=str(PROJECT_BASE_DIR),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8",
+                          errors="replace")
     print(proc.stdout)
     if proc.returncode != 0 or not JOINT_JSON.exists():
         print(f"  joint fit produced no result (exit {proc.returncode}); "
