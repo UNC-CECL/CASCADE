@@ -1,0 +1,5 @@
+# Captions — coastsat_check
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`nourishment_extent_coastsat.png`.** Shoreline position change across each fill the hindcast applies, from CoastSat. For every transect, the median position over the 365 days before the first placement date minus the median over the 365 days after the last (at least 5 passes in each), positive seaward. Placement dates are from nourishment_placement_dates.csv. The black line is a 5-transect running median. Background is every transect in the panel outside all fill footprints: its median (dashed) and ±2 robust SD (1.4826 × MAD, grey band). The CoastSat extent is the half-peak width: the contiguous run around the running median's peak inside the model footprint where it stays above the background median plus half of (peak − background median), drawn as the dotted level. Shaded columns are the model footprints (hatteras_site_config.HATTERAS_NOURISHMENT_PROJECTS). Buxton and Avon 2022 were placed at the same time, so each sits in the other's panel window and both are left out of the background.

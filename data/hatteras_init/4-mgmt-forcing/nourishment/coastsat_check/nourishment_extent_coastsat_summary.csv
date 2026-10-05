@@ -1,0 +1,5 @@
+project,model_year,model_first_gis,model_last_gis,placement_start,placement_end,before_window,after_window,observed_first_gis,observed_last_gis,median_change_in_footprint_m,background_median_m,background_robust_sd_m,half_peak_level_m,background_band_top_m,n_transects,n_background
+Rodanthe emergency fill,2014,82,88,2014-07-29,2014-09-20,2013-07-29 to 2014-07-28,2014-09-21 to 2015-09-20,83,87,23.8,0.0,13.3,16.7,26.6,195,119
+Buxton beach nourishment,2017,6,16,2017-06-21,2018-02-27,2016-06-21 to 2017-06-20,2018-02-28 to 2019-02-27,8,13,22.9,1.6,9.2,20.2,20.0,255,96
+Buxton shore protection,2022,6,16,2022-06-30,2022-08-16,2021-06-30 to 2022-06-29,2022-08-17 to 2023-08-16,7,9,9.0,7.8,6.7,20.0,21.1,255,96
+Avon shore protection,2022,21,28,2022-06-19,2022-07-26,2021-06-19 to 2022-06-18,2022-07-27 to 2023-07-26,22,26,14.4,-3.0,11.6,11.4,20.2,286,144

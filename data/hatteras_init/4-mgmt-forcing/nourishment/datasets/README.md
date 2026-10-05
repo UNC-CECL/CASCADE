@@ -2,6 +2,7 @@
 
 - `NC_beachno-episodes-2025-10-28.xlsx` — the North Carolina episodes from the national beach nourishment database, downloaded 2025-10-28. Left as downloaded.
 - `Hatteras_BN_data.xlsx` — the Hatteras Island rows taken from it, plus corrections.
+- `nourishment_placement_dates.csv` — when sand placement started and ended for each Hatteras fill, with a source for each date (added 2026-10-04). `start_precision` / `end_precision` say how firm a date is: `exact` is a reported date, `approximate` is within a few days, `latest` means placement ended on or before that date, and `pending` means not yet known. Rodanthe 2014 is the weakest: pumping began around 29 July and was reported finished by 20 September 2014.
 
 ## Corrections to the source dataset
 
@@ -11,7 +12,7 @@
 
 ## Additions not yet in the national database
 
-- **Avon 2026:** about 375,000 cubic yards along about 1 mile, from just south of Avon Pier to the south village limit, placed 27 May to 25 June 2026.
+- **Avon 2026:** about 375,000 cubic yards along about 1 mile, from just south of Avon Pier to the south village limit, placed 28 May to 25 June 2026 (planned to start 27 May).
 - **Buxton 2026:** 2.0 million cubic yards **planned**, Haulover to the lighthouse groin field. Pumping began 31 July 2026, with about 75% placed by 16 September. Replace with the as-built volume once it's published.
 
 Neither project's cost has been reported separately (the combined contract is about $45 million), so their cost fields are 0, the sheet's convention for an unknown cost.
@@ -23,6 +24,11 @@ Sources:
 - https://outerbanksvoice.com/2018/03/01/delayed-buxton-beach-nourishment-project-is-finally-done/
 - https://www.outerbanksvoice.com/2017/11/06/buxton-beach-project-will-miss-contract-deadline-by-2-months/
 - https://content.govdelivery.com/accounts/NCDARECOUNTY/bulletins/3285a2f (2022 renourishment)
+- https://content.govdelivery.com/accounts/NCDARECOUNTY/bulletins/31cb2d4 (Avon 2022 start)
+- http://www.beach104.com/2022/07/28/avon-beach-nourishment-operations-complete-per-great-lakes-dredge-and-dock-co/ (Avon 2022 end)
+- https://outerbanksofnc.org/rodanthe-beach-nourishment-project-pumping-sand/ (Rodanthe 2014 start)
+- https://outerbanksofnc.org/rodanthe-beach-nourishment-project-completed/ (Rodanthe 2014 end)
+- https://islandfreepress.org/blog/decades-of-shoreline-engineering-the-long-history-of-a-changing-buxton-beach/ (Buxton 2017 start)
 - https://www.outerbanksvoice.com/2026/05/26/avon-beach-nourishment-project-expected-to-begin-on-wednesday-may-27/ (Avon 2026)
 - https://www.outerbanksvoice.com/2026/09/17/latest-update-on-buxton-beach-nourishment-and-groin-repair/ (Buxton 2026)
 - https://islandfreepress.org/blog/avon-and-buxton-beach-nourishment-faqs-2026-edition/ (2026 projects)

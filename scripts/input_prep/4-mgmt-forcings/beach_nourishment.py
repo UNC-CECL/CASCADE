@@ -33,7 +33,7 @@ from matplotlib.patches import Patch, Rectangle  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, C_1984, C_1984_FILL, C_1997, C_1997_FILL, DOMAIN_AXIS_LABEL, INK,
     INK_MUTED, _halo, _title, apply_style, caption, figsize, open_frame,
-    save, town_bands,
+    record_caption, save, town_bands,
 )
 from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS, HATTERAS_NOURISHMENT_PROJECTS,
@@ -50,6 +50,34 @@ OUT_DIR = MGMT_DIR / "nourishment"
 SPACING_M = HATTERAS_DOMAINS.domain_spacing_m
 N_DOMAINS = HATTERAS_DOMAINS.num_real_domains
 YEAR_LO, YEAR_HI = 1984, 2024
+
+# Per-project maps
+MAP_CRS = "EPSG:26918"          # UTM 18N, north up
+MAP_PAD_DOMAINS = 3             # unfilled domains drawn either side of a footprint
+MAP_ASPECT = 1.35               # map height / width
+MAP_ZOOM = 15
+GROIN_FILE = PROJECT_ROOT / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "groins_hatteras.geojson"
+TILE_CACHE = Path(__import__("tempfile").gettempdir()) / "hat_tile_cache"
+# Maps are organised by place, so they colour by community (Okabe-Ito, clear of the year red/blue and the groin red)
+# Okabe-Ito reddish purple, orange, yellow from north to south (2026-10-04): light and saturated so they
+# read on aerial imagery, colour-blind safe, clear of the groin red and the locator teal. Drawn over a dark keyline
+COMMUNITY_COLOUR = {"Rodanthe": ("#CC79A7", "#ebc4da"), "Avon": ("#E69F00", "#f5d48a"),
+                    "Buxton": ("#F0E442", "#f8f1a6")}
+KEYLINE = "#1a1a1a"
+# Fills on the record but NOT in the model (they fall after the CoastSat data ends, 2026-01-13): maps only
+from cascade_pipeline.nourishment import NourishmentProject  # noqa: E402
+RECORD_ONLY_PROJECTS = (
+    NourishmentProject(name="Avon 2026", year=2026, gis_domains=tuple(range(22, 27)),
+                       volume_cubic_yards=375_000,
+                       note="Pampas Drive (just south of Avon Pier) to Greenwood Place, ~1 mi; placed 2026-05-28 "
+                            "to 2026-06-25. Greenwood Place geocodes ~190 m into GIS 22, the pier ~380 m into GIS 26"),
+    NourishmentProject(name="Buxton 2026", year=2026, gis_domains=tuple(range(6, 17)),
+                       volume_cubic_yards=2_000_000,
+                       note="Haulover to the southernmost Buxton groin, ~2.9 mi; PLANNED volume, pumping from "
+                            "2026-07-31, ~75% placed by 2026-09-16"),
+)
+PAPER_PAD_DOMAINS = 2           # unfilled domains either side on the paper figure
+PAPER_ASPECT = 2.1              # paper map panel height / width
 
 # Fill-year colours in time order: the earliest red, the latest blue, one between purple
 _YEAR_PALETTE = [(C_1984, C_1984_FILL), (C["ACCENT"], C["ACCENT_FILL"]), (C_1997, C_1997_FILL)]
@@ -495,7 +523,470 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     return save(fig, OUT_DIR / "nourishment_domain_map", close=True)[0]
 
 
-# Run: the three figures
+# The project maps and the summary table, in the paper style (2026-10-04): no text column, a panel
+# label and one small corner box, lat/lon ticks, a locator, the house scale bar and north dart
+
+# Short reported extent and source for each fill, for the table (full wording: reported_extent/reported_limits.csv)
+REPORTED = {
+    ("Rodanthe emergency fill", 2014): (
+        "2.13 mi from 1.5 mi north of the Pea Island refuge border south into Mirlo Beach",
+        "USACE public notice 2013, via Beachapedia",
+        "https://beachapedia.org/State_of_the_Beach/State_Reports/NC/Beach_Fill"),
+    ("Buxton beach nourishment", 2017): (
+        "Haulover Day Use Area south to the groin at the old lighthouse site, 2.94 mi",
+        "Outer Banks Voice, 2018-03-01",
+        "https://outerbanksvoice.com/2018/03/01/delayed-buxton-beach-nourishment-project-is-finally-done/"),
+    ("Buxton shore protection", 2022): (
+        "Haulover Day Use Area to the lighthouse groin field, 2.9 mi",
+        "Dare County bulletin, 2022",
+        "https://content.govdelivery.com/accounts/NCDARECOUNTY/bulletins/3285a2f"),
+    ("Avon shore protection", 2022): (
+        "Due East Rd (3,000 ft north of Avon Pier) to the NPS/Avon boundary, 2.5 mi",
+        "Dare County",
+        "https://www.darenc.gov/government/beach-nourishment/avon-beach-nourishement"),
+    ("Avon 2026", 2026): (
+        "Just south of Avon Pier to Greenwood Place, about 1 mi",
+        "Island Free Press, 2026",
+        "https://islandfreepress.org/outer-banks-news/more-than-75-of-avon-nourishment-project-completed-as-work-moves-south/"),
+    ("Buxton 2026", 2026): (
+        "Haulover area to the southernmost Buxton groin, about 2.9 mi",
+        "Island Free Press FAQ, 2026",
+        "https://islandfreepress.org/blog/avon-and-buxton-beach-nourishment-faqs-2026-edition/"),
+}
+DATES_CSV = OUT_DIR / "datasets" / "nourishment_placement_dates.csv"
+IMAGERY_NOTE = "Esri World Imagery, accessed 2026-10-04, not of the fill year"
+MM = 1 / 25.4
+PAPER_WIDTH_IN = 180 * MM       # journal double column
+SINGLE_WIDTH_IN = 90 * MM       # about a single column
+IMAGE_FADE = 0.15               # imagery blended this far toward white so the overlays read
+PER_M = r"m$^{3}$ m$^{-1}$"     # mathtext, so the superscripts render in Arial
+
+
+# Every fill, model ones first in time order, as (project, in_model)
+def all_fills():
+    every = [(q, True) for q in HATTERAS_NOURISHMENT_PROJECTS] + [(q, False) for q in RECORD_ONLY_PROJECTS]
+    return sorted(every, key=lambda t: (t[0].year, not t[1], min(t[0].gis_domains)))
+
+
+def _town(p):
+    return p.name.split()[0]
+
+
+# Placement dates per project name, from the dated record
+def placement_dates():
+    d = pd.read_csv(DATES_CSV).set_index("project")
+    return {k: (r.start_date, r.end_date if isinstance(r.end_date, str) else "pending") for k, r in d.iterrows()}
+
+
+# The map layers once: domains, their centres, groins and the island outline, all in MAP_CRS
+def _layers():
+    import geopandas as gpd
+    dom = gpd.read_file(DOMAIN_FILE).to_crs(MAP_CRS).sort_values("domain_id").set_index("domain_id")
+    return dict(dom=dom, cen=dom.geometry.centroid, groins=gpd.read_file(GROIN_FILE).to_crs(MAP_CRS),
+                outline=gpd.read_file(OUTLINE_FILE).to_crs(MAP_CRS))
+
+
+# A north-up window round a footprint with `pad` domains either side, at height/width `aspect`
+def _window(dom, first, last, pad, aspect, east=0.0):
+    lo, hi = max(1, first - pad), min(N_DOMAINS, last + pad)
+    # Centred on the footprint itself, `pad` domains of margin above and below even at the ends of the reach
+    x0, y0, x1, y1 = dom.loc[first:last].total_bounds
+    y0, y1 = y0 - pad * SPACING_M, y1 + pad * SPACING_M
+    x1 += east * (x1 - x0)
+    cx_, cy_ = (x0 + x1) / 2, (y0 + y1) / 2
+    hh = max(y1 - y0, (x1 - x0) * aspect) / 2 * 1.03
+    return lo, hi, (cx_ - hh / aspect, cy_ - hh, cx_ + hh / aspect, cy_ + hh)
+
+
+# Imagery for a window, faded toward white
+def _imagery(ax, bx):
+    import contextily as cx
+    from rasterio.warp import transform_bounds
+    cx.set_cache_dir(str(TILE_CACHE))
+    w, s, e, n = transform_bounds(MAP_CRS, "EPSG:3857", *bx)
+    img, ext = cx.bounds2img(w, s, e, n, zoom=MAP_ZOOM, source=cx.providers.Esri.WorldImagery, ll=False)
+    img, ext = cx.warp_tiles(img, ext, t_crs=MAP_CRS)
+    img = img.astype(float)
+    img[..., :3] = img[..., :3] * (1 - IMAGE_FADE) + 255 * IMAGE_FADE
+    ax.imshow(img.astype(np.uint8), extent=ext, zorder=0, interpolation="bilinear")
+
+
+# Latitude ticks up the left edge and longitude ticks along the bottom, decimal degrees
+def _latlon_ticks(ax, bx, fs, lat_step=0.02, lon_step=0.02):
+    import pyproj
+    to_ll = pyproj.Transformer.from_crs(MAP_CRS, "EPSG:4326", always_xy=True)
+    to_utm = pyproj.Transformer.from_crs("EPSG:4326", MAP_CRS, always_xy=True)
+    lon_l, lat_b = to_ll.transform(bx[0], bx[1])
+    lon_r, lat_t = to_ll.transform(bx[2], bx[3])
+    lats = np.arange(np.ceil(lat_b / lat_step) * lat_step, lat_t, lat_step)
+    lons = np.arange(np.ceil(lon_l / lon_step) * lon_step, lon_r, lon_step)
+    ys = [to_utm.transform(lon_l, la)[1] for la in lats]
+    xs = [to_utm.transform(lo, lat_b)[0] for lo in lons]
+    ax.set_yticks(ys)
+    ax.set_yticklabels([f"{la:.2f}°N" for la in lats], rotation=90, va="center", fontsize=fs)
+    ax.set_xticks(xs)
+    ax.set_xticklabels([f"{-lo:.2f}°W" for lo in lons], fontsize=fs)
+    ax.tick_params(length=2.0, width=0.5, pad=1.5)
+
+
+# Panel label: the bold letter in its white box, the italic place and year beside it
+def _panel_label(ax, i, place, fs, note=None):
+    from site_layer.hat_figure_style import MAP_TEXT
+    kw = {k: v for k, v in MAP_TEXT.items() if k != "fontsize"}
+    kw["zorder"] = 20
+    if i is None:
+        t = ax.text(0.03, 0.975, place, transform=ax.transAxes, ha="left", va="top", fontsize=fs + 0.5, **kw)
+    else:
+        t0 = ax.text(0.03, 0.975, f"({chr(97 + i)})", transform=ax.transAxes, ha="left", va="top",
+                     fontsize=fs + 0.5, fontweight="bold", **kw)
+        t = ax.annotate(place, xy=(1, 0.5), xycoords=t0, xytext=(3, 0), textcoords="offset points", ha="left",
+                        va="center", fontsize=fs + 0.5, **kw)
+    if note:
+        ax.annotate(note, xy=(0, 0), xycoords=t, xytext=(0, -2), textcoords="offset points", ha="left",
+                    va="top", fontsize=fs - 1.5, fontstyle="italic", **kw)
+
+
+# A plain scale bar: one black bar with a white keyline and a single centred label below
+def _scale_bar(ax, length_m, at, fs):
+    from site_layer.hat_figure_style import MAP_TEXT
+    (x0, x1), (y0, y1) = ax.get_xlim(), ax.get_ylim()
+    bx_, by_, h = x0 + at[0] * (x1 - x0), y0 + at[1] * (y1 - y0) + 0.025 * (y1 - y0), 0.008 * (y1 - y0)
+    ax.add_patch(Rectangle((bx_, by_), length_m, h, facecolor=INK, edgecolor="white", lw=0.8, zorder=12))
+    ax.text(bx_ + length_m / 2, by_ - 0.6 * h, f"{length_m:g} m", ha="center", va="top",
+            **{**MAP_TEXT, "fontsize": fs, "zorder": 12})
+
+
+# Village where it lies on the island: (GIS domain, fraction of the box width from its west edge)
+VILLAGE_LABEL_AT = {"Rodanthe": (81, 0.55), "Buxton": (7.5, 0.35), "Avon": (29, 0.45)}
+
+
+# Water bodies in spaced capitals and the village in italic, map-label style
+def _geo_labels(ax, p, L, lo, hi, bx, fs, water=True, village=False):
+    from site_layer.hat_figure_style import MAP_TEXT, place_label, water_label
+    dom, w, h = L["dom"], bx[2] - bx[0], bx[3] - bx[1]
+    kw = {**MAP_TEXT, "fontsize": fs - 2.0}
+    # Beside the inset, not on it: up top when the inset is low, low when it is high
+    # Single maps only: the paper panels are too narrow to hold them off the island (the locator orients those)
+    if water:
+        water_label(ax, bx[0] + 0.91 * w, bx[1] + 0.55 * h, "Atlantic Ocean", text_kw=kw, rotation=90)
+        water_label(ax, bx[0] + 0.05 * w, bx[1] + 0.62 * h, "Pamlico Sound", text_kw=kw, rotation=90)
+    # The village is named in the panel title, so it is not repeated on the map (Hannah, 2026-10-04)
+    if not village:
+        return
+    town = _town(p)
+    d, f = VILLAGE_LABEL_AT[town]
+    if town == "Avon" and not lo <= d <= hi:
+        d = hi - 0.5
+    if lo <= d <= hi:
+        b = dom.loc[int(d)].geometry.bounds
+        y = b[1] + (d - int(d) + 0.5 if d != int(d) else 0.5) * (b[3] - b[1])
+        place_label(ax, b[0] + f * (b[2] - b[0]), y, town, text_kw={**MAP_TEXT, "fontsize": fs - 1.0})
+
+
+# One fill on its imagery: domains, footprint, end numbers, groins and piers, scale bar and north dart
+def _draw_fill(ax, p, in_model, L, pad, aspect, i, fs, corner=(0.97, 0.975, "right", "top"), oneline=False,
+               east=0.0, north_top=False, north=True, title_outside=False, scale_at=(0.07, 0.065),
+               years=None):
+    from shapely.ops import unary_union
+    from site_layer.hat_figure_style import MAP_TEXT, north_dart, scale_bar_km
+    dom, cen = L["dom"], L["cen"]
+    first, last = min(p.gis_domains), max(p.gis_domains)
+    dark, light = COMMUNITY_COLOUR[_town(p)]
+    lo, hi, bx = _window(dom, first, last, pad, aspect, east)
+    _imagery(ax, bx)
+    # Only the footprint's own domains are drawn; the unfilled ones either side are left off
+    dom.loc[first:last].plot(ax=ax, facecolor="none", edgecolor="white", lw=0.3, alpha=0.6, zorder=2)
+    # Merged into one outline for the whole section; a wider buffer closes the small gaps between domain boxes
+    fp = unary_union([g.buffer(25) for g in dom.loc[first:last].geometry]).buffer(-25)
+    import geopandas as gpd
+    gpd.GeoSeries([fp], crs=MAP_CRS).plot(ax=ax, facecolor=light, edgecolor="none", alpha=0.15, zorder=3)
+    edge = gpd.GeoSeries([fp.exterior if fp.geom_type == "Polygon" else fp.boundary], crs=MAP_CRS)
+    ls = "-" if in_model else (0, (3, 1.5))
+    # A dark keyline under the colour so the outline reads on pale beach and dark water alike
+    edge.plot(ax=ax, color=KEYLINE, lw=2.4, zorder=4, linestyle=ls)
+    edge.plot(ax=ax, color=dark, lw=1.2, zorder=4.1, linestyle=ls)
+    for d in (first, last):
+        b = dom.loc[d].geometry.bounds
+        ax.text(b[0] + 70, cen.loc[d].y, str(d), ha="left", va="center", **{**MAP_TEXT, "fontsize": fs - 2.0})
+    hit = L["groins"][L["groins"].intersects(dom.loc[lo:hi].union_all())]
+    ax._has_groins = bool(len(hit))
+    ax._has_pier = any(lo <= d < hi for d, _ in HATTERAS_ANNOTATIONS.piers.values())
+    if len(hit):
+        hit.plot(ax=ax, color="white", lw=2.6, zorder=7)
+        hit.plot(ax=ax, color=C["GROIN"], lw=1.3, zorder=7)
+    for name, (d, frac) in HATTERAS_ANNOTATIONS.piers.items():
+        if lo <= d < hi:
+            a, b2 = cen.loc[d], cen.loc[d + 1]
+            py = a.y + (frac - 0.5) * (b2.y - a.y)
+            px = dom.loc[d].geometry.bounds[2] - 200
+            # Drawn like the groins: a short shore-normal line, white with a dark keyline, ~220 m seaward
+            t = np.array([b2.x - a.x, b2.y - a.y]); t /= np.hypot(*t)
+            nrm = np.array([t[1], -t[0]]) if t[1] > 0 else np.array([-t[1], t[0]])
+            p0, p1 = np.array([px, py]) - 40 * nrm, np.array([px, py]) + 220 * nrm
+            ax.plot([p0[0], p1[0]], [p0[1], p1[1]], color=INK, lw=3.0, solid_capstyle="butt", zorder=7)
+            ax.plot([p0[0], p1[0]], [p0[1], p1[1]], color="white", lw=1.4, solid_capstyle="butt", zorder=7)
+    ax.set_xlim(bx[0], bx[2])
+    ax.set_ylim(bx[1], bx[3])
+    ax.set_aspect("equal")
+    for sp in ax.spines.values():
+        sp.set_linewidth(0.5)
+        sp.set_color(INK)
+    _latlon_ticks(ax, bx, fs - 1.5)
+    if title_outside:
+        # Panel title above the frame, centred: the letter and the place
+        ax.set_title(f"({chr(97 + i)}) {_town(p)}, {years or p.year}", fontsize=fs + 0.5, color=INK, pad=3)
+    else:
+        _panel_label(ax, i, f"{_town(p)}, {p.year}", fs, note=None if in_model else "not in the model")
+    _geo_labels(ax, p, L, lo, hi, bx, fs, water=i is None)
+    # A short bar, placed on open water by the caller
+    _scale_bar(ax, 500, scale_at, fs - 2.0)
+    if north:
+        north_dart(ax, (bx[2] - 0.13 * (bx[2] - bx[0]), bx[1] + (0.86 if north_top else 0.10) * (bx[3] - bx[1])),
+                   arrow_m=0.055 * (bx[3] - bx[1]), text_kw={**MAP_TEXT, "fontsize": fs - 1.0})
+    return bx
+
+
+# The locator: the island outline with each panel's window boxed and lettered
+# Every village on the reach, nourished or not, at its GIS domain (north to south)
+LOCATOR_VILLAGES = {"Rodanthe": 80, "Waves": 74, "Salvo": 69, "Avon": 26, "Buxton": 7.5}
+
+
+def _locator(ax, L, windows, fs, label_side="right", fill=False, villages=False):
+    from site_layer.hat_figure_style import place_label
+    # Zoomed to the 90 model domains, not the whole outline: land grey on pale water, the reach outlined
+    ax.set_facecolor("#eef3f6")
+    L["outline"].plot(ax=ax, facecolor="0.82", edgecolor="0.45", lw=0.35, zorder=1)
+    reach = L["dom"].union_all()
+    import geopandas as gpd
+    gpd.GeoSeries([reach.envelope.buffer(0)], crs=MAP_CRS).boundary.plot(ax=ax, color="none", lw=0)
+    ob = L["dom"].total_bounds
+    merged = {}
+    for letter, bx in windows:
+        merged.setdefault(tuple(np.round(bx, -1)), (bx, []))[1].append(letter)
+    for bx, letters in merged.values():
+        letter = ", ".join(x for x in letters if x)
+        ax.add_patch(Rectangle((bx[0], bx[1]), bx[2] - bx[0], bx[3] - bx[1], facecolor="none",
+                               edgecolor=C["LOCATOR"], lw=0.9, zorder=3))
+        if letter:
+            xl = bx[2] + 1500 if label_side == "right" else bx[0] - 1500
+            ax.text(xl, (bx[1] + bx[3]) / 2, letter, ha="left" if label_side == "right" else "right",
+                    va="center", fontsize=fs, color=C["LOCATOR"], fontweight="bold", zorder=4)
+    # Zoomed to the panels it locates (plus a little), not the whole 90-domain reach
+    wb = np.array([b for _, b in windows])
+    y_lo, y_hi = wb[:, 1].min() - 1500, wb[:, 3].max() + 1500
+    d = L["dom"].geometry.bounds
+    near = d[(d.maxy > y_lo) & (d.miny < y_hi)]
+    west = 6500 if villages else 500
+    ax.set_xlim(min(near.minx.min(), wb[:, 0].min()) - west, max(near.maxx.max(), wb[:, 2].max()) + 3500)
+    ax.set_ylim(y_lo, y_hi)
+    if label_side == "right" and not any(x for x, _ in windows):
+        place_label(ax, ob[0] + 0.35 * (ob[2] - ob[0]), ob[1] + 0.55 * (ob[3] - ob[1]), "Hatteras\nIsland",
+                    text_kw=dict(color=INK, fontsize=fs - 1.0, zorder=5))
+    # Small dots and names on the sound side for every village, so the boxes sit among their neighbours
+    if villages:
+        cen = L["cen"]
+        for name, g in LOCATOR_VILLAGES.items():
+            pt = cen.loc[int(g)]
+            b = L["dom"].loc[int(g)].geometry.bounds
+            if not y_lo <= pt.y <= y_hi:
+                continue
+            ax.plot(b[0] + 300, pt.y, marker="o", ms=1.8, color=INK, zorder=5)
+            ax.text(b[0] - 600, pt.y, name, ha="right", va="center", fontsize=fs - 2.0, fontstyle="italic",
+                    color=INK, zorder=5)
+    # fill=True keeps the inset box exactly where it was placed and widens the view instead of shrinking the box
+    ax.set_aspect("equal", adjustable="datalim" if fill else "box")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for sp in ax.spines.values():
+        sp.set_linewidth(0.5)
+        sp.set_color(INK)
+
+
+def _legend_handles(towns, record_only=False, groins=True, pier=True):
+    import matplotlib.patheffects as pe
+    h = [Patch(facecolor=COMMUNITY_COLOUR[t][1], edgecolor=COMMUNITY_COLOUR[t][0], lw=1.2, label=t,
+               path_effects=[pe.Stroke(linewidth=2.4, foreground=KEYLINE), pe.Normal()])
+         for t in towns]
+    if record_only:
+        h.append(Line2D([], [], color=INK, lw=0.9, ls=(0, (3, 1.5)), label="Not in the model"))
+    if groins:
+        h.append(Line2D([], [], color=C["GROIN"], lw=1.3, label="Buxton groins"))
+    if pier:
+        h.append(Line2D([], [], color="white", lw=1.4, label="Pier",
+                        path_effects=[__import__("matplotlib.patheffects", fromlist=["Stroke"]).Stroke(
+                            linewidth=3.0, foreground=INK), __import__("matplotlib.patheffects",
+                            fromlist=["Normal"]).Normal()]))
+    h.append(Patch(facecolor="none", edgecolor="0.6", lw=0.5, label="Model domain (500 m)"))
+    return h
+
+
+def _caption_row(p, in_model, dates):
+    per_m = p.volume_m3_per_m(SPACING_M)
+    s, e = dates.get(p.name, ("?", "?"))
+    return (f"{p.name}, {p.year}: GIS {min(p.gis_domains)}–{max(p.gis_domains)} "
+            f"({len(p.gis_domains) * SPACING_M / 1000:.1f} km), {p.volume_cubic_yards / 1e6:.2f} × 10⁶ yd³ "
+            f"({p.volume_m3_total / 1e6:.2f} × 10⁶ m³, {per_m:.0f} m³ m⁻¹), placed {s} to {e}"
+            + ("" if in_model else ", on the record but not in the model"))
+
+
+# One map per fill, the supplement versions: same style as the paper panels, locator in the upper right
+def fig_project_maps(model: pd.DataFrame) -> list[Path]:
+    L = _layers()
+    dates = placement_dates()
+    outs = []
+    aspect = 1.55
+    for p, in_model in all_fills():
+        fig = plt.figure(figsize=(SINGLE_WIDTH_IN, SINGLE_WIDTH_IN * aspect * 0.86))
+        ax = fig.add_axes([0.13, 0.11, 0.84, 0.86])
+        # Info box under the place label; the locator takes the upper right, over the ocean, clear of the island
+        bx = _draw_fill(ax, p, in_model, L, MAP_PAD_DOMAINS, aspect, None, fs=8.0,
+                        scale_at=(0.08, 0.06) if _town(p) == "Rodanthe" else (0.60, 0.16))
+        # Where the beach runs up the upper right the inset sits lower right and the north arrow goes up top
+        # One inset size for every map (same figure and axes size, so the same box in inches)
+        # Tucked into the corner, a hair off both edges
+        # No locator on the single maps: they show the region only (Hannah, 2026-10-04); the paper figure has one
+        hs = _legend_handles([_town(p)], record_only=not in_model, groins=ax._has_groins, pier=ax._has_pier)
+        fig.legend(handles=hs, loc="lower center", ncol=min(len(hs), 3),
+                   frameon=False, fontsize=6.5, bbox_to_anchor=(0.55, 0.0), handlelength=1.4, columnspacing=1.0)
+        stem = f"nourishment_map_{p.year}_{_town(p).lower()}"
+        out = save(fig, OUT_DIR / "project_maps" / stem, close=True, bbox_inches="tight", pad_inches=0.02)[0]
+        record_caption(out, (
+            f"{_caption_row(p, in_model, dates)}. "
+            + ("Footprint as the hindcast applies it (hatteras_site_config.HATTERAS_NOURISHMENT_PROJECTS). "
+               if in_model else "Footprint from beach_nourishment.RECORD_ONLY_PROJECTS; dashed because the fill "
+               "falls after the CoastSat data ends (2026-01-13). ")
+            + f"The shaded outline is the footprint, thin white boxes the 500 m model domains, with "
+            f"{MAP_PAD_DOMAINS} unfilled domains either side; the footprint's first and last domains are numbered. "
+            "The volume is spread evenly over the footprint. Red lines are the Buxton groins, white lines the piers. "
+            f"Imagery: {IMAGERY_NOTE}. "
+            "See nourishment_summary_table for reported extents and sources."))
+        outs.append(out)
+    return outs
+
+
+# The four model fills side by side for a paper, with a locator panel at left
+def fig_project_maps_paper(model: pd.DataFrame) -> Path:
+    L = _layers()
+    dates = placement_dates()
+    # North to south, as the locator reads top to bottom; the two Buxton fills in year order
+    fills = [(p, True) for p in sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda q: (-min(q.gis_domains), q.year))]
+    # Fills on the same footprint share one panel ("Buxton, 2017 & 2022")
+    panels = []
+    for p, m in fills:
+        same = [g for g in panels if g[0][0].gis_domains == p.gis_domains]
+        (same[0] if same else panels.append([]) or panels[-1]).append((p, m))
+    fs = 8.0
+    # The locator (narrower, same height) then one panel per footprint; one north arrow, in the locator
+    map_w, gap, left, loc_w = 0.21, 0.042, 0.02, 0.10
+    box_in = map_w * PAPER_WIDTH_IN * PAPER_ASPECT              # drawn height of an equal-aspect map panel, inches
+    below_in, above_in = 0.62, 0.24                             # longitude labels + legend; titles
+    fig_h = box_in + below_in + above_in
+    fig = plt.figure(figsize=(PAPER_WIDTH_IN, fig_h))
+    bottom, avail = below_in / fig_h, box_in / fig_h
+    box_h, y0 = avail, bottom
+    windows = []
+    for i, group in enumerate(panels):
+        p, in_model = group[0]
+        ax = fig.add_axes([left + loc_w + gap + i * (map_w + gap), bottom, map_w, avail])
+        bx = _draw_fill(ax, p, in_model, L, PAPER_PAD_DOMAINS, PAPER_ASPECT, i, fs=fs,
+                        corner=(0.03, 0.925, "left", "top"), oneline=True, north=False, title_outside=True,
+                        scale_at=(0.035, 0.012) if _town(p) == "Rodanthe" else (0.825, 0.012),
+                        years=" & ".join(str(q.year) for q, _ in group))
+        # The locator boxes the footprint itself, not the panel window: adjacent windows (Avon, Buxton) overlap
+        windows.append((f"{chr(97 + i)}", L["dom"].loc[min(p.gis_domains):max(p.gis_domains)].total_bounds))
+    loc = fig.add_axes([left, y0, loc_w, box_h])
+    _locator(loc, L, windows, fs - 1.5, fill=True, villages=True)
+    loc.text(0.5, 1.0, "Hatteras Island", transform=loc.transAxes, ha="center", va="bottom", fontsize=fs + 0.5,
+             color=INK)
+    # The house split-dart north arrow, small, lower right of the locator
+    from site_layer.hat_figure_style import MAP_TEXT_DARK, north_dart
+    loc.apply_aspect()
+    (lx0, lx1), (ly0, ly1) = loc.get_xlim(), loc.get_ylim()
+    north_dart(loc, (lx1 - 0.11 * (lx1 - lx0), ly0 + 0.045 * (ly1 - ly0)), arrow_m=0.06 * (ly1 - ly0),
+               text_kw={**MAP_TEXT_DARK, "fontsize": fs - 1.0})
+    fig.legend(handles=_legend_handles(sorted({_town(p) for p, _ in fills}, key=["Rodanthe", "Avon", "Buxton"].index)),
+               loc="lower center", ncol=6, frameon=False, fontsize=fs - 1.5, bbox_to_anchor=(0.55, 0.0),
+               handlelength=1.4, columnspacing=1.2)
+    out = save(fig, OUT_DIR / "project_maps" / "nourishment_maps_paper", close=True,
+               bbox_inches="tight", pad_inches=0.02)[0]
+    rows = "; ".join(f"({chr(97 + i)}) " + "; ".join(_caption_row(p, m, dates) for p, m in group)
+                     for i, group in enumerate(panels))
+    record_caption(out, (
+        "Beach nourishment projects applied in the hindcast, north up. The shaded outline in each panel is the "
+        "fill footprint (colour marks the community) and thin white lines its 500 m model domains; the first and "
+        "last domains are numbered. The 2017 and 2022 Buxton fills share one footprint and one panel. Each "
+        "reported volume is spread evenly over its footprint. Red lines are the Buxton groins, white lines the "
+        f"piers. Scale bars differ between panels. The left panel boxes each footprint, (a)–({chr(96 + len(panels))}), on "
+        "Hatteras Island. "
+        f"Imagery: {IMAGERY_NOTE}. {rows}. Reported extents and sources: nourishment_summary_table."))
+    return out
+
+
+# The fills as one table: CSV plus a booktabs-style figure 180 mm wide
+def fig_summary_table() -> list[Path]:
+    dates = placement_dates()
+    rows = []
+    for p, in_model in all_fills():
+        words, src, url = REPORTED[(p.name, p.year)]
+        s, e = dates.get(p.name, ("", ""))
+        rows.append(dict(
+            community=_town(p), year=p.year, placement_start=s, placement_end=e, reported_extent=words,
+            source=src, source_url=url, model_gis=f"{min(p.gis_domains)}–{max(p.gis_domains)}",
+            model_length_km=len(p.gis_domains) * SPACING_M / 1000, volume_yd3=int(p.volume_cubic_yards),
+            volume_m3=round(p.volume_m3_total), volume_m3_per_m=round(p.volume_m3_per_m(SPACING_M), 1),
+            in_model="yes" if in_model else "no"))
+    tab = pd.DataFrame(rows)
+    csv = OUT_DIR / "nourishment_summary_table.csv"
+    tab.to_csv(csv, index=False)
+
+    import textwrap
+    cols = [("Community", 0.0, "left"), ("Placed", 0.085, "left"), ("Reported extent (source)", 0.215, "left"),
+            ("Model\nGIS", 0.575, "center"), ("Length\n(km)", 0.635, "center"),
+            ("Volume\n(10$^{6}$ yd$^{3}$)", 0.705, "center"), ("Volume\n(10$^{6}$ m$^{3}$)", 0.79, "center"),
+            ("Density\n(" + PER_M + ")", 0.875, "center"), ("In\nmodel", 0.955, "center")]
+    fs = 7.0
+    body = []
+    for r in tab.itertuples():
+        ext = textwrap.fill(f"{r.reported_extent} ({r.source})", 58)
+        placed = f"{r.placement_start}\nto {r.placement_end}"
+        body.append([f"{r.community}\n{r.year}", placed, ext, r.model_gis, f"{r.model_length_km:.1f}",
+                     f"{r.volume_yd3 / 1e6:.2f}", f"{r.volume_m3 / 1e6:.2f}", f"{r.volume_m3_per_m:.0f}",
+                     r.in_model])
+    n_lines = [max(c.count("\n") + 1 for c in row) for row in body]
+    line_h = 0.135
+    head_h = 2 * line_h + 0.08
+    h = head_h + sum(n * line_h + 0.07 for n in n_lines) + 0.12
+    fig = plt.figure(figsize=(PAPER_WIDTH_IN, h))
+    ax = fig.add_axes([0.01, 0, 0.98, 1])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(h, 0)
+    ax.axis("off")
+    y = 0.04
+    ax.axhline(y, color=INK, lw=0.9)
+    for name, x, ha in cols:
+        xx = x + (0.03 if ha == "center" else 0)
+        ax.text(xx, y + 0.03, name, ha=ha, va="top", fontsize=fs, fontweight="bold", color=INK, linespacing=1.15)
+    y += head_h
+    ax.axhline(y, color=INK, lw=0.5)
+    for row, n in zip(body, n_lines):
+        y += 0.035
+        for (name, x, ha), cell in zip(cols, row):
+            xx = x + (0.03 if ha == "center" else 0)
+            ax.text(xx, y, cell, ha=ha, va="top", fontsize=fs, color=INK, linespacing=1.2)
+        y += n * line_h + 0.035
+    ax.axhline(y, color=INK, lw=0.9)
+    ax.text(0, y + 0.03, "Density: model volume spread evenly over the footprint's 500 m domains. "
+            "2026 fills fall after the CoastSat record (to 2026-01-13) and are not modelled; "
+            "Buxton 2026 volume is planned, not as-built.", ha="left", va="top", fontsize=fs - 1, color=INK_MUTED)
+    out = save(fig, OUT_DIR / "nourishment_summary_table", close=True, bbox_inches="tight", pad_inches=0.03)
+    record_caption(out[0], (
+        "Beach nourishment on the modelled reach: placement dates, the extent each source reports, and the footprint "
+        "and volume the hindcast applies. Reported wording in full, with coordinates for every limit: "
+        "reported_extent/reported_limits.csv; placement-date sources: datasets/nourishment_placement_dates.csv."))
+    return [out[0], csv]
+
+
+# Run: the figures
 def main():
     apply_style()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -509,7 +1000,7 @@ def main():
 
     outs = [fig_when_where(model, record),
             fig_volume_alongshore(model),
-            fig_domain_map(model)]
+            fig_domain_map(model)] + fig_project_maps(model) + [fig_project_maps_paper(model)] + fig_summary_table()
     print("model input:")
     print(model[["name", "year", "first_gis", "last_gis", "volume_cy",
                  "volume_m3_per_m"]].to_string(index=False))
