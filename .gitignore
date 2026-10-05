@@ -138,3 +138,9 @@ brie_venv
 Output/
 Run_Output/
 /brie_venv/
+
+# Local/generated data
+*.npy
+*.csv
+*.png
+*.zip
