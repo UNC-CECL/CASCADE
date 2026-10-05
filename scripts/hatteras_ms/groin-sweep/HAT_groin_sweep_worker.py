@@ -54,6 +54,7 @@ from cascade_pipeline.shoreline import (build_shoreline_matrix,
                                         compute_change_rate, compute_lrr)
 
 from site_layer.hatteras_site_config import (
+    run_years,
     HATTERAS_BEACH_DUNE,
     HATTERAS_COMMUNITY_ZONES,
     HATTERAS_DOMAINS,
@@ -154,7 +155,9 @@ _end_override = os.environ.get("HAT_SWEEP_END_YEAR", "").strip()
 END_YEAR = int(_end_override) if _end_override else PERIOD["end_year"]
 CONTINUOUS_WINDOW = bool(_end_override) and END_YEAR != PERIOD["end_year"]
 
-RUN_YEARS = END_YEAR - START_YEAR
+# Configured period: start..last_model_year (MODEL_YEARS.md); an override end stays an exclusive boundary
+RUN_YEARS = END_YEAR - START_YEAR if CONTINUOUS_WINDOW else run_years(START_YEAR)
+LAST_MODEL_YEAR = START_YEAR + RUN_YEARS - 1
 SEA_LEVEL_RISE_RATE = PERIOD["sea_level_rise_rate"]
 ISLAND_OFFSET_FILE = HATTERAS_DATA_BASE / PERIOD["island_offset_file"]
 
@@ -252,9 +255,9 @@ def assemble_forcing(be1):
 
     # Beach/dune
     bn_schedule = nourishment.build_schedule(
-        HATTERAS_NOURISHMENT_PROJECTS, geometry, START_YEAR, END_YEAR)
+        HATTERAS_NOURISHMENT_PROJECTS, geometry, START_YEAR, LAST_MODEL_YEAR)
     bn_schedule_applied = bn_schedule if ENABLE_NOURISHMENT_FILLS else (
-        nourishment.build_schedule([], geometry, START_YEAR, END_YEAR))
+        nourishment.build_schedule([], geometry, START_YEAR, LAST_MODEL_YEAR))
     overwash_filter = (
         nourishment.build_overwash_filter(
             geometry, HATTERAS_COMMUNITY_ZONES, config=HATTERAS_BEACH_DUNE)

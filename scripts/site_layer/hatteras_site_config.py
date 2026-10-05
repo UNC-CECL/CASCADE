@@ -130,9 +130,15 @@ def island_offset_version(start_year):
     return f"{source}/{version}" if re.fullmatch(r"v\d+", version) else source
 
 
+# MODEL YEARS (2026-10-04). "end_year" is the window LABEL: it names the storm file, the CoastSat
+# target folder and the run folders (1996_2015, 2010_2026). "last_model_year" is the last calendar
+# year the model steps through. A run covers start_year .. last_model_year inclusive, one transition
+# per calendar year, so run_years(start) = last_model_year - start_year + 1, and the final saved
+# state is 1 January of last_model_year + 1. Full explanation: scripts/hatteras_ms/MODEL_YEARS.md
 HATTERAS_PERIODS = {
     1984: {
         "end_year": 2004,
+        "last_model_year": 2003,
         # 0.00391 m/yr fitted over 1984-2004 (Duck gauge), stored to 0.001
         "sea_level_rise_rate": 0.004,
         "storm_file": _env.init_relpath(_env.storm_series_file(1984, 2004)),
@@ -145,6 +151,7 @@ HATTERAS_PERIODS = {
     },
     2004: {
         "end_year": 2024,
+        "last_model_year": 2023,
         # 0.00639 m/yr fitted over 2004-2024; see rslr/fits/duck_rslr_rates.csv.
         "sea_level_rise_rate": 0.006,
         "storm_file": _env.init_relpath(_env.storm_series_file(2004, 2024)),
@@ -156,10 +163,13 @@ HATTERAS_PERIODS = {
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
 
-    # Two overlapping periods (2026-09-11); the end year is a boundary, not a simulated year
+    # Two overlapping periods (2026-09-11); see MODEL YEARS above for end_year vs last_model_year
     1996: {
         # 1996-2015 since 2026-10-02 (was 1996-2010: end 2010, RSLR 0.004)
         "end_year": 2015,
+        # Inclusive label: the CoastSat target and storm file both run through Dec 2015. Until
+        # 2026-10-04 the run stopped at 1 Jan 2015 (19 years) and never used the 2015 storms
+        "last_model_year": 2015,
         # 0.00376 m/yr fitted over 1996-2015 (Duck gauge)
         "sea_level_rise_rate": 0.004,
         "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2015)),
@@ -168,13 +178,15 @@ HATTERAS_PERIODS = {
         # Derived: the 1984 setbacks with the 1989 Pea Island relocation applied
         "road_setback_file": road_setback_relpath(1996),
         "topo_product": YEAR_PRODUCT[1996],
-        # Rodanthe 2014 falls inside 1996-2014 (none did in 1996-2009)
+        # Rodanthe 2014 falls inside 1996-2015 (none did in 1996-2009)
         "enable_nourishment": True,
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
     2010: {
         # 2010-2026 since 2026-10-02 (was 2010-2024: end 2024, RSLR 0.007)
         "end_year": 2026,
+        # Exclusive label: the run ends 1 Jan 2026, as do the storm file (2010-2025) and CoastSat (2026-01-13)
+        "last_model_year": 2025,
         # 0.00548 m/yr fitted over 2010-2026 (Duck gauge, record extended through 2025)
         "sea_level_rise_rate": 0.005,
         "storm_file": _env.init_relpath(_env.storm_series_file(2010, 2026)),
@@ -188,6 +200,22 @@ HATTERAS_PERIODS = {
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
 }
+
+# The last calendar year a period's run steps through; raises if end_year was changed without it
+def last_model_year(start_year):
+    p = HATTERAS_PERIODS[start_year]
+    last = p["last_model_year"]
+    if last not in (p["end_year"] - 1, p["end_year"]):
+        raise ValueError(
+            f"period {start_year}: last_model_year {last} does not sit at end_year {p['end_year']} "
+            f"or the year before; set both when changing a window (scripts/hatteras_ms/MODEL_YEARS.md)")
+    return last
+
+
+# Annual transitions a period's run makes: start_year .. last_model_year inclusive
+def run_years(start_year):
+    return last_model_year(start_year) - start_year + 1
+
 
 # Background erosion (source/sink) rates, m/yr by GIS domain
 
@@ -437,7 +465,10 @@ HATTERAS_BE_EDGE_ONLY = {
     # /10-offset solve, 2010, superseded 2026-09-27
 
     # 2010: 2010-2026, five Newton steps (candidate-windows experiment, 2026-10-02); GIS 1 gain fell to ~0.01 near the top
-    2010: (+172.89, +24.08),  # 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
+    # GIS 90 re-solved 2026-10-04 after the run-length fix and the Rodanthe 82-88 / Buxton 6-16 footprints: 24.08 -> 38.3
+    # (probes 28.1 -0.655, 39.0 +0.088, 37.7 -0.065, 38.3 -0.051 m/yr; the response is noise-limited near here). 1996 kept at
+    # +37.60 (-0.144): probes 32.0-40.7 all scored worse, no trend (experiments/end-domain-boundaries/2026-10-04-gis90-runlength-footprints)
+    2010: (+172.89, +38.3),  # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
 # Option B (2010-2024 at Hs 2.5 with its own ends): recorded, not wired
@@ -720,24 +751,27 @@ HATTERAS_NOURISHMENT_PROJECTS = (
     NourishmentProject(
         name="Rodanthe emergency fill",
         year=2014,
-        # Mirlo Beach S-curves emergency fill, north of Rodanthe; stops short of the locked GIS 90
-        gis_domains=tuple(range(84, 90)),
+        # GIS 82-88 since 2026-10-04 (was 84-89), from the 2013 USACE notice: 2.13 mi "from 1.5 miles north of the
+        # Pea Island NWR border into the Mirlo Beach community to just north of the Rodanthe pier"; the north limit
+        # falls ~380 m into GIS 88, the south at the GIS 82 south edge. The CoastSat change agrees (nourishment/reported_extent)
+        gis_domains=tuple(range(82, 89)),
         volume_cubic_yards=1_620_000,
-        note="Mirlo Beach S-curves, ~2 mi N of Rodanthe; GIS 84-89 carry NC-12",
+        note="Mirlo Beach S-curves, 2.13 mi from 1.5 mi north of the Pea Island refuge border south into Mirlo Beach",
     ),
     NourishmentProject(
         name="Buxton beach nourishment",
         year=2017,
         # Placed 2017-06-21 to 2018-02-27 (~46% by Nov 2017); fired in the start year. Same 2.9 mi as 2022
-        gis_domains=tuple(range(6, 16)),
+        # GIS 6-16 since 2026-10-04: southernmost groin ~200 m into GIS 6, Haulover Day Use Area ~150 m into GIS 16
+        gis_domains=tuple(range(6, 17)),
         volume_cubic_yards=2_600_000,
         note="Haulover Day Use Area to the lighthouse groin, 2.9 mi; Outer Banks Voice 2018-03-01",
     ),
     NourishmentProject(
         name="Buxton shore protection",
         year=2022,
-        # 4.7 km north of the lighthouse groin (GIS 5.5); density already matched the record
-        gis_domains=tuple(range(6, 16)),
+        # Haulover Day Use Area to the lighthouse groin field, the 2017 footprint: GIS 6-16 since 2026-10-04 (was 6-15)
+        gis_domains=tuple(range(6, 17)),
         volume_cubic_yards=1_200_000,
         note="Extends north out of Buxton village (7-8) into the road corridor",
     ),

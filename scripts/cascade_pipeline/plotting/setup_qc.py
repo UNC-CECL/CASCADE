@@ -158,8 +158,10 @@ def plot_sea_level_rise(periods, active_year):
                for i, y in enumerate(years_sorted)}
     for year in years_sorted:
         period = periods[year]
-        run_years = period["end_year"] - year
-        calendar_years = np.arange(year, period["end_year"] + 1)
+        # States run from 1 Jan of the start to 1 Jan after last_model_year (MODEL_YEARS.md)
+        last = period.get("last_model_year", period["end_year"] - 1)
+        run_years = last - year + 1
+        calendar_years = np.arange(year, last + 2)
         cumulative_m = (calendar_years - year) * period["sea_level_rise_rate"]
         is_active = year == active_year
         ax.plot(calendar_years, cumulative_m,

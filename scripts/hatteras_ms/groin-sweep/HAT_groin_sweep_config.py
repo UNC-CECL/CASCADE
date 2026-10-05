@@ -42,6 +42,7 @@ from cascade_pipeline.coastsat_lowess import compute_domain_means  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_RATES_EDGE,
     HATTERAS_PERIODS,
+    last_model_year,
 )
 
 # Periods and conventions
@@ -61,6 +62,8 @@ for _period in PERIODS:
             f"disagree about which periods exist.")
 
 END_YEAR = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
+# The last calendar year each period runs (MODEL_YEARS.md); END_YEAR is only the label
+LAST_MODEL_YEAR = {p: last_model_year(p) for p in HATTERAS_PERIODS}
 
 
 # The groin -- everything except the two swept knobs

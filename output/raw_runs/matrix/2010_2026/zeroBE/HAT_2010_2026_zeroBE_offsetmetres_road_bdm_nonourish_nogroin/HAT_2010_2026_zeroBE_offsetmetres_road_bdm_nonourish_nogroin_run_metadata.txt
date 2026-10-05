@@ -3,9 +3,9 @@
 
 [identity]
 run_name                         = HAT_2010_2026_zeroBE_offsetmetres_road_bdm_nonourish_nogroin
-timestamp                        = 2026-10-03 13:50:36
+timestamp                        = 2026-10-04 18:14:06
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 1.7
+runtime_min                      = 2.2
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
@@ -15,7 +15,7 @@ run_kind                         = matrix
 run_tag                          = 
 parameter_file                   = HAT_2010_2026_zeroBE_offsetmetres_road_bdm_nonourish_nogroin-parameters.yaml   # this run's copy of Hatteras-CASCADE-parameters.yaml; CASCADE rewrites the copy, not the template
 save_model_state                 = True
-git_commit                       = 14327c9e6e16ef5d039085f946c6cf03a908e4d5
+git_commit                       = eac55c596a84ca1d82c1090141c307a668146c8a
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 barrier3d_branch                 = hatteras/adopted
@@ -80,14 +80,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOWESS 7-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -1.8929
-rmse_m_yr                        = 2.6493
-mean_bias_interior_m_yr          = -1.7333   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 2.2934
+mean_bias_m_yr                   = -1.8964
+rmse_m_yr                        = 2.6550
+mean_bias_interior_m_yr          = -1.7359   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 2.2975
 lrr_r2_median                    = 0.9388   # how well a line describes the modelled trajectory
 lrr_r2_below_floor               = 16   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -1.7134   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 2.2797
+endpoint_mean_bias_interior_m_yr = -1.7150   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 2.2816
 
 [verification]
 nourishment_ok                   = True
@@ -96,7 +96,7 @@ roads_reloc_blocked              = 0
 
 [index row]
 run_name                         = HAT_2010_2026_zeroBE_offsetmetres_road_bdm_nonourish_nogroin
-timestamp                        = 2026-10-03 13:50:36
+timestamp                        = 2026-10-04 18:14:06
 start_year                       = 2010
 end_year                         = 2026
 source_sink_preset               = zeroBE
@@ -125,27 +125,27 @@ rslr_m_yr                        = 0.005
 annual_states                    = 17
 run_complete                     = True
 rate_estimator                   = lrr
-mean_bias_m_yr                   = -1.8929301426294691
-rmse_m_yr                        = 2.649337567575873
-mean_bias_interior_m_yr          = -1.7332710701229834
-rmse_interior_m_yr               = 2.2934246112816985
+mean_bias_m_yr                   = -1.8963954810468415
+rmse_m_yr                        = 2.6550421239961404
+mean_bias_interior_m_yr          = -1.7359129141287186
+rmse_interior_m_yr               = 2.2975141377980353
 lrr_r2_median                    = 0.9387716561368766
 lrr_r2_below_floor               = 16
-endpoint_mean_bias_interior_m_yr = -1.7134102904187658
-endpoint_rmse_interior_m_yr      = 2.279660968856426
+endpoint_mean_bias_interior_m_yr = -1.714975028696019
+endpoint_rmse_interior_m_yr      = 2.2816397443689738
 nourishment_ok                   = True
 roads_drowned                    = 0
 roads_reloc_blocked              = 0
 groin_extent_updrift_m           = nan
 groin_extent_downdrift_m         = nan
-runtime_min                      = 1.7
+runtime_min                      = 2.2
 use_sandbox_cascade              = True
 topo_product                     = 2004-start
 topo_dune_version                = v1
 island_offset_version            = duneline/v1
 geometry                         = base
-rmse_reach_interior_m_yr         = 2.2934246112816985
-git_commit                       = 14327c9e6e16
+rmse_reach_interior_m_yr         = 2.2975141377980353
+git_commit                       = eac55c596a84
 git_dirty                        = True
 barrier3d_commit                 = d6546c781b39
 barrier3d_gap_momentum_fix       = True

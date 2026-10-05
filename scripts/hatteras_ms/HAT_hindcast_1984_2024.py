@@ -110,6 +110,8 @@ from cascade_pipeline.shoreline import (build_shoreline_matrix,
 
 from site_layer.hatteras_site_config import (
     HATTERAS_ANNOTATIONS,
+    last_model_year,
+    run_years,
     HATTERAS_BEACH_DUNE,
     HATTERAS_BE_PRESETS,
     be_rates,
@@ -391,7 +393,9 @@ if PERIOD["topo_product"] != TOPO_PRODUCT:
         f"The domain arrays already in memory are the wrong ones. Re-run "
         f"with a consistent start_year.\n")
 END_YEAR = PERIOD["end_year"]
-RUN_YEARS = END_YEAR - START_YEAR
+# end_year is the window label; the run steps start..last_model_year (scripts/hatteras_ms/MODEL_YEARS.md)
+LAST_MODEL_YEAR = last_model_year(START_YEAR)
+RUN_YEARS = run_years(START_YEAR)
 
 SEA_LEVEL_RISE_RATE = PERIOD["sea_level_rise_rate"]
 ENABLE_NOURISHMENT = PERIOD["enable_nourishment"]
@@ -494,7 +498,7 @@ if _B3D["route_overwash_fix"] is not True:
 # Advisory preview of the run name; 7.5 derives the real one and raises if they differ
 _PERIOD_HAS_FILL = bool(nourishment.build_schedule(
     HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS,
-    START_YEAR, END_YEAR).projects)
+    START_YEAR, LAST_MODEL_YEAR).projects)
 _PREVIEW_TOKENS = [
     SOURCE_SINK_PRESET,
     None if OFFSET_MODE == "asrun" else f"offset{OFFSET_MODE}",
@@ -708,13 +712,13 @@ reports.road_audit_report(audit=road_audit, summary=audit_summary)
 
 # Every Hatteras project is in 2004-2024, so a 1984 run builds an empty schedule from this list
 BN_SCHEDULE = nourishment.build_schedule(
-    HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS, START_YEAR, END_YEAR)
+    HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS, START_YEAR, LAST_MODEL_YEAR)
 
 # The schedule the model is actually driven by
 
 # Fills off = an empty schedule, not a skipped call; the footprint is unchanged
 BN_SCHEDULE_APPLIED = BN_SCHEDULE if ENABLE_NOURISHMENT_FILLS else (
-    nourishment.build_schedule([], HATTERAS_DOMAINS, START_YEAR, END_YEAR))
+    nourishment.build_schedule([], HATTERAS_DOMAINS, START_YEAR, LAST_MODEL_YEAR))
 
 # What CASCADE is handed
 
@@ -1116,7 +1120,7 @@ reports.figure_config_report(
 print("\nbuild_cascade + run_cascade_simulation defined")
 print(f"  run_years -> {RUN_YEARS} transitions, "
       f"time_step_count={RUN_YEARS + 1}, {RUN_YEARS + 1} annual states "
-      f"({START_YEAR}-{END_YEAR})")
+      f"({START_YEAR}-{LAST_MODEL_YEAR}, final state 1 Jan {LAST_MODEL_YEAR + 1})")
 print("  nourishment via BN_SCHEDULE.apply_to_cascade -> "
       "cascade.nourishment_volume")
 print("  road events via cascade_pipeline.roadway.apply_historical_event")

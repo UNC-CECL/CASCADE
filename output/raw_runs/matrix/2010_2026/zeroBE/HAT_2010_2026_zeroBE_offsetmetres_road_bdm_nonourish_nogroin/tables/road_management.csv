@@ -6,7 +6,7 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 13,27,False,False,17,managed throughout,1608.3048128458051,10,0
 14,28,False,False,17,managed throughout,2685.356617959794,9,0
 15,29,False,False,17,managed throughout,2074.395693055869,0,0
-16,30,False,False,17,managed throughout,884.7014162540444,0,0
+16,30,False,False,17,managed throughout,972.1993585209273,0,0
 17,31,False,False,17,managed throughout,548.4707789421083,0,0
 18,32,False,False,17,managed throughout,397.00832867622387,0,0
 19,33,False,False,17,managed throughout,556.6321110725405,0,0
@@ -47,5 +47,5 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 65,79,False,False,17,managed throughout,518.8664593873167,4,0
 66,80,False,False,17,managed throughout,2689.059877251812,14,0
 67,81,False,False,17,managed throughout,1307.858019678281,15,0
-89,103,False,False,17,managed throughout,54.7872748741738,0,0
+89,103,False,False,17,managed throughout,49.85642013549817,0,0
 90,104,False,False,17,managed throughout,656.2291965484619,0,0

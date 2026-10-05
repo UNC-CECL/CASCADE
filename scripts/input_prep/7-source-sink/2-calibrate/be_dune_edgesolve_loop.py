@@ -30,8 +30,12 @@ RUNNER = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
 BRACKET_EXP = "end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline"
 
-END = {1996: 2010, 2004: 2024, 2010: 2024}
-SUFFIX = {1996: "road_bdm", 2004: "road_bdm_nourish", 2010: "road_bdm_nourish"}
+# Window labels from the config (1996_2015, 2010_2026 since 2026-10-02); were hardcoded 2010/2024 ends
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from site_layer.hatteras_site_config import HATTERAS_PERIODS  # noqa: E402
+END = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
+# Every window now carries a fill, so the full-management run is the _nourish one
+SUFFIX = {1996: "road_bdm_nourish", 2004: "road_bdm_nourish", 2010: "road_bdm_nourish"}
 
 
 # The matrix run names carry the offset token since the metres offset became the default (2026-09-24
@@ -142,6 +146,8 @@ def main(argv=None) -> int:
     ap.add_argument("--coastsat-window", default=None, metavar="START_END",
                     help="with --target coastsat: solve against this LRR window "
                          "instead of the run's own (e.g. 1996_2024)")
+    ap.add_argument("--hold", type=int, nargs="*", default=[],
+                    help="end domains kept at their config value and left out of convergence (e.g. --hold 1)")
     ap.add_argument("--resume", action="store_true",
                     help="pick every chain up from the finished steps on disk")
     a = ap.parse_args(argv)
@@ -185,7 +191,7 @@ def main(argv=None) -> int:
                 csv.writer(fh).writerow([w, s, k, chains[key][-1][2], r1, r90, override])
             print(f"step {k}  {w} {s:<5}  residual {r1:+.4f} / {r90:+.4f}"
                   f"   next {override}", flush=True)
-            if k >= 1 and abs(r1) < a.tol and abs(r90) < a.tol:
+            if k >= 1 and (1 in a.hold or abs(r1) < a.tol) and (90 in a.hold or abs(r90) < a.tol):
                 done[key] = k
                 print(f"          {w} {s}: CONVERGED at step {k}", flush=True)
                 continue
@@ -193,6 +199,13 @@ def main(argv=None) -> int:
                 print(f"          {w} {s}: NOT CONVERGED after {k} steps", flush=True)
                 continue
             full = merge_override(override, last[key])
+            if a.hold:
+                # A held end keeps the config value exactly, whatever the solver printed
+                from site_layer.hatteras_site_config import HATTERAS_BE_RATES_EDGE
+                pairs = dict(p.split("=") for p in full.split(","))
+                for g in a.hold:
+                    pairs[str(g)] = f"{HATTERAS_BE_RATES_EDGE[w][g]:g}"
+                full = ",".join(f"{g}={pairs[g]}" for g in sorted(pairs, key=int))
             proc, log, tag = launch(w, s, k + 1, full, a.exp)
             procs.append((key, proc, log, tag, full))
         for key, proc, log, tag, full in procs:

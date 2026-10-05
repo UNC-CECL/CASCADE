@@ -48,7 +48,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ROAD_EVENTS,
 )
 
-from HAT_groin_sweep_config import (END_YEAR, GROIN_SWEEP_ROOT, PERIODS,  # noqa: E402
+from HAT_groin_sweep_config import (END_YEAR, LAST_MODEL_YEAR, GROIN_SWEEP_ROOT, PERIODS,  # noqa: E402
                                     PRESETS)
 
 # --- CONFIG ------------------------------------------------------------------
@@ -121,7 +121,7 @@ SCENARIOS = tuple(SCENARIO_TABLE)
 def period_has_fill(period):
     return bool(nourishment.build_schedule(
         HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS,
-        period, END_YEAR[period]).projects)
+        period, LAST_MODEL_YEAR[period]).projects)
 
 
 # Relocation-event years that fall inside a period
@@ -129,7 +129,7 @@ def period_relocation_years(period):
     return tuple(
         event.year for event in HATTERAS_ROAD_EVENTS
         if isinstance(event, RelocationEvent) and event.enabled
-        and period <= event.year < END_YEAR[period])
+        and period <= event.year <= LAST_MODEL_YEAR[period])
 
 
 # Whether relocations-on is a DISTINCT run for this cell
