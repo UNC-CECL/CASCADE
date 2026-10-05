@@ -11,7 +11,7 @@ Details: README.md beside this script.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-03
 """
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import rate_windows as rw  # noqa: E402
 import target_comparison as tc  # noqa: E402
+tc.select_windows("14yr")   # built on the 1996 -> 2010 -> 2024 chain and its dune line
 
 _REPO = rw._REPO
 import matplotlib.pyplot as plt  # noqa: E402

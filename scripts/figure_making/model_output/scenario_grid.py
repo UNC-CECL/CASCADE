@@ -11,7 +11,7 @@ manuscript copy to output/figures/5-results/. Details: scripts/figure_making/mod
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-03
 """
 
 from __future__ import annotations
@@ -74,6 +74,9 @@ from site_layer.hatteras_site_config import (                            # noqa:
 
 # --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+# The model side's smoother, the target's own LOWESS (7 domains, GIS 1-10 raw)
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts" / "hatteras_ms" / "experiments"))
+from HAT_metres_1_offset_units import smooth_like_target  # noqa: E402
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE  # noqa: E402
 from site_layer import hat_figure_style as _hs  # noqa: E402
@@ -175,11 +178,13 @@ def load_runs(period_start, period_end, preset):
         frame = pd.read_csv(rate_csv).set_index("gis_domain")
         # lrr_m_yr where the run has it, change_rate_m_yr otherwise (and says so)
         if RATE_COLUMN in frame.columns:
-            series[(scenario, reloc)] = frame[RATE_COLUMN]
+            raw = frame[RATE_COLUMN]
         else:
             print(f"  ! {run_dir.name}: no {RATE_COLUMN}; falling back "
                   f"to change_rate_m_yr (endpoint difference)")
-            series[(scenario, reloc)] = frame["change_rate_m_yr"]
+            raw = frame["change_rate_m_yr"]
+        # Smoothed exactly as the target is, so both sides carry the same LOWESS
+        series[(scenario, reloc)] = smooth_like_target(raw)
     return series
 
 
@@ -366,7 +371,9 @@ def main():
             f"across every panel. Reading across a row shows what the "
             f"source/sink term does; the spread within a panel shows what "
             f"management does. The model rate is lrr_m_yr, the OLS slope the "
-            f"runs are scored with; rates are m/yr, seaward positive. An "
+            f"runs are scored with, given the target's own {TARGET_WINDOW}-domain LOWESS "
+            f"(GIS 1–10 left raw) so both sides are smoothed alike; rates are m/yr, "
+            f"seaward positive. An "
             f"empty panel is a run not yet made, not a result."))
         print(f"  saved -> {PUBLISHED}")
     print("=" * 74)

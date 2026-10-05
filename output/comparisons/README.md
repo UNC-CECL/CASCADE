@@ -8,16 +8,16 @@ which is what tells you whether a figure predates a change.
 
 ```
 hindcast_calibrated/    the headline: modelled rate against the CoastSat
-                        target, both periods; edgeBE and zeroBE on the
-                        1996/2010 chain since 09-18 (calibBE is not solved there)
-model_vs_observed/      the four rate windows on one y axis, the model against
-                        the shoreline (CoastSat) and the dune line; option A
-                        metres matrix since 09-27 (rate_windows/ until 09-18)
-matrix_vs_observed/     every option A matrix run: rate and position change,
-                        and start/end positions against CoastSat AND the dune
-                        line; fixed y axes (09-27)
-target_comparison/      CoastSat vs the dune line as the target, with the model,
-                        as net change (m) over 1996-2010 and 2010-2024 (09-19)
+                        target, both windows; edgeBE and zeroBE, 1996-2015 and
+                        2010-2026 since 10-03, model smoothed like the target
+model_vs_observed/      the model against each window's CoastSat LRR; vs_shoreline/
+                        on 1996-2015 + 2010-2026 since 10-03; the dune-line folders
+                        are still the 1996-2010 / 2010-2024 record
+matrix_vs_observed/     every matrix run on 1996-2015 + 2010-2026 (10-03): rate and
+                        position change, start/end positions, against CoastSat
+target_comparison/      total_change/runs_vs_coastsat on 1996-2015 + 2010-2026
+                        (10-03); projected/ and the dune-line sets are the
+                        1996-2010 / 2010-2024 record (09-19)
 relocation/             does the model relocate NC-12 where and when history
                         did: per window, per event, across topography
                         versions, and the 20 m rebuild clearance
@@ -30,10 +30,10 @@ offset_source/          dune line vs shoreline as BRIE's island offset: how much
 
 | folder | script | runs |
 |---|---|---|
-| `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_lowess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
-| `model_vs_observed/` | `scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py` | the option A edgeBE nogroin matrix and the option A dune-line end solve, 1996 and 2010 (since 09-27), `runs_used.csv` |
-| `matrix_vs_observed/` | `scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_vs_observed.py` | all 22 option A nogroin matrix runs, `scores.csv` |
-| `target_comparison/` | `scripts/analyze_output/compare_runs/hindcast_vs_observed/target_comparison.py` | option A since 09-27: the edgeBE and zeroBE matrix and the dune-line and 1996-2024 LRR end solves, 1996 and 2010, `runs_used.csv` |
+| `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_lowess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996-2015 and 2010-2026 |
+| `model_vs_observed/` | `scripts/analyze_output/compare_runs/hindcast_vs_observed/rate_windows.py` | the edgeBE full-management nogroin matrix, 1996-2015 and 2010-2026 (`--windows 14yr`: the 14-yr matrix and the dune-line solve), `runs_used.csv` |
+| `matrix_vs_observed/` | `scripts/analyze_output/compare_runs/matrix_vs_observed/matrix_vs_observed.py` | all 26 nogroin matrix runs on 1996-2015 and 2010-2026, `scores.csv` |
+| `target_comparison/` | `scripts/analyze_output/compare_runs/hindcast_vs_observed/target_comparison.py` | the edgeBE and zeroBE full-management matrix, 1996-2015 and 2010-2026 (`--windows 14yr`: the dune-line and 1996-2024 LRR solves), `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/scenario_grid.py` | every matrix arm, both periods |
 | `offset_source/` | `scripts/analyze_output/compare_runs/offset_source/offset_source_comparison.py` | the full-management duneline/shoreline pairs of `experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a`, 1996 and 2010, `tables/summary.csv` |

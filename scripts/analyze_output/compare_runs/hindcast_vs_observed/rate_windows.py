@@ -12,7 +12,7 @@ import its loaders. Details: README.md beside this script.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-03
 """
 from __future__ import annotations
 
@@ -55,6 +55,9 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 import coastsat_lrr_windows as obs  # noqa: E402
 import coastsat_vs_duneline as dune  # noqa: E402
 from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
+# The model side's smoother, the target's own LOWESS (7 domains, GIS 1-10 raw)
+sys.path.insert(0, str(_REPO / "scripts" / "hatteras_ms" / "experiments"))
+from HAT_metres_1_offset_units import smooth_like_target  # noqa: E402
 
 
 # --- CONFIG ------------------------------------------------------------------
@@ -62,23 +65,29 @@ RAW_RUNS = _REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
 OUT_DIR = COMPARISONS_ROOT / "model_vs_observed"
 PRESET = "edgeBE"
-# window -> (run, arm): the option A matrix, ends solved on CoastSat; no metres run for 1984 or 2004
-MATRIX_RUNS = {
-    (1984, 2004): None,
-    (1996, 2010): ("HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin", "calibration"),
-    (2004, 2024): None,
-    (2010, 2024): ("HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
+# Window set -> {window: (run, arm)}, the edgeBE full-management matrix cell of each window.
+# 'current' is HATTERAS_PERIODS since 2026-10-02 and has no dune line (none for 2015 or 2026);
+# '14yr' is the 1996 -> 2010 -> 2024 chain the dune-line products and solves were built on
+WINDOW_SETS = {
+    "current": {
+        (1996, 2015): ("HAT_1996_2015_edgeBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
+        (2010, 2026): ("HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
+    },
+    "14yr": {
+        (1984, 2004): None,
+        (1996, 2010): ("HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin", "calibration"),
+        (2004, 2024): None,
+        (2010, 2024): ("HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
+    },
 }
-WINDOWS = list(MATRIX_RUNS)
-# The dune-line end-domain solve on the current setup (history in README)
+# True where every window of the set has a dune-line product and a dune-line end solve
+HAS_DUNE_LINE = {"current": False, "14yr": True}
+WINDOW_SET = "current"
+# The dune-line end-domain solve on the 14yr windows (history in README)
 DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-duneline-split12"
 # Where each model set's ends were solved
 MODEL_SETS = ("coastsat", "dune-mean3", "dune-raw")   # where the ends were solved
 MAIN_DUNE = "dune-mean3"
-# True: the dune solve is current (option A, 2026-09-27), so its sets are drawn
-DUNE_SOLVE_CURRENT = True   # re-solved under option A, 2026-09-27
-DRAWN_SETS = MODEL_SETS if DUNE_SOLVE_CURRENT else ("coastsat",)
-DUNE_FIG_SET = MAIN_DUNE if DUNE_SOLVE_CURRENT else "coastsat"
 INTERIOR = (2, 89)          # the domains the index scores, GIS 2-89
 N = obs.N_DOMAINS
 Y_LABEL = "Change rate (m/yr)"
@@ -120,28 +129,45 @@ Y_LABEL_NET = "Net change in position (m)"
 NET_PAD_M = 5.0            # the metres bound: largest |change| + this, up to NET_STEP_M
 NET_STEP_M = 5.0
 COASTSAT_VARIANTS = ("coastsat/means", "coastsat/lowess")
+# Readings whose observation is smoothed; the model line gets the same LOWESS there
+SMOOTHED_READINGS = ("lowess", "endpoint-lowess")
+SMOOTHED = "_smoothed"      # suffix on a model column smoothed like the target
 DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-lowess")
 # Both-panel model lines use the endpoint rate, like both observations
 BOTH_COLS = {"coastsat": "change_rate_m_yr", "dune-mean3": "change_rate_m_yr",
              "dune-raw": "change_rate_m_yr"}
-# What is drawn: (root under OUT_DIR, variant, model sets in drawing order)
-MAIN_PLAN = (
-    [("", v, ["coastsat"]) for v in COASTSAT_VARIANTS]
-    + [("", v, [DUNE_FIG_SET]) for v in DUNELINE_VARIANTS]
-    + [("", v, list(dict.fromkeys(["coastsat", DUNE_FIG_SET])))
-       for v in ("both", "both-netchange")]
-    + [("", "sensitivity/mixed-estimator", [DUNE_FIG_SET])]
-)
-SENSITIVITY_PLAN = (
-    [("sensitivity/ends-swapped", v, [MAIN_DUNE]) for v in COASTSAT_VARIANTS]
-    + [("sensitivity/ends-swapped", v, ["coastsat"]) for v in DUNELINE_VARIANTS]
-    + [("sensitivity/dune-raw-solve", v, ["dune-raw"]) for v in DUNELINE_VARIANTS]
-) if DUNE_SOLVE_CURRENT else []
 TARGET_LABEL = (f"{TARGET_WINDOW}-domain LOWESS (raw means D1–{SKIP})")
 TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOWESS of the transect rates north of "
                  f"domain {SKIP}, and the raw domain means over domains 1–{SKIP} "
                  "where the Oregon Inlet boundary dominates")
 # -----------------------------------------------------------------------------
+
+
+# Point the module at one window set; sets the runs, the drawn model sets and the plans
+def select_windows(name):
+    global WINDOW_SET, MATRIX_RUNS, WINDOWS, DUNE_LINE, DRAWN_SETS, DUNE_FIG_SET
+    global MAIN_PLAN, SENSITIVITY_PLAN
+    WINDOW_SET = name
+    MATRIX_RUNS = dict(WINDOW_SETS[name])
+    WINDOWS = list(MATRIX_RUNS)
+    DUNE_LINE = HAS_DUNE_LINE[name]
+    DRAWN_SETS = MODEL_SETS if DUNE_LINE else ("coastsat",)
+    DUNE_FIG_SET = MAIN_DUNE if DUNE_LINE else "coastsat"
+    # What is drawn: (root under OUT_DIR, variant, model sets in drawing order)
+    MAIN_PLAN = [("", v, ["coastsat"]) for v in COASTSAT_VARIANTS]
+    SENSITIVITY_PLAN = []
+    if DUNE_LINE:
+        MAIN_PLAN += (
+            [("", v, [DUNE_FIG_SET]) for v in DUNELINE_VARIANTS]
+            + [("", v, ["coastsat", DUNE_FIG_SET]) for v in ("both", "both-netchange")]
+            + [("", "sensitivity/mixed-estimator", [DUNE_FIG_SET])])
+        SENSITIVITY_PLAN = (
+            [("sensitivity/ends-swapped", v, [MAIN_DUNE]) for v in COASTSAT_VARIANTS]
+            + [("sensitivity/ends-swapped", v, ["coastsat"]) for v in DUNELINE_VARIANTS]
+            + [("sensitivity/dune-raw-solve", v, ["dune-raw"]) for v in DUNELINE_VARIANTS])
+
+
+select_windows(WINDOW_SET)
 
 
 # Import a script from the input-prep tree by path
@@ -200,6 +226,10 @@ def load_model(window, spec, model_set, preset=None):
     rates = rates.rename(columns={"gis_domain": "domain_number"})
     df = _full().merge(rates[["domain_number", "change_rate_m_yr", "lrr_m_yr"]],
                        on="domain_number", how="left")
+    # Both estimators smoothed like the observation, for the smoothed readings
+    for col in ("change_rate_m_yr", "lrr_m_yr"):
+        df[col + SMOOTHED] = smooth_like_target(
+            df.set_index("domain_number")[col]).to_numpy()
     row = {"window": period, "model_ends": model_set, "run_name": run_name,
            "arm": arm, "run_dir": str(run_dir.relative_to(_REPO)), "note": ""}
     if RUN_INDEX.is_file():
@@ -320,9 +350,14 @@ class Observation:
         self.window = window
         self.coastsat = obs.load_window(*window)
         self.coastsat_target = load_coastsat_target(window)
-        self.endpoint, self.meta = load_dune_endpoint(window)
-        self.endpoint_target = load_dune_endpoint_target(window, self.meta)
-        self.cs_endpoint, self.cs_endpoint_target = load_coastsat_endpoint(window)
+        # A window set without a dune line carries the CoastSat readings only
+        self.meta = {"window": "{}_{}".format(*window), "interval_yr": np.nan}   # no survey
+        self.endpoint = self.endpoint_target = None
+        self.cs_endpoint = self.cs_endpoint_target = None
+        if DUNE_LINE:
+            self.endpoint, self.meta = load_dune_endpoint(window)
+            self.endpoint_target = load_dune_endpoint_target(window, self.meta)
+            self.cs_endpoint, self.cs_endpoint_target = load_coastsat_endpoint(window)
 
     def frames(self, reading):
         """(line/dots frame, target frame or None) for one reading."""
@@ -339,6 +374,10 @@ class Observation:
                ("endpoint_lowess", lambda o: o.endpoint_target["target_lrr_m_yr"]),
                ("cs_endpoint_raw",   lambda o: o.cs_endpoint["mean_lrr"]),
                ("cs_endpoint_lowess", lambda o: o.cs_endpoint_target["target_lrr_m_yr"]))
+
+    def targets(self):
+        """The scoring targets this window has: CoastSat only without a dune line."""
+        return self.TARGETS if self.endpoint is not None else self.TARGETS[:1]
 
 
 # The window's calendar span in years
@@ -358,12 +397,15 @@ def _y_label(variant):
 
 # One rate half-range for every panel (largest |rate| + 1, rounded up)
 def shared_bounds(observations, model_sets):
-    frames = [f for o in observations for f in (o.coastsat, o.endpoint, o.cs_endpoint)]
+    frames = [f for o in observations for f in (o.coastsat, o.endpoint, o.cs_endpoint)
+              if f is not None]
     half = obs.shared_bounds(frames)
+    # The endpoint rate is drawn only on the dune-line panels
+    cols = ("change_rate_m_yr", "lrr_m_yr") if DUNE_LINE else ("lrr_m_yr",)
     for mdfs, _ in model_sets.values():
         for df in mdfs:
             if df is not None:
-                for col in ("change_rate_m_yr", "lrr_m_yr"):
+                for col in cols:
                     m = float(np.nanmax(df[col].abs()))
                     half = max(half, float(math.ceil(m + obs.Y_PAD_M)))
     return half
@@ -372,6 +414,8 @@ def shared_bounds(observations, model_sets):
 # The metres half-range for the net-change panels
 def shared_bounds_net(observations, model_sets):
     extreme = 0.0
+    if not DUNE_LINE:      # the net-change panels draw the two endpoint observations
+        return 0.0
     for i, o in enumerate(observations):
         span = _span(o.window)
         for f in (o.endpoint, o.cs_endpoint):
@@ -463,6 +507,8 @@ def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
         mdf = models[key][0][i]
         if mdf is not None:
             c = BOTH_COLS[key] if observation == "both" else col
+            if reading in SMOOTHED_READINGS:
+                c += SMOOTHED
             draw_model(ax, mdf, c, ls="-" if k == 0 else LS_SECOND, scale=scale)
             drawn = True
     return drawn
@@ -499,7 +545,9 @@ def _estimator_label(variant):
 # One legend entry per row
 def add_legend(fig, variant, model_keys):
     observation, reading, _, _ = VARIANTS[variant]
-    base = f"modelled shoreline, {_estimator_label(variant)}: edgeBE, full management, no groin"
+    base = (f"modelled shoreline, {_estimator_label(variant)}"
+            + (", smoothed the same way" if reading in SMOOTHED_READINGS else "")
+            + ": edgeBE, full management, no groin")
     dot_pair = (Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=2.3, lw=0),
                 Line2D([], [], color=obs.C_ERODE, marker="o", ms=2.3, lw=0))
     fill_pair = (Line2D([], [], color=obs.C_ACCRETE_FILL, lw=6),
@@ -653,7 +701,8 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     head = (f"{what} and modelled {quantity} by GIS domain (1 at Cape "
             f"Point, 90 at Pea Island) for {wins}"
             + (": the 1984-start period in the left column, the 1996-start period "
-               "in the right, the earlier window of each above the later." if grid
+               "in the right, the earlier window of each above the later." if grid == "2x2"
+               else ", one window per row, the earlier above." if grid
                else "."))
     observed = _observed_clause(observation, reading, metas)
     preset = ("from the edgeBE source/sink preset under full management with the "
@@ -674,6 +723,10 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     missing = sorted({r["window"].replace("_", "–") for k in model_keys
                       for r in rows_by_key[k] if not r["run_name"]})
     body = observed + models
+    if reading in SMOOTHED_READINGS:
+        body += (" The model line is smoothed exactly as the observation is "
+                 f"({TARGET_WINDOW}-domain LOWESS of the per-domain values, GIS 1–{SKIP} "
+                 "left raw), so both sides of the comparison carry the same treatment.")
     if missing:
         body += (f" No run exists yet for {', '.join(missing)}; that panel shows "
                  "the observation alone.")
@@ -736,20 +789,25 @@ def single_figure(o: Observation, variant, models, model_keys, half, folder, roo
     return _save(fig, folder, f"{stem}_{start}_{end}")
 
 
-# All four windows in a 2 x 2 grid, one variant
+# Every window on one figure, one variant: 2 x 2 for two chains of two, else one column
 def grid_figure(observations, variant, models, model_keys, half, folder, root=""):
     stem = _stem(variant, root)
     chains = obs._chains(WINDOWS)
-    assert len(chains) == 2 and all(len(c) == 2 for c in chains), chains
     by_w = {o.window: o for o in observations}
-    cells = [(r, c, chain[r]) for r in range(2) for c, chain in enumerate(chains)]
-    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True,
+    if len(chains) == 2 and all(len(c) == 2 for c in chains):
+        layout, nrows, ncols = "2x2", 2, 2
+        cells = [(r, c, chain[r]) for r in range(2) for c, chain in enumerate(chains)]
+    else:
+        layout, nrows, ncols = "column", len(WINDOWS), 1
+        cells = [(r, 0, w) for r, w in enumerate(sorted(WINDOWS))]
+    fig, axes = plt.subplots(nrows, ncols, sharex=True, sharey=True, squeeze=False,
                              figsize=figsize("double", height=5.0),
                              constrained_layout=True)
     for i, (r, c, w) in enumerate(cells):
         ax = axes[r, c]
         if not _panel(ax, by_w[w], variant, models, model_keys, half,
-                      label=(i == 0), label_pt=obs.STRUCTURE_LABEL_PT_GRID):
+                      label=(i == 0), label_pt=(obs.STRUCTURE_LABEL_PT_GRID if ncols == 2
+                                                else obs.STRUCTURE_LABEL_PT)):
             note_no_run(ax, 6.5)
         _title(ax, i, "{}–{}".format(*w))
         if c > 0:
@@ -761,7 +819,7 @@ def grid_figure(observations, variant, models, model_keys, half, folder, root=""
     ordered = [w for _, _, w in cells]
     rows_by_key = {k: [models[k][1][WINDOWS.index(w)] for w in ordered] for k in model_keys}
     caption(fig, caption_text(ordered, rows_by_key, [by_w[w].meta for w in ordered],
-                              half, grid=True, variant=variant, model_keys=model_keys))
+                              half, grid=layout, variant=variant, model_keys=model_keys))
     return _save(fig, folder, f"{stem}_grid")
 
 
@@ -776,7 +834,7 @@ def write_tables(observations, models, tables_dir):
     skill_rows = []
     for i, o in enumerate(observations):
         tab = _full()
-        for name, getter in Observation.TARGETS:
+        for name, getter in o.targets():
             tab[f"{name}_m_yr"] = getter(o).to_numpy()
         for key, (mdfs, _) in models.items():
             mdf = mdfs[i]
@@ -785,12 +843,16 @@ def write_tables(observations, models, tables_dir):
             tag = _tag(key)
             tab[f"model_endpoint_{tag}_m_yr"] = mdf["change_rate_m_yr"].to_numpy()
             tab[f"model_lrr_{tag}_m_yr"] = mdf["lrr_m_yr"].to_numpy()
-            for name, _g in Observation.TARGETS:
+            tab[f"model_endpoint_smoothed_{tag}_m_yr"] = mdf["change_rate_m_yr" + SMOOTHED].to_numpy()
+            tab[f"model_lrr_smoothed_{tag}_m_yr"] = mdf["lrr_m_yr" + SMOOTHED].to_numpy()
+            for name, _g in o.targets():
                 est = "endpoint" if "endpoint" in name else "lrr"
                 tab[f"resid_{est}_{tag}_vs_{name}_m_yr"] = (
                     tab[f"model_{est}_{tag}_m_yr"] - tab[f"{name}_m_yr"])
-            for est, col in (("endpoint", "change_rate_m_yr"), ("lrr", "lrr_m_yr")):
-                for name, getter in Observation.TARGETS:
+            for est, col in (("endpoint", "change_rate_m_yr"), ("lrr", "lrr_m_yr"),
+                             ("endpoint_smoothed", "change_rate_m_yr" + SMOOTHED),
+                             ("lrr_smoothed", "lrr_m_yr" + SMOOTHED)):
+                for name, getter in o.targets():
                     b, e, n = skill(getter(o), mdf, col)
                     skill_rows.append({"window": o.meta["window"], "model_ends": key,
                                        "model_estimator": est, "target": name,
@@ -806,9 +868,9 @@ def write_tables(observations, models, tables_dir):
 def fair_rows(skill_df):
     s = skill_df
     return s[((s.model_ends == "coastsat") & (s.target == "coastsat_lowess")
-              & (s.model_estimator == "lrr"))
+              & s.model_estimator.isin(["lrr", "lrr_smoothed"]))
              | ((s.model_ends == DUNE_FIG_SET) & (s.target == "endpoint_lowess")
-                & (s.model_estimator == "endpoint"))]
+                & s.model_estimator.isin(["endpoint", "endpoint_smoothed"]))]
 
 
 # Run: load observations and runs, fix the y ranges, write tables, draw every figure
@@ -816,7 +878,14 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--no-sensitivity", action="store_true",
                     help="draw the main level only")
+    ap.add_argument("--windows", choices=sorted(WINDOW_SETS), default=WINDOW_SET,
+                    help="current (default): the configured windows, CoastSat only. "
+                         "14yr: 1984/1996 -> 2004/2010 -> 2024 with the dune line.")
     args = ap.parse_args(argv)
+    select_windows(args.windows)
+    global OUT_DIR
+    if args.windows != "current":    # never over the current set's tables
+        OUT_DIR = OUT_DIR / f"{args.windows}_windows"
     plan = MAIN_PLAN + ([] if args.no_sensitivity else SENSITIVITY_PLAN)
 
     apply_style()
@@ -836,13 +905,14 @@ def main(argv=None):
     (OUT_DIR / "y_bounds.txt").write_text(
         f"y axis on every panel: -{half:g} to +{half:g} m/yr\n"
         f"= ceil(max |rate| + {obs.Y_PAD_M:g}) over every observed reading (CoastSat "
-        "means, dune-line endpoint) and both estimators of every model set "
-        f"({', '.join(DRAWN_SETS)}), " + ", ".join("{}-{}".format(*w) for w in WINDOWS)
+        + ("means, dune-line endpoint) and both estimators of every model set "
+           if DUNE_LINE else "means) and the OLS rate of every model set ")
+        + f"({', '.join(DRAWN_SETS)}), " + ", ".join("{}-{}".format(*w) for w in WINDOWS)
         + "\n(the CoastSat std lines are not in the bound)\n"
-        f"net-change panels (vs_shoreline_and_duneline/net_change): -{half_net:g} to "
-        f"+{half_net:g} m\n= ceil to {NET_STEP_M:g} m of (max |rate x window years| + "
-        f"{NET_PAD_M:g}) over both endpoint observations and every model set's "
-        "endpoint rate\n", encoding="utf-8")
+        + (f"net-change panels (vs_shoreline_and_duneline/net_change): -{half_net:g} to "
+           f"+{half_net:g} m\n= ceil to {NET_STEP_M:g} m of (max |rate x window years| + "
+           f"{NET_PAD_M:g}) over both endpoint observations and every model set's "
+           "endpoint rate\n" if DUNE_LINE else ""), encoding="utf-8")
 
     # Tables, then every figure in the plan
     skill_df = write_tables(observations, models, OUT_DIR / "tables")
@@ -856,7 +926,7 @@ def main(argv=None):
         written += grid_figure(observations, variant, models, keys, h, folder, root)
 
     print(f"y bounds  +/-{half:g} m/yr, net change +/-{half_net:g} m")
-    for o in observations:
+    for o in observations if DUNE_LINE else []:
         m = o.meta
         print(f"{m['window']}  dune line {m['start_vintage']} ({m['start_date']}) -> "
               f"{m['end_vintage']} ({m['end_date']})  {m['interval_yr']:.2f} yr")

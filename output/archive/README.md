@@ -13,6 +13,7 @@ retired material scattered around `output/` was collected in one place.
 2026-09-18_hindcast-calibrated/  the last calibBE render on the 1984/2004 chain                   (was output/comparisons/hindcast_calibrated/superseded_20260918/)
 2026-09-18_rate-windows/         the rate_windows figures before the rename to model_vs_observed (was output/comparisons/rate_windows/)
 2026-09-29_figures-pre-reorg/     the whole output/figures/ tree before the numbered layout     (was output/figures/)
+2026-10-03_comparisons-14yr-windows/ comparison figures on 1996-2010/2010-2024, replaced on the 1996-2015/2010-2026 windows (see WHY.md)
 ```
 
 **One exception: archived model runs stay in `output/raw_runs/archive/`.**

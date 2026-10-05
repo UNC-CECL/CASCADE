@@ -1,5 +1,7 @@
 # matrix figures: the management ladder
 
+> **Redrawn 2026-10-03 on 1996–2015 and 2010–2026.** The matrix was re-run on 2026-10-03 on the windows 1996–2015 and 2010–2026 (the 2017 Buxton fill and the 1.62 M cy Rodanthe volume, storms `v3_split12_trim24`). Every comparison is against **each window's own CoastSat LRR**. In every smoothed reading, **both sides are smoothed alike**: the model's per-domain values get the target's own 7-domain LOWESS, with GIS 1–10 left raw (`HAT_metres_1_offset_units.smooth_like_target`). No dune line exists for 2015 or 2026, so nothing dune-line based is drawn on these windows. The figures they replace are in `output/archive/2026-10-03_comparisons-14yr-windows/`. Position change is the endpoint rate × each window's years. Both windows now have a fills rung (1996–2015 has Rodanthe 2014). Values beyond the axis are marked at the edge. The table below describes the 14-yr ladder.
+
 The matrix runs of each window and preset in order of increasing management (Hannah,
 2026-09-29). There are two versions per window and preset:
 

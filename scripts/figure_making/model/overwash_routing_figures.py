@@ -349,7 +349,10 @@ def fig_storm_routing_response():
         "overtopped cell (upstream drops the last cell of the last gap and any single-cell gap), gap discharge "
         "reaches each gap's last cell (upstream slices start:stop with stop inclusive), and the inundation "
         "momentum constant C = Cx * AvgSlope is kept (a 2024 upstream refactor resets it to 0 before routing). "
-        "Grey puts only the momentum reset back; purple puts all three back, i.e. upstream Barrier3D. The "
+        "Grey puts only the momentum reset back; purple puts all three back, i.e. upstream Barrier3D. "
+        "Black is hidden under grey in (a), (c) and (d): the momentum constant enters only the inundation "
+        "transport rule, so without inundation (run-up routing, a) and in the count of cells given water "
+        "(c, d) the two are identical; they separate only in (b). The "
         "defects are restored in an in-memory copy of the model for this figure only; barrier3d.py is unchanged. "
         "Record: ../Barrier3D/HATTERAS_FIXES.md.")
     for key, _ in cases:

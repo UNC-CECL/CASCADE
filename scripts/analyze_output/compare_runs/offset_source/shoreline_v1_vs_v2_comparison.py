@@ -39,6 +39,7 @@ STUDY = (_REPO / "output" / "raw_runs" / "experiments" / "island-offset"
 OUT = osc.OUT / "shoreline_v1_vs_v2"
 ARMS = ("v1", "v2")
 COL = {"v1": C["EARLY"], "v2": C["LATE"]}   # house vintage pair: earlier window red, later blue
+DIFF_LABEL = "±1 year of DEM collection − 3-year window"   # v2 - v1, named by method
 # -----------------------------------------------------------------------------
 
 
@@ -222,7 +223,7 @@ def fig_scatter(t, summary):
             open_frame(ax)
             _title(ax, 2 * j + k, f"{start}–{end}")
             if j == 1:
-                ax.set_xlabel(lab + ", v2 − v1")
+                ax.set_xlabel(lab + "\n" + DIFF_LABEL)
             if k == 0:
                 ax.set_ylabel("Change difference (m)")
     png = OUT / "shoreline_v1_vs_v2_offset_vs_model_full_management.png"
@@ -230,8 +231,9 @@ def fig_scatter(t, summary):
     s = summary.set_index("period")
     record_caption(png, (
         "Which property of the offset change drives the difference between the v1 and v2 runs. "
-        "Each point is one interior domain (GIS 2-89); y is the modelled change with the v2 "
-        "start minus that with the v1 start (m). Left (a, c): against the change in the "
+        "Each point is one interior domain (GIS 2-89); y is the modelled change started from "
+        "the offset averaged over +/-1 year of the DEM collection (v2) minus that started "
+        "from the 3-year-window offset (v1) (m); x is the same difference in the offset. Left (a, c): against the change in the "
         "offset's seaward position (mean removed). Right (b, d): against the change in "
         "turning, the alongshore rate of change of the offset's angle (degrees per km; positive "
         "at an embayment). Line: least squares. r, offset: {:+.2f}, {:+.2f}; r, turning: "

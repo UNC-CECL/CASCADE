@@ -11,7 +11,7 @@ Details: README.md beside this script.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-03
 """
 from __future__ import annotations
 
@@ -33,10 +33,10 @@ sys.path.insert(0, str(_REPO / "scripts" / "hatteras_ms"))
 sys.path.insert(0, str(_REPO / "scripts" / "hatteras_ms" / "experiments"))
 
 import HAT_metres_1_offset_units as common  # noqa: E402
-from matrix_vs_observed import (YEARS, matrix_runs, observed_change, rates,  # noqa: E402
-                                score, window)
+from matrix_vs_observed import (end_year, matrix_runs, observed_change, rates,  # noqa: E402
+                                score, window, years)
 from site_layer.hat_figure_style import (  # noqa: E402
-    DOMAIN_AXIS_LABEL, INK, INK_MUTED, SMOOTH_RAMP, _title, apply_style, figsize,
+    DOMAIN_AXIS_LABEL, INK, INK_MUTED, SMOOTH_RAMP, _title, apply_style, figsize, mark_offaxis,
     open_frame, record_caption, save, structures, support_dir, town_bands)
 
 # --- CONFIG ------------------------------------------------------------------
@@ -56,16 +56,16 @@ VERSIONS = {
     "rate": dict(
         ylim=(-7.5, 7.5), ylabel="Shoreline change rate,\nLRR (m/yr)", unit="m/yr", fmt="{:+.2f}",
         rmse_fmt="{:.2f}", obs_label="CoastSat LRR target",
-        model=lambda rt: rt["lrr_m_yr"],
+        model=lambda rt, n: rt["lrr_m_yr"],
         obs_text="the CoastSat LRR scoring target (black; 7-domain LOWESS, raw domain means GIS 1–10)",
         what="modelled OLS shoreline-change rate"),
     "position": dict(
         ylim=(-130, 130), ylabel=None, unit="m", fmt="{:+.1f}", rmse_fmt="{:.1f}",
         obs_label="CoastSat observed change",
-        model=lambda rt: rt["change_rate_m_yr"] * YEARS,
+        model=lambda rt, n: rt["change_rate_m_yr"] * n,
         obs_text=("the observed CoastSat change (black; mean position over the last calendar year "
                   "minus the first, smoothed at 7 domains)"),
-        what="modelled position change over the window (endpoint rate × 14 yr)"),
+        what="modelled position change over the window (endpoint rate × the window's years)"),
 }
 # -----------------------------------------------------------------------------
 
@@ -110,7 +110,9 @@ def draw(version, period, preset, rungs, observed, rows_out):
     n = len(rungs)
     fig, axes = plt.subplots(n, 1, sharex=True, constrained_layout=True,
                              figsize=figsize("double", height=min(1.75 * n + 0.8, 9.4)))
-    series = [v["model"](rates(r.run_dir)) for r, _ in rungs]
+    # Each rung smoothed as the observation is
+    series = [common.smooth_like_target(v["model"](rates(r.run_dir), years(period)))
+              for r, _ in rungs]
     labels = [rung_label(i, added) for i, (_, added) in enumerate(rungs)]
     colours = [LAYER_COLOUR[added[-1] if added else "none"] for _, added in rungs]
     for k, ax in enumerate(axes):
@@ -126,11 +128,16 @@ def draw(version, period, preset, rungs, observed, rows_out):
         ax.axhline(0, color=INK_MUTED, lw=0.6)
         ax.set_xlim(1, 90)
         ax.set_ylim(*v["ylim"])
+        mark_offaxis(ax, observed.index.to_numpy(float), observed.to_numpy(float),
+                     v["ylim"][1], color=OBSERVED["color"])
+        for i in range(k + 1):     # a held end domain beyond the axis, marked at the edge
+            mark_offaxis(ax, series[i].index.to_numpy(float), series[i].to_numpy(float),
+                         v["ylim"][1], color=colours[i])
         ax.grid(axis="y")
         open_frame(ax)
         town_bands(ax, label=(k == 0))
         structures(ax, label=(k == n - 1))
-        ax.set_ylabel(v["ylabel"] or f"Position change,\n{period + YEARS} minus {period} (m)")
+        ax.set_ylabel(v["ylabel"] or f"Position change,\n{end_year(period)} minus {period} (m)")
         r = rungs[k][0]
         row = next((x for x in rows_out if x["run_name"] == r.run_name
                     and x["preset"] == preset), None)
@@ -154,8 +161,9 @@ def draw(version, period, preset, rungs, observed, rows_out):
         f"up to that point: the {v['what']} of each rung in its own blue (lighter = less managed; "
         f"the newest rung heaviest, and each rung keeps its colour down the figure), over "
         f"{v['obs_text']}. RMSE and bias of the newest rung over the interior GIS 2–89 (GIS 1 at "
-        f"Cape Point, 90 at Pea Island); seaward positive. Rungs the window lacks are skipped: "
-        f"1996–2010 has no nourishment fills. The historical-relocation runs are not on the ladder "
+        f"Cape Point, 90 at Pea Island); seaward positive. Every model line is smoothed as the "
+        f"observation is (7-domain LOWESS, GIS 1–10 raw). A rung that adds nothing in this window "
+        f"is skipped. A value beyond the axis (GIS 1, observed and modelled) is marked with a triangle at the edge. The historical-relocation runs are not on the ladder "
         f"(relocation moves the road, not the shoreline). Runs: {runs}."))
     return png
 

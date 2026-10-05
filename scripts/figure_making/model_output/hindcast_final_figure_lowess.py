@@ -5,14 +5,14 @@ The hindcast result figure: both periods' full-management runs against the LOWES
     python scripts/figure_making/model_output/hindcast_final_figure_lowess.py [--preset edgeBE]
 
 Scores over D11-D89 and the canonical D2-D89 on the figure; reads the nogroin
-matrix runs of the 1996 -> 2010 -> 2024 chain. Writes
+matrix runs of the 1996-2015 and 2010-2026 windows. Writes
 output/comparisons/hindcast_calibrated/ and output/figures/5-results/hindcast_<preset>.png.
 Details: scripts/figure_making/model_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-03
 """
 
 from __future__ import annotations
@@ -51,14 +51,17 @@ from cascade_pipeline.run_layout import resolve                 # noqa: E402
 from cascade_pipeline.run_registry import find_run_dir          # noqa: E402
 from site_layer.hat_observed_rates import lrr_csv                # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS     # noqa: E402
+# The model side's smoother, the target's own LOWESS (7 domains, D1-D10 raw)
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts" / "hatteras_ms" / "experiments"))
+from HAT_metres_1_offset_units import smooth_like_target         # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 LOWESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
               / "2-calibrate" / "be_zone_residual_fit.py")
 
-# The canonical chain 1996 -> 2010 -> 2024; nogroin, as the matrix is
+# The two windows, ends from HATTERAS_PERIODS; full management carries fills in both since 1996-2015
 GROIN = "nogroin"
-_CHAIN = ((1996, "road_bdm", "a", C_1984), (2010, "road_bdm_nourish", "b", C_1997))
+_CHAIN = ((1996, "road_bdm_nourish", "a", C_1984), (2010, "road_bdm_nourish", "b", C_1997))
 PERIODS = {}
 for _st, _scen, _panel, _colour in _CHAIN:
     _end = HATTERAS_PERIODS[_st]["end_year"]
@@ -150,8 +153,9 @@ PRESETS = {
         title="CASCADE hindcast with the source/sink calibration removed, against the CoastSat LOWESS reference, Cape Hatteras",
         series="CASCADE edgeBE",
         config="edgeBE source/sink: the D1 and D90 edge values only, no interior "
-               "correction. Full management (roadway + beach/dune; nourishment "
-               "in 2010–2024); the Buxton groin is off, the nogroin matrix arm.",
+               "correction. Full management (roadway + beach/dune; nourishment: "
+               "Rodanthe 2014 in 1996–2015, and Rodanthe 2014, Buxton 2017 and 2022 and "
+               "Avon 2022 in 2010–2026); the Buxton groin is off, the nogroin matrix arm.",
         zone_note="NO interior source/sink correction was applied anywhere, so the frozen "
                   "zone set does not divide these domains; the edge values are kept because "
                   "they are solved by buffer-cell reproduction rather than fitted to a "
@@ -162,8 +166,9 @@ PRESETS = {
         title="CASCADE hindcast with no source/sink field, against the CoastSat LOWESS reference, Cape Hatteras",
         series="CASCADE zeroBE",
         config="zeroBE: no background-erosion field anywhere, the D1/D90 edges included. "
-               "Full management (roadway + beach/dune; nourishment in 2010–2024); the "
-               "Buxton groin is off, the nogroin matrix arm.",
+               "Full management (roadway + beach/dune; nourishment: Rodanthe 2014 in "
+               "1996–2015, and Rodanthe 2014, Buxton 2017 and 2022 and Avon 2022 in "
+               "2010–2026); the Buxton groin is off, the nogroin matrix arm.",
         zone_note="No source/sink field was applied anywhere, edges included, so the edges "
                   "carry no absorber and are free to run away from the target."),
 }
@@ -203,6 +208,8 @@ def main():
         csv = str(lrr_csv(meta["start"], meta["end"]))
         lowess, sd, transects = lowess_and_spread(module, meta["start"], csv)
         model, run_name = run_rates(key, args.preset, meta["scenario"])
+        # Smoothed exactly as the observation is, so both sides carry the same LOWESS
+        model = smooth_like_target(model)
         # The D2-D89 score is computed here, never quoted, so it cannot go stale
         spliced = module.load_observed(meta["start"], csv)[1]
         wide = [g for g in range(2, 90)
@@ -328,6 +335,9 @@ def main():
     caption_text = (
         vocab["title"] + ". Configuration: " + vocab["config"]
         + " The observed curve is the 7-domain LOWESS of CoastSat transect "
+        "rates, and the model curve is the run's per-domain LRR given the same "
+        "LOWESS (D1–D10 left raw); the scores compare the two smoothed curves. The observed "
+        "LOWESS is of the transect "
         "rates; over D1–D10 (hatched) it is dashed because the project "
         "excludes the LOWESS there (the smoother is poorly constrained at the "
         "end of its range, and Cape Point's attachment-detachment cycle is "
