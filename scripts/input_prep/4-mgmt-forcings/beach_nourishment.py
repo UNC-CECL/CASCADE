@@ -587,14 +587,14 @@ def _layers():
 
 
 # A north-up window round a footprint with `pad` domains either side, at height/width `aspect`
-def _window(dom, first, last, pad, aspect, east=0.0):
+def _window(dom, first, last, pad, aspect, east=0.0, min_h=0.0):
     lo, hi = max(1, first - pad), min(N_DOMAINS, last + pad)
     # Centred on the footprint itself, `pad` domains of margin above and below even at the ends of the reach
     x0, y0, x1, y1 = dom.loc[first:last].total_bounds
     y0, y1 = y0 - pad * SPACING_M, y1 + pad * SPACING_M
     x1 += east * (x1 - x0)
     cx_, cy_ = (x0 + x1) / 2, (y0 + y1) / 2
-    hh = max(y1 - y0, (x1 - x0) * aspect) / 2 * 1.03
+    hh = max(y1 - y0, (x1 - x0) * aspect, min_h) / 2 * 1.03
     return lo, hi, (cx_ - hh / aspect, cy_ - hh, cx_ + hh / aspect, cy_ + hh)
 
 
@@ -620,6 +620,9 @@ def _latlon_ticks(ax, bx, fs, lat_step=0.02, lon_step=0.02):
     lon_r, lat_t = to_ll.transform(bx[2], bx[3])
     lats = np.arange(np.ceil(lat_b / lat_step) * lat_step, lat_t, lat_step)
     lons = np.arange(np.ceil(lon_l / lon_step) * lon_step, lon_r, lon_step)
+    # Skip a tick that would sit in the frame corner, against the other axis's labels
+    m_lat = 0.03 * (lat_t - lat_b)
+    lats = lats[(lats > lat_b + m_lat) & (lats < lat_t - m_lat)]
     ys = [to_utm.transform(lon_l, la)[1] for la in lats]
     xs = [to_utm.transform(lo, lat_b)[0] for lo in lons]
     ax.set_yticks(ys)
@@ -651,8 +654,10 @@ def _scale_bar(ax, length_m, at, fs):
     from site_layer.hat_figure_style import MAP_TEXT
     (x0, x1), (y0, y1) = ax.get_xlim(), ax.get_ylim()
     bx_, by_, h = x0 + at[0] * (x1 - x0), y0 + at[1] * (y1 - y0) + 0.025 * (y1 - y0), 0.008 * (y1 - y0)
-    ax.add_patch(Rectangle((bx_, by_), length_m, h, facecolor=INK, edgecolor="white", lw=0.8, zorder=12))
-    ax.text(bx_ + length_m / 2, by_ - 0.6 * h, f"{length_m:g} m", ha="center", va="top",
+    # Keyline the same weight as the panel border (spines are 0.5 pt)
+    ax.add_patch(Rectangle((bx_, by_), length_m, h, facecolor=INK, edgecolor="white", lw=0.5, zorder=12))
+    lab = f"{length_m / 1000:g} km" if length_m >= 1000 else f"{length_m:g} m"
+    ax.text(bx_ + length_m / 2, by_ - 0.6 * h, lab, ha="center", va="top",
             **{**MAP_TEXT, "fontsize": fs, "zorder": 12})
 
 
@@ -664,7 +669,7 @@ VILLAGE_LABEL_AT = {"Rodanthe": (81, 0.55), "Buxton": (7.5, 0.35), "Avon": (29, 
 def _geo_labels(ax, p, L, lo, hi, bx, fs, water=True, village=False):
     from site_layer.hat_figure_style import MAP_TEXT, place_label, water_label
     dom, w, h = L["dom"], bx[2] - bx[0], bx[3] - bx[1]
-    kw = {**MAP_TEXT, "fontsize": fs - 2.0}
+    kw = {**MAP_TEXT, "fontsize": fs - 1.0}
     # Beside the inset, not on it: up top when the inset is low, low when it is high
     # Single maps only: the paper panels are too narrow to hold them off the island (the locator orients those)
     if water:
@@ -686,13 +691,13 @@ def _geo_labels(ax, p, L, lo, hi, bx, fs, water=True, village=False):
 # One fill on its imagery: domains, footprint, end numbers, groins and piers, scale bar and north dart
 def _draw_fill(ax, p, in_model, L, pad, aspect, i, fs, corner=(0.97, 0.975, "right", "top"), oneline=False,
                east=0.0, north_top=False, north=True, title_outside=False, scale_at=(0.07, 0.065),
-               years=None):
+               years=None, scale_m=500, north_left=False, min_h=0.0):
     from shapely.ops import unary_union
     from site_layer.hat_figure_style import MAP_TEXT, north_dart, scale_bar_km
     dom, cen = L["dom"], L["cen"]
     first, last = min(p.gis_domains), max(p.gis_domains)
     dark, light = COMMUNITY_COLOUR[_town(p)]
-    lo, hi, bx = _window(dom, first, last, pad, aspect, east)
+    lo, hi, bx = _window(dom, first, last, pad, aspect, east, min_h)
     _imagery(ax, bx)
     # Only the footprint's own domains are drawn; the unfilled ones either side are left off
     dom.loc[first:last].plot(ax=ax, facecolor="none", edgecolor="white", lw=0.3, alpha=0.6, zorder=2)
@@ -707,7 +712,7 @@ def _draw_fill(ax, p, in_model, L, pad, aspect, i, fs, corner=(0.97, 0.975, "rig
     edge.plot(ax=ax, color=dark, lw=1.2, zorder=4.1, linestyle=ls)
     for d in (first, last):
         b = dom.loc[d].geometry.bounds
-        ax.text(b[0] + 70, cen.loc[d].y, str(d), ha="left", va="center", **{**MAP_TEXT, "fontsize": fs - 2.0})
+        ax.text(b[0] + 70, cen.loc[d].y, str(d), ha="left", va="center", **{**MAP_TEXT, "fontsize": fs - 1.0})
     hit = L["groins"][L["groins"].intersects(dom.loc[lo:hi].union_all())]
     ax._has_groins = bool(len(hit))
     ax._has_pier = any(lo <= d < hi for d, _ in HATTERAS_ANNOTATIONS.piers.values())
@@ -739,9 +744,15 @@ def _draw_fill(ax, p, in_model, L, pad, aspect, i, fs, corner=(0.97, 0.975, "rig
         _panel_label(ax, i, f"{_town(p)}, {p.year}", fs, note=None if in_model else "not in the model")
     _geo_labels(ax, p, L, lo, hi, bx, fs, water=i is None)
     # A short bar, placed on open water by the caller
-    _scale_bar(ax, 500, scale_at, fs - 2.0)
+    # "mirror": the lower-left arrow-and-bar layout flipped to the lower right, same spacing from the edge
+    if north_left == "mirror":
+        scale_at = (1 - 0.17 - scale_m / (bx[2] - bx[0]), 0.03)
+    _scale_bar(ax, scale_m, scale_at, fs - 1.0)
     if north:
-        north_dart(ax, (bx[2] - 0.13 * (bx[2] - bx[0]), bx[1] + (0.86 if north_top else 0.10) * (bx[3] - bx[1])),
+        w_ = bx[2] - bx[0]
+        nx = (bx[2] - 0.08 * w_ if north_left == "mirror" else bx[0] + 0.08 * w_ if north_left
+              else bx[2] - 0.13 * w_)
+        north_dart(ax, (nx, bx[1] + (0.86 if north_top else 0.07 if north_left else 0.10) * (bx[3] - bx[1])),
                    arrow_m=0.055 * (bx[3] - bx[1]), text_kw={**MAP_TEXT, "fontsize": fs - 1.0})
     return bx
 
@@ -773,25 +784,44 @@ def _locator(ax, L, windows, fs, label_side="right", fill=False, villages=False)
                     va="center", fontsize=fs, color=C["LOCATOR"], fontweight="bold", zorder=4)
     # Zoomed to the panels it locates (plus a little), not the whole 90-domain reach
     wb = np.array([b for _, b in windows])
-    y_lo, y_hi = wb[:, 1].min() - 1500, wb[:, 3].max() + 1500
+    # Down past the cape point when villages are labelled, so the cape is not cut off
+    # With villages: down past the cape point, and open water above so the island sits lower in the frame
+    y_lo, y_hi = wb[:, 1].min() - (3500 if villages else 1500), wb[:, 3].max() + (3000 if villages else 1500)
+    if villages:
+        y_lo, y_hi = y_lo - 2000, y_hi - 2000          # view nudged south so the island sits a little higher
     d = L["dom"].geometry.bounds
     near = d[(d.maxy > y_lo) & (d.miny < y_hi)]
-    west = 6500 if villages else 500
-    ax.set_xlim(min(near.minx.min(), wb[:, 0].min()) - west, max(near.maxx.max(), wb[:, 2].max()) + 3500)
+    if villages:
+        # Centred on the boxes; equal aspect then sets the width from the panel's shape
+        xc = (wb[:, 0].min() + wb[:, 2].max()) / 2 - 1200   # nudged west so the island sits a little right
+        ax.set_xlim(xc - 2000, xc + 2000)
+    else:
+        ax.set_xlim(min(near.minx.min(), wb[:, 0].min()) - 500, max(near.maxx.max(), wb[:, 2].max()) + 3500)
     ax.set_ylim(y_lo, y_hi)
     if label_side == "right" and not any(x for x, _ in windows):
         place_label(ax, ob[0] + 0.35 * (ob[2] - ob[0]), ob[1] + 0.55 * (ob[3] - ob[1]), "Hatteras\nIsland",
                     text_kw=dict(color=INK, fontsize=fs - 1.0, zorder=5))
     # Small dots and names on the sound side for every village, so the boxes sit among their neighbours
     if villages:
+        from shapely.geometry import LineString
         cen = L["cen"]
+        land = L["outline"].union_all()
         for name, g in LOCATOR_VILLAGES.items():
             pt = cen.loc[int(g)]
             b = L["dom"].loc[int(g)].geometry.bounds
             if not y_lo <= pt.y <= y_hi:
                 continue
-            ax.plot(b[0] + 300, pt.y, marker="o", ms=1.8, color=INK, zorder=5)
-            ax.text(b[0] - 600, pt.y, name, ha="right", va="center", fontsize=fs - 2.0, fontstyle="italic",
+            # The dot goes on the island: the middle of the widest land crossing at the village's northing
+            cut = LineString([(b[0] - 3000, pt.y), (b[2] + 500, pt.y)]).intersection(land)
+            parts = list(getattr(cut, "geoms", [cut]))
+            seg = max(parts, key=lambda q: q.length) if parts and not cut.is_empty else None
+            xd = seg.centroid.x if seg is not None else (b[0] + b[2]) / 2
+            ax.plot(xd, pt.y, marker="o", ms=1.8, color=INK, zorder=5)
+            # Buxton's name drops below its dot, onto the cape
+            dy = -1900 if name == "Buxton" else 0
+            # Buxton's name sits centred under its dot, on the cape, clear of the panel edge
+            tx, ha = (xd, "center") if dy else (b[0] - 600, "right")
+            ax.text(tx, pt.y + dy, name, ha=ha, va="center", fontsize=fs - 1.0, fontstyle="italic",
                     color=INK, zorder=5)
     # fill=True keeps the inset box exactly where it was placed and widens the view instead of shrinking the box
     ax.set_aspect("equal", adjustable="datalim" if fill else "box")
@@ -816,7 +846,7 @@ def _legend_handles(towns, record_only=False, groins=True, pier=True):
                         path_effects=[__import__("matplotlib.patheffects", fromlist=["Stroke"]).Stroke(
                             linewidth=3.0, foreground=INK), __import__("matplotlib.patheffects",
                             fromlist=["Normal"]).Normal()]))
-    h.append(Patch(facecolor="none", edgecolor="0.6", lw=0.5, label="Model domain (500 m)"))
+    h.append(Patch(facecolor="none", edgecolor="0.6", lw=0.5, label="Model domain"))
     return h
 
 
@@ -835,19 +865,27 @@ def fig_project_maps(model: pd.DataFrame) -> list[Path]:
     dates = placement_dates()
     outs = []
     aspect = 1.55
+    # One map scale for every single map, so the north arrow and the 1 km bar are the same size on each
+    min_h = max(L["dom"].loc[min(q.gis_domains):max(q.gis_domains)].total_bounds[3]
+                - L["dom"].loc[min(q.gis_domains):max(q.gis_domains)].total_bounds[1]
+                for q, _ in all_fills()) + 2 * MAP_PAD_DOMAINS * SPACING_M
     for p, in_model in all_fills():
         fig = plt.figure(figsize=(SINGLE_WIDTH_IN, SINGLE_WIDTH_IN * aspect * 0.86))
         ax = fig.add_axes([0.13, 0.11, 0.84, 0.86])
         # Info box under the place label; the locator takes the upper right, over the ocean, clear of the island
         bx = _draw_fill(ax, p, in_model, L, MAP_PAD_DOMAINS, aspect, None, fs=8.0,
-                        scale_at=(0.08, 0.06) if _town(p) == "Rodanthe" else (0.60, 0.16))
+                        scale_at=(0.15, 0.03), scale_m=1000, min_h=min_h,
+                        north_left=True)
         # Where the beach runs up the upper right the inset sits lower right and the north arrow goes up top
         # One inset size for every map (same figure and axes size, so the same box in inches)
         # Tucked into the corner, a hair off both edges
         # No locator on the single maps: they show the region only (Hannah, 2026-10-04); the paper figure has one
         hs = _legend_handles([_town(p)], record_only=not in_model, groins=ax._has_groins, pier=ax._has_pier)
-        fig.legend(handles=hs, loc="lower center", ncol=min(len(hs), 3),
-                   frameon=False, fontsize=6.5, bbox_to_anchor=(0.55, 0.0), handlelength=1.4, columnspacing=1.0)
+        # Legend inside the map, upper right over the ocean, in the house map-legend box
+        from site_layer.hat_figure_style import MAP_LEGEND
+        # Avon and Buxton: legend lower right, clear of the island at the top of the frame
+        ax.legend(handles=hs, loc="lower right" if _town(p) in ("Avon", "Buxton") else "upper right",
+                  **{**MAP_LEGEND, "fontsize": 7, "borderaxespad": 0.4})
         stem = f"nourishment_map_{p.year}_{_town(p).lower()}"
         out = save(fig, OUT_DIR / "project_maps" / stem, close=True, bbox_inches="tight", pad_inches=0.02)[0]
         record_caption(out, (
@@ -879,34 +917,48 @@ def fig_project_maps_paper(model: pd.DataFrame) -> Path:
     # The locator (narrower, same height) then one panel per footprint; one north arrow, in the locator
     map_w, gap, left, loc_w = 0.21, 0.042, 0.02, 0.10
     box_in = map_w * PAPER_WIDTH_IN * PAPER_ASPECT              # drawn height of an equal-aspect map panel, inches
-    below_in, above_in = 0.62, 0.24                             # longitude labels + legend; titles
+    below_in, above_in = 0.34, 0.24                             # longitude labels; titles (legend sits under the locator)
     fig_h = box_in + below_in + above_in
     fig = plt.figure(figsize=(PAPER_WIDTH_IN, fig_h))
     bottom, avail = below_in / fig_h, box_in / fig_h
     box_h, y0 = avail, bottom
     windows = []
+    # Same map scale in every panel, so the latitude ticks and scale bars match
+    min_h = max(L["dom"].loc[min(g[0][0].gis_domains):max(g[0][0].gis_domains)].total_bounds[3]
+                - L["dom"].loc[min(g[0][0].gis_domains):max(g[0][0].gis_domains)].total_bounds[1]
+                for g in panels) + 2 * PAPER_PAD_DOMAINS * SPACING_M
     for i, group in enumerate(panels):
         p, in_model = group[0]
         ax = fig.add_axes([left + loc_w + gap + i * (map_w + gap), bottom, map_w, avail])
         bx = _draw_fill(ax, p, in_model, L, PAPER_PAD_DOMAINS, PAPER_ASPECT, i, fs=fs,
                         corner=(0.03, 0.925, "left", "top"), oneline=True, north=False, title_outside=True,
                         scale_at=(0.035, 0.012) if _town(p) == "Rodanthe" else (0.825, 0.012),
-                        years=" & ".join(str(q.year) for q, _ in group))
+                        years=" & ".join(str(q.year) for q, _ in group), min_h=min_h)
         # The locator boxes the footprint itself, not the panel window: adjacent windows (Avon, Buxton) overlap
         windows.append((f"{chr(97 + i)}", L["dom"].loc[min(p.gis_domains):max(p.gis_domains)].total_bounds))
-    loc = fig.add_axes([left, y0, loc_w, box_h])
+    # The locator is shorter than the maps, top flush with them; the legend fills the space below it
+    loc_frac = 0.72
+    loc = fig.add_axes([left, y0 + box_h * (1 - loc_frac), loc_w, box_h * loc_frac])
     _locator(loc, L, windows, fs - 1.5, fill=True, villages=True)
-    loc.text(0.5, 1.0, "Hatteras Island", transform=loc.transAxes, ha="center", va="bottom", fontsize=fs + 0.5,
-             color=INK)
-    # The house split-dart north arrow, small, lower right of the locator
-    from site_layer.hat_figure_style import MAP_TEXT_DARK, north_dart
+    # The island named on the map itself (no panel title), lat/long on the left and top edges
     loc.apply_aspect()
     (lx0, lx1), (ly0, ly1) = loc.get_xlim(), loc.get_ylim()
-    north_dart(loc, (lx1 - 0.11 * (lx1 - lx0), ly0 + 0.045 * (ly1 - ly0)), arrow_m=0.06 * (ly1 - ly0),
-               text_kw={**MAP_TEXT_DARK, "fontsize": fs - 1.0})
-    fig.legend(handles=_legend_handles(sorted({_town(p) for p, _ in fills}, key=["Rodanthe", "Avon", "Buxton"].index)),
-               loc="lower center", ncol=6, frameon=False, fontsize=fs - 1.5, bbox_to_anchor=(0.55, 0.0),
-               handlelength=1.4, columnspacing=1.2)
+    loc.text(lx0 + 0.42 * (lx1 - lx0), ly0 + 0.56 * (ly1 - ly0), "Hatteras Island", rotation=74, ha="center",
+             va="center", fontsize=fs - 1.0, fontstyle="italic", color=INK, zorder=5)
+    _latlon_ticks(loc, (lx0, ly0, lx1, ly1), fs - 1.5, lat_step=0.1, lon_step=0.1)
+    loc.xaxis.tick_top()
+    loc.tick_params(axis="x", labeltop=True, labelbottom=False)
+    # A thin line north arrow, lower right of the locator over open water
+    loc.annotate("", xy=(0.86, 0.13), xytext=(0.86, 0.04), xycoords="axes fraction",
+                 arrowprops=dict(arrowstyle="-|>,head_length=0.5,head_width=0.18", color=INK, lw=0.7,
+                                 shrinkA=0, shrinkB=0), zorder=6)
+    loc.text(0.86, 0.14, "N", transform=loc.transAxes, ha="center", va="bottom", fontsize=fs - 1.5,
+             color=INK, zorder=6)
+    hs = _legend_handles(sorted({_town(p) for p, _ in fills}, key=["Rodanthe", "Avon", "Buxton"].index))
+    hs[-1].set_label("Model domain")              # its 500 m width is in the caption; the full label overruns panel (a)
+    fig.legend(handles=hs,
+               loc="lower left", ncol=1, frameon=False, fontsize=fs - 1.5,
+               bbox_to_anchor=(left - 0.005, y0 - 0.01), handlelength=1.4, labelspacing=0.55, borderaxespad=0.0)
     out = save(fig, OUT_DIR / "project_maps" / "nourishment_maps_paper", close=True,
                bbox_inches="tight", pad_inches=0.02)[0]
     rows = "; ".join(f"({chr(97 + i)}) " + "; ".join(_caption_row(p, m, dates) for p, m in group)
@@ -916,7 +968,7 @@ def fig_project_maps_paper(model: pd.DataFrame) -> Path:
         "fill footprint (colour marks the community) and thin white lines its 500 m model domains; the first and "
         "last domains are numbered. The 2017 and 2022 Buxton fills share one footprint and one panel. Each "
         "reported volume is spread evenly over its footprint. Red lines are the Buxton groins, white lines the "
-        f"piers. Scale bars differ between panels. The left panel boxes each footprint, (a)–({chr(96 + len(panels))}), on "
+        f"piers. All three panels share one scale. The left panel boxes each footprint, (a)–({chr(96 + len(panels))}), on "
         "Hatteras Island. "
         f"Imagery: {IMAGERY_NOTE}. {rows}. Reported extents and sources: nourishment_summary_table."))
     return out
