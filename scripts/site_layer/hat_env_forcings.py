@@ -96,7 +96,7 @@ if __name__ == "__main__":
         path = globals()[name]
         print(f"{'ok' if path.exists() else 'MISSING':8} {name:18} "
               f"{path.relative_to(INIT_ROOT).as_posix()}")
-    for w in ((1984, 2004), (1996, 2010), (2004, 2024), (2010, 2024)):
+    for w in ((1984, 2004), (1996, 2009), (2004, 2024), (2009, 2025)):
         p = storm_series_file(*w)
         print(f"{'ok' if p.exists() else 'MISSING':8} {'storms ' + window_tag(*w):18} "
               f"{p.relative_to(INIT_ROOT).as_posix()}")

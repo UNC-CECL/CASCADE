@@ -42,28 +42,34 @@ COASTSAT_LRR_ROOT = COASTSAT_RATES / "lrr"
 COASTSAT_LRR_SMOOTHED_ROOT = COASTSAT_RATES / "lrr_smoothed"
 
 # What each window is: two chains and one context window; the one definition (WINDOWS.md is written from it)
-CURRENT_CHAIN = (1996, 2010, 2024)
+CURRENT_CHAIN = (1996, 2009, 2025)
 LEGACY_CHAIN = (1984, 2004, 2024)
 WINDOW_ROLE = {
-    (1996, 2010): "Calibration period",
-    (2010, 2024): "Test period (held out)",
-    (1996, 2024): "Full period (context, not graded)",
+    (1996, 2009): "Calibration period",
+    (2009, 2025): "Test period (held out)",
+    (1996, 2025): "Full period (context, not graded)",
+    (1996, 2010): "Calibration period, 2026-09 chain",
+    (2010, 2024): "Test period, 2026-09 chain",
+    (1996, 2024): "Full period, 2026-09 chain",
     (1984, 2004): "Calibration period, legacy chain",
     (2004, 2024): "Test period, legacy chain",
 }
 # The one-line gloss under each role, for READMEs and captions.
 WINDOW_NOTE = {
-    (1996, 2010): "the model is fitted here",
-    (2010, 2024): "held out; nothing is fitted to it",
-    (1996, 2024): "spans the whole current chain; CONTEXT ONLY, no run is "
+    (1996, 2009): "DEM to DEM (1996 ALACE to 2009 USACE); sources and sinks are fitted here",
+    (2009, 2025): "2009 DEM to 2025-08-17; held out, then its residual becomes the second set",
+    (1996, 2025): "spans the whole current chain; CONTEXT ONLY, no run is "
                   "graded against it",
+    (1996, 2010): "the 1996 -> 2010 -> 2024 chain, superseded 2026-10-05",
+    (2010, 2024): "the 1996 -> 2010 -> 2024 chain, superseded 2026-10-05",
+    (1996, 2024): "the 1996 -> 2010 -> 2024 chain, superseded 2026-10-05",
     (1984, 2004): "the 1984-start chain, superseded as the main chain 2026-09",
     (2004, 2024): "the 1984-start chain, superseded as the main chain 2026-09",
 }
 
 
 def window_role(window, with_note=False):
-    """"Calibration period" for (1996, 2010); "" for a window with no role."""
+    """"Calibration period" for (1996, 2009); "" for a window with no role."""
     role = WINDOW_ROLE.get(tuple(window), "")
     if with_note and role:
         return f"{role} - {WINDOW_NOTE[tuple(window)]}"
@@ -71,8 +77,9 @@ def window_role(window, with_note=False):
 
 
 def is_current_chain(window):
-    """True for the 1996 -> 2010 -> 2024 chain and its full-period context."""
-    return tuple(window) in {(1996, 2010), (2010, 2024), (1996, 2024)}
+    """True for the 1996 -> 2009 -> 2025 chain and its full-period context."""
+    a, b, c = CURRENT_CHAIN
+    return tuple(window) in {(a, b), (b, c), (a, c)}
 
 TRANSECT_DOMAINS = TRANSECT_FRAME / "transect_domains"
 TIMESERIES_LRR = COASTSAT_RATES / "5yr_bins"

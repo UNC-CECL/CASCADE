@@ -44,7 +44,7 @@ from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as LRR_DIR  # noqa: 
 from site_layer import hat_figure_style as _hs  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-PERIOD_STARTS = (1996, 2010)
+PERIOD_STARTS = (1996, 2009)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 DOMAIN_COL, LRR_COL = "domain_number", "mean_lrr"
 DOMAIN_MIN, DOMAIN_MAX = 1, 90

@@ -47,8 +47,8 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 
 # Periods and conventions
 
-# THE CANONICAL CHAIN IS 1996 -> 2010 -> 2024 (Hannah, 2026-09-17)
-PERIODS = (1996, 2010)
+# THE CANONICAL CHAIN IS 1996 -> 2009 -> 2025, DEM to DEM (2026-10-05; was 1996 -> 2010 -> 2024 from 2026-09-17)
+PERIODS = (1996, 2009)
 PRESETS = ("edgeBE", "zeroBE")
 
 DAM_TO_M = 10.0              # Barrier3D works in decameters

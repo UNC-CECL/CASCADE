@@ -1,5 +1,10 @@
 # RoadSetback_2010_dunestart.csv
 
+> **Renamed 2026-10-05: this folder was `2010/`.** The period now starts in the year of the DEM it
+> sits on (USACE 2009, flown 2009-08-10 to 08-24). The contents are unchanged. In the current builds
+> only the file names went from `2010` to `2009`; superseded builds keep their old names.
+> Text below this note still says 2010.
+
 A COPY of `RoadSetback_2004_dunestart.csv`, written by
 `scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_road_setback_derived_vintages.py`
 on 2026-09-11.

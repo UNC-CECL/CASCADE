@@ -1,5 +1,5 @@
 """
-How the NC-12 road setback is measured on one domain, and what the 1996 and 2010 runs are handed.
+How the NC-12 road setback is measured on one domain, and what the 1996 and 2009 runs are handed.
 
     python scripts/figure_making/pipeline/4-mgmt-forcings/road_setback_figures.py
 
@@ -36,7 +36,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 OUT = figure_dir("inputs", "4-management")
 EXAMPLE_GIS = 31
-EXAMPLE_YEAR = 2004          # the measurement the 2010 run reads unchanged
+EXAMPLE_YEAR = 2004          # the measurement the 2009 run reads unchanged
 PRODUCT = {1984: "1984-start", 2004: "2004-start"}
 # -----------------------------------------------------------------------------
 
@@ -140,7 +140,7 @@ def fig_measurement():
     plt.close(fig)
     record_caption(out[0],
         f"How the NC-12 setback is measured on one domain: GIS {gis}, the {year} measurement (the "
-        f"{vintage}-digitised centreline on the {PRODUCT[year]} extraction), which the 2010 run reads unchanged. "
+        f"{vintage}-digitised centreline on the {PRODUCT[year]} extraction), which the 2009 run reads unchanged. "
         "(a) The domain's raw 10 m elevation grid (grey, ocean at the right, water blue) with the road "
         "centreline buffered to its width and burned onto it (purple; HAT_rasterize_road_to_domains.py). "
         f"NC-12 crosses this north-up box at {dom.obliquity_deg:.0f}°, so the road cells smear across many "
@@ -156,18 +156,18 @@ def fig_measurement():
     return out
 
 
-# The setbacks the 1996 and 2010 runs are handed, alongshore
+# The setbacks the 1996 and 2009 runs are handed, alongshore
 def fig_inputs():
     gis = np.arange(1, 91)
     s96 = two_row(tv.road_setback_file(1996)).reindex(gis)
-    s10 = two_row(tv.road_setback_file(2010)).reindex(gis)
+    s10 = two_row(tv.road_setback_file(2009)).reindex(gis)
     d84 = pd.read_csv(measured_dir(1984) / "RoadOffset_1984_domains.csv").set_index("domain").reindex(gis)
     d04 = pd.read_csv(measured_dir(2004) / "RoadOffset_2004_domains.csv").set_index("domain").reindex(gis)
 
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.6), sharex=True, constrained_layout=True)
     for ax, (label, model, meas, col, i) in zip(axes, [
             ("1996 run: the 1984 measurement + the 1989 relocation", s96, d84, C_1984, 0),
-            ("2010 run: the 2004 measurement", s10, d04, C_1997, 1)]):
+            ("2009 run: the 2004 measurement", s10, d04, C_1997, 1)]):
         ax.plot(gis, meas.setback_dunestart_m, "o", mfc="none", mec="0.55", ms=3.5, label="measured (median)")
         neg = meas.setback_dunestart_m < 0
         ax.plot(gis[neg], meas.setback_dunestart_m[neg], "v", color=C["ADDED"], ms=5,
@@ -175,7 +175,7 @@ def fig_inputs():
         moved = meas.relocated_seaward_m.fillna(0) > 0
         ax.plot(gis[moved], meas.setback_dunestart_floored_m[moved], "^", color=C["ACCENT"], ms=5,
                 label="drowned at start, moved seaward")
-        ax.step(gis, model, where="mid", color=col, lw=1.4, label=f"model input, {(1996, 2010)[i]} run")
+        ax.step(gis, model, where="mid", color=col, lw=1.4, label=f"model input, {(1996, 2009)[i]} run")
         ax.fill_between(gis, meas.setback_p10_m, meas.setback_p90_m, step="mid", color=col, alpha=0.15, lw=0,
                         label=f"10th-90th percentile of profiles, {(1984, 2004)[i]}")
         ax.axhline(0, color=INK_MUTED, lw=0.5)
@@ -202,9 +202,9 @@ def fig_inputs():
         "(a) The 1996 run: no NC-12 line of 1996 vintage exists, so its file is the 1984 measurement (the "
         "1978-digitised line on the 1984-start extraction) with the one relocation between the two dates "
         f"applied, the 1989 Pea Island move (arrows, GIS {moved_1996[0]}-{moved_1996[-1]}; displacements read "
-        "from HATTERAS_ROAD_EVENTS, the same values the model fires). (b) The 2010 run: the 2004 measurement "
+        "from HATTERAS_ROAD_EVENTS, the same values the model fires). (b) The 2009 run: the 2004 measurement "
         "(the 2008-digitised line on the 2004-start extraction), copied unchanged because no relocation falls "
-        "between 2004 and 2010. Open circles are each domain's measured median over its alongshore profiles "
+        "between 2004 and 2009. Open circles are each domain's measured median over its alongshore profiles "
         "and the band their 10th-90th percentile; the line is the model-facing value after the producer's two "
         "flagged corrections, negative setbacks floored to 0 (down triangles) and roads drowning at start moved "
         "seaward (up triangles; none fire on the current topographies). Domains with no road carry no value, "

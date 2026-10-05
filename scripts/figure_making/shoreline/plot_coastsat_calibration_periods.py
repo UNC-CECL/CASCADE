@@ -42,7 +42,7 @@ from site_layer import hat_figure_style as _hs  # noqa: E402
 OUT = _hs.figure_dir("observations", "shoreline", "coastsat_calibration_periods")
 
 # The canonical chain
-PERIOD_STARTS = (1996, 2010)
+PERIOD_STARTS = (1996, 2009)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 
 DOMAIN_COL, LRR_COL = "domain_number", "mean_lrr"

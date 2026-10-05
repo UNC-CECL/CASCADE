@@ -42,7 +42,7 @@ from site_layer import hat_figure_style as _hs  # noqa: E402
 FIG_DIR = _hs.figure_dir("observations", "shoreline")
 
 # The run periods this is checking, and the DSAS pair that stands in for each
-PERIOD_STARTS = (1996, 2010)
+PERIOD_STARTS = (1996, 2009)
 RUN_PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 DSAS_WINDOWS = ((1997, 2009), (2009, 2019))
 

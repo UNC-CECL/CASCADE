@@ -270,7 +270,7 @@ if _BOOT_DRIFT:
           "restart the kernel and Run All).")
 
 # --- CONFIG ------------------------------------------------------------------
-START_YEAR = RUN_CONFIG.start_year   # 1984, 1996, 2004 or 2010
+START_YEAR = RUN_CONFIG.start_year   # 1984, 1996, 2004 or 2009
 
 # Source/sink preset: "zeroBE" nothing, "edgeBE" the two end domains, "calibBE" the full fit
 SOURCE_SINK_PRESET = RUN_CONFIG.source_sink_preset
@@ -943,9 +943,9 @@ COASTSAT_DATASETS = [
                      / "transect_lrr_full.csv"),
     ),
     CoastSatDataset(
-        label=f"CoastSat LRR (2010-{HATTERAS_PERIODS[2010]['end_year']})",
-        period_start=2010,
-        csv_path=str(COASTSAT_BASE_DIR / f"2010_{HATTERAS_PERIODS[2010]['end_year']}"
+        label=f"CoastSat LRR (2009-{HATTERAS_PERIODS[2009]['end_year']})",
+        period_start=2009,
+        csv_path=str(COASTSAT_BASE_DIR / f"2009_{HATTERAS_PERIODS[2009]['end_year']}"
                      / "transect_lrr_full.csv"),
     ),
 ]

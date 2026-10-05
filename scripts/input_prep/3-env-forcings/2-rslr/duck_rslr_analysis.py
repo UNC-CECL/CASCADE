@@ -54,6 +54,9 @@ WINDOWS = [
     (2010, 2026, 2, 1),
     # The full-window run (2026-10-05), one window on its own panel
     (1996, 2025, 3, 0),
+    # DEM-to-DEM calibration and its test (2026-10-05)
+    (1996, 2009, 4, 0),
+    (2009, 2025, 4, 1),
 ]
 
 # Fit settings

@@ -131,7 +131,7 @@ def island_offset_version(start_year):
 
 
 # MODEL YEARS (2026-10-04). "end_year" is the window LABEL: it names the storm file, the CoastSat
-# target folder and the run folders (1996_2015, 2010_2026). "last_model_year" is the last calendar
+# target folder and the run folders (1996_2009, 2009_2025). "last_model_year" is the last calendar
 # year the model steps through. A run covers start_year .. last_model_year inclusive, one transition
 # per calendar year, so run_years(start) = last_model_year - start_year + 1, and the final saved
 # state is 1 January of last_model_year + 1. Full explanation: scripts/hatteras_ms/MODEL_YEARS.md
@@ -163,39 +163,38 @@ HATTERAS_PERIODS = {
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
 
-    # Two overlapping periods (2026-09-11); see MODEL YEARS above for end_year vs last_model_year
+    # DEM to DEM (2026-10-05): calibrate 1996 -> 2009, test 2009 -> 2025; see MODEL YEARS above
     1996: {
-        # 1996-2015 since 2026-10-02 (was 1996-2010: end 2010, RSLR 0.004)
-        "end_year": 2015,
-        # Inclusive label: the CoastSat target and storm file both run through Dec 2015. Until
-        # 2026-10-04 the run stopped at 1 Jan 2015 (19 years) and never used the 2015 storms
-        "last_model_year": 2015,
-        # 0.00376 m/yr fitted over 1996-2015 (Duck gauge)
-        "sea_level_rise_rate": 0.004,
-        "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2015)),
+        # 1996-2009 since 2026-10-05: ALACE 1996 to the USACE 2009 DEM (was 1996-2015, before it 1996-2010)
+        "end_year": 2009,
+        # Exclusive label: 13 years, 1996-2008, ending 1 Jan 2009; the DEM was flown 2009-08-17
+        "last_model_year": 2008,
+        # 0.00252 m/yr fitted over 1996-2009 (Duck gauge; CI +/-0.0025). 1996-2015 was 0.00376
+        "sea_level_rise_rate": 0.003,
+        "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2009)),
         # Derived, not surveyed: built from the 1997 dune line
         "island_offset_file": _island_offset_file(1996),
         # Derived: the 1984 setbacks with the 1989 Pea Island relocation applied
         "road_setback_file": road_setback_relpath(1996),
         "topo_product": YEAR_PRODUCT[1996],
-        # Rodanthe 2014 falls inside 1996-2015 (none did in 1996-2009)
-        "enable_nourishment": True,
+        # No fill falls in 1996-2008; Rodanthe 2014 is the first
+        "enable_nourishment": False,
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
-    2010: {
-        # 2010-2026 since 2026-10-02 (was 2010-2024: end 2024, RSLR 0.007)
-        "end_year": 2026,
-        # Exclusive label: the run ends 1 Jan 2026, as do the storm file (2010-2025) and CoastSat (2026-01-13)
-        "last_model_year": 2025,
-        # 0.00548 m/yr fitted over 2010-2026 (Duck gauge, record extended through 2025)
+    2009: {
+        # Key was 2010 until 2026-10-05: the period starts in its DEM's year (USACE 2009, flown 2009-08-10 to 08-24)
+        "end_year": 2025,
+        # Exclusive label: 16 years, 2009-2024, ending 1 Jan 2025; the target is 2025-08-17 +/- 6 months
+        "last_model_year": 2024,
+        # 0.00509 m/yr fitted over 2009-2025 (Duck gauge, record through 2025)
         "sea_level_rise_rate": 0.005,
-        "storm_file": _env.init_relpath(_env.storm_series_file(2010, 2026)),
-        # Derived, not surveyed: built from the 2009 dune line (no 2010 imagery)
-        "island_offset_file": _island_offset_file(2010),
+        "storm_file": _env.init_relpath(_env.storm_series_file(2009, 2025)),
+        # Derived, not surveyed: the 2009 dune line, or the CoastSat mean over 2008-08-17 to 2010-08-17
+        "island_offset_file": _island_offset_file(2009),
         # A copy of the 2004 file: same topography, same road line, no relocation between
-        "road_setback_file": road_setback_relpath(2010),
-        "topo_product": YEAR_PRODUCT[2010],
-        # Rodanthe 2014, Buxton 2017 and both 2022 projects fall inside 2010-2025; the 2026 fills come after
+        "road_setback_file": road_setback_relpath(2009),
+        "topo_product": YEAR_PRODUCT[2009],
+        # Rodanthe 2014, Buxton 2017 and both 2022 projects fall inside 2009-2024
         "enable_nourishment": True,
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
@@ -226,7 +225,7 @@ HATTERAS_BE_RATES_ZERO = {
     1984: {},
     2004: {},
     1996: {},
-    2010: {},
+    2009: {},
 }
 
 # The edge-only domains: the first and last real domains (buffers stay 0.0)
@@ -460,7 +459,8 @@ HATTERAS_BE_EDGE_ONLY = {
     # /10-offset solve, 1996, superseded 2026-09-27
 
     # 1996: 1996-2015, five Newton steps (candidate-windows experiment, 2026-10-02)
-    1996: (+3.39, +37.60),  # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
+    # NOT SOLVED for 1996-2009 (2026-10-05); edgeBE needs HAT_BE_OVERRIDE until the end solve. 1996-2015: (+3.39, +37.60)
+    # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # /10-offset solve, 2010, superseded 2026-09-27
 
@@ -468,7 +468,8 @@ HATTERAS_BE_EDGE_ONLY = {
     # GIS 90 re-solved 2026-10-04 after the run-length fix and the Rodanthe 82-88 / Buxton 6-16 footprints: 24.08 -> 38.3
     # (probes 28.1 -0.655, 39.0 +0.088, 37.7 -0.065, 38.3 -0.051 m/yr; the response is noise-limited near here). 1996 kept at
     # +37.60 (-0.144): probes 32.0-40.7 all scored worse, no trend (experiments/end-domain-boundaries/2026-10-04-gis90-runlength-footprints)
-    2010: (+172.89, +38.3),  # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
+    # NOT SOLVED for 2009-2025 (2026-10-05). 2010-2026: (+172.89, +38.3)
+    # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
 # Option B (2010-2024 at Hs 2.5 with its own ends): recorded, not wired

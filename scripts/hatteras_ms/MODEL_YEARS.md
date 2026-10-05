@@ -31,14 +31,16 @@ The run makes one transition per calendar year. In the time loop (`cascade_pipel
 
 ## The current periods
 
+**Since 2026-10-05 the periods run DEM to DEM** (advisor plan): calibrate 1996 → 2009 and test 2009 → 2025. The 2010 key became 2009, since the period starts in its DEM's year. Both labels are exclusive. Each run starts on 1 Jan of the DEM year and steps whole years: 13 and 16. That puts the final state about 7.5 months before the DEM date (2009-08-17) or its anniversary; this offset is reported, not corrected. The targets are net change between DEM-centred mean shorelines, not the LRR. Rows for the earlier 1996–2015 / 2010–2026 windows are kept below the table as history.
+
 | Period | `end_year` (label) | `last_model_year` | `run_years` | Final state | Storm file holds | CoastSat target spans |
 |---|---|---|---|---|---|---|
-| 1996 | 2015 | 2015 | 20 | 1 Jan 2016 | 1996–2015 | 1996-01-26 to 2015-12-17 |
-| 2010 | 2026 | 2025 | 16 | 1 Jan 2026 | 2010–2025 | 2010-02-01 to 2026-01-13 |
+| 1996 | 2009 | 2008 | 13 | 1 Jan 2009 | 1996–2009 (one spare year) | start ±1 yr of 1996-10-12; end ±1 yr of 2009-08-17 |
+| 2009 | 2025 | 2024 | 16 | 1 Jan 2025 | 2009–2025 (one spare year) | start ±1 yr of 2009-08-17; end 2025-08-17 ±6 months (data stops 2026-01-13) |
 | 1984 (legacy) | 2004 | 2003 | 20 | 1 Jan 2004 | 21 years | — |
 | 2004 (legacy) | 2024 | 2023 | 20 | 1 Jan 2024 | 21 years | — |
 
-The labels follow different rules: **1996–2015 is inclusive** (the data runs through December 2015), **2010–2026 is exclusive** (the data stops in early January 2026). That is why the label alone can't set the run length. The legacy 1984 and 2004 periods keep the length they always had; their storm files hold one more year than they use.
+Before 2026-10-05 (1996–2015 and 2010–2026) the labels followed different rules: **1996–2015 is inclusive** (the data runs through December 2015), **2010–2026 is exclusive** (the data stops in early January 2026). That is why the label alone can't set the run length. The legacy 1984 and 2004 periods keep the length they always had; their storm files hold one more year than they use.
 
 Until 2026-10-04 the run length was `end_year - start_year`. That was right for 2010–2026 but made 1996–2015 a 19-year run (1996–2014): the 2015 storms were never used, and the model's rate covered a year less than the CoastSat target it was graded against. Every 1996–2015 run made before that date has the short length.
 

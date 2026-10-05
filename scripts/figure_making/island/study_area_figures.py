@@ -1667,7 +1667,7 @@ def fig_management_footprint(dom, outline, roads, frame):
     sea_edge = by0 if sea[1] < 0 else by1
 
     # The period starts this figure speaks to, and the dune line each reads (README)
-    PERIOD_STARTS = (1996, 2010)
+    PERIOD_STARTS = (1996, 2009)
     early_start, late_start = PERIOD_STARTS
     early_line = tv.road_line_for_year(early_start)
     late_line = tv.road_line_for_year(late_start)

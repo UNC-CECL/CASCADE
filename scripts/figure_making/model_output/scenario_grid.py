@@ -84,8 +84,8 @@ DEFAULT_OUT = _hs.COMPARISONS_ROOT / "scenario_grid" / "scenario_grid_by_preset.
 # The manuscript copy, written only from a default run
 PUBLISHED = _hs.figure_dir("results") / "scenario_grid.png"
 
-# The canonical chain, 1996 -> 2010 -> 2024; ends come from HATTERAS_PERIODS
-PERIOD_STARTS = (1996, 2010)
+# The canonical chain, 1996 -> 2009 -> 2025; ends come from HATTERAS_PERIODS
+PERIOD_STARTS = (1996, 2009)
 PERIODS = tuple((st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS)
 
 # Only presets solved for every period drawn; be_rates() decides

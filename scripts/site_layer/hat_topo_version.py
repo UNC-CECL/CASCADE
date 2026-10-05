@@ -51,9 +51,9 @@ PRODUCTS = ("1984-start", "2004-start", "forecast")
 YEAR_PRODUCT = {
     1984: "1984-start",
     2004: "2004-start",
-    # The 1996 and 2010 periods share those products; ask product_for_year()
+    # The 1996 and 2009 periods share those products; ask product_for_year()
     1996: "1984-start",
-    2010: "2004-start",
+    2009: "2004-start",  # was key 2010 until 2026-10-05; the period starts in its DEM year
 }
 
 # Which NC-12 line a period's road is measured from, by true vintage: the single definition
@@ -62,7 +62,7 @@ ROAD_LINE_FOR_YEAR = {
     1984: 1978,
     1996: 1978,
     2004: 2008,
-    2010: 2008,
+    2009: 2008,
 }
 
 # Which setback folders hold a measurement and which a derivation
@@ -70,7 +70,7 @@ ROAD_SETBACK_KIND = {
     1984: "measured",
     2004: "measured",
     1996: "derived",
-    2010: "derived",
+    2009: "derived",
 }
 
 MGMT_ROOT = INIT_ROOT / "4-mgmt-forcing"
@@ -351,7 +351,7 @@ DUNE_LINE_FOR_YEAR = {
     1984: 1984,
     1996: 1997,   # no 1996 imagery; the nearest island-wide survey
     2004: 2004,
-    2010: 2009,   # no 2010 aerial imagery (Hannah, 2026-09-15); the 2009 line
+    2009: 2009,   # the 2009 line; key was 2010 until 2026-10-05 (no 2010 aerial imagery)
     2024: 2023,   # the 2023 NOAA imagery (D:\Hatteras_GIS\Aerial\2023); end year of 2004-2024 and 2010-2024
 }
 
@@ -392,7 +392,7 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
 # The CoastSat shoreline window per period: +/-1 yr of the start DEM's lidar flights
 SHORELINE_WINDOW_FOR_YEAR = {
     1996: ("1995-10-12", "1997-10-12"),
-    2010: ("2008-08-17", "2010-08-17"),
+    2009: ("2008-08-17", "2010-08-17"),
 }
 
 

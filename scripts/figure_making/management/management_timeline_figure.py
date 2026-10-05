@@ -43,7 +43,7 @@ from site_layer import hat_figure_style as _hs  # noqa: E402
 OUT = _hs.figure_dir("inputs", "4-management")
 
 # The period starts in use; ends come from HATTERAS_PERIODS
-PERIOD_STARTS = (1996, 2010)
+PERIOD_STARTS = (1996, 2009)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 RECORD_Y0 = 1984                       # the first year the record covers
 PW = 0.6                               # point-event width, in years

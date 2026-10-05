@@ -1,5 +1,10 @@
 # 2010 island offsets — which SOURCE, then which version
 
+> **Renamed 2026-10-05: this folder was `2010/`.** The period now starts in the year of the DEM it
+> sits on (USACE 2009, flown 2009-08-10 to 08-24). The contents are unchanged. In the current builds
+> only the file names went from `2010` to `2009`; superseded builds keep their old names.
+> Text below this note still says 2010.
+
 This folder holds **no build of its own**. Every build sits under the feature
 it was measured from, so a folder listing says what it is:
 
