@@ -197,6 +197,9 @@ TRANSECT_EXT_TABLE = TRANSECT_DIR / "transects_100m_ext.csv"
 # Which feature the offset was measured from: the dune build keeps <year>/v<n>, others nest by source
 OFFSET_SOURCES = ("duneline", "shoreline")
 DEFAULT_OFFSET_SOURCE = "duneline"
+# What a run reads unless HAT_ISLAND_OFFSET_SOURCE says otherwise: the DEM-centred shoreline since 2026-10-05
+# (matrix runs before then are dune line). DEFAULT_OFFSET_SOURCE stays the build-naming default
+RUN_OFFSET_SOURCE = "shoreline"
 
 # A build's three files share one stem, named for the feature measured from
 _OFFSET_STEMS = {

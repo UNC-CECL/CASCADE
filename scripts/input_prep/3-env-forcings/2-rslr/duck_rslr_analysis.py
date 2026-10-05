@@ -52,6 +52,8 @@ WINDOWS = [
     # The model's periods since 2026-10-02
     (1996, 2015, 2, 0),
     (2010, 2026, 2, 1),
+    # The full-window run (2026-10-05), one window on its own panel
+    (1996, 2025, 3, 0),
 ]
 
 # Fit settings

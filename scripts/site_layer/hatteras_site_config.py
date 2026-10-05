@@ -35,9 +35,9 @@ from site_layer.hat_extension_domains import (BASE_GEOMETRY, gis_bounds,  # noqa
 # GIS 1-90 plus 15 buffers a side; HAT_GEOMETRY picks an extended reach (unset = base)
 HATTERAS_GEOMETRY = (os.environ.get("HAT_GEOMETRY", "").strip() or BASE_GEOMETRY)
 
-# Island offset source for this run: "duneline" (default) or "shoreline"; off-default is not a matrix run
+# Island offset source for this run: "shoreline" (default since 2026-10-05) or "duneline"; off-default is not a matrix run
 HATTERAS_OFFSET_SOURCE = (os.environ.get("HAT_ISLAND_OFFSET_SOURCE", "").strip()
-                          or _tv_mgmt.DEFAULT_OFFSET_SOURCE)
+                          or _tv_mgmt.RUN_OFFSET_SOURCE)
 if HATTERAS_OFFSET_SOURCE not in _tv_mgmt.OFFSET_SOURCES:
     raise SystemExit(
         f"HAT_ISLAND_OFFSET_SOURCE={HATTERAS_OFFSET_SOURCE!r} is not a known "

@@ -20,6 +20,7 @@ The source/sink rates locked at the two end domains (GIS 1 and 90): what they mu
 | [`2026-09-29-ends-resolved-split12`](2026-09-29-ends-resolved-split12/README.md) | The ends after the storms changed to `v3_split12_trim24` (back-to-back storms split). | 1996 +4.3888 / +19.0935; 2010 +8.0405 / +21.2582. Only GIS 1 moved (+0.04 each). | **current**; in the site config |
 | [`2026-09-29-ends-solved-on-duneline-split12`](2026-09-29-ends-solved-on-duneline-split12/NOTE.md) | The dune-line ends after the storms changed to `v3_split12_trim24`. | mean3: 1996 −2.7 / +8.0, 2010 +2.2 / +13.8; raw: 1996 +0.6 / +10.7, 2010 +2.0 / +13.7. Moves ≤0.2 m/yr. | **current**; drawn in model_vs_observed |
 | [`2026-09-29-ends-solved-on-lrr-1996-2024-split12`](2026-09-29-ends-solved-on-lrr-1996-2024-split12/NOTE.md) | The 1996–2024 LRR ends after the storms changed to `v3_split12_trim24`. | 1996 +4.0 / +27.7; 2010 +3.6 / +17.5. Moves ≤0.1 m/yr. | **current**; drawn in target_comparison/projected |
+| [`2026-10-05-ends-solved-on-1996-2025`](2026-10-05-ends-solved-on-1996-2025/README.md) | The ends for the 30-yr full-window run, 1996 through 2025, on the shoreline v2 start. | +144.2227 / +68.4160 (residuals +0.009 / +0.005). GIS 1 gain is only 0.038. | **current** for the full-window run; not in the site config |
 
 **Status** — **current**: its answer is in use now. **superseded**: a later study
 re-asked it; follow the pointer. **record**: a finished check or a result from an

@@ -133,7 +133,7 @@ from site_layer.hatteras_site_config import (
     HATTERAS_OFFSET_SOURCE,
     SCORE_INTERIOR_GIS,
 )
-from site_layer.hat_topo_version import DEFAULT_OFFSET_SOURCE  # noqa: E402
+from site_layer.hat_topo_version import RUN_OFFSET_SOURCE  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # the surveyed reach, GIS 1-90
 
 # Saved, not shown: a headless run cannot display (show_figures: null means False here)
@@ -439,10 +439,10 @@ if RUN_KIND == "matrix" and WAVE_TOKEN:
         f"matrix. A forced run is a sensitivity cell (HAT_RUN_KIND=sensitivity) "
         f"or an experiment (HAT_RUN_KIND=experiment HAT_RUN_TAG=<name>).")
 # Nor can a run on a non-default offset source (its name would collide): refused
-if RUN_KIND == "matrix" and HATTERAS_OFFSET_SOURCE != DEFAULT_OFFSET_SOURCE:
+if RUN_KIND == "matrix" and HATTERAS_OFFSET_SOURCE != RUN_OFFSET_SOURCE:
     raise ValueError(
         f"island offset source is {HATTERAS_OFFSET_SOURCE!r} (not "
-        f"{DEFAULT_OFFSET_SOURCE!r}) but HAT_RUN_KIND is matrix. The run name "
+        f"{RUN_OFFSET_SOURCE!r}) but HAT_RUN_KIND is matrix. The run name "
         f"carries no offset token, so this would overwrite the matrix run it is "
         f"meant to be compared against. Use HAT_RUN_KIND=experiment with "
         f"HAT_RUN_TAG=<name>.")
