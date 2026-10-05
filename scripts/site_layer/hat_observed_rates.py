@@ -269,6 +269,31 @@ def mean_shoreline_csv(start, end) -> Path:
     dates it spans, and the geolocated mean point."""
     label = mean_shoreline_label(start, end)
     return mean_shoreline_dir(start, end) / "transect_means_{0}.csv".format(label)
+# The net-change target per model period: (start window, end window) of CoastSat means, ISO dates
+# DEM to DEM since 2026-10-05. Starts are +/-1 yr of the DEM midpoint (1996-10-12, 2009-08-17); the
+# calibration end IS the test start; the test end is 2025-08-17 +/-6 months, because CoastSat stops 2026-01-13
+NET_CHANGE_WINDOWS = {
+    (1996, 2009): (("1995-10-12", "1997-10-12"), ("2008-08-17", "2010-08-17")),
+    (2009, 2025): (("2008-08-17", "2010-08-17"), ("2025-02-17", "2026-02-17")),
+}
+# The dates each window is centred on, for the interval between the two means
+NET_CHANGE_CENTRES = {
+    (1996, 2009): ("1996-10-12", "2009-08-17"),
+    (2009, 2025): ("2009-08-17", "2025-08-17"),
+}
+NET_CHANGE_ROOT = COASTSAT_RATES / "net_change"
+
+
+def net_change_dir(start, end) -> Path:
+    """One model period's observed net change: <start>_<end>/ under coastsat/net_change."""
+    return NET_CHANGE_ROOT / f"{int(start)}_{int(end)}"
+
+
+def net_change_domain_csv(start, end) -> Path:
+    """Per GIS domain: transect count, raw mean net change and its 7-domain LOWESS, seaward +."""
+    return net_change_dir(start, end) / f"domain_net_change_{int(start)}_{int(end)}.csv"
+
+
 # The four windows on one y axis (coastsat_lrr_windows.py)
 COASTSAT_LRR_WINDOWS = COASTSAT_LRR_ROOT
 # Two-window comparison figures; outputs deleted as stale

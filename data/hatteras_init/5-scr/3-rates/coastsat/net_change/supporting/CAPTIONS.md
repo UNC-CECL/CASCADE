@@ -1,0 +1,5 @@
+# Captions — net_change
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`coastsat_net_change_both_periods.png`.** Observed net shoreline change per GIS domain for the two model periods. (a) Calibration period 1996-2009: the CoastSat mean over 2008-08-17 to 2010-08-17 (centred on 2009-08-17) minus the mean over 1995-10-12 to 1997-10-12 (centred on 1996-10-12), 12.85 yr apart; the model runs 13 years, 1 Jan 1996 to 1 Jan 2009. (b) Test period 2009-2025: the CoastSat mean over 2025-02-17 to 2026-02-17 (centred on 2025-08-17) minus the mean over 2008-08-17 to 2010-08-17 (centred on 2009-08-17), 16.00 yr apart; the model runs 16 years, 1 Jan 2009 to 1 Jan 2025. CoastSat stops on 2026-01-13, so the end mean actually spans 2025-02-17 to 2026-01-13. The calibration end window and the test start window are the same mean. Pale: domain means; dark: 7-domain LOWESS, GIS 1-10 raw. Seaward positive. Beyond ±100 m, off the axis and marked with a triangle at the edge: domain means +158 m at GIS 1; LOWESS +158 m at GIS 1.

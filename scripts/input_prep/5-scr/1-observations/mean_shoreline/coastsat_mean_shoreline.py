@@ -64,12 +64,12 @@ SURVEY_ANCHORS = {
                 "1996 start's topography (`1984-start`) is built on"),
     },
     "usace_2009": {
-        "period_start": 2010,
+        "period_start": 2009,
         "survey": "2009 USACE NCMP topobathy lidar (CHARTS)",
         "flown": ("2009-08-10", "2009-08-24"),
         "centre": "2009-08-17",
         "source": "NOAA InPort item 54934, https://www.fisheries.noaa.gov/inport/item/54934",
-        "dem": ("`0-elevation/2009-2014`, the 2010 start's topography (`2004-start`): "
+        "dem": ("`0-elevation/2009-2014`, the 2009 start's topography (`2004-start`): "
                 "2009 USACE wherever it measured, 2014 Post-Sandy only in its nodata"),
     },
 }
