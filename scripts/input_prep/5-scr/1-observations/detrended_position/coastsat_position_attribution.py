@@ -8,7 +8,7 @@ Writes the test tables and figures beside the detrended position. Details: scrip
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-23
+Version: 2026-10-01
 """
 
 import sys
@@ -208,14 +208,91 @@ def draw(nourish_split, dune, quarters, by_domain, out_dir):
         "that interval carry about +13.6 m more CoastSat-minus-dune; it "
         "carries 9.7 m less. (c) the step by domain: a sensor or waterline "
         "bias applies one offset everywhere, but this spreads from "
-        "−11.9 to +71.5 m with eight domains stepping landward, while "
+        "{lo:+.1f} to {hi:+.1f} m with {n_land} domains stepping landward, while "
         "transects inside a domain agree to 2.8 m. The two tests not drawn are "
         "in attribution_tests.csv: per-transect noise (rejected) and the "
         "seasonal sampling mix (rejected). The verdict is that the step is "
         "real, so the grading target's sensitivity to 2021–2024 is a "
         "question about which period the model should represent, not about "
-        "which data to trust."
+        "which data to trust.".format(lo=s.min(), hi=s.max(), n_land=int((s < 0).sum()))
     )
+    return paths[0]
+
+
+# The step per domain from single years, all before the 2022 fills
+def step_by_domain_prefill(M, dom):
+    D = M.T.groupby(dom.to_numpy()).mean().T
+    out = pd.DataFrame({
+        "domain_number": D.columns.astype(int),
+        "step_2020_2021_m": (D.loc[2021] - D.loc[2020]).round(2).to_numpy(),
+        "step_2019_2021_m": (D.loc[2021] - D.loc[2019]).round(2).to_numpy(),
+    })
+    out["nourished"] = out["domain_number"].isin(NOURISHED_DOMAINS)
+    return out
+
+
+# The 2021 step on its own: when, and where before any 2022 sand
+def draw_step(M, dom, prefill, out_dir):
+    fs.apply_style()
+    fig, (ax, bx) = plt.subplots(2, 1, figsize=fs.figsize("double", height=5.6),
+                                 layout="constrained", gridspec_kw=dict(height_ratios=[1, 1.1]))
+    years = M.index.to_numpy()
+    touched = dom.isin(NOURISHED_DOMAINS).to_numpy()
+
+    # (a) the island mean through time, never-nourished and nourished apart
+    ax.axvspan(2020, 2021, color=fs.C["INK_MUTED"], alpha=0.15, lw=0, zorder=1)
+    ax.axhline(0.0, color=fs.C["INK"], lw=0.8, zorder=2)
+    ax.plot(years, M.loc[:, ~touched].mean(axis=1), color=fs.C["LATE"], lw=1.4,
+            marker="o", ms=3, zorder=4, label="never nourished ({0})".format(int((~touched).sum())))
+    ax.plot(years, M.loc[:, touched].mean(axis=1), color=fs.C["ADDED"], lw=1.4,
+            marker="o", ms=3, zorder=3, label="nourished domains ({0})".format(int(touched.sum())))
+    for name, (year, _) in NOURISHED.items():
+        ax.axvline(year, color=fs.C["ADDED"], lw=0.7, ls=(0, (3, 2)), zorder=2)
+    jump = float(M.loc[2021].mean() - M.loc[2020].mean())
+    ax.annotate("{0:+.1f} m\n2020 → 2021".format(jump), xy=(2019.8, 11.0), ha="right",
+                fontsize=8, color=fs.INK)
+    ax.set_xlim(years.min() - 0.5, years.max() + 0.5)
+    ax.set_ylabel("position from own\n1996–2024 trend (m)")
+    ax.set_xlabel("year")
+    fs._title(ax, 0, "The island moves seaward in one year, a year before the 2022 fills")
+    ax.legend(loc="upper left")
+    ax.grid(True, axis="y", alpha=0.6)
+
+    # (b) the step per domain, from years before any 2022 sand
+    x = prefill["domain_number"].to_numpy()
+    colours = [fs.C["ADDED"] if n else fs.C["LATE"] for n in prefill["nourished"]]
+    bx.bar(x, prefill["step_2020_2021_m"], width=0.85, color=colours, lw=0, zorder=3)
+    bx.plot(x, prefill["step_2019_2021_m"], ls="none", marker="o", ms=2.6,
+            color=fs.C["INK"], zorder=4)
+    bx.axhline(0.0, color=fs.C["INK"], lw=0.8, zorder=2)
+    bx.set_xlim(0.5, 90.5)
+    fs.town_bands(bx, label=True)
+    bx.set_xlabel("GIS domain (south → north)")
+    bx.set_ylabel("step (m)")
+    fs._title(bx, 1, "Where: seaward almost everywhere, before any 2022 sand")
+    bx.legend(handles=[
+        Line2D([], [], color=fs.C["LATE"], lw=6, label="2020 → 2021"),
+        Line2D([], [], color=fs.C["ADDED"], lw=6, label="2020 → 2021, later nourished"),
+        Line2D([], [], color=fs.C["INK"], ls="none", marker="o", ms=4,
+               label="2019 → 2021 (skips thin 2020)")],
+        loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3)
+    bx.grid(True, axis="y", alpha=0.6)
+
+    paths = fs.save(fig, Path(out_dir) / "detrended_position_2021_step", close=True)
+    s1 = prefill["step_2020_2021_m"]
+    fs.record_caption(paths[0],
+        "The 2021 step on its own. (a) CoastSat position against each "
+        "transect's own 1996–2024 trend, averaged over the never-nourished "
+        "transects (blue) and the transects in later-nourished domains (amber); "
+        "dashed lines are fill years. Both groups jump together between 2020 and "
+        "2021 (shaded), a year before the 2022 Buxton and Avon fills, and stay "
+        "seaward through 2024. (b) the step per domain from single years that "
+        "are all before the 2022 fills: bars are 2021 minus 2020, dots are 2021 "
+        "minus 2019, which skips the thinly sampled, most landward 2020. Unlike "
+        "the 2021–2024 step in detrended_position.png, no fill sand is in it. "
+        "Median {med:+.1f} m, {n_land} of 90 domains landward. Values in "
+        "step_2021_by_domain_prefill.csv.".format(
+            med=float(s1.median()), n_land=int((s1 < 0).sum())))
     return paths[0]
 
 
@@ -273,6 +350,9 @@ def main():
     ])
     tests.to_csv(out_dir / "attribution_tests.csv", index=False)
     draw(split, dune, quarters, by_domain, out_dir)
+    prefill = step_by_domain_prefill(M, dom)
+    prefill.to_csv(out_dir / "step_2021_by_domain_prefill.csv", index=False)
+    draw_step(M, dom, prefill, out_dir)
 
     print(tests[["test", "verdict"]].to_string(index=False))
     print("\n" + dune.to_string(index=False))

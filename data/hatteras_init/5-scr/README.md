@@ -25,7 +25,7 @@ runs (2026-09-18):
                              averaged, plus the five tests of what causes the
                              2021 step. Not a rate and not a model input -- it
                              explains a result in 3-rates/coastsat/
-                             window_convergence/ (2026-09-23)
+                             window_convergence_1996_2024/ (2026-09-23)
     shoreline_inventory/     study-area and reference shorelines
 2-transect-frame/
     transect_domains/        the transect-to-domain lookup, the transect layer,
@@ -42,16 +42,21 @@ runs (2026-09-18):
                              dune-line dates, m and m/yr (2026-09-18)
         5yr_bins/<window>/   the OLS in successive 5-year bins, 1996_2010
                              2010_2024 1996_2024 (rebuilt 2026-09-18)
-        window_convergence/  WHICH WINDOWS recover the long-term rate? The
+        window_convergence_1996_2026/  the same 1-/2-/3- on the record through Jan 2026
+                             (2026-10-02); 1996_2024 below is the original
+        window_convergence_1996_2024/  WHICH WINDOWS recover the long-term rate? The
             1-rate_profiles/     same OLS on NESTED families of windows, one
-            2-settling_window/   pinned at each end: forward walks the END out
+            2-r_bias_rmse/       pinned at each end: forward walks the END out
+            3-settling_window/
                              (1996-2000 ... 1996-2024), backward walks the
                              START back (2020-2024 ... 1996-2024). Both
                              converge on the 1996-2024 rate from opposite
                              sides, so the pair BRACKETS the answer. Split by
-                             question (2026-09-29): 1-rate_profiles/ (does the
-                             whole alongshore profile match? r per window) and
-                             2-settling_window/ (when does each location settle?
+                             question (2026-09-29, 10-01): 1-rate_profiles/ (what
+                             each window's alongshore profile looks like),
+                             2-r_bias_rmse/ (how close each profile is: r, bias,
+                             RMSE with 95% domain-bootstrap intervals) and
+                             3-settling_window/ (when does each location settle?
                              a-eight_sites/, b-every_transect/, c-domain_means/).
                              The record-cut-at-2020 experiment was deleted
                              2026-09-29 (--ref-end 2020 regenerates it). Not a
@@ -172,8 +177,9 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py` | `3-rates/coastsat/5yr_bins/` |
 | `1-observations/detrended_position/coastsat_detrended_position.py` | `1-observations/detrended_position/` (the index, the matrix, the alongshore step) |
 | `1-observations/detrended_position/coastsat_position_attribution.py` | `1-observations/detrended_position/attribution_*` (five tests, verdicts included) |
-| `3-rates/coastsat/window_convergence/coastsat_window_convergence.py` | `3-rates/coastsat/window_convergence/2-settling_window/<direction>_from_<year>/{a-eight_sites,b-every_transect,c-domain_means}/` (tables and its own figures); `--ref-end 2020` → `experiments/record_cut_2020/` (deleted 2026-09-29, regenerable) |
-| `3-rates/coastsat/window_convergence/coastsat_window_profiles.py` | `3-rates/coastsat/window_convergence/1-rate_profiles/<direction>_from_<year>/` (profile per window, r against 1996–2024) |
+| `3-rates/coastsat/window_convergence/coastsat_window_convergence.py` | `3-rates/coastsat/window_convergence_1996_2024/3-settling_window/<direction>_from_<year>/{a-eight_sites,b-every_transect,c-domain_means}/` (tables and its own figures); `--ref-end 2020` → `experiments/record_cut_2020/` (deleted 2026-09-29, regenerable) |
+| `3-rates/coastsat/window_convergence/coastsat_window_profiles.py` | `3-rates/coastsat/window_convergence_1996_2024/1-rate_profiles/<direction>_from_<year>/` (every window's fit and profile figures) |
+| `3-rates/coastsat/window_convergence/coastsat_window_r_bias_rmse.py` | `3-rates/coastsat/window_convergence_1996_2024/2-r_bias_rmse/` (r, bias, RMSE per window against 1996–2024; reads the profiles' fits) |
 | `3-rates/duneline/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `3-rates/coastsat/endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
 | `3-rates/coastsat/total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |

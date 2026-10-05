@@ -10,10 +10,11 @@ site, against tolerances; writes the sweeps, the convergence years and figures. 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-02
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -40,7 +41,8 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 # THE RECORD THE SWEEP MAY SEE, and the two pins
-REF_START, REF_END = 1996, 2024
+# HAT_WINDOW_REF_END=2026 runs every window_convergence script on 1996-2026 (Hannah, 2026-10-02)
+REF_START, REF_END = 1996, int(os.environ.get("HAT_WINDOW_REF_END", 2024))
 
 # The shortest window either sweep fits
 MIN_WINDOW_YEARS = 5
@@ -80,8 +82,25 @@ HEADLINE_TAGS = ["ci", "ci3x", "abs50", "overlap", "abs100"]
 HEADLINE_TAG = "overlap"
 HEADLINE_LABEL = "CI overlap"
 
-# THE MARKED YEAR, and it is the same number in both directions because in both it names a real model window
-MARKED_YEAR = 2010
+# THE MODEL WINDOWS, per reference record: the window each direction marks
+# 1996-2015 and 2010-2026 from 2026-10-02 on (Hannah); 1996-2010 / 2010-2024 before
+MODEL_WINDOWS = {
+    2024: {"forward": (1996, 2010), "backward": (2010, 2024)},
+    2026: {"forward": (1996, 2015), "backward": (2010, 2026)},
+}
+
+
+# The model window for a direction on the current record, or None when it has none
+def model_window(direction, ref_end=None):
+    return MODEL_WINDOWS.get(REF_END if ref_end is None else ref_end, {}).get(direction)
+
+
+# The marked window's moving year: forward its end, backward its start
+def marked_year(direction, ref_end=None):
+    w = model_window(direction, ref_end)
+    if w is None:
+        return None
+    return w[1] if direction == "forward" else w[0]
 
 # THE FIGURES DO NOT SINGLE OUT THE MODEL WINDOW for now (Hannah, 2026-09-29)
 HIGHLIGHT_MODEL_WINDOW = False
@@ -243,7 +262,7 @@ def summarise(sweep, direction):
     for (domain, tid), sub in sweep.groupby(["domain_number", "unit_id"], sort=False):
         sub = sub.sort_values("n_years")
         ref = sub.iloc[-1]
-        marked = sub[sub["moving_year"] == MARKED_YEAR]
+        marked = sub[sub["moving_year"] == marked_year(direction)]
         marked = marked.iloc[0] if len(marked) else None
         row = {
             "domain_number": domain,
@@ -390,7 +409,7 @@ def draw_fits(sweep, summary, out_dir, direction):
             t1 = pd.Timestamp(row.last_obs, tz="UTC")
             span = (t1 - t0).total_seconds() / (86400.0 * 365.25)
             y0, y1 = row.intercept_m, row.intercept_m + row.lrr_m_yr * span
-            if row.moving_year == MARKED_YEAR and HIGHLIGHT_MODEL_WINDOW:
+            if row.moving_year == marked_year(direction) and HIGHLIGHT_MODEL_WINDOW:
                 colour, lw, z = fs.C["ADDED"], 2.0, 8
             elif row.n_years == REF_END - REF_START + 1:
                 colour, lw, z = fs.C["ACCENT"], 2.0, 9
@@ -403,7 +422,7 @@ def draw_fits(sweep, summary, out_dir, direction):
                     solid_capstyle="round")
 
             # Forward only: where the marked window's record would put 2024.
-            if (row.moving_year == MARKED_YEAR and direction == "forward"
+            if (row.moving_year == marked_year(direction) and direction == "forward"
                     and HIGHLIGHT_MODEL_WINDOW):
                 far = (x1 - t0).total_seconds() / (86400.0 * 365.25)
                 ax.plot([t1, x1], [y1, y0 + row.lrr_m_yr * far],
@@ -435,7 +454,7 @@ def draw_fits(sweep, summary, out_dir, direction):
 
     others = ", ".join(str(y) for y in drawn
                        if y != pinned_year(direction)
-                       and (y != MARKED_YEAR or not HIGHLIGHT_MODEL_WINDOW)
+                       and (y != marked_year(direction) or not HIGHLIGHT_MODEL_WINDOW)
                        and y != (REF_END if direction == "forward" else REF_START))
     handles = [
         Line2D([], [], color="none", marker="o", ms=3.5, mfc=fs.C["BASE"],
@@ -450,7 +469,7 @@ def draw_fits(sweep, summary, out_dir, direction):
     if HIGHLIGHT_MODEL_WINDOW:
         handles.insert(3, Line2D([], [], color=fs.C["ADDED"], lw=2.0,
                                  label="{0}, the marked window".format(
-                                     window_label(direction, MARKED_YEAR))))
+                                     window_label(direction, marked_year(direction)))))
     if direction == "forward" and HIGHLIGHT_MODEL_WINDOW:
         handles.insert(4, Line2D([], [], color=fs.C["ADDED"], lw=1.2,
                                  ls=(0, (3, 2.2)),
@@ -464,7 +483,7 @@ def draw_fits(sweep, summary, out_dir, direction):
     pinned = "starts" if direction == "forward" else "ends"
     extra = ("The amber dash continues the marked fit to {0} — what "
              "{1} calendar years of record would have had you believe about {0}. "
-             .format(REF_END, MARKED_YEAR - REF_START + 1)
+             .format(REF_END, marked_year(direction) - REF_START + 1)
              if direction == "forward" else "")
     if not HIGHLIGHT_MODEL_WINDOW:
         fs.record_caption(paths[0],
@@ -496,7 +515,7 @@ def draw_fits(sweep, summary, out_dir, direction):
         "widest disagreement is GIS {7:.0f}, where the marked window gives "
         "{8:+.2f} m/yr against the reference's {9:+.2f}."
         .format(REF_START, REF_END, len(moving_all), pinned,
-                pinned_year(direction), window_label(direction, MARKED_YEAR),
+                pinned_year(direction), window_label(direction, marked_year(direction)),
                 extra, worst["domain_number"], worst["lrr_marked_m_yr"],
                 worst["ref_lrr_m_yr"]))
     return paths[0]
@@ -540,7 +559,6 @@ def draw_years_needed(ref_start, ref_end):
         spans = {}
     fig, axes = plt.subplots(2, 1, figsize=fs.figsize("double", height=6.4),
                              sharex=True, layout="constrained")
-    marked_years = MARKED_YEAR - ref_start + 1
     out_dir = None
     notes = []
     for i, direction in enumerate(("forward", "backward")):
@@ -551,10 +569,9 @@ def draw_years_needed(ref_start, ref_end):
                         / "convergence_summary_all_transects.csv")
         s["x"] = s["transect_id"].map(xmap)
         s = s.sort_values("x")
-        years = (marked_years if direction == "forward"
-                 else ref_end - MARKED_YEAR + 1)
-        model = ("{0}–{1}".format(ref_start, MARKED_YEAR) if direction == "forward"
-                 else "{0}–{1}".format(MARKED_YEAR, ref_end))
+        mw = model_window(direction, ref_end)
+        years = mw[1] - mw[0] + 1
+        model = "{0}–{1}".format(*mw)
         ax = axes[i]
         below = np.zeros(len(s))
         fracs = []
@@ -613,8 +630,8 @@ def draw_years_needed(ref_start, ref_end):
         "numbers are given beneath it. Village spans are shaded.".format(n=len(xmap), rs=ref_start, re=ref_end,
                                    full=ref_end - ref_start + 1,
                                    model=("The amber line is the model's "
-                                          "15-year window; where a band rises "
-                                          "above it, 15 years was not enough at "
+                                          "window; where a band rises "
+                                          "above it, that window was not long enough at "
                                           "that threshold. The percentages are "
                                           "the share of transects where it was. "
                                           if HIGHLIGHT_MODEL_WINDOW else "")))
@@ -670,9 +687,8 @@ CoastSat record **{ref_start}–{ref_end}**. {record_note}
 Both directions converge on the same reference, the {ref_start}–{ref_end}
 rate, and that reference is the longest window of each sweep — fitted in
 the same loop as every other window, so it cannot drift from a stored product.
-The marked year {marked} is a real model window in both: forward it is
-{ref_start}–{marked}, the window the model is graded on, and backward it is
-{marked}–{ref_end}, the second leg of the canonical chain.
+Each direction marks a real model window: forward it is {model_fwd}, the
+first leg of the model chain, and backward it is {model_bwd}, the second leg.
 
 The figure for this sweep is `../years_needed_alongshore.png` (both
 directions, one panel each).
@@ -827,7 +843,7 @@ def findings_text(summary, direction, scale="sites"):
             "Against {0}, {1} of {2} {3} ({4:.0f}%) have their {5} rate already "
             "inside the band; the median convergence window is {6}."
             .format(label, n_ok, n, unit, 100.0 * n_ok / n,
-                    window_label(direction, MARKED_YEAR),
+                    window_label(direction, marked_year(direction)),
                     window_label(direction, summary["stable_entry_" + tag].median())))
     wandered = int((summary["first_entry_" + HEADLINE_TAG]
                     != summary["stable_entry_" + HEADLINE_TAG]).sum())
@@ -841,7 +857,7 @@ def findings_text(summary, direction, scale="sites"):
         "{0} of {1} {2} ({3:.0f}%) change SIGN between the {4} window and the "
         "reference — erosional over one and accretional over the other."
         .format(flips, n, unit, 100.0 * flips / n,
-                window_label(direction, MARKED_YEAR)))
+                window_label(direction, marked_year(direction))))
     worst = summary.loc[summary["diff_marked_m_yr"].abs().idxmax()]
     # The transect id only adds something when the unit IS a transect
     named = ("GIS {0:.0f}".format(worst["domain_number"]) if scale == "domains"
@@ -850,7 +866,7 @@ def findings_text(summary, direction, scale="sites"):
     lines.append(
         "The largest {0} error is {1} at {2:+.2f} m/yr against a reference of "
         "{3:+.2f} m/yr."
-        .format(window_label(direction, MARKED_YEAR), named,
+        .format(window_label(direction, marked_year(direction)), named,
                 worst["diff_marked_m_yr"], worst["ref_lrr_m_yr"]))
     return "\n".join("- " + ln for ln in lines)
 
@@ -929,7 +945,7 @@ def one_direction(direction, domains_for_sites, scale, today):
                                     summary_all["stable_entry_" + HEADLINE_TAG].median()),
                                 len(summary_all),
                                 100.0 * summary_all["marked_in_" + HEADLINE_TAG].mean(),
-                                window_label(direction, MARKED_YEAR),
+                                window_label(direction, marked_year(direction)),
                                 HEADLINE_LABEL))
 
         if scale in ("domains", "every"):
@@ -954,7 +970,7 @@ def one_direction(direction, domains_for_sites, scale, today):
                                     dom_summary["stable_entry_" + HEADLINE_TAG].median()),
                                 len(dom_summary),
                                 100.0 * dom_summary["marked_in_" + HEADLINE_TAG].mean(),
-                                window_label(direction, MARKED_YEAR),
+                                window_label(direction, marked_year(direction)),
                                 window_label(
                                     direction,
                                     summary_all["stable_entry_" + HEADLINE_TAG].median()),
@@ -964,8 +980,11 @@ def one_direction(direction, domains_for_sites, scale, today):
     root.mkdir(parents=True, exist_ok=True)
     (root / "README.md").write_text(DIRECTION_README.format(
         folder=folder, headline=title, direction=direction, today=today,
-        ref_start=REF_START, ref_end=REF_END, marked=MARKED_YEAR,
-        record_note=RECORD_NOTE_FULL if (REF_START, REF_END) == (1996, 2024)
+        ref_start=REF_START, ref_end=REF_END,
+        model_fwd="{0}–{1}".format(*model_window("forward")),
+        model_bwd="{0}–{1}".format(*model_window("backward")),
+        record_note=RECORD_NOTE_FULL
+        if (REF_START, REF_END) == (1996, 2024) or obs._extends_record(REF_START, REF_END)
         else RECORD_NOTE_CUT.format(ref_start=REF_START, ref_end=REF_END),
         first=REF_START + MIN_WINDOW_YEARS - 1,
         last=REF_END - MIN_WINDOW_YEARS + 1,
@@ -1029,7 +1048,7 @@ def main(argv=None):
         print("wrote {0}".format(path))
         for d, note in notes:
             print("  {0:>8}: {1}".format(d, note))
-        full = (REF_START, REF_END) == (1996, 2024)
+        full = (REF_START, REF_END) == (1996, 2024) or obs._extends_record(REF_START, REF_END)
         (path.parent / "README.md").write_text(SETTLING_README.format(
             title=("3-settling_window — how many years does each place need?"
                    if full else
@@ -1037,8 +1056,8 @@ def main(argv=None):
                    "{1}–{2}".format(path.parent.name, REF_START, REF_END)),
             rs=REF_START, re=REF_END, rs1=REF_START + MIN_WINDOW_YEARS - 1,
             re4=REF_END - MIN_WINDOW_YEARS + 1, full=REF_END - REF_START + 1,
-            flag="" if full else " --ref-end {0}".format(REF_END),
-            amber=(" The amber line is the model's 15-year window."
+            flag="" if REF_END == 2024 else " --ref-end {0}".format(REF_END),
+            amber=(" The amber line is the model window."
                    if HIGHLIGHT_MODEL_WINDOW else ""),
             notes="\n".join("- **{0}**: {1}".format(
                 "(a) forward" if d == "forward" else "(b) backward", n)

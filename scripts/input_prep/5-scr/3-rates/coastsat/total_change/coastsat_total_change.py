@@ -11,7 +11,7 @@ figures, tables and provenance per window, raw and smoothed. Details: scripts/in
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-03
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ class Product:
 # Each window's own rate over its own years. Nothing is extrapolated.
 TOTAL = Product(
     "total_change", "Total shoreline change", "total", COASTSAT_TOTAL_CHANGE_ROOT,
-    [(1996, 2024), (1996, 2010), (2010, 2024)],
+    [(1996, 2024), (1996, 2010), (2010, 2024), (1996, 2015), (2010, 2026)],
     rate_window=lambda s, e: (s, e),
     method=lambda s, e: f"CoastSat LRR {s}–{e} × {e - s} yr",
 )

@@ -76,7 +76,7 @@ coastsat_position_attribution.py
     refits nothing.
 ```
 
-Built 2026-09-23, out of `3-rates/coastsat/window_convergence/`.
+Built 2026-09-23, out of `3-rates/coastsat/window_convergence_1996_2024/`.
 
 ## The scripts in detail
 
@@ -99,7 +99,7 @@ one value a year (the annual median position), and average across all 906. Any
 signal that survives that averaging is common to the island, because anything
 local is incoherent between transects and cancels.
 
-WHY IT WAS BUILT (2026-09-23). `3-rates/coastsat/window_convergence/` found
+WHY IT WAS BUILT (2026-09-23). `3-rates/coastsat/window_convergence_1996_2024/` found
 that no window shorter than about 25 years recovers the long-term rate, and
 that the answer barely varies between transects -- a transect with a fast clean
 trend needs as long as a slow noisy one. A per-transect explanation cannot

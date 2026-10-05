@@ -95,7 +95,8 @@ COASTSAT_TOTAL_CHANGE_ROOT = COASTSAT_RATES / "total_change"
 COASTSAT_PROJECTED_ROOT = COASTSAT_RATES / "projected"
 PROJECTED_RATE_WINDOW = (1996, 2024)
 # Window convergence: nested windows walking toward 1996-2024 from both sides
-COASTSAT_WINDOW_CONVERGENCE_ROOT = COASTSAT_RATES / "window_convergence"
+# Renamed from window_convergence/ 2026-10-02, when the 1996-2026 sibling arrived
+COASTSAT_WINDOW_CONVERGENCE_ROOT = COASTSAT_RATES / "window_convergence_1996_2024"
 
 
 # Question first: 1-rate_profiles, 2-r_bias_rmse, 3-settling_window, experiments
@@ -113,6 +114,22 @@ SETTLING_SCALE_DIRS = {
     "all": "b-every_transect",
     "domains": "c-domain_means",
 }
+
+
+def window_convergence_root(ref_start=1996, ref_end=2024) -> Path:
+    """The window-convergence tree for one reference record. 1996-2024 is
+    `window_convergence_1996_2024/`; a record that runs PAST 2024 gets its own sibling
+    tree with the same 1-/2-/3- layout, `window_convergence_<start>_<end>/`
+    (1996-2026, Hannah 2026-10-02). A record cut short stays an experiment
+    under the 1996-2024 tree (see window_convergence_dir)."""
+    ref_start, ref_end = int(ref_start), int(ref_end)
+    if (ref_start, ref_end) == (1996, 2024):
+        return COASTSAT_WINDOW_CONVERGENCE_ROOT
+    return COASTSAT_RATES / "window_convergence_{0}_{1}".format(ref_start, ref_end)
+
+
+def _extends_record(ref_start, ref_end):
+    return int(ref_start) == 1996 and int(ref_end) > 2024
 
 
 def window_convergence_dir(direction, anchor_year,
@@ -139,8 +156,8 @@ def window_convergence_dir(direction, anchor_year,
     """
     _check_direction(direction)
     ref_start, ref_end = int(ref_start), int(ref_end)
-    if (ref_start, ref_end) == (1996, 2024):
-        base = COASTSAT_WINDOW_CONVERGENCE_ROOT / SETTLING_WINDOW_DIR
+    if (ref_start, ref_end) == (1996, 2024) or _extends_record(ref_start, ref_end):
+        base = window_convergence_root(ref_start, ref_end) / SETTLING_WINDOW_DIR
     else:
         record = ("record_cut_{0}".format(ref_end) if ref_start == 1996
                   else "record_{0}_{1}".format(ref_start, ref_end))
@@ -148,19 +165,20 @@ def window_convergence_dir(direction, anchor_year,
     return base / "{0}_from_{1}".format(direction, int(anchor_year))
 
 
-def window_profiles_dir(direction, anchor_year) -> Path:
-    """One rate-profile family's folder, under `1-rate_profiles/`. Full
-    1996-2024 record only; the profiles have no truncated experiment."""
+def window_profiles_dir(direction, anchor_year, ref_start=1996, ref_end=2024) -> Path:
+    """One rate-profile family's folder, under `1-rate_profiles/` of the
+    record's tree; the profiles have no truncated experiment."""
     _check_direction(direction)
-    return (COASTSAT_WINDOW_CONVERGENCE_ROOT / WINDOW_PROFILES_DIR
+    return (window_convergence_root(ref_start, ref_end) / WINDOW_PROFILES_DIR
             / "{0}_from_{1}".format(direction, int(anchor_year)))
 
 
-def window_scores_dir(direction=None, anchor_year=None) -> Path:
-    """The r / bias / RMSE scores of the rate profiles, under `2-r_bias_rmse/`:
-    the folder itself (both directions together) or, given a direction, that
-    direction's folder. Full 1996-2024 record only."""
-    base = COASTSAT_WINDOW_CONVERGENCE_ROOT / WINDOW_SCORES_DIR
+def window_scores_dir(direction=None, anchor_year=None,
+                      ref_start=1996, ref_end=2024) -> Path:
+    """The r / bias / RMSE scores of the rate profiles, under `2-r_bias_rmse/`
+    of the record's tree: the folder itself (both directions together) or,
+    given a direction, that direction's folder."""
+    base = window_convergence_root(ref_start, ref_end) / WINDOW_SCORES_DIR
     if direction is None:
         return base
     _check_direction(direction)

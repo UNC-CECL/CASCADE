@@ -1,0 +1,457 @@
+<title>Hatteras Split Windows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a tall island map on the left picks the transect; the position-through-time chart fills the right, cutoff control above it. */
+:root {
+  --bg: #f5f7f8;
+  --panel: #ffffff;
+  --ink: #1c2329;
+  --muted: #5a6670;
+  --rule: #d6dde2;
+  --pts: #8b959d;
+  --median: #4b555e;
+  --whole: #7b3294;
+  --first: #b2182b;
+  --second: #2166ac;
+  --focus: #c8880f;
+  --sand: #e9e2d0;
+  --water: #e9eff4;
+  --land: #ede9df;
+  --land-edge: #8c8c8c;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12171b; --panel: #1a2126; --ink: #e4e9ec; --muted: #9aa6af; --rule: #303a41;
+    --pts: #77838c; --median: #c2cbd1; --whole: #c48ddb; --first: #ef7a72; --second: #6eaeea;
+    --focus: #e3a83a; --sand: #3a3529; --water: #17222b; --land: #3a3a33; --land-edge: #6f6f66; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12171b; --panel: #1a2126; --ink: #e4e9ec; --muted: #9aa6af; --rule: #303a41;
+  --pts: #77838c; --median: #c2cbd1; --whole: #c48ddb; --first: #ef7a72; --second: #6eaeea;
+  --focus: #e3a83a; --sand: #3a3529; --water: #17222b; --land: #3a3a33; --land-edge: #6f6f66; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 22px 32px; display: grid; gap: 18px; }
+header h1 { font-size: 1.45rem; font-weight: 600; margin: 0 0 4px; text-wrap: balance; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); max-width: 72ch; }
+.layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 18px; align-items: start; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+.map { padding: 10px; display: grid; gap: 8px; }
+.map canvas { width: 100%; height: 620px; display: block; cursor: crosshair; }
+.label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+.legendbar { height: 8px; border-radius: 2px; }
+.legendticks { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 0.7rem; color: var(--muted); }
+select, button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 8px; }
+button { cursor: pointer; }
+button:hover { border-color: var(--muted); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.main { display: grid; gap: 14px; min-width: 0; }
+.controls { padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: end; }
+.ctl { display: grid; gap: 5px; min-width: 0; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+#transect { max-width: 260px; }
+.cut { display: flex; gap: 10px; align-items: center; }
+#cutoff { width: 220px; max-width: 50vw; accent-color: var(--ink); }
+#cutval { font-family: var(--font-data); font-size: 1.05rem; font-weight: 500; min-width: 3.2em; }
+.quick button { font-family: var(--font-data); font-size: 0.8rem; padding: 3px 7px; }
+.quick button[aria-pressed="true"] { border-color: var(--ink); font-weight: 500; }
+.chart { padding: 12px 14px 6px; }
+.chart h2 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+.chart .sub { color: var(--muted); font-size: 0.82rem; }
+.chartbox { width: 100%; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.axis text { fill: var(--muted); font-family: var(--font-data); font-size: 11px; }
+.axis line, .axis path { stroke: var(--rule); }
+.rates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--rule); }
+.rate { padding: 10px 14px; display: grid; gap: 2px; border-right: 1px solid var(--rule); min-width: 0; }
+.rate:last-child { border-right: 0; }
+.rate .name { font-size: 0.8rem; color: var(--muted); display: flex; gap: 7px; align-items: center; }
+.swatch { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+.rate .v { font-family: var(--font-data); font-size: 1.3rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.rate .n { font-family: var(--font-data); font-size: 0.75rem; color: var(--muted); }
+.picks { padding: 12px 14px; display: grid; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.8rem; padding: 4px 9px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: baseline; }
+.chip b { font-weight: 500; }
+.chip span { font-family: var(--font-data); color: var(--muted); font-size: 0.74rem; }
+.chip[aria-current="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.notes { color: var(--muted); font-size: 0.82rem; max-width: 80ch; display: grid; gap: 6px; }
+.notes p { margin: 0; }
+#status { color: var(--muted); }
+.figures { display: grid; gap: 18px; }
+.figures h2 { font-size: 1.15rem; font-weight: 600; margin: 6px 0 0; }
+.fig { margin: 0; padding: 14px; display: grid; gap: 10px; }
+.fig h3 { font-size: 1rem; font-weight: 600; margin: 0; text-wrap: balance; }
+.fig a { display: block; background: #ffffff; border-radius: 4px; }
+.fig img { display: block; width: 100%; height: auto; max-width: 100%; }
+.fig figcaption { color: var(--muted); font-size: 0.84rem; max-width: 95ch; }
+@media (max-width: 760px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .map canvas { height: 300px; }
+  .rates { grid-template-columns: minmax(0, 1fr); }
+  .rate { border-right: 0; border-bottom: 1px solid var(--rule); }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Hatteras shoreline, one transect at a time</h1>
+    <p>CoastSat shoreline position 1996–2024 at each of the 906 transects, with the 1996–2024 rate and the two windows either side of a cutoff year. Pick a transect on the map or from the list, then move the cutoff.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="card map" aria-label="Transect map">
+      <div class="label" id="maplabel">Second minus first window</div>
+      <canvas id="map" tabindex="0" aria-label="Map of transects, coloured by the selected measure. Arrow keys step along the shore."></canvas>
+      <div class="legendbar" id="legendbar"></div>
+      <div class="legendticks"><span id="lt0"></span><span>0</span><span id="lt1"></span></div>
+      <select id="metric" aria-label="Map colour">
+        <option value="diff">Second − first window (m/yr)</option>
+        <option value="whole">1996–2024 rate (m/yr)</option>
+      </select>
+    </aside>
+
+    <div class="main">
+      <div class="card controls">
+        <div class="ctl">
+          <label class="label" for="transect">Transect</label>
+          <div class="row">
+            <button id="prev" type="button" aria-label="Previous transect (south)">◀</button>
+            <select id="transect"></select>
+            <button id="next" type="button" aria-label="Next transect (north)">▶</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <label class="label" for="cutoff">Cutoff year</label>
+          <div class="cut">
+            <input type="range" id="cutoff" min="1999" max="2021" step="1" value="2010">
+            <span id="cutval">2010</span>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label">Jump to</span>
+          <div class="row quick" id="quick"></div>
+        </div>
+      </div>
+
+      <div class="card chart">
+        <div class="row" style="justify-content: space-between">
+          <h2 id="ctitle">Loading the record…</h2>
+          <span class="sub" id="status"></span>
+        </div>
+        <div class="chartbox"><svg id="plot" viewBox="0 0 860 420" role="img" aria-label="Shoreline position through time"></svg></div>
+        <div class="rates">
+          <div class="rate"><span class="name"><i class="swatch" style="background: var(--whole)"></i><span id="nw">1996–2024</span></span><span class="v" id="vw">–</span><span class="n" id="cw"></span></div>
+          <div class="rate"><span class="name"><i class="swatch" style="background: var(--first)"></i><span id="nf">first window</span></span><span class="v" id="vf">–</span><span class="n" id="cf"></span></div>
+          <div class="rate"><span class="name"><i class="swatch" style="background: var(--second)"></i><span id="ns">second window</span></span><span class="v" id="vs">–</span><span class="n" id="cs"></span></div>
+        </div>
+      </div>
+
+      <div class="card picks">
+        <span class="label">The eight transects in the static figures, numbered 1 (Buxton) to 8 (Rodanthe)</span>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="notes">
+        <p>Each line is an ordinary least-squares fit to every raw CoastSat position in its window, drawn over the dates that window saw. The cutoff year belongs to both windows (calendar years, inclusive). Rates are in m/yr, seaward positive, with the 95% interval of the slope. A window with fewer than 10 positions gets no fit.</p>
+        <p>The open circles are the annual median, a guide for the eye only; nothing is fitted to them. Position is CoastSat chainage on an origin that is arbitrary per transect, so compare slopes between transects, not levels.</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="figures" id="figures" hidden aria-labelledby="figs-h">
+    <h2 id="figs-h">Figures</h2>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var D = null, T = [], sel = 0, cutoff = 2010, metric = "diff", mapVals = [];
+  var W = 860, H = 420, M = { l: 52, r: 14, t: 14, b: 34 };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  // Year boundary on the compute_lrr time axis: days since 1 Jan 1996 over 365.25
+  function yb(Y) { return 1996 + (Date.UTC(Y, 0, 1) - Date.UTC(1996, 0, 1)) / 86400000 / 365.25; }
+
+  // OLS slope and the line through the window's mean, calendar years a..b inclusive
+  function fit(tr, a, b) {
+    var lo = yb(a), hi = yb(b + 1), n = 0, st = 0, sx = 0, i;
+    var t = tr.t, x = tr.x;
+    for (i = 0; i < t.length; i++) if (t[i] >= lo && t[i] < hi) { n++; st += t[i]; sx += x[i]; }
+    if (n < D.min_obs) return { n: n };
+    var mt = st / n, mx = sx / n, stt = 0, stx = 0, sxx = 0, t0 = Infinity, t1 = -Infinity;
+    for (i = 0; i < t.length; i++) if (t[i] >= lo && t[i] < hi) {
+      var dt = t[i] - mt, dx = x[i] - mx;
+      stt += dt * dt; stx += dt * dx; sxx += dx * dx;
+      if (t[i] < t0) t0 = t[i]; if (t[i] > t1) t1 = t[i];
+    }
+    var s = stx / stt, sse = Math.max(sxx - s * stx, 0), dof = n - 2;
+    var se = Math.sqrt(sse / dof / stt);
+    var tq = 1.96 + 2.4 / dof;  // close to the t quantile for dof > 20
+    return { n: n, s: s, ci: tq * se, mt: mt, mx: mx, t0: t0, t1: t1 };
+  }
+
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  function fmt(v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2); }
+
+  function niceStep(span, target) {
+    var raw = span / target, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return p * (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10);
+  }
+
+  // The chart for the selected transect and cutoff
+  function draw() {
+    var tr = T[sel], svg = $("plot");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var x0 = 1996, x1 = 2025;
+    var ymin = Infinity, ymax = -Infinity, i;
+    for (i = 0; i < tr.x.length; i++) { if (tr.x[i] < ymin) ymin = tr.x[i]; if (tr.x[i] > ymax) ymax = tr.x[i]; }
+    var pad = (ymax - ymin) * 0.06 || 5; ymin -= pad; ymax += pad;
+    var sx = function (t) { return M.l + (t - x0) / (x1 - x0) * (W - M.l - M.r); };
+    var sy = function (v) { return H - M.b - (v - ymin) / (ymax - ymin) * (H - M.t - M.b); };
+
+    // Grid and axes
+    var g = el("g", { "class": "axis" }, svg);
+    var step = niceStep(ymax - ymin, 6);
+    for (var v = Math.ceil(ymin / step) * step; v <= ymax; v += step) {
+      el("line", { x1: M.l, x2: W - M.r, y1: sy(v), y2: sy(v), "stroke-width": 1 }, g);
+      el("text", { x: M.l - 8, y: sy(v) + 4, "text-anchor": "end" }, g).textContent = Math.round(v);
+    }
+    for (var y = 1996; y <= 2024; y += 4) {
+      el("line", { x1: sx(y), x2: sx(y), y1: H - M.b, y2: H - M.b + 5, "stroke-width": 1 }, g);
+      el("text", { x: sx(y), y: H - M.b + 19, "text-anchor": "middle" }, g).textContent = y;
+    }
+    el("text", { x: 14, y: (M.t + H - M.b) / 2, "text-anchor": "middle",
+      transform: "rotate(-90 14 " + (M.t + H - M.b) / 2 + ")" }, g).textContent = "shoreline position (m)";
+
+    // Cutoff marker across the shared year
+    el("rect", { x: sx(yb(cutoff)), y: M.t, width: sx(yb(cutoff + 1)) - sx(yb(cutoff)),
+      height: H - M.t - M.b, fill: css("--sand"), opacity: 0.8 }, svg);
+
+    // Raw positions
+    var pts = el("g", { fill: css("--pts"), "fill-opacity": 0.35 }, svg);
+    for (i = 0; i < tr.t.length; i++) el("circle", { cx: sx(tr.t[i]).toFixed(1), cy: sy(tr.x[i]).toFixed(1), r: 1.6 }, pts);
+
+    // Annual median
+    var byYear = {};
+    for (i = 0; i < tr.t.length; i++) {
+      var yr = 1996; while (yr < 2024 && tr.t[i] >= yb(yr + 1)) yr++;
+      (byYear[yr] = byYear[yr] || []).push(tr.x[i]);
+    }
+    var med = [];
+    Object.keys(byYear).sort().forEach(function (k) {
+      var a = byYear[k].slice().sort(function (p, q) { return p - q; }), m = a.length;
+      med.push([+k + 0.5, m % 2 ? a[(m - 1) / 2] : (a[m / 2 - 1] + a[m / 2]) / 2]);
+    });
+    var mc = css("--median");
+    el("polyline", { points: med.map(function (p) { return sx(yb(p[0] - 0.5) + 0.5) + "," + sy(p[1]); }).join(" "),
+      fill: "none", stroke: mc, "stroke-width": 1.2 }, svg);
+    med.forEach(function (p) {
+      el("circle", { cx: sx(yb(p[0] - 0.5) + 0.5), cy: sy(p[1]), r: 2.6, fill: css("--panel"), stroke: mc, "stroke-width": 1 }, svg);
+    });
+
+    // The three fits
+    var wins = [["whole", 1996, 2024, 3], ["first", 1996, cutoff, 2.4], ["second", cutoff, 2024, 2.4]];
+    var res = {};
+    wins.forEach(function (w) {
+      var f = fit(tr, w[1], w[2]); res[w[0]] = f;
+      if (f.s === undefined) return;
+      el("line", { x1: sx(f.t0), x2: sx(f.t1), y1: sy(f.mx + f.s * (f.t0 - f.mt)), y2: sy(f.mx + f.s * (f.t1 - f.mt)),
+        stroke: css("--" + w[0]), "stroke-width": w[3], "stroke-linecap": "round" }, svg);
+    });
+
+    // Readouts
+    var pick = tr.g ? " · " + D.groups[tr.g] : "";
+    $("ctitle").textContent = "GIS " + tr.gis + " · " + tr.id + pick;
+    $("status").textContent = tr.t.length + " positions";
+    [["w", "whole", "1996–2024"], ["f", "first", "1996–" + cutoff], ["s", "second", cutoff + "–2024"]].forEach(function (r) {
+      var f = res[r[1]];
+      $("n" + r[0]).textContent = r[2];
+      $("v" + r[0]).textContent = f.s === undefined ? "no fit" : fmt(f.s) + " m/yr";
+      $("c" + r[0]).textContent = f.s === undefined ? f.n + " positions (<" + D.min_obs + ")" : "± " + f.ci.toFixed(2) + " · n = " + f.n;
+    });
+    document.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-current", +c.dataset.i === sel ? "true" : "false"); });
+    $("transect").value = String(sel);
+  }
+
+  // Map colouring for every transect at the current cutoff
+  function computeMap() {
+    mapVals = T.map(function (tr) {
+      if (metric === "whole") { var w = fit(tr, 1996, 2024); return w.s; }
+      var a = fit(tr, 1996, cutoff), b = fit(tr, cutoff, 2024);
+      return a.s === undefined || b.s === undefined ? undefined : b.s - a.s;
+    });
+  }
+
+  var LIM = { diff: 6, whole: 3 };
+  function divColor(v, lim) {
+    if (v === undefined) return css("--rule");
+    var u = Math.max(-1, Math.min(1, v / lim));
+    var neg = [178, 24, 43], pos = [33, 102, 172], mid = [238, 236, 232];
+    var c = u < 0 ? neg : pos, k = Math.abs(u);
+    return "rgb(" + [0, 1, 2].map(function (j) { return Math.round(mid[j] + (c[j] - mid[j]) * k); }).join(",") + ")";
+  }
+
+  var proj = null;
+  function drawMap() {
+    var cv = $("map"), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    var ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+    var lons = T.map(function (t) { return t.ll[0]; }), lats = T.map(function (t) { return t.ll[1]; });
+    var k = Math.cos(35.4 * Math.PI / 180);
+    var minx = Math.min.apply(null, lons) * k, maxx = Math.max.apply(null, lons) * k;
+    var miny = Math.min.apply(null, lats), maxy = Math.max.apply(null, lats);
+    var p = 14, sc = Math.min((r.width - 2 * p) / (maxx - minx), (r.height - 2 * p) / (maxy - miny));
+    var ox = (r.width - (maxx - minx) * sc) / 2, oy = (r.height - (maxy - miny) * sc) / 2;
+    proj = function (ll) { return [ox + (ll[0] * k - minx) * sc, r.height - oy - (ll[1] - miny) * sc]; };
+    var lim = LIM[metric];
+
+    // Water, then the island outline
+    ctx.fillStyle = css("--water"); ctx.fillRect(0, 0, r.width, r.height);
+    ctx.fillStyle = css("--land"); ctx.strokeStyle = css("--land-edge"); ctx.lineWidth = 0.7;
+    (D.outline || []).forEach(function (ring) {
+      ctx.beginPath();
+      ring.forEach(function (ll, j) { var q = proj(ll); if (j) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+
+    // Every transect, coloured by the measure
+    var east = -Infinity;
+    T.forEach(function (tr, i) {
+      var q = proj(tr.ll); if (q[0] > east) east = q[0];
+      ctx.fillStyle = divColor(mapVals[i], lim);
+      ctx.beginPath(); ctx.arc(q[0], q[1], 2.6, 0, 2 * Math.PI); ctx.fill();
+    });
+
+    // The eight picks, numbered offshore as on the figures (1 at Buxton)
+    var ink = css("--ink"), panel = css("--panel");
+    var picks = T.filter(function (tr) { return tr.num; })
+      .map(function (tr) { return { q: proj(tr.ll), num: tr.num }; })
+      .sort(function (a, b) { return b.q[1] - a.q[1]; });
+    var lx = Math.min(east + 18, r.width - 10), prev = Infinity;
+    picks.forEach(function (pk) {
+      var ly = Math.min(pk.q[1], prev - 17); prev = ly;
+      ctx.strokeStyle = css("--muted"); ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(pk.q[0] + 5, pk.q[1]); ctx.lineTo(lx - 7, ly); ctx.stroke();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(pk.q[0], pk.q[1], 5, 0, 2 * Math.PI); ctx.stroke();
+      ctx.fillStyle = panel; ctx.beginPath(); ctx.arc(lx, ly, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = ink; ctx.font = "600 10px " + css("--font-body");
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(pk.num), lx, ly + 0.5);
+    });
+
+    // Villages on the sound side
+    ctx.fillStyle = css("--muted"); ctx.font = "italic 11px " + css("--font-body");
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    (D.places || []).forEach(function (pl) { var q = proj(pl.ll); ctx.fillText(pl.name, q[0] - 10, q[1]); });
+    var south = T.reduce(function (a, b) { return b.ll[1] < a.ll[1] ? b : a; });
+    var sq = proj(south.ll); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("Cape Point", sq[0] + 4, sq[1] + 6);
+
+    var q = proj(T[sel].ll);
+    ctx.strokeStyle = css("--focus"); ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(q[0], q[1], 8, 0, 2 * Math.PI); ctx.stroke();
+    ctx.fillStyle = css("--muted"); ctx.font = "11px " + css("--font-data");
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("N ↑", 10, 18);
+    $("maplabel").textContent = metric === "diff" ? "Second − first window, cut " + cutoff : "1996–2024 rate";
+    $("legendbar").style.background = "linear-gradient(90deg," + divColor(-lim, lim) + "," + divColor(0, lim) + "," + divColor(lim, lim) + ")";
+    $("lt0").textContent = "≤ −" + lim; $("lt1").textContent = "≥ +" + lim;
+  }
+
+  function select(i) { sel = Math.max(0, Math.min(T.length - 1, i)); draw(); drawMap(); }
+
+  var pending = null;
+  function setCutoff(c) {
+    cutoff = c; $("cutoff").value = c; $("cutval").textContent = c;
+    document.querySelectorAll("#quick button").forEach(function (b) { b.setAttribute("aria-pressed", +b.textContent === c ? "true" : "false"); });
+    draw();
+    if (pending) cancelAnimationFrame(pending);
+    pending = requestAnimationFrame(function () { if (metric === "diff") computeMap(); drawMap(); });
+  }
+
+  function init(data) {
+    D = data; T = data.transects; cutoff = data.cutoff;
+    var s = $("transect");
+    T.forEach(function (tr, i) {
+      var o = document.createElement("option"); o.value = i;
+      o.textContent = "GIS " + tr.gis + " · " + tr.id + (tr.num ? "  (" + tr.num + ")" : "");
+      s.appendChild(o);
+    });
+    [2005, 2010, 2015, 2020].forEach(function (y) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = y;
+      b.addEventListener("click", function () { setCutoff(y); });
+      $("quick").appendChild(b);
+    });
+    var picks = T.map(function (tr, i) { return [tr, i]; }).filter(function (p) { return p[0].g; });
+    picks.sort(function (a, b) { return a[0].num - b[0].num; });
+    picks.forEach(function (p) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.i = p[1];
+      b.innerHTML = "<b></b><span></span>";
+      b.querySelector("b").textContent = p[0].num + " · " + D.groups[p[0].g];
+      b.querySelector("span").textContent = "GIS " + p[0].gis + " · " + p[0].id;
+      b.addEventListener("click", function () { select(p[1]); });
+      $("chips").appendChild(b);
+    });
+    s.addEventListener("change", function () { select(+s.value); });
+    $("prev").addEventListener("click", function () { select(sel - 1); });
+    $("next").addEventListener("click", function () { select(sel + 1); });
+    $("cutoff").addEventListener("input", function (e) { setCutoff(+e.target.value); });
+    $("metric").addEventListener("change", function (e) { metric = e.target.value; computeMap(); drawMap(); });
+    $("map").addEventListener("click", function (e) {
+      var r = e.currentTarget.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, best = 0, bd = Infinity;
+      T.forEach(function (tr, i) { var q = proj(tr.ll), d = (q[0] - mx) * (q[0] - mx) + (q[1] - my) * (q[1] - my); if (d < bd) { bd = d; best = i; } });
+      select(best);
+    });
+    $("map").addEventListener("keydown", function (e) {
+      if (e.key === "ArrowUp" || e.key === "ArrowRight") { select(sel + 1); e.preventDefault(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowLeft") { select(sel - 1); e.preventDefault(); }
+    });
+    window.addEventListener("resize", drawMap);
+    if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { draw(); drawMap(); });
+    new MutationObserver(function () { draw(); drawMap(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+    // Open on the first pick, the cleanest example
+    sel = picks.length ? picks[0][1] : 0;
+    computeMap(); setCutoff(cutoff); drawMap();
+  }
+
+  // The static figures, if this copy of the page was published with them
+  fetch("figures/figures.json")
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (list) {
+      var sec = $("figures");
+      list.forEach(function (f) {
+        var fig = document.createElement("figure"); fig.className = "card fig";
+        var h = document.createElement("h3"); h.textContent = f.title;
+        var a = document.createElement("a"); a.href = "figures/" + f.file; a.target = "_blank"; a.rel = "noopener";
+        var img = document.createElement("img"); img.src = "figures/" + f.file; img.alt = f.title; img.loading = "lazy";
+        var cap = document.createElement("figcaption"); cap.textContent = f.caption;
+        a.appendChild(img); fig.appendChild(h); fig.appendChild(a); fig.appendChild(cap); sec.appendChild(fig);
+      });
+      sec.hidden = list.length === 0;
+    })
+    .catch(function () { /* no figures published alongside: the section stays hidden */ });
+
+  fetch("split_windows_data.json")
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(init)
+    .catch(function (e) { $("ctitle").textContent = "The transect data did not load (" + e.message + "). Reload the page to try again."; });
+})();
+</script>

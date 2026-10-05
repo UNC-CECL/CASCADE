@@ -958,9 +958,10 @@ endpoint/<window>/  net change between +/-6-month means at
 the dune-line dates (m and m/yr)
 5yr_bins/<window>/  the OLS in successive 5-year bins,
 1996_2010 2010_2024 1996_2024
-window_convergence/ the same OLS on NESTED families of
+window_convergence_1996_2024/ the same OLS on NESTED families of
 1-rate_profiles/ windows, one pinned at each end: which
-2-settling_window/ windows recover the long-term rate?
+2-r_bias_rmse/   windows recover the long-term rate?
+3-settling_window/
 experiments/     See window_convergence_dir().
 Seven tolerances scored, headline is
 CI overlap
@@ -1129,9 +1130,11 @@ QUESTION FIRST (Hannah, 2026-09-29, "it is hard to understand"). The tree
 splits by the question each product asks, numbered in reading order, and the
 pinned direction sits under each question:
 
-1-rate_profiles/<direction>_from_<year>/     does the WHOLE alongshore
-profile look like 1996-2024?
-2-settling_window/<direction>_from_<year>/   when does each LOCATION
+1-rate_profiles/<direction>_from_<year>/     what does each window's WHOLE
+alongshore profile look like?
+2-r_bias_rmse/[<direction>_from_<year>/]     how close is it to 1996-2024?
+r, bias, RMSE (added 2026-10-01)
+3-settling_window/<direction>_from_<year>/   when does each LOCATION
 a-eight_sites/  b-every_transect/        settle on it?
 c-domain_means/
 experiments/record_cut_<end>/<direction>_from_<year>/
@@ -1200,7 +1203,7 @@ folder per period start: mean_shoreline_windows/<period>/.
 THE DETRENDED POSITION (2026-09-23). Every CoastSat transect detrended against
 its own 1996-2024 fit and averaged: the signal the whole island shares, and
 the tests of what causes it. Built to explain a result in
-3-rates/coastsat/window_convergence/ -- that the convergence window barely
+3-rates/coastsat/window_convergence_1996_2024/ -- that the convergence window barely
 varies between transects, which a per-transect cause cannot produce.
 
 It is NOT a rate and NOT a model input, so it files under 1-observations with
@@ -1306,7 +1309,7 @@ NOT `<start>_<end>`, although rule 2 would ask for it: a span name claims
 ONE interval and each of these folders holds twenty-five of them. What
 they share is the end that is PINNED, so that is what the name gives.
 
-The full 1996-2024 record files under `2-settling_window/`. Any other
+The full 1996-2024 record files under `3-settling_window/`. Any other
 record span is a DIFFERENT EXPERIMENT, not a version of the same product,
 because every window in it is fitted against a different reference, so it
 files under `experiments/record_cut_<end>/` (or `record_<start>_<end>/` if
@@ -1326,6 +1329,14 @@ rate? Both converge on the same 1996-2024 reference from opposite sides.
 ```text
 One rate-profile family's folder, under `1-rate_profiles/`. Full
 1996-2024 record only; the profiles have no truncated experiment.
+```
+
+**`window_scores_dir()`**
+
+```text
+The r / bias / RMSE scores of the rate profiles, under `2-r_bias_rmse/`:
+the folder itself (both directions together) or, given a direction, that
+direction's folder. Full 1996-2024 record only.
 ```
 
 **`mean_shoreline_label()`**

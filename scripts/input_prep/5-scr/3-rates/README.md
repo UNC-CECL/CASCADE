@@ -12,10 +12,10 @@ coastsat/
     lrr/           the OLS rate fit — the thing runs are actually graded on
     endpoint/      net change between +/-6-month means at the dune-line dates
     5yr_bins/      the OLS in successive 5-year bins: WHEN did it change?
-    window_convergence/  the OLS on NESTED window families pinned at each
+    window_convergence_1996_2024/  the OLS on NESTED window families pinned at each
                    end: WHICH WINDOWS recover the long-term rate?
-                   1-rate_profiles/ (whole profile) and 2-settling_window/
-                   (each location)
+                   1-rate_profiles/ (whole profile), 2-r_bias_rmse/ (how
+                   close it is) and 3-settling_window/ (each location)
     total_change/  the rate as a distance, and the projections
     extension/     the same fit beyond the 90 surveyed domains
 duneline/
@@ -107,15 +107,24 @@ coastsat/window_convergence/coastsat_window_convergence.py
     window-to-window disagreement is shoreline behaviour and not per-transect
     noise. It draws its own figures -- per-unit panel families, not the
     alongshore profile rates_figures.py covers.
-    Output: `window_convergence/2-settling_window/<direction>_from_<year>/`;
+    Output: `window_convergence_1996_2024/3-settling_window/<direction>_from_<year>/`;
     `--ref-end 2020` files under `experiments/record_cut_2020/` (that run was
     deleted 2026-09-29; the option still works).
 
 coastsat/window_convergence/coastsat_window_profiles.py
     The same nested families drawn as whole alongshore profiles, from two-year
     windows, over the 1996-2024 rate, each scored by the alongshore Pearson r
-    against it (shape only). Reuses the settling sweep's per-transect fit.
-    Output: `window_convergence/1-rate_profiles/<direction>_from_<year>/`.
+    against it. Reuses the settling sweep's per-transect fit and writes every
+    fit to window_profiles_transects.csv.
+    Output: `window_convergence_1996_2024/1-rate_profiles/<direction>_from_<year>/`.
+
+coastsat/window_convergence/coastsat_window_r_bias_rmse.py
+    Scores each window's profile against 1996-2024 three ways -- r (shape),
+    bias (mean difference: level) and RMSE (typical miss at one transect) --
+    with 95% intervals from a 1000-draw bootstrap over the 90 domains. Reads
+    the profiles script's transects CSV; no refitting.
+    Output: `window_convergence_1996_2024/2-r_bias_rmse/` (both directions) and its
+    `<direction>_from_<year>/` folders (one direction, calendar top axis).
 
     WHY the windows disagree is answered next door, in
     1-observations/detrended_position/: one island-wide excursion, which on its own
@@ -1986,7 +1995,7 @@ Inputs
     coastsat_lrr.compute_lrr        5-scr/lib/, via scr_paths
 
 Outputs  (hat_observed_rates.window_convergence_dir(direction, anchor))
-    2-settling_window/<direction>_from_<anchor>/
+    3-settling_window/<direction>_from_<anchor>/
         a-eight_sites/
             shoreline_position_window_fits_*.png   the record: positions, the
                                                    annual median, six fits
@@ -2025,7 +2034,7 @@ the shoreline, the reference itself is biased -- and the reference is the
 model's grading target. `--ref-end 2020` refits everything on the record
 before the step, and the two record spans file side by side under
 `experiments/record_cut_<end>/`, apart from the main result in
-`2-settling_window/`, so they can be differenced rather than confused.
+`3-settling_window/` (2- until 2026-10-01), so they can be differenced rather than confused.
 ```
 
 ```text
@@ -2372,13 +2381,15 @@ the target's own `coastsat_lrr.compute_lrr`, so the estimator is the target's.
 A window with fewer than MIN_OBS positions on a transect gets no fit there,
 and r for that window is over the transects that have one (n in the table).
 
-Outputs  (obs.window_profiles_dir(direction, anchor))
-    window_profiles_<direction>_from_<year>.png         (a) every window over
-                                                        the reference, (b) r
-    window_profiles_panels_<direction>_from_<year>.png  one panel per window
+Outputs  (obs.window_profiles_dir(direction, anchor))  -- as of 2026-10-01
+    window_profiles_overlay_<direction>_from_<year>.png every window over the
+                                                        reference, ±10 m/yr
+    window_profiles_panels_<direction>_from_<year>.png  one panel per window,
+                                                        the reference last
     window_profiles_transects.csv                       a row per transect per window
-    window_profiles_correlation.csv                     a row per window: r, n
     README.md, supporting/ (PDFs, CAPTIONS.md)
+    The r panel and window_profiles_correlation.csv were replaced on
+    2026-10-01 by coastsat_window_r_bias_rmse.py -> 2-r_bias_rmse/.
 
 Usage
     python .../coastsat_window_profiles.py                     both directions
@@ -2427,6 +2438,46 @@ the line breaks instead of bridging a gap.
 ```
 
 </details>
+
+
+### coastsat/window_convergence/coastsat_window_r_bias_rmse.py
+
+How close is each nested window's alongshore rate profile to 1996-2024?
+(Hannah, 2026-10-01, split out of coastsat_window_profiles.py.)
+
+```text
+Reads 1-rate_profiles/<direction>_from_<year>/window_profiles_transects.csv
+(the per-transect OLS of every window) and scores every window against the
+1996-2024 profile over the transects with a fit:
+
+    r      alongshore Pearson correlation -- are the hotspots in the same
+           places? Shape only.
+    bias   mean over transects of (window rate - 1996-2024 rate) -- is the
+           overall level right? Negative = more erosional. Signs cancel.
+    RMSE   root-mean-square of the same difference -- the typical miss at one
+           transect, sign ignored. RMSE^2 = bias^2 + scatter^2.
+
+95% intervals: 1000 bootstrap resamples of the 90 DOMAINS (BOOT_SEED fixed).
+Domains, not transects: neighbouring transects move together, and a transect
+resample gave an interval about three times narrower. Blocks of 5 domains
+widen the forward r interval further (0.50-0.81 at 15 yr vs 0.59-0.78);
+Hannah kept single domains.
+
+r levels 0.5 / 0.75 / 0.9 are conventional, not data-picked. The marked year
+is the FIRST WINDOW FROM WHICH r STAYS at or above the level (forward 0.9 is
+24 yr, not 23: r = 0.8996 there).
+
+Outputs  (obs.window_scores_dir())
+    window_profiles_r.png, window_profiles_bias_rmse.png   both directions
+    window_profiles_r_bias_rmse.csv     r, bias_m_yr, rmse_m_yr + _lo95/_hi95
+    <direction>_from_<year>/            the two figures for one direction,
+                                        calendar window on the top axis
+    README.md, supporting/ (PDFs, CAPTIONS.md)
+
+Usage
+    python .../coastsat_window_profiles.py      first, if the fits changed
+    python .../coastsat_window_r_bias_rmse.py
+```
 
 ### duneline/duneline_endpoint.py
 

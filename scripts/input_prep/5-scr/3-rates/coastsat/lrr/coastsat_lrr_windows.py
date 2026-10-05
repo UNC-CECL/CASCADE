@@ -9,7 +9,7 @@ Writes the multi-window figure and one per window, with captions. Details: scrip
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-03
 """
 
 from __future__ import annotations
@@ -387,15 +387,20 @@ def fills_in(start: int, end: int):
                   if p.enabled and start <= p.year <= end)
 
 
-# A bar just ABOVE the frame over each fill footprint, the year on it
+# A bar just ABOVE the frame over each fill footprint, the year(s) on it; a refilled span is one bar
 def draw_fills(ax, fills, half: float, label_pt: float = STRUCTURE_LABEL_PT):
     trans = ax.get_xaxis_transform()
     y = 1.025
+    spans: dict = {}
     for year, lo, hi in fills:
+        spans.setdefault((lo, hi), []).append(year)
+    for (lo, hi), years in spans.items():
         ax.plot([lo - 0.45, hi + 0.45], [y, y], color=FILL_BAR_C, lw=2.2,
                 solid_capstyle="butt", zorder=6, clip_on=False,
                 transform=trans)
-        ax.text((lo + hi) / 2, y + 0.02, f"{year} fill", ha="center",
+        label = f"{years[0]} fill" if len(years) == 1 else \
+            f"{', '.join(str(v) for v in years)} fills"
+        ax.text((lo + hi) / 2, y + 0.02, label, ha="center",
                 va="bottom", fontsize=label_pt, color=FILL_BAR_C, zorder=6,
                 clip_on=False, transform=trans)
 

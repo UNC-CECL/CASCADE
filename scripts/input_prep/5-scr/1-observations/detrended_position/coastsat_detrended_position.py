@@ -221,7 +221,7 @@ island.
 
 ## Why it exists
 
-`3-rates/coastsat/window_convergence/` found that no window shorter than about
+`3-rates/coastsat/window_convergence_1996_2024/` found that no window shorter than about
 25 years recovers the long-term rate, and that the answer **barely varies
 between transects** — a fast, clean transect needs as long as a slow, noisy
 one (correlation between a transect's noise-to-trend ratio and its convergence

@@ -11,7 +11,7 @@ per direction. Details: scripts/input_prep/5-scr/3-rates/README.md.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-01
+Version: 2026-10-02
 """
 
 import argparse
@@ -61,6 +61,13 @@ OVERLAY_Y_HALF = 10.0
 PANEL_TITLE_PT = 9.0
 PANEL_TICK_PT = 8.0
 PANEL_LABEL_PT = 9.0
+
+# v2 of the forward panels outlines the chosen window in yellow (Hannah, 2026-10-02)
+CHOSEN_WINDOW = {"forward": (1996, 2015), "backward": (2010, 2026)}
+CHOSEN_COLOUR = "#ffd400"
+CHOSEN_LW = 3.0
+# v3: only the windows of these lengths in years of record, the chosen one still outlined (Hannah, 2026-10-02)
+V3_YEARS = {"forward": (14, 25), "backward": (14, 25)}
 # -----------------------------------------------------------------------------
 
 
@@ -195,12 +202,15 @@ def draw_overlay(sweep, windows, direction, out_dir):
 
 
 # One panel per window
-def draw_panels(sweep, corr, windows, direction, out_dir):
+def draw_panels(sweep, corr, windows, direction, out_dir, chosen=None, years=None):
     fs.apply_style()
-    drawn = windows
+    drawn = (windows if years is None else
+             [w for w in windows if years[0] <= w[1] - w[0] + 1 <= years[1]])
     ncol = 4
     nrow = int(np.ceil(len(drawn) / ncol))
-    fig, axes = plt.subplots(nrow, ncol, figsize=fs.figsize("double", height=fs.FIG_H_MAX),
+    # A cut-down set keeps the full figure's panel height instead of stretching to a page
+    height = fs.FIG_H_MAX if years is None else min(fs.FIG_H_MAX, 1.15 * nrow + 0.9)
+    fig, axes = plt.subplots(nrow, ncol, figsize=fs.figsize("double", height=height),
                              sharex=True, sharey=True, layout="constrained")
     axes = np.atleast_2d(axes)
     lengths = [e - s + 1 for s, e, _ in windows]
@@ -211,6 +221,10 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
     for k, ax in enumerate(axes.flat):
         if k >= len(drawn):
             ax.set_visible(False)
+            # The panel above an empty slot is the bottom of its column, so it carries the x-axis
+            above = axes.flat[k - ncol]
+            above.tick_params(labelbottom=True)
+            above.set_xlabel("GIS domain", fontsize=PANEL_LABEL_PT)
             continue
         start, end, moving = drawn[k]
         is_ref = (start, end) == (REF_START, REF_END)
@@ -229,6 +243,11 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
         ax.set_title(title, fontsize=PANEL_TITLE_PT, loc="left", color=fs.INK)
         ax.set_yticks([-5, -2.5, 0, 2.5, 5])
         ax.tick_params(labelsize=PANEL_TICK_PT)
+        if chosen == (start, end):
+            for spine in ax.spines.values():
+                spine.set_edgecolor(CHOSEN_COLOUR)
+                spine.set_linewidth(CHOSEN_LW)
+                spine.set_zorder(10)
     for ax in axes[-1]:
         ax.set_xlabel("GIS domain", fontsize=PANEL_LABEL_PT)
     for ax in axes[:, 0]:
@@ -236,7 +255,18 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
     fig.suptitle(figure_title(direction), x=0.01, ha="left")
 
     stem = "window_profiles_panels_{0}_from_{1}".format(direction, wc.pinned_year(direction))
+    if years:
+        stem += "_v3"
+    elif chosen:
+        stem += "_v2"
     paths = fs.save(fig, Path(out_dir) / stem, close=True)
+    picked = (" The chosen window, {0}, is outlined in yellow.".format(window_label(*chosen))
+              if chosen else "")
+    if years:
+        picked += (" Only the windows {0} to {1} years long are drawn ({2} to {3}); the "
+                   "full family is in the figure without _v3.".format(
+                       years[0], years[1], window_label(*drawn[0][:2]),
+                       window_label(*drawn[-1][:2])))
     fs.record_caption(paths[0],
         "One panel per window: the CoastSat shoreline change rate at all {n} "
         "transects (blue, darker for longer windows) against the {ref} rate "
@@ -244,11 +274,12 @@ def draw_panels(sweep, corr, windows, direction, out_dir):
         "window whose rate runs past that is cut at the panel edge. Domains 1 "
         "(Cape Point) to 90 (Pea Island). Each panel names its window, its "
         "length in years of record and the alongshore Pearson r of its "
-        "profile against the reference; the last panel is the reference "
-        "alone, for comparison. The windows are nested, so r rises to 1 at the reference by "
-        "construction.".format(
+        "profile against the reference"
+        + ("; the last panel is the reference alone, for comparison" if years is None
+           else "") + ". The windows are nested, so r rises to 1 at the reference by "
+        "construction.{picked}".format(
             n=sweep["transect_id"].nunique(), ref=window_label(REF_START, REF_END),
-            half=PANEL_Y_HALF))
+            half=PANEL_Y_HALF, picked=picked))
     return paths[0]
 
 
@@ -264,7 +295,7 @@ Hannah asked for. Built {today}.
 ```
 window_profiles_overlay_{direction}_from_{py}.png  every window over the reference (±10 m/yr)
 window_profiles_panels_{direction}_from_{py}.png   one panel per window, the reference last (±5 m/yr)
-window_profiles_transects.csv                     a row per transect per window (lrr, unc, n_obs, x_domain, diff)
+{v2_line}{v3_line}window_profiles_transects.csv                     a row per transect per window (lrr, unc, n_obs, x_domain, diff)
 ```
 
 How close each profile is to the reference, as r, bias and RMSE with 95%
@@ -285,19 +316,38 @@ def write_readme(out_dir, direction, corr, n_transects):
         first=corr["window"].iloc[0].replace("_", "–"),
         pin="start" if direction == "forward" else "end",
         py=wc.pinned_year(direction), n=n_transects, direction=direction,
-        today=datetime.date.today().isoformat())
+        today=datetime.date.today().isoformat(),
+        v2_line=("window_profiles_panels_{0}_from_{1}_v2.png  the same, {2} outlined in yellow as the chosen window\n"
+                 .format(direction, wc.pinned_year(direction), window_label(*CHOSEN_WINDOW[direction]))
+                 if direction in CHOSEN_WINDOW else ""),
+        v3_line=("window_profiles_panels_{0}_from_{1}_v3.png  the same, only the {2}-{3} yr windows\n"
+                 .format(direction, wc.pinned_year(direction), *V3_YEARS[direction])
+                 if direction in V3_YEARS else ""))
     (Path(out_dir) / "README.md").write_text(text, encoding="utf-8")
 
 
-# One direction: profiles, figures, README
-def one_direction(direction):
-    out_dir = obs.window_profiles_dir(direction, wc.pinned_year(direction))
+# One direction: profiles, figures, README; `redraw` reads the saved transects table instead of refitting
+def one_direction(direction, redraw=False):
+    out_dir = obs.window_profiles_dir(direction, wc.pinned_year(direction), REF_START, REF_END)
     out_dir.mkdir(parents=True, exist_ok=True)
-    windows, sweep = run(direction)
+    if redraw:
+        windows = windows_for(direction)
+        sweep = pd.read_csv(out_dir / "window_profiles_transects.csv")
+    else:
+        windows, sweep = run(direction)
+        sweep.to_csv(out_dir / "window_profiles_transects.csv", index=False)
     corr = correlations(sweep, windows)
-    sweep.to_csv(out_dir / "window_profiles_transects.csv", index=False)
     print(draw_overlay(sweep, windows, direction, out_dir))
     print(draw_panels(sweep, corr, windows, direction, out_dir))
+    # The chosen window only where this record's family contains it (2010-2026 is not in 1996-2024's)
+    chosen = CHOSEN_WINDOW.get(direction)
+    if chosen not in [(s, e) for s, e, _ in windows]:
+        chosen = None
+    if chosen:
+        print(draw_panels(sweep, corr, windows, direction, out_dir, chosen=chosen))
+    if direction in V3_YEARS:
+        print(draw_panels(sweep, corr, windows, direction, out_dir,
+                          chosen=chosen, years=V3_YEARS[direction]))
     write_readme(out_dir, direction, corr, sweep["transect_id"].nunique())
     print(corr[["window", "n_years", "r_vs_reference", "n_transects"]].to_string(index=False))
 
@@ -307,9 +357,11 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--direction", choices=("forward", "backward", "both"),
                     default="both")
+    ap.add_argument("--redraw", action="store_true",
+                    help="redraw from the saved transects table, no refit")
     args = ap.parse_args(argv)
     for d in (("forward", "backward") if args.direction == "both" else (args.direction,)):
-        one_direction(d)
+        one_direction(d, redraw=args.redraw)
 
 
 if __name__ == "__main__":

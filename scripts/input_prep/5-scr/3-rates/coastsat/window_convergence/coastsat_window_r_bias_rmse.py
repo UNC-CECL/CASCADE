@@ -11,7 +11,7 @@ per direction. Details: scripts/input_prep/5-scr/3-rates/README.md.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-01
+Version: 2026-10-02
 """
 
 import sys
@@ -39,8 +39,7 @@ import matplotlib.pyplot as plt                       # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 REF_START, REF_END = wc.REF_START, wc.REF_END
 
-# The model window, the r levels, the domain bootstrap
-MODEL_WINDOW_YEARS = 15
+# The r levels, the domain bootstrap; the model windows live in coastsat_window_convergence.MODEL_WINDOWS
 # r levels marked on the r figures (Hannah, 2026-10-01): conventional, not data-picked
 R_LEVELS = (0.5, 0.75, 0.9)
 N_BOOT = 1000
@@ -52,6 +51,12 @@ RMSE_Y_MAX = 6.0
 # -----------------------------------------------------------------------------
 
 
+# Years in the model window for a direction, per direction since 2026-10-02 (Hannah)
+def model_years(direction):
+    w = wc.model_window(direction)
+    return w[1] - w[0] + 1
+
+
 # A window as 'start-end'
 def window_label(start, end):
     return "{0}–{1}".format(start, end)
@@ -61,7 +66,7 @@ def window_label(start, end):
 
 # Transect x window-length matrix of rates for a direction, from its transects CSV
 def _rate_matrix(direction):
-    t = pd.read_csv(obs.window_profiles_dir(direction, wc.pinned_year(direction))
+    t = pd.read_csv(obs.window_profiles_dir(direction, wc.pinned_year(direction), REF_START, REF_END)
                     / "window_profiles_transects.csv")
     m = t.pivot_table(index=["transect_id", "domain_number"], columns="n_years",
                       values="lrr_m_yr")
@@ -140,6 +145,9 @@ LABEL_PLACE = {
 
 # Model-window labels lifted clear on a leader line, where the neighbourhood is crowded
 MODEL_LABEL_LIFT = {("r", "backward"): (-30, 19)}
+# On 1996-2026 the forward 20-yr label lands on the 19-yr r-level label
+if REF_END == 2026:
+    MODEL_LABEL_LIFT[("r", "forward")] = (12, -42)
 
 
 # A circled, labelled point; `lift` moves the label further out on a leader line
@@ -155,15 +163,15 @@ def _mark(ax, L, v, col, place, text, lift=None):
 
 
 # Key points (Hannah, 2026-10-01): the model window everywhere, and on r where it stays >= each level
-def _label_key_points(ax, sub, col, place, col_name, fmt, lift=None):
+def _label_key_points(ax, sub, col, place, col_name, fmt, lift=None, model_L=None):
     at = lambda L: float(sub.loc[sub["n_years"] == L, col_name].iloc[0])
-    _mark(ax, MODEL_WINDOW_YEARS, at(MODEL_WINDOW_YEARS), col, place,
-          "{0} yr: {1}".format(MODEL_WINDOW_YEARS, fmt.format(at(MODEL_WINDOW_YEARS))), lift)
+    _mark(ax, model_L, at(model_L), col, place,
+          "{0} yr: {1}".format(model_L, fmt.format(at(model_L))), lift)
     if col_name != "r":
         return
     # Every circled point says its value (Hannah, 2026-10-01: that is why it is circled)
     for L in dict.fromkeys(first_lasting(sub, lv) for lv in R_LEVELS):
-        if L is not None and L != MODEL_WINDOW_YEARS:
+        if L is not None and L != model_L:
             _mark(ax, L, at(L), col, place, "{0} yr: {1}".format(L, fmt.format(at(L))))
 
 
@@ -192,6 +200,12 @@ SCORE_PANELS = {
 }
 
 
+# Legend text for the dashed model-window line(s)
+def model_legend(directions):
+    return "model window ({0})".format(", ".join(
+        "{0}–{1}".format(*wc.model_window(d)) for d in directions))
+
+
 # Stacked panels on one window-length axis, one per score in `names`
 def draw_scores(table, directions, names, out_path):
     fs.apply_style()
@@ -212,9 +226,11 @@ def draw_scores(table, directions, names, out_path):
                             color=col, alpha=0.15, lw=0, zorder=1,
                             label="95% interval (domains resampled)" if i == 0 else None)
             _label_key_points(ax, sub, col, LABEL_PLACE[(name, d)], name, fmt,
-                              MODEL_LABEL_LIFT.get((name, d)))
-        ax.axvline(MODEL_WINDOW_YEARS, color=fs.INK, lw=0.7, ls=(0, (4, 2)), zorder=2,
-                   label="model window ({0} yr)".format(MODEL_WINDOW_YEARS) if i == 0 else None)
+                              MODEL_LABEL_LIFT.get((name, d)), model_years(d))
+        # One dashed line per model-window length, one legend entry naming the windows
+        for k, L in enumerate(dict.fromkeys(model_years(d) for d in directions)):
+            ax.axvline(L, color=fs.INK, lw=0.7, ls=(0, (4, 2)), zorder=2,
+                       label=model_legend(directions) if i == 0 and k == 0 else None)
         ax.axhline(0.0, color=fs.C["INK_MUTED"], lw=0.5, zorder=1)
         ax.set_ylim(*ylim)
         ax.set_ylabel(ylab)
@@ -241,7 +257,7 @@ def draw_scores(table, directions, names, out_path):
     return paths[0]
 
 
-# Caption for a score figure: what each panel is, the 15-yr values, the method
+# Caption for a score figure: what each panel is, the model-window values, the method
 def _scores_caption(table, directions, names):
     at = lambda sub, L, c: float(sub.loc[sub["n_years"] == L, c].iloc[0])
     ref = window_label(REF_START, REF_END)
@@ -257,9 +273,9 @@ def _scores_caption(table, directions, names):
                      "size of the miss at one transect, sign ignored (RMSE² = bias² + "
                      "scatter²).",
     }
-    L = MODEL_WINDOW_YEARS
     parts = []
     for d in directions:
+        L = model_years(d)
         _, _, label, family = _r_style(d)
         sub = table[table["direction"] == d]
         vals = []
@@ -274,7 +290,8 @@ def _scores_caption(table, directions, names):
             vals.append("RMSE {0:.2f} m/yr ({1:.2f}–{2:.2f})".format(
                 at(sub, L, "rmse_m_yr"), at(sub, L, "rmse_m_yr_lo95"),
                 at(sub, L, "rmse_m_yr_hi95")))
-        text = "{c}: windows with the {lab} ({fam}). At {L} years {v}.".format(
+        text = "{c}: windows with the {lab} ({fam}). At {L} years ({mw}, the model window) {v}.".format(
+            mw="{0}–{1}".format(*wc.model_window(d)),
             c="Red" if d == "forward" else "Blue", lab=label, fam=family, L=L,
             v=", ".join(vals))
         if "r" in names:
@@ -303,11 +320,12 @@ def _scores_caption(table, directions, names):
         "reference, so every score reaches its perfect value at {nr} years by "
         "construction. Shading is the 95% interval from {nb} bootstrap resamples of the "
         "90 domains (domains, not transects, because neighbouring transects move "
-        "together). The dashed vertical line is the {mw}-year model window. {notes}".format(
+        "together). The dashed vertical line marks the model window ({mw}). {notes}".format(
             n=int(table["n_transects"].iloc[0]), ref=ref,
             defs=" ".join(defs[n].format(letters[n]) for n in names),
             parts=" ".join(parts), nr=REF_END - REF_START + 1, nb=N_BOOT,
-            mw=MODEL_WINDOW_YEARS, notes=" ".join(notes)))
+            mw="; ".join("{0}–{1}, {2} yr".format(*wc.model_window(d), model_years(d))
+                         for d in directions), notes=" ".join(notes)))
 
 
 # The score figures (Hannah, 2026-10-01: r alone, bias + RMSE together), each both
@@ -320,17 +338,19 @@ SCORE_FIGURES = {
 
 def score_figures():
     table = window_scores()
-    top = obs.window_scores_dir()
+    top = obs.window_scores_dir(ref_start=REF_START, ref_end=REF_END)
     top.mkdir(parents=True, exist_ok=True)
     table.to_csv(top / "window_profiles_r_bias_rmse.csv", index=False)
     for stem, names in SCORE_FIGURES.items():
         print(draw_scores(table, ("forward", "backward"), names, top / stem))
         for d in ("forward", "backward"):
-            out_dir = obs.window_scores_dir(d, wc.pinned_year(d))
+            out_dir = obs.window_scores_dir(d, wc.pinned_year(d), REF_START, REF_END)
             out_dir.mkdir(parents=True, exist_ok=True)
             print(draw_scores(table, (d,), names,
                               out_dir / "{0}_{1}_from_{2}".format(stem, d, wc.pinned_year(d))))
-    print(table[table["n_years"] == MODEL_WINDOW_YEARS].T.to_string())
+    for d in ("forward", "backward"):
+        print(table[(table["direction"] == d)
+                    & (table["n_years"] == model_years(d))].T.to_string())
 
 
 if __name__ == "__main__":
