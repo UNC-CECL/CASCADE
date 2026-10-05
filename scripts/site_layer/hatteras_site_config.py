@@ -459,7 +459,9 @@ HATTERAS_BE_EDGE_ONLY = {
     # /10-offset solve, 1996, superseded 2026-09-27
 
     # 1996: 1996-2015, five Newton steps (candidate-windows experiment, 2026-10-02)
-    # NOT SOLVED for 1996-2009 (2026-10-05); edgeBE needs HAT_BE_OVERRIDE until the end solve. 1996-2015: (+3.39, +37.60)
+    # 1996-2009: solved 2026-10-05 on the DEM-to-DEM net change (raw GIS 1, LOWESS-7 GIS 90), five secant steps from zeroBE
+    # (experiments/end-domain-boundaries/2026-10-05-ends-solved-on-net-change-1996_2009). 1996-2015: (+3.39, +37.60)
+    1996: (+1.4981, +10.5659),
     # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # /10-offset solve, 2010, superseded 2026-09-27
@@ -468,7 +470,9 @@ HATTERAS_BE_EDGE_ONLY = {
     # GIS 90 re-solved 2026-10-04 after the run-length fix and the Rodanthe 82-88 / Buxton 6-16 footprints: 24.08 -> 38.3
     # (probes 28.1 -0.655, 39.0 +0.088, 37.7 -0.065, 38.3 -0.051 m/yr; the response is noise-limited near here). 1996 kept at
     # +37.60 (-0.144): probes 32.0-40.7 all scored worse, no trend (experiments/end-domain-boundaries/2026-10-04-gis90-runlength-footprints)
-    # NOT SOLVED for 2009-2025 (2026-10-05). 2010-2026: (+172.89, +38.3)
+    # 2009-2025: the TEST period carries the calibration ends unchanged (2026-10-05, the DEM-to-DEM plan); not solved here.
+    # Its residual becomes the second source/sink set. 2010-2026: (+172.89, +38.3)
+    2009: (+1.4981, +10.5659),
     # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 

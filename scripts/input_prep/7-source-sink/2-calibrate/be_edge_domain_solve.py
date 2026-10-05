@@ -5,12 +5,13 @@ Solve the background-erosion rate the two locked end domains (GIS 1 and 90) carr
     python scripts/input_prep/7-source-sink/2-calibrate/be_edge_domain_solve.py --period 1996 --run <first> --run <second>
 
 One run gives the residual and a first step at the nominal gain; two or more
-a secant step. Targets CoastSat or the dune line (--target duneline). Details: scripts/input_prep/7-source-sink/README.md.
+a secant step. Targets the CoastSat LRR, the dune line (--target duneline), or the
+DEM-to-DEM net change in metres (--target net_change). Details: scripts/input_prep/7-source-sink/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-05
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
@@ -35,7 +37,8 @@ from cascade_pipeline.coastsat_lowess import (            # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (              # noqa: E402
     MATRIX_KIND, find_run_dir, load_run_index)
-from site_layer.hat_observed_rates import lrr_csv, lrr_csv_ext      # noqa: E402
+from site_layer.hat_observed_rates import (                         # noqa: E402
+    NET_CHANGE_WINDOWS, lrr_csv, lrr_csv_ext, net_change_domain_csv)
 
 # --- CONFIG ------------------------------------------------------------------
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
@@ -51,6 +54,9 @@ RATE_COLUMN = "lrr_m_yr"
 
 # d(LRR)/d(BE) for the first step only, before a secant exists (mid-range of four solves)
 NOMINAL_GAIN = 0.105
+
+# Convergence on a rate; a net-change solve scales it by the run length
+CONVERGED_M_YR = 0.02
 
 # The index column holding the rate each run imposed, per end domain
 INDEX_RATE_COLUMN = {gis: "be_rate_gis{0}_m_yr".format(gis)
@@ -103,6 +109,29 @@ def load_dune_target(start_year, end_year, smooth):
     return out, note
 
 
+# The observed net change at the ends, as the runner smooths a target: raw at GIS 1, LOWESS-7 at GIS 90
+def load_net_change_target(start_year, end_year):
+    if (start_year, end_year) not in NET_CHANGE_WINDOWS:
+        raise SystemExit("no net-change target for {0}-{1}; have {2}".format(
+            start_year, end_year, sorted(NET_CHANGE_WINDOWS)))
+    dom = pd.read_csv(net_change_domain_csv(start_year, end_year), index_col=0)
+    first, last = HATTERAS_BE_EDGE_DOMAINS
+    out = {first: float(dom.loc[first, "net_change_m"]),
+           last: float(dom.loc[last, "net_change_lowess7_m"])}
+    (s0, s1), (e0, e1) = NET_CHANGE_WINDOWS[(start_year, end_year)]
+    note = ("CoastSat net change, mean {0} to {1} minus mean {2} to {3}: raw at GIS {4}, "
+            "LOWESS-{5} at GIS {6}".format(e0, e1, s0, s1, first, TARGET_WINDOW, last))
+    return out, note
+
+
+# A run's end-minus-start shoreline per GIS domain, seaward + (x_s grows landward)
+def read_model_net_change(run_dir):
+    m = np.load(next(Path(run_dir).glob("*_shoreline_matrix.npy")))
+    D = HATTERAS_DOMAINS
+    change = -(m[-1] - m[0])[D.start_real_index:D.end_real_index]
+    return dict(zip(range(D.first_gis_id, D.last_gis_id + 1), map(float, change)))
+
+
 # The rate CSV of one run, located the way every other reader does
 def find_run(run_name, start_year, end_year, preset, kind, tag):
     run_dir = find_run_dir(RUN_ROOT, run_name, (start_year, end_year), preset,
@@ -149,21 +178,30 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
            dune_smooth="raw", estimator="lrr", coastsat_window=None):
     start_year = period
     end_year = HATTERAS_PERIODS[period]["end_year"]
-    if target_source == "coastsat":
+    net = target_source == "net_change"
+    unit = "m" if net else "m/yr"
+    years = HATTERAS_PERIODS[period]["last_model_year"] - start_year + 1
+    tolerance = CONVERGED_M_YR * (years if net else 1)
+    if net:
+        target, target_note = load_net_change_target(start_year, end_year)
+        estimator = "net_change"
+    elif target_source == "coastsat":
         target = load_target(start_year, end_year, coastsat_window)
         target_note = "CoastSat LRR{0}: raw mean at GIS 1, LOWESS-{1} at GIS 90".format(
             " {0}-{1}".format(*coastsat_window) if coastsat_window else "", TARGET_WINDOW)
     else:
         target, target_note = load_dune_target(start_year, end_year, dune_smooth)
-    column = ESTIMATOR_COLUMN[estimator]
+    column = ESTIMATOR_COLUMN.get(estimator, "end minus start shoreline, m")
 
     states = []
     for run_name, kind, tag in zip(runs, kinds, tags):
         row = index_row(run_name, kind, tag)
         # The preset folder the run sits under is the preset it ran, which the index knows
         folder = preset or str(row["source_sink_preset"])
-        model = read_model(find_run(run_name, start_year, end_year, folder, kind, tag),
-                           column)
+        model = (read_model_net_change(find_run_dir(RUN_ROOT, run_name, (start_year, end_year),
+                                                    folder, kind=kind, tag=tag))
+                 if net else read_model(find_run(run_name, start_year, end_year, folder,
+                                                 kind, tag), column))
         states.append({"run": run_name, "tag": tag,
                        "imposed": imposed_rates(row),
                        "model": model})
@@ -178,7 +216,7 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
     suggestion = {}
     for gis in HATTERAS_BE_EDGE_DOMAINS:
         want = target[gis]
-        print("\nGIS {0}   target {1:+.3f} m/yr".format(gis, want))
+        print("\nGIS {0}   target {1:+.3f} {2}".format(gis, want, unit))
         print("  {0:<46} {1:>9} {2:>9} {3:>9}".format(
             "run", "imposed", "model", "residual"))
         points = []
@@ -204,16 +242,16 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
             gain = (y1 - y0) / (x1 - x0)
             source = "local secant through the last two runs"
         else:
-            gain = NOMINAL_GAIN
+            gain = NOMINAL_GAIN * (years if net else 1)
             source = "nominal gain, no second run to take a secant through"
 
         step = -residual / gain
         suggestion[gis] = last_imposed + step
-        print("  d(LRR)/d(BE) {0:.4f}   ({1})".format(gain, source))
+        print("  d({0})/d(BE) {1:.4f}   ({2})".format("net" if net else "LRR", gain, source))
         print("  next         {0:+.1f} m/yr   "
               "(step {1:+.1f} to close {2:+.3f})".format(
                   suggestion[gis], step, residual))
-        if abs(residual) < 0.02:
+        if abs(residual) < tolerance:
             print("  CONVERGED at this tolerance; another step is noise")
 
     if suggestion:
@@ -241,7 +279,7 @@ def main():
                              "version; one for all runs, or one per --run")
     parser.add_argument("--tag", action="append", default=None,
                         help="the run's tag; one for all runs, or one per --run")
-    parser.add_argument("--target", choices=("coastsat", "duneline"),
+    parser.add_argument("--target", choices=("coastsat", "duneline", "net_change"),
                         default="coastsat",
                         help="the observation the ends are solved against")
     parser.add_argument("--dune-smooth", choices=("raw", "mean3"), default="raw",
