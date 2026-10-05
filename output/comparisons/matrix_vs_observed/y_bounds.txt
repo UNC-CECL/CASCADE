@@ -1,3 +1,3 @@
 rate panel: -7.5 to +7.5 m/yr, as the runner's real-domains rate figure (rerender_run_figures.py --ylim-real=-7.5,7.5); its with-buffers figure is +/-10
-position-change panel: -130 to +130 m = max |change| over every run and the smoothed CoastSat change, rounded up to 10 m
-start/end positions: -130 to +130 m = max |position relative to the start| over every run's end, the CoastSat domain means and the dune-line change, rounded up to 10 m
+position-change panel: -110 to +110 m = max |change| over the interior GIS 2-89 of every run and the smoothed CoastSat change, rounded up to 10 m; values beyond (the held end domains) are marked at the edge
+start/end positions: -110 to +110 m = max |position relative to the start| over the interior GIS 2-89 of every run's end, the CoastSat domain means and the dune-line change where there is one, rounded up to 10 m
