@@ -3,6 +3,7 @@ Solve a source/sink rate for every domain so the calibration run's net change ma
 
     python scripts/hatteras_ms/HAT_be_domain_solve_net_change.py solve --period 1996
     python scripts/hatteras_ms/HAT_be_domain_solve_net_change.py report --period 1996
+    python scripts/hatteras_ms/HAT_be_domain_solve_net_change.py smooth --period 1996 --step 10
 
 Starts from the pinned calibration run (solved end rates, blocking groin, 0 elsewhere).
 Each pass compares the run's raw end-minus-start shoreline with the net-change target
@@ -158,6 +159,39 @@ def cmd_solve(a):
     print(f"field: {field_file(period, k).relative_to(PROJECT_ROOT)}")
 
 
+# The solved field smoothed once (7-domain LOWESS, no robust passes, over GIS 2-89; GIS 2-10 and both ends kept), then run and scored
+def cmd_smooth(a):
+    from statsmodels.nonparametric.smoothers_lowess import lowess
+    period = a.period
+    src = field_file(period, a.step)
+    field = pd.read_csv(src, index_col=0)["be_m_yr"].reindex(GIS)
+    inner = field.loc[2:89]
+    sm = pd.Series(lowess(inner.values, inner.index.values.astype(float),
+                          frac=7 / len(inner), it=0, return_sorted=False), index=inner.index)
+    sm.loc[2:10] = inner.loc[2:10]
+    out = field.copy()
+    out.loc[2:89] = sm
+    k = f"{a.step}_lowess7"
+    dest = study(period) / "fields" / f"be_field_step{k}.csv"
+    out.rename("be_m_yr").to_csv(dest)
+    hits = sorted((study(period) / "runs" / f"step{k}").glob("*/*/*/*_shoreline_matrix.npy"))
+    if not hits:
+        run(period, k, out)
+        hits = sorted((study(period) / "runs" / f"step{k}").glob("*/*/*/*_shoreline_matrix.npy"))
+    want = target(period)
+    for label, rd, f in ((f"step{a.step}", step_run_dir(period, a.step), field),
+                         (f"step{k}", hits[-1].parent, out)):
+        resid = want - model_net(rd)
+        s = score(resid)
+        print(f"{label:16} interior bias {s['bias_m']:+.2f} m, RMSE {s['rmse_m']:.2f} m, "
+              f"max |miss| {s['max_abs_m']:.2f} m at GIS {s['worst_gis']}; "
+              f"field sd {f.loc[2:89].std():.2f}, range {f.min():+.2f} to {f.max():+.2f} m/yr")
+    pd.DataFrame({"target_m": want, "model_m": model_net(hits[-1].parent),
+                  "residual_m": want - model_net(hits[-1].parent), "be_m_yr": out,
+                  "be_unsmoothed_m_yr": field}).round(4).to_csv(
+        study(period) / "fields" / f"residual_step{k}.csv")
+
+
 def cmd_report(a):
     print(pd.read_csv(study(a.period) / "solve_log.csv").to_string(index=False))
 
@@ -165,11 +199,13 @@ def cmd_report(a):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 2)[1])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("solve", "report"):
+    for name in ("solve", "report", "smooth"):
         p = sub.add_parser(name)
         p.add_argument("--period", type=int, default=1996, choices=sorted(START_RUNS))
+        if name == "smooth":
+            p.add_argument("--step", type=int, default=MAX_STEPS, help="the solved field to smooth")
     a = ap.parse_args(argv)
-    {"solve": cmd_solve, "report": cmd_report}[a.cmd](a)
+    {"solve": cmd_solve, "report": cmd_report, "smooth": cmd_smooth}[a.cmd](a)
     return 0
 
 

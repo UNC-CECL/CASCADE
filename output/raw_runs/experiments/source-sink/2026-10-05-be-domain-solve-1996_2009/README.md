@@ -23,3 +23,14 @@
 **The field (step 10).** Interior mean −0.27 m/yr, sd 1.11. The range is −4.85 m/yr (GIS 82) to +12.43 m/yr (GIS 90, which rose from the end solve's +10.57 as the interior changed). It follows the observed erosion and accretion bands: −1 to −2 at GIS 7–14 and 21–25, +1.4 to +1.8 at 17–18 and 28–31, −2 to −2.4 at 77–79. **GIS 81–85 alternate sharply** (+1.13, −4.85, −1.41, −0.19, −3.44): the field is cancelling domain-scale structure in the model's own response near Rodanthe, not a smooth observed signal. Summed over the reach (500 m domains × the 18.77 m active profile) it is a net sink of about 90,000 m³/yr.
 
 **Status.** BE set 1, not yet written to the site config.
+
+## Option b: the step-10 field smoothed once (2026-10-05)
+
+`HAT_be_domain_solve_net_change.py smooth --step 10`: 7-domain LOWESS over GIS 2–89 with **no robust passes** (`it=0`); GIS 2–10 and both end rates are kept. The first try used statsmodels' default robust reweighting (`it=3`). That treated GIS 80–81 as outliers and passed GIS 82's −4.85 through untouched, making the field more extreme, not less (RMSE 8.2 m). It is kept in `superseded_robust_lowess/` as the record.
+
+| field | sd (GIS 2–89) | range | interior bias | interior RMSE | worst miss |
+|---|---|---|---|---|---|
+| step 10, solved | 1.11 m/yr | −4.85 to +12.43 | −0.06 m | 0.49 m | 2.0 m (GIS 11) |
+| step 10, LOWESS-7 | 0.85 m/yr | −1.93 to +12.43 | −0.61 m | **4.33 m** | 19.6 m (GIS 82) |
+
+**Reading.** Smoothing costs about 9× the RMSE, and only partly at Rodanthe: without GIS 76–88 the RMSE is still 3.4 m. Away from Rodanthe, the misses are the observed erosion and accretion bands themselves (GIS 12–13, 17–18, 28–30, 35–36, 64–68). BRIE's alongshore diffusion spreads the response to a rate, so the field has to be sharper than the target it produces. At Rodanthe, GIS 82 (−19.6 m) and GIS 85 (−11.5 m) need their extra sink. Those cells respond differently from their neighbours inside the model, so the sawtooth cancels real model-internal structure there rather than noise.
