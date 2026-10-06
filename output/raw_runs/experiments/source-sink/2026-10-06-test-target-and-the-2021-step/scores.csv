@@ -1,0 +1,13 @@
+run,target,bias_m,rmse_m,r,obs_mean_m,model_mean_m
+"zeroBE, no groin",full,-11.91,27.81,0.25,11.68,-0.24
+"zeroBE, no groin",pre_step,2.79,15.4,0.34,-0.85,1.95
+"zeroBE, no groin",no_step,5.23,25.73,0.21,-5.47,-0.24
+"edgeBE, no groin",full,-11.18,26.58,0.31,11.68,0.49
+"edgeBE, no groin",pre_step,3.41,15.16,0.38,-0.85,2.57
+"edgeBE, no groin",no_step,5.96,24.75,0.28,-5.47,0.49
+edgeBE + groin,full,-11.46,27.22,0.25,11.68,0.22
+edgeBE + groin,pre_step,3.09,15.7,0.29,-0.85,2.25
+edgeBE + groin,no_step,5.68,25.35,0.21,-5.47,0.22
+domainBE + groin,full,-18.23,32.13,0.36,11.68,-6.56
+domainBE + groin,pre_step,-1.41,16.09,0.37,-0.85,-2.25
+domainBE + groin,no_step,-1.09,26.76,0.33,-5.47,-6.56
