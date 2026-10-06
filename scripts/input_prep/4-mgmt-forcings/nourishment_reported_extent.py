@@ -4,7 +4,8 @@ Where each nourishment report says the sand went, drawn against the model domain
     python scripts/input_prep/4-mgmt-forcings/nourishment_reported_extent.py
 
 Places every limit a source names (a groin, a street, a refuge boundary, a distance
-from a pier) on the 2009-2011 mean CoastSat shoreline, reads off the GIS domain it
+from a pier) on the 2009 period's mean CoastSat shoreline (2008-08-17 to 2010-08-17),
+reads off the GIS domain it
 falls in, and draws the reported stretch beside the model footprint on imagery.
 Writes reported_limits.csv and one six-panel figure. A check on the forcing; nothing
 here feeds a run.
@@ -12,7 +13,7 @@ here feeds a run.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-04
+Version: 2026-10-06
 """
 from __future__ import annotations
 
@@ -37,13 +38,15 @@ from shapely.geometry import Point  # noqa: E402
 from beach_nourishment import COMMUNITY_COLOUR, GROIN_FILE, RECORD_ONLY_PROJECTS  # noqa: E402
 from site_layer.hat_figure_style import (C, INK, MAP_TEXT, apply_style, figsize, letter_at,  # noqa: E402
                                          north_dart, record_caption, save, scale_bar_km)
-from site_layer.hat_observed_rates import DOMAIN_BOXES, MEAN_SHORELINE_ROOT  # noqa: E402
-from site_layer.hat_topo_version import MGMT_ROOT  # noqa: E402
+from site_layer.hat_observed_rates import DOMAIN_BOXES, mean_shoreline_geojson  # noqa: E402
+from site_layer.hat_topo_version import MGMT_ROOT, shoreline_window_for_year  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_NOURISHMENT_PROJECTS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 OUT_DIR = MGMT_ROOT / "nourishment" / "reported_extent"
-SHORELINE = MEAN_SHORELINE_ROOT / "2009_2011" / "shoreline_mean_2009_2011.geojson"
+# The 2009 period's shoreline window (+/-1 yr of the 2009 USACE lidar), the one its island offset uses
+SHORELINE_WINDOW = shoreline_window_for_year(2009)
+SHORELINE = mean_shoreline_geojson(*SHORELINE_WINDOW)
 MAP_CRS = "EPSG:26918"
 MI = 1609.344
 FT = 0.3048
@@ -278,7 +281,7 @@ def main():
     out = save(fig, OUT_DIR / "nourishment_reported_extent", close=True)[0]
     record_caption(out, (
         "Reported nourishment extents against the model footprints, on Esri World Imagery (current), north up. "
-        "Each limit a source names is placed on the 2009-2011 mean CoastSat shoreline and drawn as a dashed line "
+        f"Each limit a source names is placed on the {SHORELINE_WINDOW[0]} to {SHORELINE_WINDOW[1]} mean CoastSat shoreline and drawn as a dashed line "
         "across its domain at that northing; the black bracket beside the domains spans the reported stretch. "
         "Domains are assigned by northing, so only the alongshore position matters. Shaded boxes are the 500 m model "
         "domains the fill is applied to (2026 panels: record only, not in the model). Limits are geocoded "
