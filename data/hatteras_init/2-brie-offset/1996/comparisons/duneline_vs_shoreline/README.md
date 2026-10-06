@@ -1,15 +1,14 @@
-# 2010 island offset: duneline vs shoreline
+# 1996 island offset: duneline vs shoreline
 
-Two builds of the **same** 2010 island offset, from two **different
+Two builds of the **same** 1996 island offset, from two **different
 features** on the island:
 
 | source | what it is | build |
 |---|---|---|
-| `duneline` | dune line (2009 imagery) | `2010/duneline/v1/` |
-| `shoreline` | CoastSat shoreline (2008-08-17 – 2010-08-17 mean) | `2010/shoreline/v2/` |
+| `duneline` | dune line (1997 imagery) | `1996/duneline/v1/` |
+| `shoreline` | CoastSat shoreline (1995-10-12 – 1997-10-12 mean) | `1996/shoreline/v2/` |
 
-Filed with the shoreline build it was drawn against, `2010/shoreline/v2/`
-(since 2026-09-29; until then `2010/comparisons/`).
+Filed at the year, `1996/comparisons/`, because it is drawn against the CURRENT shoreline build (since 2026-10-06; from 2026-09-29 it sat under `1996/shoreline/<v>/comparisons/`).
 
 Written by `scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py`.
 This is a comparison, not a build: nothing here is read by a model run.
@@ -18,16 +17,16 @@ This is a comparison, not a build: nothing here is read by a model run.
 
 | | |
 |---|---|
-| shoreline seaward of duneline (fixed datum) | mean +45.0 m, median +43.0, sd 16.6, range +16.9 to +97.7 |
+| shoreline seaward of duneline (fixed datum) | mean +38.0 m, median +32.8, sd 17.6, range +15.8 to +96.3 |
 | domains with shoreline seaward | 90 of 90 |
-| gap between the two zeroing baselines | +27.6 m |
-| difference in the model frame | mean -17.4 m, sd 16.6, range -70.2 to +10.7 |
+| gap between the two zeroing baselines | +39.3 m |
+| difference in the model frame | mean +1.3 m, sd 17.6, range -57.0 to +23.5 |
 
 ## Read the correlation, not the way round you expect
 
 The two profiles correlate at **r = 1.0000**. That is not the dune line and
 the shoreline agreeing about the beach — it is both of them being dominated by
-the same ~6.2 km of cape curvature, against which the 17 m sd of their
+the same ~6.2 km of cape curvature, against which the 18 m sd of their
 difference is 0.3%. **Difference these profiles; never correlate them.**
 
 ## The figure
@@ -100,28 +99,34 @@ numbers, in both frames, are in the CSV.
 `ORIG_LEN` grows **landward** from the shared offshore datum, so in the
 fixed-datum frame `duneline − shoreline` is positive where shoreline is the more seaward
 feature — a beach width. The model frame is not that: each build is zeroed on
-its own most seaward domain, so differencing the two subtracts the +27.6 m
+its own most seaward domain, so differencing the two subtracts the +39.3 m
 gap between those baselines and flips the sign,
 
 ```
-model_diff = -(seaward gap) + +27.6 m
+model_diff = -(seaward gap) + +39.3 m
 ```
 
-which is why a mean beach width of +45.0 m appears in the model frame as
--17.4 m. **The band in the figure is the model-frame gap, so it is not a
+which is why a mean beach width of +38.0 m appears in the model frame as
++1.3 m. **The band in the figure is the model-frame gap, so it is not a
 beach width.** The `seaward_gap_m` column of the CSV is.
 
 ## Files
 
 | file | what it is |
 |---|---|
-| `offset_2010_duneline_vs_shoreline.csv` | per domain: both sources in both frames, columns named for the source |
-| `offset_2010_duneline_vs_shoreline.png` | the three-panel figure (PDF and caption under `supporting/`) |
+| `offset_1996_duneline_vs_shoreline.csv` | per domain: both sources in both frames, columns named for the source |
+| `offset_1996_duneline_vs_shoreline.png` | the three-panel figure (PDF and caption under `supporting/`) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_GIS01-15.png` | GIS 01-15: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_GIS16-30.png` | GIS 16-30: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_GIS31-45.png` | GIS 31-45: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_GIS46-60.png` | GIS 46-60: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_GIS61-75.png` | GIS 61-75: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_GIS76-90.png` | GIS 76-90: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
 
 ## Rebuild
 
 ```
-python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year 2010 --duneline-version v1 --shoreline-version v2
+python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year 1996 --duneline-version v1 --shoreline-version v2
 ```
 
 Without the two version flags each source resolves through its `CURRENT`.

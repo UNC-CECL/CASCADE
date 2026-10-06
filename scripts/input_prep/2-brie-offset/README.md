@@ -14,6 +14,7 @@ runner reads the one named by `CURRENT`.
     colleague_old_version/        a colleague's original scripts, kept as they were (not restyled)
 2-figures/
     compare_offset_sources.py     dune line against shoreline for one start year
+    offset_sources_on_domains.py  the start island's domains placed at each source's offset
     HAT_compare_offset_versions.py  two builds of one start year
     HAT_plot_offset_profile_1to1.py the padded profile at true scale
 ```
@@ -426,10 +427,11 @@ HOW IT IS DRAWN, AND WHAT THAT COSTS
     shape is the point; each panel therefore states its own beach range as a
     number.
 
-OUTPUT   2-brie-offset/<year>/shoreline/<v>/comparisons/<a>_vs_<b>/
-    (filed with the shoreline build it was drawn against since 2026-09-29;
-    until then <year>/comparisons/<a>_vs_<b>/, which could not say which
-    shoreline version it held once there were two)
+OUTPUT   2-brie-offset/<year>/comparisons/<a>_vs_<b>/ against the CURRENT
+    shoreline build (since 2026-10-06, once both lines were final), or
+    <year>/shoreline/<v>/comparisons/<a>_vs_<b>/ against any other one
+    (where every comparison was filed from 2026-09-29, so the folder says
+    which shoreline version it holds)
     offset_<year>_<a>_vs_<b>.csv        per domain, both frames, columns named
                                         for the SOURCE not for a version
     offset_<year>_<a>_vs_<b>.png/.pdf   the two profiles as vertical strips of
@@ -446,6 +448,32 @@ USAGE
     Each source defaults to its CURRENT build; --duneline-version and
     --shoreline-version name one instead (2026-09-29, so a build can be
     compared before it becomes CURRENT).
+```
+
+### 2-figures/offset_sources_on_domains.py
+
+```
+The start-year island as the model builds it from each offset source:
+dune line above, shoreline below (2026-10-06, for the advisor).
+
+Every Barrier3D domain grid of the start topography (product_for_year,
+domain_arrays) is placed at its offset, then the 30 m initial beach, the
+two dune rows and the interior. One figure per 15 domains (GIS 1-15 ...
+76-90, the sixths of the line overlay), each with the dune-line placement in
+(a), the shoreline placement in (b) and the per-domain shift in (c) (Hannah,
+2026-10-06: separate figures, not one grid; quarters were too coarse to see
+the shift). A white dashed line in (a) and (b) marks where the shoreline
+would be with the other source. The grids are the same in both rows; only the cross-shore placement
+changes. Checked against a 1996 shoreline-v2 run: year-0 grids equal the
+input files, and each domain sits at offset + one constant to within 1 m.
+
+USAGE
+    python offset_sources_on_domains.py --year 1996
+
+OUTPUT   domains/ inside compare_offset_sources.py's folder (the same
+    offset_source_comparison_dir), so the six figures sit apart from the overlay:
+    offset_<year>_duneline_vs_shoreline_domains_GIS<lo>-<hi>.png,
+    PDF and caption under supporting/
 ```
 
 Notes that were in the code:

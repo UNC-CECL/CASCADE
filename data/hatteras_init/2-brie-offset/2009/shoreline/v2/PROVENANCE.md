@@ -29,7 +29,9 @@ The mean shoreline sits seaward of the dune line on 450 of 450 transects, median
 
 83 of 90 domains moved ≥ 0.5 m; datum-frame mean 1.75 m seaward; largest 11.4 m seaward at GIS 25 and 11.1 m landward at GIS 51. The zero domain is GIS 76 in both builds, which moved only 0.2 m, so the model frame tracks the datum frame: model-frame v2 − v1 mean −1.6 m, range −11.3 to +11.3 m (− seaward).
 
-## Against the dune line (`comparisons/duneline_vs_shoreline/`)
+## Against the dune line (`../../comparisons/duneline_vs_shoreline/`)
+
+Under `2009/comparisons/` since 2026-10-06, when the comparison against the CURRENT shoreline build moved up to the year; it sat in this build's `comparisons/` from 2026-09-29.
 
 Drawn with `compare_offset_sources.py --year 2010 --shoreline-version v2` against the dune build `duneline/v1`. The shoreline is seaward of the dune line in 90 of 90 domains.
 

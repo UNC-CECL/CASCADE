@@ -10,7 +10,7 @@ road, dune-line and offset paths beside it; a name not on disk raises. Details: 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-06
 """
 
 from __future__ import annotations
@@ -241,9 +241,10 @@ def offset_start_dir(year: int, source: str = DEFAULT_OFFSET_SOURCE) -> Path:
 
         <year>/duneline/v<n>/     from a digitised dune line
         <year>/shoreline/v<n>/    from a CoastSat window mean
-        <year>/shoreline/<v>/comparisons/   dune line vs that shoreline build
-                                  (offset_source_comparison_dir; was
-                                  <year>/comparisons/ until 2026-09-29)
+        <year>/comparisons/       dune line vs the CURRENT shoreline build
+        <year>/shoreline/<v>/comparisons/   dune line vs an older shoreline build
+                                  (both offset_source_comparison_dir; the
+                                  CURRENT pair moved up on 2026-10-06)
 
     Nothing outside this module should join these parts by hand.
     """
@@ -324,18 +325,20 @@ def offset_comparison_dir(year: int, name: str) -> Path:
 
 def offset_source_comparison_dir(year: int, name: str,
                                  shoreline_version: str | None = None) -> Path:
-    """<year>/shoreline/<v>/comparisons/<name>/ -- a dune line vs shoreline
-    comparison, filed with the SHORELINE build it was drawn against.
+    """Where a dune line vs shoreline comparison lands.
 
-    Since 2026-09-29 (Hannah: "maybe these should instead be organized under
-    their version"). The shoreline source gained a second version that day
-    (v2, the DEM-centred window), and a shared <year>/comparisons/<name>/
-    could not say which shoreline build it held. Each shoreline build now
-    carries its own comparison against the dune line; the dune version used
-    is written into the comparison's README and caption. offset_comparison_dir
-    remains for anything compared between sources that is not versioned.
+    Against the CURRENT shoreline build: <year>/comparisons/<name>/, beside
+    both sources, since 2026-10-06 (Hannah: the shoreline and dune lines are
+    final, so the comparisons can sit at the year). Against any other
+    shoreline build: <year>/shoreline/<v>/comparisons/<name>/, filed with that
+    build as it has been since 2026-09-29, so a superseded comparison still
+    says which build it was drawn against. The builds used are written into
+    each comparison's README and caption.
     """
-    return offset_build_dir(year, shoreline_version, "shoreline") / "comparisons" / name
+    v = shoreline_version or offset_version(year, "shoreline")
+    if v == offset_version(year, "shoreline"):
+        return offset_comparison_dir(year, name)
+    return offset_build_dir(year, v, "shoreline") / "comparisons" / name
 
 
 def offset_file(year: int, kind: str = "padded", total_domains: int = 120,

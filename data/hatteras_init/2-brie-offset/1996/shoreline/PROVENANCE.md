@@ -36,7 +36,8 @@ CURRENT           the build every reader of this source takes -> v2 (since 2026-
 v1/               the build from the 1995-1997 mean shoreline, padded with the model's wrap-around
 v2/               the build from the 1995-10-12 to 1997-10-12 mean shoreline, ±1 yr of the 1996 ALACE flights (2026-09-29; CURRENT)
 superseded_20260924_pre-metres/v1/  the same build with the old slope-and-bridge buffers
-v<n>/comparisons/duneline_vs_shoreline/  the dune line against that build (compare_offset_sources.py --shoreline-version v<n>)
+v1/comparisons/duneline_vs_shoreline/  the dune line against v1 (compare_offset_sources.py --shoreline-version v1)
+../comparisons/duneline_vs_shoreline/  the dune line against CURRENT (v2), since 2026-10-06
 ```
 
 Resolved by `hat_topo_version.offset_version(1996, "shoreline")` and

@@ -19,7 +19,8 @@ raw_offsets/      one CSV per dune-line VINTAGE, per transect; a period finds
 <year>/<source>/v<n>/       one build
 <year>/<source>/ext/<geom>/ an extended geometry (not a version)
 <year>/<source>/superseded_*/   retired builds
-<year>/shoreline/<v>/comparisons/duneline_vs_shoreline/  the dune line against that shoreline build (since 2026-09-29; was <year>/comparisons/)
+<year>/comparisons/duneline_vs_shoreline/  the dune line against the CURRENT shoreline build (since 2026-10-06)
+<year>/shoreline/<v>/comparisons/duneline_vs_shoreline/  the dune line against an older shoreline build (v1)
 ```
 
 **The two sources today**

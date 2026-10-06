@@ -10,7 +10,7 @@ in the start year's comparison folder. Details: scripts/input_prep/2-brie-offset
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-06
 """
 
 from __future__ import annotations
@@ -131,7 +131,8 @@ def _unpadded(year, source, version=None):
     path = _tv.offset_file(year, "unpadded", source=source, version=version)
     if not path.is_file():
         sys.exit("no {0} build for {1}: {2} is missing".format(source, year, path))
-    return pd.read_csv(path).set_index("Domain_ID")[str(year)]
+    # The value column by position: the 2009 builds kept their 2010 header through the 2026-10-05 rename
+    return pd.read_csv(path).set_index("Domain_ID").iloc[:, 0].rename(str(year))
 
 
 # Per-domain mean station from the shared offshore datum
@@ -293,6 +294,20 @@ def main(argv=None):
 
 # The README beside the comparison
 def _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, shift, stem, ver):
+    if out_dir == _tv.offset_comparison_dir(year, out_dir.name):
+        filed = ("Filed at the year, `{0}/comparisons/`, because it is drawn against the CURRENT shoreline "
+                 "build (since 2026-10-06; from 2026-09-29 it sat under `{0}/shoreline/<v>/comparisons/`)."
+                 .format(year))
+    else:
+        filed = ("Filed with the shoreline build it was drawn against, `{0}/shoreline/{1}/`, which is not "
+                 "the CURRENT one; the comparison against CURRENT is in `{0}/comparisons/`.".format(
+                     year, ver["shoreline"]))
+    # The domain figures offset_sources_on_domains.py draws into domains/, one per 15 domains
+    extra = "".join(
+        "| `domains/{0}` | GIS {1}: the Barrier3D domains placed with each offset, dune line (a) over "
+        "shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |\n".format(
+            f.name, f.stem.split("_GIS")[1])
+        for f in sorted((out_dir / "domains").glob(stem + "_domains_GIS*.png")))
     (out_dir / "README.md").write_text("""# {year} island offset: {a} vs {b}
 
 Two builds of the **same** {year} island offset, from two **different
@@ -303,8 +318,7 @@ features** on the island:
 | `{a}` | {lab_a} | `{year}/{a}/{va}/` |
 | `{b}` | {lab_b} | `{year}/{b}/{vb}/` |
 
-Filed with the shoreline build it was drawn against, `{year}/shoreline/{vs}/`
-(since 2026-09-29; until then `{year}/comparisons/`).
+{filed}
 
 Written by `scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py`.
 This is a comparison, not a build: nothing here is read by a model run.
@@ -412,7 +426,7 @@ beach width.** The `seaward_gap_m` column of the CSV is.
 |---|---|
 | `{stem}.csv` | per domain: both sources in both frames, columns named for the source |
 | `{stem}.png` | the three-panel figure (PDF and caption under `supporting/`) |
-
+{extra}
 ## Rebuild
 
 ```
@@ -426,7 +440,7 @@ Without the two version flags each source resolves through its `CURRENT`.
            glo=gap.min(), ghi=gap.max(),
            npos=int((gap > 0).sum()), n=len(gap), shift=shift,
            mm=mdiff.mean(), msd=mdiff.std(), mlo=mdiff.min(), mhi=mdiff.max(),
-           stem=stem), encoding="utf-8")
+           stem=stem, filed=filed, extra=extra), encoding="utf-8")
 
 
 if __name__ == "__main__":

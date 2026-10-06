@@ -291,13 +291,13 @@ where the water stays below the berm >= 12 h (short pieces folded into a
 neighbour), then every event cut to the 24 h above the berm around its peak.
 The split puts back storms the grouping had chained to a larger one and the
 trim then removed -- Fran 1996 (with Edouard), Jose 2017 (with Maria) -- and
-changed no score (experiments/storms-and-overwash/2026-09-29-event-splitting).
+changed no score (experiments/storms-overwash-and-dunes/2026-09-29-event-splitting).
 Earlier defaults, both still on disk for reproducing older runs:
 v3_trim24  2026-09-28 .. 09-29: every event kept, trimmed to 24 h, not split.
 v3_72      until 2026-09-28: events over 72 h DROPPED (Isabel 2003, March
 2018, Florence, Dennis), a limit that existed only because the
 pre-49fd069 Barrier3D crashed on long storms.
-Record: 3-storms/PROVENANCE.md; experiments/storms-and-overwash/.
+Record: 3-storms/PROVENANCE.md; experiments/storms-overwash-and-dunes/.
 ```
 
 <details><summary>Function notes (the original docstrings)</summary>
@@ -2006,9 +2006,10 @@ from -- and left the two sources asymmetric once the shoreline arrived.
 
     <year>/duneline/v<n>/     from a digitised dune line
     <year>/shoreline/v<n>/    from a CoastSat window mean
-    <year>/shoreline/<v>/comparisons/   dune line vs that shoreline build
-                              (offset_source_comparison_dir; was
-                              <year>/comparisons/ until 2026-09-29)
+    <year>/comparisons/       dune line vs the CURRENT shoreline build
+    <year>/shoreline/<v>/comparisons/   dune line vs an older shoreline build
+                              (both offset_source_comparison_dir; the
+                              CURRENT pair moved up on 2026-10-06)
 
 Nothing outside this module should join these parts by hand.
 ```
@@ -2052,16 +2053,15 @@ start. `name` says what was compared, e.g. "duneline_vs_shoreline".
 **`offset_source_comparison_dir()`**
 
 ```text
-<year>/shoreline/<v>/comparisons/<name>/ -- a dune line vs shoreline
-comparison, filed with the SHORELINE build it was drawn against.
+Where a dune line vs shoreline comparison lands.
 
-Since 2026-09-29 (Hannah: "maybe these should instead be organized under
-their version"). The shoreline source gained a second version that day
-(v2, the DEM-centred window), and a shared <year>/comparisons/<name>/
-could not say which shoreline build it held. Each shoreline build now
-carries its own comparison against the dune line; the dune version used
-is written into the comparison's README and caption. offset_comparison_dir
-remains for anything compared between sources that is not versioned.
+Against the CURRENT shoreline build: <year>/comparisons/<name>/, beside
+both sources, since 2026-10-06 (Hannah: the shoreline and dune lines are
+final, so the comparisons can sit at the year). Against any other
+shoreline build: <year>/shoreline/<v>/comparisons/<name>/, filed with that
+build as it has been since 2026-09-29, so a superseded comparison still
+says which build it was drawn against. The builds used are written into
+each comparison's README and caption.
 ```
 
 **`offset_file()`**
