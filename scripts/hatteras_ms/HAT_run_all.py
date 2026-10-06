@@ -48,6 +48,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ROAD_EVENTS,
 )
 
+from HAT_hindcast_config import _FIELDS  # noqa: E402  (the groin defaults stage 6 checks against)
 from HAT_groin_sweep_config import (END_YEAR, LAST_MODEL_YEAR, GROIN_SWEEP_ROOT, PERIODS,  # noqa: E402
                                     PRESETS)
 
@@ -405,6 +406,14 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
                 failed += 1
                 continue
             M, fraction = fit["M"], fit["fraction"]
+            # Kind and b reach the runner as code defaults, so the fit file must agree with them
+            _defaults = {name: default for name, _, _, default in _FIELDS}
+            if (fit.get("kind", _defaults["groin_kind"]) != _defaults["groin_kind"]
+                    or fit.get("b", _defaults["groin_blocking_fraction"])
+                    != _defaults["groin_blocking_fraction"]):
+                raise SystemExit(f"{JOINT_JSON.name} says {fit.get('kind')} b={fit.get('b')} but "
+                                 f"the runner defaults are {_defaults['groin_kind']} "
+                                 f"b={_defaults['groin_blocking_fraction']}; pin both together")
             # The two seed cells already hold a run at provisional values
             overwrite = overwrite or (preset == SEED_PRESET
                                       and scenario == SEED_SCENARIO)

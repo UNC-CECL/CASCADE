@@ -1,5 +1,9 @@
 # `output/calibration/groin` — what is in here, and what it concluded
 
+> **PINNED 2026-10-05: blocking groin, b = 0.6, f = 0.6**, fitted on the 1996–2009 calibration period
+> (`hard-structures/groin/groin-module-test/1-dem-to-dem/2026-10-05-blocking-fit-calibration/README.md`).
+> It is in `joint_fit.json`, the runner defaults and `hat_run.yaml`. Everything below is history.
+
 > **SUPERSEDED UNDER OPTION A (2026-09-29).** M = 60 / f = 0.6 below was fitted on the ÷10 offset at
 > the old waves and is ~10× too strong on the adopted setup. The groin was re-fitted in the full model
 > with an instant 2004 failure and a new blocking form; nothing is pinned yet. Start at
