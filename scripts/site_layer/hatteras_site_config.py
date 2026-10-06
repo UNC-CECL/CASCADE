@@ -768,6 +768,8 @@ HATTERAS_NOURISHMENT_PROJECTS = (
         year=2017,
         # Placed 2017-06-21 to 2018-02-27 (~46% by Nov 2017); fired in the start year. Same 2.9 mi as 2022
         # GIS 6-16 since 2026-10-04: southernmost groin ~200 m into GIS 6, Haulover Day Use Area ~150 m into GIS 16
+        # Observed sand from the GIS 6 end moved south past the groin to GIS 4-5 within ~1 yr; the model keeps it at
+        # GIS 6. Kept as reported, the mismatch reported (2026-10-05; 4-mgmt-forcing/README.md)
         gis_domains=tuple(range(6, 17)),
         volume_cubic_yards=2_600_000,
         note="Haulover Day Use Area to the lighthouse groin, 2.9 mi; Outer Banks Voice 2018-03-01",

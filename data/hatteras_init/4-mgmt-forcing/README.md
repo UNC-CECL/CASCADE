@@ -78,3 +78,9 @@ extraction it was measured against. Spending one version's setbacks on another
 version's arrays measures from a row that moved. Every folder under
 `road_offset/dunestart_offset/` carries a `PROVENANCE.md` saying which line,
 which extraction, and -- for `derived/` -- which measured file is behind it.
+
+## Known mismatch: Buxton fill sand at the groin end (2026-10-05, kept as reported)
+
+The Buxton 2017 and 2022 fills are placed on GIS 6–16, as reported: the southernmost groin is about 200 m into GIS 6. After the 2017 fill, the observations show the sand at the south end moving **south past the groin** within about a year. CoastSat, early 2017 to late 2018: GIS 5 +32 m and GIS 4 +18 m, while GIS 6 is back to −3 m; the wet/dry photos agree. The model keeps about +32 m at GIS 6 and moves almost nothing to GIS 4–5, even with no groin, because BRIE's alongshore diffusivity at the cape is near zero.
+
+**Decision: report it, don't correct it.** The footprint stays as reported. Scores near the groin are given separately before and after the 2017 fill. In the DEM-to-DEM plan, the GIS 4–8 misfit this leaves in the test period goes into the second source/sink set, so forward scenarios with Buxton fills carry it as a correction term. Evidence and tables: `hard-structures/groin/groin-module-test/1-dem-to-dem/2026-10-05-blocking-fit-calibration/README.md`.
