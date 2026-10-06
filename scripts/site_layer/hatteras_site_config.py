@@ -530,11 +530,37 @@ for _period in HATTERAS_BE_RATES_CALIBRATED:
             f"HATTERAS_BE_EDGE_D90, so the edge preset has no value solved "
             f"against its own base run.")
 
+# "domainBE": BE set 1 of the DEM-to-DEM plan, a rate for every domain, solved 2026-10-05 so the 1996-2009
+# calibration run (solved ends, blocking groin b 0.6 f 0.6, full management, relocations off, option A waves)
+# ends on the CoastSat net change (7-domain LOWESS target, GIS 1-10 raw): interior RMSE 0.49 m after 10 passes.
+# Source: output/raw_runs/experiments/source-sink/2026-10-05-be-domain-solve-1996_2009/fields/be_field_step10.csv.
+# Not smoothed: a 7-domain smooth raised the RMSE to 4.3 m (README there). GIS 81-85 alternate on purpose.
+# The test period 2009-2025 carries the same field; its residual becomes the second set.
+_BE_DOMAIN_SET1 = {
+    1: +1.4974, 2: +0.0457, 3: -0.0630, 4: +0.0972, 5: +1.1596, 6: +0.2874,
+    7: -1.3584, 8: -0.8644, 9: -1.0920, 10: -1.4417, 11: -1.5125, 12: -1.7676,
+    13: -1.9325, 14: -0.8597, 15: +0.0916, 16: +0.6805, 17: +1.4157, 18: +1.6749,
+    19: +0.0651, 20: +0.3484, 21: -0.3560, 22: -0.7386, 23: -1.0149, 24: -1.3073,
+    25: -1.1731, 26: -0.2054, 27: +0.1596, 28: +1.3796, 29: +1.7011, 30: +1.7585,
+    31: +1.0849, 32: +0.4925, 33: -0.0085, 34: -0.6293, 35: -1.3202, 36: -1.2606,
+    37: -0.6965, 38: -0.1101, 39: +0.3490, 40: +0.5335, 41: +0.5313, 42: +0.6081,
+    43: +0.7928, 44: +0.5538, 45: +0.0859, 46: +0.0109, 47: -0.2667, 48: +0.0760,
+    49: -0.1685, 50: -0.1633, 51: -0.4718, 52: -0.8500, 53: -0.4355, 54: -0.2387,
+    55: -0.1905, 56: -0.0350, 57: +0.5753, 58: +0.3604, 59: -0.1940, 60: +0.1275,
+    61: -0.1071, 62: -0.0347, 63: -0.8589, 64: -1.4649, 65: -1.2940, 66: -0.9245,
+    67: +0.5080, 68: +1.2214, 69: +1.1947, 70: +1.2657, 71: +0.7142, 72: +0.7206,
+    73: +0.8418, 74: +0.4371, 75: -0.6250, 76: -0.7557, 77: -2.4431, 78: -1.9149,
+    79: -2.0768, 80: +0.2830, 81: +1.1317, 82: -4.8525, 83: -1.4109, 84: -0.1937,
+    85: -3.4419, 86: -1.0830, 87: -0.7478, 88: -0.9177, 89: -0.9595, 90: +12.4267,
+}
+HATTERAS_BE_RATES_DOMAIN = {1996: _BE_DOMAIN_SET1, 2009: _BE_DOMAIN_SET1}
+
 # Canonical presets: the keys are the run-name tokens
 HATTERAS_BE_PRESETS = {
     "zeroBE": HATTERAS_BE_RATES_ZERO,
     "edgeBE": HATTERAS_BE_RATES_EDGE,
     "calibBE": HATTERAS_BE_RATES_CALIBRATED,
+    "domainBE": HATTERAS_BE_RATES_DOMAIN,
 }
 
 # Deprecated spellings; resolve_be_preset() maps them to the canonical key

@@ -22,7 +22,7 @@
 
 **The field (step 10).** Interior mean −0.27 m/yr, sd 1.11. The range is −4.85 m/yr (GIS 82) to +12.43 m/yr (GIS 90, which rose from the end solve's +10.57 as the interior changed). It follows the observed erosion and accretion bands: −1 to −2 at GIS 7–14 and 21–25, +1.4 to +1.8 at 17–18 and 28–31, −2 to −2.4 at 77–79. **GIS 81–85 alternate sharply** (+1.13, −4.85, −1.41, −0.19, −3.44): the field is cancelling domain-scale structure in the model's own response near Rodanthe, not a smooth observed signal. Summed over the reach (500 m domains × the 18.77 m active profile) it is a net sink of about 90,000 m³/yr.
 
-**Status.** BE set 1, not yet written to the site config.
+**Status.** BE set 1, stored 2026-10-06 as the `domainBE` preset (`HATTERAS_BE_RATES_DOMAIN` in the site config, 1996 and 2009). The matrix run `matrix/1996_2009/domainBE/HAT_1996_2009_domainBE_offsetmetres_road_bdm_groinblock` reproduces step 10 bit for bit.
 
 ## Option b: the step-10 field smoothed once (2026-10-05)
 
