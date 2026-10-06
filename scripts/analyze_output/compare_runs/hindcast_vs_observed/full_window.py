@@ -17,7 +17,9 @@ Version: 2026-10-05
 """
 from __future__ import annotations
 
+import dataclasses
 import io
+import json
 import sys
 from pathlib import Path
 
@@ -37,12 +39,12 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 from coastsat_vs_duneline import load_chainage  # noqa: E402
 
 from site_layer.hat_figure_style import (  # noqa: E402
-    COMPARISONS_ROOT, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style,
+    C_1984_FILL, C_1997_FILL, COMPARISONS_ROOT, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
     compare_header, figsize, mark_offaxis, offaxis_clause, open_frame,
     record_caption, save, structures, town_bands)
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT  # noqa: E402
 from site_layer.hat_topo_version import INIT_ROOT  # noqa: E402
-from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS  # noqa: E402
 
 common = mvo.common
 
@@ -64,6 +66,12 @@ C_OBS = "#92c5de"                   # observed pale and thick, model dark and th
 C_MODEL = "#2166ac"
 LW_OBS, LW_MODEL = 2.8, 1.2
 GIF_MS = 450                        # per frame; the last frame holds three times as long
+# The six alongshore sections of the zoomed positions figure, GIS inclusive
+# The 15-domain sections of the GIF-zoom position figures, GIS inclusive
+SECTIONS = [(1, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90)]
+# Fixed y axes for the runner-style figures: rate in m/yr, observed position change in m (None fits the data)
+RATE_YLIM = (-5.0, 5.0)
+POSITION_YLIM = (-100.0, 100.0)
 PRESET_TEXT = {"zeroBE": "no source/sink in any domain (zeroBE)",
                "edgeBE": "end rates at GIS 1 and 90 solved on the 1996-2025 CoastSat LRR (edgeBE)"}
 # -----------------------------------------------------------------------------
@@ -233,6 +241,226 @@ def gif(preset, rd, models, change):
         "off-axis values marked at the edge."))
     return path
 
+# Start, observed end and modelled end in the model frame, landward up as in the runner's position GIFs
+def positions_figure(preset, rd, obs_net_raw):
+    m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
+    D = HATTERAS_DOMAINS
+    # Landward positive, so a plain axis puts landward up and the ocean at the bottom
+    start = _gis(m[0][D.start_real_index:D.end_real_index])
+    model_end = _gis(m[-1][D.start_real_index:D.end_real_index])
+    obs_end = start - obs_net_raw
+    s = skill(start - model_end, obs_net_raw)
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.8), layout="constrained")
+    ax.plot(start.index, start.values, color=INK_MUTED, lw=2.2, zorder=3)
+    ax.plot(obs_end.index, obs_end.values, color=C_OBS, lw=1.3, zorder=5, marker="o", ms=2.2)
+    ax.plot(model_end.index, model_end.values, color=C_MODEL, lw=1.2, zorder=6)
+    ax.set_xlim(1, N_DOMAINS)
+    # Headroom above the planform, so the village labels clear the lines
+    lo = float(np.nanmin([start.min(), obs_end.min(), model_end.min()]))
+    hi = float(np.nanmax([start.max(), obs_end.max(), model_end.max()]))
+    ax.set_ylim(lo - 0.05 * (hi - lo), hi + 0.18 * (hi - lo))
+    ax.grid(axis="y")
+    open_frame(ax)
+    town_bands(ax, label=True)
+    ax.set_ylabel("Cross-shore position,\nmodel frame (m), landward ▲")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    fig.legend(handles=[
+        Line2D([], [], color=INK_MUTED, lw=2.2, label="Start position, 1996 (model year 0)"),
+        Line2D([], [], color=C_OBS, lw=1.3, marker="o", ms=2.2,
+               label="CoastSat 2025 (calendar-year mean)"),
+        Line2D([], [], color=C_MODEL, lw=1.2,
+               label=f"Modelled 1 Jan 2026: bias {s['bias']:+.1f} m, RMSE {s['rmse']:.1f}, "
+                     f"r {s['r']:.2f}")],
+        loc="outside lower center", ncol=3, frameon=False, fontsize=7)
+    compare_header(fig, f"Full management, no groin, {preset}: the 1996 start, CoastSat 2025 "
+                        "and the modelled end shoreline")
+    # Last, once the legend and header have fixed the layout
+    structures(ax, label=True)
+    caption = (
+        f"Full management, no groin, no relocation; {PRESET_TEXT[preset]}. Run {rd.name}. "
+        "Shoreline position in the model's cross-shore frame, landward up and the ocean at the "
+        "bottom, as in the runner's position GIFs: grey the 1996 start (the shoreline offset "
+        f"built on the CoastSat mean over {START_MEAN.replace('_', ' to ')}), blue CoastSat "
+        "2025 (the start moved by the calendar-2025 mean minus the start mean, per domain), "
+        "dark the modelled shoreline on 1 Jan 2026. Domain values, unsmoothed. The CoastSat "
+        "mean is centred about half a year before the model end. Scores: modelled minus "
+        "observed change, seaward positive, over the interior GIS 2-89.")
+    pngs = [rd / "figures" / "start_and_end_positions_1996_2025.png",
+            OUT / "positions" / f"full_window_{preset}_full_management_{WINDOW}_start_and_end_positions.png"]
+    for png in pngs:
+        save(fig, png, dpi=300, close=False)
+        record_caption(png, caption)
+    plt.close(fig)
+    return pngs
+
+
+# One GIF-style frame per 15-domain section: the start, the modelled end with its change shaded, CoastSat 2025 on top
+def position_section_figures(preset, rd, obs_net_raw):
+    m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
+    D = HATTERAS_DOMAINS
+    # Landward positive, as the runner's position GIFs draw it (ocean at the bottom)
+    start = _gis(m[0][D.start_real_index:D.end_real_index])
+    model_end = _gis(m[-1][D.start_real_index:D.end_real_index])
+    obs_end = start - obs_net_raw
+    pngs = []
+    for g0, g1 in SECTIONS:
+        ref = start.loc[g0:g1].mean()
+        s, mo, ob = (v.loc[g0:g1] - ref for v in (start, model_end, obs_end))
+        fig, ax = plt.subplots(figsize=figsize("double", aspect=0.56), layout="constrained")
+        x = s.index.to_numpy(float)
+        ax.fill_between(x, mo, s, where=(mo <= s), interpolate=True, color=C_1997_FILL,
+                        alpha=0.7, lw=0, zorder=1)
+        ax.fill_between(x, mo, s, where=(mo > s), interpolate=True, color=C_1984_FILL,
+                        alpha=0.7, lw=0, zorder=1)
+        ax.plot(x, s.values, color=INK_MUTED, ls=(0, (4, 3)), lw=0.9, zorder=3)
+        ax.plot(x, ob.values, color=C_OBS, lw=2.4, zorder=4, marker="o", ms=3.0)
+        ax.plot(x, mo.values, color=INK, lw=1.6, zorder=5)
+        vals = np.concatenate([s.values, mo.values, ob.values])
+        pad = (np.nanmax(vals) - np.nanmin(vals)) * 0.10
+        # Values are landward positive, so a plain axis puts landward up and the ocean at the bottom
+        ax.set_ylim(np.nanmin(vals) - pad, np.nanmax(vals) + pad)
+        ax.set_xlim(g0 - 0.5, g1 + 0.5)
+        ax.grid(axis="y")
+        open_frame(ax)
+        town_bands(ax, label=True)
+        ax.set_ylabel("Cross-shore position (m, rel. section start mean)\nlandward ▲")
+        ax.set_xlabel(DOMAIN_AXIS_LABEL)
+        ax.set_title(f"GIS {g0}-{g1}", loc="left", fontsize=10)
+        fig.legend(handles=[
+            Line2D([], [], color=INK_MUTED, ls=(0, (4, 3)), lw=0.9, label="1996 start"),
+            Line2D([], [], color=INK, lw=1.6, label="Modelled 1 Jan 2026"),
+            plt.Rectangle((0, 0), 1, 1, color=C_1997_FILL, alpha=0.7, lw=0,
+                          label="model accretion, seaward of 1996"),
+            plt.Rectangle((0, 0), 1, 1, color=C_1984_FILL, alpha=0.7, lw=0,
+                          label="model erosion, landward of 1996"),
+            Line2D([], [], color=C_OBS, lw=2.4, marker="o", ms=3.0, label="CoastSat 2025")],
+            loc="outside lower center", ncol=3, frameon=False, fontsize=7)
+        compare_header(fig, f"Full management, no groin, {preset}: 1996 start, CoastSat 2025 and "
+                            "the modelled end shoreline")
+        structures(ax, label=True)
+        png = rd / "figures" / "position_sections" / f"start_and_end_positions_1996_2025_gis_{g0:02d}-{g1:02d}.png"
+        save(fig, png, dpi=300, close=True)
+        record_caption(png, (
+            f"Full management, no groin, no relocation; {PRESET_TEXT[preset]}. Run {rd.name}. "
+            f"GIS {g0}-{g1} at the zoom of the runner's position GIFs: cross-shore position "
+            "relative to the section's mean 1996 position, landward up and the ocean at the "
+            "bottom. Dashed the 1996 start (the shoreline offset built on the CoastSat mean over "
+            f"{START_MEAN.replace('_', ' to ')}); black the modelled shoreline on 1 Jan 2026, "
+            "shaded blue where it lies seaward of the start and red where landward; light blue "
+            "CoastSat 2025 (the start moved by the calendar-2025 mean minus the start mean). "
+            "Domain values, unsmoothed, true scale."))
+        pngs.append(png)
+    return pngs
+
+# Rename a runner rate figure's rate wording for a position change in metres
+def _relabel_as_position(fig, ax):
+    ax.set_ylabel("Shoreline Position Change (m)")
+    swaps = (("CoastSat LRR per 500 m domain",
+              "CoastSat observed change per 500 m domain (calendar-2025 mean minus the 1996 start mean)"),
+             ("transect LRR", "transect change"))
+    texts = list(fig.texts) + list(ax.texts) + [ax.title]
+    for leg in [ax.get_legend(), *fig.legends]:
+        if leg is not None:
+            texts += list(leg.get_texts())
+    for t in texts:
+        new = t.get_text()
+        for a, b in swaps:
+            new = new.replace(a, b)
+        if new != t.get_text():
+            t.set_text(new)
+
+# The model line smoothed as the observation is (7-domain LOWESS, GIS 1-10 raw), buffers left as they are
+def _smooth_model(values):
+    D = HATTERAS_DOMAINS
+    out = np.asarray(values, float).copy()
+    out[D.start_real_index:D.end_real_index] = mvo.smoothed(
+        _gis(out[D.start_real_index:D.end_real_index])).to_numpy(float)
+    return out
+
+
+# Draw one runner figure with the smoothed model, put the raw model faint behind it, rename, save
+def _draw_smoothed_model(draw, raw, png, position):
+    D = HATTERAS_DOMAINS
+    fig, ax = draw(_smooth_model(raw))[:2]
+    gis = np.arange(D.first_gis_id, D.last_gis_id + 1)
+    ax.plot(gis, np.asarray(raw, float)[D.start_real_index:D.end_real_index],
+            color=HATTERAS_ANNOTATIONS.model_color, lw=0.9, alpha=0.45, zorder=5.5)
+    if position:
+        _relabel_as_position(fig, ax)
+    # The legend's model entry names both lines
+    for leg in [ax.get_legend(), *fig.legends]:
+        if leg is None:
+            continue
+        for t in leg.get_texts():
+            if t.get_text().startswith("CASCADE"):
+                t.set_text(t.get_text() + " (7-domain LOWESS; faint: unsmoothed)")
+    fig.savefig(png, dpi=300, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+# The runner's own rate figures redrawn at a fixed y axis, and the same style for the observed position change
+def runner_style_figures(preset, rd, change):
+    from cascade_pipeline.coastsat_lowess import (CoastSatDataset, LowessConfig,
+                                                  build_coastsat_series)
+    from cascade_pipeline.plotting.rate_comparison import (
+        DEFAULT_RATE_COMPARISON, plot_annotated_rate_comparison, plot_rate_comparison)
+    from cascade_pipeline.run_info import RunInfo
+    from cascade_pipeline.run_layout import resolve
+    from cascade_pipeline.shoreline import compute_change_rate, compute_lrr
+    run_name = rd.name
+    meta = json.loads((rd / f"{run_name}_run_metadata.json").read_text(encoding="utf-8"))
+    wave, src = meta.get("wave climate", {}), meta.get("source/sink", {})
+    run = RunInfo(run_name=run_name, run_dir=str(rd), start_year=START, end_year=END,
+                  Hs=wave.get("wave_height_m"), flip_sign_model=True,
+                  background_erosion_on=bool(src.get("background_erosion_on", True)),
+                  wave_climate=meta.get("scenario", {}).get("wave climate"))
+    m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
+    years = m.shape[0] - 1
+    # As the runner: 7-domain LOWESS, GIS 1-10 raw
+    lowess = LowessConfig(window_domains=(7,), skip_southern_domains=10)
+    kw = dict(domains=HATTERAS_DOMAINS, annotations=HATTERAS_ANNOTATIONS, lowess_config=lowess)
+
+    rate, _ = compute_lrr(m, span_years=years, flip_sign=True)
+    cs_rate = build_coastsat_series(
+        [CoastSatDataset(label=f"CoastSat LRR ({START}-{END})", period_start=START,
+                         csv_path=str(COASTSAT_LRR_ROOT / WINDOW / "transect_lrr_full.csv"))],
+        active_period_start=START, lowess_config=lowess, domains=HATTERAS_DOMAINS)
+    cfg = dataclasses.replace(DEFAULT_RATE_COMPARISON, ylim=RATE_YLIM, ylim_real=RATE_YLIM)
+    pngs = [resolve(rd, "figure_rate", run_name), resolve(rd, "figure_rate_buffers", run_name)]
+    _draw_smoothed_model(lambda v: plot_rate_comparison(
+        v, cs_rate, run, real_domains_only=True, estimator="lrr", show=False, config=cfg, **kw),
+        rate, pngs[0], position=False)
+    _draw_smoothed_model(lambda v: plot_annotated_rate_comparison(
+        v, cs_rate, run, estimator="lrr", show=False, config=cfg, **kw),
+        rate, pngs[1], position=False)
+
+    # Observed change per transect (no rate): the calendar-2025 mean minus the DEM-centred start mean
+    obs = change[["domain_number", OBS_END_YEAR]].rename(columns={OBS_END_YEAR: "change_m"})
+    obs_csv = OUT / "tables" / "transect_observed_change_1996_start_to_2025.csv"
+    obs.rename_axis("transect_id").reset_index().round(4).to_csv(obs_csv, index=False)
+    cs_pos = build_coastsat_series(
+        [CoastSatDataset(label="CoastSat observed change",
+                         period_start=START, csv_path=str(obs_csv), rate_col="change_m")],
+        active_period_start=START, lowess_config=lowess, domains=HATTERAS_DOMAINS)
+    position = compute_change_rate(m, span_years=1, flip_sign=True)
+    pcfg = dataclasses.replace(
+        DEFAULT_RATE_COMPARISON, quantity="position",
+        observed_label="CoastSat observed change (2025 mean minus 1996 start mean, 7-domain LOWESS)",
+        observed_description=(f"observed change, the calendar-2025 CoastSat mean minus the mean over "
+                              f"{START_MEAN.replace('_', ' to ')} (no rate)"),
+        ylim=POSITION_YLIM, ylim_real=POSITION_YLIM)
+    pdir = rd / "figures" / "position_change" / "observed"
+    pdir.mkdir(parents=True, exist_ok=True)
+    ppngs = [pdir / "shoreline_position_change.png",
+             pdir / "shoreline_position_change_with_buffers.png"]
+    _draw_smoothed_model(lambda v: plot_rate_comparison(
+        v, cs_pos, run, real_domains_only=True, estimator=None, show=False, config=pcfg, **kw),
+        position, ppngs[0], position=True)
+    _draw_smoothed_model(lambda v: plot_annotated_rate_comparison(
+        v, cs_pos, run, estimator=None, show=False, config=pcfg, **kw),
+        position, ppngs[1], position=True)
+    return pngs + ppngs
+
 
 # Run: every preset that has run, both readings, the GIF, scores and the domain table
 def main():
@@ -267,6 +495,9 @@ def main():
         for k in m_raw:
             dom[f"{preset}_{k}_raw"], dom[f"{preset}_{k}_smoothed"] = m_raw[k], m_smooth[k]
         written.append(gif(preset, rd, models, change))
+        written.extend(positions_figure(preset, rd, obs_raw["net"]))
+        written.extend(runner_style_figures(preset, rd, change))
+        written.extend(position_section_figures(preset, rd, obs_raw["net"]))
     pd.DataFrame(rows).round(4).to_csv(OUT / "tables" / "scores.csv", index=False)
     pd.DataFrame(dom).round(4).to_csv(OUT / "tables" / "domain_series.csv")
     for p in written:
