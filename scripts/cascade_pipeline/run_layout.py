@@ -38,6 +38,9 @@ KINDS = {
                              "{run}_shoreline_change_rate_REAL_DOMAINS_ONLY.png"),
     "figure_rate_buffers":  (FIGURES, "shoreline_change_rate_with_buffers.png",
                              "{run}_annotated.png"),
+    # End-minus-start position change against the CoastSat net change (DEM-to-DEM windows)
+    "figure_net_change":    (FIGURES, "shoreline_position_change_with_buffers.png",
+                             "{run}_net_change.png"),
 
     # Tables
     "rate_csv":      (TABLES, "shoreline_change_rate.csv",

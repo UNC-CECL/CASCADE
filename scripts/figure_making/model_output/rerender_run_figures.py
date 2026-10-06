@@ -52,6 +52,7 @@ from cascade_pipeline.hindcast import build_shoreline_target  # noqa: E402
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.run_layout import ANIMATIONS, resolve  # noqa: E402
 from cascade_pipeline.shoreline import compute_change_rate, compute_lrr  # noqa: E402
+from cascade_pipeline.plotting.net_change_comparison import plot_net_change_comparison  # noqa: E402
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
     DEFAULT_RATE_COMPARISON, plot_annotated_rate_comparison,
     plot_rate_comparison)
@@ -298,6 +299,11 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
         save_path=str(buffers_png),
         show=False, **fig_kwargs)
     result["figures"] = 2
+    # The net-change figure, as the runner draws it; nothing for a window with no target
+    if plot_net_change_comparison(
+            shoreline_m, run, resolve(run_dir, "figure_net_change", run_name),
+            wave_climate=run.wave_climate, flip_sign=FLIP_SIGN_MODEL) is not None:
+        result["figures"] += 1
 
     if args.position_change:
         # End minus start, in metres: compute_change_rate over a span of 1.

@@ -103,6 +103,12 @@ class RateComparisonConfig:
             labels and caption read it.
         observed_label: Legend text for the observed LOWESS curve in the
             publication style; None keeps "CoastSat LRR (7-domain LOWESS)".
+        title, subtitle: With publication_text, a centred title (and a
+            smaller centred line under it) in place of the left-aligned
+            period tag. None keeps the tag (Hannah, 2026-10-06: "academic
+            and informative").
+        model_label: Publication legend text for the model curve; None
+            keeps "CASCADE".
         observed_description: Caption phrase for the observed quantity in
             position mode, e.g. "total change: the per-transect LRR fitted on
             1996-2010 x 14 yr".
@@ -152,6 +158,9 @@ class RateComparisonConfig:
     quantity: str = "rate"
     observed_label: str = None
     observed_description: str = None
+    title: str = None
+    subtitle: str = None
+    model_label: str = None
     plot_reference_period: bool = False
     raw_scatter_size: float = 6
     raw_scatter_alpha: float = 0.60
@@ -406,6 +415,14 @@ def _publication_axes(ax, run, config=DEFAULT_RATE_COMPARISON):
     ax.set_ylabel("Shoreline position change (m)"
                   if config.quantity == "position"
                   else "Shoreline change rate, LRR (m/yr)")
+    if config.title:
+        # Title above, the one-line context under it, both centred on the plot
+        ax.set_title(config.title, loc="center", fontsize=10, color=INK,
+                     pad=20 if config.subtitle else 8)
+        if config.subtitle:
+            ax.text(0.5, 1.02, config.subtitle, transform=ax.transAxes,
+                    ha="center", va="bottom", fontsize=8, color=INK_MUTED)
+        return
     tag = f"{run.start_year}–{run.end_year}"
     wave = _wave_tag(run.wave_climate)
     if wave:
@@ -414,7 +431,7 @@ def _publication_axes(ax, run, config=DEFAULT_RATE_COMPARISON):
 
 
 def _publication_legend(fig, config, annotations, lowess_config, extra=(),
-                        ncol=None):
+                        ncol=None, extra_model_raw=False):
     """The legend in house wording (STYLE.md, 2026-09-19): short noun
     phrases, no period or dataset repeats -- those are in the caption."""
     skip = lowess_config.skip_southern_domains
@@ -423,11 +440,19 @@ def _publication_legend(fig, config, annotations, lowess_config, extra=(),
     lw = config.window_styles[0][0]
     handles = [
         Line2D([0], [0], color=annotations.model_color, lw=1.8,
-               label="CASCADE"),
+               label=config.model_label or "CASCADE"),
         Line2D([0], [0], color=blue, lw=lw,
                label=config.observed_label
                or f"CoastSat LRR ({widest}-domain LOWESS)"),
     ]
+    if config.plot_domain_means:
+        handles.append(Line2D([0], [0], color=blue, lw=config.domain_mean_lw,
+                              alpha=config.domain_mean_alpha,
+                              label="Domain mean (unsmoothed)"))
+    if extra_model_raw:
+        handles.insert(1, Line2D([0], [0], color=annotations.model_color,
+                                 lw=config.domain_mean_lw, alpha=config.domain_mean_alpha,
+                                 label="CASCADE domain value (unsmoothed)"))
     if config.south_mean_line and skip > 0:
         handles.append(Line2D([0], [0], color=blue, lw=lw, ls=SOUTH_MEAN_DASH,
                               label=f"Domain mean, D1–{skip} (unsmoothed)"))
@@ -666,7 +691,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                                     lowess_config=DEFAULT_LOWESS,
                                     config=DEFAULT_RATE_COMPARISON,
                                     sea_level_rise_rate_m_yr=None,
-                                    save_path=None, show=False):
+                                    save_path=None, show=False,
+                                    change_rate_raw=None):
     """Publication/poster figure: modeled rate + full geographic annotation layer.
 
     Always uses the real-domains-only (GIS first_gis_id-last_gis_id) x-axis,
@@ -687,12 +713,17 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         save_path: If given, fig.savefig(save_path, dpi=300,
             bbox_inches="tight", facecolor="white").
         show: Call plt.show() before returning.
+        change_rate_raw: Optional, same shape as change_rate: the model
+            before smoothing, drawn thin and faint under it (when
+            change_rate is the smoothed model, as the observation is).
 
     Returns:
         (fig, ax)
     """
     gis_ids = np.arange(domains.first_gis_id, domains.last_gis_id + 1)
     real_rate = change_rate[domains.start_real_index:domains.end_real_index]
+    real_raw = (None if change_rate_raw is None
+                else change_rate_raw[domains.start_real_index:domains.end_real_index])
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.62),
                            constrained_layout=True)
@@ -705,6 +736,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
 
     data_handles = []
     widest_win = max(lowess_config.window_domains)
+    # What one transect value is: a rate, or a position change in metres
+    per_transect = "transect net change" if config.quantity == "position" else "transect LRR"
     for cs in cs_series:
         is_active = cs["active"]
         if not is_active and not config.plot_reference_period:
@@ -716,13 +749,13 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                 south_mask = cs["transect_domains"] <= lowess_config.skip_southern_domains
                 scatter_x_plot = scatter_x[south_mask]
                 scatter_y_plot = cs["transect_rates"][south_mask]
-                raw_lbl = (f"{cs['label']} — transect LRR "
+                raw_lbl = (f"{cs['label']} — {per_transect} "
                            f"(D{domains.first_gis_id}-{lowess_config.skip_southern_domains})"
                            if is_active else None)
             else:
                 scatter_x_plot = scatter_x
                 scatter_y_plot = cs["transect_rates"]
-                raw_lbl = f"{cs['label']} — transect LRR" if is_active else None
+                raw_lbl = f"{cs['label']} — {per_transect}" if is_active else None
             raw_alpha = config.raw_scatter_alpha if is_active else config.raw_scatter_alpha * 0.35
             ax.scatter(scatter_x_plot, scatter_y_plot, color=config.raw_color,
                        s=config.raw_scatter_size, alpha=raw_alpha, zorder=1,
@@ -792,6 +825,9 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                     label=lbl))
 
     model_label = _model_label(run, config)
+    if real_raw is not None:
+        ax.plot(gis_ids, real_raw, color=annotations.model_color,
+                lw=config.domain_mean_lw, alpha=config.domain_mean_alpha, zorder=5.5)
     ax.plot(gis_ids, real_rate, color=annotations.model_color, linewidth=2.0,
             zorder=6, label=model_label)
     data_handles.append(
@@ -821,7 +857,7 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
 
     # Lock ylim to data range, then place accretion/erosion side labels.
     all_vals = np.concatenate(
-        [real_rate] + [w["smoothed"][np.isfinite(w["smoothed"])]
+        [real_rate] + ([real_raw] if real_raw is not None else []) + [w["smoothed"][np.isfinite(w["smoothed"])]
                        for cs in cs_series for w in cs["windows"]]
         # The unsmoothed means swing wider than the LOWESS, so they set the bound too
         + ([coastsat_domain_mean(cs)[1] for cs in cs_series]
@@ -853,7 +889,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     if config.publication_text:
         _publication_axes(ax, run, config)
         _publication_legend(fig, config, annotations, lowess_config,
-                            extra=annotation_legend_handles(annotations), ncol=5)
+                            extra=annotation_legend_handles(annotations), ncol=5,
+                            extra_model_raw=real_raw is not None)
         if save_path:
             fig.savefig(save_path, dpi=300, bbox_inches="tight",
                         facecolor="white")
@@ -866,7 +903,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         return fig, ax
 
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
-    ax.set_ylabel(_rate_axis_label(estimator, title_case=True))
+    ax.set_ylabel("Shoreline Position Change (m)" if config.quantity == "position"
+                  else _rate_axis_label(estimator, title_case=True))
     ax.text(0.0, 1.005, f"\u2190 {annotations.low_end_label}",
             transform=ax.transAxes, fontsize=7.5, color=INK_MUTED, ha="left",
             va="bottom", clip_on=False)
@@ -880,7 +918,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         f"Modelled against {annotations.obs_source_name} shoreline change, "
         f"{run.start_year}–{run.end_year}",
         _run_parameters(run,
-                        f"{annotations.obs_source_name} LRR per "
+                        f"{annotations.obs_source_name} "
+                        f"{'net change' if config.quantity == 'position' else 'LRR'} per "
                         f"{int(domains.domain_spacing_m)} m domain",
                         domains, endpoints=False,
                         wave_climate=(run.wave_climate

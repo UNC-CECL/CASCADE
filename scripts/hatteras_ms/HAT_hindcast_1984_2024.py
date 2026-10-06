@@ -81,6 +81,7 @@ from cascade_pipeline.coastsat_lowess import (
     LowessConfig,
     build_coastsat_series,
 )
+from cascade_pipeline.plotting.net_change_comparison import plot_net_change_comparison
 from cascade_pipeline.plotting.rate_comparison import (
     DEFAULT_RATE_COMPARISON,
     plot_annotated_rate_comparison,
@@ -1719,6 +1720,12 @@ plot_annotated_rate_comparison(
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
     save_path=str(write_path(RUN_DIR, "figure_rate_buffers", RUN_NAME)),
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
+
+# The end-minus-start shoreline against the CoastSat net change; skipped for a window with no target
+plot_net_change_comparison(
+    shoreline_m, run, write_path(RUN_DIR, "figure_net_change", RUN_NAME),
+    wave_climate=dict((k, v) for k, v, _ in SCENARIO_SWITCHES)["wave climate"],
+    flip_sign=FLIP_SIGN_MODEL, show=SHOW_FIGURES)
 
 # Section 9.4's target, now that the run has a year 0; buffers are NaN
 SHORELINE_TARGET_M, OBSERVED_CHANGE_M = build_shoreline_target(
