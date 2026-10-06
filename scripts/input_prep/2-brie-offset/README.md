@@ -463,7 +463,7 @@ two dune rows and the interior. One figure per 15 domains (GIS 1-15 ...
 (a), the shoreline placement in (b) and the per-domain shift in (c) (Hannah,
 2026-10-06: separate figures, not one grid; quarters were too coarse to see
 the shift). A white dashed line in (a) and (b) marks where the shoreline
-would be with the other source. The grids are the same in both rows; only the cross-shore placement
+would be with the other source. An overview figure (`_domains_overview`) puts the whole island on one page: both planforms with the six sections marked, the beach width, and the shift, which equals the gap between the two builds' zero points minus the beach width, because each build is zeroed on its own most seaward domain. The grids are the same in both rows; only the cross-shore placement
 changes. Checked against a 1996 shoreline-v2 run: year-0 grids equal the
 input files, and each domain sits at offset + one constant to within 1 m.
 

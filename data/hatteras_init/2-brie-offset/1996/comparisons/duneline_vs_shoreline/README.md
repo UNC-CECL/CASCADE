@@ -116,6 +116,7 @@ beach width.** The `seaward_gap_m` column of the CSV is.
 |---|---|
 | `offset_1996_duneline_vs_shoreline.csv` | per domain: both sources in both frames, columns named for the source |
 | `offset_1996_duneline_vs_shoreline.png` | the three-panel figure (PDF and caption under `supporting/`) |
+| `domains/offset_1996_duneline_vs_shoreline_domains_overview.png` | the whole island: both planforms with the six sections marked, the beach width, and the shift per domain; start here (offset_sources_on_domains.py) |
 | `domains/offset_1996_duneline_vs_shoreline_domains_GIS01-15.png` | GIS 01-15: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
 | `domains/offset_1996_duneline_vs_shoreline_domains_GIS16-30.png` | GIS 16-30: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |
 | `domains/offset_1996_duneline_vs_shoreline_domains_GIS31-45.png` | GIS 31-45: the Barrier3D domains placed with each offset, dune line (a) over shoreline (b), and the shift per domain (c) (offset_sources_on_domains.py) |

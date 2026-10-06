@@ -56,6 +56,12 @@ def _offsets(year, source, version=None):
     return pd.read_csv(path).iloc[:, 1].to_numpy(float)
 
 
+# Per-domain distance from the shared offshore datum (GIS 1-90), the frame where the beach width is real
+def _datum(year, source, version):
+    raw = next(_tv.offset_build_dir(year, version, source).glob("*_raw.csv"))
+    return pd.read_csv(raw).groupby("domain_id")["ORIG_LEN"].mean().loc[1:90].to_numpy(float)
+
+
 # One domain's grid in m MHW, cut to its last land row: the two dune rows, then the interior, ocean first
 def _grid(elev_path, dune_path, berm_m):
     interior = np.load(elev_path) * DAM
@@ -90,6 +96,18 @@ def _draw(ax, grids, x_s, other_x_s, beach_m, gis_lo, gis_hi, ylim):
     _domain_ticks(ax, gis)
 
 
+# What a bar in the shift panel is, top right of the panel
+def _shift_note(ax, gap):
+    ax.text(0.995, 0.97, f"Shift = {gap:.0f} m − beach width at the domain",
+            transform=ax.transAxes, ha="right", va="top", fontsize=7, color=C["INK"],
+            bbox=dict(facecolor="white", edgecolor="0.7", lw=0.5, pad=2))
+
+
+# Red where the shoreline offset moves a domain seaward, blue where landward
+def _shift_colours(shift):
+    return [C["LATE"] if v > 0 else C["EARLY"] for v in shift]
+
+
 # GIS numbers every 5 on every panel, a small tick for each domain between
 def _domain_ticks(ax, gis):
     ax.set_xticks(gis[(gis % 5) == 0])
@@ -112,6 +130,14 @@ def main(argv=None):
     off = {s: _offsets(year, s, ver[s]) for s in ROWS}
     diff = off["shoreline"] - off["duneline"]
     pos = off
+    # Each build is zeroed on its own most seaward domain, so the shift is a constant minus the beach width:
+    # shift = gap - beach, gap = the distance between the two zero points (dune line minus shoreline, datum frame)
+    datum = {s: _datum(year, s, ver[s]) for s in ROWS}
+    beach = datum["duneline"] - datum["shoreline"]
+    gap = datum["duneline"].min() - datum["shoreline"].min()
+    zero = {s: int(np.argmin(off[s])) + 1 for s in ROWS}
+    if not np.allclose(diff, gap - beach, atol=1e-6):
+        sys.exit("shift is not gap - beach width; the offsets and raw files disagree")
 
     product = _tv.product_for_year(year)
     dune_version = _tv.topo_dirs(product)[2]
@@ -152,7 +178,7 @@ def main(argv=None):
         # (c) the same gap as a number per domain, in the house red/blue pair: red seaward, blue landward
         gis = np.arange(lo, hi + 1)
         axb = axes[2]
-        axb.bar(gis, d, width=0.8, color=[C["LATE"] if v > 0 else C["EARLY"] for v in d], lw=0)
+        axb.bar(gis, d, width=0.8, color=_shift_colours(d), lw=0)
         axb.axhline(0, color=C["INK"], lw=0.7)
         lim = max(10.0, np.ceil(np.abs(d).max() / 10) * 10)
         axb.set_ylim(-lim * 1.25, lim * 1.25)
@@ -166,6 +192,7 @@ def main(argv=None):
                             (0.03, "bottom", "↓ Seaward with the shoreline offset")):
             axb.text(0.005, y, text, transform=axb.transAxes, ha="left", va=va, fontsize=7,
                      color=C["LATE"] if va == "top" else C["EARLY"])
+        _shift_note(axb, gap)
         _title(axb, 2, "Cross-shore shift of each domain from (a) to (b)")
         for ax, letter in zip(axes[:2], ("b", "a")):
             # A mid-grey box, so both the white and the black dash read in the key
@@ -182,9 +209,14 @@ def main(argv=None):
 
         nseaward = int((d < 0).sum())
         frame_clause = (
-            "Offsets are in the model frame, each build zeroed on its own most seaward domain (GIS 76 in "
-            "both), which is what Cascade receives up to one shared constant (checked against a run's "
-            "year-0 positions to within 1 m). ")
+            f"Offsets are in the model frame, each build zeroed on its own most seaward domain (GIS "
+            f"{zero['duneline']} for the dune line, GIS {zero['shoreline']} for the shoreline), which is what "
+            f"Cascade receives up to one shared constant (checked against a run's year-0 positions to within "
+            f"1 m). Because of that zeroing the shift in (c) is not the distance from shoreline to dune line, "
+            f"which is always seaward (beach width {beach.min():.0f}–{beach.max():.0f} m): it is "
+            f"{gap:.1f} m, the gap between the two zero points, minus the beach width at the domain. A domain "
+            f"with a beach wider than {gap:.0f} m moves seaward under the shoreline offset, a narrower one "
+            f"landward. ")
         caption(fig, (
             f"GIS {lo}–{hi} of the {year} start island as the model builds it from each offset source, "
             f"one of {len(SECTIONS)} figures covering GIS 1–90. Every Barrier3D domain of the {year} start "
@@ -204,6 +236,76 @@ def main(argv=None):
         stem = f"offset_{year}_duneline_vs_shoreline_domains_GIS{lo:02d}-{hi:02d}"
         for path in save(fig, out_dir / stem, close=True):
             print(f"  wrote {path}")
+
+    _overview(year, off, beach, gap, diff, zero, approach, ver, out_dir)
+
+
+# The whole island on one page: where the six section figures fall, the beach width, and the shift
+def _overview(year, off, beach, gap, diff, zero, approach, ver, out_dir):
+    gis = np.arange(1, 91)
+    fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=7.4), sharex=True,
+                             gridspec_kw={"height_ratios": [1.3, 0.8, 0.8]}, constrained_layout=True)
+    ax_p, ax_b, ax_s = axes
+
+    for src in ROWS:
+        ax_p.step(gis, off[src], where="mid", color=ROWS[src]["colour"], lw=1.2, label=approach[src])
+    ax_p.set_ylabel("Cross-shore position (m)")
+    ax_p.legend(loc="upper right", fontsize=7, frameon=False)
+    _title(ax_p, 0, "Island planform from each offset, and the six section figures")
+
+    ax_b.bar(gis, beach, width=0.8, color=_shift_colours(gap - beach), lw=0)
+    ax_b.axhline(gap, color=C["INK"], lw=0.9, ls=(0, (4, 2)))
+    ax_b.text(0.995, gap, f" {gap:.0f} m: no shift ", transform=ax_b.get_yaxis_transform(),
+              ha="right", va="bottom", fontsize=7, color=C["INK"])
+    ax_b.set_ylabel("Beach width (m)")
+    ax_b.set_ylim(0, np.ceil(beach.max() / 20) * 20 + 10)
+    _title(ax_b, 1, "Beach width: mean shoreline to dune line")
+
+    ax_s.bar(gis, diff, width=0.8, color=_shift_colours(diff), lw=0)
+    ax_s.axhline(0, color=C["INK"], lw=0.7)
+    lim = np.ceil(np.abs(diff).max() / 10) * 10
+    ax_s.set_ylim(-lim * 1.3, lim * 1.3)
+    ax_s.set_ylabel("Shift (m)")
+    ax_s.set_xlabel("Model domain, 500 m each (south → north)")
+    for y, va, text in ((0.97, "top", "↑ Landward with the shoreline offset"),
+                        (0.03, "bottom", "↓ Seaward with the shoreline offset")):
+        ax_s.text(0.005, y, text, transform=ax_s.transAxes, ha="left", va=va, fontsize=7,
+                  color=C["LATE"] if va == "top" else C["EARLY"])
+    _shift_note(ax_s, gap)
+    _title(ax_s, 2, "Cross-shore shift of each domain, dune-line to shoreline offset")
+
+    # The six sections: alternate shading, their names on the planform, the borders through every panel
+    for k, (lo, hi) in enumerate(SECTIONS):
+        for ax in axes:
+            if k % 2:
+                ax.axvspan(lo - 0.5, hi + 0.5, color="0.95", lw=0, zorder=0)
+            if k:
+                ax.axvline(lo - 0.5, color="0.55", lw=0.6, ls=(0, (3, 2)), zorder=1)
+        ax_p.text((lo + hi) / 2, 0.02, f"GIS {lo}–{hi}", transform=ax_p.get_xaxis_transform(),
+                  ha="center", va="bottom", fontsize=7, color=C["INK_MUTED"])
+    for ax in axes:
+        ax.set_xlim(0.5, 90.5)
+        ax.grid(axis="y", lw=0.4, color="0.88")
+        _domain_ticks(ax, gis)
+        ax.set_xticks(gis[(gis % 5) == 0])
+        ax.tick_params(axis="x", which="minor", length=0)
+
+    caption(fig, (
+        f"The {year} island offset from each source over the whole island, the overview for the "
+        f"{len(SECTIONS)} section figures beside it (shaded bands, named in a). (a) The cross-shore position "
+        f"each offset gives every 500 m domain: {approach['duneline'].lower()} (duneline/{ver['duneline']}) and "
+        f"{approach['shoreline'][0].lower() + approach['shoreline'][1:]} (shoreline/{ver['shoreline']}), each in "
+        f"the model frame, zeroed on its own most seaward domain (GIS {zero['duneline']} and GIS "
+        f"{zero['shoreline']}); landward is up. (b) The beach width, the distance from the mean shoreline to "
+        f"the dune line in the shared offshore datum: the shoreline is seaward of the dune line in every "
+        f"domain, by {beach.min():.0f}–{beach.max():.0f} m. (c) The shift each domain makes from the "
+        f"dune-line to the shoreline offset. Because each build is zeroed on its own most seaward domain, "
+        f"the shift equals {gap:.1f} m, the gap between those two zero points, minus the beach width: domains "
+        f"with a beach wider than {gap:.0f} m (dashed line in b) move seaward (red, {int((diff < 0).sum())} "
+        f"of 90), narrower ones landward (blue). Bars in (b) carry the same colours."))
+    stem = f"offset_{year}_duneline_vs_shoreline_domains_overview"
+    for path in save(fig, out_dir / stem, close=True):
+        print(f"  wrote {path}")
 
 
 if __name__ == "__main__":
