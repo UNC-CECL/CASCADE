@@ -34,3 +34,16 @@
 | step 10, LOWESS-7 | 0.85 m/yr | −1.93 to +12.43 | −0.61 m | **4.33 m** | 19.6 m (GIS 82) |
 
 **Reading.** Smoothing costs about 9× the RMSE, and only partly at Rodanthe: without GIS 76–88 the RMSE is still 3.4 m. Away from Rodanthe, the misses are the observed erosion and accretion bands themselves (GIS 12–13, 17–18, 28–30, 35–36, 64–68). BRIE's alongshore diffusion spreads the response to a rate, so the field has to be sharper than the target it produces. At Rodanthe, GIS 82 (−19.6 m) and GIS 85 (−11.5 m) need their extra sink. Those cells respond differently from their neighbours inside the model, so the sawtooth cancels real model-internal structure there rather than noise.
+
+## The test period on BE set 1 (2026-10-06)
+
+`matrix/2009_2025/domainBE/HAT_2009_2025_domainBE_offsetmetres_road_bdm_nourish_groinblock`: domainBE, blocking groin, the four fills, relocations off. Scored against `coastsat/net_change/2009_2025` over the interior GIS 2–89, with both sides smoothed over 7 domains:
+
+| run | bias | RMSE | r |
+|---|---|---|---|
+| zeroBE, no groin | −11.9 m | 27.8 m | 0.25 |
+| edgeBE, no groin | −11.2 | 26.6 | 0.31 |
+| edgeBE + groin | −11.5 | 27.2 | 0.25 |
+| **domainBE + groin** | **−18.2** | **32.1** | **0.36** |
+
+Set 1 improves the alongshore pattern slightly (r 0.36) but makes the bias and RMSE worse. The largest misses fall where set 1 carries its strongest calibration sinks (GIS 78–79, 82, 35–36, 64–65: residuals +66 to +77 m) and at the cape (GIS 1–3: +66 to +149 m). The two periods behave differently: the island mean went from −9.8 m (1996–2009) to +11.7 m (2009–2025), and the two targets correlate at only r = 0.28 alongshore (set 1 against the test target: r = 0.15). The 1996–2009 erosion pattern does not persist into 2009–2025. Under the plan, this residual becomes BE set 2.
