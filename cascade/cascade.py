@@ -1,10 +1,13 @@
 import os
 
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel
+from joblib import delayed
 
 from .beach_dune_manager import BeachDuneManager
-from .brie_coupler import BrieCoupler, batchB3D, initialize_equal, set_specified_variable_RSLR
+from .brie_coupler import BrieCoupler
+from .brie_coupler import batchB3D
+from .brie_coupler import initialize_equal
 from .chom_coupler import ChomCoupler
 from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
@@ -335,17 +338,6 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
-        self._sandbag_management_on = sandbag_management_on
-        self._sandbag_elevation = sandbag_elevation - (berm_elevation-MHW)
-        self._sandbag_need = [False] * self._ny
-        self._enable_shoreline_offset = enable_shoreline_offset
-        self._shoreline_offset = shoreline_offset
-        self._sandbag_Need_TS = [[False]] * self._ny
-        self._road_relocation_setback = road_relocation_setback
-        self._user_inputed_RSLR = user_inputed_RSLR
-        self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
-        self._use_defined_beach_width = use_defined_beach_width
-        self._user_inputed_beach_width = user_inputed_beach_width
 
         # initialization errors
         if (
@@ -376,16 +368,9 @@ class Cascade:
             sea_level_rise_rate=self._sea_level_rise_rate,
             back_barrier_depth=bay_depth,
             s_background=s_background,
-            h_b_crit=(berm_elevation-MHW),
+            h_b_crit=(berm_elevation - MHW),
             ny=self._ny,
             nt=self._nt,
-        )
-
-        # Create offset shorelines in BRIE
-        self._brie_coupler.offset_shoreline(
-            enable_shoreline_offset=self._enable_shoreline_offset,
-            offset_values=self._shoreline_offset,
-            ny=self._ny,
         )
 
         # initialize Barrier3D models (number set by brie_ny) and make both "brie"
@@ -405,15 +390,6 @@ class Cascade:
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
         )
-
-        # Alter RSLR to set sequence
-        if self._user_inputed_RSLR == True:
-            set_specified_variable_RSLR(
-                barrier3d=self._barrier3d,
-                brie=self._brie_coupler._brie,
-                RSLR_Rates=self._user_inputed_RSLR_rate,
-                ny = self._ny
-            )
 
         ###############################################################################
         # initialize human dynamics modules
@@ -667,8 +643,6 @@ class Cascade:
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
 
-
-
         # reshape output from parallel processing and convert from tuple to list
         x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
         x_t_dt = list(x_t_dt)
@@ -736,28 +710,27 @@ class Cascade:
 
                             # set dune growth rates back to original only when dune
                             # elevation is less than equilibrium
-                            self._barrier3d[
-                                iRoad
-                            ].growthparam = self.reset_dune_growth_rates(
-                                original_growth_param=self._roadways[
-                                    iRoad
-                                ]._original_growth_param,
-                                iB3D=iRoad,
+                            self._barrier3d[iRoad].growthparam = (
+                                self.reset_dune_growth_rates(
+                                    original_growth_param=self._roadways[
+                                        iRoad
+                                    ]._original_growth_param,
+                                    iB3D=iRoad,
+                                )
                             )
 
                     else:
                         self._road_break[iB3D] = 1
-                        self._sandbag_need[iB3D] = False
 
                         # set dune growth rates back to original only when dune
                         # elevation is less than equilibrium
-                        self._barrier3d[
-                            iB3D
-                        ].growthparam = self.reset_dune_growth_rates(
-                            original_growth_param=self._roadways[
-                                iB3D
-                            ]._original_growth_param,
-                            iB3D=iB3D,
+                        self._barrier3d[iB3D].growthparam = (
+                            self.reset_dune_growth_rates(
+                                original_growth_param=self._roadways[
+                                    iB3D
+                                ]._original_growth_param,
+                                iB3D=iB3D,
+                            )
                         )
 
                 else:
@@ -860,14 +833,12 @@ class Cascade:
 
                 # else manage that community!
                 else:
-                    self._nourishments[
-                        iB3D
-                    ].dune_design_elevation = self._dune_design_elevation[
-                        iB3D
-                    ]  # m MHW
-                    self._nourishments[
-                        iB3D
-                    ].nourishment_volume = self._nourishment_volume[iB3D]
+                    self._nourishments[iB3D].dune_design_elevation = (
+                        self._dune_design_elevation[iB3D]
+                    )  # m MHW
+                    self._nourishments[iB3D].nourishment_volume = (
+                        self._nourishment_volume[iB3D]
+                    )
                     [
                         self._nourish_now[iB3D],
                         self._rebuild_dune_now[iB3D],
@@ -895,9 +866,6 @@ class Cascade:
                         / 10
                     )  # dam
                 )
-
-
-
 
         ###############################################################################
         # outwash module
