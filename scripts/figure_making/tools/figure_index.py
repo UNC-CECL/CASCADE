@@ -35,7 +35,7 @@ LAYOUT = {
     "2-observations/shoreline": "CoastSat shoreline-change rates by domain and period.",
     "2-observations/duneline": "The digitised dune lines: where they sit, how they moved, beach width, distance to NC-12.",
     "2-observations/shoreline_vs_duneline": "CoastSat shoreline change against dune-line change, side by side.",
-    "2-observations/mean_shoreline": "The CoastSat mean shoreline over each start DEM's window, drawn on aerial imagery.",
+    "2-observations/mean_shoreline": "The CoastSat mean shorelines: the three the model starts from and is graded against, and each start window on aerial imagery.",
     "2-observations/mean_shoreline/line_and_band": "The mean line and its spread.",
     "2-observations/mean_shoreline/with_domains": "The same with the model domain boxes.",
     "2-observations/mean_shoreline/with_positions": "The same with every satellite position in the window.",

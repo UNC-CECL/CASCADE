@@ -30,6 +30,16 @@ mean_shoreline/
         124 m alongshore while the geolocated position spans 6222 m -- the
         origins follow the shore around the cape.
         Writes 1-observations/mean_shoreline/<start>_<end>/.
+    coastsat_mean_shoreline_storm_check.py
+        Was a window mean shaped by a storm? The storms around each window,
+        ranked against 1984-2024, and the mean without post-storm passes.
+        Writes <start>_<end>/storm_check/.
+    coastsat_mean_shoreline_compared.py
+        The three mean shorelines the model starts from and is graded against
+        (1996, 2009, 2025), drawn as the island: distance from the offshore
+        datum per domain, six sections in one row.
+        Writes 1-observations/mean_shoreline/compared/ and a copy to
+        output/figures/2-observations/mean_shoreline/.
 
 shoreline_patterns/
     shoreline_trajectory_classification.py
@@ -911,6 +921,22 @@ The storms around the window, one panel. The shoreline series and the
 2026-09-29: keep only the storm panel).
 ```
 
+**Events after 2024 (2026-10-06)**
+
+```text
+The 2025 window needs storms through 2025, so load_events also reads the
+2009_2025 series for years after 2024, with the forcing swapped to the
+extended Duck and WIS records (identical to the 1984-2024 files where both
+have data). The reference is still 1984-2024: major thresholds, ranks and
+the storminess spans come from it alone, and a later event is ranked as if
+added to it, so the 1996 and 2009 checks are unchanged. The storminess
+comparison uses spans as long as the window (1 yr for 2025, 2 yr for the
+others). The storm record ends 2025-12-31; the README says so when a
+window runs past it.
+
+    python coastsat_mean_shoreline_storm_check.py --window-dates 2025-02-17 2026-02-17
+```
+
 **`link_from_provenance()`**
 
 ```text
@@ -919,6 +945,26 @@ coastsat_mean_shoreline.py writes the same row when the folder exists.
 ```
 
 </details>
+
+### mean_shoreline/coastsat_mean_shoreline_compared.py
+
+The three mean shorelines the model starts from and is graded against, drawn as the island.
+
+Built 2026-10-06. The three windows come from `hat_observed_rates.NET_CHANGE_WINDOWS`,
+so the figure always shows the lines the net-change targets difference: the
+1996 start (±1 yr of the ALACE flights), the 2009 calibration end and test
+start (±1 yr of the USACE flights), and the 2025 test end (±6 months of
+2025-08-17; no DEM). Each line is placed in the offshore-datum frame with the
+offset build's own intersection (`duneline_to_raw_offsets.intersect`), averaged
+per domain, so the 1996 and 2009 stations equal the stored shoreline-offset
+raw files (checked to 0.005 m). Colours: 1996 red, 2009 blue, 2025 amber
+(purple is the dune line's in the duneline_vs_shoreline figure). No spread
+band and no smoothing, by request. One row of six panels, wider than the
+house double column, for slides and posters.
+
+    python coastsat_mean_shoreline_compared.py
+
+Close the image in any viewer before re-running: an open file blocks the save.
 
 ### shoreline_inventory/shoreline_inventory.py
 
