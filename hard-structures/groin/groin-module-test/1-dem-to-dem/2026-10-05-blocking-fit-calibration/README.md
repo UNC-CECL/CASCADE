@@ -39,3 +39,22 @@ The observed gap changes at 2014–2023 are −5 / −19 / −11 / −42 / −61
 **Reading.** Before 2018 the calibrated groin tracks the test period well: 9.5 m against 45.6 m with no groin. Every run, with or without a groin, then jumps about +32 m between 2017 and 2018, while the observed gap falls 31 m. The step is the same size with and without the groin, so it is not a groin effect. It lands in the year the Buxton 2017 fill (GIS 6–16) fires; the fill raises GIS 6 but not GIS 5. After that step the groin's higher gap only adds error. The leading candidate is how the model places the 2017 fill at the groin's downdrift cell. That is not tested yet.
 
 **Status.** b 0.6 / f 0.6 is the calibration answer. Pinning it in the config is pending a decision.
+
+## The 2017→2018 step: where the Buxton fill went (checked 2026-10-05)
+
+The model places the 2017 fill on GIS 6–16 (southernmost groin ~200 m into GIS 6, as reported) and keeps it there. Observations put the south end's sand **south of the groin**:
+
+| seaward change, m | GIS 4 | GIS 5 | GIS 6 | GIS 7 | GIS 8 | GIS 9 |
+|---|---|---|---|---|---|---|
+| wet/dry photos, 2017 → 2018 | +8.6 | **+19.8** | **−10.6** | +23.2 | — | — |
+| CoastSat, 2017 H1 → 2018 H2 | +17.8 | **+31.7** | **−3.2** | +15.3 | +22.7 | +30.5 |
+| model, 1 Jan 2017 → 1 Jan 2018 (no groin) | +1.4 | +0.6 | **+31.5** | +33.3 | +34.9 | +35.7 |
+| model, same, b 0.6 f 0.6 | +0.6 | −0.1 | **+32.3** | +33.5 | +34.9 | +35.7 |
+
+In CoastSat, GIS 8–9 gain first (late 2017). GIS 6 is up briefly in 2018 H1 (+15 m), then back to about −3 m by 2018 H2, while GIS 4–5 gain +18 to +32 m and keep it through 2019. So within about a year, the sand placed at the groin end moved south past the groin. In the model, almost nothing reaches GIS 4–5, even with no groin (+2 to +4 m by 2020). BRIE's annual diffusion is too slow at the cape to move it.
+
+So the gap jump is a **fill placement/bypass mismatch at GIS 5|6**, not a groin effect. The 2022 Buxton fill uses the same footprint and will repeat it.
+
+## End domains with the groin on (checked 2026-10-05)
+
+The edgeBE ends were solved with no groin. With the pinned blocking groin, calibration GIS 1 ends at +10.61 m against the +10.65 m target (residual −0.04 m, inside the 0.26 m tolerance), and GIS 90 is unchanged (+2.17 m). The test period is unchanged at both ends (GIS 1 +8.96 m, GIS 90 −5.92 m). No re-solve is needed. The groin's reach stops at GIS 2–4: in calibration it halves their accretion (+4.6 / +12.1 m at GIS 3 / 4, against +9.8 / +26.0 with no groin). That is closer to CoastSat at GIS 3–4 (about +5 / +16).
