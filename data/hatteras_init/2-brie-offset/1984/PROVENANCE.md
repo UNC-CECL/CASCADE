@@ -15,8 +15,9 @@ it was measured from, so a folder listing says what it is:
 
 ```python
 from site_layer.hat_topo_version import offset_file
-offset_file(1984)                        # the dune build the model reads
-offset_file(1984, source="shoreline")    # the shoreline arm
+offset_file(1984)                        # the dune build, the only source this start has
+offset_file(1984, source="shoreline")    # no build: runs default to shoreline since 2026-10-05,
+                                         # so a 1984 run needs HAT_ISLAND_OFFSET_SOURCE=duneline
 ```
 
 `CURRENT` inside each source folder names the build that source's readers

@@ -28,8 +28,8 @@ The mean shoreline sits seaward of the 2009 dune line on **450 of 450** transect
 
 ## CURRENT
 
-`../CURRENT` named `v1` until 2026-09-29, when it moved to `v2` (the DEM-centred window); select this build for one run with `HAT_OFFSET_VERSION_2010_SHORELINE=v1`. The source is reached with `HAT_ISLAND_OFFSET_SOURCE=shoreline`. The 2010 dune build the runner reads by default is unchanged.
+`../CURRENT` named `v1` until 2026-09-29, when it moved to `v2` (the DEM-centred window); select this build for one run with `HAT_OFFSET_VERSION_2010_SHORELINE=v1`. The source is reached with `HAT_ISLAND_OFFSET_SOURCE=shoreline`. Since 2026-10-05 runs read the shoreline source by default, which resolves to `v2`, not this build.
 
 ## Caveat carried from 1996
 
-The Barrier3D interior topography is extracted in the dune-line frame. Before this offset becomes a default, check that the beach width is not counted twice.
+The Barrier3D interior topography is extracted in the dune-line frame. Before this offset becomes a default, check that the beach width is not counted twice. (The shoreline source became the run default on 2026-10-05, on `v2`; this check is not recorded as done.)

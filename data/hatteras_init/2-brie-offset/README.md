@@ -29,10 +29,15 @@ raw_offsets/      one CSV per dune-line VINTAGE, per transect; a period finds
 | `duneline` | a dune line digitised from aerial imagery | `dunelines/` here |
 | `shoreline` | the CoastSat satellite shoreline, averaged over a window | `5-scr/1-observations/mean_shoreline/` |
 
-`duneline` is the default: `offset_file(year)` and everything the runner
-resolves read it. The shoreline arm is reached only by asking,
-`offset_file(year, source="shoreline")`, and nothing reads it today -- see
-`1996/shoreline/PROVENANCE.md` for what would have to be checked first.
+**Runs read `shoreline` since 2026-10-05** (`hat_topo_version.RUN_OFFSET_SOURCE`;
+matrix runs before then are dune line). The build is each start's
+`shoreline/CURRENT`, which is `v2`, the window ±1 yr of the start DEM's lidar,
+for both starts that have one (1996, 2009). `HAT_ISLAND_OFFSET_SOURCE=duneline`
+puts a run back on the dune build, and 1984 and 2004 have no shoreline build,
+so a run on those starts needs it. `offset_file(year)` with no `source` still
+returns the dune build: `DEFAULT_OFFSET_SOURCE` names builds, not runs.
+See `1996/shoreline/PROVENANCE.md` for the beach-width check that was set as
+the condition for the switch and is not recorded as done.
 
 **Every source nests, since 2026-09-22.** Dune builds sat flat at
 `<year>/v<n>/` until then, from when they were the only kind, which left a

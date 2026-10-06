@@ -8,26 +8,26 @@ interview).
 
 `../v1/` is built from `duneline_1997.geojson` — a line traced on aerial
 imagery flown on one day. This folder is built from the mean satellite
-shoreline over calendar 1995–1997. Those are **two different features on the
+shoreline over a window (`v2`, CURRENT: 1995-10-12 to 1997-10-12, ±1 yr of
+the 1996 ALACE lidar; `v1`: calendar 1995–1997). Those are **two different features on the
 island**, not two readings of the same one, so this is a separate source with
 its own `v1`, never a `v2` of the dune build
 ([[feedback-version-numbering-restarts]]).
 
-The dune build keeps the flat `1996/v1/` layout it has always had, so nothing
-the runner resolves moved. `hat_topo_version.offset_version(1996)` still
-returns the dune build; the shoreline arm is reached explicitly with
-`source="shoreline"`.
+The dune build sits beside it at `../duneline/` (flat at `1996/v1/` until
+2026-09-22). `hat_topo_version.offset_version(1996)` with no `source` returns
+the dune build; this one is `source="shoreline"`.
 
 ## What the model reads
 
-**Nothing, yet.** This is an alternative arm, built to be compared against the
-dune profile. `hatteras_site_config._island_offset_file(1996)` still resolves
-`1996/v1/Island_Dune_Offsets_1996_PADDED_120.csv`.
+**This build, since 2026-10-05.** Runs read the shoreline source by default
+(`hat_topo_version.RUN_OFFSET_SOURCE`), so
+`hatteras_site_config._island_offset_file(1996)` resolves
+`1996/shoreline/v2/Island_Shoreline_Offsets_1996_PADDED_120.csv`. Run metadata
+records `island_offset_version: "shoreline/v2"`. Matrix runs before 2026-10-05
+read the dune build; `HAT_ISLAND_OFFSET_SOURCE=duneline` reproduces them.
 
-**Before this could ever become the 1996 offset**, one thing has to be checked
-that has not been: the Barrier3D interior topography for 1996 is extracted in
-the *dune-line* frame. Swapping the offset alone, without re-examining that,
-risks counting the beach width twice.
+**Open, and not recorded as checked:** the Barrier3D interior topography is extracted in the *dune-line* frame, so swapping the offset alone, without re-examining that, risks counting the beach width twice. This was the stated condition for the shoreline becoming a default; the default moved on 2026-10-05 and nothing in the repository records the check.
 
 ## Layout
 
