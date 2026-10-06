@@ -1,0 +1,5 @@
+# Captions — storm_check
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`storm_check_2025-02-17_2026-02-17.png`.** Storms around the 2025-02-17 – 2026-02-17 CoastSat mean shoreline (2025-02-17 to 2026-02-17). Grey band: the averaging window. Every high-water event of the hindcast storm series (v3_split12_trim24) from 3 yr before the window to 3 yr after, at its peak total water level (Duck gauge + Stockdon 2006 R2% from WIS 63228 waves; an estimate, not an observation at Hatteras). Circled: major, Rhigh or hours above the berm at or above its median annual maximum of 1984–2024 (2.88 m MHW, dashed; 86 h), a level reached in half the years. Tropical cyclones within 500 km are labelled with their HURDAT2 name; an unnamed storm major by length only is labelled with its hours above the berm. Each storm's rank in the 413 events of 1984–2024 is in the README and events table beside this figure.

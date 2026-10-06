@@ -75,6 +75,7 @@ No transect was excluded.
 | `transect_means_2025-02-17_2026-02-17.csv` | per transect: n, mean, sd, se, date span, the geolocated point, domain, included/why not |
 | `mean_shoreline_2025-02-17_2026-02-17.png` | the diagnostic figure |
 | `mean_shoreline_2025-02-17_2026-02-17_island_outline.png` | panel (a) of the diagnostic alone, the line over the island outline |
+| `storm_check/` | were there big storms around this window? The storm record 3 yr either side, ranked in 1984-2024, and the mean without post-storm passes; written by `coastsat_mean_shoreline_storm_check.py` |
 
 Resolved through `hat_observed_rates.mean_shoreline_dir/_geojson/_csv`.
 Never type these paths.

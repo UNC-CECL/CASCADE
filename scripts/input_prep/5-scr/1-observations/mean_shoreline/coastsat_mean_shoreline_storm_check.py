@@ -43,6 +43,10 @@ from site_layer.hat_observed_rates import mean_shoreline_csv, mean_shoreline_dir
 
 # --- CONFIG ------------------------------------------------------------------
 RECORD = (1984, 2024)
+# Events after the record, from the 2009-2025 series; ranked against RECORD, never part of it
+EXTENSION = (2009, 2025)
+DUCK_EXTENDED = env.WATER_LEVEL_DIR / "8651370_DUCK_19840101_20251231_NAVD.csv"
+WIS_EXTENDED = env.WIS_FILE.parent / "ST63228_19840101_20251231_export_plus_archive.csv"
 DEFAULT_CONTEXT_YEARS = 3
 # Beach recovery after a storm runs weeks to months
 DEFAULT_RECOVERY_DAYS = 90
@@ -54,11 +58,14 @@ CHECK_DIR = "storm_check"
 
 # The storm record, 1984-2024
 
-# Every event of 1984-2024 with its peak hour, Rhigh (m MHW), hours above the berm and storm type
+# Every event of 1984-2025 with its peak hour, Rhigh (m MHW), hours above the berm and storm type
 def load_events(variant):
+    # The extended records equal the 1984-2024 ones where both have data
+    env.DUCK_GAUGE_FILE, env.WIS_FILE = DUCK_EXTENDED, WIS_EXTENDED
     forcing = sf.load_forcing()
     parts = []
-    for (a, b), keep in (((1984, 2004), lambda y: y <= 2003), ((2004, 2024), lambda y: y >= 2004)):
+    for (a, b), keep in (((1984, 2004), lambda y: y <= 2003), ((2004, 2024), lambda y: y >= 2004),
+                         (EXTENSION, lambda y: y > RECORD[1])):
         df = pd.read_csv(env.storm_summary_file(a, b, variant), parse_dates=["StartTime", "EndTime"])
         parts.append(df[keep(df.calendar_year)])
     df = pd.concat(parts, ignore_index=True).rename(columns={"period": "tp_s"})
@@ -82,9 +89,13 @@ def load_events(variant):
     df["tc_name"], df["tc_km"] = names, kms
     df["type"] = np.where(df.tc_km <= sf.TC_NEAR_KM, "tropical", "other")
 
-    df["rank_rhigh"] = df.rhigh_m.rank(ascending=False, method="min").astype(int)
-    df["pct_rhigh"] = 100.0 * df.rhigh_m.rank(pct=True)
-    df["rank_hours"] = df.raw_hours.rank(ascending=False, method="min").astype(int)
+    # Ranks among the 1984-2024 events; a later event is ranked as if added to them
+    in_ref = df.peak.dt.year <= RECORD[1]
+    ref = df[in_ref]
+    df["rank_rhigh"] = [int((ref.rhigh_m > v).sum()) + 1 for v in df.rhigh_m]
+    df["pct_rhigh"] = [100.0 * (ref.rhigh_m <= v).mean() for v in df.rhigh_m]
+    df.loc[in_ref, "pct_rhigh"] = 100.0 * ref.rhigh_m.rank(pct=True)
+    df["rank_hours"] = [int((ref.raw_hours > v).sum()) + 1 for v in df.raw_hours]
     return df.sort_values("peak").reset_index(drop=True)
 
 
@@ -108,13 +119,13 @@ def event_name(r):
     return None
 
 
-# Storm-hours above the berm in every 2-yr span of the record, stepped monthly
-def storm_hours_2yr(events, step_days=30):
+# Storm-hours above the berm in every span of the record as long as the window, stepped monthly
+def storm_hours_spans(events, years, step_days=30):
     lo, hi = pd.Timestamp(f"{RECORD[0]}-01-01"), pd.Timestamp(f"{RECORD[1]}-12-31")
     rows = []
     t = lo
-    while t + pd.DateOffset(years=2) <= hi + pd.Timedelta(days=1):
-        e = t + pd.DateOffset(years=2)
+    while t + pd.DateOffset(years=years) <= hi + pd.Timedelta(days=1):
+        e = t + pd.DateOffset(years=years)
         sel = events[(events.peak >= t) & (events.peak < e)]
         rows.append((t, e, int(sel.raw_hours.sum()), len(sel),
                      float(sel.rhigh_m.max()) if len(sel) else np.nan))
@@ -295,10 +306,15 @@ def write_readme(folder, label, window, anchor, dune, ctx, major, n_record, span
                    f"~{spans_df.attrs.get('se_med', float('nan')):.1f} m and the 10 m Barrier3D cell.")
     else:
         verdict = "No major storm peaked inside the window or within the recovery period before it."
-    verdict += (f" The window held **{window_hours} storm-hours** above the berm; of the 2-yr spans of "
+    verdict += (f" The window held **{window_hours} storm-hours** above the berm; of the {spans_df.attrs['years']}-yr spans of "
                 f"{RECORD[0]}–{RECORD[1]} it ranks {rank_hours} of {len(spans_df)} "
                 f"(stormier than {pct_hours:.0f}% of them).")
 
+    # The storm record ends before a window that runs into 2026
+    record_end = pd.Timestamp(f"{EXTENSION[1]}-12-31")
+    gap_note = (f"- The storm record (Duck gauge and WIS) ends {record_end:%Y-%m-%d}, before the window does "
+                f"({window.hi:%Y-%m-%d}): storms of the last {(window.hi - record_end).days} days are not "
+                f"counted, and the after-window context is empty.\n" if window.hi > record_end else "")
     text = f"""# storm_check/{label} -- were there big storms around this window mean?
 
 Written by `scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_storm_check.py`
@@ -337,7 +353,7 @@ highest {inw.rhigh_m.max():.2f} m ({'' if inw.empty else inw.loc[inw.rhigh_m.idx
 ## 2. Was the window stormy?
 
 {window_hours} storm-hours above the berm fell inside the window. Over every
-2-yr span of {RECORD[0]}–{RECORD[1]} (stepped monthly) the median is
+{spans_df.attrs['years']}-yr span of {RECORD[0]}–{RECORD[1]} (stepped monthly) the median is
 {int(spans_df.hours.median())} h and the range {int(spans_df.hours.min())}–{int(spans_df.hours.max())} h,
 so this window ranks {rank_hours} of {len(spans_df)}.
 
@@ -373,7 +389,7 @@ Series in `supporting/storm_check_{label}_island_series.csv`.
   storm that moved the shoreline for good moves every later pass too, and
   that part is not removable by dropping passes: look at the island series for it.
 - Landsat 5 alone before 1999, so the 1996 window has fewer passes to drop.
-
+{gap_note}
 ## Files
 
 | file | what it is |
@@ -434,13 +450,16 @@ def run(window, events, major, variant, ctx_years, recovery_days, min_cov):
                      for r in storms.itertuples()]
     shift, keys = mean_shift(pos, window, storms, recovery_days)
 
-    spans_df = storm_hours_2yr(events)
+    n_ref = int((events.peak.dt.year <= RECORD[1]).sum())
+    years = max(1, round((window.hi - window.lo).days / 365.25))
+    spans_df = storm_hours_spans(events, years)
+    spans_df.attrs["years"] = years
     spans_df.attrs["se_med"] = float(means.se_chainage_m.median())
     wsel = events[(events.peak >= window.lo) & (events.peak <= window.hi + pd.Timedelta(days=1))]
     window_hours = int(wsel.raw_hours.sum())
 
     dune = dune_line_date(window.period_start)
-    figure(ctx, dict(ctx=ctx_years, variant=variant, n_record=len(events)),
+    figure(ctx, dict(ctx=ctx_years, variant=variant, n_record=n_ref),
            window, major, folder, label, window.anchor, dune)
 
     cols = ["peak", "rhigh_m", "raw_hours", "tp_s", "type", "name", "tc_name", "tc_km",
@@ -451,14 +470,14 @@ def run(window, events, major, variant, ctx_years, recovery_days, min_cov):
     out.round(3).to_csv(folder / f"storm_check_{label}_events.csv", index=False)
     shift.round(3).to_csv(folder / f"storm_check_{label}_mean_shift.csv", index=False)
     series.round(3).to_csv(fs.support_dir(folder) / f"storm_check_{label}_island_series.csv", index=False)
-    write_readme(folder, label, window, window.anchor, dune, ctx, major, len(events), spans_df,
+    write_readme(folder, label, window, window.anchor, dune, ctx, major, n_ref, spans_df,
                  window_hours, shift, keys, storms, recovery_days, series, n_tr, variant, ctx_years)
     link_from_provenance(window_dir)
 
     print(f"\n== {label} -> {folder}")
     print(ctx[ctx.major][["peak", "name", "type", "rhigh_m", "rank_rhigh", "raw_hours", "major_by", "vs_window"]]
           .to_string(index=False))
-    print(f"window storm-hours {window_hours}; 2-yr median {int(spans_df.hours.median())}")
+    print(f"window storm-hours {window_hours}; {years}-yr median {int(spans_df.hours.median())}")
     for k in keys:
         c = shift[f"shift_{k}_m"]
         print(f"  shift without {k}: median {c.median():+.2f} m, p5 {c.quantile(.05):+.2f}, p95 {c.quantile(.95):+.2f}")
@@ -492,7 +511,7 @@ def main(argv=None):
              else annual_max_median(events, "rhigh_m", sf.BERM_MHW),
              "hours": a.major_hours if a.major_hours is not None
              else annual_max_median(events, "raw_hours", 0)}
-    print(f"{len(events)} events 1984-2024; major = Rhigh >= {major['rhigh']:.2f} m MHW "
+    print(f"{len(events)} events 1984-{events.peak.dt.year.max()}; major = Rhigh >= {major['rhigh']:.2f} m MHW "
           f"or >= {major['hours']:.0f} h above the berm")
     for w in windows:
         run(w, events, major, a.variant, a.context_years, a.recovery_days, a.min_coverage)
