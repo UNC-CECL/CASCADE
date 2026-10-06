@@ -1,0 +1,12 @@
+step,run_dir,bias_m,rmse_m,max_abs_m,worst_gis,be_min,be_max
+0,output\raw_runs\experiments\groin\2026-10-05-blocking-fit-dem-to-dem\b0.60_f0.6\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,-5.8544,18.5778,47.8167,82,0.0,10.5659
+1,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step1\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,1.5332,3.5438,12.6608,81,-2.9426,10.5656
+2,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step2\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,-0.3842,1.7374,8.5719,82,-3.2689,11.6821
+3,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step3\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,0.2042,1.2518,6.087,82,-3.7964,11.8251
+4,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step4\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,-0.0977,0.973,5.0101,82,-4.171,11.9328
+5,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step5\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,0.2429,0.8645,5.6646,81,-4.4793,12.0277
+6,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step6\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,-0.1488,0.7053,4.5848,82,-4.4572,12.2198
+7,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step7\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,0.1671,0.6109,3.2606,81,-4.7394,12.3183
+8,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step8\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,-0.0908,0.4783,1.9791,11,-4.7093,12.3639
+9,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step9\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,0.095,0.4722,1.972,11,-4.7604,12.4072
+10,output\raw_runs\experiments\source-sink\2026-10-05-be-domain-solve-1996_2009\runs\step10\1996_2009\edgeBE\HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock,-0.0565,0.4868,1.9753,11,-4.8525,12.4267
