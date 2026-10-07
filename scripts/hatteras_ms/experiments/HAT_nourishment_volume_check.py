@@ -34,7 +34,7 @@ RUNS = {
     (1996, 2015): EXP_DIR / "runs" / "full_management" / "1996_2015" / "edgeBE",
     (2010, 2026): RAW / "management" / "2026-10-03-buxton-2017-fill" / "runs" / "with2017" / "2010_2026" / "edgeBE",
 }
-SHEET = PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing" / "nourishment" / "datasets" / "Hatteras_BN_data.xlsx"
+SHEET = PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing" / "nourishment" / "1-sources" / "Hatteras_BN_data.xlsx"
 # Sheet row for each model project: (location, yearCompleted); Buxton 2017 is completed 2018
 SHEET_ROW = {("Rodanthe emergency fill", 2014): ("Pea Island/Rodanthe", 2014),
              ("Buxton beach nourishment", 2017): ("Buxton", 2018),

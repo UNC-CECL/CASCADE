@@ -6,7 +6,7 @@ Does each fill footprint show up in CoastSat? Shoreline position the year before
 Per transect, the median CoastSat position in the 12 months before a project's
 first placement date and the 12 months after its last; the change is set against
 the transects outside every fill footprint. Dates come from
-nourishment/datasets/nourishment_placement_dates.csv, footprints from
+nourishment/1-sources/nourishment_placement_dates.csv, footprints from
 HATTERAS_NOURISHMENT_PROJECTS. A check on the forcing; nothing here feeds a run.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -38,8 +38,8 @@ from site_layer.hat_topo_version import MGMT_ROOT  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_NOURISHMENT_PROJECTS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-DATES_CSV = MGMT_ROOT / "nourishment" / "datasets" / "nourishment_placement_dates.csv"
-OUT_DIR = MGMT_ROOT / "nourishment" / "coastsat_check"
+DATES_CSV = MGMT_ROOT / "nourishment" / "1-sources" / "nourishment_placement_dates.csv"
+OUT_DIR = MGMT_ROOT / "nourishment" / "4-extent-checks" / "coastsat"
 WINDOW_DAYS = 365        # length of the before and after windows; a full year so the seasons cancel
 MIN_OBS = 5              # passes a transect needs in each window
 PAD_DOMAINS = 10         # domains drawn either side of a footprint

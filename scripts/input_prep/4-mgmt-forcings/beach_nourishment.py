@@ -46,6 +46,10 @@ from site_layer.hat_topo_version import MGMT_ROOT as MGMT_DIR, MGMT_RECORD_XLSX 
 from site_layer.hat_observed_rates import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 from site_layer.hat_map_layers import ISLAND_OUTLINE as OUTLINE_FILE  # noqa: E402
 OUT_DIR = MGMT_DIR / "nourishment"
+SOURCES_DIR = OUT_DIR / "1-sources"
+INPUT_DIR = OUT_DIR / "2-model-input"             # what the runs receive
+MAPS_DIR = OUT_DIR / "3-maps"
+PER_FILL_DIR = MAPS_DIR / "per_fill"
 
 SPACING_M = HATTERAS_DOMAINS.domain_spacing_m
 N_DOMAINS = HATTERAS_DOMAINS.num_real_domains
@@ -271,7 +275,7 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
     # Model projects the record flags nothing for in their year
     unflagged = [f"{n} {int(row.year)}" for n, row in m.iterrows() if int(row.year) not in r.index]
     unflagged_text = (f" The record flags nothing for {', '.join(unflagged)}: the project is missing from "
-                      "it (nourishment/datasets/README.md), so it has no inner bar." if unflagged else "")
+                      "it (nourishment/1-sources/README.md), so it has no inner bar." if unflagged else "")
     caption(fig, (
         f"Beach nourishment on the modelled reach, {YEAR_LO}–{YEAR_HI}, by year placed (vertical) "
         f"and GIS domain (horizontal, south to north, {SPACING_M:.0f} m each). Each filled bar is one "
@@ -292,7 +296,7 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
         + _windows_sentence(windows, model.year.tolist())
         + ". Named bands along the foot are the villages."
     ).replace("{n_off}", str(n_off)))
-    return save(fig, OUT_DIR / "nourishment_when_where", close=True)[0]
+    return save(fig, INPUT_DIR / "nourishment_when_where", close=True)[0]
 
 
 # The sentence saying which windows carry which fills, computed from the config so it cannot go stale
@@ -388,7 +392,7 @@ def fig_volume_alongshore(model: pd.DataFrame) -> Path:
           "bands along the top are the villages: the Buxton and Rodanthe footprints extend out of "
           "their villages into the road corridor, the Avon footprint stays inside its village."
     ))
-    return save(fig, OUT_DIR / "nourishment_volume_alongshore", close=True)[0]
+    return save(fig, INPUT_DIR / "nourishment_volume_alongshore", close=True)[0]
 
 
 # Figure 3: the domain map
@@ -425,7 +429,9 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
         x0, y0, x1, y1 = row.geometry.bounds
         h = (y1 - y0) / len(ys)
         for k, y in enumerate(ys):
-            pieces.append(dict(fill_year=y, geometry=row.geometry.intersection(
+            town = next(_town(q) for q in HATTERAS_NOURISHMENT_PROJECTS
+                        if q.year == y and int(row.domain_id) in q.gis_domains)
+            pieces.append(dict(fill_year=y, town=town, geometry=row.geometry.intersection(
                 box(x0, y0 + k * h, x1, y0 + (k + 1) * h))))
     bands = gpd.GeoDataFrame(pieces, geometry="geometry", crs=strip.crs)
 
@@ -434,10 +440,12 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     minx, miny, maxx, maxy = strip.total_bounds
     strip_outline.plot(ax=ax, facecolor="0.93", edgecolor="none", zorder=0)
     strip.plot(ax=ax, facecolor="none", edgecolor="0.6", linewidth=0.35, zorder=1)
-    for year, (dark, light) in YEAR_COLOUR.items():
-        sub = bands[bands.fill_year == year]
+    # Coloured by community, as on the project maps: the light fill over a dark keyline and the strong edge
+    for town, (dark, light) in COMMUNITY_COLOUR.items():
+        sub = bands[bands.town == town]
         if not sub.empty:
-            sub.plot(ax=ax, facecolor=light, edgecolor=dark, linewidth=0.9, zorder=3)
+            sub.plot(ax=ax, facecolor=light, edgecolor=KEYLINE, linewidth=1.6, zorder=3)
+            sub.plot(ax=ax, facecolor="none", edgecolor=dark, linewidth=0.8, zorder=3.1)
 
     dy = maxy - miny
     ax.set_xlim(minx - 0.01 * (maxx - minx), maxx + 0.01 * (maxx - minx))
@@ -502,8 +510,9 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     ax.text((ax0 + ax1) / 2, by + 0.05 * dy, "N", ha="center", va="bottom",
             fontsize=8.5, fontweight="bold", color=INK)
 
-    handles = year_handles(0.9) + [
-        Patch(facecolor="white", edgecolor="0.6", lw=0.35, label="domain, never nourished"),
+    towns = [t for t in COMMUNITY_COLOUR if t in set(bands.town)][::-1]
+    handles = _legend_handles(towns, groins=False, pier=False)[:-1] + [
+        Patch(facecolor="white", edgecolor="0.6", lw=0.35, label="Domain, never nourished"),
     ]
     fig.legend(handles=handles, loc="outside lower center", ncol=len(handles), frameon=False)
     refill = _refill_sentence()
@@ -515,18 +524,18 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
         f"The {len(domains)} GIS domains in place, the island rotated 90° clockwise so that south is "
         "to the left, north to the right and the Atlantic at the bottom; rotation preserves distance, "
         f"so the scale bar holds. The {n_filled} domains that receive a nourishment project in the "
-        "hindcast are filled by the year it was placed, with the site-config extents of Figure 1; "
+        "hindcast are filled by community, in the colours of the project maps, with the site-config extents of Figure 1; "
         "grey is the island outline and white domains are never nourished." + refill_text + " Every tenth domain and "
         "the ends of each footprint are numbered along the top. The Pea Island / Oregon Inlet fills "
         "in the management record lie beyond the north end of the strip."
     ))
-    return save(fig, OUT_DIR / "nourishment_domain_map", close=True)[0]
+    return save(fig, MAPS_DIR / "nourishment_domain_map", close=True)[0]
 
 
 # The project maps and the summary table, in the paper style (2026-10-04): no text column, a panel
 # label and one small corner box, lat/lon ticks, a locator, the house scale bar and north dart
 
-# Short reported extent and source for each fill, for the table (full wording: reported_extent/reported_limits.csv)
+# Short reported extent and source for each fill, for the table (full wording: 4-extent-checks/reported_limits/reported_limits.csv)
 REPORTED = {
     ("Rodanthe emergency fill", 2014): (
         "2.13 mi from 1.5 mi north of the Pea Island refuge border south into Mirlo Beach",
@@ -553,7 +562,7 @@ REPORTED = {
         "Island Free Press FAQ, 2026",
         "https://islandfreepress.org/blog/avon-and-buxton-beach-nourishment-faqs-2026-edition/"),
 }
-DATES_CSV = OUT_DIR / "datasets" / "nourishment_placement_dates.csv"
+DATES_CSV = SOURCES_DIR / "nourishment_placement_dates.csv"
 IMAGERY_NOTE = "Esri World Imagery, accessed 2026-10-04, not of the fill year"
 MM = 1 / 25.4
 PAPER_WIDTH_IN = 180 * MM       # journal double column
@@ -887,7 +896,7 @@ def fig_project_maps(model: pd.DataFrame) -> list[Path]:
         ax.legend(handles=hs, loc="lower right" if _town(p) in ("Avon", "Buxton") else "upper right",
                   **{**MAP_LEGEND, "fontsize": 7, "borderaxespad": 0.4})
         stem = f"nourishment_map_{p.year}_{_town(p).lower()}"
-        out = save(fig, OUT_DIR / "project_maps" / stem, close=True, bbox_inches="tight", pad_inches=0.02)[0]
+        out = save(fig, PER_FILL_DIR / stem, close=True, bbox_inches="tight", pad_inches=0.02)[0]
         record_caption(out, (
             f"{_caption_row(p, in_model, dates)}. "
             + ("Footprint as the hindcast applies it (hatteras_site_config.HATTERAS_NOURISHMENT_PROJECTS). "
@@ -959,7 +968,7 @@ def fig_project_maps_paper(model: pd.DataFrame) -> Path:
     fig.legend(handles=hs,
                loc="lower left", ncol=1, frameon=False, fontsize=fs - 1.5,
                bbox_to_anchor=(left - 0.005, y0 - 0.01), handlelength=1.4, labelspacing=0.55, borderaxespad=0.0)
-    out = save(fig, OUT_DIR / "project_maps" / "nourishment_maps_paper", close=True,
+    out = save(fig, MAPS_DIR / "nourishment_maps_paper", close=True,
                bbox_inches="tight", pad_inches=0.02)[0]
     rows = "; ".join(f"({chr(97 + i)}) " + "; ".join(_caption_row(p, m, dates) for p, m in group)
                      for i, group in enumerate(panels))
@@ -988,7 +997,7 @@ def fig_summary_table() -> list[Path]:
             volume_m3=round(p.volume_m3_total), volume_m3_per_m=round(p.volume_m3_per_m(SPACING_M), 1),
             in_model="yes" if in_model else "no"))
     tab = pd.DataFrame(rows)
-    csv = OUT_DIR / "nourishment_summary_table.csv"
+    csv = INPUT_DIR / "nourishment_summary_table.csv"
     tab.to_csv(csv, index=False)
 
     import textwrap
@@ -1030,24 +1039,24 @@ def fig_summary_table() -> list[Path]:
     ax.text(0, y + 0.03, "Density: model volume spread evenly over the footprint's 500 m domains. "
             "2026 fills fall after the CoastSat record (to 2026-01-13) and are not modelled; "
             "Buxton 2026 volume is planned, not as-built.", ha="left", va="top", fontsize=fs - 1, color=INK_MUTED)
-    out = save(fig, OUT_DIR / "nourishment_summary_table", close=True, bbox_inches="tight", pad_inches=0.03)
+    out = save(fig, INPUT_DIR / "nourishment_summary_table", close=True, bbox_inches="tight", pad_inches=0.03)
     record_caption(out[0], (
         "Beach nourishment on the modelled reach: placement dates, the extent each source reports, and the footprint "
         "and volume the hindcast applies. Reported wording in full, with coordinates for every limit: "
-        "reported_extent/reported_limits.csv; placement-date sources: datasets/nourishment_placement_dates.csv."))
+        "4-extent-checks/reported_limits/reported_limits.csv; placement-date sources: 1-sources/nourishment_placement_dates.csv."))
     return [out[0], csv]
 
 
 # Run: the figures
 def main():
     apply_style()
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
     model = model_projects()
     record = record_projects()
 
     table = pd.concat([model, record], ignore_index=True)
     table.insert(0, "written", dt.datetime.now().strftime("%Y-%m-%d"))
-    csv = OUT_DIR / "nourishment_projects.csv"
+    csv = INPUT_DIR / "nourishment_projects.csv"
     table.to_csv(csv, index=False, float_format="%.1f")
 
     outs = [fig_when_where(model, record),

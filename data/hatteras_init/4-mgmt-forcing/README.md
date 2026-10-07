@@ -7,11 +7,10 @@ spend.
 road_offset/      where the road sits at a period's START, per domain
 road_elevation/   how high it is - ONE set, no year
 road_relocation/  the measured displacement between the two digitised lines
-nourishment/      FIGURES ONLY: when and where the fills were placed, the
-                  site-config projects against the record, and the m^3/m each
-                  domain receives (scripts/input_prep/4-mgmt-forcings/
-                  beach_nourishment.py). Not an input; the model reads the
-                  list in hatteras_site_config
+nourishment/      the fill record, what the model receives, maps and extent
+                  checks, in numbered folders (map: nourishment/README.md).
+                  Not an input; the model reads the list in
+                  hatteras_site_config
 Hatteras_Management_Timelines.xlsx   the source record behind the nourishment
                                      projects in hatteras_site_config
 ```

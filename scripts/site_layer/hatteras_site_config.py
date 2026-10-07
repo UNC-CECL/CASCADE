@@ -786,7 +786,7 @@ HATTERAS_NOURISHMENT_PROJECTS = (
         year=2014,
         # GIS 82-88 since 2026-10-04 (was 84-89), from the 2013 USACE notice: 2.13 mi "from 1.5 miles north of the
         # Pea Island NWR border into the Mirlo Beach community to just north of the Rodanthe pier"; the north limit
-        # falls ~380 m into GIS 88, the south at the GIS 82 south edge. The CoastSat change agrees (nourishment/reported_extent)
+        # falls ~380 m into GIS 88, the south at the GIS 82 south edge. The CoastSat change agrees (nourishment/4-extent-checks/reported_limits)
         gis_domains=tuple(range(82, 89)),
         volume_cubic_yards=1_620_000,
         note="Mirlo Beach S-curves, 2.13 mi from 1.5 mi north of the Pea Island refuge border south into Mirlo Beach",

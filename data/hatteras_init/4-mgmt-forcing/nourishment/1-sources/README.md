@@ -2,6 +2,7 @@
 
 - `NC_beachno-episodes-2025-10-28.xlsx` — the North Carolina episodes from the national beach nourishment database, downloaded 2025-10-28. Left as downloaded.
 - `Hatteras_BN_data.xlsx` — the Hatteras Island rows taken from it, plus corrections.
+- `national_beach_nourishment_database.csv` — the Hatteras project summaries from the national beach nourishment database, entered by hand on 2026-10-06. Values are as listed there, with commas and `$` signs removed. `n_events` is blank because the database left it blank. Compared with our record below.
 - `nourishment_placement_dates.csv` — when sand placement started and ended for each Hatteras fill, with a source for each date (added 2026-10-04). `start_precision` / `end_precision` say how firm a date is: `exact` is a reported date, `approximate` is within a few days, `latest` means placement ended on or before that date, and `pending` means not yet known. Rodanthe 2014 is the weakest: pumping began around 29 July and was reported finished by 20 September 2014.
 
 ## Corrections to the source dataset
@@ -16,6 +17,15 @@
 - **Buxton 2026:** 2.0 million cubic yards **planned**, Haulover to the lighthouse groin field. Pumping began 31 July 2026, with about 75% placed by 16 September. Replace with the as-built volume once it's published.
 
 Neither project's cost has been reported separately (the combined contract is about $45 million), so their cost fields are 0, the sheet's convention for an unknown cost.
+
+## National database project summaries vs our record (2026-10-06)
+
+The project summaries list two Hatteras projects. Both agree with the volumes the model uses.
+
+- **Rodanthe/S-Curve, 2014:** 1,618,083 cubic yards, 10,718 ft (3.27 km). Our record rounds the volume to 1,620,000. The model footprint is 7 domains (3.5 km), and the management timeline gives 11,250 ft.
+- **Buxton, 2019–2022:** 3,807,631 cubic yards, 17,000 ft (5.18 km). This is our Buxton 2017–18 fill (2.6 million) plus Buxton 2022 (1.2 million), combined into one entry. The model footprint is 11 domains (5.5 km). The database's 2019 start year is not a placement year, since the first fill was placed June 2017 to February 2018. We keep our dates and use the database only to confirm the combined volume.
+
+Not in the summaries: Avon 2022 (1.0 million cubic yards, in the model; Dare County is its only source), Avon 2026 and Buxton 2026 (too recent), the Pea Island Oregon Inlet disposal placements of 1990–2004, the 2003 post-Isabel emergency fill and the 2013 Pea Island emergency fill (all outside the modelled reach). Every project in the summaries is already in our record.
 
 Fills ruled out on 2026-10-02 (not separate placements): FEMA reimbursements after Florence and Dorian for Buxton paid for sand inside the 2022 project; state highway (NCDOT) dune pushing and sandbags at the S-curves, Rodanthe and north Buxton moved island sand, not imported fill.
 

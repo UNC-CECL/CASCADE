@@ -43,7 +43,7 @@ from site_layer.hat_topo_version import MGMT_ROOT, shoreline_window_for_year  # 
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_NOURISHMENT_PROJECTS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT_DIR = MGMT_ROOT / "nourishment" / "reported_extent"
+OUT_DIR = MGMT_ROOT / "nourishment" / "4-extent-checks" / "reported_limits"
 # The 2009 period's shoreline window (+/-1 yr of the 2009 USACE lidar), the one its island offset uses
 SHORELINE_WINDOW = shoreline_window_for_year(2009)
 SHORELINE = mean_shoreline_geojson(*SHORELINE_WINDOW)
