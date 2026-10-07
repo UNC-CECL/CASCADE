@@ -237,72 +237,42 @@ def main(argv=None):
         for path in save(fig, out_dir / stem, close=True):
             print(f"  wrote {path}")
 
-    _overview(year, off, beach, gap, diff, zero, approach, ver, out_dir)
+    _overview(year, off, zero, approach, ver, out_dir)
 
 
-# The whole island on one page: where the six section figures fall, the beach width, and the shift
-def _overview(year, off, beach, gap, diff, zero, approach, ver, out_dir):
+# The whole island on one panel: both planforms and where the six section figures fall (Hannah, 2026-10-06)
+def _overview(year, off, zero, approach, ver, out_dir):
     gis = np.arange(1, 91)
-    fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=7.4), sharex=True,
-                             gridspec_kw={"height_ratios": [1.3, 0.8, 0.8]}, constrained_layout=True)
-    ax_p, ax_b, ax_s = axes
-
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.6), constrained_layout=True)
     for src in ROWS:
-        ax_p.step(gis, off[src], where="mid", color=ROWS[src]["colour"], lw=1.2, label=approach[src])
-    ax_p.set_ylabel("Cross-shore position (m)")
-    ax_p.legend(loc="upper right", fontsize=7, frameon=False)
-    _title(ax_p, 0, "Island planform from each offset, and the six section figures")
+        ax.step(gis, off[src], where="mid", color=ROWS[src]["colour"], lw=1.2, label=approach[src])
+    ax.set_ylabel("Cross-shore position (m)")
+    ax.set_xlabel("Model domain, 500 m each (south → north)")
+    ax.legend(loc="upper right", fontsize=7, frameon=False)
+    ax.set_title("Island planform from each offset, and the six section figures")
 
-    ax_b.bar(gis, beach, width=0.8, color=_shift_colours(gap - beach), lw=0)
-    ax_b.axhline(gap, color=C["INK"], lw=0.9, ls=(0, (4, 2)))
-    ax_b.text(0.995, gap, f" {gap:.0f} m: no shift ", transform=ax_b.get_yaxis_transform(),
-              ha="right", va="bottom", fontsize=7, color=C["INK"])
-    ax_b.set_ylabel("Beach width (m)")
-    ax_b.set_ylim(0, np.ceil(beach.max() / 20) * 20 + 10)
-    _title(ax_b, 1, "Beach width: mean shoreline to dune line")
-
-    ax_s.bar(gis, diff, width=0.8, color=_shift_colours(diff), lw=0)
-    ax_s.axhline(0, color=C["INK"], lw=0.7)
-    lim = np.ceil(np.abs(diff).max() / 10) * 10
-    ax_s.set_ylim(-lim * 1.3, lim * 1.3)
-    ax_s.set_ylabel("Shift (m)")
-    ax_s.set_xlabel("Model domain, 500 m each (south → north)")
-    for y, va, text in ((0.97, "top", "↑ Landward with the shoreline offset"),
-                        (0.03, "bottom", "↓ Seaward with the shoreline offset")):
-        ax_s.text(0.005, y, text, transform=ax_s.transAxes, ha="left", va=va, fontsize=7,
-                  color=C["LATE"] if va == "top" else C["EARLY"])
-    _shift_note(ax_s, gap)
-    _title(ax_s, 2, "Cross-shore shift of each domain, dune-line to shoreline offset")
-
-    # The six sections: alternate shading, their names on the planform, the borders through every panel
+    # The six sections: alternate shading, their names along the bottom, a border between each
     for k, (lo, hi) in enumerate(SECTIONS):
-        for ax in axes:
-            if k % 2:
-                ax.axvspan(lo - 0.5, hi + 0.5, color="0.95", lw=0, zorder=0)
-            if k:
-                ax.axvline(lo - 0.5, color="0.55", lw=0.6, ls=(0, (3, 2)), zorder=1)
-        ax_p.text((lo + hi) / 2, 0.02, f"GIS {lo}–{hi}", transform=ax_p.get_xaxis_transform(),
-                  ha="center", va="bottom", fontsize=7, color=C["INK_MUTED"])
-    for ax in axes:
-        ax.set_xlim(0.5, 90.5)
-        ax.grid(axis="y", lw=0.4, color="0.88")
-        _domain_ticks(ax, gis)
-        ax.set_xticks(gis[(gis % 5) == 0])
-        ax.tick_params(axis="x", which="minor", length=0)
+        if k % 2:
+            ax.axvspan(lo - 0.5, hi + 0.5, color="0.95", lw=0, zorder=0)
+        if k:
+            ax.axvline(lo - 0.5, color="0.55", lw=0.6, ls=(0, (3, 2)), zorder=1)
+        ax.text((lo + hi) / 2, 0.02, f"GIS {lo}–{hi}", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=7, color=C["INK_MUTED"])
+    ax.set_xlim(0.5, 90.5)
+    ax.grid(axis="y", lw=0.4, color="0.88")
+    _domain_ticks(ax, gis)
+    ax.tick_params(axis="x", which="minor", length=0)
 
     caption(fig, (
         f"The {year} island offset from each source over the whole island, the overview for the "
-        f"{len(SECTIONS)} section figures beside it (shaded bands, named in a). (a) The cross-shore position "
-        f"each offset gives every 500 m domain: {approach['duneline'].lower()} (duneline/{ver['duneline']}) and "
-        f"{approach['shoreline'][0].lower() + approach['shoreline'][1:]} (shoreline/{ver['shoreline']}), each in "
-        f"the model frame, zeroed on its own most seaward domain (GIS {zero['duneline']} and GIS "
-        f"{zero['shoreline']}); landward is up. (b) The beach width, the distance from the mean shoreline to "
-        f"the dune line in the shared offshore datum: the shoreline is seaward of the dune line in every "
-        f"domain, by {beach.min():.0f}–{beach.max():.0f} m. (c) The shift each domain makes from the "
-        f"dune-line to the shoreline offset. Because each build is zeroed on its own most seaward domain, "
-        f"the shift equals {gap:.1f} m, the gap between those two zero points, minus the beach width: domains "
-        f"with a beach wider than {gap:.0f} m (dashed line in b) move seaward (red, {int((diff < 0).sum())} "
-        f"of 90), narrower ones landward (blue). Bars in (b) carry the same colours."))
+        f"{len(SECTIONS)} section figures beside it (shaded bands, named along the bottom). The cross-shore "
+        f"position each offset gives every 500 m domain: {approach['duneline'].lower()} "
+        f"(duneline/{ver['duneline']}) and {approach['shoreline'][0].lower() + approach['shoreline'][1:]} "
+        f"(shoreline/{ver['shoreline']}), each in the model frame, zeroed on its own most seaward domain "
+        f"(GIS {zero['duneline']} and GIS {zero['shoreline']}); landward is up. At this scale the two lines "
+        f"overlap: they differ by tens of metres on a planform that spans about 6 km, which is why the "
+        f"section figures zoom to 15 domains and give the shift per domain."))
     stem = f"offset_{year}_duneline_vs_shoreline_domains_overview"
     for path in save(fig, out_dir / stem, close=True):
         print(f"  wrote {path}")

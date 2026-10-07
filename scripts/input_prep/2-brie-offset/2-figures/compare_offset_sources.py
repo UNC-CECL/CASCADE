@@ -310,8 +310,8 @@ def _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, shift, stem, ve
         for f in sorted((out_dir / "domains").glob(stem + "_domains_GIS*.png")))
     overview = out_dir / "domains" / (stem + "_domains_overview.png")
     if overview.exists():
-        extra = ("| `domains/{0}` | the whole island: both planforms with the six sections marked, the beach "
-                 "width, and the shift per domain; start here (offset_sources_on_domains.py) |\n"
+        extra = ("| `domains/{0}` | the whole island: both planforms with the six sections marked; start "
+                 "here (offset_sources_on_domains.py) |\n"
                  .format(overview.name)) + extra
     (out_dir / "README.md").write_text("""# {year} island offset: {a} vs {b}
 
