@@ -28,11 +28,11 @@ import pandas as pd
 from shapely.geometry import Point
 
 # --- CONFIG ------------------------------------------------------------------
-TRANSECTS_FILE  = Path("data/transects.geojson")
+TRANSECTS_FILE  = Path("example/data/masonboro_transects.geojson")
 TRANSECT_ID_COL = "id"                 # CoastSat id = time-series filename
-ZONES_FILE      = Path("data/zones.geojson")
-ZONE_ID_COL     = "zone_id"
-OUTPUT_DIR      = Path("data")
+ZONES_FILE      = Path("example/data/masonboro_domains.geojson")
+ZONE_ID_COL     = "domainID"
+OUTPUT_DIR      = Path("example/data")
 JOIN_POINT      = "origin"             # or "midpoint"
 # -----------------------------------------------------------------------------
 

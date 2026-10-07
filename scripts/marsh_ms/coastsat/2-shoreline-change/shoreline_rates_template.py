@@ -28,8 +28,8 @@ import pandas as pd
 from scipy import stats
 
 # --- CONFIG ------------------------------------------------------------------
-TIMESERIES_DIR = Path("data/timeseries")
-LOOKUP_CSV     = Path("data/transect_zones.csv")   # optional
+TIMESERIES_DIR = Path("example/data/timeseries")  # all the transect files
+LOOKUP_CSV     = Path("example/data/transect_zones.csv")   # optional
 OUTPUT_DIR     = Path("output")
 START_YEAR, END_YEAR = 1996, 2024
 

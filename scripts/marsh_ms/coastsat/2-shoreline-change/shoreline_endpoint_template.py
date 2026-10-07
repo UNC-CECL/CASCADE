@@ -28,8 +28,8 @@ import numpy as np
 import pandas as pd
 
 # --- CONFIG ------------------------------------------------------------------
-TIMESERIES_DIR = Path("data/timeseries")
-LOOKUP_CSV     = Path("data/transect_zones.csv")   # optional
+TIMESERIES_DIR = Path("example/data/timeseries")
+LOOKUP_CSV     = Path("example/data/transect_zones.csv")   # optional
 OUTPUT_DIR     = Path("output")
 START_YEAR, END_YEAR = 1996, 2024
 END_WINDOW_YEARS = 1
