@@ -11,6 +11,8 @@ HAT_hindcast_config.py         which run happens, and where the value came
 hat_run.yaml                   from: env > yaml > the default in the module
 HAT_run_all.py                 the batch driver: the matrix, then the sweep
 HAT_hindcast_methods.md        the written method
+DEM_TO_DEM_CALIBRATION.md      the calibration/test plan (1996-2009, 2009-2025):
+                               what is done, the open decisions, where to resume
 HINDCAST_PLAN.md               planning notes: the order the notebook builds
                                the run in. Was `HAT_hindcast_plan`, a file
                                with no extension that this line described as
@@ -36,7 +38,7 @@ Barrier3D is a separate repository, installed editable, so the branch checked ou
 
 The storm series moved to `v3_trim24` on the same day (`hat_env_forcings.DEFAULT_STORM_VARIANT`). Every run records its storm file and dune-ceiling mode in its metadata. To reproduce a run made before 2026-09-28, check out `fix/route-overwash-axis-swap` and use that date's parameter template and `v3_72` storms.
 
-`../Barrier3D-prefix-ce36866` is a detached worktree of the code **before** the route_overwash fix. It is kept only for the storm-duration cause test (`output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-max-duration/`) and can be removed with `git -C ../Barrier3D worktree remove ../Barrier3D-prefix-ce36866`.
+`../Barrier3D-prefix-ce36866` is a detached worktree of the code **before** the route_overwash fix. It is kept only for the storm-duration cause test (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-storm-max-duration/`) and can be removed with `git -C ../Barrier3D worktree remove ../Barrier3D-prefix-ce36866`.
 
 ## tools/
 
@@ -5751,7 +5753,7 @@ the fault that made the model overwash far more than the imagery -- so a
 run on one is refused, not warned about. To reproduce a run made before
 2026-09-28, check out fix/route-overwash-axis-swap in the Barrier3D
 repository and use the parameter template and storm variant (v3_72) of
-that date. experiments/storms-and-overwash/ holds the record.
+that date. experiments/storms-overwash-and-dunes/ holds the record.
 ```
 
 ```text
