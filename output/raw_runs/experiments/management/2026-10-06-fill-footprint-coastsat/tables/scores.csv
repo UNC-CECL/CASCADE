@@ -1,0 +1,11 @@
+variant,area,bias_m,rmse_m,r
+reported,"interior GIS 2-89, smoothed",-18.231,32.132,0.363
+coastsat,"interior GIS 2-89, smoothed",-18.641,35.943,0.244
+reported,"Rodanthe emergency fill 2014, GIS 82-88 raw",-37.683,38.911,
+coastsat,"Rodanthe emergency fill 2014, GIS 82-88 raw",-40.052,43.453,
+reported,"Buxton beach nourishment 2017, GIS 6-16 raw",-5.627,36.435,
+coastsat,"Buxton beach nourishment 2017, GIS 6-16 raw",-4.419,54.707,
+reported,"Buxton shore protection 2022, GIS 6-16 raw",-5.627,36.435,
+coastsat,"Buxton shore protection 2022, GIS 6-16 raw",-4.419,54.707,
+reported,"Avon shore protection 2022, GIS 21-28 raw",6.317,14.142,
+coastsat,"Avon shore protection 2022, GIS 21-28 raw",6.866,12.827,
