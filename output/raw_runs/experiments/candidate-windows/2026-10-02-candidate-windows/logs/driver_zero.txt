@@ -1,2 +1,0 @@
-done  candidate-windows/2026-10-02-candidate-windows/runs/1996_zeroBE_zero
-done  candidate-windows/2026-10-02-candidate-windows/runs/2010_zeroBE_zero

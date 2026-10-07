@@ -1,3 +1,0 @@
-y axis on every panel: -12 to +12 m/yr
-= ceil(max |rate| + 1) over every observed reading (CoastSat means) and the OLS rate of every model set (coastsat), 1996-2015, 2010-2026
-(the CoastSat std lines are not in the bound)

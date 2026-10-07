@@ -1,9 +1,0 @@
-window,model_ends,target,n,bias_m,rmse_m,r
-1996_2015,ends_solved_on_coastsat,coastsat,88,2.614,29.625,0.243
-1996_2015,ends_solved_on_coastsat,coastsat_lowess,88,3.318,22.964,0.186
-1996_2015,ends_unsolved,coastsat,88,0.813,30.093,0.196
-1996_2015,ends_unsolved,coastsat_lowess,88,0.83,23.52,0.108
-2010_2026,ends_solved_on_coastsat,coastsat,88,-17.811,31.405,0.517
-2010_2026,ends_solved_on_coastsat,coastsat_lowess,88,-17.539,27.237,0.594
-2010_2026,ends_unsolved,coastsat,88,-19.36,34.067,0.405
-2010_2026,ends_unsolved,coastsat_lowess,88,-19.412,30.514,0.45

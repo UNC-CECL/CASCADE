@@ -1,7 +1,0 @@
-offset_scale,sweep,n_runs,rmse_best,rmse_worst,bias_at_best,best_settings,best_run
-div10,wave_height,7,1.1949642400202791,2.8669771680196066,-0.1376226671492469,Hs 2 m,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs2
-div10,wave_angle,16,1.2077759561579824,1.272635822403844,0.0078406179242799,"asymmetry 0.5, high-angle 0.1",runs_wave_angle/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs1asym0p5
-metres,wave_height,7,1.634059986032107,13.723819278233218,-0.4453489852732694,Hs 0.75 m,runs_wave_height/metres_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs0p75
-metres,wave_angle,28,1.228272351170168,2.1885993125586536,-0.0423814721612511,"asymmetry 0.6, high-angle 0.45",runs_wave_angle/metres_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1asym0p6ahf0p45
-metres-detrended,wave_height,7,1.8447734352017728,11.02489037100321,-0.4585641372711005,Hs 0.75 m,runs_wave_height/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs0p75
-metres-detrended,wave_angle,16,1.3012437123231142,2.3920885197027126,-0.1306874451710636,"asymmetry 0.5, high-angle 0.4",runs_wave_angle/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs1asym0p5ahf0p4

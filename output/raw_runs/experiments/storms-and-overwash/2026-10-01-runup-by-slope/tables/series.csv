@@ -1,7 +1,0 @@
-window,variant,max_rhigh_min,max_rhigh_max,typical_year_max_p10,typical_year_max_median,typical_year_max_p90
-1996_2010,control,5.22,5.22,2.76,2.76,2.76
-1996_2010,measured,4.89,8.21,2.72,3.12,4.06
-1996_2010,pattern,4.51,7.03,2.47,2.76,3.48
-2010_2024,control,4.3,4.3,3.09,3.09,3.09
-2010_2024,measured,4.01,6.97,3.05,3.5,4.59
-2010_2024,pattern,3.67,5.93,2.74,3.09,3.93

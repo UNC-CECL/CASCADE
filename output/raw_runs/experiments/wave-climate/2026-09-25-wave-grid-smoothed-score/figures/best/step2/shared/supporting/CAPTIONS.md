@@ -1,7 +1,0 @@
-# Captions — shared
-
-Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
-
-**`best_shared_natural_step2.png`.** Natural, 2026-09-24 step-2 runs, rescored on the smoothed output. Among settings run in both windows, the one with the lowest mean of RMSE (smoothed model) divided by each window's flat-line RMSE. Score: 1 - SSE/SST of the model smoothed like the CoastSat target (LOWESS over 10 domains, the southern 10 raw) against the CoastSat LRR target, interior GIS 2-89; the other score in brackets. Top: LRR rate; bottom: position change, end minus start, against the observed CoastSat change. Solid colour: the model per domain; faint dashed: the smoothed model that is scored. Offset in metres (dune line), no groin, no relocations.
-
-**`best_shared_full_management_step2.png`.** Full management, 2026-09-24 step-2 runs, rescored on the smoothed output. Among settings run in both windows, the one with the lowest mean of RMSE (smoothed model) divided by each window's flat-line RMSE. Score: 1 - SSE/SST of the model smoothed like the CoastSat target (LOWESS over 10 domains, the southern 10 raw) against the CoastSat LRR target, interior GIS 2-89; the other score in brackets. Top: LRR rate; bottom: position change, end minus start, against the observed CoastSat change. Solid colour: the model per domain; faint dashed: the smoothed model that is scored. Offset in metres (dune line), no groin, no relocations.

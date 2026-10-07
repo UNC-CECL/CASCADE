@@ -1,96 +1,24 @@
-# Experiments, by theme
+# Experiments, by topic
 
-One question each, grouped by the investigation it belongs to (reorganised 2026-09-25, Hannah). Each study folder is `<date>-<what it tested>`; its README or NOTE is the record. Each theme's README has a table of what every study asked, what it found and whether it is still current. A study's folder path under `experiments/` is also its runs' tag in `run_index.csv`.
+Each study answers one question and lives in `<topic>/<date>-<what it tested>/`. Its README or NOTE is the record. Each topic's README has a table of its studies: the question, the answer, and whether it is still current. A study's folder path under `experiments/` is also its runs' tag in `run_index.csv`.
 
-## Start here: the wave climate to use (settled 2026-09-27)
+Only studies under the 2026-10-05 calibration/test plan are kept here. Everything older is on `D:\CASCADE_offload\output\raw_runs\experiments\` (see `OFFLOADED.md`).
 
-| | 1996–2010 | 2010–2024 | end rates, GIS 1 / GIS 90 (m/yr) |
-|---|---|---|---|
-| **A, same waves both windows (default)** | Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5 | same | 1996: +4.8394 / +17.545 · 2010: +18.8 / +24.535 |
-| B, one change between windows | as A | **Hs 2.5**, rest as A | 2010: +8.0 / +40.399 (1996 as A) |
+## Topics
 
-Both scenarios (natural and full management) use the same row. Raw share of
-alongshore variation explained (option A): 1996–2010 managed +20%, natural +24%.
-2010–2024 is not fitted by any setting, because of the 2021 CoastSat step
-(managed −135%, natural −699%; option B improves this to −122% and −538%).
+| topic | what it covers | current answer, in short |
+|---|---|---|
+| [`end-domain-boundaries/`](end-domain-boundaries/README.md) | The source/sink rates at the two end domains (GIS 1 and 90), solved against each target and window. | 1996_2009 +1.4981 / +10.5659; 2009_2025 edgeBE +32.7049 / +21.0679; 1996_2025 +144.2227 / +68.4160 m/yr, all on net change or the window's own target. |
+| [`groin/`](groin/README.md) | The Cape Point groin: strength and form. | Blocking b0.6/f0.6 on 1996–2009, pinned 2026-10-05. |
+| [`source-sink/`](source-sink/README.md) | The per-domain BE field (set 1) and whether it transfers to the test. | Set 1 fits calibration to 0.49 m; the test bias is the 2021 step; set 2 not derived. |
+| [`management/`](management/README.md) | Whether the management input (fills, volumes, footprints) arrives as intended and helps the fit. | Reported fill footprints kept; the CoastSat-observed footprints made the test worse. |
+| [`calibration-end-window/`](calibration-end-window/README.md) | Options for the end line of the 1996–2009 calibration target. | A mid-2009 end line moves the target +3.6 m seaward with the same shape; not adopted. |
+| [`code-checks/`](code-checks/README.md) | Whether a code or model change moves the results. | Records only. |
 
-- The decision and its figures: [`wave-climate/2026-09-27-wave-recommendation/README.md`](wave-climate/2026-09-27-wave-recommendation/README.md)
-- The end rates as a file: [`end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/tables/ends.json`](end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/tables/ends.json).
-  Use `ends_m_yr`, which holds the Hs-2 values. The Hs-1 and Hs-2.5 solves are kept under `history`.
-  The top-level `reference_waves` key records the first solve (Hs 1) and is not the current setting.
-  Pass the ends as `HAT_BE_OVERRIDE="1=<GIS 1>,90=<GIS 90>"` with the edgeBE preset.
-- The report, covering the same waves across windows vs period-specific waves and every test: https://claude.ai/artifact/L3ezkgxG7aQNDDPMYazDjG (private)
-- **In the code since 2026-09-27:** option A is the default. The ends are in `hatteras_site_config.HATTERAS_BE_EDGE_ONLY` and the waves are the `HAT_hindcast_config` / `hat_run.yaml` defaults, so a plain edgeBE run uses them with no overrides. Option B is recorded as `HATTERAS_WAVE_OPTION_B` in the site config, with the command that runs it (`HAT_HS=2.5` plus `HAT_BE_OVERRIDE`).
+## The model as configured now
 
-## [`island-offset/`](island-offset/README.md)
-
-How the island's planform (the BRIE island offset) is set: its units, and whether it comes from the dune line or the CoastSat shoreline.
-
-- `2026-09-22-div10-offset-shoreline-trial-original` (superseded)
-- `2026-09-24-div10-vs-metres-wave-sweep` (current)
-- `2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8` (superseded)
-- `2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a` (current)
-
-## [`storms-and-overwash/`](storms-and-overwash/README.md)
-
-What the storm series contains, and whether overwash happens where and when it should.
-
-- Seven studies from 2026-09-28. They ended in the adoption: per-cell dune ceilings, the overwash fixes and `v3_trim24` storms (current)
-
-## [`wave-climate/`](wave-climate/README.md)
-
-Tuning the four wave parameters (Hs, Tp, asymmetry, high-angle fraction) against the CoastSat alongshore rates.
-
-- `2026-09-24-metres-2-wave-sensitivity` (record)
-- `2026-09-25-wave-grid-smoothed-score` (record)
-- `2026-09-26-wave-shortlist-ends-solved` (record)
-- `2026-09-27-wave-grid-fixed-ends` (current)
-- `2026-09-27-wave-recommendation` (current)
-
-## [`end-domain-boundaries/`](end-domain-boundaries/README.md)
-
-The source/sink rates locked at the two end domains (GIS 1 and 90): what they must carry against each target.
-
-- `2026-09-16-end-domains-solved-on-duneline` (superseded)
-- `2026-09-18-end-domains-solved-on-redigitized-duneline` (superseded)
-- `2026-09-19-end-domains-2010-recheck` (superseded)
-- `2026-09-19-end-domains-solved-on-lrr-1996-2024` (superseded)
-- `2026-09-27-ends-resolved-metres-offset` (current)
-- `2026-09-27-ends-solved-on-duneline-option-a` (current)
-- `2026-09-27-ends-solved-on-lrr-1996-2024-option-a` (current)
-
-## [`topography-and-domains/`](topography-and-domains/README.md)
-
-What the model domains contain: dune footprints, rows added or removed, and extending the reach onto Pea Island.
-
-- `2026-09-02-pea-island-row-insert-control` (record)
-- `2026-09-08-dune-footprint-behind-road` (record)
-- `2026-09-16-pea-island-domain-extension` (record)
-
-## [`code-checks/`](code-checks/README.md)
-
-Whether a code or model change moves the results: re-runs against stored runs, and the Barrier3D route_overwash fix.
-
-- `2026-09-14-calibrated-pair-rerun-current-code` (record)
-- `2026-09-14-relocation-arm-rerun-new-code` (record)
-- `2026-09-14-relocation-rounding-probes` (record)
-- `2026-09-14-site-config-split-check` (record)
-- `2026-09-24-metres-3-barrier3d-overwash-fix` (current)
-
-## Chains across themes
-
-- [`2026-09-24-metres-INDEX.md`](2026-09-24-metres-INDEX.md): the 2026-09-24 metres work, steps 1-3 (offset units, wave sensitivity, the Barrier3D fix), and its 2026-09-25 follow-ups.
-
-Renamed on 2026-09-25 (old name → new): 
-- `2026-09-22-shoreline-offset` → `island-offset/2026-09-22-div10-offset-shoreline-trial-original`
-- `2026-09-16-dune-edgesolve` → `end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline`
-- `2026-09-18-dune-edgesolve` → `end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline`
-- `2026-09-19-edgesolve-2010` → `end-domain-boundaries/2026-09-19-end-domains-2010-recheck`
-- `2026-09-19-edgesolve-lrr1996_2024` → `end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024`
-- `2026-09-02-pea1989` → `topography-and-domains/2026-09-02-pea-island-row-insert-control`
-- `2026-09-08-behindroad-copy` → `topography-and-domains/2026-09-08-dune-footprint-behind-road`
-- `2026-09-16-peaisland-ext` → `topography-and-domains/2026-09-16-pea-island-domain-extension`
-- `2026-09-14-currency` → `code-checks/2026-09-14-calibrated-pair-rerun-current-code`
-- `2026-09-14-paramsplit` → `code-checks/2026-09-14-site-config-split-check`
-- `2026-09-14-probe` → `code-checks/2026-09-14-relocation-rounding-probes`
-- `2026-09-14-recode` → `code-checks/2026-09-14-relocation-arm-rerun-new-code`
+- **Plan:** calibrate 1996 → 2009 DEM, test 2009 → 2025-08-17; resume document `scripts/hatteras_ms/DEM_TO_DEM_CALIBRATION.md`.
+- **Waves:** option A (Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5), the `HAT_hindcast_config` / `hat_run.yaml` defaults. The study that chose them is on D: (`wave-climate/2026-09-27-wave-recommendation`).
+- **End rates:** `hatteras_site_config.HATTERAS_BE_EDGE_ONLY`, so a plain edgeBE run uses them with no override. To try others, pass `HAT_BE_OVERRIDE="1=<GIS 1>,90=<GIS 90>"` with the edgeBE preset.
+- **Storms:** `v3_split12_trim24`; per-cell dune ceilings and the Barrier3D overwash fixes (Barrier3D `hatteras/adopted`).
+- **Old folder names** in logs and run metadata: `chains/RENAMES.md` on D:.

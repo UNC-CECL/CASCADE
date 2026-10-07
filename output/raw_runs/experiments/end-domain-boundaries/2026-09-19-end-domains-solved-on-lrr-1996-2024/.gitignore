@@ -1,4 +1,0 @@
-# Run folders stay on disk only since the 2026-09-25 regrouping by theme put
-# their paths past Windows' 260 (Hannah, 2026-09-27: "stop tracking them");
-# git history keeps every earlier version. Tables, notes and figures stay tracked.
-HAT_*/

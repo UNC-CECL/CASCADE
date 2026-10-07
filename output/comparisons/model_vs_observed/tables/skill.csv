@@ -1,9 +1,0 @@
-window,model_ends,model_estimator,target,interval_yr,n_interior,bias_m_yr,rmse_m_yr
-1996_2015,coastsat,endpoint,coastsat_lowess,,88,0.11601585357354666,1.2094946642458213
-1996_2015,coastsat,lrr,coastsat_lowess,,88,0.0022549552094645446,1.0665961545782088
-1996_2015,coastsat,endpoint_smoothed,coastsat_lowess,,88,0.17464571003636914,1.2086215129124736
-1996_2015,coastsat,lrr_smoothed,coastsat_lowess,,88,0.039455028221376594,1.0604494750568556
-2010_2026,coastsat,endpoint,coastsat_lowess,,88,-1.1064432085902944,1.7407793327425167
-2010_2026,coastsat,lrr,coastsat_lowess,,88,-0.9923852922991496,1.7588441513479778
-2010_2026,coastsat,endpoint_smoothed,coastsat_lowess,,88,-1.096187416809062,1.7022863226957987
-2010_2026,coastsat,lrr_smoothed,coastsat_lowess,,88,-1.0232588841802561,1.7530827977577041

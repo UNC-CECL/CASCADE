@@ -1,9 +1,0 @@
-window,model_period,preset,width_domains,width_km,run,mean_bias_m_yr,rmse_m_yr
-1996_2015,1996_2015,edgeBE,5,2.5,HAT_1996_2015_edgeBE_offsetmetres_road_bdm_nourish_nogroin,0.027,1.162
-1996_2015,1996_2015,zeroBE,5,2.5,HAT_1996_2015_zeroBE_offsetmetres_road_bdm_nourish_nogroin,-0.072,1.227
-1996_2015,1996_2015,edgeBE,7,3.5,HAT_1996_2015_edgeBE_offsetmetres_road_bdm_nourish_nogroin,0.014,1.016
-1996_2015,1996_2015,zeroBE,7,3.5,HAT_1996_2015_zeroBE_offsetmetres_road_bdm_nourish_nogroin,-0.087,1.067
-2010_2026,2010_2026,edgeBE,5,2.5,HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nourish_nogroin,-1.278,1.947
-2010_2026,2010_2026,zeroBE,5,2.5,HAT_2010_2026_zeroBE_offsetmetres_road_bdm_nourish_nogroin,-1.416,2.105
-2010_2026,2010_2026,edgeBE,7,3.5,HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nourish_nogroin,-1.27,1.878
-2010_2026,2010_2026,zeroBE,7,3.5,HAT_2010_2026_zeroBE_offsetmetres_road_bdm_nourish_nogroin,-1.419,2.054

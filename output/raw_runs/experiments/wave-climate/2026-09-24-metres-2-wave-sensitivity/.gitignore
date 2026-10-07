@@ -1,8 +1,0 @@
-# The run folders (runs/) stay on disk only: this scenario's run name is ~85
-# characters and sits twice in each file path, past Windows' 260, so git
-# cannot index them. Committed: README.md, tables/, and each figure's PDF,
-# caption and data CSV under figures/**/supporting/ (see README "What is in git").
-runs/
-# The 10-domain record's full-management alongshore figures (2026-09-30): eight paths pass
-# Windows' 260 characters; they stay on disk only.
-superseded_20260930_lowess10/figures/alongshore/*/full_management/

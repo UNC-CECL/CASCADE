@@ -1,3 +1,0 @@
-period,gis1,gis90,gis1_residual,gis90_residual,converged,steps,run_dir
-1996_2010,7.024476611472189,9.828332772717385,-0.016684734893054998,0.016933741573311567,True,4,runs/full_management_step4/1996_2010/edgeBE/HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin_waveHs1asym0p8ahf0p45
-2010_2024,132.89823936552298,14.731000023008132,0.10230287952489903,0.012595372717596032,False,8,runs/full_management_step8/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin_waveHs1asym0p8ahf0p45

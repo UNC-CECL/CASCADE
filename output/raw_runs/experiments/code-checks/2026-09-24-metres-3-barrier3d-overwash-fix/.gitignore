@@ -1,3 +1,0 @@
-# The run folders (runs/) stay on disk only (paths past Windows' 260). Committed:
-# NOTE.md, tables/comparison.csv, logs/launches.jsonl and the figure's PDF and caption.
-runs/

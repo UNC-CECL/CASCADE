@@ -1,4 +1,0 @@
-{"window": "1996_2010", "variant": "g12", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 3.7}
-{"window": "1996_2010", "variant": "split12", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 3.8}
-{"window": "2010_2024", "variant": "g12", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 4.3}
-{"window": "2010_2024", "variant": "split12", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@d6546c7   route_overwash fix: True", "minutes": 4.4}

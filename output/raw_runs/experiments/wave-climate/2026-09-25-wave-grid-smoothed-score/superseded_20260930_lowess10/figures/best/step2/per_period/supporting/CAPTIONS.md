@@ -1,7 +1,0 @@
-# Captions — per_period
-
-Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
-
-**`best_by_period_natural_step2.png`.** Natural, 2026-09-24 step-2 runs, rescored on the smoothed output. The run with the highest share of alongshore variation explained by the smoothed model, in each window. Score: 1 - SSE/SST of the model smoothed like the CoastSat target (LOWESS over 10 domains, the southern 10 raw) against that target, interior GIS 2-89; the raw (unsmoothed) score in brackets. Top: LRR rate; bottom: position change, end minus start, against the observed CoastSat change. Solid colour: the model per domain; faint dashed: the smoothed model that is scored. Offset in metres (dune line), zeroBE, no groin, no relocations.
-
-**`best_by_period_full_management_step2.png`.** Full management, 2026-09-24 step-2 runs, rescored on the smoothed output. The run with the highest share of alongshore variation explained by the smoothed model, in each window. Score: 1 - SSE/SST of the model smoothed like the CoastSat target (LOWESS over 10 domains, the southern 10 raw) against that target, interior GIS 2-89; the raw (unsmoothed) score in brackets. Top: LRR rate; bottom: position change, end minus start, against the observed CoastSat change. Solid colour: the model per domain; faint dashed: the smoothed model that is scored. Offset in metres (dune line), zeroBE, no groin, no relocations.

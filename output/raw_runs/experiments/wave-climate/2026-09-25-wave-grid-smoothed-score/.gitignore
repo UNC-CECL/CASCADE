@@ -1,4 +1,0 @@
-# The run folders (runs/) stay on disk only: their paths pass Windows' 260, so
-# git cannot index them. Committed: README.md, tables/, and each figure's PDF,
-# caption and data CSV under figures/**/supporting/.
-runs/
