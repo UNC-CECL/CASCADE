@@ -33,61 +33,117 @@ for i in range(d_start_num, d_end_num+1):
     dune_files.append(dune_name)
     elev_files.append(elev_name)
 
-# ---------------------------------- set model parameters that change per run ------------------------------------------
+# ---------------------------------- set model parameters ------------------------------------------
+run_name = "calib_8"
+overwash_storm = "storms_berm_2pt0_slope_0pt06.npy"
 beach_slope = 0.06
-model_duration = 10
+model_duration = 11  # runs to nt - 1, so this is saying include up to 9 (0-9 = storms 1-10)
 berm_elev = 2.00  # m NAVD88
 MHW = 0.421
 
 # change r values per domain
 # NOTE: has to be a list and not an array because numpy array uses type float64 instead of just a float, which raises
 # an error in the load_inputs/set_yaml functions because rmin and rmax are specified as float types in configuration.py
-min_dune_r = [0.25,
+
+# # calibration 4, 10
+# min_dune_r = 0.4
+# max_dune_r = 0.6
+
+# # calibration 1, 2, 3, 5, 6, 7
+# min_dune_r = [0.25,
+# 0.25,
+# 0.25,
+# 0.25,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.05,
+# 0.10,
+# 0.10,
+# 0.10,
+# 0.10,
+# 0.10]
+# max_dune_r = [0.45,
+# 0.45,
+# 0.45,
+# 0.45,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.35,
+# 0.40,
+# 0.40,
+# 0.40,
+# 0.40,
+# 0.40]
+
+# calibration 8
+min_dune_r = [0.4,
+0.4,
+0.4,
+0.4,
 0.25,
 0.25,
 0.25,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.05,
-0.10,
-0.10,
-0.10,
-0.10,
-0.10]
-max_dune_r = [0.45,
-0.45,
-0.45,
-0.45,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.35,
-0.40,
-0.40,
-0.40,
-0.40,
-0.40]
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.25,
+0.3,
+0.3,
+0.3,
+0.3,
+0.3]
+max_dune_r = [0.6,
+0.6,
+0.6,
+0.6,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.55,
+0.6,
+0.6,
+0.6,
+0.6,
+0.6]
 
 
 # save to results folder
@@ -105,14 +161,14 @@ print(f"✓ Loaded dune offsets: {len(dune_offsets)} domains")
 print(f"  Range: {np.min(dune_offsets):.1f} to {np.max(dune_offsets):.1f} dam")
 
 # --------------------------------- running overwash scenario for 1 storm --------------------------------------
-overwash_storm = "masonboro-storms1.npy"
-run_name = "calib_1_flip_domain_order"
-
+# need to load the domains in left-right based on the orientation of ocean on top
 # reverse the domain list and everything related to the domains
 elev_files.reverse()
 dune_files.reverse()
-min_dune_r.reverse()
-max_dune_r.reverse()
+if type(min_dune_r) is list:
+    min_dune_r.reverse()
+if type(max_dune_r) is list:
+    max_dune_r.reverse()
 dune_offsets = np.flip(dune_offsets)
 
 # initialize class
@@ -172,8 +228,8 @@ cascade_marsh = Cascade(
 # run the time loop/update function
 t0 = time.time()
 
-for time_step in range(cascade_marsh._nt - 1):
-    print("\r", "Time Step: ", time_step + 1, end="")
+for time_step in range(1, cascade_marsh._nt):
+    print("\r", "Time Step: ", time_step, end="")
     cascade_marsh.update()
     if cascade_marsh.b3d_break:
         break
@@ -185,21 +241,3 @@ t_total_hours = t_total_seconds / 3600
 
 # save variables
 cascade_marsh.save(save_dir)
-
-
-# plot domains
-plot_ElevAnimation_CASCADE(
-    cascade=cascade_marsh,
-    directory=r"C:\Users\agfig\model\calibration\results",
-    TMAX_MGMT=0,
-    name=run_name,
-    TMAX_SIM=model_duration,
-    ny=items,
-    beach_management_ny=None,  # list of bool the length of ny, or None for all False
-    roadway_management_ny=None,
-    y_lim=(150, 350),
-    z_lim=5,
-    fig_size=(20, 5),
-    fig_eps=False,
-    km_on=True,
-    )

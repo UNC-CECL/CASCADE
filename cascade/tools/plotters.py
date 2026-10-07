@@ -648,6 +648,7 @@ def plot_ElevAnimation_CASCADE(
     fig_eps=False,
     km_on=True,
     flip_domain=False,
+    invert_y=False,
 ):
     """
     :param cascade: a cascade model object
@@ -813,7 +814,7 @@ def plot_ElevAnimation_CASCADE(
                     elevFig1 = plt.figure(figsize=(7, 7))
                 ax = elevFig1.add_subplot(111)
                 if flip_domain:
-                    AnimateDomain = np.flip(AnimateDomain)
+                    AnimateDomain = np.fliplr(AnimateDomain)
                 cax = ax.pcolormesh(
                     AnimateDomain,
                     cmap="terrain",
@@ -919,7 +920,7 @@ def plot_ElevAnimation_CASCADE(
             xOrigin = iB3D * BarrierLength
             AnimateDomain[
                 OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-            ] = Domain
+            ] = Domain  # animate domain is oriented with ocean/beach on top, interior/bay on bottom
 
         # Plot and save
         if fig_size is not None:
@@ -928,8 +929,8 @@ def plot_ElevAnimation_CASCADE(
             elevFig2 = plt.figure(figsize=(7, 7))
         ax = elevFig2.add_subplot(111)
         if flip_domain:
-            AnimateDomain = np.flip(AnimateDomain)
-        cax = ax.pcolormesh(
+            AnimateDomain = np.fliplr(AnimateDomain)
+        cax = ax.pcolormesh(   # ax.pcolormesh flips the array up-down because the array rows increase as you move down teh rows, but the plot increases as you move up the y-axis
             AnimateDomain,
             cmap="terrain",
             vmin=-3,
@@ -956,6 +957,8 @@ def plot_ElevAnimation_CASCADE(
         else:
             plt.ylim(bottom=OriginY - 35)
             plt.text(1, OriginY - 33, timestr)
+        if invert_y:
+            ax.invert_yaxis()
         plt.tight_layout()
         plt.rcParams.update({"font.size": 11})
         # elevFig2.tight_layout()
@@ -1745,10 +1748,8 @@ def plot_start_end_domains(
         last_model_year_dunes = (last_model_year_dunes + berm_elev) * 10
 
         # flip dunes
-        first_model_year_dunes = np.rot90(first_model_year_dunes)
-        first_model_year_dunes = np.flipud(first_model_year_dunes)
-        last_model_year_dunes = np.rot90(last_model_year_dunes)
-        last_model_year_dunes = np.flipud(last_model_year_dunes)
+        first_model_year_dunes = np.transpose(first_model_year_dunes)
+        last_model_year_dunes = np.transpose(last_model_year_dunes)
 
         # ---------------- plotting the domains --------------------------------
         n_plots = 2
@@ -1837,9 +1838,238 @@ def plot_overwash_flux(
     ax1.set_ylabel(ylabel)
     ax1.set_xlabel(xlabel)
     ax1.set_xticks(np.arange(0,ib3ds,1))
+    ax1.set_ylim(0,100)
     # save the figure
     fig1.tight_layout()
     fig1.savefig(os.path.join(save_dir, "overwash.png"))
     plt.close(fig1)
 
     return all_overwash
+
+
+def compare_modeled_observed_domains(
+        cascade_b3d,
+        save_dir,
+        observed_domains,
+        observed_dunes_list,
+        min_z,
+        max_z,
+        figsize=[15, 8]
+):
+    # plot parameters
+    plt.rcParams["font.size"] = 12
+    plt.ioff()
+
+    # create the save folder if it does not already exist
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # loop through each domain and plot the first and last model year, plus observed year
+    ib3ds = len(cascade_b3d)
+
+    for i in range(ib3ds):
+        # make 1 plot per domain and save it after
+        fig1 = plt.figure(figsize=figsize)
+        # create and format the plot
+        xlabel = "alongshore distance (dam)"
+        ylabel = "cross-shore distance (dam)"
+        minz = min_z
+        maxz = max_z
+
+        # interiors in decameters
+        first_model_year = cascade_b3d[i].DomainTS[0]  # initial domain
+        last_model_year = cascade_b3d[i].DomainTS[-1]  # last model year
+        observed = np.load(observed_domains[i]) # observed
+
+        # dunes in decameters above berm elevation
+        first_model_year_dunes = cascade_b3d[i].DuneDomain[0]  # initial domain
+        last_model_year_dunes = cascade_b3d[i].DuneDomain[-1]  # last model year
+        observed_dunes = np.load(observed_dunes_list[i])  # observed
+
+        # berm elev
+        berm_elev = cascade_b3d[i].BermEl  # dam MHW
+
+        # TMAX
+        tmax = cascade_b3d[i].TMAX
+
+        # convert domains into m MHW
+        first_model_year = first_model_year * 10
+        last_model_year = last_model_year * 10
+        observed = observed * 10
+        first_model_year_dunes = (first_model_year_dunes + berm_elev) * 10
+        last_model_year_dunes = (last_model_year_dunes + berm_elev) * 10
+        observed_dunes = (observed_dunes + berm_elev) * 10
+
+        # flip dunes
+        first_model_year_dunes = np.transpose(first_model_year_dunes)
+        last_model_year_dunes = np.transpose(last_model_year_dunes)
+        observed_dunes = np.transpose(observed_dunes)
+
+        # ---------------- plotting the domains --------------------------------
+        n_plots = 3
+
+        # model year 1 domain
+        ax1 = fig1.add_subplot(1, n_plots, 1)  # rows, cols, plot number
+        mat1 = ax1.matshow(
+            np.vstack((first_model_year_dunes, first_model_year)),
+            cmap="terrain",
+            vmin=minz,
+            vmax=maxz,
+        )
+        cbar = fig1.colorbar(mat1)
+        cbar.set_label('m MHW', rotation=270, labelpad=10)
+        ax1.set_title("model year 0")
+        ax1.set_ylabel(ylabel)
+        ax1.set_xlabel(xlabel)
+        plt.gca().xaxis.tick_bottom()
+
+        # last model year domain
+        ax2 = fig1.add_subplot(1, n_plots, 2)  # rows, cols, plot number
+        mat1 = ax2.matshow(
+            np.vstack((last_model_year_dunes, last_model_year)),
+            cmap="terrain",
+            vmin=minz,
+            vmax=maxz,
+        )
+        cbar = fig1.colorbar(mat1)
+        cbar.set_label('m MHW', rotation=270, labelpad=10)
+        ax2.set_title("model year {0}".format(tmax-1))
+        ax2.set_ylabel(ylabel)
+        ax2.set_xlabel(xlabel)
+        plt.gca().xaxis.tick_bottom()
+
+        # observed results
+        ax3 = fig1.add_subplot(1, n_plots, 3)  # rows, cols, plot number
+        mat1 = ax3.matshow(
+            np.vstack((observed_dunes, observed)),
+            cmap="terrain",
+            vmin=minz,
+            vmax=maxz,
+        )
+        cbar = fig1.colorbar(mat1)
+        cbar.set_label('m MHW', rotation=270, labelpad=10)
+        ax3.set_title("observed".format(tmax))
+        ax3.set_ylabel(ylabel)
+        ax3.set_xlabel(xlabel)
+        plt.gca().xaxis.tick_bottom()
+
+        # once all years are plotted, save the figure
+        fig1.suptitle("iB3D {0}".format(i))
+        fig1.tight_layout()
+        fig1.savefig(os.path.join(save_dir, "iB3D_{0}.png".format(i)))
+        plt.close(fig1)
+
+    print("finished. saved {0} figures to {1}".format(ib3ds, save_dir))
+
+def plot_linear_dune_dif(
+        cascade_b3d,
+        save_dir,
+        observed_dunes_list,
+        min_z,
+        max_z,
+        figsize=[15, 8]
+):
+    # plot parameters
+    plt.rcParams["font.size"] = 12
+    plt.ioff()
+
+    # create the save folder if it does not already exist
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # loop through each domain and plot the first and last model year, plus observed year
+    ib3ds = len(cascade_b3d)
+
+
+    # intialize the arrays for tracking over the entire island
+    modeled_dif_island = []
+    observed_dif_island = []
+
+    # make individual domain plots and one showing all domains
+    for i in range(ib3ds):
+        # make 1 plot per domain and save it after
+        fig1 = plt.figure(figsize=figsize)
+        # create and format the plot
+        xlabel = "alongshore distance (dam)"
+        ylabel = "change in dune height (m)"
+        minz = min_z
+        maxz = max_z
+
+        # dunes in decameters above berm elevation
+        first_model_year_dunes = cascade_b3d[i].DuneDomain[0]  # initial conditions
+        last_model_year_dunes = cascade_b3d[i].DuneDomain[-1]  # last model year
+        observed_dunes = np.load(observed_dunes_list[i])  # observed
+
+        # convert into m
+        first_model_year_dunes = first_model_year_dunes * 10
+        last_model_year_dunes = last_model_year_dunes * 10
+        observed_dunes = observed_dunes * 10
+
+        # only use the crests
+        first_model_year_dunes = np.max(first_model_year_dunes, axis=1)
+        last_model_year_dunes = np.max(last_model_year_dunes, axis=1)
+        if len(np.shape(observed_dunes)) == 2:
+            observed_dunes = np.max(observed_dunes, axis=1)
+
+        # differences
+        modeled_dif = last_model_year_dunes - first_model_year_dunes
+        observed_dif = observed_dunes - first_model_year_dunes
+        modeled_dif_island.append(modeled_dif)
+        observed_dif_island.append(observed_dif)
+
+
+        # ---------------- plotting the dunes --------------------------------
+
+        # model year 1 domain
+        ax1 = fig1.add_subplot(1, 1, 1)  # rows, cols, plot number
+        ax1.plot(modeled_dif, label="modeled")
+        ax1.plot(observed_dif, label="observed")
+        ax1.axhline(0, c="black", ls="dashed")
+        ax1.set_ylabel(ylabel)
+        ax1.set_xlabel(xlabel)
+        ax1.set_ylim(minz, maxz)
+        ax1.legend(loc="upper right")
+
+
+        # once all years are plotted, save the figure
+        fig1.suptitle("iB3D {0}".format(i))
+        fig1.tight_layout()
+        fig1.savefig(os.path.join(save_dir, "iB3D_{0}.png".format(i)))
+        plt.close(fig1)
+
+
+    # plot the full changes
+    modeled_dif_island = np.concatenate(modeled_dif_island)
+    observed_dif_island = np.concatenate(observed_dif_island)
+    fig2 = plt.figure(figsize=figsize)
+    ax1 = fig2.add_subplot(1, 1, 1)
+    ax1.plot(modeled_dif_island, label="modeled")
+    ax1.plot(observed_dif_island, label="observed")
+    ax1.axhline(0, c="black", ls="dashed")
+    ax1.set_ylabel(ylabel)
+    ax1.set_xlabel("alongshore distance, north to south (dam)")
+    ax1.set_ylim(minz, maxz)
+    ax1.legend(loc="upper right")
+    # plot domain edges as vertical lines
+    domain_len_dam = len(modeled_dif)
+    domain_edges = np.arange(0,len(modeled_dif_island)+domain_len_dam,domain_len_dam)
+    plt.vlines(domain_edges, ymin=minz, ymax=maxz, colors="black", ls="dotted", linewidth=0.5)
+    # plot domain labels as text at the top of the figure, halfway between the domain limits
+    start_text = domain_len_dam / 2  # first label at 25 dam
+    end_text = (ib3ds+1)*domain_len_dam - start_text
+    text_pos = np.arange(start_text, end_text, domain_len_dam)
+    d_text = 0  # ib3d domain
+    for t in range(len(text_pos)):
+        plt.text(x=text_pos[t], y=minz+0.5, s="{0}".format(d_text), va="center", ha="center")
+        d_text += 1
+
+    # once all years are plotted, save the figure
+    fig2.suptitle("difference in dune heights")
+    fig2.tight_layout()
+    fig2.savefig(os.path.join(save_dir, "dune_height_dif_island.png"))
+    plt.close(fig2)
+
+    print("finished. saved {0} figures to {1}".format(ib3ds, save_dir))
+
+    # save numpy arrays for comparison
+    np.save(os.path.join(save_dir, "dune_height_dif_island"), observed_dif_island)
