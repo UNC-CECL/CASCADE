@@ -26,13 +26,16 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 from shapely.geometry import Point
+import os
+
+os.chdir(r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\CoastSat")
 
 # --- CONFIG ------------------------------------------------------------------
-TRANSECTS_FILE  = Path("example/data/masonboro_transects.geojson")
+TRANSECTS_FILE  = Path("masonboro_transects.geojson")
 TRANSECT_ID_COL = "id"                 # CoastSat id = time-series filename
-ZONES_FILE      = Path("example/data/masonboro_domains.geojson")
+ZONES_FILE      = Path("masonboro_domains.geojson")
 ZONE_ID_COL     = "domainID"
-OUTPUT_DIR      = Path("example/data")
+OUTPUT_DIR      = Path("step1_output")
 JOIN_POINT      = "origin"             # or "midpoint"
 # -----------------------------------------------------------------------------
 

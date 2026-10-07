@@ -26,12 +26,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
+import os
+
+os.chdir(r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\CoastSat")
 
 # --- CONFIG ------------------------------------------------------------------
-TIMESERIES_DIR = Path("example/data/timeseries")  # all the transect files
-LOOKUP_CSV     = Path("example/data/transect_zones.csv")   # optional
-OUTPUT_DIR     = Path("output")
-START_YEAR, END_YEAR = 1996, 2024
+TIMESERIES_DIR = Path("transects")  # all the transect files
+LOOKUP_CSV     = Path("step1_output/transect_zones.csv")   # optional
+OUTPUT_DIR     = Path("step2_output")
+START_YEAR, END_YEAR = 1984, 2025
 
 MIN_OBS      = 10
 MAX_ABS_RATE = 50.0      # m/yr
