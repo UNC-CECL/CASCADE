@@ -2687,7 +2687,7 @@ as simply "more trapping" and rails at 1.0. Period 2 is 20*M*f and prefers
 f = 0. Neither is fitting the deterioration; they are fitting its absence.
 
 f IS NOT A FREE KNOB EITHER WAY -- it encodes a maintenance record (installed
-1969, last repaired 1996, storm damage 2003, fillet peaks 2004). Making the
+1969, last repaired 1995 (CSE 2013, p. 20), storm damage 2003, fillet peaks 2004). Making the
 module a STATIC trapping rate was considered on 2026-08-30 and rejected on
 measurement: at M = 60 setting f = 1 degrades period 2 from 14.90 to 17.87 m
 (+20%), and at M = 95 from 14.90 to 20.38 (+37%). It also moves the modelled

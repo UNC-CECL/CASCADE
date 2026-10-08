@@ -366,7 +366,7 @@ match is informative rather than guaranteed.
 
 ### Deterioration is scheduled, not simulated
 
-Last repair 1996, storm damage 2003, encoded as a linear ramp between them
+Last repair 1995 (CSE 2013, p. 20), storm damage 2003, encoded as a linear ramp from 1996, the first year after the repair, to 2003
 (`deterioration_delay_years = 27`, `ramp_years = 7`). For a 1984 start the ramp
 falls at run-years 12-19; for a 2004 start it has already completed, so the
 groin sits at its floor from year 0. The floor itself, `0.9`, is the sweep's

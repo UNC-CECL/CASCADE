@@ -53,7 +53,7 @@ downdrift side retreats — what a groin builds.
 | slow growth | 1978 → 2004 | 117 → 150 m | +1.3 m/yr |
 | **RELEASE** | 2004 → 2023 | 150 → 74 m | **−4.0 m/yr** |
 
-**Structure history:** installed **1969** · last repaired **1996** · storm damage **2003**.
+**Structure history:** installed **1969** · last repaired **1995** (south groin, 184 ft of steel sheet piling after Hurricane Gordon 1994; CSE 2013, report 2403-PHASE1-FR, p. 20) · storm damage **2003**. Until 2026-10-08 this line said 1996; no source gave 1996. The old ramp's onset of 1996 is the first year after the repair.
 
 The fillet peaks in **2004** and declines from there — the turning point matches
 the storm, not anything in the model.
@@ -79,7 +79,7 @@ already reproduces the measured history. **No period-specific configuration.**
 | `trapping_rate_m_yr` | **M = 60** | **fitted on PERIOD 1, window D4–D8, production geometry, be1 pinned at the production value, demeaned score.** RMSE 11.69 vs 15.58 with no groin — the groin closes **25%** of the shape misfit, and this is within 0.10 m of the global best. **Not** corroborated by the 1967 rig: the rig improves monotonically to M = 60 and then blows up (M = 70 → RMSE 320–378, M ≥ 100 crashes), so its M = 60 is the largest value it can hold, not an optimum (*corrected 2026-08-30*). Independently reproduced instead by **D3–D9**, the one other window symmetric about the structure, at the same gain. Intercepts ~719,000 m³/yr, marginally above the 5–7×10⁵ drift band (a literature range, not a hard limit) |
 | `deterioration_fraction` | **f = 0.6** | same fit; f is only weakly constrained by period 1 (which mostly precedes the 1996–2003 ramp), so it leans on the rig and on period 2 showing trapping ceased. **Updated 2026-08-30:** the rig, re-run on `1984-start/v1`, now returns **f = 0.6** itself (RMSE 23.78, against 27.24 and f = 0.5 on the pre-fix topography) — and 0.6 is bracketed on both sides there (0.5 → 24.21, 0.6 → 23.78, 0.7 → 25.06). **f is the parameter the rig actually resolves** — it rails in M but not in f |
 | `install_year` | 1969 | documented |
-| `deterioration_delay_years` | 27 (→ 1996) | last repair |
+| `deterioration_delay_years` | 27 (→ 1996) | first year after the 1995 last repair |
 | `deterioration_ramp_years` | 7 (→ 2003) | storm damage |
 | `updrift / downdrift` | GIS 6 / 5 | field occupies D6 |
 
