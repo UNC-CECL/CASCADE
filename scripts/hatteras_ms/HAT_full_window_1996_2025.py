@@ -41,7 +41,7 @@ START, END = 1996, 2025
 LAST_MODEL_YEAR = 2025
 SCENARIO = "full_management"
 # Solve probes are not production: they file as an experiment, only zero and final go to matrix/
-SOLVE_TAG = "end-domain-boundaries/2026-10-05-ends-solved-on-1996-2025"
+SOLVE_TAG = "end-domain-boundaries/2026-10-05-ends-solved-on-1996_2025"
 SOLVE_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / SOLVE_TAG
 LOG_DIR = PROJECT_ROOT / "output" / "logs" / "driver" / "full_window_1996_2025"
 MAX_STEPS = 6

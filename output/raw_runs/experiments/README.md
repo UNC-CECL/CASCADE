@@ -9,7 +9,7 @@ Only studies under the 2026-10-05 calibration/test plan are kept here. Everythin
 | topic | what it covers | current answer, in short |
 |---|---|---|
 | [`end-domain-boundaries/`](end-domain-boundaries/README.md) | The source/sink rates at the two end domains (GIS 1 and 90), solved against each target and window. | 1996_2009 +1.4981 / +10.5659; 2009_2025 edgeBE +32.7049 / +21.0679; 1996_2025 +144.2227 / +68.4160 m/yr, all on net change or the window's own target. |
-| [`groin/`](groin/README.md) | The Cape Point groin: strength and form. | Blocking b0.6/f0.6 on 1996–2009, pinned 2026-10-05. |
+| [`groin/`](groin/README.md) | The Cape Point groin: strength and form. | Blocking b0.6/f0.6 on 1996–2009, pinned 2026-10-05; the 10-08 schedule refit (failure from 1996, same b × f) is awaiting a decision. |
 | [`source-sink/`](source-sink/README.md) | The per-domain BE field (set 1) and whether it transfers to the test. | Set 1 fits calibration to 0.49 m; the test bias is the 2021 step; set 2 not derived. |
 | [`management/`](management/README.md) | Whether the management input (fills, volumes, footprints) arrives as intended and helps the fit. | Reported fill footprints kept; the CoastSat-observed footprints made the test worse. |
 | [`calibration-end-window/`](calibration-end-window/README.md) | Options for the end line of the 1996–2009 calibration target. | A mid-2009 end line moves the target +3.6 m seaward with the same shape; not adopted. |

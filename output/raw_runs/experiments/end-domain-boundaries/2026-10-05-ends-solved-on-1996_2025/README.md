@@ -20,3 +20,5 @@
 **Used by.** The final edgeBE run, `raw_runs/matrix/1996_2025/edgeBE/`. Not in the site config: HATTERAS_PERIODS has no 1996-2025 window.
 
 **Status.** current, for the full-window run only.
+
+**Renamed 2026-10-08** from `2026-10-05-ends-solved-on-1996-2025`, to spell the window with an underscore like its neighbours. The runs' `run_metadata` files and the logs in `output/logs/driver/full_window_1996_2025/` still carry the old name, as written at run time.

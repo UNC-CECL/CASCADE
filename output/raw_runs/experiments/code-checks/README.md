@@ -6,7 +6,7 @@ Whether a code or model change moves the results: re-runs against stored runs.
 
 | study | question | answer | status |
 |---|---|---|---|
-| `2026-10-06-runner-net-change-figure` (no note) | Does the runner draw the net-change figure for a DEM-to-DEM run? | Yes; the figure is now drawn for every run in a window listed in `NET_CHANGE_WINDOWS`. | record |
+| `2026-10-06-runner-net-change-figure` | Does the runner draw the net-change figure for a DEM-to-DEM run? | Yes; the figure is now drawn for every run in a window listed in `NET_CHANGE_WINDOWS`. | record |
 
 **Status** — **current**: its answer is in use now. **record**: a finished check, kept so the number can be traced.
 
