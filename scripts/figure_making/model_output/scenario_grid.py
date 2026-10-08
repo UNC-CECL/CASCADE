@@ -316,8 +316,6 @@ def main():
                               label="+ historical relocations (1989, 1999)"))
     # Legend strip measured from how many scenarios had runs
     _leg_rows = math.ceil(len(handles) / 3)
-    figure.legend(handles=handles, loc="lower center", ncol=3,
-                  frameon=False, bbox_to_anchor=(0.5, 0.004))
 
     # Title and axis note are the caption; missing cells are named, not left blank (README)
     if _DROPPED:
@@ -346,10 +344,16 @@ def main():
     else:
         print(f"  all {len(_expected)} cells present")
 
-    figure.supxlabel(DOMAIN_AXIS_LABEL)
     figure.supylabel(f"shoreline change rate, {RATE_LABEL} (m/yr)")
 
-    figure.tight_layout(rect=[0.015, 0.075 + 0.042 * _leg_rows, 1, 0.99])
+    figure.tight_layout(rect=[0.015, 0.06 + 0.04 * _leg_rows, 1, 0.99])
+    # Axis label and legend placed after layout, stacked under the tick labels so they never overlap
+    renderer = figure.canvas.get_renderer()
+    _ticks_bottom = min(ax.get_tightbbox(renderer).y0 for ax in axes[-1]) / figure.bbox.height
+    _label = figure.supxlabel(DOMAIN_AXIS_LABEL, y=_ticks_bottom - 0.01, va="top")
+    _label_bottom = _label.get_window_extent(renderer).y0 / figure.bbox.height
+    figure.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
+                  bbox_to_anchor=(0.5, _label_bottom - 0.005))
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # No tight bbox: it trimmed to content and doubled the width
