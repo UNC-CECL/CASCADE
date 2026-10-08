@@ -2667,7 +2667,7 @@ fitted (M, f). A rate figure can hide a run that gets the trend right from the
 wrong place; a position figure cannot.
 
 WHERE THE OBSERVATIONS COME FROM
-    `1-observations/coastsat_shoreline/.../groin_analysis_chainage_all.csv` -- 904k
+    `1-observations/shoreline_rates_by_era/.../groin_analysis_chainage_all.csv` -- 904k
     shoreline observations carrying `chainage_m`, the cross-shore distance from
     the project's offshore datum line, already mapped to CASCADE domains.
     Chainage is SEAWARD-POSITIVE: verified on 2026-08-23 by differencing the

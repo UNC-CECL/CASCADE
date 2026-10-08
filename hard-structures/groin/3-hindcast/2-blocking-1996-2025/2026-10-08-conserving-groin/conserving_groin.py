@@ -38,7 +38,7 @@ HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 GROIN = REPO / "hard-structures" / "groin"
 sys.path[:0] = [str(HERE.parent / "2026-10-08-schedule-refit"),
-                str(GROIN / "1-observations" / "coastsat_groin_condition"),
+                str(GROIN / "1-observations" / "gap_across_groins"),
                 str(GROIN / "2-module-tests" / "3-real-planform"),
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"), str(REPO / "scripts")]

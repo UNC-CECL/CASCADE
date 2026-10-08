@@ -46,7 +46,7 @@ WHAT THE MODULE CANNOT DO, DRAWN RATHER THAN FOOTNOTED
 DATA
     Fillet is x_s[D5] - x_s[D6] against a fixed 1967 datum, from
     `Change_from_wetdry_1967_D2_D12.csv` -- 24 dated wet/dry surveys produced by
-    the GIS analysis in 1-observations/coastsat_shoreline. Landward-positive, so a rising
+    the GIS analysis in 1-observations/shoreline_rates_by_era. Landward-positive, so a rising
     curve means the updrift side is holding while the downdrift side retreats,
     which is what a groin builds.
 

@@ -11,8 +11,8 @@ from simplest to most complex.
     structure_history.md       install 1969, last repair 1995, damage 2003; the fillet in numbers
     gis_data/                  the groins, wet/dry lines, 100 m transects, datum line, domains
     wetdry_photo_positions/    the 24-survey wet/dry and dune-line change tables (GIS 2-12, from 1967)
-    coastsat_shoreline/        CoastSat around the field: era rates, profiles, GIFs
-    coastsat_groin_condition/  when the gap stopped widening (1995, not 2004)
+    shoreline_rates_by_era/    wide view, ±60 km: rates by era and decade, how far the effect reaches
+    gap_across_groins/         narrow view: the gap across the groins each year, when it stopped widening
     figures/                   the two shorelines and the gap between them
 2-module-tests/            what the module does on its own; no Buxton fit
     TEST_PLAN.md               the 2026-09-11 design for the idealized rig
@@ -39,14 +39,11 @@ D: was not connected on 2026-10-08. When it is, move these to `D:\CASCADE_offloa
 
 | path | size | what it is |
 |---|---|---|
-| `1-observations/coastsat_shoreline/shoreline_output_coastsat/gif_frames_groin_area/` | 182 MB, 1,248 PNGs | frames behind `groin_analysis_shoreline_evolution.gif`; the analysis script rewrites them |
-| `1-observations/coastsat_shoreline/shoreline_output_grid100m/gif_frames_groin_area/` | 66 MB, 390 PNGs | the same for the 100 m grid run |
-| `1-observations/coastsat_shoreline/shoreline_output_grid100m/gif_frames_groin_area_zoomed/` | 63 MB, 501 PNGs | the zoomed GIF's frames |
 | `3-hindcast/1-dipole-1967-2017/results/sensitivity_sweep/archive_july_20260824_081742/` | 31 KB, 24 files | an earlier dipole rig sweep |
 | `3-hindcast/1-dipole-1967-2017/results/sensitivity_sweep/archive_pre1984start_20260830/` | 582 KB, 42 files | the dipole rig sweep before the 1984 start |
 | `3-hindcast/1-dipole-1967-2017/runs/1967_1997_run/` | 1.7 MB, 6 PNGs | figures left from the precursor runs deleted on 2026-10-01 |
 
-All untracked except one results CSV in each sweep archive; `git rm` those two. The GIFs themselves stay.
+All untracked except one results CSV in each sweep archive; `git rm` those two. (The shoreline GIF frames that were on this list were removed on 2026-10-08, when the plan-view GIFs replaced them.)
 
 ## Conventions
 
@@ -62,8 +59,8 @@ Reorganized on 2026-10-08 from the study's original folders. Old name → new pl
 | was | now |
 |---|---|
 | `GROIN_PLAN.md` | split: `1-observations/structure_history.md` and `3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md` |
-| `HAT-groin-gis-analysis/` | `1-observations/coastsat_shoreline/`, its `gis_data/` to `1-observations/gis_data/` |
-| `HAT-groin-condition-analysis/` | `1-observations/coastsat_groin_condition/` |
+| `HAT-groin-gis-analysis/` | `1-observations/shoreline_rates_by_era/` (first `coastsat_shoreline/`), its `gis_data/` to `1-observations/gis_data/` |
+| `HAT-groin-condition-analysis/` | `1-observations/gap_across_groins/` (first `coastsat_groin_condition/`) |
 | `HAT-groin-buxton-output/shoreline_position_output/` and `HAT-groin-buxton-input/input_prep/shoreline_position/` | `1-observations/wetdry_photo_positions/` |
 | `HAT-groin-figures/` | one `figures/` per category, each beside what it shows |
 | `groin-module-test/0-solver-audit/` | `2-module-tests/2-solver-audit/`, `3-real-planform/`, `1-straight-coast/` |

@@ -1,0 +1,11 @@
+period,side,mean,se,n
+Pre-install,downdrift,-3.465,0.310,37
+Pre-install,updrift,-3.225,0.078,133
+first 5 years,downdrift,3.351,1.484,47
+first 5 years,updrift,7.489,0.360,60
+first 10 years,downdrift,2.471,2.300,47
+first 10 years,updrift,4.281,0.271,60
+Functional groin,downdrift,-4.040,0.252,47
+Functional groin,updrift,-1.570,0.071,133
+Deteriorated,downdrift,2.301,0.065,47
+Deteriorated,updrift,0.810,0.061,133

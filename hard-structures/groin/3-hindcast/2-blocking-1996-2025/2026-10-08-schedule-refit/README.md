@@ -1,6 +1,6 @@
 # 2026-10-08-schedule-refit
 
-**Question.** Does the blocking groin fit the 1996–2009 calibration period better if it starts failing in 1996 rather than at the 2004 step? The condition analysis (`hard-structures/groin/1-observations/coastsat_groin_condition/`) found that the CoastSat gap across the groin stopped widening in 1995, at the last repair, rather than at Isabel. This study refits strength b and post-failure fraction f under three failure schedules and scores them on that annual CoastSat gap.
+**Question.** Does the blocking groin fit the 1996–2009 calibration period better if it starts failing in 1996 rather than at the 2004 step? The condition analysis (`hard-structures/groin/1-observations/gap_across_groins/`) found that the CoastSat gap across the groin stopped widening in 1995, at the last repair, rather than at Isabel. This study refits strength b and post-failure fraction f under three failure schedules and scores them on that annual CoastSat gap.
 
 **Setup.** `schedule_refit.py` drives the unchanged runner. A child process patches `cascade.groin.BlockingGroinCallback` to the schedule, and each run records its schedule in `schedule.json`. The runner's own report still prints its default schedule.
 
@@ -68,10 +68,11 @@ Up to the 2017 Buxton fill, both groins track the test period (7.5–9.1 m again
 | file | contents |
 |---|---|
 | `schedule_refit.py` | `grid`, `score`, `test`; the in-process schedule patch |
-| `refit_figures.py` | the three figures |
+| `refit_figures.py` | the four figures |
 | `grid_scores.csv` | every cell: annual and photo RMSE, bias, end values; both periods |
 | `coastsat_gap_change.csv` | the observed annual gap change relative to each start window |
 | `grid_run.log`, `score.log`, `logs/` | run and score logs |
+| `figures/schedule_refit_0_failure_schedules.png` | the three schedules, as the model applies them (moved here from the condition analysis on 2026-10-08) |
 | `figures/schedule_refit_1_misfit_maps.png` | annual CoastSat (top) and photo-date (bottom) RMSE over b and f, per schedule |
 | `figures/schedule_refit_2_calibration_gap.png` | the gap through the calibration run: best cell per schedule, the pin, no groin, CoastSat and photos |
 | `figures/schedule_refit_3_test_gap.png` | the same on the test period, one line per b × f |

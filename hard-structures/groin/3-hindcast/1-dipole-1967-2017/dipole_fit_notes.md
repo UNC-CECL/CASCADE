@@ -150,7 +150,7 @@ Things that looked like problems and were not, or vice versa:
 | two-period sweeps | `output/calibration/groin/<period>_<preset>/` |
 | continuous 1984–2024 sweep | `output/calibration/groin/fullperiod_1984_2024/` |
 | 1967 rig | `results/sensitivity_sweep/` (runs: `runs/1967_2017_run/`) |
-| GIS analysis | `../../1-observations/coastsat_shoreline/` |
+| GIS analysis | `../../1-observations/shoreline_rates_by_era/` |
 | observed fillet table | `../../1-observations/wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv` |
 
 **One operational rule:** never run two sweep orchestrators at once. Every

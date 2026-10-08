@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Figures for the schedule refit: the b-f misfit maps and the gap trajectories, calibration and test.
+Figures for the schedule refit: the three schedules, the b-f misfit maps, and the gap trajectories.
 
     python refit_figures.py   ->  figures/schedule_refit_<n>_<what>.png
 
@@ -151,9 +151,50 @@ def fig_trajectories(t, period, picks, name, letter_title):
     return png
 
 
+# 0. The three failure schedules, as the model applies them (moved from the condition analysis 2026-10-08)
+def fig_schedules(f_example=0.6):
+    from cascade.groin import _scheduled_strength
+    yrs = np.arange(1984, 2026)
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.9), constrained_layout=True)
+    ax.axvspan(sr.CALIBRATION, sr.TEST, color=C_1997, alpha=0.08, lw=0)
+    ax.axvspan(sr.TEST, 2025, color=C["ADDED"], alpha=0.08, lw=0)
+    ax.text((sr.CALIBRATION + sr.TEST) / 2, 1.12, f"calibration {sr.CALIBRATION}-{sr.TEST}", ha="center",
+            fontsize=7, color=INK_MUTED)
+    ax.text((sr.TEST + 2025) / 2, 1.12, f"test {sr.TEST}-2025", ha="center", fontsize=7, color=INK_MUTED)
+    for s, (delay, mode, ramp) in sr.SCHEDULES.items():
+        v = [_scheduled_strength(1.0, y, sr.INSTALL + delay, mode, f_example, ramp) for y in yrs]
+        c, ls = STYLE[s]
+        ax.step(yrs, v, where="post", color=c, ls=ls, lw=1.6, label=LABEL[s])
+    for yr, lab in ((1995, "last repair"), (2003, "Isabel")):
+        ax.axvline(yr, color=INK_MUTED, lw=0.6, ls=":")
+        ax.text(yr - 0.25, 0.04, lab, ha="right", fontsize=6.5, color=INK_MUTED)
+    ax.set_ylim(0, 1.2)
+    ax.set_xlim(1984, 2025)
+    ax.set_ylabel("Blocking strength,\nfraction of full b")
+    ax.set_xlabel("Model year")
+    ax.grid(axis="y")
+    open_frame(ax)
+    ax.set_title("When does the groin weaken, under each schedule tested?")
+    ax.legend(frameon=False, fontsize=7.5, loc="lower left", bbox_to_anchor=(0.0, 0.08))
+    png = FIGS / "schedule_refit_0_failure_schedules.png"
+    save(fig, png, close=True)
+    record_caption(png, (
+        "**Tests:** nothing; this is the set-up the refit compares. **How to read:** the fraction of the "
+        "full blocking strength b that the groin applies in each model year under each failure "
+        "schedule, computed with the model's own schedule function (`cascade.groin`), drawn with the "
+        f"post-failure fraction f = {f_example} for illustration (the refit fits b and f for each "
+        "schedule). Grey: the schedule pinned in the model, full strength until the 2004 step. Blue "
+        "dashed: failure from 1996, the first year after the 1995 last repair, where CoastSat puts the "
+        "end of trapping (`hard-structures/groin/1-observations/gap_across_groins/`). Purple: a "
+        "linear ramp from full strength in 1995 to the floor in 2003 (Isabel). Shading: the calibration "
+        "and test periods. **Shows:** the schedules differ only inside the calibration period; from 2004 "
+        "on all three apply b × f, so test and forward runs depend on the product alone."))
+
+
 def main():
     apply_style()
     t = scores()
+    fig_schedules()
     fig_maps(t)
     bc = best(t)
     picks = [(s, r.b, r.f, f"{LABEL[s]}: best, b {r.b:g} f {r.f:g}", STYLE[s]) for s, r in bc.items()]

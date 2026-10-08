@@ -25,7 +25,7 @@ PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
                         if (_p / "pyproject.toml").exists())
 # --- CONFIG ------------------------------------------------------------------
 CHAINAGE_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
-                / "1-observations" / "coastsat_shoreline" / "shoreline_output_coastsat"
+                / "1-observations" / "shoreline_rates_by_era" / "output"
                 / "groin_analysis_chainage_all.csv")
 
 START_YEAR, END_YEAR = 1984, 2024
