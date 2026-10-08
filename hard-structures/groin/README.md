@@ -8,6 +8,7 @@ GROIN_PLAN.md               the authority on the M and f fit
 HAT-groin-buxton-input/     the structure, the surveys, the fillet record
 HAT-groin-buxton-output/    the 1967-2017 runs behind the fit
 HAT-groin-gis-analysis/     the GIS work behind the extents
+HAT-groin-condition-analysis/  the groin's condition from CoastSat: when the gap stopped widening
 HAT-groin-figures/          the figures
 HAT-buxton-hindcast-groin-test/  the groin inside the hindcast
 groin-module-test/          the solver audit
