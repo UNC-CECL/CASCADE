@@ -170,6 +170,8 @@ def main() -> None:
     # Write both tables
     a.out.mkdir(parents=True, exist_ok=True)
     per_transect.to_csv(a.out / f"rates_per_transect_{tag}.csv", index=False)
+    per_zone["zone_id"] = per_zone["zone_id"].apply(pd.to_numeric)
+    per_zone = per_zone.sort_values(by='zone_id')
     per_zone.to_csv(a.out / f"rates_per_zone_{tag}.csv", index=False)
 
     # Bar chart of zone rates
