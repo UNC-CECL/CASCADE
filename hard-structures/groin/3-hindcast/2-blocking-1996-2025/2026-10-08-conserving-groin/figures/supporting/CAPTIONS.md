@@ -1,0 +1,5 @@
+# Captions — figures
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`groin_module_comparison_1996_2009.png`.** The three groin modules on the 1996-2009 calibration run (final frame of groin_module_comparison_1996_2009.gif). Full management, the solved edgeBE ends, relocations off, failure instant from the 2004 step. Columns: the source/sink dipole (M 12, f 0.3, the best option-A dipole), the pinned blocking groin (b 0.6, f 0.6), and the conserving blocking groin (b0.60_f0.6). Top: shoreline change from 1 Jan 1996 along GIS 1-12 against no groin (grey), and the observed CoastSat net change 1996-2009 (dashed, domain means, shown on every frame as the end-of-run target); red line, the groin. Middle: the shoreline change the module applied at GIS 5 and GIS 6 in the model year just finished, with the net for that year and so far; a non-zero net means the module created or removed sand. Bottom: the GIS 5|6 gap change against the wet/dry photo gaps from the same start.

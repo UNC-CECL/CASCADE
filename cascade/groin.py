@@ -402,8 +402,7 @@ class BlockingGroinCallback:
     explicit term doubled stands in for both. That is an approximation --
     the implicit half uses next year's shoreline -- and was measured against
     scaling the face coupling inside the solve itself at under ~1 m over 14
-    years at Buxton (hard-structures/groin/groin-module-test/0-solver-audit/
-    2026-09-29-option-a-real-planform/blocking_groin_emulator.py).
+    years at Buxton (hard-structures/groin/2-module-tests/3-real-planform/blocking_groin_emulator.py).
 
     Why this form. ``b`` is a trapping fraction, 0 (no structure) to 1 (a
     wall), comparable with published groin trapping efficiencies; the

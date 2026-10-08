@@ -133,7 +133,8 @@ offset_mode: metres
 #             ramp, where 0.6 is bracketed both sides (0.5 -> 24.21,
 #             0.6 -> 23.78, 0.7 -> 25.06). The hindcast windows cannot see f.
 #   Conditional on be1 = -42.6 and on edgeBE; carries no information in
-#   period 2. hard-structures/groin/GROIN_PLAN.md is the authority.
+#   period 2. Superseded by the blocking pin below; the reasoning is in
+#   hard-structures/groin/3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md.
 #
 #   TWO WAYS THIS DRIFTS BACK OUT OF AGREEMENT, both seen:
 #     1. HAT_run_all.py stage 6 reads joint_fit.json, NOT this file, so a
@@ -146,7 +147,7 @@ offset_mode: metres
 groin:
   enabled: false
   # PINNED 2026-10-05: blocking, b 0.6, f 0.6, fitted on the 1996-2009 calibration
-  # period (hard-structures/groin/groin-module-test/1-dem-to-dem/).
+  # period (hard-structures/groin/3-hindcast/2-blocking-1996-2025/).
   # M, the dipole's amplitude, m/yr; unused by the blocking groin. Stale under option A.
   trapping_M: 60.0
   # f, what is left after the 2004 failure, as a fraction of b (or of M for the dipole).

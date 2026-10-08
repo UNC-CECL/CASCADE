@@ -6,7 +6,7 @@ RMSE of the D5-D6 gap at the 1997/2004/2008 photos (4.0 m, against 69.2 m with n
 - `joint_fit.json` is a pipeline INPUT: `HAT_run_all` reads it, and it carries the pin and its note.
   M is carried only because the runner reads it; the blocking groin ignores it.
   **Re-running stage 5 (`HAT_groin_joint_fit.py`) overwrites this file.**
-- Evidence: `hard-structures/groin/groin-module-test/1-dem-to-dem/2026-10-05-blocking-fit-calibration/README.md`
+- Evidence: `hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-05-blocking-fit-calibration/README.md`
   and the runs in `output/raw_runs/experiments/groin/2026-10-05-blocking-fit-dem-to-dem/`.
 
 Every path is built from `HAT_groin_sweep_config.GROIN_SWEEP_ROOT`.

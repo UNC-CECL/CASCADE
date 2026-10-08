@@ -99,7 +99,7 @@ M_eff and the running D6−D5 fillet (model vs survey) are on every frame.
 reads as a plan view of the island with the ocean below the axis and the island
 above it. Gifs 01–06 were seaward-positive until 2026-08-30 and were flipped to
 match; the fillet is reported throughout as **D5 − D6**, matching
-`GROIN_PLAN.md`.
+`dipole_fit_notes.md`.
 
 **The static profile figures were flipped to match on the same day** — 01, 02,
 08, 09 and `fig_top_profiles.png`. Figure 06 needed no flip: it plots error
@@ -224,7 +224,7 @@ M      20      40      60      70          80          >=100
 RMSE  53.9    33.3    23.8    320-378     556-766     (crashes)
 ```
 
-The jump at M = 70 is a 13× discontinuity — the instability `GROIN_PLAN.md`
+The jump at M = 70 is a 13× discontinuity — the instability `dipole_fit_notes.md`
 records, not a fit degradation. **M = 60 is the largest M the rig can hold, not
 its optimum.** The rig corroborates f; it is only *consistent with* M. (The
 stability wall is rig-specific: all 36 production cells including M = 70 and
@@ -323,14 +323,14 @@ removes the rest.
 
 So M is **not the rate at which sand is impounded** — it is the rate needed to
 *sustain* a fillet against diffusion, which is a much larger number. The
-719,000 m³/yr affordability figure quoted in `GROIN_PLAN.md` and in the run
+719,000 m³/yr affordability figure quoted in `dipole_fit_notes.md` and in the run
 reports is therefore a **gross restoring rate set against a net transport
 budget**, and the two are not like for like. That does not make the comparison
 wrong; it is a deliberate, documented diagnostic, and it remains a reasonable
 argument for preferring M = 60 over M = 95. But **"marginally above the drift
 band" must not be read as "impounds more sand than the coast carries."**
 
-This is the quantitative version of `GROIN_PLAN.md`'s existing warning that M is
+This is the quantitative version of `dipole_fit_notes.md`'s existing warning that M is
 an effective, grid-specific, field-aggregate rate and "not a sediment flux."
 
 ---
@@ -353,7 +353,7 @@ Point's unrepresented share — would state the division of labour that the whol
 calibration rests on. Right now it exists only as numbers in prose.
 
 **3. Updrift and downdrift plotted separately.** Every figure here plots the
-fillet, which is a *difference*. But `GROIN_PLAN.md`'s central correction is
+fillet, which is a *difference*. But `dipole_fit_notes.md`'s central correction is
 that both sides eroded and the sheltered side eroded less — and that ~85% of
 the post-2004 collapse is the *updrift* side failing, not sand draining
 downdrift. A two-panel D5 and D6 absolute-position plot would make that

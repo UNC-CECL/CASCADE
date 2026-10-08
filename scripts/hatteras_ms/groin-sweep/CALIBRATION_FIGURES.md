@@ -103,7 +103,7 @@ corr(RMSE, f)    −0.493          M70/f0.6 = 11.2   M95/f0.4 = 12.5
 ```
 
 But the replacement claim — "M and f are each weakly constrained" — is wrong
-too. `hard-structures/groin/GROIN_PLAN.md` has the answer: the ridge is in
+too. `hard-structures/groin/3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md` has the answer: the ridge is in
 **period-1 cumulative trapping, M(15.5 + 4.5f)**, not in M·f. Period 1 mostly
 precedes the 1996–2003 deterioration ramp, so f moves it by only 29% across its
 whole range, while period 2 is 20·M·f where f = 0 gives zero. Hence **M is set
@@ -124,7 +124,7 @@ Running it in period 2 is right for consistency of the structure's timeline,
 not because it explains that period's shoreline.
 
 Period 2 records a **release** the module cannot produce: −76 m, of which
-`GROIN_PLAN.md` attributes ~85% to the **updrift** side eroding once the
+`dipole_fit_notes.md` attributes ~85% to the **updrift** side eroding once the
 structure failed, not to impounded sand draining downdrift. Trapping is bounded
 at ≥ 0, so the groin can stop adding sand but cannot drain the fillet. The groin
 supplies ≈ +17.2 m of period 1's observed +52 m (33%) and ≈ 0 of period 2's

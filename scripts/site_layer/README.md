@@ -2656,10 +2656,10 @@ M      20      40      60      70          80          >=100
 53.9    33.3    23.8    320-378     556-766     (blank)
 
 The jump at M = 70 is a 13x discontinuity, not a fit degradation -- it is
-the instability GROIN_PLAN.md already records ("M >= 70 went unstable and
+the instability dipole_fit_notes.md already records ("M >= 70 went unstable and
 M >= 100 drowned the barrier on the 41-domain rig"). M = 60 is the LARGEST
 M THE RIG CAN HOLD, not the M where the fit stops improving. The two
-documents had contradicted each other; GROIN_PLAN.md was right.
+documents had contradicted each other; dipole_fit_notes.md was right.
 
 SO THE RIG CORROBORATES f, AND IS ONLY CONSISTENT WITH M. Do not write
 "two independent routes agree on both parameters." Write: the rig brackets
@@ -2695,7 +2695,7 @@ D5-D6 differential the WRONG WAY -- observed is -2.47 m/yr, and the model goes
 -0.55 at f = 0 to -0.18 at f = 1. Deterioration is doing real work.
 
 M AND f ARE SET FROM DIFFERENT EVIDENCE, AND THAT IS DELIBERATE.
-The authority for these values is hard-structures/groin/GROIN_PLAN.md
+The authority for these values is hard-structures/groin/3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md
 (2026-08-24); this note summarises it and must not diverge from it. The
 figures testing it, and what each one showed, are described in
 scripts/hatteras_ms/groin-sweep/CALIBRATION_FIGURES.md -- the PNGs themselves
@@ -2719,11 +2719,11 @@ without checking), and then, having tested that and found corr(RMSE, M*f) =
 -0.07, claimed instead that M and f are separately and weakly constrained.
 BOTH were wrong. The product test was right that M*f is not the invariant and
 wrong about what is: the invariant is period-1 cumulative trapping. Quote M
-and f as a pair, and cite GROIN_PLAN.md for why.
+and f as a pair, and cite dipole_fit_notes.md for why.
 
 f = 0 IN THE PERIOD-2 SWEEPS IS THE RIGHT ANSWER, NOT A RAIL ARTEFACT. The
 observations show the fillet declining after 2004, i.e. trapping ceased.
-GROIN_PLAN.md records that considerable time was lost re-defining targets to
+dipole_fit_notes.md records that considerable time was lost re-defining targets to
 "fix" a result that was correct. Do not re-litigate it.
 
 THE GROIN DOES REAL WORK BUT DOES NOT REPRODUCE THE SHAPE. 15.20 -> 11.44 m
@@ -2759,7 +2759,7 @@ consistency of the structure's timeline, not because it explains that
 period's shoreline.
 
 What period 2 records is a RELEASE the module cannot produce: -76 m, of which
-GROIN_PLAN.md attributes ~85% to the UPDRIFT side eroding once the structure
+dipole_fit_notes.md attributes ~85% to the UPDRIFT side eroding once the structure
 failed, not to impounded sand draining downdrift. Trapping is bounded at >= 0,
 so the groin can stop adding sand but cannot drain the fillet. That -76 m is
 carried by the source/sink calibration together with the Cape Point dynamics
@@ -2791,7 +2791,7 @@ run reads the yaml. Check both before quoting a groin run's parameters.
 
 AFFORDABILITY IS A SOFT BOUND, NOT A CEILING. M = 60 intercepts ~719,000
 m3/yr against a 5-7e5 m3/yr littoral drift -- marginally above a LITERATURE
-RANGE, which GROIN_PLAN.md is explicit is "not a hard limit". Earlier text
+RANGE, which dipole_fit_notes.md is explicit is "not a hard limit". Earlier text
 here treated it as one; it is a reason to prefer 60 over 70 (838k, ~1.3x the
 drift), not a physical prohibition.
 
@@ -2986,7 +2986,7 @@ Its two current runs were rebuilt 2026-08-31 at M = 60 / f = 0.6 and it now
 lives in output/calibration/groin_rig/, away from production.
 
 THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
-GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
+dipole_fit_notes.md recommends "fit on the 1967 window; apply in the hindcast",
 because the hindcast windows begin 15 years after installation and record the
 fillet's decay rather than its creation. That was checked on 2026-08-30 and
 the answer is that the window exists already:
@@ -2995,7 +2995,7 @@ Change_from_wetdry_1967_D2_D12.csv covers D2-D12 -- ELEVEN real domains.
 11 real + 15 buffer + 15 buffer = 41, the rig's exact domain count.
 
 The rig was sized to the extent of the 1967 observations. Its sweep is at
-hard-structures/groin/HAT-buxton-hindcast-groin-test/sensitivity_sweep/.
+hard-structures/groin/3-hindcast/1-dipole-1967-2017/results/sensitivity_sweep/.
 
 RE-RUN 2026-08-30 ON 1984-start/v1; f MOVED ONTO THE PRODUCTION VALUE.
 The rig had been resolving topo_dirs() with no product -- the same omission

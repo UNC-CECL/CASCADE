@@ -340,8 +340,8 @@ FILLET_TREND_ORDER = 2
 
 
 WETDRY_CHANGE_TABLE = (
-    PROJECT_BASE_DIR / "hard-structures" / "groin" / "HAT-groin-buxton-output"
-    / "shoreline_position_output" / "Change_from_wetdry_1967_D2_D12.csv")
+    PROJECT_BASE_DIR / "hard-structures" / "groin" / "1-observations"
+    / "wetdry_photo_positions" / "Change_from_wetdry_1967_D2_D12.csv")
 
 
 # Fillet change over one period, from the fixed 1967 wet/dry datum

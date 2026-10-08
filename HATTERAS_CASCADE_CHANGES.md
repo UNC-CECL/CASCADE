@@ -51,7 +51,7 @@ The fresh-start commit already carried some local edits, made before this branch
   - BRIE's alongshore solve does not conserve volume. The shoreline score is demeaned, which is what makes that drift harmless.
 - The "groin progradation ceiling" of 2026-09-11 was the Barrier3D `route_overwash` crash (`HATTERAS_FIXES.md` §1), not a groin limit.
 
-**Evidence.** Module docstrings; `scripts/hatteras_ms/groin-sweep/`; the solver audit `hard-structures/groin/groin-module-test/0-solver-audit/HAT_groin_solver_audit.py`; `output/calibration/groin*/`.
+**Evidence.** Module docstrings; `scripts/hatteras_ms/groin-sweep/`; the solver audit `hard-structures/groin/2-module-tests/2-solver-audit/HAT_groin_solver_audit.py`; `output/calibration/groin*/`.
 
 **Upstreaming note.** `cascade_groin.py` duplicates about 850 lines of `cascade.py`, and every model change has to go into both (change 2 did). Upstream, the hook should go into `cascade.py` itself; `GroinCallback` then needs no separate class.
 

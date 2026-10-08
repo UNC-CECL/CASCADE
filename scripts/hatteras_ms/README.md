@@ -1660,7 +1660,7 @@ WHAT EACH ONE SHOWS
                              +0.61 for M and -0.49 for f, and equal-product
                              cells score 10.4 to 12.5 m. But the REPLACEMENT
                              claim ("M and f each weakly constrained") was
-                             also wrong: per GROIN_PLAN.md the invariant is
+                             also wrong: per dipole_fit_notes.md the invariant is
                              period-1 cumulative trapping, M(15.5 + 4.5f).
     fig_top_profiles.png     the top cells and the no-groin baseline against
                              the observed change profile, fit window marked.
@@ -2351,7 +2351,7 @@ ORIENTATION: EROSION IS UP, SO THE PANEL READS AS A PLAN VIEW
           anything that rescales this must be re-checked against the cell's own
           shoreline_change_rate.csv.)
 
-    The fillet is therefore reported as D5 - D6, matching GROIN_PLAN.md, rather
+    The fillet is therefore reported as D5 - D6, matching dipole_fit_notes.md, rather
     than the D6 - D5 the earlier seaward-positive revision of this script used.
 
 WHAT IS PLOTTED
@@ -2395,7 +2395,7 @@ surveys INK, and the structure a muted guide line rather than a fourth hue.
 ```
 
 ```text
-Documented structure history -- GROIN_PLAN.md section 1. The rig's own
+Documented structure history -- hard-structures/groin/1-observations/structure_history.md. The rig's own
 install year is 1970 (it keeps 1967-69 as a free control window); the
 documented installation is 1969. Both are shown rather than reconciled.
 The strip is a ruler, not data: four greys, light to dark as the structure
@@ -2633,7 +2633,7 @@ WHY THIS GUARD EXISTS. This ranking scores BOTH periods jointly, and
 period 2 records a fillet RELEASE the module cannot produce at any (M, f).
 So it rails: on 2026-08-30 it returned edgeBE M = 160 / f = 0.8 and zeroBE
 M = 140 / f = 1.0, both at a grid bound. Fitting period 2 is the wrong
-thing to attempt -- see hard-structures/groin/GROIN_PLAN.md -- so the file
+thing to attempt -- see hard-structures/groin/3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md -- so the file
 is pinned by hand to M = 60, f = 0.6.
 
 HAT_run_all.py stage 6 passes whatever this file holds to every groin run
@@ -2667,7 +2667,7 @@ fitted (M, f). A rate figure can hide a run that gets the trend right from the
 wrong place; a position figure cannot.
 
 WHERE THE OBSERVATIONS COME FROM
-    `HAT-groin-gis-analysis/.../groin_analysis_chainage_all.csv` -- 904k
+    `1-observations/coastsat_shoreline/.../groin_analysis_chainage_all.csv` -- 904k
     shoreline observations carrying `chainage_m`, the cross-shore distance from
     the project's offshore datum line, already mapped to CASCADE domains.
     Chainage is SEAWARD-POSITIVE: verified on 2026-08-23 by differencing the
@@ -2851,7 +2851,7 @@ WHY THIS FIGURE EXISTS
          diffusion, which is a much larger number.
 
     Panel (c) is the reason this figure is worth having. It reframes the
-    affordability comparison that GROIN_PLAN.md and the run reports both make:
+    affordability comparison that dipole_fit_notes.md and the run reports both make:
     719,000 m3/yr at M = 60 against a 5-7e5 m3/yr littoral drift is a GROSS
     restoring rate set against a NET transport budget, and they are not like
     for like. That does not make the comparison wrong -- it is a deliberate,
@@ -5134,7 +5134,7 @@ WHAT TO LOOK FOR
     the ridge in period-1 cumulative trapping, M(15.5 + 4.5f). An earlier
     version of this caption said "the metric identifies a product, not a
     pair"; fig_Mf_identifiability.png tested that and refuted it
-    (corr(RMSE, M*f) = -0.07). See CALIBRATION_FIGURES.md and GROIN_PLAN.md.
+    (corr(RMSE, M*f) = -0.07). See CALIBRATION_FIGURES.md and dipole_fit_notes.md.
 
 Usage:
     python HAT_period1_top_n_figure.py [--top-n 5]
@@ -6006,7 +6006,7 @@ that failed in the September 2003 storm. The ramp put a decline inside the
 1996-2010 window the data do not show, and no groin strength then fitted both
 windows. Strength drops from the 2004 step, the first full year after the
 storm (2004 fitted better than 2003). Study: hard-structures/groin/
-groin-module-test/0-solver-audit/2026-09-29-option-a-real-planform/.
+2-module-tests/3-real-planform/.
 ```
 
 ```text
@@ -6276,7 +6276,7 @@ not shore-normal. Under option A BRIE's diffusivity at 0 deg is negative
 GIS 6 sits near -12 deg where it is positive. x_s is a uniform base plus
 island_offset, so the offset alone gives the angle BRIE's first solve reads
 (forward difference, as brie.py). No groin: shore-normal, as before.
-Found 2026-09-29: hard-structures/groin/groin-module-test/0-solver-audit/
+Found 2026-09-29: hard-structures/groin/2-module-tests/2-solver-audit/
 2026-09-29-option-a-real-planform/.
 ```
 

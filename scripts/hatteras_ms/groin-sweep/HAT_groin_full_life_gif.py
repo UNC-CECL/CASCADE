@@ -68,7 +68,7 @@ OBS_C = INK                      # the surveys
 MARK_C = INK_MUTED               # the structure
 GHOST_C = "0.86"                 # surveys already passed
 
-# Documented structure history -- GROIN_PLAN.md section 1
+# Documented structure history -- hard-structures/groin/1-observations/structure_history.md
 PHASES = [
     (1967, 1969, "before the groin", "0.97"),
     (1970, 1995, "structure sound", "0.93"),

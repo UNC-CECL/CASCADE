@@ -1,0 +1,9 @@
+# Captions — figures
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`schedule_refit_1_misfit_maps.png`.** Calibration 1996-2009 misfit of the blocking groin over strength b and post-failure fraction f, for the three failure schedules (columns). Top: RMSE of the modelled GIS 5|6 gap change against the annual CoastSat gap change, 1996-2008, model mid-year against the calendar-year mean, both relative to the start. Bottom: RMSE at the three wet/dry photo dates (1997, 2004, 2008), the 2026-10-05 score. Red box: the best cell. Each row shares one colour scale (capped at the 95th percentile). No groin: 42 m annual, 69 m photos. Under instant failure from 1996 the groin is at b x f for the whole window, so only the product is constrained (equal products, equal runs).
+
+**`schedule_refit_2_calibration_gap.png`.** The GIS 5|6 gap change through the calibration run, seaward positive (updrift holding is up), each relative to its start. Lines: model at 1 Jan of each year; no groin dotted; the best cell of each schedule on the annual CoastSat score; the pinned cell (failure at 2004, b 0.6 f 0.6, amber). Blue dots: CoastSat calendar-year means, relative to the mean over the DEM-centred start window (Oct 1995-Oct 1997), plotted mid-year. Red squares: the wet/dry photo gap relative to its value interpolated to 1996, plotted mid-year.
+
+**`schedule_refit_3_test_gap.png`.** The same on the 2009-2025 test period, which no cell was fitted to. Every schedule has failed by 2009, so a test run depends only on b x f: one line per product, naming the calibration cells it stands for (their runs are identical). CoastSat relative to the mean over Aug 2008-Aug 2010; the Buxton 2017 fill lands on GIS 6-16 and its sand moved south past the groin, which the model cannot do (the +32 m model jump at 2018).

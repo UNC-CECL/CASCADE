@@ -62,7 +62,7 @@ from HAT_groin_sweep_figures import (  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 CHAINAGE_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
-                / "HAT-groin-gis-analysis" / "shoreline_output_coastsat"
+                / "1-observations" / "coastsat_shoreline" / "shoreline_output_coastsat"
                 / "groin_analysis_chainage_all.csv")
 
 # The groin field's real footprint, from HAT_groin_shoreline_analysis_v2.py's metadata
@@ -90,7 +90,7 @@ def load_chainage():
         raise FileNotFoundError(
             f"shoreline chainage not found at {CHAINAGE_CSV}. It is produced "
             f"by HAT_groin_shoreline_analysis_v2.py in "
-            f"hard-structures/groin/HAT-groin-gis-analysis/.")
+            f"hard-structures/groin/1-observations/coastsat_shoreline/.")
     frame = pd.read_csv(
         CHAINAGE_CSV,
         usecols=["domain", "decimal_year", "chainage_m", "alongshore_m",

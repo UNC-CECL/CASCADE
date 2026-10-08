@@ -29,7 +29,7 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
 
 # --- CONFIG ------------------------------------------------------------------
 SWEEP_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
-             / "HAT-buxton-hindcast-groin-test" / "sensitivity_sweep"
+             / "3-hindcast" / "1-dipole-1967-2017" / "results" / "sensitivity_sweep"
              / "HAT_groin_sweep_results.csv")
 FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 

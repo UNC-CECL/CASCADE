@@ -74,7 +74,7 @@ FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 OBSERVED_COLOR, MODEL_COLOR, RATE_COLOR = INK, C["ACCENT"], C["ACCENT"]
 EVENT_COLOR = INK_MUTED
 
-# Documented structure history -- GROIN_PLAN.md section 1.
+# Documented structure history -- hard-structures/groin/1-observations/structure_history.md.
 EVENTS = [
     (1969, "installed"),
     (1996, "last repaired"),

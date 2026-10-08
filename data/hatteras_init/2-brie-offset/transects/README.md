@@ -9,7 +9,7 @@ polygons: 450 transects fall in GIS 1-90, exactly five per domain, LineID 12
 through 463. The other 172 carry no domain and are ignored.
 
 Copied here 2026-09-15 from
-`hard-structures/groin/HAT-groin-gis-analysis/gis_data/transects_100m.geojson`
+`hard-structures/groin/1-observations/gis_data/transects_100m.geojson`
 (byte-identical) so that `2-brie-offset/` holds everything a dune line needs
 to become an offset file, and `duneline_to_raw_offsets.py` does not reach into
 the groin study for an input. The ArcGIS exports in `raw_offsets/` were made

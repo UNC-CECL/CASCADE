@@ -114,7 +114,7 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 60.0),
     ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.6),
     # PINNED 2026-10-05: blocking b 0.6, f 0.6, fitted on the 1996-2009 calibration period
-    # (hard-structures/groin/groin-module-test/1-dem-to-dem/2026-10-05-blocking-fit-calibration)
+    # (hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-05-blocking-fit-calibration)
     ("groin_kind",                   ("groin", "kind"),            _as_str,   "blocking"),
     ("groin_blocking_fraction",      ("groin", "blocking_b"),      _as_float, 0.6),
 

@@ -7,7 +7,7 @@ groin/README.md        what the pin is and where its evidence lives
 ```
 
 `groin/` paths are built from `HAT_groin_sweep_config.GROIN_SWEEP_ROOT`. The
-fit's evidence is `hard-structures/groin/groin-module-test/1-dem-to-dem/2026-10-05-blocking-fit-calibration/`
+fit's evidence is `hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-05-blocking-fit-calibration/`
 and `raw_runs/experiments/groin/2026-10-05-blocking-fit-dem-to-dem/`. The
 current per-domain BE (set 1) is `raw_runs/experiments/source-sink/2026-10-05-be-domain-solve-1996_2009/`.
 

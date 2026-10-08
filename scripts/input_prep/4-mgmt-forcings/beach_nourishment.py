@@ -60,7 +60,7 @@ MAP_CRS = "EPSG:26918"          # UTM 18N, north up
 MAP_PAD_DOMAINS = 3             # unfilled domains drawn either side of a footprint
 MAP_ASPECT = 1.35               # map height / width
 MAP_ZOOM = 15
-GROIN_FILE = PROJECT_ROOT / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "groins_hatteras.geojson"
+GROIN_FILE = PROJECT_ROOT / "hard-structures" / "groin" / "1-observations" / "gis_data" / "groins_hatteras.geojson"
 TILE_CACHE = Path(__import__("tempfile").gettempdir()) / "hat_tile_cache"
 # Maps are organised by place, so they colour by community (Okabe-Ito, clear of the year red/blue and the groin red)
 # Okabe-Ito reddish purple, orange, yellow from north to south (2026-10-04): light and saturated so they

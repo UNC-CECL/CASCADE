@@ -210,7 +210,7 @@ def main() -> None:
             "is a GROSS restoring rate rather than like-for-like against a net "
             "transport budget. Volumes come from the repo's own "
             "implied_interception_m3_yr, so they reconcile with the numbers in "
-            "GROIN_PLAN.md and the run reports. M is an effective, "
+            "dipole_fit_notes.md and the run reports. M is an effective, "
             "grid-specific, field-aggregate rate for four structures inside "
             "one 500 m domain against a real fillet of about 190 m: not a "
             "sediment flux, and not divisible by four for a per-structure "

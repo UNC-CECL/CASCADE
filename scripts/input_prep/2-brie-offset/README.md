@@ -183,7 +183,7 @@ The 100 m transects, 10 km long, each starting on the offshore datum line
 (x = 460198 in EPSG:3725) and running west across the island. domain_id is
 the ArcGIS spatial join onto the 500 m domain polygons; 450 of the 622
 transects fall in GIS 1-90, five per domain. Copied 2026-09-15 from
-hard-structures/groin/HAT-groin-gis-analysis/gis_data/, see transects/README.md.
+hard-structures/groin/1-observations/gis_data/, see transects/README.md.
 ```
 
 ```text

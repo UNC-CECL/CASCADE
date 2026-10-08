@@ -33,7 +33,7 @@ Started 2026-10-05 from the advisor's plan. Last updated **2026-10-06**. Start h
 | Net-change targets | island mean −9.2 m (12.85 yr) and +14.1 m (16 yr) | `5-scr/3-rates/coastsat/net_change/` | 0ae1316e |
 | End rates, calibration | GIS 1 **+1.4981**, GIS 90 **+10.5659** m/yr | `experiments/end-domain-boundaries/2026-10-05-ends-solved-on-net-change-1996_2009/` | 12411289 |
 | End rates, test (edge-only base run) | GIS 1 **+32.7049**, GIS 90 **+21.0679** m/yr (GIS 1 noisy, ±1–2 m) | `…-ends-solved-on-net-change-2009_2025/` | 1c43b4d5 |
-| Blocking groin fit + pin | calibration date RMSE 4.0 m (no groin 69.2); test fits until the 2017 fill | `hard-structures/groin/groin-module-test/1-dem-to-dem/2026-10-05-blocking-fit-calibration/` | bf498225, 89a54887 |
+| Blocking groin fit + pin | calibration date RMSE 4.0 m (no groin 69.2); test fits until the 2017 fill | `hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-05-blocking-fit-calibration/` | bf498225, 89a54887 |
 | Dipole vs blocking comparison | blocking keeps the real step at the groin; its two flanks are unbalanced (inherits BRIE's non-conservation) | same folder, `figures/` | e55b2bf1 |
 | Per-domain source/sink, calibration (**BE set 1**) | interior RMSE 0.49 m after 10 passes; GIS 81–85 alternate on purpose; smoothing the field raises RMSE to 4.3 m | `experiments/source-sink/2026-10-05-be-domain-solve-1996_2009/`; preset **`domainBE`** | ca2940f4, 7fd83b5c, 232a5fa1 |
 | Test on BE set 1 | interior bias −18.2 m, RMSE 32.1 m, r 0.36 (worse bias than edge only) | `matrix/2009_2025/domainBE/` | a14e37dd |

@@ -109,7 +109,7 @@ caption(fig,
         "to 9.2 m, and D7 also worsens. Because RMSE squares residuals, D4's "
         "large improvement outweighs the two degradations and the window "
         "scores well. This is the volume-neutral dipole failing exactly as "
-        "GROIN_PLAN.md predicts: the observed downdrift extent is 0 m and the "
+        "dipole_fit_notes.md predicts: the observed downdrift extent is 0 m and the "
         "model's is 2,500 m. Green and red mean better and worse on panel (b) "
         "only; elsewhere in this figure set they are the 1984 and 1997 "
         "vintages, and no vintage is drawn here.")
