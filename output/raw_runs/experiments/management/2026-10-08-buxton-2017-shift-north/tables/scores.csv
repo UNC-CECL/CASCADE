@@ -1,0 +1,13 @@
+variant,area,bias_m,rmse_m,r
+reported,"interior GIS 2-89, smoothed",-18.231,32.132,0.363
+shifted,"interior GIS 2-89, smoothed",-18.193,31.217,0.429
+reported,"Buxton reach, GIS 1-20 raw",-25.55,52.712,
+shifted,"Buxton reach, GIS 1-20 raw",-24.97,50.994,
+reported,"south of the fill, GIS 1-5 raw",-69.725,87.057,
+shifted,"south of the fill, GIS 1-5 raw",-71.337,87.298,
+reported,"reported footprint, GIS 6-16 raw",-5.627,36.435,
+shifted,"reported footprint, GIS 6-16 raw",-9.625,31.903,
+reported,GIS 6-7 (dropped) raw,47.679,47.688,
+shifted,GIS 6-7 (dropped) raw,25.225,25.336,
+reported,GIS 17-18 (added) raw,-14.018,14.756,
+shifted,GIS 17-18 (added) raw,15.112,15.15,
