@@ -17,6 +17,8 @@ TEST_PLAN.md        the 2026-09-11 design: tier 0 offline (built), tiers 1-2 ful
                     dipole, pinned, drift and corrected versions scored as a groin field
 5-fine-grid-reference/  2026-10-09. A Buxton-sized field (three groins, 200 m apart) on a 25 m
                     one-line model with GENESIS-style bypassing, as the yardstick for the modules
+6-long-term/        2026-10-09. The modules and the reference over 200 years: stability,
+                    sand conservation, and whether the gap levels off
 figures/            groin_module_logic: the dipole's arithmetic as a schematic
 ```
 
@@ -26,6 +28,7 @@ figures/            groin_module_logic: the dipole's arithmetic as a schematic
 3. The old M = 60 is not runnable under option A; a blocking groin, bounded by the transport that arrives, is.
 4. With four groins on one coast, the corrected version behaves most like a groin field (105 of 112 checks against 60 to 75 for the others), but close groins share their sand only weakly, since no version has a groin length.
 5. Against a real-sized field on a 25 m grid, the corrected version is closest (gap error 71 m against 103 to 241 m), but the field's gap is set by groin length (about twice it), which no module has.
+6. Over 200 years nothing runs away and the corrected version holds its gap, but on a grid-aligned coast it leaks sand slowly (232 m by year 200) unless its correction zone is widened from 5 to 10 cells.
 
 **Next step up (not built).** The same straight-coast test inside full CASCADE on a fake barrier, storms off then on (`TEST_PLAN.md` tiers 1-2), once a module version passes step 1.
 

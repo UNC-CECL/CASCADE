@@ -1,0 +1,50 @@
+-30 deg done
+-20 deg done
+-10 deg done
++0 deg done
++10 deg done
++20 deg done
++30 deg done
+ theta0_deg    source  gap_50_m  gap_100_m  gap_200_m  gap_growth_last_quarter_m  net_change_end_m  max_angle_deg  all_finite
+        -30 corrected     215.3      223.2      225.8                        1.1               3.1           45.8        True
+        -30    dipole      71.5       73.9       75.6                        0.7             477.3           36.1        True
+        -30     drift     426.6      420.3      414.9                      -11.3           11023.4           55.9        True
+        -30    length     124.2      125.1      126.4                        3.1               1.3           39.7        True
+        -30    pinned     316.2      349.7      374.1                        9.1             -34.3           53.0        True
+        -30 reference     224.9      223.4      222.3                       -0.4              -0.0            NaN        True
+        -20 corrected     214.2      214.5      218.9                        0.4               3.3           38.7        True
+        -20    dipole     138.4      177.6      172.1                       -3.1            4117.3           37.3        True
+        -20     drift     342.7      350.7      350.7                        8.3            4171.2           47.3        True
+        -20    length     126.6      127.2      127.7                        0.2               0.2           31.8        True
+        -20    pinned     180.6      205.7      225.1                        7.3             -27.2           39.2        True
+        -20 reference     227.3      224.6      223.0                       -0.5              -0.0            NaN        True
+        -10 corrected     254.3      255.6      256.7                        0.5               9.0           34.7        True
+        -10    dipole     139.4      140.0      141.7                        0.9             928.5           24.8        True
+        -10     drift     274.5      291.6      308.0                        0.2             601.6           38.6        True
+        -10    length     149.1      150.3      151.1                        0.5               0.8           25.6        True
+        -10    pinned      66.2       80.9       94.4                        5.4             -15.4           20.1        True
+        -10 reference     213.2      217.3      229.2                        2.0               0.0            NaN        True
+          0 corrected     327.8      332.5      334.5                        1.3            -231.5           33.8        True
+          0    dipole     145.9      148.2      148.5                       -0.1            -337.6           16.6        True
+          0     drift     302.3      308.5      314.6                        4.2            -938.0           32.3        True
+          0    length     182.2      183.8      184.7                        0.6             -37.1           20.3        True
+          0    pinned       0.0        0.0        0.0                        0.0               0.0            0.0        True
+          0 reference     222.8      222.7      222.5                       -0.1               0.0            NaN        True
+         10 corrected     287.8      296.9      317.5                       10.8             -19.0           24.6        True
+         10    dipole     189.3      196.9      199.5                       -1.6           -5082.0           17.8        True
+         10     drift     347.9      349.9      355.4                        2.2           -4433.1           28.1        True
+         10    length     146.1      149.1      151.5                        0.9              -3.3           13.9        True
+         10    pinned    -102.3     -110.9     -117.2                       -2.4              16.2           22.3        True
+         10 reference     222.8      222.1      221.6                       -0.2               0.0            NaN        True
+         20 corrected      44.3       45.0       45.7                        0.2              17.0           21.8        True
+         20    dipole      28.2       28.8       29.2                        0.1            -424.4           20.7        True
+         20     drift     370.6      379.2      388.7                       -1.0          -18758.2           33.3        True
+         20    length      36.5       37.0       37.4                        0.2              10.4           21.8        True
+         20    pinned    -230.3     -243.1     -251.9                       -3.3              23.7           41.0        True
+         20 reference     222.5      221.7      221.2                       -0.2               0.0            NaN        True
+         30 corrected       3.0        3.1        3.2                        0.0               5.4           30.2        True
+         30    dipole      18.8       19.1       19.3                        0.1            -128.1           30.4        True
+         30     drift       8.8        9.0        9.1                        0.0             -29.8           30.2        True
+         30    length       2.9        2.9        3.0                        0.0               5.5           30.2        True
+         30    pinned    -376.9     -393.7     -405.3                       -4.3              19.2           54.2        True
+         30 reference     136.0      225.7      221.9                       -0.8               0.0            NaN        True

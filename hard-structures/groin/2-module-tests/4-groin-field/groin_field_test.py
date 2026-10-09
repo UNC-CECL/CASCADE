@@ -72,11 +72,13 @@ def leak_correction(r, step, faces):
 
 
 # One run: straight_coast_test.run() with a list of groin faces; returns the final shoreline, seaward +
-def run_field(t, theta0, module, faces, years, blocking_fraction=sc.BLOCKING_FRACTION, groin_length_m=sc.GROIN_LENGTH_M):
+def run_field(t, theta0, module, faces, years, blocking_fraction=sc.BLOCKING_FRACTION, groin_length_m=sc.GROIN_LENGTH_M,
+              record_years=()):
     slope = np.tan(np.deg2rad(theta0))
     eta = np.zeros(NY)
     up_is_hi = float(sc.drift(t, theta0)[0]) < 0          # drift toward lower index: the higher cell is updrift
-    for _ in range(years):
+    snaps = {}
+    for year in range(1, years + 1):
         step = slope * sc.DY_M + (np.roll(eta, -1) - eta)       # x[i+1] - x[i], landward +
         theta = 180.0 * np.arctan2(step, sc.DY_M) / np.pi
         r = np.maximum(0.0, t["coast_diff"][sc.angle_index(theta, t["climl"])] * sc.DT_YR / 2 / sc.DY_M ** 2)
@@ -103,7 +105,9 @@ def run_field(t, theta0, module, faces, years, blocking_fraction=sc.BLOCKING_FRA
         rhs = eta + r * (np.roll(eta, -1) - 2 * eta + np.roll(eta, 1)) + dx
         dv = np.r_[-r[-1], -r[1:], 1 + 2 * r, -r[0:-1], -r[0]]
         eta = spsolve(csr_matrix((dv, (t["di"], t["dj"]))), rhs)
-    return -eta
+        if year in record_years:
+            snaps[year] = -eta.copy()
+    return snaps if record_years else -eta   # record_years: {year: shoreline}, for long runs
 
 
 # The four scores of one field run, against the isolated groin's offset
