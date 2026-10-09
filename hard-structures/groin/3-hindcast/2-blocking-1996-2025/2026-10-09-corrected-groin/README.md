@@ -83,4 +83,12 @@ All 39 runs clean (`schedules_run.log`, `tests_run.log`). The test RMSE is also 
 8. **B and C are the same run on the test period.** Both have weakened to b·f 0.16 by 2009, so their test runs are identical. The schedules differ only in 1996-2003, where the calibration cannot separate them (finding 6).
 9. **2009-2016 favours a weaker groin than the calibration chose.** 18.4 m at strength 0.16, against the drift groin's 11.9 m at 0.04 and the pin's 7.5 m at 0.36 (schedule-refit). Choosing the strength from the test period would be fitting to it, so this is not done here.
 
-**Caveat on D.** The 2017 switch-off was suggested by the test-period misfit, not by evidence about the structure. Before it is adopted, the 2017 project record or imagery should show the groins buried, overtopped or bypassed by the fill. Without that evidence it is a fitted guess.
+**Caveat on D.** The 2017 switch-off was suggested by the test-period misfit, not by evidence about the structure.
+
+**The record, checked 2026-10-09** (`../../../1-observations/structure_history.md`, "After 1995"):
+- *Supports a switch-off around 2015-2017, for a different reason.* The groins fell apart rather than being buried. Holes and structural losses were reported from 2015-2016, large portions were gone by 2021, and the northern and middle groins are now submerged most days.
+- *Placement.* The 2017-18 fill (Jun 2017 to Feb 2018) was placed across the whole groin field, from the Haulover to the southernmost groin.
+- *No source says the fill buried or overtopped the groins.* Burial stays unconfirmed; structural loss is documented, but only from press accounts.
+- *Not a clean step.* The southernmost groin stayed partly intact until its 2026 rebuild, and the county manager linked faster erosion after the 2022 fill to its decay.
+
+What the record supports is a groin that lost most of its function over 2015-2021, which an instant switch-off at 2017 approximates. A ramp from 2015 to 2021 would match the record more closely; it has not been run.

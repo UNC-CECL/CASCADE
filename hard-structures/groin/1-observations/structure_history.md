@@ -4,6 +4,21 @@ What the structure is and what the shoreline did around it. None of this depends
 
 **Structure history:** installed **1969** · last repaired **1995** (south groin, 184 ft of steel sheet piling after Hurricane Gordon 1994; CSE 2013, report 2403-PHASE1-FR, p. 20) · storm damage **2003**. Until 2026-10-08 this line said 1996; no source gave 1996. The old ramp's onset of 1996 is the first year after the repair. The field spans northing 3901373–3901789, entirely inside GIS 6, so the groin is the face between GIS 5 (downdrift, south) and GIS 6 (updrift, north).
 
+**After 1995, from press reports (checked 2026-10-09).**
+- The U.S. Navy built three groins in 1969 and 1970. The northernmost failed soon after; a December 1972 photo shows its centre section gone. The southernmost was repaired in 1975 and 1994 and extended landward in the early 1980s. (The GIS layer has four digitized lines, two of them at one site.)
+- Maintenance largely stopped after the lighthouse was moved in 1999.
+- Beach users reported "increasingly significant holes and structural losses beginning around 2015 and 2016". By 2021 "large portions of the structures had been lost" (Buxton Civic Association, quoted by the Island Free Press).
+- Today the northern and middle groins are submerged most days. Only the southernmost is more than 50% intact, the threshold for repair; the other two cannot be rebuilt.
+- Dare County's manager attributed the faster sand loss after the 2022 fill partly to the southernmost groin's deterioration ("there's no way to prove that one hundred percent").
+- The southernmost groin is being rebuilt in 2026 on its old footprint, about 640 ft (195 m) into the ocean, with substantial completion due by 15 December 2026.
+- Both the 2017-18 and 2022 fills ran from the Haulover south to the southernmost groin, so both were placed across the whole groin field. No source found says whether they buried or overtopped the groins.
+
+Sources:
+- Island Free Press, "Decades of shoreline engineering: the long history of a changing Buxton beach": https://islandfreepress.org/blog/decades-of-shoreline-engineering-the-long-history-of-a-changing-buxton-beach/
+- Outer Banks Voice, 2026-09-17: https://www.outerbanksvoice.com/2026/09/17/latest-update-on-buxton-beach-nourishment-and-groin-repair/
+- Coastal Review, 2026-05: https://coastalreview.org/2026/05/final-federal-permit-clears-way-for-buxton-groin-repair-project/
+- Outer Banks Voice, 2018-03-01: https://outerbanksvoice.com/2018/03/01/delayed-buxton-beach-nourishment-project-is-finally-done/
+
 **The one thing to keep straight:** the "fillet" is the GAP between the updrift and downdrift shorelines, not a volume of new beach. Both sides eroded; the sheltered side eroded less. By 2004 the downdrift side had retreated 175 m since 1967 and the updrift side only 25 m. That 150 m difference is the fillet. The post-2004 collapse is ~85% the updrift side eroding once the structure failed, not impounded sand draining downdrift.
 
 ## What the wet/dry surveys show
