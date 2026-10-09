@@ -46,3 +46,41 @@ All 43 runs clean (`grid_run.log`, `edge_run.log`). Scores are as the drift-groi
 5. **Out of sample it does worse than no groin and than the drift groin.** It holds the gap almost unchanged after 2009 (−2.8 m) while CoastSat's closes by 50 m. After the 2004 step it still blocks b·f = 0.16 of the drift, four times the drift groin's 0.04. The calibration chose a groin that hardly weakened in 2004, and the later record needs one that largely gave way. This is the failure-schedule conflict open in `../2026-10-08-schedule-refit/`, sharper here because the corrected groin holds more sand. The 2017 fill placement also costs every groin run 37-43 m in this period (10-05 README).
 
 **What this means.** The corrected groin's mechanism carries over to Buxton: with the correction confined to its own bends, it traps on the right side, conserves sand and leaves the no-groin baseline unchanged. It fits 1996-2009 as well as the pin. It does not fix the test period, because what the groin does after 2004 is set by the failure schedule, not by how it traps. The next step is the schedule decision (options A-C in `../2026-10-08-schedule-refit/`), then refitting this module under the chosen schedule.
+
+## The failure schedules, A-D (2026-10-09)
+
+Asked the same day: refit under every schedule option of `../2026-10-08-schedule-refit/`, plus a fourth. The schedules are taken from `schedule_refit.SCHEDULES`; D is new here.
+- **A, failure from 1996:** one strength all window, run as b with f 1.0 (`instant1996`, 9 runs).
+- **B, the 2004 step:** the grid above (`instant2004`).
+- **C, ramp:** full in 1995, falling to b·f by 2003 (`ramp1996`, b 0.1-0.4 × f 0.2-0.8, 24 runs).
+- **D:** any of these, with the groin passing everything from the 2017 Buxton fill on (`OFF_YEAR`). It is the hypothesis that a 2 million m³ fill buried or overtopped the groins. It changes only the test period. Each schedule's best calibration cell is run on 2009-2025 with and without it.
+
+All 39 runs clean (`schedules_run.log`, `tests_run.log`). The test RMSE is also split at the fill: 2009-2016 and 2017-2024.
+
+**Calibration, best joint cell per schedule:**
+
+| schedule | b, f | annual | photos | joint |
+|---|---|---|---|---|
+| B, 2004 step | 0.2, 0.9 | 20.6 | 18.7 | 19.7 |
+| A, from 1996 | 0.2 (constant) | 21.6 | 17.6 | 19.7 |
+| C, ramp | 0.2, 0.8 | 16.1 | 25.1 | 21.1 |
+
+6. **The calibration cannot tell the schedules apart.** All three best cells score 19.7-21.1 m, all at b 0.2 with little or no weakening, as the pin study found.
+
+**Test, 2009-2025:**
+
+| run | strength after failure | annual | photos | joint | 2009-2016 | 2017-2024 | gap change at end, model / CoastSat |
+|---|---|---|---|---|---|---|---|
+| no groin | 0 | 23.5 | 31.1 | 27.6 | 31.7 | 9.8 | −57.8 / −50.4 |
+| drift b 0.1 f 0.4 | 0.04 | 26.2 | 31.7 | 29.0 | 11.9 | 35.0 | −17.5 / −50.4 |
+| corrected B or C (b 0.2 f 0.8) | 0.16 | 38.7 | 43.3 | 41.1 | 18.4 | 51.5 | −2.8 / −50.4 |
+| corrected A (b 0.2) | 0.2 | 48.5 | 53.4 | 51.0 | 27.2 | 63.0 | +9.1 / −50.4 |
+| **corrected B or C + D** | 0.16, off from 2017 | **16.8** | **20.1** | **18.5** | 18.4 | **15.0** | **−53.3** / −50.4 |
+| corrected B (f 0.9) + D | 0.18, off from 2017 | 19.5 | 22.1 | 20.8 | 22.2 | 16.3 | −52.7 / −50.4 |
+| corrected A + D | 0.2, off from 2017 | 23.2 | 24.5 | 23.8 | 27.2 | 18.2 | −51.7 / −50.4 |
+
+7. **Turning the groin off at the 2017 fill fixes most of the test period.** With D, the corrected groin beats no groin (18.5 m against 27.6 m joint) and the drift groin (29.0 m), and ends within 3 m of CoastSat's gap. Its 2017-2024 error falls from 51.5 to 15.0 m (no groin: 9.8 m), and 2009-2016 is unchanged.
+8. **B and C are the same run on the test period.** Both have weakened to b·f 0.16 by 2009, so their test runs are identical. The schedules differ only in 1996-2003, where the calibration cannot separate them (finding 6).
+9. **2009-2016 favours a weaker groin than the calibration chose.** 18.4 m at strength 0.16, against the drift groin's 11.9 m at 0.04 and the pin's 7.5 m at 0.36 (schedule-refit). Choosing the strength from the test period would be fitting to it, so this is not done here.
+
+**Caveat on D.** The 2017 switch-off was suggested by the test-period misfit, not by evidence about the structure. Before it is adopted, the 2017 project record or imagery should show the groins buried, overtopped or bypassed by the fill. Without that evidence it is a fitted guess.

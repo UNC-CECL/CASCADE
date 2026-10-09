@@ -7,7 +7,9 @@ Fit the corrected groin (the drift groin plus a leak correction at the groin's o
     python corrected_groin.py grid   [--streams 4]        # the calibration grid
     python corrected_groin.py edge   [--streams 4]        # past the grid's f 0.8 edge, and b 0.25
     python corrected_groin.py score                       # -> grid_scores.csv
-    python corrected_groin.py test --b 0.1 --f 0.6        # one cell on 2009-2025
+    python corrected_groin.py schedules [--streams 4]    # schedules A (instant1996) and C (ramp1996) on 1996-2009
+    python corrected_groin.py tests [--streams 4]        # each schedule's best cell on 2009-2025, with and without D
+    python corrected_groin.py test --b 0.1 --f 0.6 [--schedule ramp1996] [--off 2017]   # one cell on 2009-2025
 
 The drift groin of ../2026-10-08-drift-groin/ (b of BRIE's wave-climate net drift at the updrift
 approach face, moved from GIS 5 to GIS 6 each year), plus straight-coast module 6's leak
@@ -50,6 +52,7 @@ sys.path[:0] = [str(HERE.parent / "2026-10-08-drift-groin"), str(HERE.parent / "
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"), str(REPO / "scripts")]
 import drift_groin as dg  # noqa: E402
+import schedule_refit as sr  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = dg.RUNNER
@@ -63,7 +66,19 @@ B_EDGE = (0.15, 0.2, 0.25, 0.3)              # the first grid's best sat at f 0.
 F_EDGE = (0.9, 1.0)                          # f 1.0: no failure in 2004 (a diagnostic, not a schedule)
 SMOKE = (0.1, 0.6)
 CALIBRATION, TEST = dg.CALIBRATION, dg.TEST
+SCHEDULES = sr.SCHEDULES                     # instant2004 (B, the runner's), instant1996 (A), ramp1996 (C)
+A_STRENGTHS = (0.02, 0.05, 0.08, 0.1, 0.12, 0.15, 0.2, 0.25, 0.3)   # A: one strength b f all window; run as b, f 1.0
+C_B = (0.1, 0.15, 0.2, 0.25, 0.3, 0.4)       # C: full b in 1995, ramping to b f by 2003
+C_F = (0.2, 0.4, 0.6, 0.8)
+OFF_YEAR = 2017                              # D: the groin passes everything from the 2017 Buxton fill on
 # -----------------------------------------------------------------------------
+
+
+# Where a schedule's runs are filed; the 2004 schedule without D keeps the first grid's place
+def tag(schedule="instant2004", off=None):
+    if schedule == "instant2004" and off is None:
+        return STUDY
+    return f"{STUDY}/{schedule}" + (f"_off{off}" if off else "")
 
 
 def run_dir(study, period, b, f):
@@ -93,15 +108,21 @@ def _launch():
     import runpy
     import cascade.groin as cg
     base_m = np.load(os.environ["CORRECTED_GROIN_BASELINE"])     # no-groin run, [year x domain], m, landward +
+    delay, mode, ramp = SCHEDULES[os.environ.get("CORRECTED_GROIN_SCHEDULE", "instant2004")]
+    off = int(os.environ["CORRECTED_GROIN_OFF"]) if os.environ.get("CORRECTED_GROIN_OFF") else None
 
     class CorrectedGroin(cg.BlockingGroinCallback):
         kind = "blocking"
+
+        def __init__(self, *a, **kw):
+            kw.update(deterioration_delay_years=delay, deterioration_mode=mode, deterioration_ramp_years=ramp)
+            super().__init__(*a, **kw)
 
         def __call__(self, cascade, x_s_dt):
             year = self.start_year + self._call_count
             k = self._call_count
             self._call_count += 1
-            active = year >= self.install_year
+            active = year >= self.install_year and (off is None or year < off)
             b = self._effective_trapping_rate(year) if active else 0.0
             brie = cascade._brie_coupler._brie
             x_s = np.asarray(brie.x_s, dtype=float)
@@ -163,38 +184,46 @@ def _launch():
     runpy.run_path(str(RUNNER), run_name="__main__")
 
 
-def run(period, b, f):
+def run(period, b, f, schedule="instant2004", off=None):
     from schedule_refit import baseline_file
-    env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
+    study = tag(schedule, off)
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("HAT_", "CORRECTED_GROIN_"))}
     env.update({
         "HAT_IGNORE_SETTINGS": "1", "HAT_START_YEAR": str(period),
         "HAT_SOURCE_SINK_PRESET": "edgeBE", "HAT_SCENARIO": "full_management",
         "HAT_RELOCATIONS": "false", "HAT_GROIN_ENABLED": "true", "HAT_GROIN_KIND": "blocking",
         "HAT_GROIN_BLOCKING_FRACTION": str(b), "HAT_GROIN_DETERIORATION_FRACTION": str(f),
-        "HAT_RUN_KIND": "experiment", "HAT_RUN_TAG": f"{STUDY}/{dg.member(b, f)}",
+        "HAT_RUN_KIND": "experiment", "HAT_RUN_TAG": f"{study}/{dg.member(b, f)}",
         "HAT_SAVE_MODEL_STATE": "false", "HAT_SHOW_FIGURES": "false", "HAT_MAKE_GIFS": "false",
         "HAT_OVERWRITE": "false", "MPLBACKEND": "Agg", "PYTHONIOENCODING": "utf-8",
         "CORRECTED_GROIN_BASELINE": str(baseline_file(period)),
+        "CORRECTED_GROIN_SCHEDULE": schedule, "CORRECTED_GROIN_OFF": str(off or ""),
     })
     LOGS.mkdir(exist_ok=True)
-    log = LOGS / f"{dg.window(period)}_{dg.member(b, f)}.log"
+    label = study.replace(STUDY, "").strip("/").replace("/", "_")
+    log = LOGS / f"{label + '_' if label else ''}{dg.window(period)}_{dg.member(b, f)}.log"
     t0 = time.time()
     with open(log, "w", encoding="utf-8") as fh:
         code = subprocess.call([sys.executable, str(Path(__file__)), "_launch"], cwd=REPO,
                                env=env, stdout=fh, stderr=subprocess.STDOUT)
-    d = run_dir(STUDY, period, b, f)
+    d = run_dir(study, period, b, f)
     if code == 0 and d is not None:
+        delay, mode, ramp = SCHEDULES[schedule]
         (d / "corrected_groin.txt").write_text(
             "patched in-process by corrected_groin.py: the drift groin (b of BRIE's net drift at the updrift "
             f"approach face, GIS 5 -> GIS 6) plus module 6's leak correction within {HALF_WIDTH} cells, applied "
-            "as this run's minus the no-groin run's; the runner's report and groin labels do not show it\n")
-    print(f"{time.strftime('%H:%M:%S')}  {dg.window(period)} {dg.member(b, f)}: exit {code} "
-          f"({(time.time() - t0) / 60:.1f} min)", flush=True)
+            "as this run's minus the no-groin run's; the runner's report and groin labels do not show it. "
+            f"Schedule {schedule}: deterioration {delay} yr after the 1969 install, {mode}, ramp {ramp} yr"
+            + (f"; the groin passes everything from {off}" if off else "") + ".")
+    print(f"{time.strftime('%H:%M:%S')}  {label or 'instant2004'} {dg.window(period)} {dg.member(b, f)}: "
+          f"exit {code} ({(time.time() - t0) / 60:.1f} min)", flush=True)
     return code
 
 
+# cells: (period, b, f) or (period, b, f, schedule, off)
 def run_all(cells, streams):
-    todo = [c for c in cells if shoreline_file(STUDY, *c) is None]
+    cells = [tuple(c) + ("instant2004", None)[len(c) - 3:] for c in cells]
+    todo = [c for c in cells if shoreline_file(tag(c[3], c[4]), *c[:3]) is None]
     print(f"{len(cells) - len(todo)} of {len(cells)} done; running {len(todo)} in {streams} streams", flush=True)
     jobs, failed = queue.Queue(), []
     for c in todo:
@@ -232,24 +261,51 @@ def cmd_check(_a):
     print(f"max |rebuilt no-groin BRIE shoreline - this run's|: {diag.max_diff_from_no_groin_m.max():.3e} m")
 
 
+# The schedule grids: A as one strength (b, f 1.0), C as b x f
+def schedule_cells():
+    return ([(CALIBRATION, s, 1.0, "instant1996", None) for s in A_STRENGTHS]
+            + [(CALIBRATION, b, f, "ramp1996", None) for b in C_B for f in C_F])
+
+
+# Annual RMSE before and after the 2017 fill, test period only
+def split_scores(path, period, obs):
+    if period != TEST:
+        return {}
+    m = sr.model_change(path)
+    out = {}
+    for name, (y0, y1) in (("rmse_2009_2016", (2009, 2016)), ("rmse_2017_2024", (2017, 2024))):
+        yrs = [y for y in range(y0, y1 + 1) if y in obs.index and y - period < len(m)]
+        d = np.array([m[y - period] for y in yrs]) - obs.loc[yrs].to_numpy()
+        out[name] = float(np.sqrt(np.mean(d ** 2)))
+    return out
+
+
 def cmd_score(_a):
     from schedule_refit import baseline_file, coastsat_change, score_annual, score_photos
     from score_instant_grid import observed_series
     photos = observed_series()
+    arms = [("corrected", "instant2004", None, tag())] + [
+        ("corrected", s, off, tag(s, off)) for s in SCHEDULES for off in (None, OFF_YEAR) if (s, off) != ("instant2004", None)]
+    bs = sorted(set(B_VALUES) | set(B_EDGE) | set(A_STRENGTHS) | set(C_B) | set(dg.B_VALUES) | set(dg.B_FINE))
+    fs = sorted(set(F_VALUES) | set(F_EDGE) | set(C_F) | set(dg.F_VALUES))
     rows = []
     for period in (CALIBRATION, TEST):
         obs = coastsat_change(period)
         base = baseline_file(period)
         if base.is_file():
-            rows.append(dict(arm="none", period=period, b=0.0, f=np.nan, **score_annual(base, period, obs),
-                             **score_photos(base, period, photos), **dg.near_change(base)))
-        for arm, study, finder in (("corrected", STUDY, shoreline_file), ("drift", dg.STUDY, dg.shoreline_file)):
-            for b in sorted(set(B_VALUES) | set(B_EDGE) | set(dg.B_VALUES) | set(dg.B_FINE)):
-                for f in sorted(set(F_VALUES) | set(F_EDGE) | set(dg.F_VALUES)):
+            rows.append(dict(arm="none", schedule="", off=np.nan, period=period, b=0.0, f=np.nan,
+                             **score_annual(base, period, obs), **score_photos(base, period, photos),
+                             **dg.near_change(base), **split_scores(base, period, obs)))
+        finders = [(arm, s, off, study, shoreline_file) for arm, s, off, study in arms]
+        finders.append(("drift", "instant2004", None, dg.STUDY, dg.shoreline_file))
+        for arm, s, off, study, finder in finders:
+            for b in bs:
+                for f in fs:
                     p = finder(study, period, b, f)
                     if p is not None:
-                        rows.append(dict(arm=arm, period=period, b=b, f=f, **score_annual(p, period, obs),
-                                         **score_photos(p, period, photos), **dg.budget(p), **dg.near_change(p)))
+                        rows.append(dict(arm=arm, schedule=s, off=off if off else np.nan, period=period, b=b, f=f,
+                                         **score_annual(p, period, obs), **score_photos(p, period, photos),
+                                         **dg.budget(p), **dg.near_change(p), **split_scores(p, period, obs)))
     t = pd.DataFrame(rows)
     for period in (CALIBRATION, TEST):
         none = t[(t.arm == "none") & (t.period == period)]
@@ -257,15 +313,32 @@ def cmd_score(_a):
             sel = t.period == period
             t.loc[sel, "island_vs_none_m"] = t.loc[sel, "island_seaward_sum_m"] - float(none.island_seaward_sum_m.iloc[0])
     t["joint_rmse"] = np.sqrt((t.rmse_annual ** 2 + t.rmse_photos ** 2) / 2)
+    t["strength_after_failure"] = t.b * t.f
     t.to_csv(HERE / "grid_scores.csv", index=False, float_format="%.3f")
-    pd.set_option("display.width", 220)
+    pd.set_option("display.width", 240)
     cal = t[(t.period == CALIBRATION) & (t.arm == "corrected")]
-    for score in ("rmse_photos", "rmse_annual", "joint_rmse", "island_vs_none_m"):
-        if len(cal):
-            print(f"\n=== corrected groin, calibration: {score} (m) ===")
-            print(cal.pivot(index="b", columns="f", values=score).to_string(float_format="%.1f"))
-    best = t[t.period == CALIBRATION].sort_values("joint_rmse").groupby("arm").head(1)
-    print(best[["arm", "b", "f", "rmse_annual", "rmse_photos", "joint_rmse", "island_vs_none_m"]].round(1).to_string(index=False))
+    print("=== calibration, best joint per schedule (corrected groin) ===")
+    print(cal.sort_values("joint_rmse").groupby("schedule").head(1)[
+        ["schedule", "b", "f", "rmse_annual", "rmse_photos", "joint_rmse", "island_vs_none_m"]].round(1).to_string(index=False))
+    print("=== calibration, best annual and best photos per schedule ===")
+    for sc_ in ("rmse_annual", "rmse_photos"):
+        print(cal.sort_values(sc_).groupby("schedule").head(1)[
+            ["schedule", "b", "f", "rmse_annual", "rmse_photos", "joint_rmse"]].round(1).to_string(index=False))
+    test = t[t.period == TEST]
+    print("=== test 2009-2025 ===")
+    print(test[["arm", "schedule", "off", "b", "f", "strength_after_failure", "rmse_annual", "rmse_photos", "joint_rmse",
+                "rmse_2009_2016", "rmse_2017_2024", "end_model", "end_obs"]].round(1).to_string(index=False))
+
+
+# The test cells: each schedule's best calibration cell, with and without D
+def cmd_tests(a):
+    t = pd.read_csv(HERE / "grid_scores.csv")
+    cal = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.isna())]
+    best = cal.sort_values("joint_rmse").groupby("schedule").head(1)
+    cells = [(TEST, float(r.b), float(r.f), r.schedule, off) for r in best.itertuples() for off in (None, OFF_YEAR)]
+    for c in cells:
+        print("test cell:", c)
+    sys.exit(0 if run_all(cells, a.streams) else 1)
 
 
 def main():
@@ -277,14 +350,15 @@ def main():
     s = sub.add_parser("smoke")
     s.add_argument("--b", type=float, default=SMOKE[0])
     s.add_argument("--f", type=float, default=SMOKE[1])
-    g = sub.add_parser("grid")
-    g.add_argument("--streams", type=int, default=4)
-    e = sub.add_parser("edge")
-    e.add_argument("--streams", type=int, default=4)
+    for name in ("grid", "edge", "schedules", "tests"):
+        p = sub.add_parser(name)
+        p.add_argument("--streams", type=int, default=4)
     sub.add_parser("score")
     t = sub.add_parser("test")
     t.add_argument("--b", type=float, required=True)
     t.add_argument("--f", type=float, required=True)
+    t.add_argument("--schedule", default="instant2004", choices=sorted(SCHEDULES))
+    t.add_argument("--off", type=int, default=None)
     a = ap.parse_args()
     if a.cmd == "check":
         return cmd_check(a)
@@ -295,8 +369,12 @@ def main():
     if a.cmd == "edge":
         cells = [(CALIBRATION, b, f) for b in B_EDGE for f in F_EDGE] + [(CALIBRATION, 0.25, f) for f in F_VALUES[1:]]
         sys.exit(0 if run_all(cells, a.streams) else 1)
+    if a.cmd == "schedules":
+        sys.exit(0 if run_all(schedule_cells(), a.streams) else 1)
+    if a.cmd == "tests":
+        return cmd_tests(a)
     if a.cmd == "test":
-        sys.exit(0 if run_all([(TEST, a.b, a.f)], 1) else 1)
+        sys.exit(0 if run_all([(TEST, a.b, a.f, a.schedule, a.off)], 1) else 1)
     cmd_score(a)
 
 
