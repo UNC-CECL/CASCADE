@@ -73,7 +73,7 @@ COASTSAT_ROOT_DIR        = str(_obs.COASTSAT_TIMESERIES)
 # The 90 real domain boxes, D1-D90; replaced a fixed-spacing formula (README)
 DOMAINS_JSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "HAT_domains.json")
 
-OUTPUT_DIR = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "shoreline_rates_by_era" / "output")
+OUTPUT_DIR = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "shoreline_rates_by_era" / "tables")
 
 # CRS for all spatial operations (UTM 18N covers NC Outer Banks)
 PROJECTED_CRS = "EPSG:32618"

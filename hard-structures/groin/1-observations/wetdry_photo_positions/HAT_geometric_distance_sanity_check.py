@@ -4,8 +4,8 @@ Per-domain distance to the offshore datum for any set of shoreline geojsons, wit
     python HAT_geometric_distance_sanity_check.py
 
 Reads the domain polygons, the datum line and SHORELINE_FILES from INPUT_DIR;
-writes the raw-distance CSV, one change-from-reference CSV per REFERENCE_KEYS
-and two sanity-check figures to OUTPUT_DIR. Needs numpy, pandas, matplotlib,
+writes the raw-distance CSV and one change-from-reference CSV per REFERENCE_KEYS
+to OUTPUT_DIR, and two sanity-check figures to FIGURE_DIR. Needs numpy, pandas, matplotlib,
 pyproj, shapely. Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -32,6 +32,7 @@ REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml"
 GROIN = REPO / "hard-structures" / "groin"
 INPUT_DIR  = str(GROIN / "3-hindcast" / "1-dipole-1967-2017" / "inputs" / "groin_init" / "island_offset" / "input")
 OUTPUT_DIR = str(GROIN / "1-observations" / "wetdry_photo_positions")
+FIGURE_DIR = os.path.join(OUTPUT_DIR, "figures")
 
 TARGET_CRS = "EPSG:26918"
 
@@ -309,6 +310,7 @@ def main():
               f"{sorted(loaded.keys())}")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(FIGURE_DIR, exist_ok=True)
 
     print("\nComputing per-domain distances...")
     all_raw = {}
@@ -357,9 +359,9 @@ def main():
     print("\nBuilding sanity-check figures...")
     fig_spatial_map(domain_polys, datum_line,
                     {k: v for k, v in shorelines.items()},
-                    os.path.join(OUTPUT_DIR, "sanity_check_spatial_map.png"))
+                    os.path.join(FIGURE_DIR, "sanity_check_spatial_map.png"))
     fig_distance_profile(all_raw, domains,
-                          os.path.join(OUTPUT_DIR, "sanity_check_distance_profile.png"),
+                          os.path.join(FIGURE_DIR, "sanity_check_distance_profile.png"),
                           reference_key=FIGURE_REFERENCE_KEY)
 
     print("\nDone.")

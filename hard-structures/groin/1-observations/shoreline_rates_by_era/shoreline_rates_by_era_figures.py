@@ -36,7 +36,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     figsize, open_frame, record_caption, save, town_bands)
 
 # --- CONFIG ------------------------------------------------------------------
-TABLES = HERE / "output"
+TABLES = HERE / "tables"
 FIGS = HERE / "figures"
 PRE, WORK, AFTER = "Pre-install", "Functional groin", "Deteriorated"
 ERA = {PRE: ("before the groin, 1849-1969", C["BASE"], "--"),

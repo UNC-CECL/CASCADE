@@ -27,4 +27,4 @@ The fillet peaks in **2004** and declines from there. The turning point matches 
 
 When the gap stopped widening, from CoastSat rather than the photos, is in `gap_across_groins/`.
 
-`figures/groin_two_shorelines.png` is the one-picture version: the two shorelines and the gap between them.
+`wetdry_photo_positions/figures/groin_two_shorelines.png` is the one-picture version: the two shorelines and the gap between them.

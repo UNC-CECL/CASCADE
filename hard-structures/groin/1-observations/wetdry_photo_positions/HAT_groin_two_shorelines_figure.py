@@ -5,7 +5,7 @@ The groin in one picture: the two shorelines either side of it, and the gap betw
     python HAT_groin_two_shorelines_figure.py
 
 Reads the wet/dry change table (GIS 5 and 6 since 1967); writes
-groin_two_shorelines.png (and .pdf) beside this file, caption in CAPTIONS.md.
+figures/groin_two_shorelines.png, its PDF and caption in figures/supporting/.
 Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -189,7 +189,7 @@ def main():
                     r2=endpoint_rate(years, gap, 2004, final)))
 
     # Write the figure and print the gap at four surveys
-    written = save(fig, HERE / "groin_two_shorelines.png", close=True)
+    written = save(fig, HERE / "figures" / "groin_two_shorelines.png", close=True)
     for path in written:
         print("wrote {}".format(path))
     for year in (1967, 1978, 2004, 2023):

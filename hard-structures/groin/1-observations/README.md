@@ -5,23 +5,28 @@ Measured or digitized. Nothing here is fitted to the model, and nothing here cha
 ```
 structure_history.md       the structure's dates and the fillet in numbers
 gis_data/                  GIS layers: groins_hatteras, wet_dry_groin, transects_100m,
-                           the offshore datum line, the CASCADE domains and study area
+                           the offshore datum line, the CASCADE domains and study area;
+                           its README says which are copies and who reads each; ArcGIS originals in shapefiles/
 wetdry_photo_positions/    shoreline position per domain (GIS 2-12) from 24 dated wet/dry
                            surveys and the dune lines, as change since 1967; the
-                           Change_from_wetdry table is the observed gap every fit reads
+                           Change_from_wetdry table is the observed gap every fit reads,
+                           and figures/groin_two_shorelines draws it: the groin in one picture
 shoreline_rates_by_era/    WIDE VIEW, ±60 km: shoreline change rates on every transect
                            before, during and after the groin's working life, by decade,
                            and how far along the coast the groin's effect reaches
 gap_across_groins/         NARROW VIEW, across the groins only: the north-minus-south
                            gap year by year, and when it stopped widening (1995)
-figures/                   groin_two_shorelines: the two shorelines and the gap
 ```
+
+Each analysis folder keeps the same shape: its scripts at the top, the tables they write
+(`tables/`, or the CSVs themselves in `wetdry_photo_positions/`, which other code reads
+by path), and `figures/` with each figure's PDF and `CAPTIONS.md` in `figures/supporting/`.
 
 **Who reads these.**
 - `wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`: every hindcast fit, the figures, `scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_config.py`.
 - `gis_data/groins_hatteras.geojson`: `scripts/input_prep/4-mgmt-forcings/beach_nourishment.py`.
-- `gis_data/transects_100m.geojson`: the 2-brie-offset stage (`data/hatteras_init/2-brie-offset/transects/README.md`).
-- `shoreline_rates_by_era/output/groin_analysis_chainage_all.csv`: the dipole sweep's target (`scripts/hatteras_ms/groin-sweep/`).
+- `gis_data/transects_100m.geojson`: `shoreline_rates_by_era/`; the 2-brie-offset stage reads its byte-identical twin (`data/hatteras_init/2-brie-offset/transects/README.md`).
+- `shoreline_rates_by_era/tables/groin_analysis_chainage_all.csv`: the dipole sweep's target (`scripts/hatteras_ms/groin-sweep/`).
 - `gap_across_groins/`: the 2026-10-08 schedule refit (`../3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`).
 
 The photos and CoastSat disagree at one date, the 2004 survey (by 42 m); see `gap_across_groins/README.md`, figure 7.

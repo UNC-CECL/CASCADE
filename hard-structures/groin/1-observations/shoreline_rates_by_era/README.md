@@ -16,13 +16,18 @@ era boundary at 1995 here comes from the repair record; that analysis reaches 19
 Until 2026-10-08 this folder was `coastsat_shoreline/` (and before that `HAT-groin-gis-analysis/`).
 
 ```
-HAT_groin_shoreline_analysis.py   the analysis -> output/; settings in its CONFIG block
-shoreline_rates_by_era_figures.py the four figures, from the tables in output/ -> figures/
-shoreline_plan_view_gif.py        the shoreline each year as a true map -> figures/shoreline_map_*.gif
-output/                           every table and the run metadata (2026-10-08 run)
-figures/                          four figures, two map GIFs and shoreline_map_tiles/ (the coast in 1.5 km map GIFs);
-                                  captions and the zone-mean table in figures/supporting/
+HAT_groin_shoreline_analysis.py   the analysis -> tables/; settings in its CONFIG block
+shoreline_rates_by_era_figures.py the four figures, from the tables in tables/ -> figures/
+shoreline_plan_view_gif.py        figure 5, and the shoreline each year as a true map -> figures/v1_plain/, figures/v2_satellite/
+tables/                           every table and the run metadata (2026-10-08 run)
+figures/                          the five numbered figures; captions and the zone-mean table in supporting/;
+    v1_plain/                     the map GIFs on a plain sand-and-sea basemap: whole reach, groin close-up,
+                                  shoreline_map_tiles/ (the coast in 1.5 km map GIFs)
+    v2_satellite/                 the same GIFs over satellite imagery
 ```
+
+`tables/` was `output/` and the plain GIFs sat loose in `figures/` until 2026-10-09; renamed to match
+`../gap_across_groins/` and to put the two GIF sets side by side.
 
     python HAT_groin_shoreline_analysis.py     # tables and metadata (the slow step)
     python shoreline_rates_by_era_figures.py   # seconds: the four figures
@@ -36,9 +41,9 @@ figures/                          four figures, two map GIFs and shoreline_map_t
 | 3 | `shoreline_rates_by_era_3_decade_map` | how did the rate evolve decade by decade, and how far did the groin's effect reach? |
 | 4 | `shoreline_rates_by_era_4_zone_means` | near the groins, how did each side's mean rate change? |
 | 5 | `shoreline_rates_by_era_5_groin_window_four_years` | how far, and when, did the shoreline around the groins move? The 1.5 km groin window as true-scale maps at 1985, 1998, 2010 and 2025, with its change since 1984-1986 and the fills marked (the static version of the close-up GIF, for papers and slides) |
-| GIF | `shoreline_map_whole_reach` | where was the shoreline each year, 1984-2025? GIS 1-65 as one map |
-| GIF | `shoreline_map_groin_closeup` | the same around the Buxton groins: a 1.5 km map (GIS 5-8), where it is on Hatteras, and how far the window's shoreline has moved since 1984-1986 |
-| GIF | `shoreline_map_tiles/shoreline_map_tile_<nn>_GIS<a>-<b>` | the same 1.5 km view walked along the whole coast, GIS 1-65, numbered south to north and named by the domains each covers |
+| GIF | `v1_plain/shoreline_map_whole_reach` | where was the shoreline each year, 1984-2025? GIS 1-65 as one map |
+| GIF | `v1_plain/shoreline_map_groin_closeup` | the same around the Buxton groins: a 1.5 km map (GIS 5-8), where it is on Hatteras, and how far the window's shoreline has moved since 1984-1986 |
+| GIF | `v1_plain/shoreline_map_tiles/shoreline_map_tile_<nn>_GIS<a>-<b>` | the same 1.5 km view walked along the whole coast, GIS 1-65, numbered south to north and named by the domains each covers |
 
 **The shoreline GIFs (2026-10-08).** True maps: UTM 18N, north up, drawn 1:1 with no stretching, a scale bar and north arrow on each. Every CoastSat observation sits at its real position, the transect's origin plus its chainage along that transect's own shore-normal direction from the CoastSat transect layer (all 1,255 lines start within 5 m of the chainage origins, checked in the script). One frame per year, 1984-2025: the median position per transect that year (at least 3 images) in black, the earlier years as thin lines coloured light to dark, the 1984-1986 shoreline dashed, the four groins as their real lines. The island is filled in sand up to that year's shoreline: the island outline (`site_layer.hat_map_layers.ISLAND_OUTLINE`, widened 250 m with square corners so it reaches every shoreline on these maps; they sit at most about 210 m seaward of it) minus everything seaward of the year's line, where a transect without images that year takes its 1984-1986 position. At true scale the year-to-year movement (tens of metres) is small next to kilometres of coast, so it is subtle by design. These replace three earlier versions tried the same day (the 100 m grid, a rotated frame, a change-from-1984 view), which either stretched the vertical scale or did not look like the coast, and the analysis script's own GIFs (`LEGACY_FIGURES = False`). The 1.5 km views (the close-up and the tiles, centred every 1.4 km along the 1984-1986 shoreline, so neighbours overlap by 100 m) also draw the GIS domain bands (white lines, numbers on the land), a locator, and the window's median change since 1984-1986 per year (transects whose 1984-1986 position lies in the window), building up frame by frame. They replaced an eight-panel 4 km sections GIF, in which the change was too small to see at true scale.
 
@@ -50,7 +55,7 @@ figures/                          four figures, two map GIFs and shoreline_map_t
 `shoreline_output_grid100m/` (2026-07-14). Despite the names, their tables were byte-identical: every rate
 is always measured on CoastSat's own shore-normal transects. The "100 m grid" setting only changed how
 the GIF placed points, in a mode this README warns produces a spurious drift. Both were replaced by one
-rerun into `output/` with the GIF in the default `"coastsat"` mode; that rerun also picked up the CoastSat
+rerun into `output/` (now `tables/`) with the GIF in the default `"coastsat"` mode; that rerun also picked up the CoastSat
 images added since July (909,567 observations against 904,543), which moved the post-1996 rates by
 +0.04 m/yr on average and left the earlier eras, the signal extent and the zone means unchanged.
 The old static figures (eight, drawn inside the analysis script) are switched off by `LEGACY_FIGURES = False`
@@ -64,8 +69,8 @@ surveys per transect.
 
 Most outputs are git-ignored (the chainage CSV alone is 121 MB, the GIFs tens of
 MB); the metadata text and a few tables are tracked. Its GIS inputs are in `../gis_data/`;
-`transects_100m.geojson` there
-is also read by the 2-brie-offset stage (`data/hatteras_init/2-brie-offset/transects/README.md`).
+`transects_100m.geojson` there is a byte-identical copy of the one the 2-brie-offset stage reads
+(`data/hatteras_init/2-brie-offset/transects/README.md`).
 
 The script still calls itself `HAT_groin_shoreline_analysis_v2.py` inside the
 metadata it writes; that text is part of its output and was left unchanged.

@@ -3,8 +3,8 @@
 The shoreline around the Buxton groins as a true map, one frame per year, from CoastSat.
 
     python shoreline_plan_view_gif.py [--only whole|closeup|tiles|static] [--basemap plain|satellite]
-        plain:     figures/shoreline_map_whole_reach.gif, figures/shoreline_map_groin_closeup.gif,
-                   figures/shoreline_map_tiles/shoreline_map_tile_<nn>_GIS<a>-<b>.gif,
+        plain:     figures/v1_plain/shoreline_map_whole_reach.gif, .../shoreline_map_groin_closeup.gif,
+                   .../shoreline_map_tiles/shoreline_map_tile_<nn>_GIS<a>-<b>.gif,
                    figures/shoreline_rates_by_era_5_groin_window_four_years.png (--only static)
         satellite: the same GIFs over satellite imagery, under figures/v2_satellite/
 
@@ -55,7 +55,7 @@ from site_layer.hat_topo_version import ROAD_LINE_CURRENT  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-CHAINAGE = HERE / "output" / "groin_analysis_chainage_all.csv"
+CHAINAGE = HERE / "tables" / "groin_analysis_chainage_all.csv"
 GROINS = HERE.parent / "gis_data" / "groins_hatteras.geojson"
 DOMAINS = REPO / "data" / "hatteras_init" / "5-scr" / "2-transect-frame" / "transect_domains" / "HAT_domains.json"
 FILLS = (REPO / "data" / "hatteras_init" / "4-mgmt-forcing" / "nourishment" / "2-model-input"
@@ -480,7 +480,7 @@ def main():
     apply_style()
     data = Data()
     style = a.basemap
-    root = FIGS if style == "plain" else FIGS / "v2_satellite"
+    root = FIGS / ("v1_plain" if style == "plain" else "v2_satellite")
     tiles = root / "shoreline_map_tiles"
     root.mkdir(parents=True, exist_ok=True)
     if a.only in (None, "static") and style == "plain":

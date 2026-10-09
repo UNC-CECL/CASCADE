@@ -62,7 +62,7 @@ from HAT_groin_sweep_figures import (  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 CHAINAGE_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
-                / "1-observations" / "shoreline_rates_by_era" / "output"
+                / "1-observations" / "shoreline_rates_by_era" / "tables"
                 / "groin_analysis_chainage_all.csv")
 
 # The groin field's real footprint, from HAT_groin_shoreline_analysis_v2.py's metadata

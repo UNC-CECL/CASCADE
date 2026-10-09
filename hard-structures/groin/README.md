@@ -10,10 +10,10 @@ from simplest to most complex.
 1-observations/            true whatever the model does; nothing here is fitted
     structure_history.md       install 1969, last repair 1995, damage 2003; the fillet in numbers
     gis_data/                  the groins, wet/dry lines, 100 m transects, datum line, domains
-    wetdry_photo_positions/    the 24-survey wet/dry and dune-line change tables (GIS 2-12, from 1967)
+    wetdry_photo_positions/    the 24-survey wet/dry and dune-line change tables (GIS 2-12, from 1967), and
+                               the groin in one picture: the two shorelines and the gap between them
     shoreline_rates_by_era/    wide view, ±60 km: rates by era and decade, how far the effect reaches
     gap_across_groins/         narrow view: the gap across the groins each year, when it stopped widening
-    figures/                   the two shorelines and the gap between them
 2-module-tests/            what the module does on its own; no Buxton fit
     TEST_PLAN.md               the 2026-09-11 design for the idealized rig
     1-straight-coast/          six module versions on straight coasts, -40 to +40 deg
@@ -70,7 +70,7 @@ Reorganized on 2026-10-08 from the study's original folders. Old name → new pl
 | `HAT-groin-gis-analysis/` | `1-observations/shoreline_rates_by_era/` (first `coastsat_shoreline/`), its `gis_data/` to `1-observations/gis_data/` |
 | `HAT-groin-condition-analysis/` | `1-observations/gap_across_groins/` (first `coastsat_groin_condition/`) |
 | `HAT-groin-buxton-output/shoreline_position_output/` and `HAT-groin-buxton-input/input_prep/shoreline_position/` | `1-observations/wetdry_photo_positions/` |
-| `HAT-groin-figures/` | one `figures/` per category, each beside what it shows |
+| `HAT-groin-figures/` | `figures/` beside what each shows: the two-shorelines figure in `1-observations/wetdry_photo_positions/figures/` (it had its own `1-observations/figures/` until 2026-10-09), the module schematic in `2-module-tests/figures/`, the timeline in `3-hindcast/1-dipole-1967-2017/figures/` |
 | `groin-module-test/0-solver-audit/` | `2-module-tests/2-solver-audit/`, `3-real-planform/`, `1-straight-coast/` |
 | `groin-module-test/1-dem-to-dem/` | `3-hindcast/2-blocking-1996-2025/` |
 | `HAT-groin-buxton-input/`, `HAT-groin-buxton-output/`, `HAT-buxton-hindcast-groin-test/` | `3-hindcast/1-dipole-1967-2017/inputs/`, `runs/`, `results/` |
