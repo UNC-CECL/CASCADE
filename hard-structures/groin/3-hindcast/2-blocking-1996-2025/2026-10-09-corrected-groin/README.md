@@ -117,3 +117,31 @@ b, f and the schedules are one way of saying how strong the groin is in each str
 That spec reads: 0.2 from installation, 0.16 from the 2004 failure, 0 from the 2017 fill. b, f, the schedule and the switch-off are not used. Runs are filed under `periods_<spec>`, and the run's `corrected_groin.txt` records the spec. **Check:** that spec on 2009-2025 reproduces the b 0.2 / f 0.8 / off-at-2017 run to 8.5 × 10⁻¹⁴ m (0.2 × 0.8 is 0.16000000000000003 in floating point), with the same scores: joint 18.5 m, 2009-2016 18.4 m, 2017-2024 15.0 m.
 
 In this form the corrected groin's best description so far is three numbers: **0.2 to 2003, 0.16 from 2004, 0 from 2017.** The calibration barely separates the first two (findings 4 and 6). The third rests on the test period and the 2017 placement record (findings 10-11).
+
+## The two-number groin: one strength, one end year (2026-10-09)
+
+Because the calibration cannot separate the strength before and after 2004, the groin is described by two numbers: a constant strength s from installation, and 0 from an end year. The end year is **not fitted**: 1996-2009 never reaches it, and fitting it on 2009-2025 would be fitting to the test. It is fixed at **2017** from the placement record (the fill was placed across the groin field) and the documented decay from 2015 (`../../../1-observations/structure_history.md`). The test's 2017-2024 half still informed that choice (findings 7, 10-11), so only 2009-2016 is fully independent.
+
+**Calibration, 1996-2009.** The schedule-A runs (constant strength) plus `periods` runs at 0.16-0.19:
+
+| s | 0.10 | 0.12 | 0.15 | 0.16 | 0.17 | 0.18 | **0.19** | 0.20 | 0.25 | 0.30 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| annual | 14.7 | **11.3** | 11.6 | 13.2 | 14.6 | 16.6 | 18.9 | 21.6 | 34.7 | 47.6 |
+| photos | 41.5 | 34.6 | 27.5 | 25.4 | 23.5 | 21.5 | 19.4 | 17.6 | **14.5** | 21.8 |
+| joint | 31.1 | 25.8 | 21.1 | 20.2 | 19.6 | 19.2 | **19.2** | 19.7 | 26.6 | 37.0 |
+
+The joint score is flat at 0.18-0.19; at 0.19 the two scores are nearly equal. The annual record alone wants 0.12, the photos alone 0.25.
+
+**Test, 2009-2025, end year 2017:**
+
+| s (chosen by) | annual | photos | joint | 2009-2016 | 2017-2024 | gap change at end, model / CoastSat |
+|---|---|---|---|---|---|---|
+| no groin | 23.5 | 31.1 | 27.6 | 31.7 | 9.8 | −57.8 / −50.4 |
+| **0.12 (annual CoastSat)** | **11.7** | **18.6** | **15.5** | **11.5** | 12.0 | −54.5 / −50.4 |
+| 0.19 (joint) | 21.3 | 23.3 | 22.3 | 24.6 | 17.4 | −52.2 / −50.4 |
+| 0.25 (photos) | 32.0 | 31.4 | 31.7 | 39.5 | 22.0 | −51.4 / −50.4 |
+| three numbers: 0.2, 0.16 from 2004, 0 from 2017 | 16.8 | 20.1 | 18.5 | 18.4 | 15.0 | −53.3 / −50.4 |
+
+12. **The strength fitted to the annual CoastSat record predicts the test period best**, on both scores and on the independent 2009-2016 half (11.5 m against 24.6 m for the joint choice and 31.7 m for no groin). The photo-fitted strength does worse than no groin. The photos' pull toward a stronger groin rests on the 2004 survey, the one date where the photos and CoastSat disagree by 42 m (`../../../1-observations/gap_across_groins/`, figure 7).
+13. **This bears on the calibration target (decision 2):** the annual CoastSat gap generalises; the three photo dates do not.
+14. **The two-number groin with s 0.12 is the best-predicting groin so far**, ahead of the three-number one (18.5 m). It uses two numbers, s = 0.12 (holding back about 11 m of shoreline a year at Buxton) and an end year of 2017. Neither was fitted to 2009-2016.

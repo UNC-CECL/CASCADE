@@ -345,8 +345,10 @@ def cmd_score(_a):
             finders.append(("corrected", "periods", spec, tag("periods", spec), shoreline_file))
         finders.append(("drift", "instant2004", None, dg.STUDY, dg.shoreline_file))
         for arm, s, off, study, finder in finders:
-            for b in bs:
-                for f in fs:
+            # a periods run is filed under its first strength with f 1.0
+            cells = [(parse_periods(off)[0][1], 1.0)] if s == "periods" else [(b, f) for b in bs for f in fs]
+            for b, f in cells:
+                if True:
                     p = finder(study, period, b, f)
                     if p is not None:
                         rows.append(dict(arm=arm, schedule=s, off=off if off else "", period=period, b=b, f=f,
