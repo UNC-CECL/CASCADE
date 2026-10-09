@@ -16,7 +16,7 @@ from simplest to most complex.
     figures/                   the two shorelines and the gap between them
 2-module-tests/            what the module does on its own; no Buxton fit
     TEST_PLAN.md               the 2026-09-11 design for the idealized rig
-    1-straight-coast/          four module versions on straight coasts, -40 to +40 deg
+    1-straight-coast/          six module versions on straight coasts, -40 to +40 deg
     2-solver-audit/            the dipole in BRIE's alongshore solve alone
     3-real-planform/           the dipole and blocking groin on the real planform, option A waves
     figures/                   the dipole's arithmetic as a schematic
@@ -26,10 +26,18 @@ from simplest to most complex.
 4-forecast/                not started
 ```
 
-**Where things stand (2026-10-08).**
-- **Pinned in the runner:** the blocking groin, b 0.6, f 0.6, instant failure at the 2004 step (`output/calibration/groin/joint_fit.json`, read by `HAT_run_all.py`; evidence in `3-hindcast/2-blocking-1996-2025/2026-10-05-blocking-fit-calibration/`).
-- **Open decision:** the failure schedule. CoastSat puts the end of trapping at the 1995 repair, and refitting on it gives a weaker groin failing from 1996 with the same post-failure strength (b × f 0.36), so test and forward runs are unchanged (`3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`).
-- **Open problem:** neither module is a physically correct groin yet. On a straight coast the pinned groin conserves sand but blocks only the tilt-driven part of the transport, not the net drift; a drift-blocking groin traps correctly but BRIE's alongshore solve does not conserve sand around it (`2-module-tests/1-straight-coast/`).
+**Where we left off (2026-10-09).** Commit `6c8cde10`.
+
+- **Pinned in the runner, unchanged:** the blocking groin, b 0.6, f 0.6, instant failure at the 2004 step (`output/calibration/groin/joint_fit.json`, read by `HAT_run_all.py`).
+- **Module design, settled in principle:** build on BRIE and Barrier3D, never edit them. Of the six versions tested on straight coasts (`2-module-tests/1-straight-coast/`), the drift-blocking groin ("option 1") is the one to carry forward. It moves a fraction b of the wave-driven drift arriving at the groin across GIS 5|6 each year, read from BRIE's own wave climate. Its known limitation is BRIE's sand leak at the bends the groin makes, about +100 m of summed shoreline over 1996-2009; it is reported, not corrected. The corrected version (module 6) conserves sand but changes BRIE's behaviour at Buxton's natural bend (`2-module-tests/3-real-planform/corrected_groin/`).
+- **Option 1 in the full model** (`3-hindcast/2-blocking-1996-2025/2026-10-08-drift-groin/`): best combined fit on 1996-2009 at b 0.1, f 0.4 (joint RMSE 15.8 m against the pin's 20.9 m). The annual CoastSat score and the photo-date score want different b (0.06-0.07 against 0.12). On 2009-2025 it beats the pin but not no groin: it holds the gap too wide (−18 m against CoastSat's −50 m).
+- **Next, in order:**
+  1. **Decide the failure schedule** (options A-C in `3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`). It now limits both groin versions on 2009-2025.
+  2. **Decide which observation drives the calibration:** annual CoastSat, the photo dates, or the joint score.
+  3. **Refit option 1 under that schedule and score,** then rerun the 2009-2025 test.
+  4. **Then decide whether option 1 replaces the pin.** If it does, move the drift groin from `drift_groin.py`'s in-process patch into `cascade/groin.py` as its own callback, alongside `BlockingGroinCallback`, and refit for the runner.
+- **Check before quoting:** the pinned 2009-2025 test run reads −416 m of island change against no groin. It is a 10-05 run and may not share the baseline's setup.
+- **Still open:** the D: offload below.
 
 **Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the pinned `joint_fit.json` is in `output/calibration/groin/`. The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\CASCADE_offload\output\calibration\` on 2026-10-07.
 
