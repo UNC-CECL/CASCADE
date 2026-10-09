@@ -15,6 +15,8 @@ TEST_PLAN.md        the 2026-09-11 design: tier 0 offline (built), tiers 1-2 ful
                     that led to the blocking groin
 4-groin-field/      2026-10-09. Four groins 1 to 10 km apart on one straight coast: the
                     dipole, pinned, drift and corrected versions scored as a groin field
+5-fine-grid-reference/  2026-10-09. A Buxton-sized field (three groins, 200 m apart) on a 25 m
+                    one-line model with GENESIS-style bypassing, as the yardstick for the modules
 figures/            groin_module_logic: the dipole's arithmetic as a schematic
 ```
 
@@ -23,6 +25,7 @@ figures/            groin_module_logic: the dipole's arithmetic as a schematic
 2. The dipole's fillet is bought by M / diffusion number, the solve is not volume-conserving, and five domains are too few.
 3. The old M = 60 is not runnable under option A; a blocking groin, bounded by the transport that arrives, is.
 4. With four groins on one coast, the corrected version behaves most like a groin field (105 of 112 checks against 60 to 75 for the others), but close groins share their sand only weakly, since no version has a groin length.
+5. Against a real-sized field on a 25 m grid, the corrected version is closest (gap error 71 m against 103 to 241 m), but the field's gap is set by groin length (about twice it), which no module has.
 
 **Next step up (not built).** The same straight-coast test inside full CASCADE on a fake barrier, storms off then on (`TEST_PLAN.md` tiers 1-2), once a module version passes step 1.
 

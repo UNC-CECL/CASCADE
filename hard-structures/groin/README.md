@@ -20,6 +20,7 @@ from simplest to most complex.
     2-solver-audit/            the dipole in BRIE's alongshore solve alone
     3-real-planform/           the dipole and blocking groin on the real planform, option A waves
     4-groin-field/             four groins on one straight coast: which module behaves like a groin field
+    5-fine-grid-reference/     a real-sized field on a 25 m grid as the yardstick for the modules
     figures/                   the dipole's arithmetic as a schematic
 3-hindcast/                the module fitted to Buxton in real model runs
     1-dipole-1967-2017/        SUPERSEDED: the dipole (M, f) fit on the 1967-2017 rig
