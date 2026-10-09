@@ -124,10 +124,10 @@ def gap_over_time():
             ax.plot(period + np.arange(len(m)) + 0.5, m, color=col, ls=ls, lw=1.6 if "corrected" in label else 1.3)
         n = len(sr.model_change(files["no groin"]))
         obs = obs[(obs.index >= period) & (obs.index < period + n)]       # this period's years only
-        ax.plot(obs.index + 0.5, obs.values, "o", color=OBS_C, ms=3.5, mfc="white", mew=1.0)
+        ax.plot(obs.index + 0.5, obs.values, "o-", color=OBS_C, lw=0.9, ms=3.5, mfc="white", mew=1.0)
         yrs = [y for y in photos.index if period < y <= period + n]
         g0 = np.interp(period, photos.index, photos.values)
-        ax.plot(yrs, [photos[y] - g0 for y in yrs], "s", color=OBS_C, ms=5)
+        ax.plot(yrs, [photos[y] - g0 for y in yrs], "s", color=OBS_C, ms=5, ls=(0, (3, 2)), lw=0.9)
         if period == TEST:
             ax.axvline(2017.5, color=INK_MUTED, lw=0.7, ls=(0, (1, 2)))
             ax.text(2017.7, ax.get_ylim()[1] * 0.95, "2017 fill;\ngroin off",
@@ -142,8 +142,8 @@ def gap_over_time():
                      loc="center", fontsize=8.5)
     axes[0].set_ylabel("Change in the gap across the\ngroins since the start (m)")
     handles = [Line2D([], [], color=col, ls=ls, lw=1.5, label=label) for label, (col, ls) in RUNS.items()]
-    handles += [Line2D([], [], color=OBS_C, marker="o", ls="none", mfc="white", label="observed, annual CoastSat"),
-                Line2D([], [], color=OBS_C, marker="s", ls="none", label="observed, wet/dry photo dates")]
+    handles += [Line2D([], [], color=OBS_C, marker="o", lw=0.9, mfc="white", label="observed, annual CoastSat"),
+                Line2D([], [], color=OBS_C, marker="s", lw=0.9, ls=(0, (3, 2)), label="observed, wet/dry photo dates")]
     fig.legend(handles=handles, loc="outside lower center", ncol=3, fontsize=6.8, frameon=False)
     fig.suptitle("Does the corrected groin reproduce the gap across the Buxton groins?")
     png = FIGS / "corrected_groin_2_gap_over_time.png"
@@ -290,8 +290,8 @@ def main():
         "**Tests:** whether the corrected groin reproduces the observed gap across the Buxton groins, in the "
         "calibration period it was fitted to and in the test period it was not. **How to read:** the change in "
         "the gap between GIS 6 (updrift, north) and GIS 5 (downdrift, south) since each period's start, from its "
-        "own starting topography; positive means the gap widened. Teal: observed, annual CoastSat (open circles) "
-        "and the wet/dry photo dates (squares). Lines: no groin (grey), the pinned groin in the runner now "
+        "own starting topography; positive means the gap widened. Teal: observed, annual CoastSat (open circles, joined) "
+        "and the wet/dry photo dates (squares, dashed). Lines: no groin (grey), the pinned groin in the runner now "
         f"(purple), and the two-number corrected groin at {CHOSEN} (solid black, fitted to annual CoastSat) and "
         f"{JOINT} (dashed, fitted to both records), each off from the 2017 fill. **Shows:** without a groin the "
         "gap closes far too fast in both periods. In the test, the pinned groin follows the observed gap until "
