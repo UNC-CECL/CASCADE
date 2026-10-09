@@ -157,3 +157,4 @@ The joint score is flat at 0.18-0.19; at 0.19 the two scores are nearly equal. T
 | `corrected_groin_3_choosing_strength` | Which strength each observed record picks, and how each does on the test |
 | `corrected_groin_4_test_summary` | Every groin version on 2009-2025, before and after the 2017 fill |
 | `corrected_groin_5_plan_view` | The shorelines on a map (1.5 km windows, true scale) in 2008, 2016 and 2024: observed, no groin, pinned and corrected (`plan_view_figure.py`) |
+| `corrected_groin_effect.gif` | The shoreline with and without the corrected groin, year by year on the 1.5 km map, with the gap alongside (`groin_effect_gif.py`; git-ignored, rerun to make it) |
