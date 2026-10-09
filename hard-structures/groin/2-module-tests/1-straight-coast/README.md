@@ -49,6 +49,8 @@ None of the first five is right. The pinned groin conserves sand but traps the w
 
 **How the corrected groin works, in one figure (2026-10-09).** `corrected_groin_explained_figure.py` draws `6-trapping-corrected/figures/corrected_groin_explained.png`: a sketch of the four steps each year, the sand held back against the sand BRIE carries back, and the gap levelling off, at −20°.
 
+The same, animated in the sketch's style: `corrected_groin_sketch_gif.py` draws `6-trapping-corrected/figures/corrected_groin_explained.gif` (git-ignored), with the shoreline each year from the model and the arrows' widths in proportion to the sand they move.
+
 **How the corrected groin works, as a GIF (2026-10-09).** `corrected_groin_gif.py` animates module 6 alone at −20° for 60 years: `6-trapping-corrected/figures/corrected_groin_how_it_works.gif` (git-ignored; rerun the script). Each year the groin holds back 60% of the drift arriving, moving it from the downdrift cell to the updrift cell, and puts back BRIE's leak near the groin. What it holds back hardly changes: 58 m of shoreline in year 1, 57.6 m in year 60. The approach face turns from −20° to about −18°, where the drift is almost the same. The gap levels off because BRIE treats the groin face as open and carries sand back across it, about 15 m a year in year 1 and 38 m by year 60, and spreads the rest along the coast. The gap is 104 m after year 1, 204 m at year 25 and 215 m at year 60.
 
 Run: `python straight_coast_test.py [--years 50]` (about a minute), then `python straight_coast_conservative_solve_check.py`.
