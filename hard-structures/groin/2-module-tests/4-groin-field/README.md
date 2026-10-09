@@ -56,13 +56,13 @@ A qualitative comparison, not a fit. It draws on the groin-design literature: th
 | no sand is created: what the field holds comes out of the coast below it | yes | yes | no | no |
 | sand piled against each groin's updrift side, a sawtooth | yes | negative angles only | yes | forced by the transfer |
 | recession below the last groin (Westhampton) | yes | negative angles only | mostly | mostly |
-| the fillet stops growing as the shoreline turns toward the waves | yes | still growing at 50 yr | — | grows without limit at −20° |
+| the fillet stops growing | yes, but not through the groin: BRIE carries sand back across the groin face (see below) | still growing at 50 yr | — | grows without limit at −20° |
 
 The last row is from the single-groin runs (`../1-straight-coast/*/tables/*_by_year.csv`). The cell just updrift of the corrected groin builds out 91, 97, 103 and 107 m at years 5, 10, 25 and 50 at −20°, and 126, 144, 158 and 164 m at 0°. The pinned groin's grows 30, 45, 68 and 85 m at −20°; the dipole's 38, 60, 113 and 207 m.
 
 **Two things the literature describes that this test cannot show.**
 1. *A real groin field is smaller than one domain.* Groins are usually spaced a few groin lengths apart, roughly 100 to 400 m, so a whole field fits inside one 500 m domain, as Buxton's four groins do. The groins here, 1 to 10 km apart, are separate structures along one coast. How compartments within one field fill in turn, the most updrift first while the next is starved, happens below the grid.
-2. *Groin length is not modelled.* In the literature a compartment fills to about the groin's tip, then sand passes around it and the recession below the field stops growing. In the corrected version the fillet levels off only because the shoreline turns toward the waves. That limit is set by the wave climate and the blocking fraction, not by a structure, and the steps of 245 to 330 m across each groin at 0° are probably more than a real groin could hold.
+2. *Groin length is not modelled.* In the literature a compartment fills to about the groin's tip, then sand passes around it and the recession below the field stops growing. In the corrected version the groin holds back nearly the same amount every year (58 m of shoreline in year 1 and 57.6 m in year 60 at −20°). The fillet levels off because BRIE, which treats the groin face as open, carries more and more of it back across the face as the gap steepens (about 15 m a year in year 1, 38 m by year 60), and spreads the rest along the coast (`../1-straight-coast/corrected_groin_gif.py`; corrected 2026-10-09, when this line said the shoreline turning toward the waves cut the drift arriving). That limit is set by the wave climate, the blocking fraction and BRIE's diffusivity, not by a structure, and the steps of 245 to 330 m across each groin at 0° are probably more than a real groin could hold.
 
 5. **Adding a groin length (module 7) does not help in a field.** It scores 99 against the corrected version's 105: it holds less sand at each groin and fails "act as one" at four more cases. The length test is in `../5-fine-grid-reference/`.
 
