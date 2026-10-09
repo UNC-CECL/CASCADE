@@ -45,4 +45,22 @@ The tests were set on 2026-10-09, before the runs. Each is scored at year 50 for
 3. **The dipole and drift versions do not conserve sand in a field.** The drift version creates sand on coasts turned against the drift and destroys it on coasts turned with it: up to 18,800 m of summed shoreline at +20° with the groins 10 apart, where the whole field erodes (panels i and l of `groin_field_profiles.png`). The dipole adds or removes up to 7,000 m. Both build a sawtooth because each groin's own transfer forces one, not because the field holds sand.
 4. **Close groins share their sand only weakly in every version.** In a real field the compartments between close groins are short, so each groin holds a small offset and the field acts as one wider structure. Here, at 1 km apart, each of the corrected version's downdrift groins still holds 71% to 92% of an isolated groin's offset at −30° to +20° (45% at +10°). By 5 km apart it is 80% to 101%. None of the modules has a groin length, so nothing caps the offset, and at 0.5 km apart (the first run) each groin held as much as an isolated one at −20°, −10° and +20°. The test passes, but the sharing is much weaker than a real field's.
 
+## Against the groin literature (2026-10-09)
+
+A qualitative comparison, not a fit. It draws on the groin-design literature: the USACE manual EM 1110-2-1617 (1992), *Coastal Groins and Nearshore Breakwaters*, and Kraus, Hanson & Blomgren (1994), *Modern functional design of groin systems*, Proc. 24th ICCE, 1327-1342, which models single groins and groin fields with GENESIS against the 15 groins at Westhampton Beach, New York. Nersesian, Kraus & Carson (1992, Proc. 23rd ICCE) describe that field: accretion inside it, and heavy recession downdrift of the last groin where too little sand bypassed. The comparison was written from the abstracts and from general knowledge of these works; the full texts were not re-read.
+
+| what the literature describes | corrected | pinned | drift | dipole |
+|---|---|---|---|---|
+| a groin works only where there is net longshore drift, and traps on its updrift side (Kraus et al. 1994: net against gross transport controls how a groin works) | yes, reads the drift | no, reads the tilt: nothing at 0°, wrong side at +20° | yes | no, a fixed transfer whatever the drift |
+| no sand is created: what the field holds comes out of the coast below it | yes | yes | no | no |
+| sand piled against each groin's updrift side, a sawtooth | yes | negative angles only | yes | forced by the transfer |
+| recession below the last groin (Westhampton) | yes | negative angles only | mostly | mostly |
+| the fillet stops growing as the shoreline turns toward the waves | yes | still growing at 50 yr | — | grows without limit at −20° |
+
+The last row is from the single-groin runs (`../1-straight-coast/*/tables/*_by_year.csv`). The cell just updrift of the corrected groin builds out 91, 97, 103 and 107 m at years 5, 10, 25 and 50 at −20°, and 126, 144, 158 and 164 m at 0°. The pinned groin's grows 30, 45, 68 and 85 m at −20°; the dipole's 38, 60, 113 and 207 m.
+
+**Two things the literature describes that this test cannot show.**
+1. *A real groin field is smaller than one domain.* Groins are usually spaced a few groin lengths apart, roughly 100 to 400 m, so a whole field fits inside one 500 m domain, as Buxton's four groins do. The groins here, 1 to 10 km apart, are separate structures along one coast. How compartments within one field fill in turn, the most updrift first while the next is starved, happens below the grid.
+2. *Groin length is not modelled.* In the literature a compartment fills to about the groin's tip, then sand passes around it and the recession below the field stops growing. In the corrected version the fillet levels off only because the shoreline turns toward the waves. That limit is set by the wave climate and the blocking fraction, not by a structure, and the steps of 245 to 330 m across each groin at 0° are probably more than a real groin could hold.
+
 **What this means for the module.** If a model run has more than one groin, the corrected version is the one to use, with the same reservation as for one groin: its leak correction also acts on any natural bend near a groin (`../3-real-planform/corrected_groin/`). A groin length, a cap on the offset a groin can hold, would be needed before close groins share sand as a real field does. That is a module change, so it is not part of this test.
