@@ -31,11 +31,76 @@ roadway and dune elevations are reduced by SLR for each time step.
 """
 
 import copy
+import math
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
+
+
+def shoreface_nourishment(
+    x_s,
+    x_t,
+    nourishment_volume,
+    average_barrier_height,
+    shoreface_depth,
+    beach_width,
+):
+    """Nourish the roadway-domain shoreface and update its beach width.
+
+    This is the roadway-local implementation of the formulation used by
+    BeachDuneManager. All inputs must use the same horizontal and vertical units.
+    """
+
+    new_x_s = x_s - (2 * nourishment_volume) / (
+        2 * average_barrier_height + shoreface_depth
+    )
+    s_sf = shoreface_depth / (new_x_s - x_t)
+    beach_width = beach_width + (x_s - new_x_s)
+
+    return new_x_s, s_sf, beach_width
+
+
+def beach_width_dune_dynamics(
+    current_beach_width,
+    beach_width_last_year,
+    beach_width_threshold,
+    barrier3d,
+    time_index,
+):
+    """Control dune migration using the roadway-domain managed beach width."""
+
+    if current_beach_width <= beach_width_threshold:
+        barrier3d.dune_migration_on = True
+
+        if beach_width_last_year > beach_width_threshold:
+            cellular_shoreline_change = int(math.floor(current_beach_width) / -10)
+
+            if cellular_shoreline_change >= 1:
+                barrier3d.SCRagg[time_index - 1] = (
+                    (barrier3d.x_s_TS[-1] % 1) + cellular_shoreline_change
+                ) * -1
+                barrier3d.migrate_dunes(
+                    shoreline_change_aggregate=barrier3d.SCRagg[time_index - 1],
+                    cellular_shoreline_change=cellular_shoreline_change,
+                    time_index=time_index - 1,
+                )
+
+                _, _, interior_width_average = barrier3d.FindWidths(
+                    barrier3d.InteriorDomain, barrier3d.SL
+                )
+                barrier3d.InteriorWidth_AvgTS[-1] = interior_width_average
+                barrier3d.DomainTS[time_index - 1] = barrier3d.InteriorDomain
+            else:
+                barrier3d.SCRagg[time_index - 1] = (barrier3d.x_s % 1) * -1
+
+        if current_beach_width < 0:
+            current_beach_width = 0
+    else:
+        barrier3d.dune_migration_on = False
+
+    return current_beach_width
 
 
 def bulldoze(
@@ -449,6 +514,7 @@ def road_relocation_checks(
     road_relocation_setback,
     road_relocation_width,
     average_barrier_width,
+    forced_relocation=False,
 ):
     """Check if the roadway needs to be relocated due to dune migration, and if
     there is room for roadway relocation.
@@ -468,6 +534,9 @@ def road_relocation_checks(
         The road width specified for roadway relocation [m]
     average_barrier_width: float
         The average barrier width from the last time step [m]
+    forced_relocation: bool, optional
+        Request relocation during this update even when the dune line has not
+        crossed the road. The original width-feasibility check still applies.
 
     Returns
     -------
@@ -486,29 +555,29 @@ def road_relocation_checks(
     if dune_migrated != 0:
         road_setback = road_setback + dune_migrated
 
-        # with this shoreline change and dune migration, check if the roadway needs
-        # to be relocated
+    relocation_requested = bool(forced_relocation) or (
+        dune_migrated != 0 and road_setback < 0
+    )
+    if relocation_requested:
+        road_relocated = 1
+        print("Roadway relocated")
 
-        if road_setback < 0:
-            road_relocated = 1
-            print("Roadway relocated")
-
-            # relocate the road only if the width of the island allows it
-            if (
-                road_relocation_setback
-                + (
-                    2 * road_relocation_width
-                )  # bay shoreline buffer of one roadway width
-                > average_barrier_width
-            ):
-                relocation_break = 1
-                # time_index - 1 because B3D advances time step at end of dune_update
-                print(
-                    "Island is too narrow for roadway to be relocated. Roadway "
-                    f"eaten up by dunes at {time_index - 1} years"
-                )
-            else:
-                road_setback = road_relocation_setback
+        # relocate the road only if the width of the island allows it
+        if (
+            road_relocation_setback
+            + (
+                2 * road_relocation_width
+            )  # bay shoreline buffer of one roadway width
+            > average_barrier_width
+        ):
+            relocation_break = 1
+            # time_index - 1 because B3D advances time step at end of dune_update
+            print(
+                "Island is too narrow for roadway to be relocated. Roadway "
+                f"eaten up by dunes at {time_index - 1} years"
+            )
+        else:
+            road_setback = road_relocation_setback
 
     return road_relocated, road_setback, relocation_break
 
@@ -575,6 +644,10 @@ class RoadwayManager:
         original_growth_param=None,
         road_relocation_setback=30,
         allow_causeway=False,
+        nourishment_interval=None,
+        nourishment_volume=100,
+        initial_beach_width=30,
+        road_setback_trigger=20.0,
     ):
         """The RoadwayManager module
 
@@ -599,6 +672,19 @@ class RoadwayManager:
         original_growth_param: optional
             Dune growth parameters from first time step of Barrier3d, before
             human modifications [unitless]
+        nourishment_interval: int, optional
+            Interval between roadway-domain beach nourishment events [years].
+            If None, nourishment occurs only when explicitly requested.
+        nourishment_volume: float, optional
+            Volume of nourished sand along a cross-shore transect [m^3/m].
+        initial_beach_width: float, optional
+            Initial roadway-domain beach width [m]. Beach-width management stays
+            inactive until the first nourishment event.
+        road_setback_trigger: float, optional
+            Maximum road setback at which the existing dune-rebuilding process is
+            permitted [m]. When the current setback is greater than this trigger,
+            artificial rebuilding is skipped and the dunes continue to evolve
+            through Barrier3D's natural dune-growth logic. The default is 20 m.
         road_relocation_setback: optional
             Distance from the duneline where the relocated road will be placed [m]
         allow_causway: optional
@@ -621,6 +707,15 @@ class RoadwayManager:
         self._percent_water_cells_touching_road = 0.2
         self._allow_causeway = allow_causeway
 
+        # These values mirror BeachDuneManager, but they do not alter original
+        # RoadwayManager behavior until the first actual nourishment event.
+        self._nourishment_interval = nourishment_interval
+        self._nourishment_counter = nourishment_interval
+        self._nourishment_volume = nourishment_volume
+        self._beach_width_threshold = 0
+        self._beach_management_active = False
+        self._road_setback_trigger = road_setback_trigger
+
         # set relocation parameters to original values
         self._road_relocation_width = (
             road_width  # can be updated outside `update` within cascade
@@ -628,6 +723,8 @@ class RoadwayManager:
         self._road_relocation_setback = (
             road_relocation_setback  # can be updated outside `update` within cascade
         )
+        self._historical_relocation_requested = False
+        self._historical_relocation_setback = None
 
         # user can specify that dune rebuilding is off with `None`: mostly for
         # debugging and sensitivity testing
@@ -665,6 +762,17 @@ class RoadwayManager:
         self._dune_minimum_elevation_TS[0] = self._dune_minimum_elevation
         self._dunes_rebuilt_TS = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
         self._road_relocated_TS = np.zeros(self._nt)  # when road is relocated (boolean)
+        self._triggered_relocation_TS = np.zeros(self._nt, dtype=bool)
+        self._relocation_incomplete_TS = np.zeros(self._nt, dtype=bool)
+        self._historical_relocation_requested_TS = np.zeros(self._nt, dtype=bool)
+        self._forced_relocation_TS = np.zeros(self._nt, dtype=bool)
+        self._beach_width = [np.nan] * self._nt
+        self._beach_width[0] = initial_beach_width
+        self._nourishment_TS = np.zeros(self._nt)
+        self._nourishment_volume_TS = np.zeros(self._nt)
+        self._dune_migration_on = [np.nan] * self._nt
+        self._dune_migration_on[0] = True
+        self._road_dune_rebuild_disabled_TS = np.zeros(self._nt, dtype=bool)
         self._rebuild_dune_volume_TS = np.zeros(
             self._nt
         )  # sand for rebuilding dunes [m^3]
@@ -689,8 +797,24 @@ class RoadwayManager:
         self._post_storm_interior = [None] * self._nt
         self._post_storm_ave_interior_height = [None] * self._nt
 
-    def update(self, barrier3d, trigger_dune_knockdown):
+    def update(self, barrier3d, trigger_dune_knockdown, nourish_now=False):
         self._time_index = barrier3d.time_index
+
+        if self._nourishment_counter is not None:
+            self._nourishment_counter -= 1
+
+        nourishment_due = bool(nourish_now or self._nourishment_counter == 0)
+
+        self._update_beach_width_dune_dynamics(barrier3d)
+
+        historical_relocation_requested = bool(self._historical_relocation_requested)
+        historical_relocation_setback = self._historical_relocation_setback
+        self._historical_relocation_requested = False
+        self._historical_relocation_setback = None
+        diagnostic_index = self._time_index - 1
+        self._historical_relocation_requested_TS[diagnostic_index] = (
+            historical_relocation_requested
+        )
 
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
@@ -716,20 +840,37 @@ class RoadwayManager:
         dune_migration = (
             barrier3d.ShorelineChangeTS[self._time_index - 1] * 10
         )  # if +, dune progrades; -, dune erodes into interior [m]
-        [road_relocated, self._road_setback, self._relocation_break] = (
-            road_relocation_checks(
-                self._time_index,
-                dune_migration,
-                self._road_setback,  # current road setback, m
-                self._road_relocation_setback,  # setback specified for relocation, m
-                self._road_relocation_width,  # width specified for relocation, m
-                average_barrier_width,  # current width, m
-            )
+
+        # check if there is a forced relocation
+        if historical_relocation_requested:
+             relocation_target_setback= historical_relocation_setback
+        else:
+            relocation_target_setback = self._road_relocation_setback
+
+        # track if the road is relocated
+        relocation_requested = bool(
+            historical_relocation_requested
+            or (dune_migration != 0 and self._road_setback + dune_migration < 0)
+        )
+
+        [
+            road_relocated,
+            self._road_setback,
+            self._relocation_break,
+        ] = road_relocation_checks(
+            self._time_index,
+            dune_migration,
+            self._road_setback,  # current road setback, m
+            relocation_target_setback,  # normal or historical target setback, m
+            self._road_relocation_width,  # width specified for relocation, m
+            average_barrier_width,  # current width, m
+            forced_relocation=historical_relocation_requested,
         )
 
         # if road can't be relocated, no longer manage and exit; dune growth
         # parameters reset to original in CASCADE
         if self._relocation_break == 1:
+            self._relocation_incomplete_TS[diagnostic_index] = relocation_requested
             # an adaptation solution may be to knock down the dunes so that they
             # are small and can easily be overwashed
             if trigger_dune_knockdown:
@@ -737,7 +878,8 @@ class RoadwayManager:
                     0, :, :
                 ]
 
-            return
+            self._release_beach_width_control(barrier3d)
+            return nourish_now
 
         # if road is relocated, get the new road elevation (built at grade) and
         # update dune elevations which are dependent on the road elevation;
@@ -785,6 +927,9 @@ class RoadwayManager:
         # road cannot be below 0 m MHW (sea level); stop managing!
         if self._road_ele < 0:
             self._drown_break = 1
+            self._relocation_incomplete_TS[diagnostic_index] = bool(
+                relocation_requested and road_relocated
+            )
             print(
                 f"Roadway drowned in place at {self._time_index - 1} years due to "
                 "SLR - road cannot be below 0 m MHW"
@@ -797,8 +942,12 @@ class RoadwayManager:
                     0, :, :
                 ]
 
-            return
+            self._release_beach_width_control(barrier3d)
+            return nourish_now
         elif self._drown_break == 1:  # if road drowned from road relocation above
+            self._relocation_incomplete_TS[diagnostic_index] = bool(
+                relocation_requested and road_relocated
+            )
             # an adaptation solution may be to knock down the dunes so that they are
             # small and can easily be overwashed
             if trigger_dune_knockdown:
@@ -806,7 +955,8 @@ class RoadwayManager:
                     0, :, :
                 ]
 
-            return
+            self._release_beach_width_control(barrier3d)
+            return nourish_now
 
         # when the roadway gets really low in elevation, the dune_design_elevation
         # may not be above the berm; when this happens, we use a design height of
@@ -823,6 +973,13 @@ class RoadwayManager:
             (barrier3d.BermEl * 10) + self._absolute_minimum_dune_height,
         )
 
+        road_dune_rebuild_disabled = bool(
+            self._road_setback > self._road_setback_trigger
+        )
+        self._road_dune_rebuild_disabled_TS[self._time_index - 1] = (
+            road_dune_rebuild_disabled
+        )
+
         # save time series
         self._road_setback_TS[self._time_index - 1] = self._road_setback
         self._road_width_TS[self._time_index - 1] = self._road_width
@@ -834,6 +991,12 @@ class RoadwayManager:
             self._dune_minimum_elevation
         )
         self._road_relocated_TS[self._time_index - 1] = road_relocated
+        self._triggered_relocation_TS[diagnostic_index] = bool(
+            road_relocated and not historical_relocation_requested
+        )
+        self._forced_relocation_TS[diagnostic_index] = bool(
+            road_relocated and historical_relocation_requested
+        )
 
         ###############################################################################
         # bulldoze roadway after storms and check for road width drowning
@@ -871,7 +1034,8 @@ class RoadwayManager:
                     0, :, :
                 ]
 
-            return  # exit program
+            self._release_beach_width_control(barrier3d)
+            return nourish_now  # exit program
 
         self._road_overwash_volume[self._time_index - 1] = (
             road_overwash_removal * dm3_to_m3
@@ -894,6 +1058,8 @@ class RoadwayManager:
         # dune management: rebuild dunes!
         # Dune min elevation should likely be altered
         if self._dune_design_elevation is None or self._dune_minimum_elevation is None:
+            pass
+        elif self._road_setback > self._road_setback_trigger:
             pass
         else:
             # in B3D, dune height is the height above the berm crest
@@ -966,7 +1132,181 @@ class RoadwayManager:
         # update class variables
         barrier3d.growthparam = new_growth_parameters
 
-        return
+        # Apply only the shoreface/beach nourishment action from
+        # BeachDuneManager. Roadway dune rebuilding above remains unchanged.
+        if nourishment_due:
+            self.nourish_now(barrier3d)
+            if self._nourishment_counter is not None:
+                self._nourishment_counter = self._nourishment_interval
+            nourish_now = 0
+
+        self._dune_migration_on[self._time_index - 1] = getattr(
+            barrier3d, "dune_migration_on", np.nan
+        )
+
+        return nourish_now
+
+    def _update_beach_width_dune_dynamics(self, barrier3d):
+        """Apply BeachDuneManager beach-width control after its activation."""
+
+        output_index = self._time_index - 1
+        previous_index = output_index - 1
+
+        if not self._beach_management_active:
+            # Before the first nourishment, keep the original RoadwayManager and
+            # native Barrier3D dune-migration behavior. The unchanged width is
+            # retained so the first nourishment starts from the configured width.
+            if previous_index >= 0:
+                self._beach_width[output_index] = self._beach_width[previous_index]
+            self._dune_migration_on[output_index] = getattr(
+                barrier3d, "dune_migration_on", np.nan
+            )
+            return
+
+        change_in_shoreline = (barrier3d.x_s_TS[-1] - barrier3d.x_s_TS[-2]) * 10
+        self._beach_width[output_index] = (
+            self._beach_width[previous_index] - change_in_shoreline
+        )
+
+        self._beach_width[output_index] = beach_width_dune_dynamics(
+            current_beach_width=self._beach_width[output_index],
+            beach_width_last_year=self._beach_width[previous_index],
+            beach_width_threshold=self._beach_width_threshold,
+            barrier3d=barrier3d,
+            time_index=self._time_index,
+        )
+
+    def _release_beach_width_control(self, barrier3d):
+        """Restore native dune migration if an actively managed road is lost."""
+
+        if not self._beach_management_active:
+            return
+
+        output_index = self._time_index - 1
+        barrier3d.dune_migration_on = True
+        barrier3d.SCRagg[output_index] = (barrier3d.x_s % 1) * -1
+        self._dune_migration_on[output_index] = True
+        self._beach_management_active = False
+
+    def nourish_now(self, barrier3d, nourishment_volume=None, beach_width=None):
+        """Nourish the shoreface exactly as BeachDuneManager does.
+
+        This intentionally does not use BeachDuneManager's overwash filtering or
+        community dune-rebuilding actions. Roadway dune management is unchanged.
+        """
+
+        self._time_index = barrier3d.time_index
+        output_index = self._time_index - 1
+        if nourishment_volume is None:
+            nourishment_volume = self._nourishment_volume
+        if beach_width is None:
+            beach_width = self._beach_width[output_index]
+            if not np.isfinite(beach_width) and output_index > 0:
+                beach_width = self._beach_width[output_index - 1]
+        (
+            barrier3d.x_s,
+            barrier3d.s_sf_TS[-1],
+            self._beach_width[output_index],
+        ) = shoreface_nourishment(
+            barrier3d.x_s,
+            barrier3d.x_t,
+            nourishment_volume / 100,
+            barrier3d.h_b_TS[-1],
+            barrier3d.DShoreface,
+            beach_width / 10,
+        )
+        self._beach_width[output_index] *= 10
+        self._nourishment_TS[output_index] = 1
+        self._nourishment_volume_TS[output_index] = nourishment_volume
+        barrier3d.x_s_TS[-1] = barrier3d.x_s
+        barrier3d.dune_migration_on = False
+        self._beach_management_active = True
+
+    def request_forced_relocation(self, road_setback):
+        """Queue one historical forced-relocation request for the next update.
+
+        The request supplies a target setback in meters. It does not bypass the
+        original island-width, destination-elevation, or roadway-drowning checks.
+        """
+
+        road_setback = float(road_setback)
+        if not np.isfinite(road_setback) or road_setback < 0:
+            raise ValueError(
+                "Historical relocation setback must be finite and non-negative."
+            )
+        self._historical_relocation_requested = True
+        self._historical_relocation_setback = road_setback
+
+    def request_historical_relocation(self, road_setback):
+        """Alias that explicitly names the historical-request use case."""
+
+        self.request_forced_relocation(road_setback)
+
+    @property
+    def triggered_relocation_TS(self):
+        return self._triggered_relocation_TS
+
+    @property
+    def relocation_incomplete_TS(self):
+        return self._relocation_incomplete_TS
+
+    @property
+    def historical_relocation_requested_TS(self):
+        return self._historical_relocation_requested_TS
+
+    @property
+    def forced_relocation_TS(self):
+        return self._forced_relocation_TS
+
+    @property
+    def beach_width(self):
+        return self._beach_width
+
+    @property
+    def nourishment_TS(self):
+        return self._nourishment_TS
+
+    @property
+    def nourishment_volume_TS(self):
+        return self._nourishment_volume_TS
+
+    @property
+    def nourishment_volume(self):
+        return self._nourishment_volume
+
+    @nourishment_volume.setter
+    def nourishment_volume(self, value):
+        self._nourishment_volume = value
+
+    @property
+    def nourishment_interval(self):
+        return self._nourishment_interval
+
+    @nourishment_interval.setter
+    def nourishment_interval(self, value):
+        if self._nourishment_interval != value:
+            self._nourishment_interval = value
+            self._nourishment_counter = value
+
+    @property
+    def dune_migration_on(self):
+        return self._dune_migration_on
+
+    @property
+    def beach_management_active(self):
+        return self._beach_management_active
+
+    @property
+    def road_setback_trigger(self):
+        return self._road_setback_trigger
+
+    @road_setback_trigger.setter
+    def road_setback_trigger(self, value):
+        self._road_setback_trigger = value
+
+    @property
+    def road_dune_rebuild_disabled_TS(self):
+        return self._road_dune_rebuild_disabled_TS
 
     @property
     def road_relocation_width(self):
