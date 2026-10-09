@@ -32,10 +32,21 @@ run_log.txt                      the 2026-10-09 run's printed tables
 | drift | 103 m | 121 m |
 | dipole | 116 m | 51 m |
 | pinned | 241 m | 67 m |
+| corrected, with length (module 7, added 10-09) | 95 m | 26 m |
 
 1. **The real-sized field is limited by its groin length, not by the waves.** It fills to its tips within 5 to 20 years at −30° to +20°, then holds a gap of about twice the groin length at every one of those orientations: 108 to 113 m for 55 m groins, 213 to 227 m for 110 m groins, 441 to 461 m for 220 m groins. Only at +30°, where the drift is a tenth of its grid-aligned value, is it still filling at year 50 (136 m). This is the literature's picture: a compartment fills to the tip and then bypasses.
 2. **The corrected version is closest, by a wide margin on coasts turned against the drift.** At −30° and −20° its gap ends at 215 and 214 m against the reference's 225 and 227 m (gap error 23 and 20 m, shoreline error 8 and 9 m). That is partly coincidence: its fillet levels off because the shoreline turns toward the waves, and here that limit happens to land near what 110 m groins hold.
 3. **Without a groin length, every module misses at other orientations.** At 0° the corrected version overshoots, 328 m against 223 m, and is still growing. At +20° it undershoots, 44 m against 222 m: BRIE's diffusivity there is five times larger than at −20° and spreads the fillet. The reference still fills to its tips. The drift version overshoots at most orientations (343 m at −20°) and shows a numerical zigzag. The pinned version builds its gap on the wrong side from +10° on (−230 m at +20°).
 4. **What this suggests for Buxton.** The observed gap reached 117 m by 1978, about ten years after installation, and peaked at 150 to 155 m in 1995-2004. That is the speed and the kind of levelling-off the reference shows. A gap of about twice the groin length would put Buxton's effective length near 75 m, shorter than the digitized 90 to 155 m, which include the part of each groin on the beach. This is a hypothesis for the hindcast stage, not a result: the record also carries storms, the 2003 damage and the post-1995 deterioration.
+
+## Module 7: the corrected groin with a length (2026-10-09)
+
+Built on the finding above: the corrected version with GENESIS-style bypassing, blocking 0.6 × (1 − a/L)^(2/3), with a the 500 m updrift cell's build-out and L the physical groin length, untuned (`../1-straight-coast/straight_coast_test.py`, module 7; `../4-groin-field/groin_field_test.py`). It conserves sand (within 10 m on the straight coast) and its gap levels off as intended, but too low:
+
+- **With 110 m groins** it ends at 124 to 182 m at −30° to +10°, against the reference's 213 to 227 m, and at 37 m at +20°, against 222 m.
+- **It barely scales with L** (`fine_reference_3_length.png`, `tables/fine_reference_length_check.csv`). From 55 to 220 m groins its gap rises from 80-101 m to 159-246 m at −30° to +10°, while the reference doubles each time (108-113, 213-227, 441-461 m). Its gap error against the reference at the same L is 41 m at 55 m, 95 m at 110 m and 248 m at 220 m.
+- **On average it is further from the reference than the corrected version without a length** (gap error 95 m against 71 m; shoreline error 26 m against 25 m).
+
+**Why.** The rule reads how far the whole 500 m updrift cell has built out. In the reference, the cells right at the groins reach the tips while the domain average is about L. On BRIE's grid, the module's sand spreads updrift through 500 m diffusion as it arrives, so the updrift cell never gets near L: 63 m at −20° on the straight coast. The groin therefore starts letting sand round its tip long before a real one would. Raising L to compensate would make it a tuned parameter, not a length: even L = 220 m gives 160 m at −20°, against 227 m for real 110 m groins.
 
 **What this means for the module.** Of the existing versions, the corrected one is the best stand-in for a real-sized field, and it is the right base. To match the reference across orientations it needs a groin length: blocking that falls to zero as the updrift cell builds out toward the tip, as in the reference. That is a change to the module. The next step would be to add it as a seventh straight-coast variant and score it against this reference before any Buxton run.

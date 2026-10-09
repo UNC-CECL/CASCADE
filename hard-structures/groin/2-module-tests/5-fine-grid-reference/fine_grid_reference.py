@@ -42,7 +42,7 @@ GROIN_OFFSETS_M = (0.0, 200.0, 400.0)     # the field's groins updrift of the co
 GROIN_LENGTH_M = 110.0                    # Buxton's digitized groins are 90-155 m
 LENGTH_SENSITIVITY_M = (55.0, 220.0)
 ORIENTATIONS = (-30, -20, -10, 0, 10, 20, 30)
-MODULES = ("dipole", "pinned", "drift", "corrected")
+MODULES = ("dipole", "pinned", "drift", "corrected", "length")
 RECORD_YEARS = tuple(range(1, 51))
 CFL = 0.4                                 # explicit step: dt = CFL dx^2 / max diffusivity
 WINDOW = 10                               # domains either side of the face in the profile error
@@ -119,13 +119,15 @@ def main():
                                               domain=np.arange(NY * SUB) / SUB, seaward_m=ref[a.years])))
                 prof.append(pd.DataFrame(dict(source="reference", theta0_deg=th, domain=np.arange(NY) + 0.5,
                                               seaward_m=to_domains(ref[a.years]))))
-        for m in MODULES:
+        runs = [(m, np.nan) for m in MODULES if m != "length"] + [
+            ("length", L) for L in (GROIN_LENGTH_M,) + LENGTH_SENSITIVITY_M]
+        for m, length in runs:
             for y in years:
-                c = gf.run_field(t, th, m, [LO], y)
-                rows.append(dict(source=m, groin_length_m=np.nan, theta0_deg=th, year=y,
+                c = gf.run_field(t, th, m, [LO], y, groin_length_m=length if m == "length" else sc.GROIN_LENGTH_M)
+                rows.append(dict(source=m, groin_length_m=length, theta0_deg=th, year=y,
                                  updrift_m=c[up], downdrift_m=c[down], gap_m=c[up] - c[down],
                                  net_change_m=float(c.sum())))
-                if y == a.years:
+                if y == a.years and not (m == "length" and length != GROIN_LENGTH_M):
                     prof.append(pd.DataFrame(dict(source=m, theta0_deg=th, domain=np.arange(NY) + 0.5,
                                                   seaward_m=c)))
         print(f"{th:+d} deg done")
@@ -137,7 +139,8 @@ def main():
     ref_prof = prof[prof.source == "reference"].set_index(["theta0_deg", "domain"]).seaward_m
     near = np.arange(LO - WINDOW, LO + WINDOW + 2) + 0.5
     score = []
-    for (m, th), s_ in frame[frame.source.isin(MODULES)].groupby(["source", "theta0_deg"]):
+    main_runs = frame[frame.source.isin(MODULES) & (frame.groin_length_m.isna() | (frame.groin_length_m == GROIN_LENGTH_M))]
+    for (m, th), s_ in main_runs.groupby(["source", "theta0_deg"]):
         s_ = s_.set_index("year")
         r_ = ref.loc[th]
         mp = prof[(prof.source == m) & (prof.theta0_deg == th)].set_index("domain").seaward_m
@@ -148,11 +151,21 @@ def main():
                           ref_net_m=r_.net_change_m.iloc[-1], module_net_m=s_.net_change_m.iloc[-1]))
     score = pd.DataFrame(score)
 
+    # Module 7 against the reference at the same groin length
+    lengths = []
+    for (th, length), s_ in frame[frame.source == "length"].groupby(["theta0_deg", "groin_length_m"]):
+        r_ = frame[(frame.source == "reference") & (frame.theta0_deg == th) & (frame.groin_length_m == length)]
+        lengths.append(dict(theta0_deg=th, groin_length_m=length, ref_gap_end_m=r_.gap_m.iloc[-1],
+                            module_gap_end_m=s_.gap_m.iloc[-1],
+                            gap_rmse_m=float(np.sqrt(((s_.gap_m.values - r_.gap_m.values) ** 2).mean()))))
+    lengths = pd.DataFrame(lengths)
+
     out = HERE / "tables"
     out.mkdir(parents=True, exist_ok=True)
     frame.to_csv(out / "fine_reference_by_year.csv", index=False, float_format="%.3f")
     prof.to_csv(out / "fine_reference_profiles.csv", index=False, float_format="%.3f")
     score.to_csv(out / "fine_reference_scores.csv", index=False, float_format="%.3f")
+    lengths.to_csv(out / "fine_reference_length_check.csv", index=False, float_format="%.3f")
 
     pd.set_option("display.width", 220)
     print(score.pivot(index="theta0_deg", columns="module", values="gap_rmse_m").round(1).to_string())
@@ -161,6 +174,8 @@ def main():
           .join(score.groupby("theta0_deg").ref_gap_end_m.first().round(1)).to_string())
     print(frame[(frame.source == "reference") & (frame.year.isin([5, 10, 25, 50]))]
           .pivot_table(index=["theta0_deg", "groin_length_m"], columns="year", values="gap_m").round(1).to_string())
+    print(lengths.pivot(index="theta0_deg", columns="groin_length_m",
+                        values=["ref_gap_end_m", "module_gap_end_m"]).round(0).to_string())
     print("reference net change, max |m|:", frame[frame.source == "reference"].net_change_m.abs().max())
 
 

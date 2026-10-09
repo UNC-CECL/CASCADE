@@ -58,7 +58,7 @@ def gap_and_profiles(frame, prof, score):
         r = ref[ref.groin_length_m == fr.GROIN_LENGTH_M]
         ax.plot(r.year, r.gap_m, **REF_KW)
         for m in fr.MODULES:
-            s_ = f[f.source == m]
+            s_ = f[(f.source == m) & (f.groin_length_m.isna() | (f.groin_length_m == fr.GROIN_LENGTH_M))]
             ax.plot(s_.year, s_.gap_m, markevery=7, **module_kw(m))
         ax.axhline(0, color=INK_MUTED, lw=0.5)
         ax.set_xlabel("Year")
@@ -161,7 +161,55 @@ def errors(score):
     return mean
 
 
-# Run: read the tables, draw both figures
+# Figure 3: the gap at the last year against groin length, the reference and module 7
+def length_check(lengths):
+    fig, ax = plt.subplots(figsize=figsize("single", height=3.0), constrained_layout=True)
+    ths = sorted(lengths.theta0_deg.unique())
+    ramp = plt.get_cmap("Greys")(np.linspace(0.35, 0.95, len(ths)))
+    for c, th in zip(ramp, ths):
+        l_ = lengths[lengths.theta0_deg == th].sort_values("groin_length_m")
+        ax.plot(l_.groin_length_m, l_.ref_gap_end_m, color=c, lw=1.4, marker="o", ms=3)
+        ax.plot(l_.groin_length_m, l_.module_gap_end_m, color=c, lw=1.0, ls=(0, (3, 2)),
+                marker=gf.MARKERS["length"], ms=3, mfc=sc.MODULES["length"]["col"], mec=sc.MODULES["length"]["col"])
+    x = np.array([0, lengths.groin_length_m.max()])
+    ax.plot(x, 2 * x, color=C["GROIN"], lw=0.8, ls=(0, (1, 1.5)))
+    ax.text(20, 75, "gap = 2L", color=C["GROIN"], fontsize=6.5, ha="left", va="bottom", rotation=0)
+    ax.set_xlabel("Groin length L (m)")
+    ax.set_ylabel("Gap after 50 yr (m)")
+    ax.set_xlim(0, x[1] * 1.05)
+    ax.set_ylim(0, None)
+    ax.grid(axis="y")
+    open_frame(ax)
+    handles = [Line2D([], [], color=INK, lw=1.4, marker="o", ms=3, label="reference, 25 m cells"),
+               Line2D([], [], color=INK, lw=1.0, ls=(0, (3, 2)), marker=gf.MARKERS["length"], ms=3,
+                      mfc=sc.MODULES["length"]["col"], mec=sc.MODULES["length"]["col"], label=sc.MODULES["length"]["label"]),
+               Line2D([], [], color=ramp[0], lw=1.4, label=f"{ths[0]:+d}$^\\circ$ (light) to {ths[-1]:+d}$^\\circ$ (dark)")]
+    ax.legend(handles=handles, loc="upper left", fontsize=6.3, frameon=False)
+    fig.suptitle("Does the gap scale with groin length?")
+    png = FIGS / "fine_reference_3_length.png"
+    save(fig, png, dpi=250, close=True)
+    sub = lengths[lengths.theta0_deg <= 10]
+    record_caption(png, (
+        "**Tests:** whether the corrected groin with a groin length (module 7) makes the gap across the groin "
+        "scale with the groin's length the way a real-sized field does. **How to read:** the gap between the "
+        "updrift and downdrift domains after 50 years against the groin length L, for the 25 m reference (solid, "
+        "circles) and module 7 on BRIE's 500 m grid with the same L (dashed, pink triangles), one shade per "
+        "orientation from -30 (light) to +30 degrees (dark); the dotted red line is a gap of twice the groin "
+        "length. **Shows:** the reference follows gap = 2L at -30 to +20 degrees "
+        f"({sub[sub.groin_length_m == fr.LENGTH_SENSITIVITY_M[0]].ref_gap_end_m.min():.0f} to "
+        f"{sub[sub.groin_length_m == fr.LENGTH_SENSITIVITY_M[1]].ref_gap_end_m.max():.0f} m). Module 7 rises far "
+        "more slowly: from "
+        f"{sub[sub.groin_length_m == fr.LENGTH_SENSITIVITY_M[0]].module_gap_end_m.min():.0f}-"
+        f"{sub[sub.groin_length_m == fr.LENGTH_SENSITIVITY_M[0]].module_gap_end_m.max():.0f} m at "
+        f"{fr.LENGTH_SENSITIVITY_M[0]:g} m to "
+        f"{sub[sub.groin_length_m == fr.LENGTH_SENSITIVITY_M[1]].module_gap_end_m.min():.0f}-"
+        f"{sub[sub.groin_length_m == fr.LENGTH_SENSITIVITY_M[1]].module_gap_end_m.max():.0f} m at "
+        f"{fr.LENGTH_SENSITIVITY_M[1]:g} m at -30 to +10 degrees, and near zero at +20 and +30. Its blocking reads "
+        "the build-out of the whole 500 m updrift cell, which BRIE's diffusion keeps well short of the tip, so "
+        "the groin starts passing sand long before a real one would (tables/fine_reference_length_check.csv)."))
+
+
+# Run: read the tables, draw the figures
 def main():
     apply_style()
     frame = pd.read_csv(TABLES / "fine_reference_by_year.csv")
@@ -170,6 +218,7 @@ def main():
     FIGS.mkdir(parents=True, exist_ok=True)
     gap_and_profiles(frame, prof, score)
     print(errors(score).to_string())
+    length_check(pd.read_csv(TABLES / "fine_reference_length_check.csv"))
 
 
 if __name__ == "__main__":

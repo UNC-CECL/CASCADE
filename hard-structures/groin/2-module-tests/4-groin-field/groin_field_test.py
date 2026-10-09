@@ -43,14 +43,14 @@ NY = 161                                  # 80 km, room for a 60-domain field an
 N_GROINS = 4
 SPACINGS = (2, 5, 10, 20)                 # domains between neighbouring groins (1 to 10 km)
 ORIENTATIONS = (-30, -20, -10, 0, 10, 20, 30)
-MODULES = ("dipole", "pinned", "drift", "corrected")
+MODULES = ("dipole", "pinned", "drift", "corrected", "length")
 MIN_DRIFT_SHARE = 0.10                    # orientations scored: drift at least this share of the drift at 0 deg
 CONSERVE_TOL = 0.10                       # |net change| at most this share of the gross change
 HOLD_M = 1.0                              # an offset across a groin, or a lee cut, counts past 1 m
 LEE_CELLS = 5                             # cells just downdrift of the last groin searched for the lee cut
 MERGE_FAR_MIN = 0.5                       # at the widest spacing, each downdrift groin holds at least half an isolated one
 SHOWN = (-20, 0, 20)                      # orientations drawn as profiles
-MARKERS = dict(dipole="o", pinned="s", drift="^", corrected="D")
+MARKERS = dict(dipole="o", pinned="s", drift="^", corrected="D", length="v")
 TESTS = dict(conserves="Conserves sand", sawtooth="Holds sand at\nevery groin",
              lee_cut="Cuts the coast\nbelow the field", merges="Close groins\nact as one")
 # -----------------------------------------------------------------------------
@@ -72,7 +72,7 @@ def leak_correction(r, step, faces):
 
 
 # One run: straight_coast_test.run() with a list of groin faces; returns the final shoreline, seaward +
-def run_field(t, theta0, module, faces, years, blocking_fraction=sc.BLOCKING_FRACTION):
+def run_field(t, theta0, module, faces, years, blocking_fraction=sc.BLOCKING_FRACTION, groin_length_m=sc.GROIN_LENGTH_M):
     slope = np.tan(np.deg2rad(theta0))
     eta = np.zeros(NY)
     up_is_hi = float(sc.drift(t, theta0)[0]) < 0          # drift toward lower index: the higher cell is updrift
@@ -91,12 +91,14 @@ def run_field(t, theta0, module, faces, years, blocking_fraction=sc.BLOCKING_FRA
             elif module == "pinned":
                 dx[lo] -= blocking_fraction * 2 * r[lo] * off
                 dx[hi] += blocking_fraction * 2 * r[hi] * off
-            elif module in ("drift", "corrected"):
+            elif module in ("drift", "corrected", "length"):
                 approach = theta[hi] if up_is_hi else theta[lo - 1]
                 q = blocking_fraction * float(sc.drift(t, approach)[0]) * sc.DT_YR / (sc.DY_M * t["depth"])
+                if module == "length":
+                    q *= sc.length_factor(-eta[up], groin_length_m)
                 dx[lo] -= q
                 dx[hi] += q
-        if module == "corrected":
+        if module in ("corrected", "length"):
             dx += leak_correction(r, step, faces)
         rhs = eta + r * (np.roll(eta, -1) - 2 * eta + np.roll(eta, 1)) + dx
         dv = np.r_[-r[-1], -r[1:], 1 + 2 * r, -r[0:-1], -r[0]]
@@ -152,7 +154,7 @@ def profile_figure(prof, years):
     handles = [Line2D([], [], color=sc.MODULES[m]["col"], lw=1.3, marker=MARKERS[m], ms=3.5,
                       label=sc.MODULES[m]["label"]) for m in MODULES]
     handles.append(Line2D([], [], color=C["GROIN"], lw=0.8, label="groin"))
-    fig.legend(handles=handles, loc="outside lower center", ncol=5, fontsize=7, frameon=False)
+    fig.legend(handles=handles, loc="outside lower center", ncol=6, fontsize=7, frameon=False)
     fig.suptitle(f"Where does each version put the sand along a field of {N_GROINS} groins?")
     png = HERE / "figures" / "groin_field_profiles.png"
     save(fig, png, dpi=250, close=True)
@@ -162,7 +164,7 @@ def profile_figure(prof, years):
 # The scorecard: module by row, test by column, each cell orientation by spacing, filled = passes
 def scorecard_figure(field, card):
     th_scored = sorted(field[field.scored].theta0_deg.unique())
-    fig, axes = plt.subplots(len(MODULES), len(TESTS), figsize=figsize("double", height=6.6),
+    fig, axes = plt.subplots(len(MODULES), len(TESTS), figsize=figsize("double", height=8.2),
                              constrained_layout=True)
     for r_, m in enumerate(MODULES):
         for c_, (test, title) in enumerate(TESTS.items()):

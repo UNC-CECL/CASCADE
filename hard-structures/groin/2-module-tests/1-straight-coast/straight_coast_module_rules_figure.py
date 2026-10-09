@@ -29,7 +29,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 OUT = sc.HERE / "comparison" / "figures" / "straight_coast_module_rules.png"
 SAND, OCEAN = C["ADDED_FILL"], C["WATER"]
-PER_ROW = 3                          # modules per row of sketches
+PER_ROW = 4                          # modules per row of sketches
 MAX_THETA = 30                       # beyond the zero-drift angle the drift reverses and the sides swap
 # Per module: what it reads, the updrift/downdrift labels, the sketch's updrift gain and downdrift loss
 SKETCH = {
@@ -44,6 +44,8 @@ SKETCH = {
                    up="+f$_{block}$ Q$_{net}$\n+ f$_{block}$ $\\Delta$r s", down="$-$f$_{block}$ Q$_{net}$", gain=1.25, loss=1.0, drift=True),
     "corrected": dict(reads="reads the net drift, and\nreturns BRIE's leak\nnear the groin",
                       up="+f$_{block}$ Q$_{net}$", down="$-$f$_{block}$ Q$_{net}$", gain=1.0, loss=1.0, drift=True),
+    "length": dict(reads="as corrected, scaled by\ng = (1$-$a/L)$^{2/3}$: zero once\nthe fillet reaches the tip",
+                   up="+f$_{block}$ g Q$_{net}$", down="$-$f$_{block}$ g Q$_{net}$", gain=0.8, loss=0.8, drift=True),
 }
 # -----------------------------------------------------------------------------
 
@@ -62,8 +64,8 @@ def sketch(ax, name, spec, i):
     for xc in (3, 4, 6, 7):
         ax.plot([xc, xc], [0.25, -0.25], color=INK_MUTED, lw=0.5)
     ax.plot([5, 5], [1.2, -2.2], color=C["GROIN"], lw=2.2, solid_capstyle="butt")
-    ax.text(6.15, -s["gain"] / 2, s["up"], ha="left", va="center", fontsize=6.8, color=INK)
-    ax.text(3.85, s["loss"] / 2, s["down"], ha="right", va="center", fontsize=6.8, color=INK)
+    ax.text(6.15, -s["gain"] / 2, s["up"], ha="left", va="center", fontsize=6.0, color=INK)
+    ax.text(3.85, s["loss"] / 2, s["down"], ha="right", va="center", fontsize=6.0, color=INK)
     if s["drift"]:
         ax.annotate("", xy=(5.15, -2.9), xytext=(9.6, -2.9),
                     arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.3))
@@ -137,6 +139,9 @@ def main():
         ax.grid(axis="y")
         open_frame(ax)
         _letter_inside(ax, j + n)
+    for j in range(n, blocks * PER_ROW):                     # the empty slots in the last row
+        axes[2 * (j // PER_ROW), j % PER_ROW].axis("off")
+        axes[2 * (j // PER_ROW) + 1, j % PER_ROW].axis("off")
     fig.suptitle("What does each groin version read, and how much sand does it move?")
     save(fig, OUT, dpi=250, close=True)
 
@@ -145,8 +150,8 @@ def main():
                       / f"straight_coast_{sc.MODULES['pinned']['folder']}_by_year.csv")
     bent = pin[(pin.theta0_deg == 20) & (pin.year == 10)].iloc[0]
     record_caption(OUT, (
-        "**Tests:** nothing new; this figure explains the six groin modules compared in the straight-coast "
-        "test, by what each one reads and how much sand it moves. **How to read:** (a-f) Plan-view sketches, "
+        "**Tests:** nothing new; this figure explains the seven groin modules compared in the straight-coast "
+        "test, by what each one reads and how much sand it moves. **How to read:** (a-g) Plan-view sketches, "
         "not to scale: land (sand) above, ocean (blue) below, the updrift side on the right and the net drift "
         "arriving from the right. The red line is the groin, between two 500 m cells; the dashed line is the "
         "straight coast before the module acts. Each year the module moves the updrift cell's shoreline "
@@ -158,10 +163,10 @@ def main():
         "same with the groin face's r on both sides, so the two amounts always match. (d) The drift version "
         f"cancels a fraction f$_{{block}}$ of the wave climate's net longshore drift Q$_{{net}}$ arriving at the groin, "
         f"converted to shoreline metres over one 500 m cell and the {t['depth']:.1f} m active depth; f$_{{block}}$ = {sc.BLOCKING_FRACTION} "
-        "in (b)-(f). (e) The hybrid is the drift version plus the pinned version's row correction: the updrift "
+        "in (b)-(g). (e) The hybrid is the drift version plus the pinned version's row correction: the updrift "
         "cell also gets f$_{block}$ times the difference between the two cells' r, times the step s, which is what the "
-        "pinned version moves beyond the conserving one. (f) The corrected version is the drift version plus a leak correction within five cells of the groin: each year it gives back what BRIE's row-scaled solve creates or destroys there, so sand is conserved without changing BRIE. Its first-year transfer is the drift version's. (g-l) What each module moves in its first year on a straight coast, against the coast's "
-        "orientation (its own colour; the other three in grey). Below zero (shaded) the module builds the "
+        "pinned version moves beyond the conserving one. (f) The corrected version is the drift version plus a leak correction within five cells of the groin: each year it gives back what BRIE's row-scaled solve creates or destroys there, so sand is conserved without changing BRIE. Its first-year transfer is the drift version's. (g) The corrected version with a groin length L (110 m): the same, with f$_{block}$ scaled by (1 $-$ a/L)$^{2/3}$, a the updrift cell's build-out, so it passes all the drift once the fillet reaches the groin's tip; on a straight start a = 0, so its first-year transfer is the corrected version's. (h-n) What each module moves in its first year on a straight coast, against the coast's "
+        "orientation (its own colour; the others in grey). Below zero (shaded) the module builds the "
         f"downdrift side instead. Orientations stop at +{MAX_THETA} degrees: the net drift reaches zero at "
         f"{zero_q:+.0f} degrees and reverses beyond it, which swaps the two sides. **Shows:** "
         "the versions differ in what drives them. The dipole moves the same 12 m at every orientation. The pinned "

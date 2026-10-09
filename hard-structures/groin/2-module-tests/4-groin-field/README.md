@@ -4,7 +4,7 @@
 
 **Setup.** The straight-coast emulator from `../1-straight-coast/` (imported, unchanged): BRIE's alongshore step alone under the option-A waves, no storms, no Barrier3D, no sea level. Here there are 161 domains (80 km) instead of 61, with four groins 2, 5, 10 or 20 domains apart (1 to 10 km), and a single groin on the same coast as the reference. Each layout runs for 50 years at seven orientations, −30° to +30°. With the single groin on the 61-domain rig, `run_field()` reproduces `straight_coast_test.run()` to 0.0 m for all four modules.
 
-Four of the six straight-coast modules, chosen 2026-10-09: the dipole as the reference, and the three trapping versions still in contention (pinned, drift, corrected). The conserving and hybrid versions were dropped after the straight-coast test. Settings are those of the straight-coast test: dipole M 12 m/yr, blocking fraction 0.6. Where two groins' correction zones overlap (spacing under 10 domains), the corrected version applies its leak correction once per cell, because the correction is a property of the cell, not of the groin.
+Four of the six straight-coast modules, chosen 2026-10-09: the dipole as the reference, and the three trapping versions still in contention (pinned, drift, corrected). The conserving and hybrid versions were dropped after the straight-coast test. Module 7, the corrected version with a groin length, was added on 2026-10-09 after `../5-fine-grid-reference/`. Settings are those of the straight-coast test: dipole M 12 m/yr, blocking fraction 0.6. Where two groins' correction zones overlap (spacing under 10 domains), the corrected version applies its leak correction once per cell, because the correction is a property of the cell, not of the groin.
 
 ```
 groin_field_test.py      the runs, the scores and both figures (about 5 s)
@@ -39,6 +39,7 @@ The tests were set on 2026-10-09, before the runs. Each is scored at year 50 for
 | dipole | 0 | 27 | 20 | 28 | 75 |
 | drift | 0 | 25 | 20 | 28 | 73 |
 | pinned | 24 | 12 | 12 | 12 | 60 |
+| corrected, with length (added 10-09) | 25 | 27 | 27 | 20 | 99 |
 
 1. **The corrected version behaves most like a groin field.** It builds a sawtooth and cuts the coast below the field in every case. It conserves sand everywhere except +20° at 2 to 10 apart, where so little sand moves that a net change of 200 m of summed shoreline is 29% of the gross. Elsewhere its largest net change is 135 m against a gross change in the thousands. It fails "act as one" only at +30°, where the drift is a tenth of its grid-aligned value.
 2. **The pinned version still traps on the side set by the tilt.** It conserves sand (largest net change 125 m), but four of its 24 passes are at 0°, where it moves nothing. It builds a sawtooth only at −30° to −10°. From +10° on it builds out below each groin instead of above it, the straight-coast finding 2 repeated at every groin.
@@ -62,5 +63,7 @@ The last row is from the single-groin runs (`../1-straight-coast/*/tables/*_by_y
 **Two things the literature describes that this test cannot show.**
 1. *A real groin field is smaller than one domain.* Groins are usually spaced a few groin lengths apart, roughly 100 to 400 m, so a whole field fits inside one 500 m domain, as Buxton's four groins do. The groins here, 1 to 10 km apart, are separate structures along one coast. How compartments within one field fill in turn, the most updrift first while the next is starved, happens below the grid.
 2. *Groin length is not modelled.* In the literature a compartment fills to about the groin's tip, then sand passes around it and the recession below the field stops growing. In the corrected version the fillet levels off only because the shoreline turns toward the waves. That limit is set by the wave climate and the blocking fraction, not by a structure, and the steps of 245 to 330 m across each groin at 0° are probably more than a real groin could hold.
+
+5. **Adding a groin length (module 7) does not help in a field.** It scores 99 against the corrected version's 105: it holds less sand at each groin and fails "act as one" at four more cases. The length test is in `../5-fine-grid-reference/`.
 
 **What this means for the module.** If a model run has more than one groin, the corrected version is the one to use, with the same reservation as for one groin: its leak correction also acts on any natural bend near a groin (`../3-real-planform/corrected_groin/`). A groin length, a cap on the offset a groin can hold, would be needed before close groins share sand as a real field does. That is a module change, so it is not part of this test.

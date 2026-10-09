@@ -16,6 +16,8 @@ One groin sits at the face between the middle two domains. The modules:
     5 trapping, hybrid     module 4 plus module 2's row correction: blocking_fraction of BRIE's r[HI] - r[LO] mismatch at the face
     6 trapping, corrected  module 4 plus a leak correction: near the groin, gives back what BRIE's row-scaled
                            solve creates or destroys, 2 (r[i] - r[i-1]) (x[i] - x[i-1]) per cell, BRIE untouched
+    7 corrected, length    module 6 with a groin length L: blocking_fraction (1 - a/L)^(2/3), a the updrift
+                           cell's build-out, so the groin passes everything once the fillet reaches its tip
 
 Q_net is the wave pdf convolved with BRIE's own _coast_qs, aligned as BRIE aligns coast_diff;
 coast_diff = -(1/depth) dQ_net/dtheta to within one angle bin, so module 4 uses the same physics
@@ -67,8 +69,10 @@ MODULES = {
     "drift": dict(folder="4-trapping-drift", label="Trapping, drift", col=C["LATE"]),
     "hybrid": dict(folder="5-trapping-hybrid", label="Trapping, hybrid", col=C["LOCATOR"]),
     "corrected": dict(folder="6-trapping-corrected", label="Trapping, corrected", col=INK),
+    "length": dict(folder="7-corrected-length", label="Corrected, with length", col="#e7298a"),
 }
 CORRECTION_HALF_WIDTH = 5                # module 6: cells either side of the groin face that get the leak correction
+GROIN_LENGTH_M = 110.0                   # module 7: Buxton's digitized groins are 90-155 m
 # -----------------------------------------------------------------------------
 
 
@@ -107,6 +111,11 @@ def leak_correction(r, step, half_width=None):
     return np.where(near, 2 * (r - np.roll(r, 1)) * np.roll(step, 1), 0.0)
 
 
+# Module 7's share of blocking_fraction still held: GENESIS bypassing, falling to zero as the fillet reaches the tip
+def length_factor(advance_m, length_m=GROIN_LENGTH_M):
+    return max(0.0, 1.0 - max(0.0, advance_m) / length_m) ** (2.0 / 3.0)
+
+
 def run(t, theta0, module, years, blocking_fraction=BLOCKING_FRACTION, correction_fraction=BLOCKING_FRACTION):
     slope = np.tan(np.deg2rad(theta0))
     eta = np.zeros(NY)
@@ -129,16 +138,18 @@ def run(t, theta0, module, years, blocking_fraction=BLOCKING_FRACTION, correctio
         elif module == "conserving":
             dx[LO] -= blocking_fraction * 2 * r[LO] * off
             dx[HI] += blocking_fraction * 2 * r[LO] * off
-        elif module in ("drift", "hybrid", "corrected"):
+        elif module in ("drift", "hybrid", "corrected", "length"):
             # the drift arriving at the groin: the angle of the updrift approach face, not of the step
             approach = theta[HI] if up == HI else theta[LO - 1]
             q = blocking_fraction * float(drift(t, approach)[0]) * DT_YR / (DY_M * t["depth"])
+            if module == "length":
+                q *= length_factor(-eta[up])
             dx[LO] -= q
             dx[HI] += q
             if module == "hybrid":
                 # the pinned module's row correction: BRIE counts the face with r[HI] in HI's row, r[LO] in LO's
                 dx[HI] += correction_fraction * 2 * (r[HI] - r[LO]) * off
-            if module == "corrected":
+            if module in ("corrected", "length"):
                 dx += leak_correction(r, step)
         rhs = eta + r * (np.roll(eta, -1) - 2 * eta + np.roll(eta, 1)) + dx
         dv = np.r_[-r[-1], -r[1:], 1 + 2 * r, -r[0:-1], -r[0]]
