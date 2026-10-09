@@ -13,6 +13,8 @@ TEST_PLAN.md        the 2026-09-11 design: tier 0 offline (built), tiers 1-2 ful
 3-real-planform/    2026-09-29. The dipole and the first blocking emulator on the real
                     Hatteras planform under option A waves, and the full-model grids
                     that led to the blocking groin
+4-groin-field/      2026-10-09. Four groins 1 to 10 km apart on one straight coast: the
+                    dipole, pinned, drift and corrected versions scored as a groin field
 figures/            groin_module_logic: the dipole's arithmetic as a schematic
 ```
 
@@ -20,6 +22,7 @@ figures/            groin_module_logic: the dipole's arithmetic as a schematic
 1. The pinned groin conserves sand but blocks only the tilt-driven part of the transport, so at 0° it does nothing while 0.91 M m³/yr of net drift passes; a drift-blocking groin traps correctly, but BRIE's row-scaled solve creates or destroys sand around it.
 2. The dipole's fillet is bought by M / diffusion number, the solve is not volume-conserving, and five domains are too few.
 3. The old M = 60 is not runnable under option A; a blocking groin, bounded by the transport that arrives, is.
+4. With four groins on one coast, the corrected version behaves most like a groin field (105 of 112 checks against 60 to 75 for the others), but close groins share their sand only weakly, since no version has a groin length.
 
 **Next step up (not built).** The same straight-coast test inside full CASCADE on a fake barrier, storms off then on (`TEST_PLAN.md` tiers 1-2), once a module version passes step 1.
 

@@ -19,6 +19,7 @@ from simplest to most complex.
     1-straight-coast/          six module versions on straight coasts, -40 to +40 deg
     2-solver-audit/            the dipole in BRIE's alongshore solve alone
     3-real-planform/           the dipole and blocking groin on the real planform, option A waves
+    4-groin-field/             four groins on one straight coast: which module behaves like a groin field
     figures/                   the dipole's arithmetic as a schematic
 3-hindcast/                the module fitted to Buxton in real model runs
     1-dipole-1967-2017/        SUPERSEDED: the dipole (M, f) fit on the 1967-2017 rig
