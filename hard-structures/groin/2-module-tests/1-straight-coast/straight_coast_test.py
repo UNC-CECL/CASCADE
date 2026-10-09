@@ -10,9 +10,12 @@ the tilted line plus a periodic perturbation eta, so the tilt never meets the pe
 One groin sits at the face between the middle two domains. The modules:
 
     1 source/sink dipole   GroinCallback: -M updrift, +M downdrift, whatever the coast does
-    2 trapping, pinned     BlockingGroinCallback: cancels b of each cell's own diffusive coupling
+    2 trapping, pinned     BlockingGroinCallback: cancels blocking_fraction of each cell's own diffusive coupling
     3 trapping, conserving the same, one face coefficient on both sides
-    4 trapping, drift      cancels b of the wave-climate net drift Q_net across the face
+    4 trapping, drift      cancels blocking_fraction of the wave-climate net drift Q_net across the face
+    5 trapping, hybrid     module 4 plus module 2's row correction: blocking_fraction of BRIE's r[HI] - r[LO] mismatch at the face
+    6 trapping, corrected  module 4 plus a leak correction: near the groin, gives back what BRIE's row-scaled
+                           solve creates or destroys, 2 (r[i] - r[i-1]) (x[i] - x[i-1]) per cell, BRIE untouched
 
 Q_net is the wave pdf convolved with BRIE's own _coast_qs, aligned as BRIE aligns coast_diff;
 coast_diff = -(1/depth) dQ_net/dtheta to within one angle bin, so module 4 uses the same physics
@@ -44,7 +47,7 @@ HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path[:0] = [str(REPO / "scripts")]
 from site_layer.hat_figure_style import (  # noqa: E402
-    C, INK, INK_MUTED, _title, apply_style, figsize, open_frame, record_caption, save)
+    C, INK, INK_MUTED, _letter_inside, apply_style, figsize, open_frame, record_caption, save)
 
 # --- CONFIG ------------------------------------------------------------------
 DY_M, DT_YR = 500.0, 1.0                 # fixed by the CASCADE coupler
@@ -54,14 +57,18 @@ LO, HI = 30, 31                          # the groin is the face between these t
 ORIENTATIONS = tuple(range(-40, 45, 5))  # shoreline angle theta0, degrees
 SHOWN = (-30, -10, 0, 10, 20, 30)        # orientations drawn as profiles
 PROFILE_YEARS = (1, 5, 10, 25, 50)
-B = 0.6                                  # trapping fraction, the 10-05 pin
+BLOCKING_FRACTION = 0.6                  # share of the transport the groin holds; the 10-05 pin
+                                         # (cascade.groin.BlockingGroinCallback's blocking_fraction)
 M = 12.0                                 # dipole, the best option-A dipole (2026-09-29)
 MODULES = {
     "dipole": dict(folder="1-source-sink-dipole", label="Source/sink (dipole)", col=C["ADDED"]),
     "pinned": dict(folder="2-trapping-pinned", label="Trapping, pinned", col=C["ACCENT"]),
     "conserving": dict(folder="3-trapping-conserving", label="Trapping, conserving", col=C["REF"]),
     "drift": dict(folder="4-trapping-drift", label="Trapping, drift", col=C["LATE"]),
+    "hybrid": dict(folder="5-trapping-hybrid", label="Trapping, hybrid", col=C["LOCATOR"]),
+    "corrected": dict(folder="6-trapping-corrected", label="Trapping, corrected", col=INK),
 }
+CORRECTION_HALF_WIDTH = 5                # module 6: cells either side of the groin face that get the leak correction
 # -----------------------------------------------------------------------------
 
 
@@ -91,7 +98,16 @@ def drift(t, theta_deg):
     return -t["g"][angle_index(np.atleast_1d(theta_deg), t["climl"])]
 
 
-def run(t, theta0, module, years, b=B):
+# What BRIE's row-scaled solve adds beyond a face-centred one, with the sign reversed, near the groin.
+# Row i couples to both neighbours with r[i]; a conserving solve uses r[i-1] on its lower face, so the
+# difference is (r[i] - r[i-1]) times the lower step; x2 for the two Crank-Nicolson halves.
+def leak_correction(r, step, half_width=None):
+    half_width = CORRECTION_HALF_WIDTH if half_width is None else half_width
+    near = np.abs(np.arange(r.size) - (LO + 0.5)) <= half_width
+    return np.where(near, 2 * (r - np.roll(r, 1)) * np.roll(step, 1), 0.0)
+
+
+def run(t, theta0, module, years, blocking_fraction=BLOCKING_FRACTION, correction_fraction=BLOCKING_FRACTION):
     slope = np.tan(np.deg2rad(theta0))
     eta = np.zeros(NY)
     f0 = float(drift(t, theta0)[0])
@@ -108,17 +124,22 @@ def run(t, theta0, module, years, b=B):
             dx[up] -= M
             dx[down] += M
         elif module == "pinned":
-            dx[LO] -= b * 2 * r[LO] * off
-            dx[HI] += b * 2 * r[HI] * off
+            dx[LO] -= blocking_fraction * 2 * r[LO] * off
+            dx[HI] += blocking_fraction * 2 * r[HI] * off
         elif module == "conserving":
-            dx[LO] -= b * 2 * r[LO] * off
-            dx[HI] += b * 2 * r[LO] * off
-        elif module == "drift":
+            dx[LO] -= blocking_fraction * 2 * r[LO] * off
+            dx[HI] += blocking_fraction * 2 * r[LO] * off
+        elif module in ("drift", "hybrid", "corrected"):
             # the drift arriving at the groin: the angle of the updrift approach face, not of the step
             approach = theta[HI] if up == HI else theta[LO - 1]
-            q = b * float(drift(t, approach)[0]) * DT_YR / (DY_M * t["depth"])
+            q = blocking_fraction * float(drift(t, approach)[0]) * DT_YR / (DY_M * t["depth"])
             dx[LO] -= q
             dx[HI] += q
+            if module == "hybrid":
+                # the pinned module's row correction: BRIE counts the face with r[HI] in HI's row, r[LO] in LO's
+                dx[HI] += correction_fraction * 2 * (r[HI] - r[LO]) * off
+            if module == "corrected":
+                dx += leak_correction(r, step)
         rhs = eta + r * (np.roll(eta, -1) - 2 * eta + np.roll(eta, 1)) + dx
         dv = np.r_[-r[-1], -r[1:], 1 + 2 * r, -r[0:-1], -r[0]]
         eta = spsolve(csr_matrix((dv, (t["di"], t["dj"]))), rhs)
@@ -147,44 +168,70 @@ def pelnard_considere(t, theta0, years):
     return 2 * tan_a * np.sqrt(d * years / np.pi), tan_a
 
 
+YEAR_RAMP = plt.get_cmap("Blues")(np.linspace(0.35, 0.95, len(PROFILE_YEARS)))   # light early, dark late
+
+
+# The letter inside the corner, a short title centred above
+def label(ax, i, text):
+    _letter_inside(ax, i)
+    ax.set_title(text, loc="center")
+
+
+# The drift as an arrow along the top of a panel, from the updrift (right) side toward the groin
+def drift_arrow(ax, q):
+    ax.annotate("", xy=(0.56, 0.93), xytext=(0.9, 0.93), xycoords="axes fraction",
+                arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=1.0))
+    ax.text(0.73, 0.86, f"drift {abs(q) / 1e6:.2f} M m$^3$/yr", transform=ax.transAxes, ha="center", va="top",
+            fontsize=6.5, color=INK_MUTED)
+
+
 def module_figures(name, frame, profiles):
     spec = MODULES[name]
     out = HERE / spec["folder"] / "figures"
     out.mkdir(parents=True, exist_ok=True)
     dom = np.arange(NY) - LO - 0.5                              # domains from the groin face
-    fig, axes = plt.subplots(2, 3, figsize=figsize("double", height=5.2), sharex=True,
+    fig, axes = plt.subplots(2, 3, figsize=figsize("double", height=5.4), sharex=True,
                              constrained_layout=True)
-    shades = plt.cm.Greys(np.linspace(0.35, 1.0, len(PROFILE_YEARS)))
     lim = max(np.abs(profiles[(th, y)]).max() for th in SHOWN for y in PROFILE_YEARS)
-    lim = max(5.0, np.ceil(lim / 10) * 10)
+    lim = max(5.0, np.ceil(lim / 10) * 10) * 1.15
     for i, (ax, th) in enumerate(zip(axes.flat, SHOWN)):
-        for c, y in zip(shades, PROFILE_YEARS):
-            ax.plot(dom, profiles[(th, y)], color=c, lw=1.2)
-        ax.axvline(0, color=C["GROIN"], lw=0.8)
+        for c, y in zip(YEAR_RAMP, PROFILE_YEARS):
+            ax.plot(dom, profiles[(th, y)], color=c, lw=1.3)
+        ax.axvline(0, color=C["GROIN"], lw=0.9)
         ax.axhline(0, color=INK_MUTED, lw=0.5)
         ax.set_xlim(-12, 12)
         ax.set_ylim(-lim, lim)
-        q = frame[(frame.theta0_deg == th) & (frame.year == 1)].drift0_m3_yr.iloc[0]
-        ax.text(0.03, 0.04, f"drift {q / 1e3:+.0f}k m$^3$/yr", transform=ax.transAxes,
-                fontsize=6.5, color=INK_MUTED)
+        drift_arrow(ax, frame[(frame.theta0_deg == th) & (frame.year == 1)].drift0_m3_yr.iloc[0])
         ax.grid(axis="y")
         open_frame(ax)
-        _title(ax, i, f"coast at {th:+d}$^\\circ$")
+        label(ax, i, f"Coast at {th:+d}$^\\circ$")
     for ax in axes[:, 0]:
         ax.set_ylabel("Shoreline change\n(m, seaward +)")
     for ax in axes[1]:
         ax.set_xlabel("Domains from the groin (updrift right)")
-    handles = [Line2D([], [], color=c, lw=1.2, label=f"year {y}") for c, y in zip(shades, PROFILE_YEARS)]
-    fig.legend(handles=handles, loc="outside upper center", ncol=5, fontsize=7, frameon=False)
+    fig.suptitle(f"Does the {spec['label'].lower()} groin hold sand updrift on a straight coast?")
+    handles = [Line2D([], [], color=c, lw=1.3, label=f"year {y}") for c, y in zip(YEAR_RAMP, PROFILE_YEARS)]
+    handles.append(Line2D([], [], color=C["GROIN"], lw=0.9, label="groin"))
+    fig.legend(handles=handles, loc="outside lower center", ncol=6, fontsize=7, frameon=False)
     png = out / f"straight_coast_{spec['folder']}_profiles.png"
     save(fig, png, dpi=250, close=True)
+    last = frame[frame.year == frame.year.max()].set_index("theta0_deg")
     record_caption(png, (
-        f"{spec['label']} groin on a straight coast in BRIE's alongshore solve alone (option A "
-        "waves, no storms, no Barrier3D), at six shoreline orientations. Lines: shoreline change "
-        "from the straight start, seaward positive, at years 1, 5, 10, 25 and 50 (light to dark). "
-        "Red line: the groin face. The x axis runs in domains from the face with the updrift side "
-        "on the right at every orientation. 'drift' is the wave-climate net longshore transport on "
-        "the undisturbed coast."))
+        f"**Tests:** what the {spec['label'].lower()} groin does on its own, on a straight coast with nothing "
+        "else going on, and whether it behaves like a groin: sand held on the updrift side, taken from the "
+        "downdrift side, and no sand created or destroyed. **How to read:** BRIE's alongshore solve alone "
+        "(option A waves; no storms, no Barrier3D, no sea-level rise), one groin between the two middle "
+        "domains. Each panel is one shoreline orientation; lines are the shoreline change from the straight "
+        "start at years 1, 5, 10, 25 and 50 (light to dark), seaward positive, with the updrift side on the "
+        "right; the arrow is the wave-climate net longshore drift on the undisturbed coast, which runs toward "
+        "the groin from the right. A groin that traps drift builds out on the right and cuts back on the "
+        "left. Red line: the groin face. **Shows:** after 50 years the cell just updrift has moved "
+        f"{last.loc[-30, 'updrift_seaward_m']:+.0f} m at -30$^\\circ$, {last.loc[0, 'updrift_seaward_m']:+.0f} m at "
+        f"0$^\\circ$ and {last.loc[30, 'updrift_seaward_m']:+.0f} m at +30$^\\circ$; the module's own sand "
+        f"balance over 50 years ranges from {last['applied_net_cum_m'].min():+.0f} to "
+        f"{last['applied_net_cum_m'].max():+.0f} m of summed shoreline across orientations, and the total "
+        f"change in the reach (module plus solve) from {last['reach_change_m'].min():+.0f} to "
+        f"{last['reach_change_m'].max():+.0f} m (comparison figures, and tables/)."))
 
 
 def comparison_figures(t, summary, frames):
@@ -192,73 +239,118 @@ def comparison_figures(t, summary, frames):
     out.mkdir(parents=True, exist_ok=True)
     th = np.arange(-45, 46)
     dif = t["coast_diff"][angle_index(th, t["climl"])]
-    fig, axes = plt.subplots(2, 2, figsize=figsize("double", height=5.6), constrained_layout=True)
+    q = drift(t, th)
+    k = np.flatnonzero(np.diff(np.sign(q)) != 0)
+    zero_q = float(np.interp(0, q[k[0]:k[0] + 2][::-1], th[k[0]:k[0] + 2][::-1])) if len(k) else np.nan
+    fig, axes = plt.subplots(2, 3, figsize=figsize("double", height=5.8), constrained_layout=True)
     ax = axes[0, 0]
-    ax.plot(th, drift(t, th) / 1e3, color=INK, lw=1.4)
+    ax.plot(th, -q / 1e6, color=INK, lw=1.5, label="net drift toward the groin")
     ax.axhline(0, color=INK_MUTED, lw=0.5)
-    ax.set_ylabel("Net drift (10$^3$ m$^3$/yr,\ntoward higher domains +)")
+    ax.set_ylabel("Net drift (M m$^3$/yr)")
     ax2 = ax.twinx()
-    ax2.plot(th, dif / 1e3, color=C["BASE"], lw=1.2, ls="--")
-    ax2.plot(th, np.maximum(dif, 0) / 1e3, color=C["BASE"], lw=0.0)
-    ax2.set_ylabel("BRIE diffusivity\n(10$^3$ m$^2$/yr, dashed)", color=C["BASE"])
+    ax2.plot(th, dif / 1e3, color=C["BASE"], lw=1.2, ls="--", label="BRIE diffusivity")
+    frozen = th[dif <= 0]
+    if len(frozen):
+        ax.axvspan(frozen.min() - 0.5, frozen.max() + 0.5, color=C["BASE_FILL"], alpha=0.8, lw=0)
+    ax2.set_ylabel("BRIE diffusivity\n(10$^3$ m$^2$/yr, dashed)", color=C["BASE"], fontsize=7)
+    ax2.tick_params(labelsize=6.5)
+    if np.isfinite(zero_q):
+        ax.axvline(zero_q, color=INK_MUTED, lw=0.6, ls=":")
+        ax.text(zero_q - 1.5, ax.get_ylim()[0] + 0.04 * np.ptp(ax.get_ylim()), f"zero drift\n{zero_q:+.0f}$^\\circ$",
+                ha="right", va="bottom",
+                fontsize=6.3, color=INK_MUTED)
     ax.set_xlabel("Shoreline orientation ($^\\circ$)")
     open_frame(ax)
-    _title(ax, 0, "What drives each module")
-
-    for k, (col, ylab, title) in enumerate((
-            ("updrift_seaward_m", "Updrift cell, year 50\n(m, seaward +)", "Sand held updrift"),
-            ("applied_net_cum_m", "Module's net, 50 yr\n(m of shoreline, + added)", "Sand the module created"),
-            ("solve_error_m", "Solve's net, 50 yr\n(m of shoreline, + added)", "Sand BRIE's solve created"))):
+    label(ax, 0, "What drives the groin")
+    panels = (("updrift_seaward_m", "Updrift cell after 50 yr\n(m, seaward +)", "Sand held updrift"),
+              ("applied_net_cum_m", "Sand the module adds, 50 yr\n(m of summed shoreline)", "The module's own balance"),
+              ("solve_error_m", "Sand the solve adds, 50 yr\n(m of summed shoreline)", "BRIE's solve"),
+              ("reach_change_m", "Total change in the reach, 50 yr\n(m of summed shoreline)", "Module plus solve"))
+    for k, (col, ylab, title) in enumerate(panels):
         ax = axes.flat[k + 1]
         for name, spec in MODULES.items():
-            s = summary[summary.module == name]
-            ax.plot(s.theta0_deg, s[col], color=spec["col"], lw=1.6, marker="o", ms=3)
-        ax.axhline(0, color=INK_MUTED, lw=0.5)
+            s_ = summary[summary.module == name]
+            ax.plot(s_.theta0_deg, s_[col], color=spec["col"], lw=1.6, marker="o", ms=3)
+        ax.axhline(0, color=INK_MUTED, lw=0.6)
         ax.axvline(0, color=INK_MUTED, lw=0.5, ls=(0, (2, 2)))
         ax.set_xlabel("Shoreline orientation ($^\\circ$)")
-        ax.set_ylabel(ylab)
+        ax.set_ylabel(ylab, fontsize=7)
         ax.grid(axis="y")
         open_frame(ax)
-        _title(ax, k + 1, title)
-    handles = [Line2D([], [], color=s["col"], lw=1.6, marker="o", ms=3, label=s["label"])
-               for s in MODULES.values()]
-    fig.legend(handles=handles, loc="outside upper center", ncol=4, fontsize=7, frameon=False)
+        label(ax, k + 1, title)
+    ax = axes.flat[5]
+    ax.axis("off")
+    handles = [Line2D([], [], color=s_["col"], lw=1.6, marker="o", ms=3, label=s_["label"]) for s_ in MODULES.values()]
+    handles += [Line2D([], [], color=INK, lw=1.5, label="net drift toward the groin (a)"),
+                Line2D([], [], color=C["BASE"], lw=1.2, ls="--", label="BRIE diffusivity (a)"),
+                plt.Rectangle((0, 0), 1, 1, color=C["BASE_FILL"], alpha=0.8, label="diffusivity at or below zero:\ncoast frozen (a)")]
+    ax.legend(handles=handles, loc="center", fontsize=7.5, frameon=False)
+    fig.suptitle("Does each version hold sand updrift, and is sand conserved?")
     png = out / "straight_coast_modules_vs_orientation.png"
     save(fig, png, dpi=250, close=True)
+    sm = summary.set_index(["module", "theta0_deg"])
+    tot = summary.groupby("module")["reach_change_m"].agg(lambda v: v.abs().max())
     record_caption(png, (
-        "Four groin modules on a straight coast at orientations -40 to +40 degrees, 50 years of "
-        "BRIE's alongshore solve alone (option A waves). (a) The wave-climate net drift (solid) "
-        "and BRIE's diffusivity (dashed; BRIE clips negative values to zero, which freezes the "
-        "coast). (b) Seaward change of the updrift cell beside the groin. (c) Sand the module "
-        "itself added, as summed shoreline change across the reach (zero for a conserving "
-        "module). (d) Sand BRIE's row-scaled solve added on top, which is non-zero wherever the "
-        f"groin makes the diffusivity vary along the coast. Dipole M {M:g}; trapping b {B}."))
+        "**Tests:** across shoreline orientations from -40 to +40 degrees, whether each version of the groin "
+        "module holds sand updrift, and whether the sand balance closes, for the module on its own, for BRIE's "
+        "alongshore solve, and for the two together. **How to read:** 50 years of BRIE's alongshore solve "
+        "alone (option A waves), one groin, every value read at year 50. (a) What drives the modules: the "
+        "wave-climate net longshore drift toward the groin (solid) and BRIE's shoreline diffusivity (dashed); "
+        "where the diffusivity is at or below zero BRIE clips it to zero (shaded), which freezes a straight coast. "
+        "(b) How far the cell just updrift of the groin has built out. (c) The sand the module itself adds, as "
+        "shoreline change summed over the reach; zero means the module's own books balance. (d) The sand "
+        "BRIE's row-scaled solve adds on top, non-zero wherever the groin makes the diffusivity change along "
+        "the coast. (e) The total, (c) plus (d): zero means the groin, in the model, neither creates nor "
+        f"destroys sand. Dipole M {M:g} m/yr; trapping versions blocking fraction {BLOCKING_FRACTION}. **Shows:** the net drift is "
+        f"{-drift(t, 0)[0] / 1e6:.2f} M m$^3$/yr toward the groin on a grid-aligned coast and reaches zero "
+        f"near {zero_q:+.0f} degrees, while the diffusivity is about zero there, so the pinned and conserving "
+        "versions, which block only the diffusive part of the transport, do nothing at 0 degrees. Only the "
+        f"pinned version stays near zero in (e) (largest |total| {tot['pinned']:.0f} m against "
+        f"{tot['conserving']:.0f} m conserving, {tot['dipole']:.0f} m dipole, {tot['drift']:.0f} m drift, {tot['hybrid']:.0f} m hybrid and {tot['corrected']:.0f} m corrected), "
+        "because its own imbalance offsets the solve's; the drift version traps the right quantity but sits on "
+        "a solve that does not conserve sand, and the hybrid, which adds the pinned version's row correction "
+        "at the groin face to the drift version, does not close the balance either, because the solve loses "
+        "sand along the whole bent fillet, not only at the groin face. The corrected version gives that sand back "
+        "within five cells of the groin each year, and stays near zero while trapping on the updrift side."))
 
-    # Year-50 profiles, modules side by side at the shown orientations
-    fig, axes = plt.subplots(2, 3, figsize=figsize("double", height=5.2), sharex=True,
+    # Year-50 profiles, the versions side by side at the shown orientations
+    fig, axes = plt.subplots(2, 3, figsize=figsize("double", height=5.4), sharex=True,
                              constrained_layout=True)
     dom = np.arange(NY) - LO - 0.5
+    f0 = frames["dipole"][0]
     for i, (ax, th0) in enumerate(zip(axes.flat, SHOWN)):
         for name, spec in MODULES.items():
             ax.plot(dom, frames[name][1][(th0, 50)], color=spec["col"], lw=1.5)
-        ax.axvline(0, color=C["GROIN"], lw=0.8)
+        ax.axvline(0, color=C["GROIN"], lw=0.9)
         ax.axhline(0, color=INK_MUTED, lw=0.5)
         ax.set_xlim(-12, 12)
+        lo_, hi_ = ax.get_ylim()
+        ax.set_ylim(lo_, hi_ + 0.18 * (hi_ - lo_))
+        drift_arrow(ax, f0[(f0.theta0_deg == th0) & (f0.year == 1)].drift0_m3_yr.iloc[0])
         ax.grid(axis="y")
         open_frame(ax)
-        _title(ax, i, f"coast at {th0:+d}$^\\circ$, year 50")
+        label(ax, i, f"Coast at {th0:+d}$^\\circ$")
     for ax in axes[:, 0]:
-        ax.set_ylabel("Shoreline change\n(m, seaward +)")
+        ax.set_ylabel("Shoreline change after\n50 yr (m, seaward +)")
     for ax in axes[1]:
         ax.set_xlabel("Domains from the groin (updrift right)")
-    fig.legend(handles=handles, loc="outside upper center", ncol=4, fontsize=7, frameon=False)
+    fig.suptitle("Where does each version put the sand after 50 years?")
+    fig.legend(handles=handles[:len(MODULES)] + [Line2D([], [], color=C["GROIN"], lw=0.9, label="groin")],
+               loc="outside lower center", ncol=4, fontsize=7, frameon=False)
     png = out / "straight_coast_profiles_year50.png"
     save(fig, png, dpi=250, close=True)
     record_caption(png, (
-        "The four groin modules after 50 years on a straight coast at six orientations, BRIE's "
-        "alongshore solve alone (option A waves). Shoreline change from the straight start, "
-        "seaward positive, updrift side on the right; red line, the groin face; each panel has its "
-        "own y range."))
+        "**Tests:** side by side, where each version of the groin module puts the sand after 50 years, at six "
+        "shoreline orientations. **How to read:** BRIE's alongshore solve alone (option A waves), one groin; "
+        "shoreline change from the straight start, seaward positive, with the updrift side on the right; the "
+        "arrow is the net longshore drift toward the groin. A groin that traps drift builds out on the right "
+        "and cuts back on the left. Each panel has its own vertical range. **Shows:** on coasts turned "
+        "against the drift (negative angles) every trapping version builds out updrift; at 0 degrees only the "
+        "drift version and the dipole change the coast; on coasts turned with the drift (positive angles) the "
+        "pinned version builds out on the wrong (downdrift) side, and the conserving and drift versions cut "
+        "back both sides, the sand lost through BRIE's solve "
+        f"(summary table: comparison/tables/straight_coast_summary_year50.csv; e.g. at +20 degrees the "
+        f"conserving version's updrift cell is at {sm.loc[('conserving', 20), 'updrift_seaward_m']:+.0f} m)."))
 
 
 def main():
@@ -293,7 +385,7 @@ def main():
     summary = pd.concat(summary, ignore_index=True)
     bench = []
     for th in ORIENTATIONS:
-        f, _ = run(t, th, "drift", a.years, b=1.0)
+        f, _ = run(t, th, "drift", a.years, blocking_fraction=1.0)
         y_pc, tan_a = pelnard_considere(t, th, a.years)
         bench.append(dict(theta0_deg=th, model_updrift_m=float(f.updrift_seaward_m.iloc[-1]),
                           pelnard_considere_m=y_pc, tan_alpha=tan_a,

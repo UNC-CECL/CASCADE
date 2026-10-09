@@ -7,5 +7,6 @@ The blocking groin (`cascade.groin.BlockingGroinCallback`) fitted on the calibra
 | `2026-10-05-blocking-fit-calibration/` | which b and f fit the 1996-2009 gap; how does that groin do on 2009-2025? Also the dipole against the blocking groin | **b 0.6, f 0.6, pinned** |
 | `2026-10-08-schedule-refit/` | does the fit change if the groin fails from 1996 (the last repair) instead of at the 2004 step? | done; **decision pending** (options A-C in its README) |
 | `2026-10-08-conserving-groin/` | does a version whose own books balance still fit? Also the three-module comparison GIF | **stopped**: the premise was wrong (see `../../2-module-tests/1-straight-coast/`) |
+| `2026-10-08-drift-groin/` | option 1: does a groin that blocks the drift the waves carry (BRIE untouched) fit 1996-2009, with what b and f? | grids done: joint floor 15.8-16.7 m at b 0.08-0.10 (pin 20.9); annual and photo scores want different b; 2009-2025 test of b 0.1 f 0.4: beats the pin, not no groin (gap held too wide) |
 
 After the 2017 Buxton fill every groin run misses the test period by 37-43 m. The cause is the fill's placement at GIS 6, not the groin (10-05 README).

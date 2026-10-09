@@ -12,6 +12,7 @@
 | `failure_schedule_test.py` | does an instant failure at the 2003 storm fit both windows? | `failure_schedule_scores.csv` |
 | `trajectory_check.py` | the instant-failure candidates, at the observed dates | `trajectory_check.csv` |
 | `score_instant_grid.py` | the full-model instant-2004 grids against the observed gap | `instant_grid_scores.csv` |
+| `corrected_groin_real_planform.py` | the corrected trapping groin (straight-coast module 6) on the real Buxton planform, against pinned and drift (2026-10-08) | `corrected_groin/tables/`, `corrected_groin/figures/` |
 
 The emulators import each other: `blocking_groin_emulator.py` takes the
 planform, climates and schedule constants from `groin_stability_option_a.py`,

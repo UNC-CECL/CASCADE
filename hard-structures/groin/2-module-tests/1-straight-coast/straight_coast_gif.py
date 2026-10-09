@@ -27,7 +27,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 import straight_coast_test as sc  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
-    C, INK_MUTED, _title, apply_style, figsize, open_frame)
+    C, INK_MUTED, _letter_inside, apply_style, figsize, open_frame)
 
 # --- CONFIG ------------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
@@ -73,25 +73,24 @@ def main():
             for name, spec in sc.MODULES.items():
                 ax.plot(dom, profiles[(name, th)][year], color=spec["col"], lw=1.5)
                 lines.append((spec["col"], totals[(name, th)][year]))
-            ax.text(0.03, 0.97, "total sand (m)", transform=ax.transAxes, fontsize=6.0,
-                    color=INK_MUTED, va="top")
+            ax.text(0.03, 0.04 + 0.075 * len(lines), "sand gained (m)", transform=ax.transAxes,
+                    fontsize=6.0, color=INK_MUTED, va="bottom")
             for k, (col, tot) in enumerate(lines):
-                ax.text(0.03, 0.97 - 0.075 * (k + 1), f"{tot:+.0f}", transform=ax.transAxes,
-                        fontsize=6.3, color=col, va="top")
+                ax.text(0.03, 0.04 + 0.075 * (len(lines) - 1 - k), f"{tot:+.0f}", transform=ax.transAxes,
+                        fontsize=6.3, color=col, va="bottom")
             ax.set_xlim(-12, 12)
             ax.set_ylim(-lims[th], lims[th])
             ax.tick_params(labelsize=6.5)
             ax.grid(axis="y")
             open_frame(ax)
-            q = float(sc.drift(t, th)[0])
-            _title(ax, i, f"coast at {th:+d}$^\\circ$")
-            ax.text(0.97, 0.04, f"drift {abs(q) / 1e3:.0f}k m$^3$/yr", transform=ax.transAxes,
-                    fontsize=6.3, color=INK_MUTED, ha="right")
+            _letter_inside(ax, i)
+            ax.set_title(f"Coast at {th:+d}$^\\circ$", loc="center", fontsize=8)
+            sc.drift_arrow(ax, float(sc.drift(t, th)[0]))
         for ax in axes[:, 0]:
             ax.set_ylabel("Shoreline change\n(m, seaward +)")
         for ax in axes[1]:
             ax.set_xlabel("Domains from the groin (updrift right)", fontsize=7)
-        fig.suptitle(f"Year {year}", fontsize=10, y=0.99)
+        fig.suptitle(f"How does each version reshape a straight coast?  Year {year}", fontsize=10, y=0.99)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     writer = PillowWriter(fps=FPS)
