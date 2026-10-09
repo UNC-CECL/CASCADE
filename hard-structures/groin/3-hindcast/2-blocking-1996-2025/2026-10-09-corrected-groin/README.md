@@ -145,3 +145,14 @@ The joint score is flat at 0.18-0.19; at 0.19 the two scores are nearly equal. T
 12. **The strength fitted to the annual CoastSat record predicts the test period best**, on both scores and on the independent 2009-2016 half (11.5 m against 24.6 m for the joint choice and 31.7 m for no groin). The photo-fitted strength does worse than no groin. The photos' pull toward a stronger groin rests on the 2004 survey, the one date where the photos and CoastSat disagree by 42 m (`../../../1-observations/gap_across_groins/`, figure 7).
 13. **This bears on the calibration target (decision 2):** the annual CoastSat gap generalises; the three photo dates do not.
 14. **The two-number groin with s 0.12 is the best-predicting groin so far**, ahead of the three-number one (18.5 m). It uses two numbers, s = 0.12 (holding back about 11 m of shoreline a year at Buxton) and an end year of 2017. Neither was fitted to 2009-2016.
+
+## Figures (2026-10-09)
+
+`python results_figures.py` draws four figures into `figures/`, with captions in `figures/supporting/CAPTIONS.md`:
+
+| figure | question |
+|---|---|
+| `corrected_groin_1_strength_over_time` | How strong is the groin each year in each option, against the structure's history? |
+| `corrected_groin_2_gap_over_time` | Does the corrected groin reproduce the observed gap, in calibration and test? (no groin, the pinned groin, the two-number groin at 0.12 and 0.19) |
+| `corrected_groin_3_choosing_strength` | Which strength each observed record picks, and how each does on the test |
+| `corrected_groin_4_test_summary` | Every groin version on 2009-2025, before and after the 2017 fill |
