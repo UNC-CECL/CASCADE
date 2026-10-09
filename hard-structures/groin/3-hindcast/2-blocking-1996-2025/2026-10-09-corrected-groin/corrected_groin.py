@@ -71,7 +71,24 @@ A_STRENGTHS = (0.02, 0.05, 0.08, 0.1, 0.12, 0.15, 0.2, 0.25, 0.3)   # A: one str
 C_B = (0.1, 0.15, 0.2, 0.25, 0.3, 0.4)       # C: full b in 1995, ramping to b f by 2003
 C_F = (0.2, 0.4, 0.6, 0.8)
 OFF_YEAR = 2017                              # D: the groin passes everything from the 2017 Buxton fill on
+DECLINES = ("2015-2021r0", "2015-2021r0.33")  # D': linear decline 2015-2021 to nothing, or to the southernmost of three groins
 # -----------------------------------------------------------------------------
+
+
+# The share of the scheduled strength left in `year` under an end spec: None, a switch-off year ("2017"),
+# or a linear decline "Y0-Y1rR" from full at Y0 to R at Y1, held after
+def end_factor(spec, year):
+    if not spec:
+        return 1.0
+    spec = str(spec)
+    if "-" not in spec:
+        return 0.0 if year >= int(spec) else 1.0
+    y0, rest = spec.split("-")
+    y1, r = rest.split("r")
+    y0, y1, r = int(y0), int(y1), float(r)
+    if year <= y0:
+        return 1.0
+    return r if year >= y1 else 1.0 - (1.0 - r) * (year - y0) / (y1 - y0)
 
 
 # Where a schedule's runs are filed; the 2004 schedule without D keeps the first grid's place
@@ -109,7 +126,7 @@ def _launch():
     import cascade.groin as cg
     base_m = np.load(os.environ["CORRECTED_GROIN_BASELINE"])     # no-groin run, [year x domain], m, landward +
     delay, mode, ramp = SCHEDULES[os.environ.get("CORRECTED_GROIN_SCHEDULE", "instant2004")]
-    off = int(os.environ["CORRECTED_GROIN_OFF"]) if os.environ.get("CORRECTED_GROIN_OFF") else None
+    off = os.environ.get("CORRECTED_GROIN_OFF") or None
 
     class CorrectedGroin(cg.BlockingGroinCallback):
         kind = "blocking"
@@ -122,8 +139,8 @@ def _launch():
             year = self.start_year + self._call_count
             k = self._call_count
             self._call_count += 1
-            active = year >= self.install_year and (off is None or year < off)
-            b = self._effective_trapping_rate(year) if active else 0.0
+            active = year >= self.install_year
+            b = self._effective_trapping_rate(year) * end_factor(off, year) if active else 0.0
             brie = cascade._brie_coupler._brie
             x_s = np.asarray(brie.x_s, dtype=float)
             ny, lo, hi = len(x_s), self._lo, self._hi
@@ -214,7 +231,7 @@ def run(period, b, f, schedule="instant2004", off=None):
             f"approach face, GIS 5 -> GIS 6) plus module 6's leak correction within {HALF_WIDTH} cells, applied "
             "as this run's minus the no-groin run's; the runner's report and groin labels do not show it. "
             f"Schedule {schedule}: deterioration {delay} yr after the 1969 install, {mode}, ramp {ramp} yr"
-            + (f"; the groin passes everything from {off}" if off else "") + ".")
+            + (f"; end of the groin's working life: {off} (see end_factor)" if off else "") + ".")
     print(f"{time.strftime('%H:%M:%S')}  {label or 'instant2004'} {dg.window(period)} {dg.member(b, f)}: "
           f"exit {code} ({(time.time() - t0) / 60:.1f} min)", flush=True)
     return code
@@ -285,7 +302,7 @@ def cmd_score(_a):
     from score_instant_grid import observed_series
     photos = observed_series()
     arms = [("corrected", "instant2004", None, tag())] + [
-        ("corrected", s, off, tag(s, off)) for s in SCHEDULES for off in (None, OFF_YEAR) if (s, off) != ("instant2004", None)]
+        ("corrected", s, off, tag(s, off)) for s in SCHEDULES for off in (None, str(OFF_YEAR)) + DECLINES if (s, off) != ("instant2004", None)]
     bs = sorted(set(B_VALUES) | set(B_EDGE) | set(A_STRENGTHS) | set(C_B) | set(dg.B_VALUES) | set(dg.B_FINE))
     fs = sorted(set(F_VALUES) | set(F_EDGE) | set(C_F) | set(dg.F_VALUES))
     rows = []
@@ -303,7 +320,7 @@ def cmd_score(_a):
                 for f in fs:
                     p = finder(study, period, b, f)
                     if p is not None:
-                        rows.append(dict(arm=arm, schedule=s, off=off if off else np.nan, period=period, b=b, f=f,
+                        rows.append(dict(arm=arm, schedule=s, off=off if off else "", period=period, b=b, f=f,
                                          **score_annual(p, period, obs), **score_photos(p, period, photos),
                                          **dg.budget(p), **dg.near_change(p), **split_scores(p, period, obs)))
     t = pd.DataFrame(rows)
@@ -333,7 +350,7 @@ def cmd_score(_a):
 # The test cells: each schedule's best calibration cell, with and without D
 def cmd_tests(a):
     t = pd.read_csv(HERE / "grid_scores.csv")
-    cal = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.isna())]
+    cal = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.fillna("") == "")]
     best = cal.sort_values("joint_rmse").groupby("schedule").head(1)
     cells = [(TEST, float(r.b), float(r.f), r.schedule, off) for r in best.itertuples() for off in (None, OFF_YEAR)]
     for c in cells:
@@ -358,7 +375,7 @@ def main():
     t.add_argument("--b", type=float, required=True)
     t.add_argument("--f", type=float, required=True)
     t.add_argument("--schedule", default="instant2004", choices=sorted(SCHEDULES))
-    t.add_argument("--off", type=int, default=None)
+    t.add_argument("--off", default=None, help="a switch-off year (2017) or a decline Y0-Y1rR (2015-2021r0)")
     a = ap.parse_args()
     if a.cmd == "check":
         return cmd_check(a)

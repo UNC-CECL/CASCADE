@@ -92,3 +92,18 @@ All 39 runs clean (`schedules_run.log`, `tests_run.log`). The test RMSE is also 
 - *Not a clean step.* The southernmost groin stayed partly intact until its 2026 rebuild, and the county manager linked faster erosion after the 2022 fill to its decay.
 
 What the record supports is a groin that lost most of its function over 2015-2021, which an instant switch-off at 2017 approximates. A ramp from 2015 to 2021 would match the record more closely; it has not been run.
+
+## D as the record describes it: a decline 2015-2021 (2026-10-09)
+
+The record (above) describes structural loss over 2015-2021, not a switch-off at the fill. Two test runs at b 0.2 f 0.8 hold the post-2004 strength to 2015, then decline linearly to a remnant by 2021, held after (`end_factor`, off spec `2015-2021rR`). The remnant is 0, or 1/3 for the southernmost of three groins still more than half intact. The 1/3 is a stand-in, not a measured value.
+
+| end of the groin's working life | annual | photos | joint | 2009-2016 | 2017-2024 | gap change at end, model / CoastSat |
+|---|---|---|---|---|---|---|
+| none (the 2004 step only) | 38.7 | 43.3 | 41.1 | 18.4 | 51.5 | −2.8 / −50.4 |
+| off at the 2017 fill | 16.8 | 20.1 | **18.5** | 18.4 | **15.0** | −53.3 / −50.4 |
+| decline 2015-2021 to 0 | 22.2 | 28.9 | 25.7 | 18.5 | 25.4 | −50.7 / −50.4 |
+| decline 2015-2021 to 1/3 | 26.0 | 32.1 | 29.2 | 18.4 | 31.8 | −35.5 / −50.4 |
+| no groin | 23.5 | 31.1 | 27.6 | 31.7 | 9.8 | −57.8 / −50.4 |
+
+10. **The decline the record describes fits worse than switching off at the fill.** It ends at the right gap (−50.7 m against −50.4 m), but its 2017-2024 error is 25.4 m, against 15.0 m for the switch-off. While it is still declining, in 2017-2020, the groin holds the fill's sand at GIS 6. A remnant of 1/3 holds too much (29.2 m joint).
+11. **So the 2017-2024 misfit is mostly the fill, not the groin's decay.** The data want the fill's sand to pass the groin field at once. That fits a fill placed across the whole field, filling the compartments so the groins bypassed everything, more than a gradual structural loss. No source confirms the bypass (see the record above); it is what the shoreline data imply.
