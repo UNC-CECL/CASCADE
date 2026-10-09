@@ -107,3 +107,13 @@ The record (above) describes structural loss over 2015-2021, not a switch-off at
 
 10. **The decline the record describes fits worse than switching off at the fill.** It ends at the right gap (−50.7 m against −50.4 m), but its 2017-2024 error is 25.4 m, against 15.0 m for the switch-off. While it is still declining, in 2017-2020, the groin holds the fill's sand at GIS 6. A remnant of 1/3 holds too much (29.2 m joint).
 11. **So the 2017-2024 misfit is mostly the fill, not the groin's decay.** The data want the fill's sand to pass the groin field at once. That fits a fill placed across the whole field, filling the compartments so the groins bypassed everything, more than a gradual structural loss. No source confirms the bypass (see the record above); it is what the shoreline data imply.
+
+## Strength per period, set directly (2026-10-09)
+
+b, f and the schedules are one way of saying how strong the groin is in each stretch of its life. `periods` sets those strengths directly, as the share of the arriving drift the groin holds back from each year on:
+
+    python corrected_groin.py periods --period 2009 --spec "1969:0.2,2004:0.16,2017:0"
+
+That spec reads: 0.2 from installation, 0.16 from the 2004 failure, 0 from the 2017 fill. b, f, the schedule and the switch-off are not used. Runs are filed under `periods_<spec>`, and the run's `corrected_groin.txt` records the spec. **Check:** that spec on 2009-2025 reproduces the b 0.2 / f 0.8 / off-at-2017 run to 8.5 × 10⁻¹⁴ m (0.2 × 0.8 is 0.16000000000000003 in floating point), with the same scores: joint 18.5 m, 2009-2016 18.4 m, 2017-2024 15.0 m.
+
+In this form the corrected groin's best description so far is three numbers: **0.2 to 2003, 0.16 from 2004, 0 from 2017.** The calibration barely separates the first two (findings 4 and 6). The third rests on the test period and the 2017 placement record (findings 10-11).

@@ -10,6 +10,7 @@ Fit the corrected groin (the drift groin plus a leak correction at the groin's o
     python corrected_groin.py schedules [--streams 4]    # schedules A (instant1996) and C (ramp1996) on 1996-2009
     python corrected_groin.py tests [--streams 4]        # each schedule's best cell on 2009-2025, with and without D
     python corrected_groin.py test --b 0.1 --f 0.6 [--schedule ramp1996] [--off 2017]   # one cell on 2009-2025
+    python corrected_groin.py periods --period 2009 --spec "1969:0.2,2004:0.16,2017:0"  # strength per period, set directly
 
 The drift groin of ../2026-10-08-drift-groin/ (b of BRIE's wave-climate net drift at the updrift
 approach face, moved from GIS 5 to GIS 6 each year), plus straight-coast module 6's leak
@@ -91,8 +92,28 @@ def end_factor(spec, year):
     return r if year >= y1 else 1.0 - (1.0 - r) * (year - y0) / (y1 - y0)
 
 
+# Strength per period, set directly: "1969:0.2,2004:0.16,2017:0" holds 0.2 from 1969, 0.16 from 2004, 0 from 2017
+def parse_periods(spec):
+    pairs = sorted((int(y), float(v)) for y, v in (item.split(":") for item in str(spec).split(",")))
+    return pairs
+
+
+def strength_for(spec, year):
+    value = 0.0
+    for y, v in parse_periods(spec):
+        if year >= y:
+            value = v
+    return value
+
+
+def periods_label(spec):
+    return "_".join(f"{y}-{v:g}" for y, v in parse_periods(spec))
+
+
 # Where a schedule's runs are filed; the 2004 schedule without D keeps the first grid's place
 def tag(schedule="instant2004", off=None):
+    if schedule == "periods":
+        return f"{STUDY}/periods_{periods_label(off)}"     # the runner allows four path components
     if schedule == "instant2004" and off is None:
         return STUDY
     return f"{STUDY}/{schedule}" + (f"_off{off}" if off else "")
@@ -125,7 +146,8 @@ def _launch():
     import runpy
     import cascade.groin as cg
     base_m = np.load(os.environ["CORRECTED_GROIN_BASELINE"])     # no-groin run, [year x domain], m, landward +
-    delay, mode, ramp = SCHEDULES[os.environ.get("CORRECTED_GROIN_SCHEDULE", "instant2004")]
+    schedule = os.environ.get("CORRECTED_GROIN_SCHEDULE", "instant2004")
+    delay, mode, ramp = SCHEDULES.get(schedule, SCHEDULES["instant2004"])
     off = os.environ.get("CORRECTED_GROIN_OFF") or None
 
     class CorrectedGroin(cg.BlockingGroinCallback):
@@ -140,7 +162,10 @@ def _launch():
             k = self._call_count
             self._call_count += 1
             active = year >= self.install_year
-            b = self._effective_trapping_rate(year) * end_factor(off, year) if active else 0.0
+            if schedule == "periods":                    # the strength set directly per period; b and f unused
+                b = strength_for(off, year) if active else 0.0
+            else:
+                b = self._effective_trapping_rate(year) * end_factor(off, year) if active else 0.0
             brie = cascade._brie_coupler._brie
             x_s = np.asarray(brie.x_s, dtype=float)
             ny, lo, hi = len(x_s), self._lo, self._hi
@@ -225,13 +250,14 @@ def run(period, b, f, schedule="instant2004", off=None):
                                env=env, stdout=fh, stderr=subprocess.STDOUT)
     d = run_dir(study, period, b, f)
     if code == 0 and d is not None:
-        delay, mode, ramp = SCHEDULES[schedule]
+        delay, mode, ramp = SCHEDULES.get(schedule, (None, None, None))
         (d / "corrected_groin.txt").write_text(
             "patched in-process by corrected_groin.py: the drift groin (b of BRIE's net drift at the updrift "
             f"approach face, GIS 5 -> GIS 6) plus module 6's leak correction within {HALF_WIDTH} cells, applied "
             "as this run's minus the no-groin run's; the runner's report and groin labels do not show it. "
             f"Schedule {schedule}: deterioration {delay} yr after the 1969 install, {mode}, ramp {ramp} yr"
-            + (f"; end of the groin's working life: {off} (see end_factor)" if off else "") + ".")
+            + (f"; end of the groin's working life: {off} (see end_factor)" if off and schedule != "periods" else "")
+            + (f"; SCHEDULE IGNORED, strength set per period: {off}" if schedule == "periods" else "") + ".")
     print(f"{time.strftime('%H:%M:%S')}  {label or 'instant2004'} {dg.window(period)} {dg.member(b, f)}: "
           f"exit {code} ({(time.time() - t0) / 60:.1f} min)", flush=True)
     return code
@@ -314,6 +340,9 @@ def cmd_score(_a):
                              **score_annual(base, period, obs), **score_photos(base, period, photos),
                              **dg.near_change(base), **split_scores(base, period, obs)))
         finders = [(arm, s, off, study, shoreline_file) for arm, s, off, study in arms]
+        for d in sorted((RAW / "experiments" / STUDY).glob("periods_*")):
+            spec = ",".join(item.replace("-", ":", 1) for item in d.name[len("periods_"):].split("_"))
+            finders.append(("corrected", "periods", spec, tag("periods", spec), shoreline_file))
         finders.append(("drift", "instant2004", None, dg.STUDY, dg.shoreline_file))
         for arm, s, off, study, finder in finders:
             for b in bs:
@@ -370,6 +399,9 @@ def main():
     for name in ("grid", "edge", "schedules", "tests"):
         p = sub.add_parser(name)
         p.add_argument("--streams", type=int, default=4)
+    pr = sub.add_parser("periods")
+    pr.add_argument("--period", type=int, choices=(CALIBRATION, TEST), required=True)
+    pr.add_argument("--spec", required=True, help='strength from each year on, e.g. "1969:0.2,2004:0.16,2017:0"')
     sub.add_parser("score")
     t = sub.add_parser("test")
     t.add_argument("--b", type=float, required=True)
@@ -388,6 +420,9 @@ def main():
         sys.exit(0 if run_all(cells, a.streams) else 1)
     if a.cmd == "schedules":
         sys.exit(0 if run_all(schedule_cells(), a.streams) else 1)
+    if a.cmd == "periods":
+        first = parse_periods(a.spec)[0][1]
+        sys.exit(0 if run_all([(a.period, first, 1.0, "periods", a.spec)], 1) else 1)
     if a.cmd == "tests":
         return cmd_tests(a)
     if a.cmd == "test":
