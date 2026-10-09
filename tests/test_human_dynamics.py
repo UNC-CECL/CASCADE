@@ -1,17 +1,335 @@
 import shutil
+from copy import deepcopy
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
 
 from cascade import Cascade
+from cascade.beach_dune_manager import (
+    beach_width_dune_dynamics as beach_manager_beach_width_dune_dynamics,
+)
 from cascade.beach_dune_manager import filter_overwash
 from cascade.beach_dune_manager import shoreface_nourishment
+from cascade.roadway_manager import (
+    beach_width_dune_dynamics as roadway_beach_width_dune_dynamics,
+)
 from cascade.roadway_manager import bulldoze
 from cascade.roadway_manager import rebuild_dunes
+from cascade.roadway_manager import RoadwayManager
+from cascade.roadway_manager import road_relocation_checks
 from cascade.roadway_manager import set_growth_parameters
+from cascade.roadway_manager import (
+    shoreface_nourishment as roadway_shoreface_nourishment,
+)
 
 NT = 180
+
+
+def relocation_test_barrier(average_width_m=100.0, dune_migration_m=0.0):
+    """Create the minimum Barrier3D state needed for a manager update."""
+
+    states = 4
+    alongshore = 5
+    interior = np.full((12, alongshore), 0.2)
+    dunes = np.full((states, alongshore, 2), 0.4)
+    domain_ts = np.empty(states, dtype=object)
+    for index in range(states):
+        domain_ts[index] = interior.copy()
+    return SimpleNamespace(
+        time_index=2,
+        growthparam=np.full((1, alongshore), 0.5),
+        InteriorDomain=interior,
+        DuneDomain=dunes,
+        h_b_TS=[0.2, 0.2],
+        InteriorWidth_AvgTS=[average_width_m / 10.0],
+        ShorelineChangeTS=np.array([0.0, dune_migration_m / 10.0, 0.0, 0.0]),
+        RSLR=np.zeros(states),
+        BermEl=0.1,
+        SL=0.0,
+        Dmax=0.5,
+        DomainTS=domain_ts,
+        x_s=100.0,
+        x_t=0.0,
+        x_s_TS=[100.0, 100.0],
+        x_b_TS=[114.0, 114.0],
+        s_sf_TS=[0.01, 0.01],
+        DShoreface=1.0,
+        dune_migration_on=True,
+        SCRagg=np.zeros(states),
+    )
+
+
+def test_relocation_diagnostic_series_start_false():
+    roadway = RoadwayManager(time_step_count=4)
+
+    assert not roadway.triggered_relocation_TS.any()
+    assert not roadway.relocation_incomplete_TS.any()
+    assert not roadway.historical_relocation_requested_TS.any()
+    assert not roadway.forced_relocation_TS.any()
+
+
+def test_natural_relocation_sets_only_triggered_series():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier(dune_migration_m=-10.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert roadway.triggered_relocation_TS[event_index]
+    assert not roadway.relocation_incomplete_TS[event_index]
+    assert not roadway.historical_relocation_requested_TS[event_index]
+    assert not roadway.forced_relocation_TS[event_index]
+
+
+def test_historical_request_sets_requested_and_forced_after_success():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier()
+    roadway.request_forced_relocation(30.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.triggered_relocation_TS[event_index]
+    assert not roadway.relocation_incomplete_TS[event_index]
+    assert roadway.historical_relocation_requested_TS[event_index]
+    assert roadway.forced_relocation_TS[event_index]
+    assert roadway._road_setback_TS[event_index] == pytest.approx(30.0)
+    assert not roadway._historical_relocation_requested
+
+
+def test_historical_request_is_incomplete_when_original_width_check_fails():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier(average_width_m=40.0)
+    roadway.request_historical_relocation(30.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.triggered_relocation_TS[event_index]
+    assert roadway.relocation_incomplete_TS[event_index]
+    assert roadway.historical_relocation_requested_TS[event_index]
+    assert not roadway.forced_relocation_TS[event_index]
+    assert roadway.relocation_break
+
+
+def test_historical_request_is_incomplete_when_destination_grade_fails():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier()
+    barrier.InteriorDomain[3, :] = 0.0
+    barrier.DomainTS[1] = barrier.InteriorDomain.copy()
+    roadway.request_forced_relocation(30.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.triggered_relocation_TS[event_index]
+    assert roadway.relocation_incomplete_TS[event_index]
+    assert roadway.historical_relocation_requested_TS[event_index]
+    assert not roadway.forced_relocation_TS[event_index]
+    assert roadway.drown_break
+
+
+def test_forced_relocation_helper_keeps_original_width_check():
+    successful = road_relocation_checks(
+        time_index=2,
+        dune_migrated=0.0,
+        road_setback=5.0,
+        road_relocation_setback=30.0,
+        road_relocation_width=10.0,
+        average_barrier_width=100.0,
+        forced_relocation=True,
+    )
+    incomplete = road_relocation_checks(
+        time_index=2,
+        dune_migrated=0.0,
+        road_setback=5.0,
+        road_relocation_setback=30.0,
+        road_relocation_width=10.0,
+        average_barrier_width=40.0,
+        forced_relocation=True,
+    )
+
+    assert successful == (1, 30.0, 0)
+    assert incomplete == (1, 5.0, 1)
+
+
+@pytest.mark.parametrize(
+    "historical_volume_m3_per_m",
+    [
+        pytest.param(431200.0 / 500.0, id="domain-114-1992"),
+        pytest.param(49146.6667 / 500.0, id="domain-116-1992"),
+        pytest.param(102954.25 / 500.0, id="domain-111-2003"),
+        pytest.param(74972.4 / 500.0, id="domain-115-2004"),
+    ],
+)
+def test_roadway_shoreface_function_matches_beach_manager(
+    historical_volume_m3_per_m,
+):
+    arguments = {
+        "x_s": 100.0,
+        "x_t": 0.0,
+        "nourishment_volume": historical_volume_m3_per_m / 100.0,
+        "average_barrier_height": 0.2,
+        "shoreface_depth": 1.0,
+        "beach_width": 3.0,
+    }
+
+    beach_manager_result = shoreface_nourishment(**arguments)
+    roadway_result = roadway_shoreface_nourishment(**arguments)
+
+    np.testing.assert_array_equal(roadway_result, beach_manager_result)
+
+
+@pytest.mark.parametrize("current_beach_width", [-5.0, 15.0])
+def test_roadway_beach_width_function_matches_beach_manager(
+    current_beach_width,
+):
+    beach_manager_barrier = relocation_test_barrier()
+    beach_manager_barrier.x_s = 100.25
+    roadway_barrier = deepcopy(beach_manager_barrier)
+    arguments = {
+        "current_beach_width": current_beach_width,
+        "beach_width_last_year": 30.0,
+        "beach_width_threshold": 0.0,
+        "time_index": 2,
+    }
+
+    beach_manager_result = beach_manager_beach_width_dune_dynamics(
+        barrier3d=beach_manager_barrier,
+        **arguments,
+    )
+    roadway_result = roadway_beach_width_dune_dynamics(
+        barrier3d=roadway_barrier,
+        **arguments,
+    )
+
+    assert roadway_result == beach_manager_result
+    assert roadway_barrier.dune_migration_on == (
+        beach_manager_barrier.dune_migration_on
+    )
+    np.testing.assert_array_equal(roadway_barrier.SCRagg, beach_manager_barrier.SCRagg)
+
+
+def test_roadway_no_nourishment_preserves_original_dune_migration():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+        initial_beach_width=30.0,
+    )
+    barrier = relocation_test_barrier()
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.beach_management_active
+    assert roadway.beach_width[event_index] == pytest.approx(30.0)
+    assert barrier.dune_migration_on
+    assert not roadway.nourishment_TS[event_index]
+
+
+def test_roadway_manual_nourishment_matches_beach_dune_manager_formula():
+    volume = 100.0
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+        nourishment_volume=volume,
+        initial_beach_width=30.0,
+    )
+    barrier = relocation_test_barrier()
+    pre_nourishment_x_s = barrier.x_s
+
+    returned_request = roadway.update(
+        barrier,
+        trigger_dune_knockdown=False,
+        nourish_now=True,
+    )
+    expected_x_s, expected_s_sf, expected_width_dam = shoreface_nourishment(
+        x_s=pre_nourishment_x_s,
+        x_t=barrier.x_t,
+        nourishment_volume=volume / 100,
+        average_barrier_height=barrier.h_b_TS[-1],
+        shoreface_depth=barrier.DShoreface,
+        beach_width=30.0 / 10,
+    )
+
+    event_index = barrier.time_index - 1
+    assert returned_request == 0
+    assert roadway.beach_management_active
+    assert roadway.nourishment_TS[event_index]
+    assert roadway.nourishment_volume_TS[event_index] == pytest.approx(volume)
+    assert barrier.x_s == pytest.approx(expected_x_s)
+    assert barrier.s_sf_TS[-1] == pytest.approx(expected_s_sf)
+    assert roadway.beach_width[event_index] == pytest.approx(expected_width_dam * 10)
+    assert not barrier.dune_migration_on
+
+
+def test_roadway_automatic_nourishment_uses_configured_interval():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+        nourishment_interval=2,
+        nourishment_volume=100.0,
+        initial_beach_width=30.0,
+    )
+    barrier = relocation_test_barrier()
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+    assert not roadway.nourishment_TS[1]
+
+    barrier.time_index = 3
+    barrier.x_s_TS.append(barrier.x_s)
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    assert roadway.nourishment_TS[2]
+    assert roadway.nourishment_volume_TS[2] == pytest.approx(100.0)
+    assert roadway.beach_management_active
+    assert not barrier.dune_migration_on
+
+
+def test_roadway_beach_width_control_starts_after_nourishment():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+        nourishment_volume=100.0,
+        initial_beach_width=30.0,
+    )
+    barrier = relocation_test_barrier()
+    roadway.update(
+        barrier,
+        trigger_dune_knockdown=False,
+        nourish_now=True,
+    )
+    width_after_nourishment = roadway.beach_width[1]
+
+    barrier.time_index = 3
+    barrier.x_s += 1.0
+    barrier.x_s_TS.append(barrier.x_s)
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    assert roadway.beach_width[2] == pytest.approx(width_after_nourishment - 10.0)
+    assert not barrier.dune_migration_on
 
 
 def run_cascade_roadway_dynamics(datadir):
@@ -514,10 +832,15 @@ def test_shoreline_road_relocation(tmp_path, datadir, monkeypatch):
 
     dunes_migrated = CASCADE_ROADWAY_OUTPUT.barrier3d[iB3D]._ShorelineChangeTS < 0
     road_relocated = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]._road_relocated_TS > 0
-    road_setback_TS = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]._road_setback_TS
+    roadway = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]
+    road_setback_TS = roadway._road_setback_TS
 
     diff_road_setback = np.hstack([0, np.diff(road_setback_TS)])
     road_relocated_based_on_setback = diff_road_setback > 0
 
     assert np.all(road_relocated_based_on_setback == road_relocated)
     assert np.all(dunes_migrated[road_relocated])
+    assert np.array_equal(roadway.triggered_relocation_TS, road_relocated)
+    assert not roadway.relocation_incomplete_TS.any()
+    assert not roadway.historical_relocation_requested_TS.any()
+    assert not roadway.forced_relocation_TS.any()
