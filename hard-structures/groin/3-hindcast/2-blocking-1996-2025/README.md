@@ -8,5 +8,6 @@ The blocking groin (`cascade.groin.BlockingGroinCallback`) fitted on the calibra
 | `2026-10-08-schedule-refit/` | does the fit change if the groin fails from 1996 (the last repair) instead of at the 2004 step? | done; **decision pending** (options A-C in its README) |
 | `2026-10-08-conserving-groin/` | does a version whose own books balance still fit? Also the three-module comparison GIF | **stopped**: the premise was wrong (see `../../2-module-tests/1-straight-coast/`) |
 | `2026-10-08-drift-groin/` | option 1: does a groin that blocks the drift the waves carry (BRIE untouched) fit 1996-2009, with what b and f? | grids done: joint floor 15.8-16.7 m at b 0.08-0.10 (pin 20.9); annual and photo scores want different b; 2009-2025 test of b 0.1 f 0.4: beats the pin, not no groin (gap held too wide) |
+| `2026-10-09-corrected-groin/` | the drift groin plus module 6's leak correction, applied to the groin's own bends only: does it fit, and does it conserve sand? | calibration joint 20.4 m at b 0.2 f 0.8 (pin 20.9), island +19 m (drift +107); 2009-2025 test worse than no groin: holds the gap (−2.8 m against −50.4 m) |
 
 After the 2017 Buxton fill every groin run misses the test period by 37-43 m. The cause is the fill's placement at GIS 6, not the groin (10-05 README).
