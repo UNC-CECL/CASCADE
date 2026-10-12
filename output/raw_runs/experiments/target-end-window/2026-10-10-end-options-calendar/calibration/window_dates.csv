@@ -1,0 +1,6 @@
+period,end_window,first,last,n_positions,mean_date,months_from_model_end,share_2007,share_2008,share_2009
+calibration,selected,2007-07-01,2009-06-30,30243,2008-05-27,-7.2,0.241,0.636,0.124
+calibration,year,2008-01-01,2008-12-31,19222,2008-07-04,-5.9,,1.0,
+calibration,last_two,2007-01-01,2008-12-31,33139,2008-01-26,-11.2,0.42,0.58,
+calibration,three_yr,2007-01-01,2009-12-31,41668,2008-05-15,-7.6,0.334,0.461,0.205
+calibration,end_state,2008-01-01,2010-01-01,27751,2008-10-28,-2.1,,0.693,0.307

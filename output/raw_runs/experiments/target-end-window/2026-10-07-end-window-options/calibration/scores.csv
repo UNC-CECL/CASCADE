@@ -1,0 +1,13 @@
+period,run,end_window,bias_m,rmse_m,r,obs_mean_m,model_mean_m
+calibration,"zeroBE, no groin",dem_centred,5.1,18.58,0.53,-9.75,-4.65
+calibration,"zeroBE, no groin",mid_2009,1.5,16.58,0.56,-6.15,-4.65
+calibration,"zeroBE, no groin",jan_2009,2.05,17.12,0.55,-6.7,-4.65
+calibration,"zeroBE, no groin",year_2009,1.63,18.28,0.52,-6.28,-4.65
+calibration,"edgeBE, no groin",dem_centred,5.96,19.05,0.51,-9.75,-3.8
+calibration,"edgeBE, no groin",mid_2009,2.35,17.02,0.53,-6.15,-3.8
+calibration,"edgeBE, no groin",jan_2009,2.91,17.57,0.53,-6.7,-3.8
+calibration,"edgeBE, no groin",year_2009,2.48,18.66,0.5,-6.28,-3.8
+calibration,domainBE + groin,dem_centred,0.31,4.42,0.98,-9.75,-9.44
+calibration,domainBE + groin,mid_2009,-3.29,5.55,0.98,-6.15,-9.44
+calibration,domainBE + groin,jan_2009,-2.74,5.33,0.98,-6.7,-9.44
+calibration,domainBE + groin,year_2009,-3.17,5.96,0.98,-6.28,-9.44
