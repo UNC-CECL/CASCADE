@@ -1,0 +1,82 @@
+  CoastSat 1996: 906 transects  est. spacing 50 m  LRR range -2.92-+4.69 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 1996)
+
+==========================================================================
+END-DOMAIN SOLVE   1996-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 1996-2025: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +3.993 m/yr
+  run                                              imposed     model  residual
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou   +144.22    +4.053    +0.060
+  d(LRR)/d(BE) 0.1050   (nominal gain, no second run to take a secant through)
+  next         +143.7 m/yr   (step -0.6 to close +0.060)
+
+GIS 90   target +1.457 m/yr
+  run                                              imposed     model  residual
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou    +68.42    +1.469    +0.013
+  d(LRR)/d(BE) 0.1050   (nominal gain, no second run to take a secant through)
+  next         +68.3 m/yr   (step -0.1 to close +0.013)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=143.7,90=68.3"
+
+  CoastSat 1996: 906 transects  est. spacing 50 m  LRR range -2.92-+4.69 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 1996)
+
+==========================================================================
+END-DOMAIN SOLVE   1996-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 1996-2025: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +3.993 m/yr
+  run                                              imposed     model  residual
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou   +144.22    +4.053    +0.060
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou   +143.65    +4.046    +0.053
+  d(LRR)/d(BE) 0.0119   (local secant through the last two runs)
+  next         +139.2 m/yr   (step -4.5 to close +0.053)
+
+GIS 90   target +1.457 m/yr
+  run                                              imposed     model  residual
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou    +68.42    +1.469    +0.013
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou    +68.29    +1.464    +0.008
+  d(LRR)/d(BE) 0.0423   (local secant through the last two runs)
+  next         +68.1 m/yr   (step -0.2 to close +0.008)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=139.2,90=68.1"
+
+  CoastSat 1996: 906 transects  est. spacing 50 m  LRR range -2.92-+4.69 m/yr
+  LOWESS applied: window=7 domains (3.5 km)  frac=0.077  (CoastSat 1996)
+
+==========================================================================
+END-DOMAIN SOLVE   1996-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat LRR 1996-2025: raw mean at GIS 1, LOWESS-7 at GIS 90
+model    lrr (lrr_m_yr)
+==========================================================================
+
+GIS 1   target +3.993 m/yr
+  run                                              imposed     model  residual
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou   +144.22    +4.053    +0.060
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou   +143.65    +4.046    +0.053
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou   +139.19    +4.009    +0.016
+  d(LRR)/d(BE) 0.0084   (local secant through the last two runs)
+  next         +137.3 m/yr   (step -1.9 to close +0.016)
+  CONVERGED at this tolerance; another step is noise
+
+GIS 90   target +1.457 m/yr
+  run                                              imposed     model  residual
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou    +68.42    +1.469    +0.013
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou    +68.29    +1.464    +0.008
+  HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nou    +68.11    +1.447    -0.010
+  d(LRR)/d(BE) 0.0949   (local secant through the last two runs)
+  next         +68.2 m/yr   (step +0.1 to close -0.010)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=137.3,90=68.2"
+

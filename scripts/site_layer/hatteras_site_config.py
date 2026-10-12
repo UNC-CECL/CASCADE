@@ -184,8 +184,9 @@ HATTERAS_PERIODS = {
     2009: {
         # Key was 2010 until 2026-10-05: the period starts in its DEM's year (USACE 2009, flown 2009-08-10 to 08-24)
         "end_year": 2025,
-        # Exclusive label: 16 years, 2009-2024, ending 1 Jan 2025; the target is 2025-08-17 +/- 6 months
-        "last_model_year": 2024,
+        # Inclusive label since 2026-10-09: 17 years, 2009-2025, ending 1 Jan 2026 (was 16, ending 1 Jan 2025);
+        # the target is 2025-08-17 +/- 6 months. The calibration label stays exclusive (1996-2008)
+        "last_model_year": 2025,
         # 0.00509 m/yr fitted over 2009-2025 (Duck gauge, record through 2025)
         "sea_level_rise_rate": 0.005,
         "storm_file": _env.init_relpath(_env.storm_series_file(2009, 2025)),
@@ -194,7 +195,7 @@ HATTERAS_PERIODS = {
         # A copy of the 2004 file: same topography, same road line, no relocation between
         "road_setback_file": road_setback_relpath(2009),
         "topo_product": YEAR_PRODUCT[2009],
-        # Rodanthe 2014, Buxton 2017 and both 2022 projects fall inside 2009-2024
+        # Rodanthe 2014, Buxton 2017 and both 2022 projects fall inside 2009-2025; the 2026 ones do not
         "enable_nourishment": True,
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
@@ -461,7 +462,11 @@ HATTERAS_BE_EDGE_ONLY = {
     # 1996: 1996-2015, five Newton steps (candidate-windows experiment, 2026-10-02)
     # 1996-2009: solved 2026-10-05 on the DEM-to-DEM net change (raw GIS 1, LOWESS-7 GIS 90), five secant steps from zeroBE
     # (experiments/end-domain-boundaries/2026-10-05-ends-solved-on-net-change-1996_2009). 1996-2015: (+3.39, +37.60)
-    1996: (+1.4981, +10.5659),
+    # Re-solved 2026-10-09 on the calendar 2008 +/-6-month end (2007-07-01..2009-06-30), four steps, residuals -0.10 / -0.14 m
+    # (experiments/end-domain-boundaries/2026-10-09-ends-solved-on-net-change-1996_2009). 2026-10-05: (+1.4981, +10.5659)
+    # Re-solved 2026-10-12 on the +/-6-month offset (v3) and start window, five steps, residuals +0.03 / +0.10 m
+    # (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-net-change-1996_2009). 2026-10-09: (+1.4041, +10.3439)
+    1996: (+1.6765, +10.8869),
     # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # /10-offset solve, 2010, superseded 2026-09-27
@@ -474,7 +479,12 @@ HATTERAS_BE_EDGE_ONLY = {
     # (experiments/end-domain-boundaries/2026-10-05-ends-solved-on-net-change-2009_2025); residuals +0.43 / +0.01 m, GIS 1
     # responds noisily (+/-1-2 m). The test of the calibration field is domainBE, which carries its own copy of set 1.
     # Before: the calibration ends (+1.4981, +10.5659), 2026-10-05. 2010-2026: (+172.89, +38.3)
-    2009: (+32.7049, +21.0679),
+    # Re-solved 2026-10-09 for the 17-yr run (2009-2025, ending 1 Jan 2026), six steps, residuals +0.29 / +0.13 m
+    # (experiments/end-domain-boundaries/2026-10-09-ends-solved-on-net-change-2009_2025). 16-yr run, 2026-10-06: (+32.7049, +21.0679)
+    # Re-solved 2026-10-12 on the +/-6-month offset (v3) and start window and the 2025 +/-6-month end (2024-07-01..2026-06-30),
+    # eight steps, residuals -0.06 / -0.01 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-net-change-2009_2025).
+    # 2026-10-09: (+32.2422, +21.5341)
+    2009: (+29.1320, +21.7947),
     # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 

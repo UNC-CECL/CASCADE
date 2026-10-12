@@ -392,10 +392,11 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
     return DUNELINE_DIR / f"duneline_{int(vintage)}{suffix}.geojson"
 
 
-# The CoastSat shoreline window per period: +/-1 yr of the start DEM's lidar flights
+# The CoastSat shoreline window per period: +/-6 months of the start DEM's lidar flights (offset
+# shoreline/v3, min 5 positions), since 2026-10-12. +/-1 yr before it (v2): 1995-10-12..1997-10-12, 2008-08-17..2010-08-17
 SHORELINE_WINDOW_FOR_YEAR = {
-    1996: ("1995-10-12", "1997-10-12"),
-    2009: ("2008-08-17", "2010-08-17"),
+    1996: ("1996-04-12", "1997-04-12"),
+    2009: ("2009-02-17", "2010-02-17"),
 }
 
 

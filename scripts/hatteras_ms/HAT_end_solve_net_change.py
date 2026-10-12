@@ -13,7 +13,7 @@ edgeBE run goes to the matrix. Full management, no groin, relocations off.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-05
+Version: 2026-10-12
 """
 from __future__ import annotations
 
@@ -35,7 +35,9 @@ from site_layer.hatteras_site_config import HATTERAS_PERIODS  # noqa: E402
 HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
 SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
 SCENARIO = "full_management"
-SOLVE_DATE = "2026-10-05"
+# The solve folder and log date; 2026-10-05 solved the first targets, 2026-10-09 the calendar-2008 end and 17-yr test,
+# 2026-10-12 the +/-6-month offset (v3) and start windows and the 2025 +/-6-month test end
+SOLVE_DATE = "2026-10-12"
 MAX_STEPS = 8
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"
 EXP_ROOT = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "end-domain-boundaries"
@@ -69,7 +71,7 @@ def run(period, preset, label, override=None, tag=None):
         env.update(HAT_RUN_KIND="matrix")
     if override:
         env["HAT_BE_OVERRIDE"] = override
-    log = LOG_ROOT / f"end_solve_{window(period)}_{label}.log"
+    log = LOG_ROOT / f"end_solve_{SOLVE_DATE}_{window(period)}_{label}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     print(f"start {label} {override or ''} -> {log.relative_to(PROJECT_ROOT)}", flush=True)
     with open(log, "w", encoding="utf-8") as f:
