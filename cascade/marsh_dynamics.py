@@ -89,6 +89,7 @@ def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
 
     return shift_marsh
 
+
 def find_non_marsh_cells(
         start_marsh,
         end_marsh,
@@ -133,7 +134,6 @@ def find_non_marsh_cells(
         print("the non-marsh row list is not equal in length to the non-marsh columns list")
 
     return non_marsh_cells_rows_OG_index, non_marsh_cells_cols
-
 
 
 def evolvemarsh(
@@ -429,6 +429,42 @@ def decompose(
     return elevation[yr, x_m:x_f], compaction, organic_dep_autoch
 
 
+def thin_layer_placement(
+        full_int_domain,
+        min_TLP_elev,
+        max_TLP_elev,
+):
+    """
+    simulates a thin layer placement by setting all cells (below a threshold)
+    to a specific elevation. to give the domain some variance in elevation,
+    a random value is assigned between the min and max provided
+    :param full_int_domain: array
+        all interior domain cells (not just marsh) in dam MHW
+    :param max_marsh_elev: float
+        self._m_max (which is in dam MHW)
+    :param min_TLP_elev: float
+        target elevation for the thin layer placement (dam MHW)
+    :param max_TLP_elev: float
+        target elevation for the thin layer placement (dam MHW)
+    :return: new interior array elevations with same shape
+    """
+
+    # produces a tuple where position 0 is rows and position 1 is corresponding cols
+    marsh_cells = np.where(full_int_domain<min_TLP_elev)
+    # set all those cells to a value within the specified range
+    full_int_domain[marsh_cells] = np.random.uniform(low=min_TLP_elev, high=max_TLP_elev, size=np.shape(marsh_cells[0]))
+
+    return full_int_domain
+
+def dredge_channel():
+    """
+    simulates dredging the bay or channel specifically to keep the back-barrier position fixed
+    therefore, if overwash made its way to the end of the domain, those cells are reset to an
+    elevation of -3 m MHW (or whatever the bay elevation is in b3d)
+    :return:
+    """
+
+
 class Marsh:
     """apply marsh dynamics
 
@@ -463,6 +499,10 @@ class Marsh:
         initial_width,      # initial width of the barrier
         bay_depth=3,           # bay depth (m MHW)
         accretion_method=1,  # method for mineral deposition
+        enable_TLP=False,   # specify if thin layer placement occurs (bool)
+        TLP_years = [],     # specify years when thin layer placement occurs for this iB3D domain (list)
+        min_TLP=0,          # minimum elevation for thin layer placement sediment (dam MHW)
+        max_TLP=1,          # maximum elevation for thin layer placement sediment (dam MHW)
     ):
         """
 
@@ -491,6 +531,10 @@ class Marsh:
         self._initial_width = initial_width
         self._bay_depth = bay_depth  # m MHW
         self._accretion_method = accretion_method
+        self._enable_TLP = enable_TLP
+        self._TLP_years = TLP_years
+        self._min_TLP = min_TLP
+        self._max_TLP = max_TLP
 
         # initialize other variables that do not have inputs
         self._inundation_time = P / numiterations  # seconds
@@ -530,7 +574,13 @@ class Marsh:
         interior_domain = np.flip(interior_domain, axis=0)
 
         # add optional function for thin-layer spreading?
-        # could either apply it here to the whole domain or make it first after determining the marsh cells
+        if self._enable_TLP:
+            if model_year in self._TLP_years:
+                interior_domain = thin_layer_placement(
+                    full_int_domain=interior_domain,
+                    min_TLP_elev=self._min_TLP,
+                    max_TLP_elev=self._max_TLP,
+                )
 
         # we will need to convert the interior domain from dam MHW to m MSL
         interior_domain = interior_domain * 10  # convert to m

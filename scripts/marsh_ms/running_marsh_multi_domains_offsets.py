@@ -34,12 +34,40 @@ for i in range(d_start_num, d_end_num+1):
     elev_files.append(elev_name)
 
 # ---------------------------------- set model parameters ------------------------------------------
-run_name = "calib_8"
+run_name = "test_tlp"
 overwash_storm = "storms_berm_2pt0_slope_0pt06.npy"
 beach_slope = 0.06
 model_duration = 11  # runs to nt - 1, so this is saying include up to 9 (0-9 = storms 1-10)
 berm_elev = 2.00  # m NAVD88
 MHW = 0.421
+
+# one list per ib3d domain
+# tlp_list = []  # if no thin layer placement
+tlp_list = [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [2],
+    [3],
+    [3,7],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+]
 
 # change r values per domain
 # NOTE: has to be a list and not an array because numpy array uses type float64 instead of just a float, which raises
@@ -170,6 +198,7 @@ if type(min_dune_r) is list:
 if type(max_dune_r) is list:
     max_dune_r.reverse()
 dune_offsets = np.flip(dune_offsets)
+tlp_list.reverse()
 
 # initialize class
 cascade_marsh = Cascade(
@@ -185,7 +214,7 @@ cascade_marsh = Cascade(
     beach_nourishment_module=False,
     community_economics_module=False,
     outwash_module=False,
-    marsh_module=False,
+    marsh_module=True,
     alongshore_section_count=items,
     time_step_count=model_duration,
     wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -218,7 +247,11 @@ cascade_marsh = Cascade(
     min_elev_marsh=-0.2,
     max_elev_marsh=0,
     tidal_amplitude=0.7,
-    accretion_method=4,
+    accretion_method=2,
+    enable_thin_layer_placement=True,
+    thin_layer_placement_years=tlp_list,
+    min_thin_layer_placement_elev=0.1,
+    max_thin_layer_placement_elev=0.1,
     # ---------- offsets ----------- #
     enable_shoreline_offset=True,
     shoreline_offset=dune_offsets,
@@ -239,5 +272,5 @@ t_total_seconds = t1 - t0
 t_total_minutes = t_total_seconds / 60
 t_total_hours = t_total_seconds / 3600
 
-# save variables
-cascade_marsh.save(save_dir)
+# # save variables
+# cascade_marsh.save(save_dir)

@@ -207,6 +207,10 @@ class Cascade:
         max_elev_marsh=0,
         tidal_amplitude=0.7,
         accretion_method=1,
+        enable_thin_layer_placement=False,
+        thin_layer_placement_years=[],
+        min_thin_layer_placement_elev=0,
+        max_thin_layer_placement_elev=0.1,
         # ---------------------- offsets -------------------------
         enable_shoreline_offset=False,
         shoreline_offset=[],
@@ -391,6 +395,19 @@ class Cascade:
             maximum elev that is considered marsh [dam MHW]
         tidal_amplitude: float
             tidal amplitude [m]
+        accretion_method: int (1 or 2)
+            specifies whether to use original (1) or new (2) accretion method
+            1: from Ian's version of PyBMFTC
+            2: Brad's suggestion to use exponential decay regardless of bioavailability
+        enable_thin_layer_placement: bool
+            allow thin layer placements on the marsh to raise the elevation
+        thin_layer_placement_years: list containing lists
+            list of years to implement thin layer placement for each iB3D domain
+            specifying the years that thin layer placement occurs
+        min_thin_layer_placement_elev: float [dam MHW]
+            minimum elevation for raising the interior during a thin layer placement
+        max_thin_layer_placement_elev: float [dam MHW]
+            maximum elevation for raising the interior during a thin layer placement
 
         Examples
         --------
@@ -660,6 +677,20 @@ class Cascade:
         self._marsh = []
         for iB3D in range(self._ny):
             if self._marsh_module[iB3D]:
+                # set up thin layer placement variables
+                if not enable_thin_layer_placement:
+                    tlp = []  # make sure the list is empty
+                else:
+                    if len(thin_layer_placement_years) == 0:
+                        raise CascadeError(
+                            "thin layer placement is True, but list of years per iB3D domain is empty"
+                        )
+                    # if users only have one ib3d domain, they may only input one list rather than a list of lists
+                    elif type(thin_layer_placement_years[0]) is int:
+                        tlp = thin_layer_placement_years
+                    # otherwise, assume list of lists for each ib3d domain
+                    elif type(thin_layer_placement_years[0]) is list:
+                        tlp = thin_layer_placement_years[iB3D]
                 self._marsh.append(
                     Marsh(
                         RSLR=self._sea_level_rise_rate,
@@ -684,6 +715,10 @@ class Cascade:
                         initial_width=np.shape(self._barrier3d[iB3D].InteriorDomain)[0],
                         bay_depth=bay_depth,
                         accretion_method=accretion_method,
+                        enable_TLP=enable_thin_layer_placement,
+                        TLP_years=tlp,
+                        min_TLP=min_thin_layer_placement_elev,
+                        max_TLP=max_thin_layer_placement_elev,
                     )
                 )
 
