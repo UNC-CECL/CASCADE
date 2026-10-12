@@ -6,13 +6,13 @@ how the strength was chosen, and the test period run by run.
     python results_figures.py   ->  figures/corrected_groin_<n>_<what>.png
 
 Reads the runs scored by corrected_groin.py (grid_scores.csv) and their shoreline matrices, the
-pinned groin's runs from ../2026-10-08-schedule-refit/, and the observed gap (annual CoastSat and
-the wet/dry photo dates). Captions go to figures/supporting/CAPTIONS.md. Details: README.md.
+pinned and drift groins rerun on the same setup (same_setup_runs.py), and the observed gap (annual
+CoastSat and the wet/dry photo dates). Captions go to figures/supporting/CAPTIONS.md. Details: README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-09
+Version: 2026-10-12
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 import corrected_groin as cgm  # noqa: E402
 import drift_groin as dg  # noqa: E402
+import same_setup_runs as ssr  # noqa: E402
 import schedule_refit as sr  # noqa: E402
 from score_instant_grid import observed_series  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
@@ -34,7 +35,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 HERE = cgm.HERE
 FIGS = HERE / "figures"
 CAL, TEST = cgm.CALIBRATION, cgm.TEST
-CHOSEN, JOINT, PHOTO = 0.12, 0.19, 0.25               # the strengths each calibration target picks
+CHOSEN, JOINT, PHOTO = 0.12, 0.18, 0.25               # the strengths each calibration target picks
 OBS_C = C["LOCATOR"]                                  # observations: teal, markers only
 RUNS = {                                              # label: (colour, line style)
     "no groin": (C["BASE"], "-"),
@@ -61,7 +62,7 @@ def two_number_file(period, s):
 def run_files(period):
     return {
         "no groin": sr.baseline_file(period),
-        "pinned groin (in the runner now)": sr.shoreline_file("instant2004", period, 0.6, 0.6),
+        "pinned groin (in the runner now)": ssr.pinned_file(period),
         f"corrected, {CHOSEN} to 2016": two_number_file(period, CHOSEN),
         f"corrected, {JOINT} to 2016": two_number_file(period, JOINT),
     }
@@ -102,7 +103,7 @@ def strength_over_time():
         "**Tests:** nothing; this figure shows the options compared in the corrected-groin hindcast. **How to "
         "read:** each line is the corrected groin's strength, the share of the wave-climate net drift arriving at "
         "the groin that it holds back each year (0.12 at Buxton is about 11 m of shoreline a year). Dotted lines: "
-        "the structure's recorded events (`../../../1-observations/structure_history.md`); shading: the "
+        "the structure's recorded events (`../../../1-observations/data/structure_history.md`); shading: the "
         "structural losses reported for 2015-2021. Arrows: the calibration (1996-2009) and test (2009-2025) "
         "periods. The pinned groin in the runner now is not drawn: its 0.6 is a share of BRIE's diffusive "
         "exchange, not of the drift, so it is not on this axis. **Shows:** the two-number groin holds one strength "
@@ -213,16 +214,17 @@ def choosing_strength(sc_):
         f"record wants {CHOSEN}, the photos {PHOTO}. On the test the annual-fitted strength is best before the fill "
         f"({t.loc[CHOSEN, 'rmse_2009_2016']:.1f} m, against {t.loc[JOINT, 'rmse_2009_2016']:.1f} m for {JOINT}, "
         f"{t.loc[PHOTO, 'rmse_2009_2016']:.1f} m for {PHOTO} and {none['rmse_2009_2016']:.1f} m with no groin) and "
-        f"after it ({t.loc[CHOSEN, 'rmse_2017_2024']:.1f} m). The photo-fitted strength does worse than no groin "
-        "before the fill. Its pull toward a stronger groin rests on the 2004 survey, where the photos and "
+        f"after it ({t.loc[CHOSEN, 'rmse_2017_2024']:.1f} m). The photo-fitted strength does no better than no "
+        "groin before the fill. Its pull toward a stronger groin rests on the 2004 survey, where the photos and "
         "CoastSat disagree by 42 m."))
 
 
 # Figure 4: every version on the test period, before and after the 2017 fill
 def test_summary(sc_):
     t = sc_[sc_.period == TEST]
-    pin = sr.shoreline_file("instant2004", TEST, 0.6, 0.6)
-    pin_split = cgm.split_scores(pin, TEST, sr.coastsat_change(TEST))
+    obs = sr.coastsat_change(TEST)
+    pin_split = cgm.split_scores(ssr.pinned_file(TEST), TEST, obs)
+    drift_split = cgm.split_scores(ssr.drift_file(TEST), TEST, obs)
 
     def row(sel):
         r = t[sel]
@@ -231,7 +233,7 @@ def test_summary(sc_):
     rows = [
         ("no groin", row(t.arm == "none")),
         ("pinned groin (in the runner now)", pd.Series(pin_split)),
-        ("drift groin, b 0.1 f 0.4", row((t.arm == "drift") & (t.b == 0.1) & (t.f == 0.4))),
+        ("drift groin, b 0.1 f 0.4", pd.Series(drift_split)),
         ("corrected, 0.2 then 0.16, never off", row((t.schedule == "ramp1996") & (t.off.fillna("") == "")
                                                     & (t.b == 0.2) & (t.f == 0.8))),
         ("corrected, declining 2015-2021 to 0", row(t.off == "2015-2021r0")),
@@ -263,19 +265,25 @@ def test_summary(sc_):
     png = FIGS / "corrected_groin_4_test_summary.png"
     save(fig, png, dpi=250, close=True)
     best = rows[-1][1]
+    named = dict(rows)
+    on = [r["rmse_2017_2024"] for n, r in rows[1:] if "off from 2017" not in n]
+    off = [r["rmse_2017_2024"] for n, r in rows if "off from 2017" in n]
     record_caption(png, (
         "**Tests:** how each version of the groin does on the test period, 2009-2025, which was not used to fit "
         "its strength, split at the 2017 Buxton fill. **How to read:** one row per run; the filled circle is the "
         "annual CoastSat error in the gap across the groins for 2009-2016, the open square for 2017-2024; grey "
         "lines mark the run without a groin. The pinned groin is the one in the runner now (b 0.6, f 0.6); the "
-        "drift groin is the corrected groin without its leak correction. **Shows:** every groin that stays on "
-        "after 2017 misses 2017-2024 by 25-52 m, because it holds the fill's sand at GIS 6 while the observed sand "
-        "passed the groin field; switching the groin off at the fill brings that half to 12-17 m. Before the fill, "
-        "the pinned groin does best (7.5 m), then the weaker drift and corrected groins (11.5-11.9 m); the "
-        "stronger corrected groins do worse. The two-number groin fitted to annual CoastSat "
-        f"({CHOSEN}, off from 2017) is best on both halves of the corrected runs ({best['rmse_2009_2016']:.1f} and "
-        f"{best['rmse_2017_2024']:.1f} m). The 2017 switch-off was suggested by the 2017-2024 misfit and is "
-        "supported by the placement record, so only 2009-2016 is fully independent (README)."))
+        "drift groin is the corrected groin without its leak correction; all runs on the 2026-10-12 setup. "
+        f"**Shows:** every groin that stays on after 2017 misses 2017-2024 by {min(on):.0f}-{max(on):.0f} m, because "
+        "it holds the fill's sand at GIS 6 while the observed sand passed the groin field; switching the groin off "
+        f"at the fill brings that half to {min(off):.0f}-{max(off):.0f} m. Before the fill the pinned groin does best "
+        f"({named['pinned groin (in the runner now)']['rmse_2009_2016']:.1f} m), then the two-number groin at "
+        f"{CHOSEN} ({best['rmse_2009_2016']:.1f} m) and the drift groin "
+        f"({named['drift groin, b 0.1 f 0.4']['rmse_2009_2016']:.1f} m); the stronger corrected groins do worse. "
+        f"The two-number groin fitted to annual CoastSat ({CHOSEN}, off from 2017) is best on both halves of the "
+        f"corrected runs ({best['rmse_2009_2016']:.1f} and {best['rmse_2017_2024']:.1f} m). The 2017 switch-off was "
+        "suggested by the 2017-2024 misfit and is supported by the placement record, so only 2009-2016 is fully "
+        "independent (README)."))
 
 
 def main():

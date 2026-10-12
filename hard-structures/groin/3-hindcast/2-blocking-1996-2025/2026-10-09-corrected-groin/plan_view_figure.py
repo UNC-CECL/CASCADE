@@ -10,7 +10,7 @@ island is filled up to that year's observed CoastSat shoreline (the median posit
 Each modelled shoreline is placed per transect: the observed position over the run's start window
 plus the model's shoreline change since its start in that transect's domain, along the transect's
 own shore-normal. The model has one value per 500 m domain, so its lines step at domain edges. Map
-layers come from ../../../1-observations/shoreline_rates_by_era/shoreline_plan_view_gif.py, used
+layers come from ../../../1-observations/analysis/3-shoreline_rates_by_era/shoreline_plan_view_gif.py, used
 unchanged.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -33,7 +33,7 @@ from shapely.geometry import box  # noqa: E402
 
 import results_figures as rf  # noqa: E402
 
-sys.path.insert(0, str(rf.cgm.REPO / "hard-structures" / "groin" / "1-observations" / "shoreline_rates_by_era"))
+sys.path.insert(0, str(rf.cgm.REPO / "hard-structures" / "groin" / "1-observations" / "analysis" / "3-shoreline_rates_by_era"))
 import shoreline_plan_view_gif as pv  # noqa: E402
 from site_layer.hat_figure_style import C, INK_MUTED, MAP_TEXT_DARK, apply_style, figsize, record_caption, save  # noqa: E402
 

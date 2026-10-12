@@ -11,24 +11,30 @@ Fit the corrected groin (the drift groin plus a leak correction at the groin's o
     python corrected_groin.py tests [--streams 4]        # each schedule's best cell on 2009-2025, with and without D
     python corrected_groin.py test --b 0.1 --f 0.6 [--schedule ramp1996] [--off 2017]   # one cell on 2009-2025
     python corrected_groin.py periods --period 2009 --spec "1969:0.2,2004:0.16,2017:0"  # strength per period, set directly
+    python corrected_groin.py tracked [--streams 4]      # the tracked reference against the no-groin run, same setup
+    python corrected_groin.py refresh [--streams 4]      # every run the README reports, then the score
+    python corrected_groin.py --reference baseline score # the 10-09 runs, with the no-groin run as reference
 
 The drift groin of ../2026-10-08-drift-groin/ (b of BRIE's wave-climate net drift at the updrift
 approach face, moved from GIS 5 to GIS 6 each year), plus straight-coast module 6's leak
 correction within HALF_WIDTH cells of the groin face, applied to the groin's bends only (option
-B): each year the correction is computed for this run's BRIE shoreline and for the no-groin run's
-in the same year, and only the difference is added to x_s_dt,
+B): each year the correction is computed for this run's BRIE shoreline and for the groin-free
+shoreline in the same year, and only the difference is added to x_s_dt,
 
     L(x) = 2 (r_i - r_{i-1}) (x_i - x_{i-1}),   x_s_dt += L(x_groin) - L(x_none)   near the groin
 
-so with no groin the two cancel and the no-groin baseline is untouched. The no-groin BRIE
-shoreline is rebuilt each year as this run's year-0 BRIE shoreline plus the no-groin run's
-shoreline change since year 0. BRIE and Barrier3D are not changed: the class replaces
-BlockingGroinCallback in a child process, and the unchanged runner is driven as the 10-05 setup.
+The groin-free shoreline x_none is, by default ("tracked", since 2026-10-12), this run's shoreline
+minus the groin's own footprint: each year the callback repeats BRIE's alongshore step for last
+year with and without its own contribution and keeps the difference, so fills and Barrier3D's
+change cancel and no no-groin run is needed; with no groin the footprint is exactly zero. With
+--reference baseline (the 10-09 runs) x_none is the no-groin run's shoreline instead. BRIE and
+Barrier3D are not changed: the class replaces BlockingGroinCallback in a child process, and the
+unchanged runner is driven as the 10-05 setup.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-09
+Version: 2026-10-12
 """
 from __future__ import annotations
 
@@ -48,7 +54,7 @@ HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 GROIN = REPO / "hard-structures" / "groin"
 sys.path[:0] = [str(HERE.parent / "2026-10-08-drift-groin"), str(HERE.parent / "2026-10-08-schedule-refit"),
-                str(GROIN / "1-observations" / "gap_across_groins"),
+                str(GROIN / "1-observations" / "analysis" / "2-gap_across_groins"),
                 str(GROIN / "2-module-tests" / "3-real-planform"),
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"), str(REPO / "scripts")]
@@ -73,6 +79,10 @@ C_B = (0.1, 0.15, 0.2, 0.25, 0.3, 0.4)       # C: full b in 1995, ramping to b f
 C_F = (0.2, 0.4, 0.6, 0.8)
 OFF_YEAR = 2017                              # D: the groin passes everything from the 2017 Buxton fill on
 DECLINES = ("2015-2021r0", "2015-2021r0.33")  # D': linear decline 2015-2021 to nothing, or to the southernmost of three groins
+# How the groin-free shoreline for the leak correction is found: "tracked" (default since 2026-10-12) subtracts the
+# groin's own tracked footprint, so no no-groin run is needed; "baseline" uses the no-groin run (the 10-09 runs);
+# "now" is "baseline" rerun under the 10-12 setup, filed apart for the comparison. --reference sets it
+REFERENCE = "tracked"
 # -----------------------------------------------------------------------------
 
 
@@ -110,13 +120,21 @@ def periods_label(spec):
     return "_".join(f"{y}-{v:g}" for y, v in parse_periods(spec))
 
 
-# Where a schedule's runs are filed; the 2004 schedule without D keeps the first grid's place
-def tag(schedule="instant2004", off=None):
+# Where a schedule's runs are filed; the 2004 schedule without D keeps the first grid's place.
+# Runs with the tracked reference (no no-groin run needed) are filed apart, prefixed "tracked"; "now" is the
+# no-groin-run reference rerun under the 2026-10-12 setup (six-month start lines, calendar end windows),
+# so the two can be compared on the same setup
+PREFIX = {"baseline": "", "tracked": "tracked_", "now": "now_"}
+SCORES = {"tracked": "grid_scores.csv", "baseline": "grid_scores_2026-10-09_baseline.csv"}
+
+
+def tag(schedule="instant2004", off=None, reference=None):
+    pre = PREFIX[reference or REFERENCE]
     if schedule == "periods":
-        return f"{STUDY}/periods_{periods_label(off)}"     # the runner allows four path components
+        return f"{STUDY}/{pre}periods_{periods_label(off)}"     # the runner allows four path components
     if schedule == "instant2004" and off is None:
-        return STUDY
-    return f"{STUDY}/{schedule}" + (f"_off{off}" if off else "")
+        return f"{STUDY}/{pre[:-1]}" if pre else STUDY
+    return f"{STUDY}/{pre}{schedule}" + (f"_off{off}" if off else "")
 
 
 def run_dir(study, period, b, f):
@@ -141,11 +159,26 @@ def leak(brie, x):
     return 2 * (r - np.roll(r, 1)) * np.roll(step, 1)
 
 
+# BRIE's implicit alongshore step (brie.py:1293-1326) for a shoreline x and shoreline change dx, m
+def brie_step(brie, x, dx):
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import spsolve
+    theta = 180.0 * np.arctan2(np.roll(x, -1) - x, brie._dy) / np.pi
+    k = np.maximum(1, np.minimum(brie._wave_climl, np.round(90 - theta).astype(int)))
+    r = np.maximum(0.0, brie._coast_diff[k] * brie._dt / 2 / brie._dy ** 2)
+    dv = np.r_[-r[-1], -r[1:], 1 + 2 * r, -r[0:-1], -r[0]]
+    rhs = x + r * (np.roll(x, -1) - 2 * x + np.roll(x, 1)) + dx
+    return spsolve(csr_matrix((dv, (brie._di, brie._dj))), rhs)
+
+
 # Child process: the corrected groin in BlockingGroinCallback's place, then the unchanged runner
 def _launch():
     import runpy
     import cascade.groin as cg
-    base_m = np.load(os.environ["CORRECTED_GROIN_BASELINE"])     # no-groin run, [year x domain], m, landward +
+    reference = os.environ.get("CORRECTED_GROIN_REFERENCE", "baseline")
+    base_path = os.environ.get("CORRECTED_GROIN_BASELINE", "")
+    # the no-groin run, [year x domain], m, landward +: the reference for "baseline", a check only for "tracked"
+    base_m = np.load(base_path) if base_path and Path(base_path).is_file() else None
     schedule = os.environ.get("CORRECTED_GROIN_SCHEDULE", "instant2004")
     delay, mode, ramp = SCHEDULES.get(schedule, SCHEDULES["instant2004"])
     off = os.environ.get("CORRECTED_GROIN_OFF") or None
@@ -172,7 +205,15 @@ def _launch():
             if not hasattr(self, "_q_net"):
                 self._q_net = dg.drift_table(brie)
                 self._x0 = x_s.copy()
+                self._a = np.zeros(ny)                    # tracked: the groin's own footprint on the shoreline
+                self._prev = None
                 self.drift_m3_yr_TS, self.approach_deg_TS, self.correction_m_TS, self.baseline_gap_m_TS = [], [], [], []
+                self.footprint_m_TS, self.tracked_vs_baseline_m_TS = [], []
+            if reference == "tracked" and self._prev is not None:
+                # last year's step with and without the groin's own contribution; fills and Barrier3D's change
+                # enter both alike and cancel, so with no groin the footprint stays exactly zero
+                xp, dxp, gp, ap = self._prev
+                self._a = brie_step(brie, xp, dxp) - brie_step(brie, xp - ap, dxp - gp)
 
             def angle(i):
                 return 180.0 * np.arctan2(x_s[(i + 1) % ny] - x_s[i], brie._dy) / np.pi
@@ -189,11 +230,20 @@ def _launch():
             x_s_dt[lo] += dx_lo
             x_s_dt[hi] += dx_hi
 
-            # The leak correction, on the groin's bends only: this run minus the no-groin run
-            x_none = self._x0 + (base_m[min(k, len(base_m) - 1)] - base_m[0])
+            # The leak correction, on the groin's bends only: this run minus the groin-free shoreline, taken from
+            # the no-groin run ("baseline") or as this run minus the groin's tracked footprint ("tracked")
+            x_base = None if base_m is None else self._x0 + (base_m[min(k, len(base_m) - 1)] - base_m[0])
+            x_none = x_s - self._a if reference == "tracked" else x_base
             near = np.abs(np.arange(ny) - (lo + 0.5)) <= HALF_WIDTH
             corr = np.where(near, leak(brie, x_s) - leak(brie, x_none), 0.0)
             x_s_dt += corr
+            g = corr.copy()
+            g[lo] += dx_lo
+            g[hi] += dx_hi
+            self._prev = (x_s.copy(), np.asarray(x_s_dt, dtype=float).copy(), g, self._a.copy())
+            self.footprint_m_TS.append(float(np.abs(self._a).max()))
+            self.tracked_vs_baseline_m_TS.append(
+                np.nan if x_base is None else float(np.abs((x_s - self._a) - x_base)[near].max()))
 
             dx_up, dx_down = (dx_lo, dx_hi) if self.updrift_pad == lo else (dx_hi, dx_lo)
             self.year_TS.append(year)
@@ -214,10 +264,11 @@ def _launch():
         def diagnostics_frame(self):
             rows = super().diagnostics_frame()
             extra = zip(getattr(self, "drift_m3_yr_TS", []), getattr(self, "approach_deg_TS", []),
-                        getattr(self, "correction_m_TS", []), getattr(self, "baseline_gap_m_TS", []))
-            for row, (qv, th, c, g) in zip(rows, extra):
+                        getattr(self, "correction_m_TS", []), getattr(self, "baseline_gap_m_TS", []),
+                        getattr(self, "footprint_m_TS", []), getattr(self, "tracked_vs_baseline_m_TS", []))
+            for row, (qv, th, c, g, fp, tv) in zip(rows, extra):
                 row.update(net_drift_m3_yr=qv, approach_angle_deg=th, leak_correction_m=c,
-                           max_diff_from_no_groin_m=g)
+                           max_diff_from_no_groin_m=g, footprint_max_m=fp, tracked_vs_baseline_m=tv)
             return rows
 
     cg.BlockingGroinCallback = CorrectedGroin
@@ -226,9 +277,10 @@ def _launch():
     runpy.run_path(str(RUNNER), run_name="__main__")
 
 
-def run(period, b, f, schedule="instant2004", off=None):
+def run(period, b, f, schedule="instant2004", off=None, reference=None):
     from schedule_refit import baseline_file
-    study = tag(schedule, off)
+    reference = reference or REFERENCE
+    study = tag(schedule, off, reference)
     env = {k: v for k, v in os.environ.items() if not k.startswith(("HAT_", "CORRECTED_GROIN_"))}
     env.update({
         "HAT_IGNORE_SETTINGS": "1", "HAT_START_YEAR": str(period),
@@ -240,6 +292,7 @@ def run(period, b, f, schedule="instant2004", off=None):
         "HAT_OVERWRITE": "false", "MPLBACKEND": "Agg", "PYTHONIOENCODING": "utf-8",
         "CORRECTED_GROIN_BASELINE": str(baseline_file(period)),
         "CORRECTED_GROIN_SCHEDULE": schedule, "CORRECTED_GROIN_OFF": str(off or ""),
+        "CORRECTED_GROIN_REFERENCE": reference,
     })
     LOGS.mkdir(exist_ok=True)
     label = study.replace(STUDY, "").strip("/").replace("/", "_")
@@ -254,7 +307,9 @@ def run(period, b, f, schedule="instant2004", off=None):
         (d / "corrected_groin.txt").write_text(
             "patched in-process by corrected_groin.py: the drift groin (b of BRIE's net drift at the updrift "
             f"approach face, GIS 5 -> GIS 6) plus module 6's leak correction within {HALF_WIDTH} cells, applied "
-            "as this run's minus the no-groin run's; the runner's report and groin labels do not show it. "
+            + ("as this run's minus that of this run less the groin's tracked footprint (no no-groin run used); "
+               if reference == "tracked" else "as this run's minus the no-groin run's; ")
+            + "the runner's report and groin labels do not show it. "
             f"Schedule {schedule}: deterioration {delay} yr after the 1969 install, {mode}, ramp {ramp} yr"
             + (f"; end of the groin's working life: {off} (see end_factor)" if off and schedule != "periods" else "")
             + (f"; SCHEDULE IGNORED, strength set per period: {off}" if schedule == "periods" else "") + ".")
@@ -263,10 +318,10 @@ def run(period, b, f, schedule="instant2004", off=None):
     return code
 
 
-# cells: (period, b, f) or (period, b, f, schedule, off)
+# cells: (period, b, f), (period, b, f, schedule, off) or (period, b, f, schedule, off, reference)
 def run_all(cells, streams):
-    cells = [tuple(c) + ("instant2004", None)[len(c) - 3:] for c in cells]
-    todo = [c for c in cells if shoreline_file(tag(c[3], c[4]), *c[:3]) is None]
+    cells = [tuple(c) + ("instant2004", None, REFERENCE)[len(c) - 3:] for c in cells]
+    todo = [c for c in cells if shoreline_file(tag(*c[3:]), *c[:3]) is None]
     print(f"{len(cells) - len(todo)} of {len(cells)} done; running {len(todo)} in {streams} streams", flush=True)
     jobs, failed = queue.Queue(), []
     for c in todo:
@@ -340,10 +395,12 @@ def cmd_score(_a):
                              **score_annual(base, period, obs), **score_photos(base, period, photos),
                              **dg.near_change(base), **split_scores(base, period, obs)))
         finders = [(arm, s, off, study, shoreline_file) for arm, s, off, study in arms]
-        for d in sorted((RAW / "experiments" / STUDY).glob("periods_*")):
-            spec = ",".join(item.replace("-", ":", 1) for item in d.name[len("periods_"):].split("_"))
+        pre = PREFIX[REFERENCE] + "periods_"
+        for d in sorted((RAW / "experiments" / STUDY).glob(pre + "*")):
+            spec = ",".join(item.replace("-", ":", 1) for item in d.name[len(pre):].split("_"))
             finders.append(("corrected", "periods", spec, tag("periods", spec), shoreline_file))
-        finders.append(("drift", "instant2004", None, dg.STUDY, dg.shoreline_file))
+        if REFERENCE == "baseline":                 # the drift groin was only run on the 10-09 setup
+            finders.append(("drift", "instant2004", None, dg.STUDY, dg.shoreline_file))
         for arm, s, off, study, finder in finders:
             # a periods run is filed under its first strength with f 1.0
             cells = [(parse_periods(off)[0][1], 1.0)] if s == "periods" else [(b, f) for b in bs for f in fs]
@@ -362,7 +419,7 @@ def cmd_score(_a):
             t.loc[sel, "island_vs_none_m"] = t.loc[sel, "island_seaward_sum_m"] - float(none.island_seaward_sum_m.iloc[0])
     t["joint_rmse"] = np.sqrt((t.rmse_annual ** 2 + t.rmse_photos ** 2) / 2)
     t["strength_after_failure"] = t.b * t.f
-    t.to_csv(HERE / "grid_scores.csv", index=False, float_format="%.3f")
+    t.to_csv(HERE / SCORES[REFERENCE], index=False, float_format="%.3f")
     pd.set_option("display.width", 240)
     cal = t[(t.period == CALIBRATION) & (t.arm == "corrected")]
     print("=== calibration, best joint per schedule (corrected groin) ===")
@@ -378,9 +435,73 @@ def cmd_score(_a):
                 "rmse_2009_2016", "rmse_2017_2024", "end_model", "end_obs"]].round(1).to_string(index=False))
 
 
+# The tracked reference against the no-groin-run reference: b 0 (must reproduce no groin), and the two-number
+# groin at the strengths the annual record (0.12) and the joint score (0.19) pick, in both periods
+TRACKED_STRENGTHS = (0.12, 0.19)
+
+
+def cmd_tracked(a):
+    from schedule_refit import baseline_file, coastsat_change, score_annual, score_photos
+    from score_instant_grid import observed_series
+    spec = {s: f"1969:{s},2017:0" for s in TRACKED_STRENGTHS}
+    cells = [(CALIBRATION, 0.0, 0.6, "instant2004", None, "tracked")] + [
+        (p, s, 1.0, "periods", spec[s], ref) for ref in ("tracked", "now")
+        for p in (CALIBRATION, TEST) for s in TRACKED_STRENGTHS]
+    if not run_all(cells, a.streams):
+        sys.exit(1)
+    photos, rows = observed_series(), []
+    x0, base = np.load(shoreline_file(tag(reference="tracked"), CALIBRATION, 0.0, 0.6)), np.load(baseline_file(CALIBRATION))
+    print(f"b 0, tracked: max |shoreline - no-groin run| over all years and domains: {np.abs(x0 - base).max():.3e} m")
+    for p in (CALIBRATION, TEST):
+        obs = coastsat_change(p)
+        for s in TRACKED_STRENGTHS:
+            pt = shoreline_file(tag("periods", spec[s], "tracked"), p, s, 1.0)
+            pb = shoreline_file(tag("periods", spec[s], "now"), p, s, 1.0)          # same setup, no-groin reference
+            xt, xb = np.load(pt), np.load(pb)
+            diag = pd.read_csv(pt.parent / "tables" / "groin_diagnostics.csv")
+            for ref, path in (("baseline", pb), ("tracked", pt)):
+                sa, sp = score_annual(path, p, obs), score_photos(path, p, photos)
+                rows.append(dict(period=p, strength=s, reference=ref, rmse_annual=sa["rmse_annual"],
+                                 rmse_photos=sp["rmse_photos"], end_model=sa["end_model"], end_obs=sa["end_obs"]))
+            rows[-1].update(max_diff_vs_baseline_m=float(np.abs(xt - xb).max()),
+                            gap_diff_vs_baseline_m=float(np.abs(sr.model_change(pt) - sr.model_change(pb)).max()),
+                            island_diff_vs_baseline_m=float(np.abs((xt - xb).sum(axis=1)).max()),
+                            tracked_vs_baseline_ref_m=float(diag.tracked_vs_baseline_m.max()))
+    t = pd.DataFrame(rows)
+    t["joint_rmse"] = np.sqrt((t.rmse_annual ** 2 + t.rmse_photos ** 2) / 2)
+    t.to_csv(HERE / "tracked_vs_baseline.csv", index=False, float_format="%.3f")
+    pd.set_option("display.width", 240)
+    print(t.round(2).to_string(index=False))
+
+
+# Every run the README reports, under the current setup and reference: the calibration grid, edge and schedules,
+# the two-number calibration strengths, the README's test cells, then the score and each schedule's new best cells
+def cmd_refresh(a):
+    two = lambda s: f"1969:{s},2017:0"                                   # noqa: E731
+    cal = ([(CALIBRATION, b, f) for b in B_VALUES for f in F_VALUES]
+           + [(CALIBRATION, b, f) for b in B_EDGE for f in F_EDGE] + [(CALIBRATION, 0.25, f) for f in F_VALUES[1:]]
+           + schedule_cells() + [(CALIBRATION, s, 1.0, "periods", two(s)) for s in (0.16, 0.17, 0.18, 0.19)])
+    test = ([(TEST, s, 1.0, "periods", two(s)) for s in (0.12, 0.19, 0.25)]
+            + [(TEST, 0.2, 1.0, "periods", "1969:0.2,2004:0.16,2017:0")]
+            + [(TEST, 0.2, f, "instant2004", off) for f in (0.8, 0.9) for off in (None, str(OFF_YEAR))]
+            + [(TEST, 0.2, 1.0, "instant1996", off) for off in (None, str(OFF_YEAR))]
+            + [(TEST, 0.2, 0.8, "ramp1996", off) for off in (None, str(OFF_YEAR))]
+            + [(TEST, 0.2, 0.8, "instant2004", d) for d in DECLINES])
+    ok = run_all(cal + test, a.streams)
+    cmd_score(a)
+    t = pd.read_csv(HERE / SCORES[REFERENCE])
+    c = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.fillna("") == "") & (t.schedule != "periods")]
+    best = c.sort_values("joint_rmse").groupby("schedule").head(1)
+    extra = [(TEST, float(r.b), float(r.f), r.schedule, off) for r in best.itertuples() for off in (None, str(OFF_YEAR))]
+    print("best calibration cells:", [(e[1], e[2], e[3]) for e in extra[::2]], flush=True)
+    ok = run_all(extra, a.streams) and ok
+    cmd_score(a)
+    sys.exit(0 if ok else 1)
+
+
 # The test cells: each schedule's best calibration cell, with and without D
 def cmd_tests(a):
-    t = pd.read_csv(HERE / "grid_scores.csv")
+    t = pd.read_csv(HERE / SCORES[REFERENCE])
     cal = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.fillna("") == "")]
     best = cal.sort_values("joint_rmse").groupby("schedule").head(1)
     cells = [(TEST, float(r.b), float(r.f), r.schedule, off) for r in best.itertuples() for off in (None, OFF_YEAR)]
@@ -393,12 +514,14 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "_launch":
         return _launch()
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--reference", choices=("tracked", "baseline"), default=REFERENCE,
+                    help="groin-free shoreline: the groin's tracked footprint (default) or the no-groin run (10-09)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check")
     s = sub.add_parser("smoke")
     s.add_argument("--b", type=float, default=SMOKE[0])
     s.add_argument("--f", type=float, default=SMOKE[1])
-    for name in ("grid", "edge", "schedules", "tests"):
+    for name in ("grid", "edge", "schedules", "tests", "tracked", "refresh"):
         p = sub.add_parser(name)
         p.add_argument("--streams", type=int, default=4)
     pr = sub.add_parser("periods")
@@ -411,6 +534,7 @@ def main():
     t.add_argument("--schedule", default="instant2004", choices=sorted(SCHEDULES))
     t.add_argument("--off", default=None, help="a switch-off year (2017) or a decline Y0-Y1rR (2015-2021r0)")
     a = ap.parse_args()
+    globals()["REFERENCE"] = a.reference
     if a.cmd == "check":
         return cmd_check(a)
     if a.cmd == "smoke":
@@ -427,6 +551,10 @@ def main():
         sys.exit(0 if run_all([(a.period, first, 1.0, "periods", a.spec)], 1) else 1)
     if a.cmd == "tests":
         return cmd_tests(a)
+    if a.cmd == "tracked":
+        return cmd_tracked(a)
+    if a.cmd == "refresh":
+        return cmd_refresh(a)
     if a.cmd == "test":
         sys.exit(0 if run_all([(TEST, a.b, a.f, a.schedule, a.off)], 1) else 1)
     cmd_score(a)
