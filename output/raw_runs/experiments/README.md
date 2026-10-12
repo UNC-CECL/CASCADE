@@ -2,7 +2,7 @@
 
 Each study answers one question and lives in `<topic>/<date>-<what it tested>/`. Its README or NOTE is the record. Each topic's README has a table of its studies: the question, the answer, and whether it is still current. A study's folder path under `experiments/` is also its runs' tag in `run_index.csv`.
 
-Only studies under the 2026-10-05 calibration/test plan are kept here. Everything older is on `D:\CASCADE_offload\output\raw_runs\experiments\` (see `OFFLOADED.md`).
+Only studies under the 2026-10-05 calibration/test plan are kept here. Everything older is on `D:\archive\CASCADE_offload\output\raw_runs\experiments\` (see `OFFLOADED.md`).
 
 ## Topics
 

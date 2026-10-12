@@ -32,4 +32,4 @@ figures/            groin_module_logic: the dipole's arithmetic as a schematic
 
 **Next step up (not built).** The same straight-coast test inside full CASCADE on a fake barrier, storms off then on (`TEST_PLAN.md` tiers 1-2), once a module version passes step 1.
 
-Two scripts in `3-real-planform/` (`diagnose_no_groin_relaxation.py`, `trajectory_check.py`) read the 1996-2010 matrix runs, which moved to `D:\CASCADE_offload\` on 2026-10-07; they run only with that drive attached.
+Two scripts in `3-real-planform/` (`diagnose_no_groin_relaxation.py`, `trajectory_check.py`) read the 1996-2010 matrix runs, which moved to `D:\archive\CASCADE_offload\` on 2026-10-07; they run only with that drive attached.

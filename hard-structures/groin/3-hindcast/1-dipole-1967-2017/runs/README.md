@@ -9,7 +9,7 @@
 
 Each folder holding scripts has its own README with the reasoning behind
 them. The rig's runs were written to `output/calibration/groin_rig/`, now on
-`D:\CASCADE_offload\output\calibration\groin_rig\` (2026-10-07). The observed target every
+`D:\archive\CASCADE_offload\output\calibration\groin_rig\` (2026-10-07). The observed target every
 script here reads is `../../../1-observations/wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`.
 
 ## Deleted 2026-10-01: the 1967-1997 precursors

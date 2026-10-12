@@ -13,7 +13,7 @@ current per-domain BE (set 1) is `raw_runs/experiments/source-sink/2026-10-05-be
 
 ## Moved off C: on 2026-10-07
 
-Superseded calibrations, now on `D:\CASCADE_offload\output\calibration\`, same
+Superseded calibrations, now on `D:\archive\CASCADE_offload\output\calibration\`, same
 paths (tracked READMEs and DECISION.md are in git history):
 
 - `hs/`: the Hs 3.0 vs 2.5 test on the ÷10 offset (replaced by option A waves).

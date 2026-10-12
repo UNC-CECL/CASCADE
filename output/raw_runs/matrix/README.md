@@ -1,6 +1,6 @@
 # matrix - the production runs
 
-Only current windows live here. Superseded windows go to `D:\CASCADE_offload\output\raw_runs\matrix\` (see the bottom).
+Only current windows live here. Superseded windows go to `D:\archive\CASCADE_offload\output\raw_runs\matrix\` (see the bottom).
 
 ## Current windows (the 2026-10-05 calibration/test plan)
 
@@ -18,4 +18,4 @@ Rules since 2026-10-12 (the same in both periods): the island offset is the Coas
 
 ## Moved off C: on 2026-10-07
 
-`1996_2010/`, `2010_2024/` (the 14-yr windows, superseded 2026-10-03), `1996_2015/`, `2010_2026/` (the candidate windows, superseded by the calibration/test plan 2026-10-05) and `figures/` (management-ladder figures on 1996_2015 / 2010_2026). All of them are on `D:\CASCADE_offload\output\raw_runs\matrix\`, same paths, and their tracked text files are in git history before the commit that removed them.
+`1996_2010/`, `2010_2024/` (the 14-yr windows, superseded 2026-10-03), `1996_2015/`, `2010_2026/` (the candidate windows, superseded by the calibration/test plan 2026-10-05) and `figures/` (management-ladder figures on 1996_2015 / 2010_2026). All of them are on `D:\archive\CASCADE_offload\output\raw_runs\matrix\`, same paths, and their tracked text files are in git history before the commit that removed them.

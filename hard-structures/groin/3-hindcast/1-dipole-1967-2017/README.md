@@ -14,4 +14,4 @@ results/              the rig's sweep results and the three-run comparison
 figures/              groin_timeline_and_hindcast: the fillet against the dipole's M_eff schedule
 ```
 
-The rig's runs are in `D:\CASCADE_offload\output\calibration\groin_rig\` (moved 2026-10-07). The 1984-2024 hindcast sweeps that pinned M 60 are in `D:\CASCADE_offload\output\calibration\groin\`, and their scripts are in `scripts/hatteras_ms/groin-sweep/`.
+The rig's runs are in `D:\archive\CASCADE_offload\output\calibration\groin_rig\` (moved 2026-10-07). The 1984-2024 hindcast sweeps that pinned M 60 are in `D:\archive\CASCADE_offload\output\calibration\groin\`, and their scripts are in `scripts/hatteras_ms/groin-sweep/`.

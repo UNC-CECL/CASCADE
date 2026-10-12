@@ -1,6 +1,6 @@
 # figures
 
-The dipole module's arithmetic as a schematic, beside the observed gap and two dipole sweep cells. Reads the wet/dry change table and the 1984-2024 dipole sweep cells, which moved to `D:\CASCADE_offload\output\calibration\groin\fullperiod_1984_2024\` on 2026-10-07, so it only redraws with that drive attached.
+The dipole module's arithmetic as a schematic, beside the observed gap and two dipole sweep cells. Reads the wet/dry change table and the 1984-2024 dipole sweep cells, which moved to `D:\archive\CASCADE_offload\output\calibration\groin\fullperiod_1984_2024\` on 2026-10-07, so it only redraws with that drive attached.
 
     python HAT_groin_module_logic_figure.py
 

@@ -1,7 +1,7 @@
 # results — the 1967 rig's sweep results and its three-run figure
 
 The products of the Buxton groin rig (GIS 2-12, 1967-2017), apart from the
-runs themselves, which are on `D:\CASCADE_offload\output\calibration\groin_rig\`. The scripts
+runs themselves, which are on `D:\archive\CASCADE_offload\output\calibration\groin_rig\`. The scripts
 that make the runs and the sweep are in
 `../runs/1967_2017_run/`.
 

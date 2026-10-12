@@ -12,6 +12,6 @@ The source/sink rates locked at the two end domains (GIS 1 and 90): what they mu
 
 **Status** — **current**: its answer is in use now. **record**: a finished check, kept so the number can be traced.
 
-Studies from before the 2026-10-05 calibration/test plan were moved on 2026-10-07 to `D:\CASCADE_offload\output\raw_runs\experiments\end-domain-boundaries/`, with this topic's full table in the README there (the LRR, dune-line, candidate-window and run-length solves).
+Studies from before the 2026-10-05 calibration/test plan were moved on 2026-10-07 to `D:\archive\CASCADE_offload\output\raw_runs\experiments\end-domain-boundaries/`, with this topic's full table in the README there (the LRR, dune-line, candidate-window and run-length solves).
 
 Back to [the map](../README.md).

@@ -4,7 +4,7 @@ Everything under here is **produced**, and everything here is **current**. The o
 to "produced" is `calibration/groin/joint_fit.json`, an input the pipeline reads back.
 
 Superseded material is not kept here. On 2026-10-07 it all moved to the Seagate drive,
-`D:\CASCADE_offload\output\`, under the same relative paths (see the bottom).
+`D:\archive\CASCADE_offload\output\`, under the same relative paths (see the bottom).
 
 ## Where do I find...
 
@@ -17,7 +17,7 @@ Superseded material is not kept here. On 2026-10-07 it all moved to the Seagate 
 | the pinned groin | `calibration/groin/joint_fit.json` and its README |
 | a figure for the manuscript or a talk | `figures/<n>-<subject>/` (captions in `supporting/CAPTIONS.md`), talk versions in `figures/talk/` |
 | what a batch did | `logs/driver/driver_manifest.jsonl`; the DEM-to-DEM and full-window logs are in `logs/driver/dem_to_dem/` and `logs/driver/full_window_1996_2025/` |
-| anything older | `D:\CASCADE_offload\output\`, same path as it had here |
+| anything older | `D:\archive\CASCADE_offload\output\`, same path as it had here |
 
 ## The map
 
@@ -33,7 +33,7 @@ Superseded material is not kept here. On 2026-10-07 it all moved to the Seagate 
 
 - **Logs.** A run's log goes in its run directory. A study's logs go in that
   study's folder. Driver batches go in `logs/driver/<batch>/`.
-- **Superseded material.** Copy it to `D:\CASCADE_offload\output\` under the same
+- **Superseded material.** Copy it to `D:\archive\CASCADE_offload\output\` under the same
   path, check every file arrived at full size, then delete it here. Git-tracked
   text is removed in a commit, so history keeps it.
 - **Dates.** ISO `YYYY-MM-DD` in every new folder name.

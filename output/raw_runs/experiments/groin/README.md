@@ -12,6 +12,6 @@ The Cape Point groin (GIS 5/6): how strong it must be, and in what form, to hold
 
 **Status** — **current**: its answer is in use now. **record**: a finished check, kept so the number can be traced.
 
-Studies from before the 2026-10-05 calibration/test plan were moved on 2026-10-07 to `D:\CASCADE_offload\output\raw_runs\experiments\groin/`, with this topic's full table in the README there (the option-A and instant-2004 grids).
+Studies from before the 2026-10-05 calibration/test plan were moved on 2026-10-07 to `D:\archive\CASCADE_offload\output\raw_runs\experiments\groin/`, with this topic's full table in the README there (the option-A and instant-2004 grids).
 
 Back to [the map](../README.md).

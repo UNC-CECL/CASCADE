@@ -42,11 +42,11 @@ from simplest to most complex.
 - **Check before quoting:** the pinned 2009-2025 test run reads −416 m of island change against no groin. It is a 10-05 run and may not share the baseline's setup.
 - **Still open:** the D: offload below.
 
-**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the pinned `joint_fit.json` is in `output/calibration/groin/`. The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\CASCADE_offload\output\calibration\` on 2026-10-07.
+**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the pinned `joint_fit.json` is in `output/calibration/groin/`. The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
 
 ## To do: move to the offload drive (D: attached 2026-10-09)
 
-D: was not connected on 2026-10-08. When it is, move these to `D:\CASCADE_offload\hard-structures\groin\<same path>`, check that the file count and size match, delete them here, and give each parent README a line saying where they went (the 2026-10-07 `output/` offload is the model to follow):
+D: was not connected on 2026-10-08. When it is, move these to `D:\archive\CASCADE_offload\hard-structures\groin\<same path>`, check that the file count and size match, delete them here, and give each parent README a line saying where they went (the 2026-10-07 `output/` offload is the model to follow):
 
 | path | size | what it is |
 |---|---|---|
