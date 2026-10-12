@@ -62,18 +62,25 @@ PROFILE_YEARS = (1, 5, 10, 25, 50)
 BLOCKING_FRACTION = 0.6                  # share of the transport the groin holds; the 10-05 pin
                                          # (cascade.groin.BlockingGroinCallback's blocking_fraction)
 M = 12.0                                 # dipole, the best option-A dipole (2026-09-29)
+# Versions 2-5 and 7 were retired on 2026-10-12; their results live in ../archive/1-straight-coast/
 MODULES = {
     "dipole": dict(folder="1-source-sink-dipole", label="Source/sink (dipole)", col=C["ADDED"]),
-    "pinned": dict(folder="2-trapping-pinned", label="Trapping, pinned", col=C["ACCENT"]),
-    "conserving": dict(folder="3-trapping-conserving", label="Trapping, conserving", col=C["REF"]),
-    "drift": dict(folder="4-trapping-drift", label="Trapping, drift", col=C["LATE"]),
-    "hybrid": dict(folder="5-trapping-hybrid", label="Trapping, hybrid", col=C["LOCATOR"]),
+    "pinned": dict(folder="2-trapping-pinned", archived=True, label="Trapping, pinned", col=C["ACCENT"]),
+    "conserving": dict(folder="3-trapping-conserving", archived=True, label="Trapping, conserving", col=C["REF"]),
+    "drift": dict(folder="4-trapping-drift", archived=True, label="Trapping, drift", col=C["LATE"]),
+    "hybrid": dict(folder="5-trapping-hybrid", archived=True, label="Trapping, hybrid", col=C["LOCATOR"]),
     "corrected": dict(folder="6-trapping-corrected", label="Trapping, corrected", col=INK),
-    "length": dict(folder="7-corrected-length", label="Corrected, with length", col="#e7298a"),
+    "length": dict(folder="7-corrected-length", archived=True, label="Corrected, with length", col="#e7298a"),
 }
 CORRECTION_HALF_WIDTH = 5                # module 6: cells either side of the groin face that get the leak correction
 GROIN_LENGTH_M = 110.0                   # module 7: Buxton's digitized groins are 90-155 m
+ARCHIVE = HERE.parent / "archive" / "1-straight-coast"
 # -----------------------------------------------------------------------------
+
+
+# Where a version's tables and figures live: here, or the archive for the retired ones
+def module_dir(spec):
+    return (ARCHIVE if spec.get("archived") else HERE) / spec["folder"]
 
 
 # coast_diff, Q_net, depth and BRIE's sparse indices from a real Brie instance
@@ -198,7 +205,7 @@ def drift_arrow(ax, q):
 
 def module_figures(name, frame, profiles):
     spec = MODULES[name]
-    out = HERE / spec["folder"] / "figures"
+    out = module_dir(spec) / "figures"
     out.mkdir(parents=True, exist_ok=True)
     dom = np.arange(NY) - LO - 0.5                              # domains from the groin face
     fig, axes = plt.subplots(2, 3, figsize=figsize("double", height=5.4), sharex=True,
@@ -246,7 +253,7 @@ def module_figures(name, frame, profiles):
 
 
 def comparison_figures(t, summary, frames):
-    out = HERE / "comparison" / "figures"
+    out = ARCHIVE / "comparison" / "figures"   # all seven versions: archived
     out.mkdir(parents=True, exist_ok=True)
     th = np.arange(-45, 46)
     dif = t["coast_diff"][angle_index(th, t["climl"])]
@@ -380,7 +387,7 @@ def main():
             rows.append(f)
             profiles.update({(th, y): v for y, v in p.items()})
         frame = pd.concat(rows, ignore_index=True)
-        tables = HERE / spec["folder"] / "tables"
+        tables = module_dir(spec) / "tables"
         tables.mkdir(parents=True, exist_ok=True)
         frame.to_csv(tables / f"straight_coast_{spec['folder']}_by_year.csv", index=False,
                      float_format="%.4f")

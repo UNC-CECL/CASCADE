@@ -5,9 +5,9 @@ Tests of the code, not of Buxton: does each version of the module behave like a 
 ```
 TEST_PLAN.md        the 2026-09-11 design: tier 0 offline (built), tiers 1-2 full-model
                     rigs on fake barriers (not built yet)
-1-straight-coast/   2026-10-08. Four versions (source/sink dipole, trapping pinned,
-                    trapping conserving, trapping drift), one subfolder each, on straight
-                    coasts at -40 to +40 deg in BRIE's alongshore solve alone
+1-straight-coast/   2026-10-08. Version 1 (the source/sink dipole) against version 6 (the
+                    corrected drift groin) on straight coasts at -40 to +40 deg in BRIE's
+                    alongshore solve alone; trimmed to these two on 2026-10-12
 2-solver-audit/     2026-09-11. The dipole in BRIE's solve alone: diffusivity, runaway,
                     closure, domain count, groin fields, the chosen rig
 3-real-planform/    2026-09-29. The dipole and the first blocking emulator on the real
@@ -20,10 +20,19 @@ TEST_PLAN.md        the 2026-09-11 design: tier 0 offline (built), tiers 1-2 ful
 6-long-term/        2026-10-09. The modules and the reference over 200 years: stability,
                     sand conservation, and whether the gap levels off
 figures/            groin_module_logic: the dipole's arithmetic as a schematic
+archive/            the retired versions (2 pinned, 3 conserving, 4 drift, 5 hybrid,
+                    7 length): their straight-coast results, the all-version figures,
+                    and why each was dropped. Version 2 is still the groin in the runner
 ```
 
+**The versions.** Seven were tested; two are kept here. Version 1, the dipole, moves a fixed amount of
+sand across the groin whatever the waves do; it was the first module and is the baseline. Version 6, the
+corrected groin, holds back part of the real drift and gives back the sand BRIE's solve creates or destroys
+at the groin; it is the current candidate. Tests 4-6 still score some retired versions next to version 6,
+because those comparisons are the evidence for choosing it.
+
 **What these found, in one line each.**
-1. The pinned groin conserves sand but blocks only the tilt-driven part of the transport, so at 0° it does nothing while 0.91 M m³/yr of net drift passes; a drift-blocking groin traps correctly, but BRIE's row-scaled solve creates or destroys sand around it.
+1. BRIE's row-scaled solve creates or destroys sand at the bend a groin makes; the dipole's results are mostly that error (+752 to −1,481 m of summed shoreline in 50 years), while the corrected groin traps the real drift and conserves sand within 27 m at every orientation.
 2. The dipole's fillet is bought by M / diffusion number, the solve is not volume-conserving, and five domains are too few.
 3. The old M = 60 is not runnable under option A; a blocking groin, bounded by the transport that arrives, is.
 4. With four groins on one coast, the corrected version behaves most like a groin field (105 of 112 checks against 60 to 75 for the others), but close groins share their sand only weakly, since no version has a groin length.
