@@ -3,7 +3,7 @@
 Inputs for the Buxton groin study (`../README.md`): the 1967 island offset for
 domains D2-D12, the storm files for the 1967-1997 test and the 1967-2017
 hindcast, and the observed dune-line target the groin must reproduce. The
-shoreline-position check moved to `../../../1-observations/wetdry_photo_positions/` on 2026-10-08. Products sit beside the code, as
+shoreline-position check moved to `../../../1-observations/analysis/1-wetdry_photo_positions/` on 2026-10-08. Products sit beside the code, as
 everywhere in this study (`../README.md`, "Where it departs").
 
 ```

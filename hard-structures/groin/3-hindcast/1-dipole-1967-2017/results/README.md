@@ -13,8 +13,11 @@ sensitivity_sweep/   the (M, f) sweep on the rig, written by
                      ../runs/1967_2017_run/HAT_groin_sensitivity_sweep.py:
                      HAT_groin_sweep_results.csv (tracked), the heatmap and
                      profile figures, and profiles/<M>_frac<f>.npy per cell
-    archive_july_20260824_081742/    an earlier sweep, results and profiles
-    archive_pre1984start_20260830/   the sweep as it stood before the 1984 start
 ```
+
+Two earlier sweeps, `sensitivity_sweep/archive_july_20260824_081742/` and
+`sensitivity_sweep/archive_pre1984start_20260830/`, were moved on 2026-10-09 to
+`D:\archive\CASCADE_offload\hard-structures\groin\3-hindcast\1-dipole-1967-2017\results\sensitivity_sweep\`
+(same folder names; their `HAT_groin_sweep_results.csv` left git then).
 
 `../dipole_fit_notes.md` cites `sensitivity_sweep/` as the 1967 rig's sweep.

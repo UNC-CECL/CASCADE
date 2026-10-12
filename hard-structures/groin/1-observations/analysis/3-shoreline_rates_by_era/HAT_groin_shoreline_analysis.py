@@ -1,7 +1,7 @@
 """
 Buxton groin field: shoreline change rates around the groin, from three shoreline sources on CoastSat's transects.
 
-    python hard-structures/groin/1-observations/shoreline_rates_by_era/HAT_groin_shoreline_analysis.py
+    python hard-structures/groin/1-observations/analysis/3-shoreline_rates_by_era/HAT_groin_shoreline_analysis.py
 
 Inputs: aerial wet-dry lines, NC Coastal Management shorelines and CoastSat,
 all measured on CoastSat's own transects, plus the groin and domain layers in
@@ -53,10 +53,10 @@ _PATH_REPO = next(_p for _p in _AnchorPath(__file__).resolve().parents
 
 # Paths
 
-STUDY_AREA_FILTER_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "cascade_area.geojson")
+STUDY_AREA_FILTER_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "cascade_area.geojson")
 STUDY_AREA_BUFFER_M    = 500
 
-WET_DRY_PATH     = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "wet_dry_groin.geojson")
+WET_DRY_PATH     = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "wet_dry_groin.geojson")
 WET_DRY_DATE_COL = "date"
 
 # NC Coastal Management shorelines, read from the data tree (README)
@@ -71,9 +71,9 @@ COASTSAT_ROOT_DIR        = str(_obs.COASTSAT_TIMESERIES)
 # CASCADE domain reference
 
 # The 90 real domain boxes, D1-D90; replaced a fixed-spacing formula (README)
-DOMAINS_JSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "HAT_domains.json")
+DOMAINS_JSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "HAT_domains.json")
 
-OUTPUT_DIR = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "shoreline_rates_by_era" / "tables")
+OUTPUT_DIR = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "analysis" / "3-shoreline_rates_by_era" / "tables")
 
 # CRS for all spatial operations (UTM 18N covers NC Outer Banks)
 PROJECTED_CRS = "EPSG:32618"
@@ -87,7 +87,7 @@ PLOT_X_MAX_KM = 60   # generic safety cap; kept as the GIF/other fallback defaul
 # Groin location
 
 # Groin features: the northernmost is the 0 km origin, the full extent is shaded
-GROIN_GEOJSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "groins_hatteras.geojson")
+GROIN_GEOJSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "groins_hatteras.geojson")
 
 # Used only if the groin GeoJSON is missing; None to fail instead
 GROIN_NORTHING_FALLBACK = 3_901_580.0    # from groins_hatteras.geojson center
@@ -192,7 +192,7 @@ GIF_LAND_COLOR  = "#E3D5A8"
 # The static figures are drawn by shoreline_rates_by_era_figures.py since 2026-10-08; True also draws the old ones
 LEGACY_FIGURES = False
 GIF_TRANSECT_SOURCE = "coastsat"   # "coastsat" (CoastSat shore-normal transects), "hybrid", or "grid100m"; see README
-TRANSECTS_100M_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "transects_100m.geojson")
+TRANSECTS_100M_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "transects_100m.geojson")
 
 # CASCADE domain assignment
 
@@ -280,8 +280,8 @@ ANN_PIERS = {
     # Rodanthe Pier removed -- same edge-of-window collision as above.
 }
 # The groin is not listed: every plot already marks it
-ANN_WIMBLE_SHOALS = (60, 74)
-ANN_AVON_SHOALS   = (24, 39)   # Avon Shoals influence zone
+ANN_WIMBLE_SHOALS = (61, 74)
+ANN_AVON_SHOALS   = (26, 38)   # Avon Shoals influence zone
 
 # Accretion/erosion label heights: None for the midpoint, or a 0-1 axes fraction
 LABEL_ACCRETION_Y = None

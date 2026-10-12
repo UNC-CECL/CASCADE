@@ -33,7 +33,7 @@ PROJECT_BASE_DIR = next(
 
 WETDRY_CHANGE_TABLE = (
     PROJECT_BASE_DIR / "hard-structures" / "groin" / "1-observations"
-    / "wetdry_photo_positions" / "Change_from_wetdry_1967_D2_D12.csv")
+    / "analysis" / "1-wetdry_photo_positions" / "Change_from_wetdry_1967_D2_D12.csv")
 
 DATUM_YEAR = 1967
 UPDRIFT_GIS = 6

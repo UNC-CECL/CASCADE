@@ -185,7 +185,7 @@ def fig_schedules(f_example=0.6):
         f"post-failure fraction f = {f_example} for illustration (the refit fits b and f for each "
         "schedule). Grey: the schedule pinned in the model, full strength until the 2004 step. Blue "
         "dashed: failure from 1996, the first year after the 1995 last repair, where CoastSat puts the "
-        "end of trapping (`hard-structures/groin/1-observations/gap_across_groins/`). Purple: a "
+        "end of trapping (`hard-structures/groin/1-observations/analysis/2-gap_across_groins/`). Purple: a "
         "linear ramp from full strength in 1995 to the floor in 2003 (Isabel). Shading: the calibration "
         "and test periods. **Shows:** the schedules differ only inside the calibration period; from 2004 "
         "on all three apply b × f, so test and forward runs depend on the product alone."))

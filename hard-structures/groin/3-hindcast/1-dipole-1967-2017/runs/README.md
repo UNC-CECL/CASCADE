@@ -4,13 +4,12 @@
 1967_2017_run/               the rig runner, the (M, f) sweep and its worker, the
                              edge solve, the fillet-trajectory target, plots
     comparison/              no-groin vs groin against the observed shoreline
-1967_1997_run/comparison/    six PNGs left from the deleted 1967-1997 precursors (untracked)
 ```
 
 Each folder holding scripts has its own README with the reasoning behind
 them. The rig's runs were written to `output/calibration/groin_rig/`, now on
 `D:\archive\CASCADE_offload\output\calibration\groin_rig\` (2026-10-07). The observed target every
-script here reads is `../../../1-observations/wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`.
+script here reads is `../../../1-observations/analysis/1-wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`.
 
 ## Deleted 2026-10-01: the 1967-1997 precursors
 
@@ -28,8 +27,9 @@ original 30-year (1967-1997) groin-only test, which the 1967-2017 rig replaced:
 They were deleted because `GROIN_PLAN.md` and the fit never cite them, and
 nothing imports them; other scripts mention them only as where they were
 adapted from. Retired code is deleted, not parked (ORGANIZATION.md rule 4).
-Their figures were git-ignored and were kept: they are still in
-`1967_1997_run/comparison/` (`base_vs_60M/`, `M_sweep_noBE/`).
+Their figures were git-ignored and were kept in `1967_1997_run/comparison/`
+(`base_vs_60M/`, `M_sweep_noBE/`) until 2026-10-09, when they were moved to
+`D:\archive\CASCADE_offload\hard-structures\groin\3-hindcast\1-dipole-1967-2017\runs\1967_1997_run\`.
 
 To recover any of them:
 

@@ -40,10 +40,10 @@ FIT_YEAR = 2023                   # last surveyed wet/dry year
 
 WETDRY_CHANGE_TABLE = (
     hc.PROJECT_BASE_DIR / "hard-structures" / "groin" / "1-observations"
-    / "wetdry_photo_positions" / "Change_from_wetdry_1967_D2_D12.csv"
+    / "analysis" / "1-wetdry_photo_positions" / "Change_from_wetdry_1967_D2_D12.csv"
     if isinstance(hc.PROJECT_BASE_DIR, pathlib.Path)
     else pathlib.Path(hc.PROJECT_BASE_DIR) / "hard-structures" / "groin"
-    / "1-observations" / "wetdry_photo_positions"
+    / "1-observations" / "analysis" / "1-wetdry_photo_positions"
     / "Change_from_wetdry_1967_D2_D12.csv")
 
 STORM_FILE_1967_2024 = (

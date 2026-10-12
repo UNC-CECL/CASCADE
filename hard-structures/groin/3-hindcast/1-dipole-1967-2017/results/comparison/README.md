@@ -29,7 +29,7 @@ behaviour; the explanations that left the code are below, word for word.
 could not find its runs, its observations or its output folder on any
 machine. It now finds the repo root by searching upward and reads the runs
 from `output/calibration/groin_rig/`, the wet/dry table from
-`../../../../1-observations/wetdry_photo_positions/`, and writes to
+`../../../../1-observations/analysis/1-wetdry_photo_positions/`, and writes to
 `three_run_comparison/` beside itself, where the existing figures already
 are. Of the three runs, `..._no_groin` and `..._groin` exist in
 `groin_rig/`; the baseline `HAT_1967_2018_edge_calibrated_no_BN_no_groin`

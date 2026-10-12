@@ -2395,7 +2395,7 @@ surveys INK, and the structure a muted guide line rather than a fourth hue.
 ```
 
 ```text
-Documented structure history -- hard-structures/groin/1-observations/structure_history.md. The rig's own
+Documented structure history -- hard-structures/groin/1-observations/data/structure_history.md. The rig's own
 install year is 1970 (it keeps 1967-69 as a free control window); the
 documented installation is 1969. Both are shown rather than reconciled.
 The strip is a ruler, not data: four greys, light to dark as the structure
@@ -2667,7 +2667,7 @@ fitted (M, f). A rate figure can hide a run that gets the trend right from the
 wrong place; a position figure cannot.
 
 WHERE THE OBSERVATIONS COME FROM
-    `1-observations/shoreline_rates_by_era/.../groin_analysis_chainage_all.csv` -- 904k
+    `1-observations/analysis/3-shoreline_rates_by_era/.../groin_analysis_chainage_all.csv` -- 904k
     shoreline observations carrying `chainage_m`, the cross-shore distance from
     the project's offshore datum line, already mapped to CASCADE domains.
     Chainage is SEAWARD-POSITIVE: verified on 2026-08-23 by differencing the

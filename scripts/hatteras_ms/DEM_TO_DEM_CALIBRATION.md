@@ -40,7 +40,7 @@ Started 2026-10-05 from the advisor's plan. Last updated **2026-10-12**. Start h
 | Test on BE set 1 | interior bias −18.2 m, RMSE 32.1 m, r 0.36 (worse bias than edge only) | `matrix/2009_2025/domainBE/` | a14e37dd |
 | 2021 CoastSat step check | the test bias **is** the step: −18.2 → −1.1 m with the step removed; RMSE unchanged, so the alongshore pattern does not carry across periods | `experiments/source-sink/2026-10-06-test-target-and-the-2021-step/` | db7cd3b9 |
 | Net-change run figure | every run on these windows draws `figures/shoreline_position_change_with_buffers.png` (both sides LOWESS-7, ±100 m axis) | `cascade_pipeline/plotting/net_change_comparison.py` | dbfeb437 |
-| Groin condition from CoastSat | the gap across the groin stopped widening in **1995** (90% 1992–98), at the last repair, then declined slowly; no separate drop at Isabel. The photos agree except the single 2004 survey (+42 m off), which set the 2004 failure step. Last repair corrected 1996 → 1995 (CSE 2013) | `hard-structures/groin/1-observations/gap_across_groins/` | 69ff268c, dc16bab4 |
+| Groin condition from CoastSat | the gap across the groin stopped widening in **1995** (90% 1992–98), at the last repair, then declined slowly; no separate drop at Isabel. The photos agree except the single 2004 survey (+42 m off), which set the 2004 failure step. Last repair corrected 1996 → 1995 (CSE 2013) | `hard-structures/groin/1-observations/analysis/2-gap_across_groins/` | 69ff268c, dc16bab4 |
 | End rates re-solved (2026-10-09) | calibration GIS 1 **+1.4041**, GIS 90 **+10.3439** (calendar 2008 ±6-month end); test **+32.2422** / **+21.5341** (17-yr run). Both moved < 0.5 m/yr; interior scores unchanged | `experiments/end-domain-boundaries/2026-10-09-ends-solved-on-net-change-*/` | not yet |
 | Clean re-run (2026-10-12) | v3 offsets + new windows; every old matrix run deleted; targets rebuilt (island mean −4.7 m calibration, +12.6 m test, 905 transects); ends re-solved: calibration **+1.6765 / +10.8869** (5 steps), test **+29.1320 / +21.7947** (8 steps), full window **+139.19 / +68.1128** (on the LRR, 3 steps); zeroBE + edgeBE re-run for all three windows (edgeBE bit-identical to the last solve step). **domainBE not re-run** | `experiments/end-domain-boundaries/2026-10-12-*` | not yet |
 | Groin schedule refit | 3 failure schedules × the b-f grid on the annual CoastSat gap: all reach ~10 m (no groin 41.6); best is **failure from 1996, b × f 0.36** (9.8 m), i.e. a weak, constant groin. The pin scores 29.2 m on CoastSat but 4.0 m on the photos. Test runs depend only on b × f, so the pin and the CoastSat best are identical from 2009 | `hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/` | not yet |
@@ -127,7 +127,7 @@ python scripts/hatteras_ms/HAT_be_domain_solve_net_change.py solve --period 1996
 python scripts/hatteras_ms/HAT_be_domain_solve_net_change.py smooth --period 1996 --step 10
 
 # Groin condition (CoastSat gap, breakpoint) and the failure-schedule refit
-python hard-structures/groin/1-observations/gap_across_groins/coastsat_gap_across_groins.py
+python hard-structures/groin/1-observations/analysis/2-gap_across_groins/coastsat_gap_across_groins.py
 python hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/schedule_refit.py score
 
 # Targets

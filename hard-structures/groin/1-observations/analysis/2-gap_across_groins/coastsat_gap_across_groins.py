@@ -34,8 +34,8 @@ REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 # --- CONFIG ------------------------------------------------------------------
 FRAME = REPO / "data" / "hatteras_init" / "5-scr" / "2-transect-frame" / "transect_domains"
 SERIES_DIR = REPO / "data" / "hatteras_init" / "5-scr" / "1-observations" / "coastsat_timeseries"
-GROINS = REPO / "hard-structures" / "groin" / "1-observations" / "gis_data" / "groins_hatteras.geojson"
-PHOTOS = (REPO / "hard-structures" / "groin" / "1-observations" / "wetdry_photo_positions"
+GROINS = REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "groins_hatteras.geojson"
+PHOTOS = (REPO / "hard-structures" / "groin" / "1-observations" / "analysis" / "1-wetdry_photo_positions"
           / "Change_from_wetdry_1967_D2_D12.csv")
 TABLES = HERE / "tables"
 SITE = "usa_NC_0032"                 # the CoastSat site holding Buxton

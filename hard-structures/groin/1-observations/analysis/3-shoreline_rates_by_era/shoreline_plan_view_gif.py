@@ -56,7 +56,7 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 CHAINAGE = HERE / "tables" / "groin_analysis_chainage_all.csv"
-GROINS = HERE.parent / "gis_data" / "groins_hatteras.geojson"
+GROINS = HERE.parents[1] / "data" / "gis" / "groins_hatteras.geojson"
 DOMAINS = REPO / "data" / "hatteras_init" / "5-scr" / "2-transect-frame" / "transect_domains" / "HAT_domains.json"
 FILLS = (REPO / "data" / "hatteras_init" / "4-mgmt-forcing" / "nourishment" / "2-model-input"
          / "nourishment_projects.csv")

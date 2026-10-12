@@ -46,7 +46,7 @@ OBSERVED_FINAL_YEAR  = 2018   # full D2-D12 coverage; 2017 has only 6/11 (README
 
 WETDRY_CHANGE_TABLE = os.path.join(
     PROJECT_BASE_DIR, "hard-structures", "groin", "1-observations",
-    "wetdry_photo_positions", "Change_from_wetdry_1967_D2_D12.csv",
+    "analysis", "1-wetdry_photo_positions", "Change_from_wetdry_1967_D2_D12.csv",
 )
 
 # Red / amber / blue: problem -> partial fix -> full fix, on purpose (README)

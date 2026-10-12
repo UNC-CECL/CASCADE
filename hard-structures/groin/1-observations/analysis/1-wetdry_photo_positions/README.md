@@ -13,7 +13,7 @@ figures/                                 groin_two_shorelines, sanity_check_spat
 
 The CSVs stay at this level because the hindcast fits and the sweep config read them by path. The
 geojsons the sanity check reads are the 1967 rig's inputs
-(`../../3-hindcast/1-dipole-1967-2017/inputs/groin_init/island_offset/input/`). Until 2026-10-08 the
+(`../../../3-hindcast/1-dipole-1967-2017/inputs/groin_init/island_offset/input/`). Until 2026-10-08 the
 script sat in the rig's `input_prep/shoreline_position/` and its products in the rig's
 `shoreline_position_output/`; until 2026-10-09 the two sanity-check PNGs sat loose here and the
 two-shorelines figure had its own `1-observations/figures/` folder.
@@ -57,7 +57,7 @@ wrong CRS, wrong file or reversed geometry) and the distance profile, against
 and `OUTPUT_DIR` `/scripts/groin/HAT-buxton-hindcast-groin-test/input_prep/shoreline_position/shoreline_position_output`.
 Both now resolve from the repo root: the inputs to
 `groin_init/island_offset/input/` (where all seven geojsons are) and the output
-to `1-observations/wetdry_photo_positions/` (where its products are).
+to `1-observations/analysis/1-wetdry_photo_positions/` (where its products are).
 
 From the script's original header:
 

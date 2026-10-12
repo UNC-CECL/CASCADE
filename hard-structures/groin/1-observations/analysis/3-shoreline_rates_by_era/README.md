@@ -7,10 +7,10 @@ decade. From those it finds how far along the coast the groin's effect reaches.
 
 **Who reads it.** Its chainage table was the target of the superseded dipole fit
 (`scripts/hatteras_ms/groin-sweep/`). The current blocking-groin fits do not read it: they score
-against the wet/dry photo gap (`../wetdry_photo_positions/`) and the yearly gap across the groins
-(`../gap_across_groins/`).
+against the wet/dry photo gap (`../1-wetdry_photo_positions/`) and the yearly gap across the groins
+(`../2-gap_across_groins/`).
 
-**Its narrow counterpart** is `../gap_across_groins/`: only the transects either side of the
+**Its narrow counterpart** is `../2-gap_across_groins/`: only the transects either side of the
 groins, reduced to one gap per year, to date when the groin stopped holding the shoreline. The
 era boundary at 1995 here comes from the repair record; that analysis reaches 1995 from the data.
 Until 2026-10-08 this folder was `coastsat_shoreline/` (and before that `HAT-groin-gis-analysis/`).
@@ -27,7 +27,7 @@ figures/                          the five numbered figures; captions and the zo
 ```
 
 `tables/` was `output/` and the plain GIFs sat loose in `figures/` until 2026-10-09; renamed to match
-`../gap_across_groins/` and to put the two GIF sets side by side.
+`../2-gap_across_groins/` and to put the two GIF sets side by side.
 
     python HAT_groin_shoreline_analysis.py     # tables and metadata (the slow step)
     python shoreline_rates_by_era_figures.py   # seconds: the four figures
@@ -68,7 +68,7 @@ turned matplotlib's `"offset points"` into `"raw_offset points"` (fixed).
 surveys per transect.
 
 Most outputs are git-ignored (the chainage CSV alone is 121 MB, the GIFs tens of
-MB); the metadata text and a few tables are tracked. Its GIS inputs are in `../gis_data/`;
+MB); the metadata text and a few tables are tracked. Its GIS inputs are in `../../data/gis/`;
 `transects_100m.geojson` there is a byte-identical copy of the one the 2-brie-offset stage reads
 (`data/hatteras_init/2-brie-offset/transects/README.md`).
 

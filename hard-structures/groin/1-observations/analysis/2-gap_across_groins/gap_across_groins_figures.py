@@ -18,6 +18,7 @@ Version: 2026-10-08
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -35,7 +36,7 @@ REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 from coastsat_gap_across_groins import (  # noqa: E402
-    BREAK_RANGE, ERAS, FIT, GROINS, N_BOOT, N_BOOT_CHECK, NEAR_M, STEP_YEAR, TABLES)
+    BREAK_RANGE, ERAS, FIT, GROINS, N_BOOT, N_BOOT_CHECK, NEAR_M, PHOTOS, STEP_YEAR, TABLES, DOWNDRIFT, UPDRIFT, era_rate)
 from site_layer.hat_figure_style import (  # noqa: E402
     C, C_1984, C_1997, INK, INK_MUTED, MAP_TEXT_DARK, _letter_inside, _title, apply_style, figsize,
     map_label, north_dart, open_frame, place_label, record_caption, save, scale_bar_km,
@@ -107,6 +108,234 @@ def chart(ax):
 
 def out(name):
     return FIGS / f"gap_across_groins_{name}.png"
+
+
+# Each side's wet/dry position per survey year, change since 1967, seaward positive
+def photo_sides():
+    t = pd.read_csv(PHOTOS).set_index("Domain_ID")
+    out = {}
+    for c in t.columns:
+        m = re.match(r"change_from_wetdry_1967_wetdry_(\d{4})", c)
+        if m:
+            out.setdefault(int(m.group(1)), []).append(-t.loc[[UPDRIFT, DOWNDRIFT], c].to_numpy())
+    return pd.DataFrame({y: np.mean(v, axis=0) for y, v in out.items()}, index=["north", "south"]).T.sort_index()
+
+
+# 0. What the gap is, and how each record measures it
+def fig_what_gap():
+    s = photo_sides()
+    n96, s96 = s.loc[1996, "north"], s.loc[1996, "south"]
+    fig = plt.figure(figsize=figsize("double", height=5.6), constrained_layout=True)
+    gs = fig.add_gridspec(2, 2, width_ratios=(0.62, 1), height_ratios=(1, 0.95))
+
+    # (a) plan view at true scale: GIS 5 and 6, the 1967 and 1996 shorelines, both measurements
+    ax = fig.add_subplot(gs[:, 0])
+    y = np.linspace(0, 1000, 401)
+    x96 = np.where(y >= 500, n96, s96)
+    ax.fill_betweenx(y, -320, x96, color=C["ADDED_FILL"], lw=0, zorder=0)
+    ax.fill_betweenx(y, x96, 230, color=C["WATER"], alpha=0.35, lw=0, zorder=0)
+    ax.plot(x96, y, color=INK, lw=1.4, zorder=3)
+    ax.axvline(0, color=INK_MUTED, lw=1.0, ls=(0, (4, 2)), zorder=3)
+    ax.axhline(500, color="white", lw=1.0, zorder=1)
+    ax.plot([-90, 70], [500, 500], color=C["GROIN"], lw=3.0, solid_capstyle="butt", zorder=4)
+    for k in range(13):                                     # CoastSat transects: 6 in GIS 6, 13 in GIS 5
+        yy = 20 + k * 36
+        ax.plot([-300, 60], [yy, yy], color=SIDE_COL["downdrift"], lw=0.5, alpha=0.8, zorder=2)
+    for k in range(6):
+        yy = 540 + k * 80
+        ax.plot([-300, 60], [yy, yy], color=SIDE_COL["updrift"], lw=0.5, alpha=0.8, zorder=2)
+    ax.axvline(160, color=C["LOCATOR"], lw=1.0, ls=":", zorder=3)
+    ax.text(166, 980, "offshore\ndatum line", fontsize=6.3, color=C["LOCATOR"], va="top")
+    for yy, xx in ((600, n96), (250, s96)):                 # the photo distance to the datum
+        ax.annotate("", xy=(xx, yy), xytext=(160, yy),
+                    arrowprops=dict(arrowstyle="<->", color=C["LOCATOR"], lw=0.8), zorder=5)
+    for yy, xx, side in ((690, n96, "updrift"), (180, s96, "downdrift")):   # retreat since 1967
+        ax.annotate("", xy=(xx, yy), xytext=(0, yy), arrowprops=dict(arrowstyle="->", color=INK, lw=1.0), zorder=5)
+        ax.text(xx - 6 if xx > -100 else xx / 2, yy + 14, f"{xx:.0f} m", ha="right" if xx > -100 else "center",
+                fontsize=7, zorder=6)
+    ax.plot([n96, n96], [500, 360], color=SIDE_COL["updrift"], lw=1.0, ls=(0, (2, 1.5)), zorder=4)
+    ax.annotate("", xy=(s96, 380), xytext=(n96, 380),
+                arrowprops=dict(arrowstyle="<->", color=C["ACCENT"], lw=1.3), zorder=6)
+    ax.text((s96 + n96) / 2, 392, f"gap {n96 - s96:.0f} m", ha="center", fontsize=7.5, color=C["ACCENT"],
+            fontweight="bold", zorder=6)
+    ax.annotate("", xy=(110, 760), xytext=(110, 960), arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=1.1))
+    ax.text(100, 860, "net drift", rotation=90, ha="right", va="center", fontsize=6.5, color=INK_MUTED)
+    ax.text(-310, 750, "GIS 6\nnorth\n(updrift)", fontsize=7, va="center")
+    ax.text(-310, 110, "GIS 5\nsouth\n(downdrift)", fontsize=7, va="center")
+    ax.text(4, 990, "1967", fontsize=6.5, color=INK_MUTED, va="top")
+    ax.text(n96 - 4, 990, "1996", fontsize=6.5, va="top", ha="right")
+    ax.text(75, 508, "groins", fontsize=6.5, color=C["GROIN"])
+    ax.set_xlim(-320, 230)
+    ax.set_ylim(0, 1000)
+    ax.set_aspect("equal")
+    ax.set_xlabel("Cross-shore (m), ocean to the right")
+    ax.set_yticks([0, 500, 1000], ["0", "500", "1000 m"])
+    open_frame(ax)
+    question(ax, 0, "What is the gap?", inside=True)
+
+    # (b) each side's position over time from the photos; the gap is the space between them
+    ax = fig.add_subplot(gs[0, 1])
+    ax.fill_between(s.index, s["south"], s["north"], color=C["ACCENT_FILL"], alpha=0.5, lw=0)
+    for side, key in (("updrift", "north"), ("downdrift", "south")):
+        ax.plot(s.index, s[key], color=SIDE_COL[side], lw=1.3, marker="s", ms=3.2, label=SIDE[side])
+    ax.annotate("", xy=(1996, s96), xytext=(1996, n96),
+                arrowprops=dict(arrowstyle="<->", color=C["ACCENT"], lw=1.2))
+    ax.text(1996.8, (n96 + s96) / 2, f"gap in 1996\n= {n96:.0f} − ({s96:.0f})\n= {n96 - s96:.0f} m",
+            fontsize=6.8, color=C["ACCENT"], va="center")
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.set_xlim(1965, 2025)
+    ax.set_ylabel("Shoreline change since\n1967 (m), + seaward")
+    ax.legend(frameon=False, fontsize=6.8, loc="lower left")
+    chart(ax)
+    question(ax, 1, "Both sides retreat; the gap is the space between")
+
+    # (c) how each record measures it, and how to read it
+    ax = fig.add_subplot(gs[1, 1])
+    ax.axis("off")
+    rows = [
+        ("Aerial photos", "24 dated surveys, 1967-2023; one day each. Each side's position is the mean\n"
+                          "distance from the wet/dry line to a fixed offshore datum line (25 points per\n"
+                          "domain), as change since 1967. Gap = south's retreat − north's retreat."),
+        ("CoastSat", "satellite shorelines from 1984, many images a year. Each transect's yearly mean\n"
+                     "(≥ 3 images), about its own 1984-2016 mean, averaged over the side (6 transects\n"
+                     "in GIS 6, 13 in GIS 5). Gap = north − south. With no 1967 survey, only its\n"
+                     "changes compare, so it is moved onto the photos' 1967 baseline."),
+        ("Reading it", "rising: the north holds while the south retreats (the groin trapping sand);\n"
+                       "flat: the groin holds the gap but adds nothing; falling: the two sides converge\n"
+                       "(sand getting past the groin, or a storm or fill on one side)."),
+    ]
+    yy = 1.0
+    for head, body in rows:
+        ax.text(0.0, yy, head, fontsize=7.3, fontweight="bold", va="top", transform=ax.transAxes)
+        ax.text(0.0, yy - 0.075, body, fontsize=6.8, va="top", transform=ax.transAxes, linespacing=1.25)
+        yy -= 0.12 + 0.07 * (body.count("\n") + 1)
+    question(ax, 2, "How each record measures it")
+
+    handles = [Line2D([], [], color=INK_MUTED, lw=1.0, ls=(0, (4, 2)), label="1967 shoreline"),
+               Line2D([], [], color=INK, lw=1.4, label="1996 shoreline (photos)"),
+               Line2D([], [], color=C["GROIN"], lw=3.0, label="groins (simplified)"),
+               Line2D([], [], color=SIDE_COL["updrift"], lw=0.6, label="CoastSat transects, north"),
+               Line2D([], [], color=SIDE_COL["downdrift"], lw=0.6, label="CoastSat transects, south"),
+               Line2D([], [], color=C["LOCATOR"], lw=0.8, label="photo distance to the datum")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False, fontsize=6.8)
+    png = out("0_what_the_gap_is")
+    save(fig, png, close=True)
+    record_caption(png, (
+        "**Tests:** nothing; this figure explains the quantity the rest of the figures, and every groin fit, "
+        "use. **How to read:** (a) Plan view at true scale, north up, ocean to the right, simplified: GIS 5 and "
+        "GIS 6 drawn as straight 500 m domains with the groin field at the face between them (in reality the "
+        "field lies just inside GIS 6), the 1967 shoreline dashed, and the 1996 shoreline at each domain's "
+        f"photo-measured position: GIS 6 {n96:.0f} m and GIS 5 {s96:.0f} m from 1967. The gap (purple) is the "
+        "difference between the two sides' positions. Teal: what the photos measure, the distance from the "
+        "wet/dry line to a fixed offshore datum line; thin lines: the CoastSat transects whose positions are "
+        "averaged per side (spacing schematic). (b) Each side's position from the dated aerial-photo "
+        "wet/dry surveys, change since 1967, seaward positive (`../1-wetdry_photo_positions/"
+        "Change_from_wetdry_1967_D2_D12.csv`; two 1972 surveys averaged); the shaded band between them is "
+        "the gap. (c) How the photo and CoastSat records each measure it, and how to read a change in it. "
+        f"**Shows:** the gap is not new beach: both sides retreated, the north side by {-n96:.0f} m and the "
+        f"south side by {-s96:.0f} m by 1996, and the {n96 - s96:.0f} m between them is the groin's effect."))
+
+
+# What is happening in each stretch of the record, for the animation
+STORY = ((1969, "1967: the first survey. Both sides start at zero; there is no gap yet."),
+         (1978, "Groins built 1969. Sand drifting south is caught on the north side, so the south side\n"
+                "is starved and retreats faster. The gap grows quickly."),
+         (1995.5, "The gap keeps growing, more slowly. Hurricane Gordon (1994) cuts the south side;\n"
+                  "the last repair is in 1995, and the gap is at its widest."),
+         (2015, "No more repairs. The gap stops growing and slowly shrinks: the north side keeps\n"
+                "retreating while the south side holds."),
+         (2024, "The groins fall apart (2015-2021) and the 2017 fill is placed across them. Sand gets past:\n"
+                "the south side gains, the north side keeps retreating, and the gap shrinks."))
+
+
+# 0b. The same, animated: the two shorelines and the gap through the photo record
+def gif_what_gap():
+    from matplotlib.animation import FuncAnimation, PillowWriter
+    s = photo_sides()
+    years = np.arange(1967, s.index.max() + 0.001, 0.25)
+    north = np.interp(years, s.index, s["north"])
+    south = np.interp(years, s.index, s["south"])
+    frames = list(range(len(years))) + [len(years) - 1] * 25          # hold the last frame
+    fig = plt.figure(figsize=figsize("double", height=4.2))
+    gs = fig.add_gridspec(1, 2, width_ratios=(0.55, 1), left=0.07, right=0.98, top=0.80, bottom=0.12, wspace=0.28)
+    ax, at = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
+    story = fig.text(0.5, 0.975, "", ha="center", va="top", fontsize=8.2)
+    stamp = fig.text(0.07, 0.86, "", fontsize=11, fontweight="bold")
+
+    at.set_xlim(1965, 2025)
+    at.set_ylim(-215, 20)
+    at.axhline(0, color=INK_MUTED, lw=0.6)
+    at.set_ylabel("Shoreline change since 1967 (m)\n+ seaward")
+    at.set_xlabel("Year")
+    chart(at)
+    for yr, lab in ((1969, "built"), (1995, "last repair"), (2017, "fill")):
+        at.axvline(yr, color=INK_MUTED, lw=0.6, ls=":")
+        at.text(yr + 0.4, 15, lab, fontsize=6.5, color=INK_MUTED, va="top")
+    at.axvspan(2015, 2021, color=C["ADDED_FILL"], alpha=0.5, lw=0)
+    at.plot(s.index, s["north"], "s", color=SIDE_COL["updrift"], ms=3, alpha=0.35)
+    at.plot(s.index, s["south"], "s", color=SIDE_COL["downdrift"], ms=3, alpha=0.35)
+    ln_n, = at.plot([], [], color=SIDE_COL["updrift"], lw=1.6, label=SIDE["updrift"])
+    ln_s, = at.plot([], [], color=SIDE_COL["downdrift"], lw=1.6, label=SIDE["downdrift"])
+    at.legend(frameon=False, fontsize=7, loc="lower left")
+    at.set_title("Each side's position; the shaded band is the gap", fontsize=8.5)
+    dyn = []
+
+    def draw(k):
+        for a in dyn:
+            a.remove()
+        dyn.clear()
+        yr, n, so = years[k], north[k], south[k]
+        # plan view, true scale
+        ax.clear()
+        y = np.linspace(0, 1000, 401)
+        x = np.where(y >= 500, n, so)
+        ax.fill_betweenx(y, -320, x, color=C["ADDED_FILL"], lw=0)
+        ax.fill_betweenx(y, x, 140, color=C["WATER"], alpha=0.35, lw=0)
+        ax.plot(x, y, color=INK, lw=1.6)
+        ax.axvline(0, color=INK_MUTED, lw=1.0, ls=(0, (4, 2)))
+        ax.text(3, 990, "1967", fontsize=6.5, color=INK_MUTED, va="top")
+        ax.axhline(500, color="white", lw=1.0)
+        if yr >= 1969:
+            ax.plot([-90, 70], [500, 500], color=C["GROIN"], lw=3.0, solid_capstyle="butt")
+            ax.text(72, 515, "groins", fontsize=6.5, color=C["GROIN"])
+        ax.annotate("", xy=(105, 650), xytext=(105, 900), arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=1.1))
+        ax.text(97, 775, "drift", rotation=90, ha="right", va="center", fontsize=6.5, color=INK_MUTED)
+        for yy, xx, side in ((700, n, "updrift"), (200, so, "downdrift")):
+            if xx < -2:
+                ax.annotate("", xy=(xx, yy), xytext=(0, yy), arrowprops=dict(arrowstyle="->", color=SIDE_COL[side],
+                                                                              lw=1.2))
+            ax.text(min(xx, 0) - 6, yy + 18, f"{xx:.0f} m", ha="right", fontsize=7.5, color=SIDE_COL[side],
+                    fontweight="bold")
+        gap = n - so
+        if abs(gap) > 2:
+            ax.plot([n, n], [500, 330], color=SIDE_COL["updrift"], lw=1.0, ls=(0, (2, 1.5)))
+            ax.annotate("", xy=(so, 360), xytext=(n, 360), arrowprops=dict(arrowstyle="<->", color=C["ACCENT"], lw=1.4))
+        ax.text(-310, 390, f"gap\n{gap:.0f} m", fontsize=9, color=C["ACCENT"], fontweight="bold", va="center")
+        ax.text(-310, 760, "GIS 6\nnorth", fontsize=7, va="center")
+        ax.text(-310, 110, "GIS 5\nsouth", fontsize=7, va="center")
+        ax.set_xlim(-320, 140)
+        ax.set_ylim(0, 1000)
+        ax.set_aspect("equal")
+        ax.set_yticks([0, 500, 1000], ["0", "500", "1000 m"])
+        ax.set_xlabel("Cross-shore (m), ocean →")
+        open_frame(ax)
+        ax.set_title("Map view (true scale)", fontsize=8.5)
+        # time series up to this year
+        m = years <= yr
+        ln_n.set_data(years[m], north[m])
+        ln_s.set_data(years[m], south[m])
+        dyn.append(at.fill_between(years[m], south[m], north[m], color=C["ACCENT_FILL"], alpha=0.5, lw=0))
+        dyn.append(at.annotate("", xy=(yr, so), xytext=(yr, n),
+                               arrowprops=dict(arrowstyle="<->", color=C["ACCENT"], lw=1.2)))
+        stamp.set_text(f"{int(yr)}")
+        story.set_text(next(t for end, t in STORY if yr < end or end == STORY[-1][0]))
+        return []
+
+    anim = FuncAnimation(fig, draw, frames=frames, blit=False)
+    gif = FIGS / "gap_across_groins_0_what_the_gap_is.gif"
+    anim.save(gif, writer=PillowWriter(fps=12), dpi=110)
+    plt.close(fig)
+    print("wrote", gif)
 
 
 # 1. Where each gap is measured
@@ -472,9 +701,128 @@ def fig_photos():
         "year's mean."))
 
 
+# 8. The groin's state in 1996, the start of the hindcast
+def fig_state_1996():
+    a, ph, e, br = tab("gap_annual"), tab("photo_gap"), tab("era_rates"), tab("gap_breakpoint")
+    d = a[a["gap"] == "domain"].set_index("year")
+    ph = ph.set_index("year")
+    shift = (ph["shifted_m"] - ph["gap_change_since_1967_m"]).mean()    # CoastSat onto the photos' 1967 datum
+    cs = d["gap_m"] - shift
+    photos = ph["gap_change_since_1967_m"]
+    peak_yr = int(photos.idxmax())
+    b = br.set_index("gap").loc["domain"]
+    fig = plt.figure(figsize=figsize("double", height=6.4), constrained_layout=True)
+    gs = fig.add_gridspec(2, 2, width_ratios=(1.35, 1))
+
+    # (a) the gap over the groin's whole life, on the photos' 1967 datum
+    ax = fig.add_subplot(gs[0, :])
+    for (lo, hi), name in (((1967, 1978), "building"), ((1978, 1995), "slow growth"),
+                           ((1995, 2016), "after the last repair")):
+        ax.axvspan(lo, hi, color=C["BASE_FILL"] if name == "slow growth" else "white", alpha=0.5, lw=0, zorder=0)
+        ax.text((lo + hi) / 2, 0.03, name, transform=ax.get_xaxis_transform(), ha="center", fontsize=6.8,
+                color=INK_MUTED)
+    ax.axvspan(2015, 2021, color=C["ADDED_FILL"], alpha=0.5, lw=0, zorder=0)
+    ax.plot(cs.index, cs.values, color=COL["domain"], lw=1.1, marker="o", ms=2.8)
+    ax.plot(photos.index, photos.values, ls="none", marker="s", ms=4.5, color=COL["photos"], mec="white",
+            mew=0.5, zorder=5)
+    ax.axvline(1996, color=INK, lw=1.4)
+    g96 = photos.loc[1996]
+    ax.annotate(f"1996: gap {g96:.0f} m (photos), {cs.loc[1996]:.0f} m (CoastSat)\n"
+                f"peak {photos.max():.0f} m in {peak_yr}", xy=(1996, g96), xytext=(1998.5, 30),
+                fontsize=7, arrowprops=dict(arrowstyle="-", color=INK, lw=0.6), va="bottom")
+    for yr, lab in ((1969, "built"), (1975, "repaired"), (1995, "last repair"), (2003, "Isabel"),
+                    (2017, "Buxton fill")):
+        ax.axvline(yr, color=INK_MUTED, lw=0.6, ls=":", zorder=1)
+        ax.text(yr + 0.3, 0.985, lab, transform=ax.get_xaxis_transform(), fontsize=6.5, color=INK_MUTED,
+                va="top")
+    ax.text(2019.2, 0.80, "decay\nreported", transform=ax.get_xaxis_transform(), ha="center", fontsize=6.5,
+            color=INK_MUTED)
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.set_xlim(1965, 2027)
+    ax.set_ylim(-10, 215)
+    ax.set_ylabel("Gap since 1967 (m)\n+ = north side seaward")
+    ax.set_xlabel("Year")
+    chart(ax)
+    question(ax, 0, "Where did the gap stand in 1996, in the groin's whole life?")
+
+    # (b) the rate of gap change in each stage
+    ax = fig.add_subplot(gs[1, 0])
+    r_build, se_build, _ = era_rate(photos, 1967, 1978)
+    ce = e[e["source"] == "domain"].set_index("era")
+    rows = [("1967-1978\nbuilding\n(photos)", r_build, se_build, COL["photos"]),
+            ("1984-1995\nup to the\nlast repair", ce.loc["1984-1995", "rate_m_yr"], ce.loc["1984-1995", "se_m_yr"],
+             COL["domain"]),
+            ("1996-2003\nfrom the\nhindcast start", ce.loc["1996-2003", "rate_m_yr"],
+             ce.loc["1996-2003", "se_m_yr"], INK),
+            ("2004-2016\nIsabel to\nthe fill", ce.loc["2004-2016", "rate_m_yr"], ce.loc["2004-2016", "se_m_yr"],
+             COL["domain"])]
+    x = np.arange(len(rows))
+    ax.bar(x, [r[1] for r in rows], yerr=[r[2] for r in rows], color=[r[3] for r in rows], width=0.6,
+           capsize=2.5, error_kw=dict(lw=0.8))
+    for xi, (_, r, se, _) in zip(x, rows):
+        ax.text(xi, r + np.sign(r) * (se + 0.4) if r else 0.4, f"{r:+.1f}", ha="center",
+                va="bottom" if r >= 0 else "top", fontsize=7)
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.set_xticks(x, [r[0] for r in rows], fontsize=6.6)
+    ax.set_ylim(-6, 15.5)
+    ax.set_ylabel("Rate of gap change (m/yr)\n± 1 SE; + = widening")
+    chart(ax)
+    question(ax, 1, "Was the gap still widening in 1996?", inside=True)
+
+    # (c) the state in 1996, in words
+    ax = fig.add_subplot(gs[1, 1])
+    ax.axis("off")
+    _letter_inside(ax, 2)
+    ax.set_title("The groin in 1996", loc="center")
+    lines = [
+        ("Structure", "south groin repaired 1995 (last repair);\nnorth groin gone since 1972;\n"
+                      "maintenance stops after 1999"),
+        ("Gap", f"near its full size: {g96:.0f} m since 1967,\n{100 * g96 / photos.max():.0f}% of the "
+                f"{photos.max():.0f} m peak ({peak_yr})"),
+        ("Trend", f"no longer widening: the break is {b.break_year}\n(90% range {b.break_ci90_lo}-"
+                  f"{b.break_ci90_hi}); after it {b.rate_after_m_yr:+.1f} m/yr"),
+        ("Not failed", "the gap fades slowly; no separate\ndrop at Isabel (2003-04)"),
+        ("Caveat", "the 1995 peak is partly Gordon's\n(1994) loss on the south side"),
+    ]
+    y = 0.86
+    for head, body in lines:
+        ax.text(0.02, y, head, fontsize=7.4, fontweight="bold", va="top", transform=ax.transAxes)
+        ax.text(0.30, y, body, fontsize=7.2, va="top", transform=ax.transAxes)
+        y -= 0.035 + 0.058 * (body.count("\n") + 1)
+    ax.text(0.02, 0.0, "In short: a full fillet, held in place,\nno longer growing and starting to fade.",
+            fontsize=7.4, va="bottom", style="italic", transform=ax.transAxes)
+
+    handles = [Line2D([], [], color=COL["domain"], lw=1.1, marker="o", ms=2.8,
+                      label="CoastSat gap, annual mean (moved onto the photos' 1967 datum)"),
+               Line2D([], [], ls="none", marker="s", ms=4.5, color=COL["photos"], mec="white",
+                      label="aerial-photo gap (wet/dry line), change since 1967"),
+               Patch(facecolor=C["ADDED_FILL"], alpha=0.5, label="structural losses reported, 2015-2021")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False, fontsize=7)
+    png = out("8_state_in_1996")
+    save(fig, png, close=True)
+    record_caption(png, (
+        "**Tests:** what state the Buxton groin was in at 1996, the start of the calibration (hindcast) "
+        "period, from the observations alone. **How to read:** (a) The gap across the groins (GIS 6 "
+        "seaward of GIS 5) over the groin's whole life: the dated aerial-photo wet/dry surveys as change "
+        "since 1967 (squares), and the CoastSat annual gap (circles) moved onto the same datum by its "
+        f"mean offset from the photos over the shared {FIT[0]}-{FIT[1]} years ({-shift:.0f} m), so the "
+        "two read on one scale. Black line: 1996. Dotted lines: the structure's recorded events "
+        "(`../../data/structure_history.md`); orange shading: the structural losses reported for 2015-2021. "
+        "(b) The least-squares rate of gap change in each stage, ± 1 standard error: the photos for "
+        "1967-1978 (CoastSat starts in 1984), CoastSat for the rest (tables/era_rates.csv). (c) The "
+        f"state in 1996 in words, from (a), (b), figures 2-6 and the structure record. **Shows:** in "
+        f"1996 the gap stood at {g96:.0f} m (photos), {100 * g96 / photos.max():.0f}% of its {photos.max():.0f} m "
+        f"peak in {peak_yr}, a year after the last repair. It had built at {r_build:+.1f} m/yr in the "
+        f"first decade and was still widening at {ce.loc['1984-1995', 'rate_m_yr']:+.1f} m/yr to 1995, "
+        f"but from 1996 to 2003 it changed by {ce.loc['1996-2003', 'rate_m_yr']:+.1f} ± "
+        f"{ce.loc['1996-2003', 'se_m_yr']:.1f} m/yr, not distinguishable from zero. So in 1996 the groin "
+        "held a full-sized gap but no longer widened it, and nothing in the record or the data marks a "
+        "collapse before the 2015-2021 losses."))
+
+
 def main():
     apply_style()
-    for f in (fig_map, fig_sides, fig_gap, fig_break, fig_eras, fig_robust, fig_photos):
+    for f in (fig_what_gap, gif_what_gap, fig_map, fig_sides, fig_gap, fig_break, fig_eras, fig_robust, fig_photos, fig_state_1996):
         f()
         print(f"drew {f.__name__}")
 

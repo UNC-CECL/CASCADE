@@ -34,7 +34,7 @@ from site_layer.hat_figure_style import (apply_style, C, INK_MUTED,  # noqa: E40
                               caption, figsize, open_frame, save)
 
 # --- CONFIG ------------------------------------------------------------------
-WETDRY_TABLE = (GROIN_DIR / "1-observations" / "wetdry_photo_positions"
+WETDRY_TABLE = (GROIN_DIR / "1-observations" / "analysis" / "1-wetdry_photo_positions"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 
 INSTALL_YEAR, LAST_REPAIR_YEAR, STORM_YEAR = 1969, 1996, 2003

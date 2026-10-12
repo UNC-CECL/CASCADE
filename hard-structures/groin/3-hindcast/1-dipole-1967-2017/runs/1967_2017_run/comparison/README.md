@@ -6,7 +6,7 @@
 
 The runs come from `../HAT_groin_hindcast_1967_2017.py` (or the three-way
 runner in `"single"` mode); the observed table is
-`../../../../../1-observations/wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`.
+`../../../../../1-observations/analysis/1-wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`.
 
 ## The scripts in detail
 
@@ -138,7 +138,7 @@ switch to the wet/dry table.
 
 **Paths.** As of 2026-10-01 the script's paths were fixed after the restyle
 (see the folder history in git): the repo root is found by searching upward,
-the wet/dry table is read from `1-observations/wetdry_photo_positions/`,
+the wet/dry table is read from `1-observations/analysis/1-wetdry_photo_positions/`,
 and figures go to `hard-structures/groin/3-hindcast/1-dipole-1967-2017/results/comparison/<COMPARISON_SUBFOLDER>/`.
 Before that, `PROJECT_BASE_DIR` was `r"/"` and both paths named the
 pre-reorganisation `scripts/groin/...` tree, so the script could not find its
