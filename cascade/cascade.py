@@ -16,6 +16,7 @@ from .roadway_manager import RoadwayManager
 from .roadway_manager import check_sandbag_need
 from .roadway_manager import set_growth_parameters
 from .marsh_dynamics import Marsh
+from .marsh_dynamics import dredge_channel
 
 
 class CascadeError(Exception):
@@ -214,6 +215,8 @@ class Cascade:
         # ---------------------- offsets -------------------------
         enable_shoreline_offset=False,
         shoreline_offset=[],
+        # --------------- dredge------------------
+        dredge_on = False
 
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
@@ -468,6 +471,11 @@ class Cascade:
         self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
         self._use_defined_beach_width = use_defined_beach_width
         self._user_inputed_beach_width = user_inputed_beach_width
+        # dredge
+        if type(dredge_on) is bool:
+            self._dredge_on = [dredge_on] * self._ny
+        else:
+            self._dredge_on = dredge_on
 
         # initialization errors
         if (
@@ -861,6 +869,16 @@ class Cascade:
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
                 return
+
+        ###############################################################################
+        # dredge function
+        ###############################################################################
+        # Simulates dredging the channel: if there is an expansion in barrier width
+        # on the bay side, reset that row to the bay depth.
+        for iB3D in range(self._ny):
+            if self._dredge_on[iB3D]:
+                # update interior domain variable
+                dredge_channel(self._barrier3d[iB3D])
 
         ###############################################################################
         # human dynamics modules

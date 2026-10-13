@@ -214,7 +214,7 @@ cascade_marsh = Cascade(
     beach_nourishment_module=False,
     community_economics_module=False,
     outwash_module=False,
-    marsh_module=True,
+    marsh_module=False,
     alongshore_section_count=items,
     time_step_count=model_duration,
     wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -255,7 +255,8 @@ cascade_marsh = Cascade(
     # ---------- offsets ----------- #
     enable_shoreline_offset=True,
     shoreline_offset=dune_offsets,
-
+    # --------------- dredge------------------
+    dredge_on=True
 )
 
 # run the time loop/update function

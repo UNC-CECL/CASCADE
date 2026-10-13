@@ -446,7 +446,7 @@ def thin_layer_placement(
         target elevation for the thin layer placement (dam MHW)
     :param max_TLP_elev: float
         target elevation for the thin layer placement (dam MHW)
-    :return: new interior array elevations with same shape
+    :return: updated interior array elevations with same shape
     """
 
     # produces a tuple where position 0 is rows and position 1 is corresponding cols
@@ -456,13 +456,51 @@ def thin_layer_placement(
 
     return full_int_domain
 
-def dredge_channel():
+
+def dredge_channel(b3d):
     """
     simulates dredging the bay or channel specifically to keep the back-barrier position fixed
     therefore, if overwash made its way to the end of the domain, those cells are reset to an
     elevation of -3 m MHW (or whatever the bay elevation is in b3d)
-    :return:
+    :return: updated interior array elevations with same shape
     """
+    # since we are running this AFTER b3d update, use time index-1
+    year = b3d.time_index - 1
+    current_width = np.shape(b3d.InteriorDomain)[0]
+    # expected width due to shoreline changes
+    initial_width = np.shape(b3d.DomainTS[0])[0]
+    expected_width = initial_width + sum(b3d.ShorelineChangeTS[0:year + 1])
+    # if the expected width is greater, there was a new row added
+    if current_width > expected_width:
+        added_rows = int(current_width - expected_width)
+        # set all those rows to bay elevation
+        b3d.InteriorDomain[-added_rows:,:] = -b3d.BayDepth
+
+        # Remove all rows of bay without any deposition from the domain
+        check = 1
+        while check == 1:
+            if all(x <= -b3d.BayDepth for x in b3d.InteriorDomain[-1, :]):
+                b3d.InteriorDomain = np.delete(b3d.InteriorDomain, (-1), axis=0)
+            else:
+                check = 0
+
+        # update DomainTS
+        b3d.DomainTS[b3d.time_index-1] = b3d.InteriorDomain
+
+        # recalculate barrier height
+        new_ave_interior_height = np.average(
+            b3d.InteriorDomain[
+                b3d.InteriorDomain >= b3d.SL
+                ]  # all in dam MHW
+        )
+        b3d.h_b_TS[-1] = new_ave_interior_height
+
+        # recalculate and save avg interior width
+        _, _, new_ave_interior_width = b3d.FindWidths(b3d.InteriorDomain, b3d.SL)
+        b3d.InteriorWidth_AvgTS[-1] = new_ave_interior_width
+
+        # replace value of x_b_TS with new InteriorWidth_Avg
+        b3d.x_b_TS[-1] = b3d.x_s_TS[-1] + new_ave_interior_width
 
 
 class Marsh:
