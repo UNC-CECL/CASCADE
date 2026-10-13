@@ -11,7 +11,7 @@ it was measured from, so a folder listing says what it is:
 | source | what it was measured from | CURRENT | also here |
 |---|---|---|---|
 | `duneline/` | a dune line digitised from aerial imagery | `v1` | `superseded_20260919_pre-redigitized/` |
-| `shoreline/` | the mean CoastSat shoreline (v2: 2008-08-17 to 2010-08-17, ±1 yr of the 2009 USACE lidar; v1: calendar 2009-2011) | `v2` (since 2026-09-29) | |
+| `shoreline/` | the mean CoastSat shoreline (v2: 2008-08-17 to 2010-08-17, ±1 yr of the 2009 USACE lidar; v1: calendar 2009-2011) | `v2` (since 2026-09-29) | `v3`: ±6 months of the DEM, min 5 positions; a test build, not CURRENT (2026-10-09) |
 
 
 

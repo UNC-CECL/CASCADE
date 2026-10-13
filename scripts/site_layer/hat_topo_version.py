@@ -215,7 +215,7 @@ _OFFSET_FILE_SUFFIXES = {
 
 def offset_basename(year: int, source: str = DEFAULT_OFFSET_SOURCE) -> str:
     """The stem a build's three files share, e.g. Island_Dune_Offsets_1996.
-    island_offset_hybrid.py names its outputs from this rather than keeping a
+    step2_raw_offsets_to_island_offset.py names its outputs from this rather than keeping a
     second spelling of them (2026-09-22)."""
     return f"{_OFFSET_STEMS[_check_offset_source(source)]}_{int(year)}"
 
@@ -392,11 +392,13 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
     return DUNELINE_DIR / f"duneline_{int(vintage)}{suffix}.geojson"
 
 
-# The CoastSat shoreline window per period: +/-6 months of the start DEM's lidar flights (offset
-# shoreline/v3, min 5 positions), since 2026-10-12. +/-1 yr before it (v2): 1995-10-12..1997-10-12, 2008-08-17..2010-08-17
+# The CoastSat shoreline window per period: the DEM's calendar year (offset shoreline/v4, min 5
+# positions), since 2026-10-12, with the storms starting the year after (advisor's proposal).
+# Before: +/-6 months of the DEM's lidar flights (v3): 1996-04-12..1997-04-12, 2009-02-17..2010-02-17;
+# +/-1 yr (v2): 1995-10-12..1997-10-12, 2008-08-17..2010-08-17
 SHORELINE_WINDOW_FOR_YEAR = {
-    1996: ("1996-04-12", "1997-04-12"),
-    2009: ("2009-02-17", "2010-02-17"),
+    1996: ("1996-01-01", "1996-12-31"),
+    2009: ("2009-01-01", "2009-12-31"),
 }
 
 
@@ -418,7 +420,7 @@ def shoreline_window_for_year(year, strict: bool = True):
 def shoreline_raw_file(window) -> Path:
     """raw_offsets/<start>_<end>_shoreline_offset_raw.csv -- the per-transect
     stations of one averaging window's mean shoreline, the shoreline
-    counterpart of dune_raw_file(). Written by duneline_to_raw_offsets.py from
+    counterpart of dune_raw_file(). Written by step1_line_to_raw_offsets.py from
     the mean-shoreline geojson, which hat_observed_rates owns."""
     # A window is two calendar years or two ISO dates, named as the mean_shoreline folder is
     a, b = (str(v) if "-" in str(v) else str(int(v)) for v in window)

@@ -3,19 +3,19 @@
 
 [identity]
 run_name                         = HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin
-timestamp                        = 2026-10-12 09:42:24
+timestamp                        = 2026-10-12 19:18:53
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 2.6
+runtime_min                      = 2.2
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
-island_offset_version            = shoreline/v3
+island_offset_version            = shoreline/v4
 geometry                         = base   # GIS 1 to 90
 run_kind                         = matrix
 run_tag                          = 
 parameter_file                   = HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin-parameters.yaml   # this run's copy of Hatteras-CASCADE-parameters.yaml; CASCADE rewrites the copy, not the template
 save_model_state                 = True
-git_commit                       = e6d7ef4e647e24ac9556a2c6368a748dc88233bb
+git_commit                       = a6a49df96e4d101804791d1cac679d3684b51ee0
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 barrier3d_branch                 = hatteras/adopted
@@ -25,11 +25,11 @@ barrier3d_route_overwash_fix     = True   # True: the loaded Barrier3D has the 2
 barrier3d_gap_momentum_fix       = True   # True: DuneGaps, gap discharge slice and inundation momentum fixed (2026-09-28)
 barrier3d_per_cell_ceiling       = True
 dune_ceiling                     = per-cell, from the starting dunes
-storm_file                       = 3-env-forcings\3-storms\hindcast_storms\2009_2025\2009_2025_storms_v3_split12_trim24.npy
+storm_file                       = 3-env-forcings\3-storms\hindcast_storms\2010_2025\2010_2025_storms_v3_split12_trim24.npy
 bdm_dune_cap_applies_to          = added sand only
 
 [scenario]
-period                           = 2009-2025 (17 yr)
+period                           = 2009-2025 (16 yr)
 source/sink preset               = zeroBE
 shoreline offset                 = metres
 background erosion               = False
@@ -44,8 +44,10 @@ wave climate                     = Hs 2.0 m, Tp 7.5 s, asym 0.6, high-angle 0.5
 [period]
 start_year                       = 2009
 end_year                         = 2025
-run_years                        = 17   # transitions
-annual_states                    = 18
+first_model_year                 = 2010
+last_model_year                  = 2025
+run_years                        = 16   # transitions
+annual_states                    = 17
 
 [wave climate]
 wave_height_m                    = 2.0
@@ -55,7 +57,7 @@ wave_angle_high_frac             = 0.5
 shoreface_depth_m                = 17.80   # 8.9 * Hs
 
 [sea level]
-rslr_m_yr                        = 0.005
+rslr_m_yr                        = 0.006
 rslr_constant                    = True
 
 [dunes and roadway]
@@ -80,14 +82,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOWESS 7-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -1.1885
-rmse_m_yr                        = 2.2571
-mean_bias_interior_m_yr          = -1.0277   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 1.8840
-lrr_r2_median                    = 0.9028   # how well a line describes the modelled trajectory
-lrr_r2_below_floor               = 20   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -1.1551   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 1.8878
+mean_bias_m_yr                   = -1.1946
+rmse_m_yr                        = 2.2786
+mean_bias_interior_m_yr          = -1.0333   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 1.9070
+lrr_r2_median                    = 0.8880   # how well a line describes the modelled trajectory
+lrr_r2_below_floor               = 18   # domains under r2 0.50
+endpoint_mean_bias_interior_m_yr = -1.1543   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 1.8956
 
 [verification]
 nourishment_ok                   = True
@@ -96,7 +98,7 @@ roads_reloc_blocked              = 0
 
 [index row]
 run_name                         = HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin
-timestamp                        = 2026-10-12 09:42:24
+timestamp                        = 2026-10-12 19:18:53
 start_year                       = 2009
 end_year                         = 2025
 source_sink_preset               = zeroBE
@@ -121,35 +123,35 @@ Hs_m                             = 2.0
 kind                             = matrix
 tag                              = 
 sandbags_on                      = False
-rslr_m_yr                        = 0.005
-annual_states                    = 18
+rslr_m_yr                        = 0.006
+annual_states                    = 17
 run_complete                     = True
 rate_estimator                   = lrr
-mean_bias_m_yr                   = -1.1884599045073125
-rmse_m_yr                        = 2.257129566843289
-mean_bias_interior_m_yr          = -1.0276817599680144
-rmse_interior_m_yr               = 1.884038299003482
-lrr_r2_median                    = 0.9027710129349327
-lrr_r2_below_floor               = 20
-endpoint_mean_bias_interior_m_yr = -1.1551230822333052
-endpoint_rmse_interior_m_yr      = 1.8878176465336647
+mean_bias_m_yr                   = -1.1946443696168447
+rmse_m_yr                        = 2.278569078138205
+mean_bias_interior_m_yr          = -1.033303199610765
+rmse_interior_m_yr               = 1.907007163072351
+lrr_r2_median                    = 0.8880360190520373
+lrr_r2_below_floor               = 18
+endpoint_mean_bias_interior_m_yr = -1.1543360101707194
+endpoint_rmse_interior_m_yr      = 1.8956415030968885
 nourishment_ok                   = True
 roads_drowned                    = 0
 roads_reloc_blocked              = 0
 groin_extent_updrift_m           = nan
 groin_extent_downdrift_m         = nan
-runtime_min                      = 2.6
+runtime_min                      = 2.2
 use_sandbox_cascade              = True
 topo_product                     = 2004-start
 topo_dune_version                = v1
-island_offset_version            = shoreline/v3
+island_offset_version            = shoreline/v4
 geometry                         = base
-rmse_reach_interior_m_yr         = 1.884038299003482
-git_commit                       = e6d7ef4e647e
+rmse_reach_interior_m_yr         = 1.907007163072351
+git_commit                       = a6a49df96e4d
 git_dirty                        = True
 barrier3d_commit                 = d6546c781b39
 barrier3d_gap_momentum_fix       = True
 dune_ceiling                     = per-cell
-storm_file                       = 2009_2025_storms_v3_split12_trim24.npy
+storm_file                       = 2010_2025_storms_v3_split12_trim24.npy
 bdm_dune_cap                     = added sand only
 barrier3d_route_overwash_fix     = True

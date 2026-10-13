@@ -270,19 +270,21 @@ def mean_shoreline_csv(start, end) -> Path:
     label = mean_shoreline_label(start, end)
     return mean_shoreline_dir(start, end) / "transect_means_{0}.csv".format(label)
 # The net-change target per model period: (start window, end window) of CoastSat means, ISO dates
-# DEM to DEM since 2026-10-05; rules since 2026-10-12, the same in both periods:
-#   start = the island offset's window, the DEM midpoint (1996-10-12, 2009-08-17) +/-6 months
-#   end   = the last modelled year Y +/-6 months, 1 Jul Y-1 .. 30 Jun Y+1 (CoastSat stops 2026-01-13)
-# Study: experiments/target-end-window/2026-10-10-end-options-calendar. Before 2026-10-12: starts +/-1 yr
-# (1995-10-12..1997-10-12, 2008-08-17..2010-08-17), test end 2025-02-17..2026-02-17
+# DEM to DEM since 2026-10-05. Calendar years since 2026-10-12 (advisor's proposal): every line is
+# a calendar-year mean, the storms run the years between, and calibration's end is the test's start:
+#   calibration: calendar 1996 -> calendar 2009 (storms 1997-2009)
+#   test:        calendar 2009 -> calendar 2025 (storms 2010-2025)
+# Keys stay the DEM years. Study: experiments/target-end-window/2026-10-12-shoreline-positions.
+# Earlier on 2026-10-12: starts DEM midpoint +/-6 months (1996-04-12..1997-04-12, 2009-02-17..2010-02-17),
+# ends last modelled year +/-6 months (2007-07-01..2009-06-30, 2024-07-01..2026-06-30)
 NET_CHANGE_WINDOWS = {
-    (1996, 2009): (("1996-04-12", "1997-04-12"), ("2007-07-01", "2009-06-30")),
-    (2009, 2025): (("2009-02-17", "2010-02-17"), ("2024-07-01", "2026-06-30")),
+    (1996, 2009): (("1996-01-01", "1996-12-31"), ("2009-01-01", "2009-12-31")),
+    (2009, 2025): (("2009-01-01", "2009-12-31"), ("2025-01-01", "2025-12-31")),
 }
 # The dates each window is centred on, for the interval between the two means
 NET_CHANGE_CENTRES = {
-    (1996, 2009): ("1996-10-12", "2008-07-01"),
-    (2009, 2025): ("2009-08-17", "2025-07-01"),
+    (1996, 2009): ("1996-07-01", "2009-07-01"),
+    (2009, 2025): ("2009-07-01", "2025-07-01"),
 }
 NET_CHANGE_ROOT = COASTSAT_RATES / "net_change"
 

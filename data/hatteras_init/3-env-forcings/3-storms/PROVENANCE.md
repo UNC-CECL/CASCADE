@@ -51,13 +51,13 @@ as an observed limit of the script, not a coastal one, unless it is re-tested.
 
 ## 2026-09-28: the 72 h limit was a crash workaround; `v3_trim24` keeps every event
 
-**Why the longer limits "did not work".** Barrier3D before the route_overwash axis-swap fix (commit 49fd069, 2026-09-24) read out of bounds during overwash routing. A long storm routes through enough steps to reach that read, and the process died without a message; Isabel 2003 did it in model year 8 of a 240 h series. On the fixed code every limit runs (`output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-max-duration/`).
+**Why the longer limits "did not work".** Barrier3D before the route_overwash axis-swap fix (commit 49fd069, 2026-09-24) read out of bounds during overwash routing. A long storm routes through enough steps to reach that read, and the process died without a message; Isabel 2003 did it in model year 8 of a 240 h series. On the fixed code every limit runs (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-storm-max-duration/`).
 
 **What the 72 h limit cost.** The builder DROPS an event longer than the limit rather than shortening it. At 72 h that removed 29 events from 1996–2024, among them Isabel 2003 (Rhigh 5.22 m MHW, 133 h after grouping), March 2018 (4.30 m), Florence 2018, November 2010, Dennis 1999 and Nor'Ida 2009.
 
 **The adopted rule (Hannah, 2026-09-28): `--long-events trim --max-duration 24`, files `<window>_storms_v3_trim24`.** Every event is kept. One longer than 24 h is cut to the 24 h above the berm centred on its peak total water level, with Rhigh, Rlow and the period taken from what is kept. It was chosen on overwash against the imagery:
 
-- `experiments/storms-and-overwash/2026-09-28-storm-length-selection/`: trim length barely changes where and when overwash happens, but longer trims add retreat.
+- `experiments/storms-overwash-and-dunes/2026-09-28-storm-length-selection/`: trim length barely changes where and when overwash happens, but longer trims add retreat.
 - `.../2026-09-28-dune-ceiling-per-domain/`: with realistic dunes, the long storms are what make 1996–2010 match the imagery.
 
 **Check.** The builder's defaults (`drop`, 72) rebuild the `v3_72` files exactly, and the `v3_trim24` files equal the ones those experiments ran. Built for all four windows. The `v3_72` files are kept, so earlier runs stay reproducible. Which file a run reads is set by `hat_env_forcings.storm_series_file`'s default variant.
@@ -72,7 +72,7 @@ as an observed limit of the script, not a coastal one, unless it is re-tested.
 2. Split each group wherever the water stays below the berm for ≥12 h. A piece shorter than the 8 h minimum is folded into the piece before it (after, for the first), so no hour the group counted is lost.
 3. Each piece is an event of its own, dated by its start and trimmed to the 24 h around its peak.
 
-**Evidence** (`output/raw_runs/experiments/storms-and-overwash/2026-09-29-event-splitting/`): on the adopted model, managed, both windows, the overwash scores (PSS, POD, POFD, timing and space r), interior RMSE and bias are unchanged to two decimals. Overwash volume rises 2–3% in 2010–2024. It is adopted as the more faithful record, not for skill.
+**Evidence** (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-29-event-splitting/`): on the adopted model, managed, both windows, the overwash scores (PSS, POD, POFD, timing and space r), interior RMSE and bias are unchanged to two decimals. Overwash volume rises 2–3% in 2010–2024. It is adopted as the more faithful record, not for skill.
 
 **Check.** Without `--split-gap` the builder rebuilds `v3_72` and `v3_trim24` exactly, and with it the files equal the experiment's `split12`. Built for all four windows:
 

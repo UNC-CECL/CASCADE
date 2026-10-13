@@ -111,6 +111,7 @@ from cascade_pipeline.shoreline import (build_shoreline_matrix,
 
 from site_layer.hatteras_site_config import (
     HATTERAS_ANNOTATIONS,
+    first_model_year,
     last_model_year,
     run_years,
     HATTERAS_BEACH_DUNE,
@@ -396,6 +397,8 @@ if PERIOD["topo_product"] != TOPO_PRODUCT:
 END_YEAR = PERIOD["end_year"]
 # end_year is the window label; the run steps start..last_model_year (scripts/hatteras_ms/MODEL_YEARS.md)
 LAST_MODEL_YEAR = last_model_year(START_YEAR)
+# The period key is the DEM year; the model clock starts at the first storms (since 2026-10-12)
+FIRST_MODEL_YEAR = first_model_year(START_YEAR)
 RUN_YEARS = run_years(START_YEAR)
 
 SEA_LEVEL_RISE_RATE = PERIOD["sea_level_rise_rate"]
@@ -464,7 +467,7 @@ OUTPUT_BASE_DIR = preset_dir_for(OUTPUT_ROOT, PERIOD_TAG, SOURCE_SINK_PRESET,
 OUTPUT_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 print(f"\nSTART_YEAR = {START_YEAR}  ->  {START_YEAR}-{END_YEAR}, "
-      f"{RUN_YEARS} model years")
+      f"{RUN_YEARS} model years, storms {FIRST_MODEL_YEAR}-{LAST_MODEL_YEAR}")
 print(f"RUN_NAME_STEM = {RUN_NAME_STEM!r}"
       "   (scenario suffix derived in 7.5)")
 print(f"SOURCE_SINK_PRESET = {SOURCE_SINK_PRESET!r}")
@@ -499,7 +502,7 @@ if _B3D["route_overwash_fix"] is not True:
 # Advisory preview of the run name; 7.5 derives the real one and raises if they differ
 _PERIOD_HAS_FILL = bool(nourishment.build_schedule(
     HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS,
-    START_YEAR, LAST_MODEL_YEAR).projects)
+    FIRST_MODEL_YEAR, LAST_MODEL_YEAR).projects)
 _PREVIEW_TOKENS = [
     SOURCE_SINK_PRESET,
     None if OFFSET_MODE == "asrun" else f"offset{OFFSET_MODE}",
@@ -713,13 +716,13 @@ reports.road_audit_report(audit=road_audit, summary=audit_summary)
 
 # Every Hatteras project is in 2004-2024, so a 1984 run builds an empty schedule from this list
 BN_SCHEDULE = nourishment.build_schedule(
-    HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS, START_YEAR, LAST_MODEL_YEAR)
+    HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS, FIRST_MODEL_YEAR, LAST_MODEL_YEAR)
 
 # The schedule the model is actually driven by
 
 # Fills off = an empty schedule, not a skipped call; the footprint is unchanged
 BN_SCHEDULE_APPLIED = BN_SCHEDULE if ENABLE_NOURISHMENT_FILLS else (
-    nourishment.build_schedule([], HATTERAS_DOMAINS, START_YEAR, LAST_MODEL_YEAR))
+    nourishment.build_schedule([], HATTERAS_DOMAINS, FIRST_MODEL_YEAR, LAST_MODEL_YEAR))
 
 # What CASCADE is handed
 
@@ -816,7 +819,7 @@ GROIN_PROFILE_HEIGHT_CANDIDATES_M = (12.0, 24.0)
 _GROIN_COMMON = dict(
     updrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS),
     downdrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_DOWNDRIFT_GIS),
-    start_year=START_YEAR,
+    start_year=FIRST_MODEL_YEAR,
     install_year=GROIN_INSTALL_YEAR,
     n_domains=HATTERAS_DOMAINS.total_domains,
     deterioration_delay_years=GROIN_DETERIORATION_DELAY_YEARS,
@@ -838,7 +841,7 @@ GROIN_CALLBACK = GROIN_CB if GROIN_ENABLED else None
 reports.groin_report(
     enabled=GROIN_ENABLED, callback=GROIN_CB,
     updrift_gis=GROIN_UPDRIFT_GIS, downdrift_gis=GROIN_DOWNDRIFT_GIS,
-    install_year=GROIN_INSTALL_YEAR, start_year=START_YEAR, end_year=END_YEAR,
+    install_year=GROIN_INSTALL_YEAR, start_year=FIRST_MODEL_YEAR, end_year=LAST_MODEL_YEAR + 1,
     geometry=HATTERAS_DOMAINS,
     trapping_rate_m_yr=GROIN_TRAPPING_RATE_M_YR,
     m_provenance=GROIN_M_PROVENANCE,
@@ -1121,7 +1124,7 @@ reports.figure_config_report(
 print("\nbuild_cascade + run_cascade_simulation defined")
 print(f"  run_years -> {RUN_YEARS} transitions, "
       f"time_step_count={RUN_YEARS + 1}, {RUN_YEARS + 1} annual states "
-      f"({START_YEAR}-{LAST_MODEL_YEAR}, final state 1 Jan {LAST_MODEL_YEAR + 1})")
+      f"({FIRST_MODEL_YEAR}-{LAST_MODEL_YEAR}, final state 1 Jan {LAST_MODEL_YEAR + 1})")
 print("  nourishment via BN_SCHEDULE.apply_to_cascade -> "
       "cascade.nourishment_volume")
 print("  road events via cascade_pipeline.roadway.apply_historical_event")
@@ -1310,7 +1313,7 @@ _run_kwargs = dict(
     run_years=RUN_YEARS,
     name=RUN_NAME,
     run_dir=RUN_DIR,
-    start_year=START_YEAR,
+    start_year=FIRST_MODEL_YEAR,
     geometry=HATTERAS_DOMAINS,
     alongshore_section_count=HATTERAS_DOMAINS.total_domains,
     historical_road_events=HATTERAS_ROAD_EVENTS,
@@ -1399,6 +1402,7 @@ _shoreface_depth_m = float(cascade._brie_coupler._brie.d_sf)
 run = RunInfo(
     run_name=RUN_NAME, run_dir=RUN_DIR,
     start_year=START_YEAR, end_year=END_YEAR, Hs=Hs,
+    first_model_year=FIRST_MODEL_YEAR,
     flip_sign_model=FLIP_SIGN_MODEL,
     background_erosion_on=USE_BACKGROUND_EROSION,
 )
@@ -1525,6 +1529,8 @@ _META = {
     "period": {
         "start_year": START_YEAR,
         "end_year": END_YEAR,
+        "first_model_year": FIRST_MODEL_YEAR,
+        "last_model_year": LAST_MODEL_YEAR,
         "run_years": (RUN_YEARS, "transitions"),
         "annual_states": _states,
     },

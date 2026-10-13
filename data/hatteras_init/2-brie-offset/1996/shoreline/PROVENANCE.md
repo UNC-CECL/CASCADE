@@ -49,3 +49,12 @@ silently move what the runner reads.
 ## Renumbered (2026-09-24)
 
 `v1/` is the build now in `superseded_20260924_pre-metres/v1/` re-padded with the model's smooth wrap-around (`cascade_pipeline.hindcast.pad_offset_ring`); the real domains are identical and the padded file is exactly what offset_mode `metres` hands Cascade. `CURRENT` = `v1`. Built as `v2` and renumbered the same day (numbering restarted). See `v1/PROVENANCE.md`.
+
+## Builds
+
+Written by `build_island_offset.py`, one row per build; each version's own `PROVENANCE.md` has the detail.
+
+| version | built | line | vintage | zero domain | compared with | |
+|---|---|---|---|---|---|---|
+| `v3` | 2026-10-09 | `shoreline_mean_1996-04-12_1997-04-12.geojson` | 1996-04-12 to 1997-04-12 | GIS 76 | v2 |  |
+| `v4` | 2026-10-12 | `shoreline_mean_1996-01-01_1996-12-31.geojson` | 1996-01-01 to 1996-12-31 | GIS 76 | v3 | CURRENT |

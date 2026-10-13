@@ -10,13 +10,13 @@ and the groin.
 
 | | |
 |---|---|
-| start window | `mean_shoreline/2009-02-17_2010-02-17/`, centred on 2009-08-17 |
-| end window | `mean_shoreline/2024-07-01_2026-06-30/`, centred on 2025-07-01 |
-| between centres | 15.87 yr |
+| start window | `mean_shoreline/2009-01-01_2009-12-31/`, centred on 2009-07-01 |
+| end window | `mean_shoreline/2025-01-01_2025-12-31/`, centred on 2025-07-01 |
+| between centres | 16.00 yr |
 | model run | 17 years, 1 Jan 2009 to 1 Jan 2026 |
-| transects in both windows | 905 (dropped, in one window only: 1) |
-| domain mean net change, GIS 1-90 | +12.6 m (range -36.7 to +149.2) |
-| interior GIS 2-89, smoothed | mean +10.7 m, sd 24.5 m |
+| transects in both windows | 878 (dropped, in one window only: 28) |
+| domain mean net change, GIS 1-90 | +10.8 m (range -37.2 to +159.5) |
+| interior GIS 2-89, smoothed | mean +8.6 m, sd 24.7 m |
 | median domain standard error | 1.6 m |
 
 ## Conventions
@@ -30,5 +30,3 @@ and the groin.
   the domain's transects). It is sampling noise only, not tide or datum error.
 - The model's interval differs from the window-centre interval: the run starts on 1 Jan of the
   DEM year and steps whole years. This is reported here, not corrected.
-- The end window runs past the CoastSat record, which stops on 2026-01-13. Its data
-  covers 2024-07-01 to 2026-01-13.

@@ -9,7 +9,7 @@ height, sign convention. Details: scripts/cascade_pipeline/README.md.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-12
 """
 
 import dataclasses
@@ -22,7 +22,7 @@ class RunInfo:
     Attributes:
         run_name: Run name used in output filenames (e.g. run_name_hs).
         run_dir: Output directory for this run's files.
-        start_year: Calendar year the run starts (period START_YEAR).
+        start_year: The period key (START_YEAR, the DEM year); picks the target window.
         end_year: Calendar year the run ends.
         Hs: Fixed significant wave height used for this run (m), shown in
             figure titles/legends. None omits it.
@@ -41,6 +41,9 @@ class RunInfo:
         wave_climate: The run's wave settings as one line, e.g. "Hs 2.0 m,
             Tp 7.5 s, asym 0.6, high-angle 0.5". Shown in the subtitle only
             when RateComparisonConfig.show_wave_climate is set. None omits it.
+        first_model_year: Calendar year of the first storms, when they start
+            the year after start_year (the model starts from the start_year
+            shoreline). Year labels stay start_year + t. None means start_year.
     """
 
     run_name: str
@@ -52,3 +55,4 @@ class RunInfo:
     background_erosion_on: bool = True
     model_name: str = "CASCADE"
     wave_climate: str = None
+    first_model_year: int = None

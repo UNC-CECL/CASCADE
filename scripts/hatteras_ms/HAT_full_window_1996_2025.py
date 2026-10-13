@@ -4,12 +4,13 @@ One run over the whole record: 1996 start, through December 2025 (30 model years
     python scripts/hatteras_ms/HAT_full_window_1996_2025.py check
     python scripts/hatteras_ms/HAT_full_window_1996_2025.py zero
     python scripts/hatteras_ms/HAT_full_window_1996_2025.py solve
-    python scripts/hatteras_ms/HAT_full_window_1996_2025.py final
+    python scripts/hatteras_ms/HAT_full_window_1996_2025.py final --ends G1 G90 [--scenario natural]
 
 Runs the unchanged runner with the 1996 period patched in-process (end 2025,
 its own storms, sea-level rate and CoastSat LRR); HATTERAS_PERIODS is not
 edited. zero and final file in matrix/1996_2025/; the end-solve probes file as
-an experiment. Full management, no groin, no relocation.
+an experiment. Full management, no groin, no relocation; final --scenario runs
+a less-managed rung of the management ladder on the solved ends.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -65,6 +66,8 @@ def patch_period():
     from site_layer import hat_env_forcings as _env
     period = sc.HATTERAS_PERIODS[START]
     period["end_year"] = END
+    # Storms from 1996 as before; the 1996 matrix period starts its storms in 1997 since 2026-10-12
+    period["first_model_year"] = START
     period["last_model_year"] = LAST_MODEL_YEAR
     period["storm_file"] = _env.init_relpath(_env.storm_series_file(START, END))
     period["sea_level_rise_rate"] = rslr_rate()
@@ -103,11 +106,11 @@ def _launch():
 
 
 # One run through _launch in its own process; matrix unless a tag is given
-def run(preset, label, override=None, tag=None):
+def run(preset, label, override=None, tag=None, scenario=SCENARIO):
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1",
                HAT_IGNORE_SETTINGS="1",
                HAT_START_YEAR=str(START), HAT_SOURCE_SINK_PRESET=preset,
-               HAT_SCENARIO=SCENARIO, HAT_RELOCATIONS="False",
+               HAT_SCENARIO=scenario, HAT_RELOCATIONS="False",
                HAT_GROIN_ENABLED="False", HAT_OVERWRITE="False")
     if tag:
         env.update(HAT_RUN_KIND="experiment", HAT_RUN_TAG=tag, HAT_SAVE_MODEL_STATE="False")
@@ -187,7 +190,8 @@ def cmd_solve(args):
 
 # The solved ends as a matrix run
 def cmd_final(args):
-    run("edgeBE", "final", f"1={args.ends[0]},90={args.ends[1]}")
+    label = "final" if args.scenario == SCENARIO else f"final_{args.scenario}"
+    run("edgeBE", label, f"1={args.ends[0]},90={args.ends[1]}", scenario=args.scenario)
 
 
 def main(argv=None):
@@ -203,6 +207,9 @@ def main(argv=None):
                    help="first-step end rates, default the 1996-2015 ones")
     f = sub.add_parser("final")
     f.add_argument("--ends", type=float, nargs=2, metavar=("GIS1", "GIS90"), required=True)
+    f.add_argument("--scenario", default=SCENARIO,
+                   choices=("natural", "roadway_only", "full_no_fill", SCENARIO),
+                   help="management rung, default full management (2026-10-12: the ladder)")
     a = ap.parse_args(argv)
     {"check": cmd_check, "zero": cmd_zero, "solve": cmd_solve, "final": cmd_final}[a.cmd](a)
     return 0

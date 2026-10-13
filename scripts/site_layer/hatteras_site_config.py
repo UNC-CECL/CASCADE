@@ -71,8 +71,9 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
         "Buxton Groin": 5.5,  # boundary between domains 5 and 6
     },
     shoal_zones={
-        "Avon Shoals": (24, 39),
-        "Wimble Shoals": (60, 74),
+        # Alongshore footprint of each offshore shoal outline, picked by eye (Hannah); revised 2026-10-12
+        "Avon Shoals": (26, 38),
+        "Wimble Shoals": (61, 74),
     },
     region_name="Hatteras Island",
     low_end_label="S | Cape Point",
@@ -90,7 +91,7 @@ def _island_offset_file(start_year):
     """Path of the padded offset file, relative to INIT_ROOT.
 
     120 domains in the base geometry. An extended geometry reads its own
-    build under <year>/ext/<geometry>/ (island_offset_hybrid.py --geometry),
+    build under <year>/ext/<geometry>/ (step2_raw_offsets_to_island_offset.py --geometry),
     which is not a version and does not move CURRENT; the path is returned
     unchecked because every period resolves here at import and only the
     period being run needs the file to exist -- the runner checks that.
@@ -163,15 +164,19 @@ HATTERAS_PERIODS = {
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
 
-    # DEM to DEM (2026-10-05): calibrate 1996 -> 2009, test 2009 -> 2025; see MODEL YEARS above
+    # DEM to DEM (2026-10-05): calibrate 1996 -> 2009, test 2009 -> 2025; see MODEL YEARS above.
+    # Calendar years since 2026-10-12 (advisor's setup): the key is the DEM year, the start shoreline
+    # is the DEM's calendar-year mean, and the storms begin the year after (first_model_year)
     1996: {
         # 1996-2009 since 2026-10-05: ALACE 1996 to the USACE 2009 DEM (was 1996-2015, before it 1996-2010)
         "end_year": 2009,
-        # Exclusive label: 13 years, 1996-2008, ending 1 Jan 2009; the DEM was flown 2009-08-17
-        "last_model_year": 2008,
-        # 0.00252 m/yr fitted over 1996-2009 (Duck gauge; CI +/-0.0025). 1996-2015 was 0.00376
-        "sea_level_rise_rate": 0.003,
-        "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2009)),
+        # Storms 1997-2009: 13 years, ending 1 Jan 2010, graded against calendar 2009.
+        # Before 2026-10-12: 1996-2008, ending 1 Jan 2009
+        "first_model_year": 1997,
+        "last_model_year": 2009,
+        # 0.00240 m/yr fitted over 1997-2009 (Duck gauge; CI +/-0.0028). 1996-2009 was 0.00252 (0.003)
+        "sea_level_rise_rate": 0.002,
+        "storm_file": _env.init_relpath(_env.storm_series_file(1997, 2009)),
         # Derived, not surveyed: built from the 1997 dune line
         "island_offset_file": _island_offset_file(1996),
         # Derived: the 1984 setbacks with the 1989 Pea Island relocation applied
@@ -184,12 +189,13 @@ HATTERAS_PERIODS = {
     2009: {
         # Key was 2010 until 2026-10-05: the period starts in its DEM's year (USACE 2009, flown 2009-08-10 to 08-24)
         "end_year": 2025,
-        # Inclusive label since 2026-10-09: 17 years, 2009-2025, ending 1 Jan 2026 (was 16, ending 1 Jan 2025);
-        # the target is 2025-08-17 +/- 6 months. The calibration label stays exclusive (1996-2008)
+        # Storms 2010-2025: 16 years, ending 1 Jan 2026, graded against calendar 2025.
+        # Before 2026-10-12: 2009-2025, 17 years
+        "first_model_year": 2010,
         "last_model_year": 2025,
-        # 0.00509 m/yr fitted over 2009-2025 (Duck gauge, record through 2025)
-        "sea_level_rise_rate": 0.005,
-        "storm_file": _env.init_relpath(_env.storm_series_file(2009, 2025)),
+        # 0.00569 m/yr fitted over 2010-2025 (Duck gauge, record through 2025). 2009-2025 was 0.00509 (0.005)
+        "sea_level_rise_rate": 0.006,
+        "storm_file": _env.init_relpath(_env.storm_series_file(2010, 2025)),
         # Derived, not surveyed: the 2009 dune line, or the CoastSat mean over 2008-08-17 to 2010-08-17
         "island_offset_file": _island_offset_file(2009),
         # A copy of the 2004 file: same topography, same road line, no relocation between
@@ -212,9 +218,15 @@ def last_model_year(start_year):
     return last
 
 
-# Annual transitions a period's run makes: start_year .. last_model_year inclusive
+# The calendar year of a period's first model step (its first storms): the key itself unless the
+# period sets first_model_year (the DEM year's own storms are in the DEM; since 2026-10-12)
+def first_model_year(start_year):
+    return HATTERAS_PERIODS[start_year].get("first_model_year", start_year)
+
+
+# Annual transitions a period's run makes: first_model_year .. last_model_year inclusive
 def run_years(start_year):
-    return last_model_year(start_year) - start_year + 1
+    return last_model_year(start_year) - first_model_year(start_year) + 1
 
 
 # Background erosion (source/sink) rates, m/yr by GIS domain
@@ -466,7 +478,10 @@ HATTERAS_BE_EDGE_ONLY = {
     # (experiments/end-domain-boundaries/2026-10-09-ends-solved-on-net-change-1996_2009). 2026-10-05: (+1.4981, +10.5659)
     # Re-solved 2026-10-12 on the +/-6-month offset (v3) and start window, five steps, residuals +0.03 / +0.10 m
     # (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-net-change-1996_2009). 2026-10-09: (+1.4041, +10.3439)
-    1996: (+1.6765, +10.8869),
+    # Re-solved 2026-10-12 evening for the calendar-year setup (storms 1997-2009, calendar 1996 -> 2009, offset v4),
+    # five steps, residuals +0.005 / -0.035 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-1996_2009).
+    # 2026-10-12 morning (v3): (+1.6765, +10.8869)
+    1996: (+1.6727, +10.7761),
     # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # /10-offset solve, 2010, superseded 2026-09-27
@@ -484,7 +499,10 @@ HATTERAS_BE_EDGE_ONLY = {
     # Re-solved 2026-10-12 on the +/-6-month offset (v3) and start window and the 2025 +/-6-month end (2024-07-01..2026-06-30),
     # eight steps, residuals -0.06 / -0.01 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-net-change-2009_2025).
     # 2026-10-09: (+32.2422, +21.5341)
-    2009: (+29.1320, +21.7947),
+    # Re-solved 2026-10-12 evening for the calendar-year setup (storms 2010-2025, calendar 2009 -> 2025, offset v4),
+    # eight steps, residuals -0.05 / +0.00 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-2009_2025).
+    # 2026-10-12 morning (v3): (+29.1320, +21.7947)
+    2009: (+32.4325, +21.6164),
     # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 

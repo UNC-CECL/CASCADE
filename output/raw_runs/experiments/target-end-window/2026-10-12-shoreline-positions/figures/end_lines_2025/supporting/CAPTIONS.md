@@ -1,0 +1,5 @@
+# Captions — end_lines_2025
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`end_lines_2025_positions.png`.** CoastSat mean shoreline positions for four test end lines of the 2026-10-07 figure: three windows around the end of the test plus calendar year 2025, in six consecutive sections of Hatteras, south to north from left to right, alongshore up the page. Each line is the distance from the shared offshore datum along the 100 m model transects, averaged per 500 m domain, ocean on the right, computed with the island-offset build's own intersection. CoastSat ends 2026-01-13, so windows reaching past it hold data up to then. Median satellite positions per transect: 1 Jul 2024 ±1 yr 72, 1 Jan 2025 (model end) ±1 yr 70, 1 Jan 2025 (model end) ±6 months 38, Calendar year 2025 37. The four lines differ by at most 35 m in any domain (island median 5.9 m). No smoothing. Village spans shaded grey; shoal zones (Avon Shoals GIS 26-38, Wimble Shoals GIS 61-74) hatched; piers dash-dot blue, Buxton groin dotted red. Per-domain numbers in end_lines_2025_positions.csv.

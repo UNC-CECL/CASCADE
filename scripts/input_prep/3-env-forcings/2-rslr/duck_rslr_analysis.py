@@ -57,6 +57,9 @@ WINDOWS = [
     # DEM-to-DEM calibration and its test (2026-10-05)
     (1996, 2009, 4, 0),
     (2009, 2025, 4, 1),
+    # Calendar-year storms (2026-10-12): calibration storms 1997-2009, test storms 2010-2025
+    (1997, 2009, 5, 0),
+    (2010, 2025, 5, 1),
 ]
 
 # Fit settings

@@ -50,3 +50,22 @@ Until 2026-10-04 the run length was `end_year - start_year`. That was right for 
 2. Set `last_model_year` to the last full calendar year of data, and `end_year` to whatever label the window's files use.
 3. Check the storm file holds exactly `run_years` years (`calendar_year` in its summary CSV).
 4. Re-solve the edgeBE ends if the run length changed.
+
+## 2026-10-12: the first model year can follow the DEM year
+
+Advisor's calendar-year setup (Hannah chose to keep the DEM-year keys). A period may set
+`first_model_year` in `HATTERAS_PERIODS`; `first_model_year(start)` returns it, or the key when unset.
+
+| period key (DEM) | model starts from | storms (model years) | model ends at | target |
+|---|---|---|---|---|
+| 1996 (ALACE) | calendar 1996 mean (offset shoreline/v4) | 1997-2009 (13) | 2009 (after the 2009 storms) | calendar 2009 - calendar 1996 |
+| 2009 (USACE) | calendar 2009 mean (offset shoreline/v4) | 2010-2025 (16) | 2025 (after the 2025 storms) | calendar 2025 - calendar 2009 |
+
+The model starts in the DEM year from that year's mean shoreline; storms start the year after.
+Shoreline row t is year `START_YEAR + t` (row 0 = 1996 or 2009, the last row = 2009 or 2025), the
+same years the target differences. `run_years = last_model_year - first_model_year + 1`. The runner keeps `START_YEAR` (the key) for
+what is tied to the DEM: topography, island offset, road setbacks, run name, target lookup, run index.
+It uses `FIRST_MODEL_YEAR` for the clock: the nourishment schedule, the groin callback and its report,
+the run loop's storm year (step t runs the storms of `FIRST_MODEL_YEAR + t`), and
+`RunInfo.first_model_year`. GIF year labels stay `START_YEAR + t`.
+Run metadata records both under "period". The full-window driver pins `first_model_year = 1996`.

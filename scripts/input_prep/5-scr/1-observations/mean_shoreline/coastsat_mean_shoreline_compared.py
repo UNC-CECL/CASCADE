@@ -11,7 +11,7 @@ and a copy to output/figures/2-observations/mean_shoreline/.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-06
+Version: 2026-10-12
 """
 
 from __future__ import annotations
@@ -39,10 +39,11 @@ from site_layer.hat_observed_rates import (  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 CALIBRATION, TEST = (1996, 2009), (2009, 2025)
-# 1996 red, 2009 blue, 2025 amber (Hannah, 2026-10-06); purple stays the dune line's
-STYLES = ((fs.C_1984, "-"), (fs.C_1997, (0, (4, 2))), (fs.C["ADDED"], (0, (1.2, 1.2))))
+# 1996 red, 2009 amber, 2025 blue on every figure that draws all three (Hannah, 2026-10-12;
+# was 2009 blue, 2025 amber since 10-06); purple stays the dune line's
+STYLES = ((fs.C_1984, "-"), (fs.C["ADDED"], (0, (4, 2))), (fs.C_1997, (0, (1.2, 1.2))))
 OFFSET_PRODUCER = (_REPO / "scripts" / "input_prep" / "2-brie-offset" / "1-produce"
-                   / "duneline_to_raw_offsets.py")
+                   / "step1_line_to_raw_offsets.py")
 SECTIONS = ((1, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90))
 # One row, the island laid out left to right (Hannah, 2026-10-06)
 GRID_COLS = 6
@@ -62,9 +63,9 @@ def shorelines():
     return list(zip((CALIBRATION[0], CALIBRATION[1], TEST[1]), (c0, c1, t1), centres))
 
 
-# duneline_to_raw_offsets.py, loaded as a module
+# step1_line_to_raw_offsets.py, loaded as a module
 def _offset_producer():
-    spec = importlib.util.spec_from_file_location("duneline_to_raw_offsets", OFFSET_PRODUCER)
+    spec = importlib.util.spec_from_file_location("step1_line_to_raw_offsets", OFFSET_PRODUCER)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -110,7 +111,7 @@ def figure(st, lines, n_obs, folder):
         _town_bands_y(ax, lo, hi)
         for (y, (wlo, whi), c), (col, ls) in zip(lines, STYLES):
             ax.plot(sec[y], sec.index, color=col, ls=ls, lw=1.4, zorder=3 + years.index(y),
-                    label=f"{y} (±{'6 months' if y == years[2] else '1 yr'} of {c})")
+                    label=f"{y} mean shoreline ({wlo} to {whi})")
         ax.set_ylim(lo - 0.5, hi + 0.5)
         ax.invert_xaxis()          # landward left, ocean right
         ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
@@ -134,12 +135,12 @@ def figure(st, lines, n_obs, folder):
         f"island-offset build sees them, in six consecutive sections of Hatteras in one row, south to north from left to right, "
         f"alongshore up the page, south at the bottom. Each line is the distance from the shared "
         f"offshore datum along the 100 m model transects, averaged per 500 m domain, with the ocean on "
-        f"the right, computed with the offset build's own intersection (duneline_to_raw_offsets.intersect). "
-        f"{years[0]} (red, solid) and {years[1]} (blue, dashed) are means over ±1 yr of the middle of the "
-        f"lidar flights of the start DEMs (1996 NOAA/NASA ALACE, {lines[0][1][0]} to {lines[0][1][1]}; "
-        f"2009 USACE NCMP, {lines[1][1][0]} to {lines[1][1][1]}). {years[2]} (amber, dotted) has no DEM: "
-        f"it is the mean over ±6 months of {lines[2][2]}, 16 yr after the 2009 centre, and CoastSat ends "
-        f"2026-01-13, so it spans about 11 months; median satellite positions per transect "
+        f"the right, computed with the offset build's own intersection (step1_line_to_raw_offsets.intersect). "
+        f"{years[0]} (red, solid), {years[1]} (amber, dashed) and {years[2]} (blue, dotted) are CoastSat "
+        f"means over calendar years ({lines[0][1][0]} to {lines[0][1][1]}, {lines[1][1][0]} to "
+        f"{lines[1][1][1]}, {lines[2][1][0]} to {lines[2][1][1]}): the advisor's 2026-10-12 setup, in which "
+        f"the {years[0]} DEM (NOAA/NASA ALACE) and the {years[1]} DEM (USACE NCMP) start runs whose storms "
+        f"begin the year after; median satellite positions per transect "
         f"{n_obs[years[0]]}, {n_obs[years[1]]} and {n_obs[years[2]]}. The text in each panel gives the "
         f"range of change per domain over the calibration ({years[0]}→{years[1]}) and test "
         f"({years[1]}→{years[2]}) periods, seaward +; island medians {d1.median():+.1f} m and "

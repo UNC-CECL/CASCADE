@@ -6,7 +6,7 @@ it was measured from, so a folder listing says what it is:
 | source | what it was measured from | CURRENT | also here |
 |---|---|---|---|
 | `duneline/` | a dune line digitised from aerial imagery | `v1` | `ext/` extended geometries, `superseded_20260919_pre-redigitized/` |
-| `shoreline/` | the CoastSat satellite shoreline, averaged over a window (v2: ±1 yr of the 1996 ALACE flights) | `v2` (since 2026-09-29; `v1` calendar 1995–1997) | - |
+| `shoreline/` | the CoastSat satellite shoreline, averaged over a window (v2: ±1 yr of the 1996 ALACE flights) | `v2` (since 2026-09-29; `v1` calendar 1995–1997) | `v3`: ±6 months of the DEM, min 5 positions; a test build, not CURRENT (2026-10-09) |
 
 `comparisons/duneline_vs_shoreline/` — the dune line against the CURRENT shoreline build (v2), with the overlay figure; `domains/` inside it holds the Barrier3D domains placed at each offset, six figures, one per 15 domains. Moved up from `shoreline/v2/comparisons/` on 2026-10-06, once both lines were final (Hannah). The comparison against shoreline v1 stays with that build, `shoreline/v1/comparisons/`, as a record.
 

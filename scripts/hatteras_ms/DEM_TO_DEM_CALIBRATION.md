@@ -135,3 +135,18 @@ python scripts/input_prep/5-scr/3-rates/coastsat/net_change/coastsat_net_change.
 ```
 
 Runs take about 2–5 minutes each. Logs go to `output/logs/driver/dem_to_dem/`.
+
+
+## 2026-10-12 (evening): calendar-year setup adopted
+
+Advisor's proposal, keys kept at the DEM years (option a). Old calibration/test matrix runs deleted and
+ledgered. New inputs: storms `1997_2009` / `2010_2025` (`slice_storm_window.py`), RSLR 0.002 / 0.006,
+offsets shoreline/v4 (calendar 1996 / 2009), targets calendar lines (calibration -4.8 m over 13.0 yr,
+test +10.8 m over 16.0 yr). Runner (notebook + .py) uses `FIRST_MODEL_YEAR` for the clock; see MODEL_YEARS.md.
+Next: end-rate re-solve both periods -> groin refit -> BE set 1 -> zeroBE/edgeBE/domainBE matrix -> commit.
+
+End rates re-solved 2026-10-12 (evening), in HATTERAS_BE_EDGE_ONLY: 1996 (+1.6727, +10.7761), 5 steps, residuals
++0.005 / -0.035 m; 2009 (+32.4325, +21.6164), 8 steps, residuals -0.05 / 0.00 m
+(experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-<window>/). Matrix zeroBE + edgeBE made for
+both periods; edgeBE bit-identical to the last solve step. Interior GIS 2-89, LOWESS-7 (bias / RMSE / r):
+calibration zeroBE +1.1 / 18.7 / 0.52, edgeBE +1.8 / 18.9 / 0.51; test zeroBE -10.2 / 27.1 / 0.28, edgeBE -8.7 / 24.4 / 0.42.

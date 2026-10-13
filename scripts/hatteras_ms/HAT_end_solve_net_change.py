@@ -1,6 +1,7 @@
 """
 Solve the GIS 1 and GIS 90 end rates of one period against its DEM-to-DEM net-change target.
 
+    python scripts/hatteras_ms/HAT_end_solve_net_change.py base --period 1996
     python scripts/hatteras_ms/HAT_end_solve_net_change.py solve --period 1996
     python scripts/hatteras_ms/HAT_end_solve_net_change.py final --period 1996 --ends 14.6 39.9
 
@@ -36,8 +37,10 @@ HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
 SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
 SCENARIO = "full_management"
 # The solve folder and log date; 2026-10-05 solved the first targets, 2026-10-09 the calendar-2008 end and 17-yr test,
-# 2026-10-12 the +/-6-month offset (v3) and start windows and the 2025 +/-6-month test end
+# 2026-10-12 the +/-6-month offset (v3) and start windows and the 2025 +/-6-month test end;
+# SOLVE_NAME keeps a second solve on one day apart (2026-10-12 evening: the calendar-year setup)
 SOLVE_DATE = "2026-10-12"
+SOLVE_NAME = "ends-solved-on-calendar-years"
 MAX_STEPS = 8
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"
 EXP_ROOT = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "end-domain-boundaries"
@@ -49,7 +52,7 @@ def window(period):
 
 
 def solve_tag(period):
-    return f"end-domain-boundaries/{SOLVE_DATE}-ends-solved-on-net-change-{window(period)}"
+    return f"end-domain-boundaries/{SOLVE_DATE}-{SOLVE_NAME}-{window(period)}"
 
 
 # The zeroBE base run every solve starts from, as the matrix files it
@@ -71,7 +74,7 @@ def run(period, preset, label, override=None, tag=None):
         env.update(HAT_RUN_KIND="matrix")
     if override:
         env["HAT_BE_OVERRIDE"] = override
-    log = LOG_ROOT / f"end_solve_{SOLVE_DATE}_{window(period)}_{label}.log"
+    log = LOG_ROOT / f"end_solve_{SOLVE_DATE}_{SOLVE_NAME}_{window(period)}_{label}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     print(f"start {label} {override or ''} -> {log.relative_to(PROJECT_ROOT)}", flush=True)
     with open(log, "w", encoding="utf-8") as f:
@@ -126,6 +129,11 @@ def cmd_solve(a):
     print(f"last step: {steps[-1] if steps else 'base run'}")
 
 
+# The zeroBE matrix run the solve starts from (both ends at 0)
+def cmd_base(a):
+    run(a.period, "zeroBE", "base")
+
+
 def cmd_final(a):
     run(a.period, "edgeBE", "final", f"1={a.ends[0]},90={a.ends[1]}")
 
@@ -133,13 +141,13 @@ def cmd_final(a):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 2)[1])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("solve", "final"):
+    for name in ("base", "solve", "final"):
         p = sub.add_parser(name)
         p.add_argument("--period", type=int, required=True, choices=sorted(HATTERAS_PERIODS))
         if name == "final":
             p.add_argument("--ends", type=float, nargs=2, metavar=("GIS1", "GIS90"), required=True)
     a = ap.parse_args(argv)
-    {"solve": cmd_solve, "final": cmd_final}[a.cmd](a)
+    {"base": cmd_base, "solve": cmd_solve, "final": cmd_final}[a.cmd](a)
     return 0
 
 

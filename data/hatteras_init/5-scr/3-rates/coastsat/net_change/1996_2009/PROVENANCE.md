@@ -10,14 +10,14 @@ and the groin.
 
 | | |
 |---|---|
-| start window | `mean_shoreline/1996-04-12_1997-04-12/`, centred on 1996-10-12 |
-| end window | `mean_shoreline/2007-07-01_2009-06-30/`, centred on 2008-07-01 |
-| between centres | 11.72 yr |
+| start window | `mean_shoreline/1996-01-01_1996-12-31/`, centred on 1996-07-01 |
+| end window | `mean_shoreline/2009-01-01_2009-12-31/`, centred on 2009-07-01 |
+| between centres | 13.00 yr |
 | model run | 13 years, 1 Jan 1996 to 1 Jan 2009 |
-| transects in both windows | 905 (dropped, in one window only: 1) |
-| domain mean net change, GIS 1-90 | -4.7 m (range -61.3 to +44.1) |
-| interior GIS 2-89, smoothed | mean -5.2 m, sd 20.1 m |
-| median domain standard error | 1.3 m |
+| transects in both windows | 878 (dropped, in one window only: 27) |
+| domain mean net change, GIS 1-90 | -4.8 m (range -67.2 to +48.1) |
+| interior GIS 2-89, smoothed | mean -5.2 m, sd 22.0 m |
+| median domain standard error | 1.7 m |
 
 ## Conventions
 
