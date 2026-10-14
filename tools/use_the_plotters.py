@@ -4,22 +4,33 @@
 
 import os
 import numpy as np
+import pandas as pd
 from cascade.tools.plotters import (
     plot_ElevAnimation_CASCADE,
     plot_dune_domain,
     plot_start_end_domains,
     plot_overwash_flux,
     compare_modeled_observed_domains,
-    plot_linear_dune_dif
+    plot_linear_dune_dif,
+    plot_shoreline_all_domains,
+    plot_shoreline_change_all_domains
     )
 
 # choose whether to plot and save the cascade animations since it is automatic
 # the other plots just produce and output on screen
-plot_and_save_elev_anim = True
-plot_dunes = True
-plot_overwash = True
-plot_domain_comparison = True
-plot_linear_dune = True
+# plot_and_save_elev_anim = True
+# plot_dunes = True
+# plot_overwash = True
+# plot_domain_comparison = True
+# plot_linear_dune = True
+# plot_shoreline = True
+plot_and_save_elev_anim = False
+plot_dunes = False
+plot_overwash = False
+plot_domain_comparison = False
+plot_linear_dune = False
+plot_shoreline = True
+plot_shoreline_change = True
 
 # model results
 datadir = r"C:\Users\agfig\model\calibration"
@@ -47,6 +58,13 @@ for i in range(d_end_num, d_start_num-1, -1):
     elev_name = os.path.join(elev_2014_datadir, 'domain_{0}_interior_2014.npy'.format(i))  # decameters above berm
     dune_files.append(dune_name)
     elev_files.append(elev_name)
+
+# coastsat data for comparison: listed by GIS domain, so need to convert to iB3D domain
+coastsat_df = pd.read_csv(r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\CoastSat\step2_output\endpoint_per_zone_1984_2025.csv")
+coastsat_df = coastsat_df[(coastsat_df["zone_id"]>=d_start_num)&(coastsat_df["zone_id"]<=d_end_num)]
+coastsat_xs_change = coastsat_df["mean_change_m"].values
+# reverse the order since ib3d[0] corresponds to domain 25
+coastsat_xs_change = np.flip(coastsat_xs_change)
 
 # plot domains as a full island with offsets and save as gif
 if plot_and_save_elev_anim:
@@ -106,3 +124,20 @@ if plot_linear_dune:
         max_z=5,
         figsize=[15, 8]
 )
+
+if plot_shoreline:
+    plot_shoreline_all_domains(
+        cascade=calib,
+        years=[0,5,10],
+        save_dir=r"C:\Users\agfig\model\calibration\results\{0}".format(run_name),
+        figsize=[16, 8]
+    )
+
+if plot_shoreline_change:
+    plot_shoreline_change_all_domains(
+        cascade=calib,
+        years=[0,-1],
+        coastsat=coastsat_xs_change,
+        save_dir=r"C:\Users\agfig\model\calibration\results\{0}".format(run_name),
+        figsize=[16,8],
+        seaward_pos=True)

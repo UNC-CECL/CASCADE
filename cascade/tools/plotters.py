@@ -2071,5 +2071,88 @@ def plot_linear_dune_dif(
 
     print("finished. saved {0} figures to {1}".format(ib3ds, save_dir))
 
-    # save numpy arrays for comparison
-    np.save(os.path.join(save_dir, "dune_height_dif_island"), observed_dif_island)
+    # # save numpy arrays for comparison
+    # np.save(os.path.join(save_dir, "dune_height_dif_island"), observed_dif_island)
+
+
+def plot_shoreline_all_domains(cascade, years, save_dir, figsize=[10,4], seaward_pos=True):
+    """
+    :param cascade: cascade class loaded from the output npz file
+    :param years: list of the year(s) you want to plot
+    :param figsize: size of the figure
+    :param seaward_pos: if True, an increase in shoreline position
+        corresponds to seaward movement of the barrier
+    :return: fig
+
+    Shoreline positions for a model year over each domain
+
+    """
+    # create the save folder if it does not already exist
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    plt.rcParams["font.size"] = 16
+    fig1 = plt.figure(figsize=figsize)
+    for year in years:
+        shorelines = []
+        # group all domains from the same year in one list
+        for iB3D in range(cascade._ny):
+            b3d = cascade.barrier3d[iB3D]
+            if seaward_pos:
+                x_s = b3d.x_s_TS[year] * -10  # in b3d, shorelines are in dam
+                ylab = "Shoreline Position (m) \n <--- landward || seaward --->"
+            else:
+                x_s = b3d.x_s_TS[year] * 10  # in b3d, shorelines are in dam
+                ylab = "Shoreline Position (m) \n <--- seaward || landward --->"
+            shorelines.append(x_s)  # all shorelines per domain
+        plt.plot(shorelines, marker='o', markersize=4, label="year {0}".format(year))
+    plt.ylabel(ylab)
+    plt.xlabel("iB3D Domain")
+    plt.legend()
+    # plt.show()
+    fig1.tight_layout()
+    fig1.savefig(os.path.join(save_dir, "shorelines_all_domains.png"))
+
+    # return fig1
+
+def plot_shoreline_change_all_domains(cascade, years, coastsat, save_dir, figsize=[10,4], seaward_pos=True):
+    """
+    :param cascade: cascade class loaded from the output npz file
+    :param years: list of two model years to use for calculating the difference
+    :param coastsat: list of observed change (in same orientation as iB3D domains)
+    :return: fig
+
+    Shoreline positions for a model year over each domain
+
+    """
+    # create the save folder if it does not already exist
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    plt.rcParams["font.size"] = 16
+    fig1 = plt.figure(figsize=figsize)
+    shoreline_change = []
+    year1 = years[0]
+    year2 = years[1]
+    # group all domains in one list
+    for iB3D in range(cascade._ny):
+        b3d = cascade.barrier3d[iB3D]
+        xs1 = b3d.x_s_TS[year1] * 10  # in b3d, shorelines are in dam
+        xs2 = b3d.x_s_TS[year2] * 10
+        # in b3d, shorelines are positive as they move landward, but coastsat uses the opposite sign
+        if seaward_pos:
+            dif = xs1 - xs2
+        else:
+            dif = xs2 - xs1
+        shoreline_change.append(dif)  # all shorelines per domain
+    # plot the modeled and observed data
+    plt.plot(shoreline_change, marker='o', markersize=4, label="modeled")
+    plt.plot(coastsat, marker='o', markersize=4, label="observed")
+    plt.ylabel("Change in Shoreline Position (m) \n <--- landward || seaward --->")
+    plt.xlabel("iB3D Domain")
+    plt.legend()
+    # plt.show()
+    fig1.tight_layout()
+    fig1.savefig(os.path.join(save_dir, "shoreline_change_comparison.png"))
+
+    # return fig1
