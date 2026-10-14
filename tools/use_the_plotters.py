@@ -24,13 +24,15 @@ from cascade.tools.plotters import (
 # plot_domain_comparison = True
 # plot_linear_dune = True
 # plot_shoreline = True
+plot_shoreline_change = True
+
 plot_and_save_elev_anim = False
 plot_dunes = False
 plot_overwash = False
 plot_domain_comparison = False
 plot_linear_dune = False
-plot_shoreline = True
-plot_shoreline_change = True
+plot_shoreline = False
+# plot_shoreline_change = False
 
 # model results
 datadir = r"C:\Users\agfig\model\calibration"
@@ -60,7 +62,13 @@ for i in range(d_end_num, d_start_num-1, -1):
     elev_files.append(elev_name)
 
 # coastsat data for comparison: listed by GIS domain, so need to convert to iB3D domain
-coastsat_df = pd.read_csv(r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\CoastSat\step2_output\endpoint_per_zone_1984_2025.csv")
+startyear = 2004
+endyear = 2014
+coastsat_df = pd.read_csv(
+    r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\CoastSat\step2_output\endpoint_per_zone_{0}_{1}.csv".format(
+        startyear,
+        endyear)
+)
 coastsat_df = coastsat_df[(coastsat_df["zone_id"]>=d_start_num)&(coastsat_df["zone_id"]<=d_end_num)]
 coastsat_xs_change = coastsat_df["mean_change_m"].values
 # reverse the order since ib3d[0] corresponds to domain 25
@@ -139,5 +147,6 @@ if plot_shoreline_change:
         years=[0,-1],
         coastsat=coastsat_xs_change,
         save_dir=r"C:\Users\agfig\model\calibration\results\{0}".format(run_name),
+        title="{0} to {1}".format(startyear, endyear),
         figsize=[16,8],
         seaward_pos=True)

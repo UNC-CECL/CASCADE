@@ -2109,13 +2109,11 @@ def plot_shoreline_all_domains(cascade, years, save_dir, figsize=[10,4], seaward
     plt.ylabel(ylab)
     plt.xlabel("iB3D Domain")
     plt.legend()
-    # plt.show()
     fig1.tight_layout()
     fig1.savefig(os.path.join(save_dir, "shorelines_all_domains.png"))
+    plt.close()
 
-    # return fig1
-
-def plot_shoreline_change_all_domains(cascade, years, coastsat, save_dir, figsize=[10,4], seaward_pos=True):
+def plot_shoreline_change_all_domains(cascade, years, coastsat, save_dir, title, figsize=[10,4], seaward_pos=True):
     """
     :param cascade: cascade class loaded from the output npz file
     :param years: list of two model years to use for calculating the difference
@@ -2150,9 +2148,9 @@ def plot_shoreline_change_all_domains(cascade, years, coastsat, save_dir, figsiz
     plt.plot(coastsat, marker='o', markersize=4, label="observed")
     plt.ylabel("Change in Shoreline Position (m) \n <--- landward || seaward --->")
     plt.xlabel("iB3D Domain")
+    plt.axhline(y=0,color="grey", linewidth=0.5)
     plt.legend()
-    # plt.show()
+    plt.title(title)
     fig1.tight_layout()
     fig1.savefig(os.path.join(save_dir, "shoreline_change_comparison.png"))
-
-    # return fig1
+    plt.close()
