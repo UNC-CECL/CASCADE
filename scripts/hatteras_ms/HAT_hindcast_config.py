@@ -110,13 +110,11 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("run_tag",                      ("run_tag",),           _as_str,      ""),
 
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
-    # M: the dipole's amplitude, unused by the pinned blocking groin (2026-08-30 value, stale under option A)
-    ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 60.0),
-    ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.6),
-    # PINNED 2026-10-05: blocking b 0.6, f 0.6, fitted on the 1996-2009 calibration period
-    # (hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-05-blocking-fit-calibration)
-    ("groin_kind",                   ("groin", "kind"),            _as_str,   "blocking"),
-    ("groin_blocking_fraction",      ("groin", "blocking_b"),      _as_float, 0.6),
+    # The corrected groin (2026-10-14): share of the arriving drift held back, and the first year it no
+    # longer works (the 2017 Buxton fill); fitted 1967-2025 in hard-structures/groin/3-hindcast/
+    # 2-blocking-1996-2025/2026-10-13-pregroin-planform
+    ("groin_strength",               ("groin", "strength"),        _as_float, 0.25),
+    ("groin_end_year",               ("groin", "end_year"),        _as_int,   2017),
 
     # Wave climate: option A since 2026-09-27; moving one earns a name token (README)
     ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.0),

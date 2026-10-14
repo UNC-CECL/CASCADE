@@ -47,8 +47,7 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
         f"pyproject.toml. This file expects to live under scripts/.")
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 # HAT_run_all lives in scripts/hatteras_ms/
-for _path in (SCRIPTS_DIR, SCRIPTS_DIR / "hatteras_ms",
-              SCRIPTS_DIR / "hatteras_ms" / "groin-sweep"):
+for _path in (SCRIPTS_DIR, SCRIPTS_DIR / "hatteras_ms"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 

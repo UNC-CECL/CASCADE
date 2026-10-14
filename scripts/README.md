@@ -120,8 +120,7 @@ hatteras_ms/           the manuscript runs. HAT_hindcast_1984_2024.ipynb is
                        mirror with no features of its own. Settings are typed
                        in hat_run.yaml and read by HAT_hindcast_config.py
                        (env var > yaml > default); HAT_run_all.py drives the
-                       matrix and the sweep unattended. groin-sweep/ holds
-                       the groin calibration and its figures.
+                       matrix, without and with the groin, unattended.
 
 sensitivity_analysis/  standalone sweep driver and plotter, working off the
                        run registry rather than off a live run.

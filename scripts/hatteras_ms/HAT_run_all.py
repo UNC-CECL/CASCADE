@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-End-to-end unattended driver: the comparison matrix, the groin sweeps, the joint fit.
+End-to-end unattended driver: the comparison matrix, without and with the groin.
 
-    python scripts/hatteras_ms/HAT_run_all.py [--workers N] [--dry-run] [--no-model-state]
+    python scripts/hatteras_ms/HAT_run_all.py [--dry-run] [--no-model-state] [--stages 1,2,3]
 
 Runs every stage in dependency order and resumes where it stopped; each
 job recorded in a manifest. Details: scripts/hatteras_ms/README.md.
@@ -10,7 +10,7 @@ job recorded in a manifest. Details: scripts/hatteras_ms/README.md.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-18
+Version: 2026-10-14
 """
 
 from __future__ import annotations
@@ -32,9 +32,7 @@ _HERE = Path(__file__).resolve()
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
                         if (_p / "pyproject.toml").exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
-# The sweep, its config and the joint fit live in groin-sweep/
-GROIN_SWEEP_DIR = _HERE.parent / "groin-sweep"
-for _path in (SCRIPTS_DIR, _HERE.parent, GROIN_SWEEP_DIR):
+for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
@@ -45,26 +43,29 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_PRESETS,
     HATTERAS_DOMAINS,
     HATTERAS_NOURISHMENT_PROJECTS,
+    HATTERAS_PERIODS,
     HATTERAS_ROAD_EVENTS,
+    last_model_year,
 )
 
-from HAT_hindcast_config import _FIELDS  # noqa: E402  (the groin defaults stage 6 checks against)
-from HAT_groin_sweep_config import (END_YEAR, LAST_MODEL_YEAR, GROIN_SWEEP_ROOT, PERIODS,  # noqa: E402
-                                    PRESETS)
+from HAT_hindcast_config import field_default  # noqa: E402  (the groin's two numbers, in the job key)
 
 # --- CONFIG ------------------------------------------------------------------
-# The matrix's preset axis is WIDER than the sweep's
+# The calibration and test periods, and the presets the matrix covers by default
+PERIODS = (1996, 2009)
+PRESETS = ("edgeBE", "zeroBE")
 ALL_PRESETS = tuple(PRESETS) + tuple(
     name for name in HATTERAS_BE_PRESETS if name not in PRESETS)
+END_YEAR = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
+LAST_MODEL_YEAR = {p: last_model_year(p) for p in HATTERAS_PERIODS}
+# The groin's strength and end year reach the runner as code defaults; they key its runs
+GROIN_STRENGTH = field_default("groin_strength")
+GROIN_END_YEAR = field_default("groin_end_year")
 
 HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
-SWEEP = GROIN_SWEEP_DIR / "HAT_groin_sweep.py"
-JOINT_FIT = GROIN_SWEEP_DIR / "HAT_groin_joint_fit.py"
 
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
-SWEEP_DIR = GROIN_SWEEP_ROOT
-JOINT_JSON = SWEEP_DIR / "joint_fit.json"
 
 PARAMETER_FILE = (PROJECT_BASE_DIR / "data" / "hatteras_init"
                   / "Hatteras-CASCADE-parameters.yaml")
@@ -156,13 +157,8 @@ def scenario_applies(period, scenario):
                        f"full_management")
     return True, None
 
-# The seed runs exist only to give the drift guard a reference
-SEED_M, SEED_F = 50.0, 0.9
-SEED_PRESET, SEED_SCENARIO = "edgeBE", "full_management"
-
 # A 20-year run is a few minutes
 RUN_TIMEOUT_S = 3600
-SWEEP_TIMEOUT_S = 12 * 3600
 
 
 # Exclusion
@@ -218,10 +214,11 @@ def be_digest_for(period, preset):
 
 # Stable identity for one unit of work
 def job_key(stage, period=None, preset=None, scenario=None, groin=None,
-            reloc=None, M=None, fraction=None, hs=None):
+            reloc=None, hs=None):
     parts = [stage, period, preset, scenario, groin, reloc]
+    # A groin run is keyed on the groin's two numbers, so changing either reruns it
     if groin:
-        parts += [M, fraction]
+        parts += [f"s{GROIN_STRENGTH:g}", f"off{GROIN_END_YEAR}"]
     digest = be_digest_for(period, preset)
     if digest != "empty":
         parts.append(digest)
@@ -284,7 +281,7 @@ def run_name_from_log(log_path):
 
 
 # Runs the hindcast once, driven entirely through the environment
-def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
+def run_hindcast(period, preset, scenario, reloc, groin,
                  overwrite, save_state, log_name, dry_run, hs=None):
     env = {key: value for key, value in os.environ.items()
            if not key.startswith("HAT_")}
@@ -302,8 +299,6 @@ def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
         "HAT_RUN_KIND": "matrix",
         "HAT_RELOCATIONS": "true" if reloc else "false",
         "HAT_GROIN_ENABLED": "true" if groin else "false",
-        "HAT_GROIN_TRAPPING_RATE_M_YR": str(M),
-        "HAT_GROIN_DETERIORATION_FRACTION": str(fraction),
         "HAT_OVERWRITE": "true" if overwrite else "false",
         "HAT_SAVE_MODEL_STATE": "true" if save_state else "false",
         # Matplotlib must not try to open a window in an unattended run.
@@ -315,8 +310,7 @@ def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
 
     if dry_run:
         print(f"      would run: period={period} preset={preset} "
-              f"scenario={scenario} reloc={reloc} groin={groin} "
-              f"M={M} f={fraction}")
+              f"scenario={scenario} reloc={reloc} groin={groin}")
         return True, 0.0, "dry-run"
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -341,7 +335,7 @@ def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
 
 
 # Runs the matrix cells for one groin state, serially
-def matrix_stage(stage, groin, manifest, args, fits=None):
+def matrix_stage(stage, groin, manifest, args):
     jobs, skipped = [], []
     for period in PERIODS:
         for preset in args.presets:
@@ -361,21 +355,13 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
 
     completed = failed = 0
     print(f"\n{'=' * 72}\nSTAGE {stage}: {len(jobs)} runs (serial)\n{'=' * 72}")
-    # (M, fraction) for this preset's groin runs, or (None, None)
-    def _fit_values(preset):
-        fit = (fits or {}).get(preset) if groin else None
-        if not fit:
-            return None, None
-        return fit.get("M"), fit.get("fraction")
-
     if skipped:
         print(f"  {len(skipped)} cell(s) skipped as degenerate:")
         for period, preset, scenario, reloc, reason in skipped:
             arm = "reloc  " if reloc else "       "
             print(f"    {period} {preset:<7} {scenario:<16} {arm}-- {reason}")
-            _m, _f = _fit_values(preset)
             key = job_key(stage, period, preset, scenario, groin, reloc,
-                          _m, _f, args.hs)
+                          args.hs)
             if key not in manifest and not args.dry_run:
                 # Recorded ok (no retry) with skipped=True, so the summary tells it from a real success
                 record(dict(key=key, stage=stage, period=period,
@@ -385,9 +371,8 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
                             at=datetime.now().isoformat(timespec="seconds")))
 
     for index, (period, preset, scenario, reloc) in enumerate(jobs, start=1):
-        _m, _f = _fit_values(preset)
         key = job_key(stage, period, preset, scenario, groin, reloc,
-                      _m, _f, args.hs)
+                      args.hs)
         if already_done(manifest, key):
             print(f"  [{index:>2}/{len(jobs)}] {period} {preset:<7} "
                   f"{scenario:<16} reloc={reloc!s:<5} groin={groin}  "
@@ -395,28 +380,8 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
             completed += 1
             continue
 
-        M = fraction = 0.0
         # Off by default: --overwrite is for a directory that exists but is stale
         overwrite = bool(getattr(args, "overwrite", False))
-        if groin:
-            fit = (fits or {}).get(preset)
-            if not fit:
-                print(f"  [{index:>2}/{len(jobs)}] no fitted (M, f) for "
-                      f"{preset}; skipping its groin runs")
-                failed += 1
-                continue
-            M, fraction = fit["M"], fit["fraction"]
-            # Kind and b reach the runner as code defaults, so the fit file must agree with them
-            _defaults = {name: default for name, _, _, default in _FIELDS}
-            if (fit.get("kind", _defaults["groin_kind"]) != _defaults["groin_kind"]
-                    or fit.get("b", _defaults["groin_blocking_fraction"])
-                    != _defaults["groin_blocking_fraction"]):
-                raise SystemExit(f"{JOINT_JSON.name} says {fit.get('kind')} b={fit.get('b')} but "
-                                 f"the runner defaults are {_defaults['groin_kind']} "
-                                 f"b={_defaults['groin_blocking_fraction']}; pin both together")
-            # The two seed cells already hold a run at provisional values
-            overwrite = overwrite or (preset == SEED_PRESET
-                                      and scenario == SEED_SCENARIO)
 
         # A `reloc` token only where the arm carries one, matching how the runner derives RUN_NAME in 7.5
         # The window, not just the start: 2010-2026 must not overwrite the 2010-2024 logs
@@ -426,16 +391,18 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
             + ["groin" if groin else "nogroin"])
         print(f"  [{index:>2}/{len(jobs)}] {period} {preset:<7} "
               f"{scenario:<16} reloc={reloc!s:<5} groin={groin}"
-              + (f" M={M:g} f={fraction:g}" if groin else ""), flush=True)
+              + (f" strength={GROIN_STRENGTH:g} off={GROIN_END_YEAR}" if groin else ""), flush=True)
 
         ok, seconds, detail = run_hindcast(
-            period, preset, scenario, reloc, groin, M, fraction, overwrite,
+            period, preset, scenario, reloc, groin, overwrite,
             not args.no_model_state, label, args.dry_run)
         # Not recorded on a dry run: a preview must never cancel the job it checks
         if not args.dry_run:
             record(dict(key=key, stage=stage, period=period, preset=preset,
-                        scenario=scenario, groin=groin, reloc=reloc, M=M,
-                        fraction=fraction, ok=ok, seconds=round(seconds, 1),
+                        scenario=scenario, groin=groin, reloc=reloc,
+                        groin_strength=GROIN_STRENGTH if groin else None,
+                        groin_end_year=GROIN_END_YEAR if groin else None,
+                        ok=ok, seconds=round(seconds, 1),
                         detail=detail,
                         # Read back from the runner's output, not derived -- see run_name_from_log
                         run_name=run_name_from_log(detail if ok else None),
@@ -474,112 +441,9 @@ def stage_archive(manifest, args):
                     at=datetime.now().isoformat(timespec="seconds")))
 
 
-# Runs the per-period drift-guard reference at provisional M and f
-def stage_seed(manifest, args):
-    print(f"\n{'=' * 72}\nSTAGE seed: {len(PERIODS)} runs\n{'=' * 72}")
-    print(f"  provisional M = {SEED_M:g}, f = {SEED_F:g} -- these exist only "
-          f"to give the\n  sweep's drift guard a rate curve to difference "
-          f"against. Stage 6 re-runs\n  both cells at the fitted values.")
-    completed = failed = 0
-    for period in PERIODS:
-        key = job_key("seed", period, SEED_PRESET, SEED_SCENARIO, True,
-                      False, hs=args.hs)
-        if already_done(manifest, key):
-            print(f"  {period}: SKIP (done)")
-            completed += 1
-            continue
-        print(f"  {period} {SEED_PRESET} {SEED_SCENARIO} groin=True", flush=True)
-        # Relocations off: the seed only gives the sweep's drift guard a curve
-        ok, seconds, detail = run_hindcast(
-            period, SEED_PRESET, SEED_SCENARIO, False, True, SEED_M, SEED_F,
-            False, not args.no_model_state, f"seed_{period}", args.dry_run,
-            hs=args.hs)
-        if not args.dry_run:   # see the note in matrix_stage
-            record(dict(key=key, stage="seed", period=period,
-                        preset=SEED_PRESET, scenario=SEED_SCENARIO,
-                        groin=True, reloc=False, M=SEED_M, fraction=SEED_F,
-                        ok=ok, seconds=round(seconds, 1), detail=detail,
-                        at=datetime.now().isoformat(timespec="seconds")))
-        if ok:
-            completed += 1
-            print(f"    done in {seconds / 60:.1f} min")
-        else:
-            failed += 1
-            print(f"    FAILED: {detail}")
-    return completed, failed
-
-
-# Runs the four period/preset sweeps
-def stage_sweeps(manifest, args):
-    completed = failed = 0
-    # Period 1 edgeBE is 215 of the 344 cells
-    order = [(period, preset) for period, preset in
-             [(1984, "edgeBE"), (1984, "zeroBE"),
-              (2004, "edgeBE"), (2004, "zeroBE")]
-             if preset in args.presets]
-    print(f"\n{'=' * 72}\nSTAGE sweeps: {len(order)} sweeps\n{'=' * 72}")
-    for period, preset in order:
-        key = job_key("sweep", period, preset, hs=args.hs)
-        if already_done(manifest, key):
-            print(f"  {period} {preset}: SKIP (done)")
-            completed += 1
-            continue
-        command = [sys.executable, str(SWEEP), "--period", str(period),
-                   "--preset", preset, "--workers", str(args.workers)]
-        sweep_env = dict(os.environ)
-        if args.hs is not None:
-            # Read by HAT_groin_sweep_worker, and by sweep_output_dir, which sends the results to their own directory
-            sweep_env["HAT_SWEEP_HS"] = repr(float(args.hs))
-        if args.dry_run:
-            command.append("--dry-run")
-        print(f"\n  --> {' '.join(command[1:])}", flush=True)
-
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        log_path = LOG_DIR / f"sweep_{period}_{preset}.log"
-        t0 = time.perf_counter()
-        # Streamed to a log rather than captured
-        with log_path.open("w", encoding="utf-8") as handle:
-            proc = subprocess.run(command, cwd=str(PROJECT_BASE_DIR),
-                                  stdout=handle, stderr=subprocess.STDOUT,
-                                  env=sweep_env, timeout=SWEEP_TIMEOUT_S)
-        seconds = time.perf_counter() - t0
-        ok = proc.returncode == 0
-        record(dict(key=key, stage="sweep", period=period, preset=preset,
-                    ok=ok, seconds=round(seconds, 1),
-                    detail=f"exit {proc.returncode}; log {log_path}",
-                    at=datetime.now().isoformat(timespec="seconds")))
-        if ok:
-            completed += 1
-            print(f"      done in {seconds / 60:.1f} min  ({log_path.name})")
-        else:
-            failed += 1
-            print(f"      FAILED exit {proc.returncode} -- see {log_path}")
-    return completed, failed
-
-
-# Runs the joint fit and returns the fitted values per preset
-def stage_joint_fit(args):
-    print(f"\n{'=' * 72}\nSTAGE joint fit\n{'=' * 72}")
-    if args.dry_run:
-        print("  would run HAT_groin_joint_fit.py")
-        return {}
-    proc = subprocess.run([sys.executable, str(JOINT_FIT)],
-                          cwd=str(PROJECT_BASE_DIR),
-                          capture_output=True, text=True, encoding="utf-8",
-                          errors="replace")
-    print(proc.stdout)
-    if proc.returncode != 0 or not JOINT_JSON.exists():
-        print(f"  joint fit produced no result (exit {proc.returncode}); "
-              f"stage 6 cannot run")
-        return {}
-    return json.loads(JOINT_JSON.read_text())
-
-
 # Run: every stage asked for, in order
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    parser.add_argument("--workers", type=int, default=8,
-                        help="sweep pool width (default 8; RAM-capped)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the plan without running anything")
     parser.add_argument("--overwrite", action="store_true",
@@ -593,25 +457,23 @@ def main():
     parser.add_argument("--no-model-state", action="store_true",
                         help="skip the ~160 MB .npz per matrix run "
                              "(saves ~6 GB; figures then need a re-run)")
-    parser.add_argument("--stages", default="1,2,3,4,5,6",
-                        help="comma-separated stage numbers to run "
-                             "(default all)")
+    parser.add_argument("--stages", default="1,2,3",
+                        help="comma-separated stage numbers to run: 1 archive the run index, "
+                             "2 the no-groin matrix, 3 the groin matrix (default all)")
     parser.add_argument("--scenarios", default=",".join(SCENARIOS),
                         help="comma-separated scenarios to cover "
                              "(default all; the reloc arm of each is still "
                              "decided by relocation_applies)")
     parser.add_argument("--hs", type=float, default=None,
-                        help="significant wave height for every run and sweep "
-                             "cell (default: the code value, 2.5). Anything "
-                             "other than 2.5 puts the matrix runs in their own "
-                             "directories via the waveHs run-name token and "
-                             "the sweeps in their own output directory, so an "
-                             "Hs experiment cannot overwrite the 2.5 m one.")
+                        help="significant wave height for every run (default: "
+                             "the code value). Anything else puts the matrix "
+                             "runs in their own directories via the waveHs "
+                             "run-name token, so an Hs experiment cannot "
+                             "overwrite the default one.")
     parser.add_argument("--presets", default=",".join(PRESETS),
                         help="comma-separated source/sink presets to cover "
                              f"(default {','.join(PRESETS)}; also accepts "
-                             f"{', '.join(p for p in ALL_PRESETS if p not in PRESETS)}, "
-                             f"which the sweep cannot fit)")
+                             f"{', '.join(p for p in ALL_PRESETS if p not in PRESETS)})")
     args = parser.parse_args()
 
     stages = {int(s) for s in args.stages.split(",") if s.strip()}
@@ -624,12 +486,6 @@ def main():
     args.presets = tuple(p for p in ALL_PRESETS if p in named)
     if not args.presets:
         parser.error("--presets selected nothing")
-    # Said once, here, rather than left for stage 4 to discover
-    unsweepable = [p for p in args.presets if p not in PRESETS]
-    if unsweepable:
-        print(f"  note: {', '.join(unsweepable)} has no sweep grid, so "
-              f"stages 4-6 skip it; stages 1-3 run normally")
-
     # Validated against the runner's table and put in its order
     chosen = [s.strip() for s in args.scenarios.split(",") if s.strip()]
     unknown = [s for s in chosen if s not in SCENARIOS]
@@ -646,7 +502,7 @@ def main():
     print(f"  stages       {sorted(stages)}")
     print(f"  presets      {', '.join(args.presets)}")
     print(f"  scenarios    {', '.join(args.scenarios)}")
-    print(f"  sweep pool   {args.workers}")
+    print(f"  groin        strength {GROIN_STRENGTH:g}, off from {GROIN_END_YEAR}")
     print(f"  model state  {'NOT saved' if args.no_model_state else 'saved'}")
     print(f"  manifest     {MANIFEST}")
     print(f"  logs         {LOG_DIR}")
@@ -660,27 +516,9 @@ def main():
         totals["matrix nogroin"] = matrix_stage(
             "matrix_nogroin", False, manifest, args)
     if 3 in stages:
-        totals["seed"] = stage_seed(manifest, args)
-    if 4 in stages:
-        manifest = load_manifest()
-        totals["sweeps"] = stage_sweeps(manifest, args)
-
-    # Stage 6 alone falls back to joint_fit.json for (M, f)
-    if 5 in stages:
-        fits = stage_joint_fit(args)
-    elif JOINT_JSON.exists():
-        fits = json.loads(JOINT_JSON.read_text())
-        summary = ", ".join(f"{k} M={v.get('M')} f={v.get('fraction')}"
-                            for k, v in fits.items())
-        print(f"  stage 5 not requested; read fitted values from "
-              f"{JOINT_JSON.name}: {summary}")
-    else:
-        fits = {}
-
-    if 6 in stages:
         manifest = load_manifest()
         totals["matrix groin"] = matrix_stage(
-            "matrix_groin", True, manifest, args, fits=fits)
+            "matrix_groin", True, manifest, args)
 
     elapsed = (datetime.now() - started).total_seconds() / 3600
     print("\n" + "=" * 72)
@@ -689,13 +527,6 @@ def main():
     for name, (done, failed) in totals.items():
         flag = "" if not failed else f"   {failed} FAILED"
         print(f"  {name:<16} {done} completed{flag}")
-    if fits:
-        print("\n  fitted parameters")
-        for preset, fit in fits.items():
-            bound = (f"   RAILED on {', '.join(fit['at_grid_bound'])}"
-                     if fit.get("at_grid_bound") else "")
-            print(f"    {preset:<8} M = {fit['M']:g} m/yr, "
-                  f"f = {fit['fraction']:g}{bound}")
     print(f"\n  re-invoke this script to retry anything that failed")
     return 0 if not any(f for _, f in totals.values()) else 1
 

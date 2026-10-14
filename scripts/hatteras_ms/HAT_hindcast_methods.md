@@ -239,250 +239,78 @@ does.
 
 ## 7. `hard_structures` / groin -- Buxton groin field
 
-`cascade/groin.py` attaches to a run through `cascade._groin_callback` and is
-called once per model year from inside `Cascade.update()`, immediately before
-the alongshore-transport solve (`cascade/cascade_groin.py:600`). Each active
-year it adds `-M` to the updrift domain and `+M` to the downdrift domain of
-`x_s_dt`, then hands the array on. BRIE's implicit diffusion solve spreads that
-dipole in the same step, so the fillet's taper and alongshore extent are
-**emergent** -- only its amplitude is imposed.
+`cascade/groin.py`'s `CorrectedGroinCallback` attaches to a run through
+`cascade._groin_callback` and is called once per model year from inside
+`Cascade.update()`, immediately before the alongshore-transport solve
+(`cascade/cascade_groin.py`). It reads BRIE's shoreline and wave-climate tables,
+adds to `x_s_dt`, and changes nothing inside BRIE or Barrier3D. Each active year:
 
-Units and sign are the ones BRIE already uses, verified rather than assumed:
-`brie_coupler.py:57` converts `x_s_dt` to meters before the hook sees it and
-line 344 converts back, so `M` is meters per year with no conversion in the
-module. `x_s` increases landward, so `-M` updrift is a seaward advance.
+1. **It holds back a share of the drift.** BRIE's net alongshore drift for the
+   wave climate, read from its own tables at the shoreline angle where the drift
+   arrives at the GIS 5|6 face, is converted to shoreline change
+   (`q dt / (dy (h_b_crit + d_sf))`); a share `s` of it is moved from the
+   downdrift domain (GIS 5) to the updrift one (GIS 6).
+2. **It stops BRIE leaking that sand away.** BRIE's diffusive step would smooth
+   the step the groin builds and spread the held sand onto the rest of the
+   island. Within 10 cells of the face the callback adds back
+   `2 (r_i - r_{i-1}) (x_i - x_{i-1})` for this shoreline minus the same term for
+   the groin-free shoreline, so the correction acts on the groin's own bends and
+   never on the coast's natural ones. The groin-free shoreline is this shoreline
+   less the groin's tracked footprint: each year BRIE's alongshore step for the
+   previous year is repeated with and without the groin's own contribution, and
+   the difference is the footprint. A groin of strength 0 is therefore exactly
+   the no-groin run, which a full run confirms to 0 m.
 
-### It is a forcing, not a barrier
+Units and sign are BRIE's: `x_s_dt` reaches the hook in metres, and `x_s`
+increases landward, so the updrift advance is a negative `x_s_dt`.
 
-Nothing in this module blocks alongshore transport. Littoral drift crosses GIS
-5.5 in the model exactly as it would with no structure there. What the dipole
-reproduces is the *shoreline signature* of blockage -- accretion one side,
-starvation the other -- by moving shoreline displacement between two adjacent
-cells. The pair is volume-neutral by construction: `-M` and `+M` cancel.
+### Two numbers, fitted over the groin's whole life
 
-Three consequences, stated here rather than discovered later:
+The groin is set by its **strength**, the share of the arriving drift held
+back (`groin.strength`, 0.25), and the **first year it no longer works**
+(`groin.end_year`, 2017). Both were fitted on one continuous run from the 1967
+wet/dry shoreline, two years before the groins, to 2025, scored on the gap
+across the groins against the wet/dry photo dates and annual CoastSat
+(`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`).
+Fitted era by era, the strength is 0.25 for 1969-1995, 0.25 for 1996-2009 and
+0.20-0.25 for 2010-2016 (0.25 is within 0.5 m), so one strength is kept. It is
+the minimum under three different stand-ins for the pre-1984 storms. The end
+year is the 2017 Buxton fill, placed across the whole groin field: left on, the
+groin misses 2017-2025 by 47 m.
 
-- **Trapping never saturates on state.** A real groin fills to its tip and
-  bypasses; trapping shuts off because the fillet grew. Here `M` is applied at
-  full strength every year, modulated only by a calendar schedule. The
-  amplitude does level off -- diffusion balances injection at
-  `A ~= M / (4 * r_ipl)` -- but for a reason unrelated to the physical one.
-- **The year counter is the call counter.** `groin.py:230` computes
-  `year = start_year + _call_count`. The callback never reads `cascade` and
-  never checks `time_index`, so it assumes it is called exactly once per model
-  year, in order. It cannot detect the off-by-one that section 6 documents for
-  `BeachDuneManager`.
-- **`install_year` is inert here.** 1969 precedes both 1984 and 2004, so
-  `active` is `True` at every step of either period and `active_TS` carries no
-  information. It mattered for the 1967 test runs.
+**Why not fit the calibration and test windows separately.** Each window's run
+starts from the observed shoreline, which already holds the fillet the groins
+built. A strength fitted that way measures how fast the model relaxes that
+fillet (0.16 on 1996-2009, 0.10 on 2010-2016), not how strong the groin is: run
+as one history, those values leave the gap 30-40 m below the record from 1996
+to 2017.
 
-One dipole also stands in for the whole Buxton groin field. At 500 m domains
-the field is sub-domain scale, so that is a resolution limit rather than a
-modelling choice.
+**Why the no-groin runs move at GIS 5|6.** The 1996 and 2009 start offsets step
+240-264 m seaward from GIS 5 to 6, against 104 m on the 1967 dune line: about
+100 m is the coast's bend toward the cape and about 150 m the fillet. Without a
+groin BRIE smooths it, GIS 6 eroding and GIS 5 building out with almost no net
+change; it is not a source or a sink.
 
-### Two independent estimates of `M` disagree, and that is reported
+### What is not represented
 
-`M` is the single tunable knob, and two lines of evidence give answers an order
-of magnitude apart.
+- **The build-up speed.** At full strength from installation the model builds
+  its fillet in about 3 years; the photos show about 9. Ramping the strength in
+  over 1969-1978 reproduces it without moving the plateau, which matters only
+  for a run that starts before the fillet exists (a forecast of a rebuilt groin).
+- **The fillet's width.** The model's change sits in the two domains beside the
+  face; the observed one spans three or four, and is mostly downdrift retreat.
+- **One groin against three.** 0.25 is the three-groin field's strength; only
+  the southernmost groin is rebuilt in 2026.
+- **The 2017 fill's footprint.** The fill starts at GIS 6, so it makes a gap
+  across the groins of its own (35 m in the no-groin run).
 
-The sensitivity sweep fit `M` against a **shoreline-position** target and found
-`M = 50 m/yr` (RMSE 24.0, `HAT_groin_sweep_results.csv`) -- from the 1967-2017
-test setup, not this period.
+### History
 
-The **sediment budget** says that is unaffordable. Moving `M` meters of
-shoreline over a 500 m domain transfers `M * dy * (d_sf + h_b)` per year. At
-`M = 50` that is 3-6 x 10^5 m3/yr depending on the active profile height,
-against a reach-integrated transport-gradient loss of 5.9 x 10^5 m3/yr for the
-whole of Oregon Inlet to Cape Hatteras (Inman & Dolan 1989, via Moore et al.
-2010, doi:10.1029/2009JF001299). The groin would be moving something close to
-the island's entire annual budget across one domain boundary, every year, while
-deteriorating from 1996 and storm-damaged in 2003.
-
-That comparison is order-of-magnitude only: 5.9 x 10^5 m3/yr is a *divergence*
-over a ~60 km reach, not a gross flux past Buxton. The cell prints that caveat
-with the number on every run.
-
-The run is configured at the sweep's `M = 50` and the breach is **reported, not
-corrected** -- the same treatment section 6 gives the double-managed domains.
-If both estimates are right, the extra shoreline signal at D5/D6 is not groin
-trapping; it is the Cape Point shoal dynamics the calibrated source/sink rates
-already claim there (`+1.2` at D5, `+2.0` at D6, both accretion). Those rates
-were fit to observed CoastSat LRR spanning the functional-groin era, so the
-groin's signature is plausibly counted twice. Left standing pending the
-source/sink re-analysis; section 12 checks it against the finished run.
-
-### What the fitted differential actually measures
-
-`differential = LRR[D6] - LRR[D5]` is algebraically the **OLS slope of the
-fillet**, `x_s[D5] - x_s[D6]`. Its trend across the window, not its size. Three
-consequences, all counter-intuitive, all measured on the 2026-08-22 sweep:
-
-- The fillet **saturates** -- ~18 m at `M = 40`, reached by 1990, where BRIE's
-  diffusion balances the trapping. A healthy, strong, *constant* groin therefore
-  scores near **zero**.
-- A **degrading** groin scores **negative**, because its fillet is relaxing
-  during the window.
-- Sign reports building-vs-failing, not strong-vs-weak. Two very different
-  groins can score identically.
-
-| year | fillet, `f = 0.00` | fillet, `f = 1.00` | applied `M` |
-|---|---|---|---|
-| 1984 | 0.0 | 0.0 | 40.0 |
-| 1990 | 17.4 | 17.4 | 40.0 |
-| 1996 | 17.6 | 17.6 | 40.0 |
-| 2000 | 10.6 | 18.3 | 17.1 |
-| 2004 | 0.7 | 18.3 | 0.0 |
-
-#### The "period 2 is unreachable" claim was wrong
-
-Earlier versions of `HAT_groin_sweep_config.py` argued that a negative
-differential could not be produced at any `M >= 0`, since the callback adds `-M`
-updrift and `+M` downdrift. That reasoning holds for the fillet's *size*, not
-its *slope*. Falsified twice:
-
-1. Period-1 cell `M40_beNA_f0.00` scores **-0.713**, more negative than the
-   no-groin baseline's **-0.229** -- a groin at `M = 40` driving the
-   differential *below* no groin at all.
-2. The period-2 seed run inherits a **25.3 m fillet at t = 0** (the real Buxton
-   fillet is in the 2004 initial shoreline) and relaxes to 21.9 m, scoring
-   **-0.168 m/yr** at `M = 50, f = 0.9`. Negative, with a groin attached.
-
-So the observed 2004-2024 differential of **-2.47 m/yr** is reachable, and is
-what a fillet relaxing after the 2003 storm damage looks like.
-
-#### Why the fit ranks on period 1 alone
-
-Cumulative trapping is `M*(16 + 4f)` in 1984-2004 but `20*M*f` in 2004-2024.
-Period 2 sits entirely past the ramp, so `M` and `f` enter **only as their
-product** -- that window cannot separate them. Every bit of information
-distinguishing the two lives in period 1, the one window straddling the
-1996-2003 ramp.
-
-Summing both legs let a window that cannot identify the parameters pull them
-anyway, and in the wrong direction: holding period-1 trapping fixed, driving `f`
-from 0.9 to 0 forces `M` from 50 to **61.3 m/yr** -- 52% to 63% of the reach
-sediment budget. Period 2 is now reported out-of-sample, where its failure to
-match is informative rather than guaranteed.
-
-### Deterioration is scheduled, not simulated
-
-Last repair 1995 (CSE 2013, p. 20), storm damage 2003, encoded as a linear ramp from 1996, the first year after the repair, to 2003
-(`deterioration_delay_years = 27`, `ramp_years = 7`). For a 1984 start the ramp
-falls at run-years 12-19; for a 2004 start it has already completed, so the
-groin sits at its floor from year 0. The floor itself, `0.9`, is the sweep's
-paired value for `M = 50` -- it leaves the structure at 90 % strength after
-failure, which the documented 1996/2003 history does not support. Printed as an
-open tension rather than silently reconciled.
-
-### What the 1984 sweep found
-
-The 1984 `zeroBE` sweep, 43 cells, is the only leg run to completion
-(2026-08-23). `zeroBE` imposes **no** source/sink anywhere, and `edgeBE`
-imposes it only at GIS 1 and 90, so neither preset puts anything at D5/D6 --
-the groin is fitted against the whole unexplained signal there. `calibBE` is
-excluded from `PRESETS` for the opposite reason: fitting a groin against a
-field that already absorbed the groin would count it twice.
-
-**On the fillet's slope, the fit has no optimum.** Error falls monotonically in
-`f` at every `M`, and monotonically in `M` along `f = 1.0`. The best cell is
-the top-right corner, `M = 110, f = 1.0`, railed on both axes:
-
-| M \ f | 0.0 | 0.4 | 0.8 | 1.0 |
-|---|---|---|---|---|
-| 40 | -0.713 | -0.418 | -0.121 | +0.026 |
-| 70 | -1.086 | -0.565 | -0.029 | +0.249 |
-| 110 | -1.616 | -0.773 | +0.102 | **+0.555** |
-
-Observed is **+0.986**, the no-groin baseline **-0.229**. The `f = 1.0`
-contribution is linear in `M` to R^2 = 0.998, so the grid ceiling delivers 65 %
-of what is needed and the line reaches the target only at `M ~= 168 m/yr` --
-**175 % of the reach sediment budget**, moving 1.13x the entire Buxton 2022
-nourishment across one domain boundary every year. Matching the observed
-differential would need a groin that never degrades *and* is unaffordable, on
-two independent counts.
-
-**On the fillet's size, the same 43 runs give an interior optimum.** Rescored
-with `measure_fillet` against the detrended observation (13.80 m):
-
-| ranked on | best cell | error | railed | mean applied `M` | budget |
-|---|---|---|---|---|---|
-| slope | M=110, f=1.0 | 0.431 m/yr | both axes | 110.0 | 115 % |
-| **size** | **M=50, f=0.6** | **0.068 m** | neither | 46.0 | 48 % |
-
-The ridge is well formed -- M=50/f=0.6 at 13.87 m, M=70/f=0.4 at 13.46 m,
-M=40/f=0.8 at 14.77 m -- and `f = 0.6` is consistent with the 1996 repair and
-2003 storm the schedule already encodes, where `f = 1.0` flatly is not. This is
-the number to quote, with the caveat below.
-
-### The caveat that limits the fit: the observed shape is not a dipole
-
-Detrending the observed LRR across D1-D12 with the groin pair excluded gives
-the pair's local anomaly. It is **one-signed**:
-
-```
-observed anomaly:   D5 +0.786    D6 +1.476     sum +2.26
-model anomaly:      D5 -1.543    D6 -0.759     sum -2.30
-```
-
-Both observed domains sit *above* the regional trend. The groin dipole is
-volume-neutral by construction, so it must place a **notch** at D5 -- and the
-model does, at every `(M, f)` on the grid. The model therefore cannot reproduce
-the observed *shape* at any parameter, regardless of amplitude.
-
-D5's `+0.786` is also within the scatter of the regional fit (D1 `+0.869`, D3
-`-0.812`, D8 `+0.774`); only D6's `+1.476` is a genuine outlier. What the data
-shows is an accretional bulge centred near Cape Point, not a groin dipole. A
-well-conditioned fit to a feature whose shape the model cannot produce is a
-better-behaved number, not a truer one -- so report the fillet-size `(M, f)`
-*and* this mismatch together.
-
-### Bypassing is missing, and it matters at high `M`
-
-`GroinCallback` is a pure forcing: "trapping never saturates on state". A real
-groin stops trapping once its fillet reaches the seaward tip, which also stops
-the downdrift starvation, because sand resumes rounding the end. Without that,
-the source saturates on diffusion while the sink saturates on nothing:
-
-| M | downdrift D5 | updrift D6 | fillet |
-|---|---|---|---|
-| 40 | +10.5 m erosion | -7.8 m accretion | 18 m |
-| 70 | +25.2 m | -7.6 m | 33 m |
-| 110 | **+52.2 m** | **-0.8 m** | 53 m |
-
-52 m of notch against 0.8 m of advance is not a groin; it is a runaway sink.
-**The differential fit rails straight into that regime**, which is a second
-reason not to quote its `M = 110`.
-
-`bypass_fillet_m` was added to `GroinCallback` (default `None`, so every prior
-run reproduces) as a **capacity limit** -- the year's trapping is capped at the
-fillet the structure can still accept, `cap - fillet`. A hard switch and a
-linear taper were both tried first and both degenerate at an annual timestep,
-because one year at `M = 70` moves the fillet ~140 m and overshoots any
-plausible cap; their shared signature is mean applied `M` pinned to exactly
-`M/2`. Verified at M=70, f=1.0:
-
-| cap | mean applied `M` |
-|---|---|
-| 15 m | 18.60 |
-| 25 m | 25.44 |
-| 40 m | 35.82 |
-| 100 m | 70.00 (never binds; identical to uncapped) |
-
-Capping at a plausible fillet cuts effective trapping ~4x at high `M`. **The
-full capped sweep was not completed** -- three attempts were lost to the machine
-suspending mid-sweep, which kills in-flight workers on `WORKER_TIMEOUT_S`
-wall-clock -- so the cap is a demonstrated mechanism and a documented model gap,
-not a fitted parameter. The cap value itself is unsourced: the 1969 Navy groins
-have no published length in anything this project cites.
-
-### What is deliberately not here
-
-No `predict_fillet` call. Its `r_ipl` is a local variable inside BRIE's
-`update()` (`brie.py:1294`), computed per domain per step from `_coast_diff`
-and never stored -- and `finalize()` deletes `_coast_diff` outright. Section 11
-reads it off the constructed model and prints the predicted amplitude and
-extent **before** the time loop, so the emergent-extent check is pre-registered
-rather than retrofitted.
+The dipole (a fixed `-M`/`+M` a year, with a deterioration floor `f`) and the
+blocking groin (a share `b` of BRIE's diffusive exchange cancelled at the face)
+were the runner's groins until 2026-10-14; their fits and why they were replaced
+are in `hard-structures/groin/README.md`, and git keeps their code (last at
+commit `4d937b79`).
 
 ## 8. CoastSat target rates -- LOWESS windows
 

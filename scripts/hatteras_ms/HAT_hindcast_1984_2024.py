@@ -52,7 +52,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-from cascade.groin import BlockingGroinCallback, GroinCallback, predict_fillet
+from cascade.groin import CorrectedGroinCallback
 
 from cascade_pipeline import nourishment, roadway
 from cascade_pipeline import reports
@@ -316,12 +316,8 @@ if GEOMETRY != HATTERAS_GEOMETRY:
 # The groin is not part of the scenario: every scenario runs with and without it (12.3)
 GROIN_ENABLED = RUN_CONFIG.groin_enabled
 
-# Which groin: "dipole" (+/-M a year) or "blocking" (a fraction b of the transport); own name tokens
-GROIN_KIND = RUN_CONFIG.groin_kind
-if GROIN_KIND not in ("dipole", "blocking"):
-    raise ValueError(f"groin kind {GROIN_KIND!r} must be 'dipole' or 'blocking'")
-GROIN_TOKEN = (("groin" if GROIN_KIND == "dipole" else "groinblock")
-               if GROIN_ENABLED else "nogroin")
+# One groin since 2026-10-14, the corrected groin; its runs carry the plain token
+GROIN_TOKEN = "groin" if GROIN_ENABLED else "nogroin"
 
 # Where a relocated road is rebuilt, metres behind the dune line; "measured" = the t=0 setback
 RELOCATION_SETBACK_M = RUN_CONFIG.relocation_setback_m
@@ -760,9 +756,10 @@ reports.beach_dune_report(
 
 # 7. Hard structures / groin -- Buxton groin field
 
-# The groin callback adds -M updrift, +M downdrift each year before the transport solve; the fillet is emergent
+# The corrected groin moves a share of the drift arriving at GIS 5|6 updrift each year, before the transport
+# solve, and cancels BRIE's leak of it; the fillet is emergent
 
-# 7.1 Switches, structure, sediment-budget reference
+# 7.1 Switches and structure
 
 # GROIN_ENABLED is set in section 3; the guard stays here
 
@@ -781,58 +778,25 @@ GROIN_UPDRIFT_GIS = 6       # source: accretes
 GROIN_DOWNDRIFT_GIS = 5     # sink:   erodes
 GROIN_INSTALL_YEAR = 1969   # confirmed construction date
 
-# Amplitude and deterioration floor: the two tunable knobs
-
-# M and f come from the config (the sweep sets them per run); fit jointly across both periods
-GROIN_TRAPPING_RATE_M_YR = RUN_CONFIG.groin_trapping_rate_m_yr
-# b, the blocking fraction: read only when GROIN_KIND is "blocking"; f scales it as it scales M
-GROIN_BLOCKING_FRACTION = RUN_CONFIG.groin_blocking_fraction
-GROIN_M_PROVENANCE = ("joint two-period fit against the CoastSat D6-D5 "
-                      "differential; see output/calibration/groin/ for the M-f "
-                      "ridge and which grid bounds the solution touches")
-
-# Deterioration: intact until the 2003 storm, failed from 2004
-
-# Instant failure at the 2003 storm (from the 2004 step), as the observed D5-D6 gap shows
-GROIN_DETERIORATION_DELAY_YEARS = 2004 - GROIN_INSTALL_YEAR   # = 35
-GROIN_DETERIORATION_MODE = "instant"
-GROIN_DETERIORATION_RAMP_YEARS = 0.0
-GROIN_DETERIORATION_FRACTION = RUN_CONFIG.groin_deterioration_fraction
-
-# Sediment-budget reference
-REACH_TRANSPORT_LOSS_M3_YR = 5.9e5
-REACH_TRANSPORT_CITATION = ("Inman & Dolan (1989), via Moore et al. (2010), "
-                            "doi:10.1029/2009JF001299")
-REACH_TRANSPORT_CAVEAT = (
-    "reach-integrated transport-gradient LOSS, Oregon Inlet to Cape Hatteras "
-    "(~60 km) -- a divergence, not a gross flux at Buxton, so this bounds "
-    "order of magnitude only")
-
-# Active profile height: both candidates printed; section 11 resolves it from the model
-GROIN_PROFILE_HEIGHT_CANDIDATES_M = (12.0, 24.0)
+# The groin's two numbers (hat_run.yaml): the share of the arriving drift it holds back, and the
+# first year it no longer works (the 2017 Buxton fill). Fitted on one continuous 1967-2025 run:
+# hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/
+GROIN_STRENGTH = RUN_CONFIG.groin_strength
+GROIN_END_YEAR = RUN_CONFIG.groin_end_year
 
 
 # 7.2 Build the callback
 
 # GROIN_CB is built either way for the 7.4 report; GROIN_CALLBACK is the one attached
 
-_GROIN_COMMON = dict(
+GROIN_CB = CorrectedGroinCallback(
     updrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS),
     downdrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_DOWNDRIFT_GIS),
+    strength_history=[(GROIN_INSTALL_YEAR, GROIN_STRENGTH), (GROIN_END_YEAR, 0.0)],
     start_year=FIRST_MODEL_YEAR,
     install_year=GROIN_INSTALL_YEAR,
     n_domains=HATTERAS_DOMAINS.total_domains,
-    deterioration_delay_years=GROIN_DETERIORATION_DELAY_YEARS,
-    deterioration_mode=GROIN_DETERIORATION_MODE,
-    deterioration_ramp_years=GROIN_DETERIORATION_RAMP_YEARS,
-    deterioration_fraction=GROIN_DETERIORATION_FRACTION,
 )
-if GROIN_KIND == "blocking":
-    GROIN_CB = BlockingGroinCallback(
-        blocking_fraction=GROIN_BLOCKING_FRACTION, **_GROIN_COMMON)
-else:
-    GROIN_CB = GroinCallback(
-        trapping_rate_m_yr=GROIN_TRAPPING_RATE_M_YR, **_GROIN_COMMON)
 GROIN_CALLBACK = GROIN_CB if GROIN_ENABLED else None
 
 
@@ -842,18 +806,7 @@ reports.groin_report(
     enabled=GROIN_ENABLED, callback=GROIN_CB,
     updrift_gis=GROIN_UPDRIFT_GIS, downdrift_gis=GROIN_DOWNDRIFT_GIS,
     install_year=GROIN_INSTALL_YEAR, start_year=FIRST_MODEL_YEAR, end_year=LAST_MODEL_YEAR + 1,
-    geometry=HATTERAS_DOMAINS,
-    trapping_rate_m_yr=GROIN_TRAPPING_RATE_M_YR,
-    m_provenance=GROIN_M_PROVENANCE,
-    groin_kind=GROIN_KIND, blocking_fraction=GROIN_BLOCKING_FRACTION,
-    deterioration_mode=GROIN_DETERIORATION_MODE,
-    deterioration_delay_years=GROIN_DETERIORATION_DELAY_YEARS,
-    deterioration_ramp_years=GROIN_DETERIORATION_RAMP_YEARS,
-    deterioration_fraction=GROIN_DETERIORATION_FRACTION,
-    profile_height_candidates_m=GROIN_PROFILE_HEIGHT_CANDIDATES_M,
-    reach_transport_loss_m3_yr=REACH_TRANSPORT_LOSS_M3_YR,
-    reach_transport_citation=REACH_TRANSPORT_CITATION,
-    reach_transport_caveat=REACH_TRANSPORT_CAVEAT,
+    geometry=HATTERAS_DOMAINS, strength=GROIN_STRENGTH, off_year=GROIN_END_YEAR,
     source_sink_preset=SOURCE_SINK_PRESET, domain_be_rates=DOMAIN_BE_RATES)
 
 
@@ -884,8 +837,7 @@ SCENARIO_SWITCHES = [
      "nourish" if BN_SCHEDULE_APPLIED.projects
      else ("nonourish" if BN_SCHEDULE.projects and ENABLE_BEACH_DUNE_MANAGEMENT
            else None)),
-    ("groin", ("on" if GROIN_KIND == "dipole" else "on (blocking)")
-     if GROIN_ENABLED else "off", GROIN_TOKEN),
+    ("groin", "on" if GROIN_ENABLED else "off", GROIN_TOKEN),
     ("relocation target",
      "each domain's measured offset" if RELOCATION_SETBACK_M is None
      else f"{RELOCATION_SETBACK_M:g} m behind the dune line",
@@ -1261,20 +1213,6 @@ _h_b_m = float(cascade.barrier3d[0].h_b_TS[0]) * DAM_TO_M
 _profile_height_m = _d_sf_m + _h_b_m
 _berm_floor_m = float(cascade.barrier3d[0].BermEl) * DAM_TO_M
 
-# The M / (4 r_ipl) prediction is the dipole's; a blocking groin has no a-priori amplitude
-if GROIN_CALLBACK is not None and GROIN_KIND == "dipole":
-    (GROIN_PREDICTED_AMPLITUDE_M,
-     GROIN_PREDICTED_EXTENT_DOMAINS,
-     GROIN_PREDICTED_EXTENT_M) = predict_fillet(
-        trapping_rate_m_yr=GROIN_CALLBACK.M,
-        r_ipl=R_IPL,
-        run_years=RUN_YEARS,
-        dy_m=HATTERAS_DOMAINS.domain_spacing_m,
-    )
-else:
-    GROIN_PREDICTED_AMPLITUDE_M = None
-    GROIN_PREDICTED_EXTENT_DOMAINS = None
-    GROIN_PREDICTED_EXTENT_M = None
 
 reports.pre_run_report(
     run_name=RUN_NAME, run_dir=RUN_DIR, run_years=RUN_YEARS,
@@ -1284,11 +1222,7 @@ reports.pre_run_report(
     profile_height_m=_profile_height_m, berm_floor_m=_berm_floor_m,
     dune_design_elevation_m=DUNE_DESIGN_ELEVATION_M,
     dune_minimum_elevation_m=DUNE_MINIMUM_ELEVATION_M,
-    groin_callback=GROIN_CALLBACK, groin_enabled=GROIN_ENABLED, r_ipl=R_IPL,
-    predicted_amplitude_m=GROIN_PREDICTED_AMPLITUDE_M,
-    predicted_extent_domains=GROIN_PREDICTED_EXTENT_DOMAINS,
-    predicted_extent_m=GROIN_PREDICTED_EXTENT_M,
-    reach_transport_loss_m3_yr=REACH_TRANSPORT_LOSS_M3_YR)
+    groin_callback=GROIN_CALLBACK, groin_enabled=GROIN_ENABLED, r_ipl=R_IPL)
 
 
 # 12. Run the loop, verify, then figures
@@ -1390,9 +1324,7 @@ else:
         GROIN_UPDRIFT_GIS, GROIN_DOWNDRIFT_GIS, GROIN_EXTENT_THRESHOLD_FRAC)
     reports.groin_extent_report(
         extent=GROIN_EXTENT, threshold_frac=GROIN_EXTENT_THRESHOLD_FRAC,
-        baseline_name=GIF_BASELINE_NAME,
-        predicted_extent_domains=GROIN_PREDICTED_EXTENT_DOMAINS,
-        predicted_extent_m=GROIN_PREDICTED_EXTENT_M)
+        baseline_name=GIF_BASELINE_NAME)
 
 
 # 12.4 Write
@@ -1597,19 +1529,13 @@ _META = {
 
 if GROIN_CALLBACK is not None:
     _META["groin"].update({
-        "kind": GROIN_KIND,
-        **({"trapping_rate_m_yr": GROIN_CALLBACK.M} if GROIN_KIND == "dipole"
-           else {"blocking_fraction": GROIN_CALLBACK.blocking_fraction,
-                 "mean_trapping_rate_m_yr":
-                     f"{GROIN_CALLBACK.mean_trapping_rate_m_yr:.2f}"}),
+        "kind": GROIN_CALLBACK.kind,
+        "strength_history": GROIN_CALLBACK.strength_history,
+        "mean_trapping_rate_m_yr": f"{GROIN_CALLBACK.mean_trapping_rate_m_yr:.2f}",
         "updrift / downdrift": f"GIS {GROIN_UPDRIFT_GIS} / {GROIN_DOWNDRIFT_GIS}",
         "install_year": GROIN_CALLBACK.install_year,
-        "deterioration": f"{GROIN_CALLBACK.deterioration_mode}, "
-                         f"floor {GROIN_CALLBACK.deterioration_fraction}",
         "r_ipl_t0": f"{R_IPL:.4f}",
         "r_ipl_theta_deg": f"{R_IPL_THETA_DEG:.1f}",
-        "predicted_extent_m": ("n/a" if GROIN_PREDICTED_EXTENT_M is None
-                               else f"{GROIN_PREDICTED_EXTENT_M:.0f}"),
     })
     if GROIN_EXTENT is not None:
         _META["groin"]["measured_extent_m"] = (
@@ -1632,17 +1558,11 @@ _index_row = {
     "scenario": SCENARIO,
     "scenario_overridden": bool(_SCENARIO_DEPARTURES),
     "groin_enabled": GROIN_ENABLED,
-    "groin_kind": GROIN_KIND if GROIN_CALLBACK is not None else "",
-    # A blocking groin's M is emergent: the mean rate it actually applied.
+    "groin_strength": GROIN_STRENGTH if GROIN_CALLBACK is not None else np.nan,
+    "groin_end_year": GROIN_END_YEAR if GROIN_CALLBACK is not None else np.nan,
+    # The shoreline change the groin moved across its face, mean over its active years
     "groin_trapping_m_yr": (np.nan if GROIN_CALLBACK is None
-                            else GROIN_CALLBACK.M if GROIN_KIND == "dipole"
                             else GROIN_CALLBACK.mean_trapping_rate_m_yr),
-    "groin_blocking_b": (GROIN_CALLBACK.blocking_fraction
-                         if GROIN_CALLBACK is not None and GROIN_KIND == "blocking"
-                         else np.nan),
-    # f, recorded since 2026-08-31 (the seed runs used 0.9); be1 is be_rate_gis1_m_yr
-    "groin_deterioration_f": (GROIN_CALLBACK.deterioration_fraction
-                              if GROIN_CALLBACK is not None else np.nan),
     "roadway_management": ENABLE_ROADWAY_MANAGEMENT,
     "relocations_enabled": ENABLE_HISTORICAL_ROAD_RELOCATIONS,
     "beach_dune_management": ENABLE_BEACH_DUNE_MANAGEMENT,

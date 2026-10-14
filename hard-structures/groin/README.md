@@ -33,18 +33,17 @@ from simplest to most complex.
 
 **Where we left off (2026-10-14).** Numbers on the calendar-year setup (commit `e9c5e663`).
 
-- **Pinned in the runner, unchanged:** the blocking groin, b 0.6, f 0.6, instant failure at the 2004 step (`output/calibration/groin/joint_fit.json`, read by `HAT_run_all.py`).
-- **Module design, settled:** build on BRIE and Barrier3D, never edit them. Of the seven versions tested on straight coasts, the corrected groin (version 6: the drift groin plus a correction for BRIE's sand leak at the groin's own bends) is the one to carry forward; versions 2-5 and 7 are in `2-module-tests/archive/`. Its reference is the groin's own tracked footprint, so it needs no no-groin run (`3-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`, findings 15-17).
-- **The groin's strength, from one continuous run 1967-2025** (`3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`): a ramp to 0.25 by 1978, 0.25 to 2009 (perhaps 0.30 after the 1995 repair), 0.20 to 2016, off from the 2017 fill. It follows the observed gap to 17 m over the whole record, and 0.25 is the minimum under three different pre-1984 storm sequences.
+- **In the runner since 2026-10-14: the corrected groin**, `cascade.groin.CorrectedGroinCallback`, the only groin left. Two numbers in `scripts/hatteras_ms/hat_run.yaml`: `groin.strength` 0.25, the share of the arriving drift held back, and `groin.end_year` 2017. Run through the runner it reproduces the experiment runs it was fitted with to 0 m in both windows. The dipole (M, f) and blocking (b, f) groins, the M/f sweeps (`scripts/hatteras_ms/groin-sweep/`) and the driver's sweep and joint-fit stages were removed the same day; the last commit with them is `4d937b79`.
+- **Module design:** build on BRIE and Barrier3D, never edit them. Of the seven versions tested on straight coasts, the corrected groin (version 6: the drift groin plus a correction for BRIE's sand leak at the groin's own bends) is the one carried forward; versions 2-5 and 7 are in `2-module-tests/archive/`. Its reference is the groin's own tracked footprint, so it needs no no-groin run (`3-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`, findings 15-17).
+- **The groin's strength, from one continuous run 1967-2025** (`3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`): 0.25 from installation to 2009 (perhaps 0.30 after the 1995 repair), 0.20-0.25 to 2016 (0.25 within 0.5 m, so one strength is kept), off from the 2017 fill. It follows the observed gap to 17 m over the whole record, and 0.25 is the minimum under three different pre-1984 storm sequences.
 - **The window fits are superseded as the groin's strength.** Fitted from the observed 1996 and 2009 shorelines, the corrected groin wanted 0.16 on 1996-2009 and 0.10 on 2010-2016 (`2026-10-09-corrected-groin/`, findings 18-22). Those starts already hold the fillet, so the fits measure how fast the model relaxes it; run as one history they leave the gap 30-40 m below the record from 1996 to 2017.
 - **The jump at GIS 5|6 in no-groin runs is real planform**, not a source or sink: about 100 m of the start offsets' 240-264 m step there is the natural bend toward the cape and about 150 m the fillet the groins built (the 1967 dune line steps 104 m). Without a groin, BRIE smooths it.
-- **Settled:** the groin is off from the 2017 fill (left on, 2017-2025 misses by 47 m); the annual CoastSat gap is the target that generalises, not the photo dates alone.
 - **Next, in order:**
-  1. **Decide whether the corrected groin replaces the pin**, and with which history: 0.25 to 2009, 0.20 to 2016, off from 2017. If it does, move it from `corrected_groin.py`'s in-process patch into `cascade/groin.py` as its own callback, alongside `BlockingGroinCallback`, point the runner at it, and rerun the 1996-2009 and 2009-2025 windows with it.
-  2. **Forecast** (`4-forecast/`): the 2026 rebuild at about 0.25, ramped in over 5-9 years; only the southernmost of the three groins is rebuilt, so 0.25 is an upper bound.
+  1. **Rerun the groin matrix** (`HAT_run_all.py --stages 3`) and point BE set 1 (`HAT_be_domain_solve_net_change.py`, whose start run is still a blocking-groin run) at a corrected-groin start.
+  2. **Forecast** (`4-forecast/`): the 2026 rebuild at about 0.25; at full strength from day one the model builds the fillet in about 3 years against about 9 observed, so ramp it in over 5-9 years if the timing matters. Only the southernmost of the three groins is rebuilt, so 0.25 is an upper bound.
   3. Open: the model's fillet sits in the two domains beside the groin where the observed one spans three or four; the 2017 fill starts at GIS 6 and makes its own 35 m gap in the no-groin run.
 
-**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the pinned `joint_fit.json` is in `output/calibration/groin/`. The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
+**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
 
 ## Conventions
 
@@ -52,6 +51,7 @@ from simplest to most complex.
 - **Scripts follow `scripts/STYLE.md`** (header and author block, one-line comments, CONFIG block, reasoning in the folder README), since 2026-10-01.
 - **Figures** follow the house style; each PNG has its PDF in `supporting/` or beside it, and its caption in `CAPTIONS.md`.
 - **Experiments are dated** (`YYYY-MM-DD-<question>/`) inside a numbered step, and never edit the main code: they drive the unchanged runner with an in-process patch.
+- **Code these studies ran against.** The dipole (`GroinCallback`) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the corrected groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
 
 ## Layout history
 

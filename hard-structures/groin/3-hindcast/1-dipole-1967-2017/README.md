@@ -1,5 +1,7 @@
 # 1-dipole-1967-2017 — the dipole groin fit (SUPERSEDED)
 
+**Code these studies ran against.** The dipole (`GroinCallback`) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the corrected groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+
 > **Superseded 2026-10-05** by the blocking groin (`../2-blocking-1996-2025/`). Kept as the record of how the dipole (`cascade.groin.GroinCallback`, a fixed −M / +M pair) was fitted. Not maintained: some scripts read runs that are now on the offload drive.
 
 `dipole_fit_notes.md` is the reasoning: how M 60 and f 0.6 were chosen, what the dipole cannot do, and the corrections along the way.

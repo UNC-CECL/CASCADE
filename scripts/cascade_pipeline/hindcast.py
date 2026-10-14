@@ -46,7 +46,7 @@ __all__ = [
     "load_island_offset_dam", "build_island_offset",
     "close_offset_ring", "pad_offset_ring",
     "island_offset_tilts", "ISLAND_OFFSET_MODES", "load_storm_series", "build_background_erosion",
-    "groin_trapping_schedule", "implied_interception_m3_yr",
+    "groin_trapping_schedule",
     "build_target_table", "groin_differential", "scenario_run_name",
     "load_absolute_dune_distance", "build_shoreline_target",
     "build_cascade", "run_cascade_simulation", "brie_r_ipl",
@@ -371,42 +371,24 @@ def build_background_erosion(be_rates, geometry):
 # Groin diagnostics
 
 def groin_trapping_schedule(callback, start_year, end_year):
-    """Effective trapping rate for every model year of a period.
+    """The groin's strength for every model year of a period.
 
-    Reads the callback's deterioration curve without running it.
+    Reads the callback's strength history without running it.
     `_effective_trapping_rate` is a pure function of the year -- it does not
     touch `_call_count` -- so querying it here leaves the callback's year
     counter at zero for the actual run.
 
     Args:
-        callback: A GroinCallback.
+        callback: A CorrectedGroinCallback.
         start_year: First model year.
         end_year: Last model year, exclusive.
 
     Returns:
-        A (years, M_eff) tuple of 1-D arrays.
+        A (years, strength) tuple of 1-D arrays.
     """
     years = np.arange(start_year, end_year)
     m_eff = np.array([callback._effective_trapping_rate(int(y)) for y in years])
     return years, m_eff
-
-
-def implied_interception_m3_yr(m_per_yr, profile_height_m, geometry):
-    """Sediment volume the dipole transfers across the groin each year.
-
-    A shoreline displacement of `m_per_yr` over one domain implies a volume of
-    `m_per_yr * dy * (d_sf + h_b)`. The dipole moves that from the downdrift
-    side to the updrift side; the transfer is volume-neutral overall.
-
-    Args:
-        m_per_yr: Trapping rate M, in meters per year.
-        profile_height_m: Active profile height (d_sf + h_b), in meters.
-        geometry: DomainGeometry supplying the alongshore domain width.
-
-    Returns:
-        The implied transfer in cubic meters per year.
-    """
-    return m_per_yr * geometry.domain_spacing_m * profile_height_m
 
 
 def measure_groin_extent(shoreline_m, baseline_m, geometry, updrift_gis,

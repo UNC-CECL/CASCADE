@@ -861,38 +861,20 @@ Raises:
 **`groin_trapping_schedule()`**
 
 ```text
-Effective trapping rate for every model year of a period.
+The groin's strength for every model year of a period.
 
-Reads the callback's deterioration curve without running it.
+Reads the callback's strength history without running it.
 `_effective_trapping_rate` is a pure function of the year -- it does not
 touch `_call_count` -- so querying it here leaves the callback's year
 counter at zero for the actual run.
 
 Args:
-    callback: A GroinCallback.
+    callback: A CorrectedGroinCallback.
     start_year: First model year.
     end_year: Last model year, exclusive.
 
 Returns:
-    A (years, M_eff) tuple of 1-D arrays.
-```
-
-**`implied_interception_m3_yr()`**
-
-```text
-Sediment volume the dipole transfers across the groin each year.
-
-A shoreline displacement of `m_per_yr` over one domain implies a volume of
-`m_per_yr * dy * (d_sf + h_b)`. The dipole moves that from the downdrift
-side to the updrift side; the transfer is volume-neutral overall.
-
-Args:
-    m_per_yr: Trapping rate M, in meters per year.
-    profile_height_m: Active profile height (d_sf + h_b), in meters.
-    geometry: DomainGeometry supplying the alongshore domain width.
-
-Returns:
-    The implied transfer in cubic meters per year.
+    A (years, strength) tuple of 1-D arrays.
 ```
 
 **`measure_groin_extent()`**
@@ -1130,7 +1112,7 @@ Args:
         against.
     parameter_file: Barrier3D parameter yaml name, resolved by
         CASCADE inside data_base.
-    groin_callback: A GroinCallback to attach, or None.
+    groin_callback: A CorrectedGroinCallback to attach, or None.
     relocation_setback_m: Standard distance behind the dune line, in
         metres, that a relocated roadway is rebuilt at. None leaves every
         domain relocating to its own measured setback, which is CASCADE's
@@ -1159,7 +1141,7 @@ Args:
     relocations_enabled: Global toggle for relocation events.
     setback_check: {gis: measured_setback_m} reported beside relocations.
     nourishment_schedule: A NourishmentSchedule, or None for no fills.
-    groin_callback: The attached GroinCallback, for diagnostics output.
+    groin_callback: The attached CorrectedGroinCallback, for diagnostics output.
     progress: Optional tqdm-like object with update() and write().
         When given, the year counter advances the bar and every event
         message is written through it, so the messages scroll above a
@@ -3416,11 +3398,10 @@ domain becomes an unmanaged barrier wearing a road label.
 **`groin_report()`**
 
 ```text
-Prints the groin configuration, its sediment budget, and the overlap.
+Prints the groin's configuration, its strength over the run, and the source/sink overlap.
 
-For a blocking groin (groin_kind "blocking") the schedule is of b, the
-intercepted fraction, and the budget is emergent -- it depends on the
-transport arriving -- so it is reported after the run, not here.
+The corrected groin's trapped volume depends on the drift arriving each
+year, so it is reported after the run, in the groin diagnostics CSV.
 
 The double-count note is reported rather than corrected: the calibrated
 background-erosion rates were fit to CoastSat spanning the functional-groin
@@ -3442,10 +3423,7 @@ Args:
 **`pre_run_report()`**
 
 ```text
-Prints what was built, the resolved profile, and the fillet prediction.
-
-The prediction is printed BEFORE the run because a prediction printed
-after one is not a prediction. Amplitude was tuned; extent was not.
+Prints what was built, the resolved profile, and the groin attached.
 ```
 
 **`nourishment_report()`**

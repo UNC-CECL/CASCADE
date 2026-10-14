@@ -1,5 +1,7 @@
 # 2-blocking-1996-2025 — the blocking groin on the calibration and test periods
 
+**Code these studies ran against.** The dipole (`GroinCallback`) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the corrected groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+
 The blocking groin (`cascade.groin.BlockingGroinCallback`) fitted on the calibration period 1996-2009 and checked on the test period 2009-2025, with full management, the solved edgeBE ends and relocations off. Scored on the GIS 5|6 gap against the wet/dry photos and, from 10-08, the annual CoastSat gap.
 
 | folder | question | status |

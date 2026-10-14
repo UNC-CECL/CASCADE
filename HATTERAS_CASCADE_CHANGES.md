@@ -24,7 +24,7 @@ The fresh-start commit already carried some local edits, made before this branch
 
 | # | change | files | kind | commit(s) | used by the hindcast |
 |---|---|---|---|---|---|
-| 1 | Groin representation: an alongshore source/sink dipole injected before BRIE's transport solve | `groin.py` (new), `cascade_groin.py` (new: `cascade.py` + a hook) | new capability | 058cc821, 5b26cb54 (+ pre-history) | yes, `cascade_groin.Cascade` is the class the runner builds; the groin itself is off in the current matrix (`nogroin`) |
+| 1 | Groin representation: a share of the wave-driven drift held back at the face, without BRIE's leak of it, injected before BRIE's transport solve (a dipole and a blocking form before 2026-10-14) | `groin.py` (new), `cascade_groin.py` (new: `cascade.py` + a hook) | new capability | 058cc821, 5b26cb54 (+ pre-history), corrected groin 2026-10-14 | yes, `cascade_groin.Cascade` is the class the runner builds; the groin runs at strength 0.25, off from 2017 |
 | 2 | Where a relocated road is rebuilt is its own input (`road_relocation_setback`) | `cascade.py`, `cascade_groin.py` | interface fix | ead66e13 | yes |
 | 3 | `resize_interior_domain` aligns pre/post-storm grids by anchoring the edge that did not move | `beach_dune_manager.py` | crash fix | 9b89dfee | yes, every managed run |
 | 4 | The bulldozer dune cap limits only the sand added, not the whole dune cell | `beach_dune_manager.py` | bug fix | 4d9c3acd | yes, every managed run |
@@ -39,21 +39,21 @@ The fresh-start commit already carried some local edits, made before this branch
 
 **The change.**
 - `cascade/cascade_groin.py` is a copy of `cascade.py` with one addition: just before BRIE's alongshore-transport solve, `update()` calls `cascade._groin_callback(self, x_s_dt)` if one is attached (`cascade_groin.py:608-618`). With no callback, the model is bit-for-bit the same as `cascade.py`.
-- `cascade/groin.py` provides `GroinCallback`: each year it adds −M (m) to the updrift domain and +M to the downdrift one. BRIE's diffusion then spreads that dipole into an emergent fillet and notch. The only knob is the trapping rate M, plus the fraction f in the runner. It also provides `predict_fillet`: the steady-state amplitude A ≈ M / (4 r_ipl), and the extent L ≈ dy·√(2 r_ipl t), which M does not affect. So fitting M to the observed amplitude leaves the extent as an independent test.
+- `cascade/groin.py` provides `CorrectedGroinCallback` (since 2026-10-14). Each year it moves a share `s` of BRIE's wave-driven net drift arriving at the GIS 5|6 face from the downdrift domain to the updrift one, and, within 10 cells of the face, adds back the diffusive leak BRIE would make of that sand at the groin's own bends. The leak is measured against the groin's tracked footprint (BRIE's alongshore step repeated with and without the groin's contribution), so a groin of strength 0 is exactly the no-groin run. Nothing inside BRIE or Barrier3D is edited.
+- Two numbers set it: the strength (0.25) and the first year it no longer works (2017, the Buxton fill), in `hat_run.yaml`.
 
 **Effect and status.**
-- Implemented and fitted (joint two-period fit, M = 60 m/yr, f = 0.6 in the driver's `joint_fit.json`).
-- **Not used in the current matrix**, which is all `nogroin`.
+- Fitted on one continuous 1967-2025 run from the 1967 shoreline against the wet/dry photo dates and annual CoastSat: it follows the gap across the groins to 17 m over the whole record (`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`). The runner reproduces the experiment runs it was fitted with to 0 m.
 - Open problems:
-  - M at that size moves about half the reach's annual sediment budget past one groin, so it fails a budget check.
-  - The fillet depends on M / r_ipl, and r_ipl scales with Hs, so a fitted M only holds at the Hs it was fitted at.
-  - BRIE runs away past about −23° of shoreline angle.
-  - BRIE's alongshore solve does not conserve volume. The shoreline score is demeaned, which is what makes that drift harmless.
+  - At full strength from installation it builds the fillet in about 3 years against about 9 observed.
+  - The model's fillet sits in two domains; the observed one spans three or four.
+  - The three-groin field's strength is an upper bound for the single groin rebuilt in 2026.
+- Replaced on 2026-10-14: the dipole `GroinCallback` (a fixed −M/+M a year, fitted M = 60 m/yr, f = 0.6, which moved about half the reach's sediment budget past one groin) and the `BlockingGroinCallback` (a share b of BRIE's diffusive exchange cancelled at the face, pinned b 0.6, f 0.6). Git keeps both (last at commit `4d937b79`); the studies are in `hard-structures/groin/`.
 - The "groin progradation ceiling" of 2026-09-11 was the Barrier3D `route_overwash` crash (`HATTERAS_FIXES.md` §1), not a groin limit.
 
-**Evidence.** Module docstrings; `scripts/hatteras_ms/groin-sweep/`; the solver audit `hard-structures/groin/2-module-tests/2-solver-audit/HAT_groin_solver_audit.py`; `output/calibration/groin*/`.
+**Evidence.** The module docstring; `tests/test_groin.py`; `hard-structures/groin/README.md` and its studies.
 
-**Upstreaming note.** `cascade_groin.py` duplicates about 850 lines of `cascade.py`, and every model change has to go into both (change 2 did). Upstream, the hook should go into `cascade.py` itself; `GroinCallback` then needs no separate class.
+**Upstreaming note.** `cascade_groin.py` duplicates about 850 lines of `cascade.py`, and every model change has to go into both (change 2 did). Upstream, the hook should go into `cascade.py` itself.
 
 ## 2. `road_relocation_setback` (ead66e13)
 
@@ -148,7 +148,7 @@ None of these were changed in `cascade/`. The pipeline or the reporting handles 
 | `update()` copies its own `_nourishment_volume[iB3D]` and `_dune_design_elevation[iB3D]` into each `BeachDuneManager` just before calling it | `cascade_groin.py:802-809` | a volume written onto `cascade.nourishments[i]` is overwritten, and every fill silently used the 100 m³/m init default (Avon 2022: 100 instead of 841 m³/m) | volumes are written to the Cascade-level list by `cascade_pipeline/nourishment.py` (`NourishmentSchedule.apply_to_cascade`); `verify_nourishment()` reads the manager's own `_nourishment_volume_TS` to confirm |
 | the beach/dune manager runs on the union of community zones and nourished domains, all period | runner footprint | where it overlaps the roadway footprint, both managers run: overwash removed twice and `ShorelineChangeTS` pinned at 0 | reported, not corrected; asserted against the finished run |
 | a fill is an instantaneous step in `x_s`, and BRIE's Crank-Nicolson solve rings at the grid scale (r ≈ 1.05) | `shoreface_nourishment`; `brie.py` ~1294 | alternating ±m wiggles next to recent fills, decaying ~40%/yr | model rates are an OLS slope (LRR), which averages the ringing |
-| BRIE's alongshore solve is not volume-conserving | `brie.py` | the reach mean drifts; matters for the groin dipole | the shoreline score is demeaned |
+| BRIE's alongshore solve is not volume-conserving | `brie.py` | the reach mean drifts; the groin's own share of the leak is corrected at its bends (`groin.py`) | the shoreline score is demeaned |
 | `drown_threshold = 0` is commented "m MSL" but compared against MHW-relative elevations | `roadway_manager.py:766` | effectively 0 m MHW | documented in `UNITS.md` |
 | the roadway dune rebuild trigger is floored at `BermEl*10 + 0.3` m and the design height at `BermEl*10 + 1.0` m | `roadway_manager.py:530, 719-722` | a passed `dune_minimum_elevation` of 0 does nothing | documented in `UNITS.md` |
 | `beta` (0.04 default) is not the storm run-up slope (0.06) | `Cascade(beta=...)` not passed | affects only the initial beach width in the beach/dune manager | documented in `UNITS.md`; left as is |

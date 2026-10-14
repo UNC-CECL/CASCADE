@@ -1,5 +1,7 @@
 # 3-hindcast — the groin module fitted to Buxton
 
+**Code these studies ran against.** The dipole (`GroinCallback`) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the corrected groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+
 The module inside real model runs of Hatteras, scored against `../1-observations/`. Numbered in the order they were done; the first is superseded.
 
 ```
