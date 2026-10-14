@@ -1,0 +1,25 @@
+run,period,rule,hit_rate,false_alarm_rate,skill,skill_wrong_place,skill_above_wrong_place
+single 5.5 m (adopted),1996_2009,strict (current),0.662,0.068,0.594,0.557,0.037
+single 5.5 m (adopted),1996_2009,any storm in the model year,0.662,0.073,0.589,0.552,0.037
+single 5.5 m (adopted),1996_2009,+ one image either side,0.779,0.066,0.714,0.661,0.053
+single 5.5 m (adopted),1996_2009,+ one domain either side,0.853,0.043,0.81,0.766,0.044
+single 5.5 m (adopted),2009_2025,strict (current),0.191,0.071,0.12,0.108,0.012
+single 5.5 m (adopted),2009_2025,any storm in the model year,0.204,0.15,0.054,0.052,0.002
+single 5.5 m (adopted),2009_2025,+ one image either side,0.21,0.097,0.113,0.104,0.009
+single 5.5 m (adopted),2009_2025,+ one domain either side,0.338,0.079,0.258,0.251,0.007
+per-cell (fork),1996_2009,strict (current),0.75,0.175,0.575,0.455,0.12
+per-cell (fork),1996_2009,any storm in the model year,0.794,0.221,0.573,0.412,0.161
+per-cell (fork),1996_2009,+ one image either side,0.897,0.187,0.71,0.537,0.173
+per-cell (fork),1996_2009,+ one domain either side,0.941,0.159,0.782,0.668,0.114
+per-cell (fork),2009_2025,strict (current),0.414,0.219,0.195,0.17,0.025
+per-cell (fork),2009_2025,any storm in the model year,0.439,0.419,0.02,0.009,0.011
+per-cell (fork),2009_2025,+ one image either side,0.49,0.343,0.147,0.101,0.046
+per-cell (fork),2009_2025,+ one domain either side,0.745,0.31,0.436,0.383,0.053
+per-domain median,1996_2009,strict (current),0.529,0.07,0.46,0.206,0.254
+per-domain median,1996_2009,any storm in the model year,0.544,0.09,0.454,0.188,0.266
+per-domain median,1996_2009,+ one image either side,0.632,0.071,0.561,0.242,0.319
+per-domain median,1996_2009,+ one domain either side,0.853,0.052,0.801,0.432,0.369
+per-domain median,2009_2025,strict (current),0.242,0.131,0.111,0.102,0.009
+per-domain median,2009_2025,any storm in the model year,0.248,0.247,0.001,0.013,-0.012
+per-domain median,2009_2025,+ one image either side,0.274,0.186,0.088,0.075,0.012
+per-domain median,2009_2025,+ one domain either side,0.408,0.166,0.242,0.253,-0.011

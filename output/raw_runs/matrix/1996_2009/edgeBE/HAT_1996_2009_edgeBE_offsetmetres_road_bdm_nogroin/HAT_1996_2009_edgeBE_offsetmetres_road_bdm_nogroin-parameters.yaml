@@ -3,8 +3,6 @@ BayDepth: 3.0
 BermEl: 1.7
 DShoreface: 17.8
 Dmaxel: 5.5
-DuneCeilingFloor: 0.5
-DuneCeilingFromStart: true
 DuneParamStart: true
 GrowthParamStart: false
 LShoreface: 1834.9609806662193

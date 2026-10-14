@@ -478,12 +478,7 @@ print(f"BARRIER3D = {_B3D['branch']}@{str(_B3D['commit'])[:7]}   "
       + ("   (tree dirty)" if _B3D["dirty"] else ""))
 print(f"            overwash gap/momentum fixes: {_B3D.get('gap_momentum_fix')}   "
       f"per-cell dune ceilings: {_B3D.get('per_cell_ceiling')}")
-# The adopted model needs per-cell dune ceilings: a Barrier3D without them is refused
-if _B3D.get("per_cell_ceiling") is not True:
-    raise RuntimeError(
-        f"Barrier3D {_B3D['branch']}@{str(_B3D['commit'])[:7]} has no per-cell dune "
-        "ceilings, which the parameter template asks for. Check out hatteras/adopted "
-        "in the Barrier3D repository.")
+# One island-wide Dmaxel since 2026-10-13, so a Barrier3D without per-cell ceilings runs (it was refused)
 if _B3D.get("gap_momentum_fix") is not True:
     print("  WARNING: this Barrier3D does not carry the 2026-09-28 overwash gap and "
           "momentum fixes (hatteras/adopted has them).")
@@ -1102,7 +1097,9 @@ RMAX = [0.95] * HATTERAS_DOMAINS.total_domains
 # Dune rebuild thresholds, m MHW
 
 # In metres, the documented unit
-DUNE_DESIGN_ELEVATION_M = 3.0    # rebuild target
+# Rebuild target: the NC-12 safe dune crest, 4.3 m NAVD88 (Velasquez-Montoya et al. 2021,
+# Natural Hazards Review 22(2)), less MHW 0.36 m. Was 3.0, unsourced, until 2026-10-13
+DUNE_DESIGN_ELEVATION_M = 3.94   # rebuild target
 DUNE_MINIMUM_ELEVATION_M = 0.0   # rebuild trigger: CASCADE's berm floor governs, explicitly
 DUNE_DESIGN_ELEVATION = [DUNE_DESIGN_ELEVATION_M] * HATTERAS_DOMAINS.total_domains
 DUNE_MINIMUM_ELEVATION = [DUNE_MINIMUM_ELEVATION_M] * HATTERAS_DOMAINS.total_domains

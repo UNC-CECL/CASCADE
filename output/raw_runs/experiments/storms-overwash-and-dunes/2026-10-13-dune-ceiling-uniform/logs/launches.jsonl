@@ -1,0 +1,10 @@
+{"start": 1996, "variant": "uni60", "ceiling_m_navd88": 6.0, "returncode": 0, "minutes": 2.0}
+{"start": 1996, "variant": "uni55", "ceiling_m_navd88": 5.5, "returncode": 0, "minutes": 2.0}
+{"start": 1996, "variant": "uni50", "ceiling_m_navd88": 5.0, "returncode": 0, "minutes": 2.1}
+{"start": 1996, "variant": "percell", "ceiling_m_navd88": null, "returncode": 0, "minutes": 2.2}
+{"start": 1996, "variant": "uni65", "ceiling_m_navd88": 6.5, "returncode": 0, "minutes": 2.1}
+{"start": 2009, "variant": "uni55", "ceiling_m_navd88": 5.5, "returncode": 0, "minutes": 3.0}
+{"start": 2009, "variant": "uni50", "ceiling_m_navd88": 5.0, "returncode": 0, "minutes": 3.2}
+{"start": 2009, "variant": "percell", "ceiling_m_navd88": null, "returncode": 0, "minutes": 3.4}
+{"start": 2009, "variant": "uni60", "ceiling_m_navd88": 6.0, "returncode": 0, "minutes": 2.4}
+{"start": 2009, "variant": "uni65", "ceiling_m_navd88": 6.5, "returncode": 0, "minutes": 1.8}

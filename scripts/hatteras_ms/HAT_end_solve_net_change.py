@@ -38,9 +38,10 @@ SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-cali
 SCENARIO = "full_management"
 # The solve folder and log date; 2026-10-05 solved the first targets, 2026-10-09 the calendar-2008 end and 17-yr test,
 # 2026-10-12 the +/-6-month offset (v3) and start windows and the 2025 +/-6-month test end;
-# SOLVE_NAME keeps a second solve on one day apart (2026-10-12 evening: the calendar-year setup)
-SOLVE_DATE = "2026-10-12"
-SOLVE_NAME = "ends-solved-on-calendar-years"
+# SOLVE_NAME keeps a second solve on one day apart (2026-10-12 evening: the calendar-year setup);
+# 2026-10-13 the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88)
+SOLVE_DATE = "2026-10-13"
+SOLVE_NAME = "ends-solved-on-dune-settings"
 MAX_STEPS = 8
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"
 EXP_ROOT = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "end-domain-boundaries"

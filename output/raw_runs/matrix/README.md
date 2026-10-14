@@ -2,6 +2,19 @@
 
 Only current windows live here. Superseded windows go to `D:\archive\CASCADE_offload\output\raw_runs\matrix\` (see the bottom).
 
+**Re-run from 2026-10-13 with the new dune settings.** Done: `1996_2009/` and `2009_2025/`, zeroBE and edgeBE,
+ends re-solved (1996 +0.9769 / +10.8017; 2009 +29.6576 / +20.7639 m/yr), and `1996_2025/` (full window,
+zeroBE + edgeBE, ends +134.7 / +67.50 on its LRR target; GIS 1 noise-limited, best probe residual -0.026 m/yr).
+The management ladder is re-run for all three windows and its figures redrawn. Not re-run: domainBE (waits on the
+groin). New: in every managed 2009_2025 run the GIS 14 road drowns in model year 9 (20% of road-side cells below
+0 m MHW); it did not under the 10-12 settings. Earlier the same day every run was deleted, not moved
+(D: was not connected).
+They used the 3.0 m MHW rebuild height and per-cell dune ceilings, both replaced that day
+(design height 3.94 m MHW, one island-wide Dmaxel of 5.5 m NAVD88). Their rows are in
+`../retired_runs.csv`; 38 of their small text files had never been committed, so not all are in
+git history. `figures/` was kept and is drawn from the deleted runs. The windows and rules below
+stand for the re-run.
+
 ## Current windows (the 2026-10-05 calibration/test plan)
 
 | window | role | presets | target |
@@ -12,7 +25,7 @@ Only current windows live here. Superseded windows go to `D:\archive\CASCADE_off
 
 Rules since 2026-10-12 (the same in both periods): the island offset is the CoastSat mean over the DEM midpoint ±6 months (offset shoreline/v3); the target's start window is that same window; the end window is the last modelled year ±6 months. All storms are kept (the pre-DEM storm question is open with the advisor). The plan, scores and open decisions are in `scripts/hatteras_ms/DEM_TO_DEM_CALIBRATION.md`. Each run draws its own net-change figure under `<run>/figures/`.
 
-**Management ladder (2026-10-12, edgeBE only):** each period also holds the edgeBE runs with less management: natural (`noroad_nobdm`), roads only (`road_nobdm`) and, for test, roads + beach/dune without fills (`road_bdm_nonourish`). All use the period's full-management end rates. Figures: `figures/<window>/management_ladder_{net_change,rate}_edgeBE_<window>.png` (`matrix_management_ladder.py`), scores in `figures/supporting/ladder_scores.csv`.
+**Management ladder (2026-10-12, edgeBE only):** each period also holds the edgeBE runs with less management: natural (`noroad_nobdm`), roads only (`road_nobdm`) and, for test and the full window, roads + beach/dune without fills (`road_bdm_nonourish`). All use the window's full-management end rates. The full-window rungs come from `HAT_full_window_1996_2025.py final --scenario`. Figures: `figures/<window>/management_ladder_{net_change,rate}_edgeBE_<window>.png` (`matrix_management_ladder.py`), scores in `figures/supporting/ladder_scores.csv`.
 
 **Clean re-run 2026-10-12.** Every earlier matrix run (v2 ±1-yr offsets) was deleted at Hannah's request; their tracked text files are in git history. domainBE (BE set 1, blocking groin) is not re-run: set 1 and the groin pin were fitted on the old targets and wait for the groin decision.
 

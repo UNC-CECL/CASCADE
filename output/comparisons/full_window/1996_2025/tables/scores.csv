@@ -1,9 +1,9 @@
 run_name,preset,quantity,smoothed,n,bias,rmse,r
-HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,rate,False,88,-0.5136,1.4756,0.2538
-HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,net,False,88,-12.738,41.1359,0.3457
-HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,rate,True,88,-0.5172,1.3004,0.2699
-HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,net,True,88,-12.5498,37.4073,0.3604
-HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,rate,False,88,-0.4046,1.3528,0.3785
-HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,net,False,88,-9.4646,37.5176,0.4634
-HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,rate,True,88,-0.3894,1.165,0.4094
-HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,net,True,88,-8.833,33.6773,0.4816
+HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,rate,False,88,-0.3652,1.468,0.1615
+HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,net,False,88,-9.0151,41.3381,0.2638
+HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,rate,True,88,-0.3869,1.29,0.1791
+HAT_1996_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin,zeroBE,net,True,88,-9.5938,37.5061,0.2895
+HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,rate,False,88,-0.2655,1.3732,0.2796
+HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,net,False,88,-6.0427,38.5692,0.3737
+HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,rate,True,88,-0.2755,1.1897,0.3025
+HAT_1996_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin,edgeBE,net,True,88,-6.3808,34.7609,0.3954

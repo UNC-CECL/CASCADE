@@ -2,18 +2,19 @@ BarrierLength: 500
 BayDepth: 3.0
 BermEl: 1.7
 DShoreface: 22.25
-# DUNE CEILINGS (2026-09-28, Hannah). Every dune cell grows toward its own
-# starting crest from the dune file, floored 0.5 m above the berm, instead of
-# one island-wide Dmaxel. Needs Barrier3D hatteras/adopted (or any branch with
-# feature/per-cell-dune-ceiling). With it on, Dmaxel below is replaced by the
-# median cell ceiling; it is written anyway so Barrier3D's 3.4 m NAVD88 default
-# (Virginia; it held every Hatteras dune near 3 m MHW against ~4.9 m in the
-# 2009 lidar) can never apply by omission. 5.5 m NAVD88 is the uniform value
-# that matched the lidar median. Record:
-# output/raw_runs/experiments/storms-and-overwash/2026-09-28-dune-ceiling-per-domain/
+# DUNE CEILING (2026-10-13, Hannah). One island-wide Dmaxel, as in base
+# Barrier3D: 5.5 m NAVD88, the same for both periods. Chosen 2026-09-28 because
+# model dunes grow to the ceiling in ~5 yr and 5.5 m brought the modelled crests
+# within 0.2 m of the 2009 lidar median; confirmed 2026-10-13 on the 1996-2009
+# overwash plateau (skill 0.59-0.63 for 4.5-5.5 m, collapse above ~5.6 m where
+# dunes outgrow Isabel's 5.58 m run-up) and held fixed for 2009-2025. Not a
+# fitted optimum: anything 4.5-5.5 m does as well. It replaces Barrier3D's 3.4 m
+# NAVD88 default (Virginia), which held every Hatteras dune near 3 m MHW. The
+# per-cell ceilings of 2026-09-28 to 10-13 (DuneCeilingFromStart,
+# DuneCeilingFloor, a local Barrier3D change) were dropped to stay on the base
+# model. Record (scripts/hatteras_ms/experiments/README.md):
+# output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-range/
 Dmaxel: 5.5
-DuneCeilingFloor: 0.5
-DuneCeilingFromStart: true
 DuneParamStart: true
 GrowthParamStart: false
 LShoreface: 2640.0497975182934

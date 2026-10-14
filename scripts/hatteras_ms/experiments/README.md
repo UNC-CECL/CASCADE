@@ -12,7 +12,7 @@ are separate so a finished sweep can be re-scored without re-running.
 | Wave climate | `HAT_wave_grid_smoothed_score.py` (+ `_plot`), `HAT_wave_grid_fixed_ends.py`, `HAT_wave_shortlist_ends_solved.py`, `HAT_wave_recommendation_figures.py`, `HAT_metres_2_wave_sensitivity.py` (+ `_plot`) |
 | Island offset | `HAT_metres_1_offset_units.py` (+ `_plot`), `HAT_offset_source_comparison.py` (and its `_div10`, `_option_a` variants), `HAT_offset_source_shoreline_v2.py`, `HAT_offset_source_0922_figures.py` |
 | End domains | `HAT_resolve_ends_metres.py`, `HAT_resolve_ends_on_position_change.py`, `HAT_position_change_ends_figure.py` |
-| Storms and overwash | `HAT_storm_max_duration.py`, `HAT_storm_length_selection.py`, `HAT_storm_event_splitting.py`, `HAT_storm_height_test.py`, `HAT_storm_rlow_duration.py`, `HAT_storm_runup_by_slope.py`, `HAT_trim_length_adopted.py`, `HAT_excess_overwash_diagnosis.py`, `HAT_dune_recovery_diagnosis.py`, `HAT_dune_recovery_rate.py`, `HAT_dune_ceiling_rebuild.py`, `HAT_dune_ceiling_per_domain.py` |
+| Storms and overwash | `HAT_storm_max_duration.py`, `HAT_storm_length_selection.py`, `HAT_storm_event_splitting.py`, `HAT_storm_height_test.py`, `HAT_storm_rlow_duration.py`, `HAT_storm_runup_by_slope.py`, `HAT_trim_length_adopted.py`, `HAT_excess_overwash_diagnosis.py`, `HAT_dune_recovery_diagnosis.py`, `HAT_dune_recovery_rate.py`, `HAT_dune_ceiling_rebuild.py`, `HAT_dune_ceiling_per_domain.py`, `HAT_dune_design_height.py`, `HAT_dune_ceiling_uniform.py`, `HAT_dune_ceiling_domain_value.py`, `HAT_dune_growth_rate.py`, `HAT_dune_ceiling_callback.py`, `HAT_dune_ceiling_range.py`, `HAT_overwash_scoring_tolerance.py`, `HAT_soundside_overwash.py` |
 | Code checks | `HAT_metres_3_overwash_fix.py` (+ `_plot_explained`), `HAT_barrier3d_gap_momentum_fix.py`, `HAT_adopt_dune_ceiling_check.py` |
 | Topography and domains | `HAT_peaisland_extension.py`, `HAT_run_crest_experiment.py`, `HAT_plot_crest_experiment.py` |
 | Road relocation | `HAT_relocation_comparison.py`, `HAT_relocation_period_compare.py`, `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`, `HAT_score_road_position.py`; conclusions in `RELOCATION_COMPARISON_RESULTS.md` |
@@ -44,7 +44,7 @@ HAT_adopt_dune_ceiling_check.py -- does the committed per-cell ceiling reproduce
 Step 4 of adopting the per-cell dune ceiling (Hannah, 2026-09-28).
 
     reproduce  the four trim24 per-cell cases of
-               storms-and-overwash/2026-09-28-dune-ceiling-per-domain
+               storms-overwash-and-dunes/2026-09-28-dune-ceiling-per-domain
                (1996/2010 x full_management/natural) run on Barrier3D branch
                feature/per-cell-dune-ceiling (worktree ../Barrier3D-dune-ceiling,
                PYTHONPATH) with DuneCeilingFromStart switched on, against the
@@ -138,6 +138,308 @@ without the fill against CoastSat over GIS 1-30, and the residual per domain.
     python HAT_buxton_2017_fill_plot.py [--smoothed]
 ```
 
+### HAT_dune_design_height.py
+
+Does raising the dune design height from 3.0 to 3.94 m MHW (4.3 m NAVD88) change the calibration run?
+
+The 3.0 m MHW design height has no recorded source. 4.3 m NAVD88 is the NC-12
+dune crest that Velasquez-Montoya et al. (2021, Natural Hazards Review 22(2))
+give for the road not to be overwashed; with MHW 0.36 m it is 3.94 m MHW,
+2.6 m above the berm. The value is overridden on the `build_cascade` call
+in-process; the runner is unchanged, so its metadata and printout still say
+3.0 for the variant (the scorer reads the applied value off the saved
+roadway managers). 1996-2009, full_management, edgeBE, no groin.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-design-height/tables/scores.csv`):
+
+| | control (3.0) | 3.94 |
+|---|---|---|
+| overwash skill | 0.548 | 0.575 |
+| hits / misses / false alarms | 50 / 18 / 121 | 51 / 17 / 113 |
+| crest end minus 2009 lidar (median) | -0.10 m | +0.03 m |
+| dune rebuilds | 32 | 44 |
+| shoreline RMSE interior | 1.2098 m/yr | 1.2110 m/yr |
+
+The control reproduces the matrix run exactly. The extra rebuilds are in GIS
+48, 56 and 57, where some dune cells have per-cell ceilings of 1.1-1.25 m
+above the berm. A rebuild to 2.6 m puts them far above their ceiling, the
+logistic growth term shrinks them below the trigger within a year, and they
+are rebuilt again: an annual rebuild cycle that the 3.0 m design height
+mostly avoided. Adopted 2026-10-13 (Hannah, option 1: 3.94 as is, the rebuild
+cycle noted); runner and notebook set DUNE_DESIGN_ELEVATION_M = 3.94.
+
+### HAT_dune_ceiling_uniform.py
+
+Does one island-wide dune ceiling do as well as the per-cell ceilings, and at what height?
+
+Asked because a per-cell ceiling taken from the starting DEM never lets a
+surveyed low dune grow past its survey height. Each domain's per-cell ceilings
+are replaced in-process with one value (5.0, 5.5, 6.0, 6.5 m NAVD88; the
+starting crest medians are 5.73 in 1996 and 5.39 in 2009). Managed edgeBE,
+both periods, design height 3.94 m MHW, no groin.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-uniform/tables/scores.csv`):
+
+| | per-cell | 5.0 | 5.5 | 6.0 | 6.5 |
+|---|---|---|---|---|---|
+| 1996-2009 overwash skill | 0.575 | 0.625 | 0.594 | 0.045 | 0.015 |
+| 1996-2009 hits / false alarms | 51 / 113 | 48 / 52 | 45 / 44 | 4 / 9 | 2 / 9 |
+| 1996-2009 crest vs 2009 lidar, r | 0.55 | 0.12 | 0.22 | 0.21 | 0.19 |
+| 1996-2009 dune rebuilds | 44 | 8 | 3 | 1 | 1 |
+| 1996-2009 shoreline RMSE | 1.211 | 1.242 | 1.235 | 1.233 | 1.228 |
+| 2009-2025 overwash skill | 0.195 | 0.136 | 0.120 | 0.125 | 0.111 |
+| 2009-2025 hit rate | 0.41 | 0.22 | 0.19 | 0.19 | 0.17 |
+| 2009-2025 shoreline RMSE | 1.745 | 1.662 | 1.657 | 1.664 | 1.664 |
+| 2009-2025 cell-years flattened | 8.7% | 3.7% | 3.2% | 3.0% | 2.7% |
+
+A uniform ceiling raises calibration skill only by cutting false alarms, has a
+cliff between 5.5 and 6.0 m (overwash all but stops), loses the alongshore
+dune pattern, and halves the test-period hit rate. It does end the rebuild
+cycle and lowers the test shoreline RMSE by 0.08 m/yr. Not adopted at first;
+adopted later the same day at 5.5 m to stay on the base model (see
+HAT_dune_ceiling_range.py).
+
+### HAT_dune_ceiling_domain_value.py
+
+Does one dune ceiling per domain, from that domain's own starting crests, beat the per-cell ceilings?
+
+Keeps alongshore variability at the 500 m domain scale while letting low cells
+inside a domain grow to the domain's typical height. Each domain's ceiling is
+the median (dom50) or 75th percentile (dom75) of its starting cell crests,
+in-process only. Same setup as HAT_dune_ceiling_uniform.py, whose per-cell and
+island-wide runs it scores alongside.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-domain-value/tables/scores.csv`):
+
+| | per-cell | dom50 | dom75 | uniform 5.0 |
+|---|---|---|---|---|
+| 1996-2009 overwash skill | 0.575 | 0.460 | 0.376 | 0.625 |
+| 1996-2009 hits / false alarms | 51 / 113 | 36 / 45 | 28 / 23 | 48 / 52 |
+| 1996-2009 crest vs 2009 lidar, r | 0.55 | 0.56 | 0.54 | 0.12 |
+| 1996-2009 dune rebuilds | 44 | 3 | 3 | 8 |
+| 1996-2009 shoreline RMSE | 1.211 | 1.203 | 1.226 | 1.242 |
+| 2009-2025 overwash skill | 0.195 | 0.111 | 0.124 | 0.136 |
+| 2009-2025 hit rate | 0.41 | 0.24 | 0.23 | 0.22 |
+| 2009-2025 shoreline RMSE | 1.745 | 1.729 | 1.706 | 1.662 |
+
+The domain values keep the alongshore dune pattern but lose overwash hits in
+both periods: raising a domain's low cells to its median closes the gaps the
+observed overwash went through. Not adopted.
+
+### HAT_dune_growth_rate.py
+
+How much do the dune growth rate bounds (rmin, rmax) change the dunes and the overwash?
+
+Barrier3D draws each dune cell's growth rate uniformly between rmin and rmax
+with a fixed seed, so only the range changes between variants. rmin/rmax set
+in-process to 0.25-0.65 (CASCADE default), 0.35-0.85 (Barrier3D default) and
+0.75-1.15; the 0.55-0.95 control is HAT_dune_ceiling_uniform.py's per-cell run.
+Managed edgeBE, both periods, design height 3.94 m MHW, per-cell ceilings.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-growth-rate/tables/scores.csv`):
+
+| | 0.25-0.65 | 0.35-0.85 | 0.55-0.95 (current) | 0.75-1.15 |
+|---|---|---|---|---|
+| 1996-2009 overwash skill | 0.542 | 0.530 | 0.575 | 0.570 |
+| 1996-2009 hits / false alarms | 50 / 125 | 49 / 123 | 51 / 113 | 51 / 116 |
+| 1996-2009 crest end minus lidar | +0.02 m | +0.04 m | +0.03 m | +0.06 m |
+| 1996-2009 dune rebuilds | 29 | 29 | 44 | 44 |
+| 1996-2009 shoreline RMSE | 1.2105 | 1.2101 | 1.2110 | 1.2110 |
+| 2009-2025 overwash skill | 0.194 | 0.188 | 0.195 | 0.199 |
+| 2009-2025 cell-years flattened | 9.5% | 8.9% | 8.7% | 8.1% |
+| 2009-2025 dune rebuilds | 71 | 74 | 81 | 116 |
+| 2009-2025 shoreline RMSE | 1.7512 | 1.7446 | 1.7446 | 1.7422 |
+
+The dunes, overwash and shoreline barely move across a doubling of the mean
+rate: the per-cell ceilings start every dune at its equilibrium, so the rate
+only acts on the few cells a storm has lowered. The one outcome it moves is
+the number of rebuilds, because a faster rate also shrinks a rebuilt dune
+above its own ceiling faster (the rebuild cycle of HAT_dune_design_height.py).
+
+### HAT_dune_ceiling_callback.py
+
+Can a CASCADE-side callback reproduce the per-cell dune ceilings on base Barrier3D dune growth?
+
+The per-cell ceilings (DuneCeilingFromStart, DuneCeilingFloor) are a local
+Barrier3D change (d343461 on hatteras/adopted); Hannah's rule is to build on
+Barrier3D, not edit it. The callback turns them off, so Barrier3D grows dunes
+on its own scalar ceiling, and each year sets each cell's growth rate to
+r * (1 - D/K) / (1 - D/Dmax) during the Barrier3D step only, so the front dune
+row grows logistically toward its own starting crest K. The plain rates are
+restored before the road and beach managers run. growthparam is one value per
+cell shared by both dune rows, so the back row is approximate.
+
+- `callback` (scalar Dmax = the domain's median cell ceiling, as the fork
+  reports): fails. Wherever a dune sits near the median, 1 - D/Dmax is near
+  zero and the rescaled rate explodes; the back row reached 26.9 m (GIS 6,
+  1996 run) and shorelines moved 340-410 m.
+- `callback2x` (scalar Dmax = twice the domain's tallest cell ceiling; also
+  corrects D for the RSLR SeaLevel() applies before growth): stable.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-callback/tables/scores.csv`):
+
+| | fork per-cell | callback2x |
+|---|---|---|
+| 1996-2009 overwash skill | 0.575 | 0.553 |
+| 1996-2009 shoreline RMSE | 1.2110 | 1.2083 |
+| 1996-2009 dune rebuilds | 44 | 38 |
+| 2009-2025 overwash skill | 0.195 | 0.205 |
+| 2009-2025 shoreline RMSE | 1.7446 | 1.7297 |
+| 2009-2025 dune rebuilds | 81 | 128 |
+| 2009-2025 low-quartile crest at end | 4.18 m | 3.30 m |
+| crest difference, every cell-year, P95 / max | | 0.43-0.56 m / 4.5-5.3 m |
+| shoreline difference, max | | 8 m (1996), 23 m (2009) |
+
+Island scores match closely; cell by cell they do not. Base Barrier3D uses its
+one scalar Dmax for growth and also as the run-up overwash sediment-flux cap
+(fluxLimit = Dmax), the dune restart cap and, through CASCADE, the managers'
+growth shut-off. Twice the tallest ceiling raises that flux cap well above the
+fork's median, which is the likely source of the extra test-period rebuilds and
+the lower low dunes.
+
+### HAT_dune_ceiling_range.py
+
+Across a range of island-wide dune ceilings, how much overwash does the model make, and is it where the record puts it?
+
+Run after the parameter file moved to one island-wide Dmaxel of 5.5 m NAVD88
+(2026-10-13); the 5.5 runs are the unchanged runner on that file (metadata
+records "uniform Dmaxel 5.50 m NAVD88"). Dmaxel set in-process to 4.5, 5.0,
+5.25, 5.75 and 6.0. Managed edgeBE, both periods. space_r = correlation, over
+GIS 1-90, of the share of assessed images with observed and with modelled
+overwash. Per-domain shares: tables/overwash_by_domain.csv; alongshore figure:
+figures/overwash_by_domain_dune_ceiling_range.png.
+
+| | 4.5 | 5.0 | 5.25 | 5.5 | 5.75 | 6.0 | per-cell (fork) | domain median |
+|---|---|---|---|---|---|---|---|---|
+| 1996-2009 skill | 0.607 | 0.625 | 0.625 | 0.594 | 0.045 | 0.045 | 0.575 | 0.460 |
+| 1996-2009 space_r | 0.26 | 0.25 | 0.25 | 0.29 | 0.14 | 0.14 | 0.64 | 0.48 |
+| 1996-2009 modelled / observed share | 0.157 / 0.095 | 0.140 | 0.140 | 0.125 | 0.018 | 0.018 | 0.230 | 0.113 |
+| 2009-2025 skill | 0.065 | 0.136 | 0.124 | 0.120 | 0.141 | 0.125 | 0.195 | 0.111 |
+| 2009-2025 space_r | -0.01 | -0.01 | -0.05 | -0.06 | -0.03 | -0.01 | 0.10 | 0.01 |
+| 2009-2025 road zone hit/miss/false alarm | 21/90/70 | 16/95/15 | 14/97/12 | 13/98/11 | 14/97/7 | 12/99/10 | 36/75/62 | |
+
+With one ceiling the dunes converge to one height, so overwash in 1996-2009
+is Cape Point plus one storm year that overtops almost every domain at once
+(a flat line at ~0.12 in the figure). Above 5.5 m that storm no longer
+overtops and overwash all but stops. No value in the range puts overwash where
+the record has it; in 2009-2025 none does (space_r ~0), and the per-cell and
+per-domain ceilings barely do either.
+
+That storm is Isabel (2003-09-18), run-up 5.58 m NAVD88, the only storm over
+5 m in 1997-2025 (2010-2025 peaks at 4.66 m, March 2018). A dune at the
+ceiling is overtopped only by a storm whose run-up beats it, so the cliff sits
+between 5.5 and 5.75.
+
+Added the same day: the "DEM maximum" ceiling a colleague uses, the 2009 lidar
+crest maximum 12.1 m NAVD88 and its P95 8.4 m. Both leave 2 of 68 observed
+1996-2009 overwash events (modelled share 1.5% against 9.5% observed) and 25
+of 157 in 2009-2025: no storm reaches dunes grown toward those heights. The
+12 m maximum also sits at the 12 m clip of the 1996 DEM product.
+
+Also added: each period's own starting-DEM median crest, 5.73 (1996) and 5.39
+(2009), run for both periods. 1996-2009 at 5.73: skill 0.045, 4 of 68 hits
+(as 5.75), because grown dunes stand above Isabel's 5.58 m run-up; at 5.39:
+0.627, as 5.25. 2009-2025 at 5.39: 0.126, 31 hits, as 5.5. Period-specific
+medians would break calibration and leave the test unchanged, so one Dmaxel
+holds for both periods: set on the 1996-2009 plateau (4.5-5.5 m, skill
+0.59-0.63; collapse above ~5.6 m) and held fixed for the test.
+
+**Adopted 2026-10-13 (Hannah):** one island-wide Dmaxel of 5.5 m NAVD88 for
+both periods, to stay on the base model. Source: 2026-09-28, where 5.5 m
+brought the modelled crests within 0.2 m of the 2009 lidar median (dunes grow
+to the ceiling in ~5 yr); confirmed here as the top of the 1996-2009 overwash
+plateau (4.5-5.5 m) and held fixed for the test. "Median of both starting DEMs"
+was dropped as the justification: it uses the 2009 survey, the end of the
+calibration period;
+DuneCeilingFromStart and DuneCeilingFloor removed from the parameter file. The
+per-domain median (base-compatible, but CASCADE has no per-domain Dmaxel
+input) was not taken: better 1996 placement (space_r 0.48) but lower skill.
+Overwash location is reproduced only at Cape Point; say so when reporting.
+
+### HAT_overwash_scoring_tolerance.py
+
+How much do the overwash scores depend on how strictly modelled overwash is matched to the imagery?
+
+Re-scores existing runs, no new runs. The imagery is about one image a year at
+irregular dates (1998-10 to 2004-05 is one window); the model records overwash
+per model year. Rules, each adding to the last: strict (current: a model year
+is dated by its largest storm); any storm in the model year; one image either
+side; one domain either side. Tolerance is symmetric (a false alarm needs no
+observed overwash nearby). "Wrong place" is the same model output shifted
+alongshore by 10-80 domains, averaged: a score that survives the shift is
+timing, not location.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-overwash-scoring-tolerance/scores.csv`), skill / skill with the overwash in the wrong place:
+
+| 1996-2009 | strict | any storm | +1 image | +1 domain |
+|---|---|---|---|---|
+| single 5.5 m | 0.594 / 0.557 | 0.589 / 0.552 | 0.714 / 0.661 | 0.810 / 0.766 |
+| per-cell | 0.575 / 0.455 | 0.573 / 0.412 | 0.710 / 0.537 | 0.782 / 0.668 |
+| per-domain median | 0.460 / 0.206 | 0.454 / 0.188 | 0.561 / 0.242 | 0.801 / 0.432 |
+
+| 2009-2025 | strict | any storm | +1 image | +1 domain |
+|---|---|---|---|---|
+| single 5.5 m | 0.120 / 0.108 | 0.054 / 0.052 | 0.113 / 0.104 | 0.258 / 0.251 |
+| per-cell | 0.195 / 0.170 | 0.020 / 0.009 | 0.147 / 0.101 | 0.436 / 0.383 |
+| per-domain median | 0.111 / 0.102 | 0.001 / 0.013 | 0.088 / 0.075 | 0.242 / 0.253 |
+
+Most of the skill score is timing: moving the single-ceiling run's overwash to
+the wrong domains costs 0.04 of its 0.59. Looser matching raises every score
+and the wrong-place score with it, so it adds no information about location.
+"Any storm in the model year" lowers the 2009-2025 scores, because a model
+year's overwash then counts in both of two images a few months apart (2009,
+2014, 2023).
+
+The imagery records NEW overwash since the previous image (Hannah, 2026-10-13),
+so the window-per-image comparison is the right frame and old fans are never
+re-counted; dating a model year by its largest storm stays.
+
+Timing and location, scored apart (`timing_location_scores.csv` in the same
+folder). Timing r: per image, share of domains with new overwash, observed
+against modelled. Location r: per domain, share of images with new overwash.
+
+| | 1996-2009 timing r | location r | modelled / observed share | 2009-2025 timing r | location r | modelled / observed share |
+|---|---|---|---|---|---|---|
+| single 5.5 m (adopted) | 0.98 | 0.29 | 0.125 / 0.095 | 0.24 | -0.06 | 0.098 / 0.227 |
+| single 12.1 m (DEM max) | 0.23 | 0.12 | 0.015 | 0.37 | 0.04 | 0.065 |
+| per-cell | 0.85 | 0.64 | 0.230 | 0.04 | 0.10 | 0.263 |
+| per-domain median | 0.86 | 0.48 | 0.113 | -0.07 | 0.01 | 0.156 |
+
+1996-2009 has 8 images and its timing r rests mostly on the one after Isabel.
+
+### HAT_soundside_overwash.py
+
+How much of the observed overwash could not have come from the ocean side, and so is likely sound-side?
+
+The overwash record has no direction, and Barrier3D overwashes only from the
+ocean (storm Rhigh against the dune crest; bay water never enters). For each
+observed new overwash (image, domain): the highest ocean run-up in the image's
+window (storm summary, m NAVD88) against the domain's LOWEST surveyed crest at
+the period start (1996 or 2009 dune file). Run-up below it makes ocean
+overwash implausible. NOAA sound-gauge peaks (Oregon Inlet 8652587, USCG
+Hatteras 8654467) for named storms mark high sound water (>= 1 m above MHW).
+Scored on the adopted single 5.5 m run.
+
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-soundside-overwash/`):
+
+| | 1996-2009 | 2009-2025 |
+|---|---|---|
+| observed new-overwash domain-images | 68 | 157 |
+| ocean run-up below the lowest surveyed crest | 16 (24%) | 70 (45%) |
+| ... of those, with high sound water in the window | 8 | 36 |
+| model hit rate where the ocean could reach the dune | 0.87 (45/52) | 0.34 (30/87) |
+| model hit rate where it could not | 0/16 | 0/70 |
+
+Irene's image (2011-08-27; Oregon Inlet 2.02 m) carries 30 of the 70. The
+2024-03-14 image carries 26 with no high sound water (the 2023-24 winter
+peaked at 0.69-0.79 m in the sound, 0.84 m at Duck): there the likelier cause
+is dunes lowered in the 15 years since the 2009 survey. So "implausible" is an
+upper bound on sound-side overwash: about 12-24% of calibration events and
+23-45% of test events. Separately, the largest 2010-2025 ocean run-up is 4.66 m
+NAVD88, below the adopted 5.5 m ceiling: once a model dune reaches the ceiling
+no test-period storm can overtop it from the ocean, which is why the model also
+misses most of the ocean-plausible test events.
+
 ### HAT_dune_recovery_diagnosis.py
 
 Why do breached dunes never rebuild in the model?
@@ -158,7 +460,7 @@ into them.
 
     python HAT_dune_recovery_diagnosis.py
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-dune-recovery-diagnosis/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-dune-recovery-diagnosis/
 (NOTE.md has the findings, tables/dune_recovery_by_domain.csv the numbers)
 ```
 
@@ -198,7 +500,7 @@ NOTHING IN THE MAIN CODE CHANGES.
     python HAT_dune_recovery_rate.py run
     python HAT_dune_recovery_rate.py score
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-dune-recovery-rate/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-dune-recovery-rate/
 ```
 
 ### HAT_dune_ceiling_per_domain.py
@@ -209,7 +511,7 @@ From the script's original header:
 
 ```text
 HAT_dune_ceiling_per_domain.py -- does a dune ceiling taken from each domain's own dunes keep the low spots storms break through?
-WHY (storms-and-overwash/2026-09-28-dune-ceiling-and-rebuild): one island-
+WHY (storms-overwash-and-dunes/2026-09-28-dune-ceiling-and-rebuild): one island-
 wide Dmaxel of 5.5 m NAVD88 matches the 2009 lidar on average and fixes
 1996-2010 (PSS 0.60), but every dune grows toward it within a few years. That
 erases the real low spots. In 2010-2024 the hit rate falls to 0.23, and Irene
@@ -236,7 +538,7 @@ constructed model before the first step; the storm file is swapped as before.
 Scoring applies the same DuneGrowth wrapper, so its crest reconstruction
 matches the run.
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-dune-ceiling-per-domain/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-dune-ceiling-per-domain/
 
 USAGE
     python HAT_dune_ceiling_per_domain.py run [--workers 6]
@@ -281,7 +583,7 @@ From the script's original header:
 
 ```text
 HAT_dune_ceiling_rebuild.py -- does a Hatteras dune ceiling and a rebuild that never lowers dunes fix the excess overwash?
-WHY (storms-and-overwash/2026-09-28-excess-overwash-diagnosis): the model's
+WHY (storms-overwash-and-dunes/2026-09-28-excess-overwash-diagnosis): the model's
 dunes sit at ~3 m MHW while the 2009 lidar puts Hatteras foredunes at ~4.9 m.
 Two settings hold them there:
     Dmaxel   never set for Hatteras, so Barrier3D's default 3.4 m NAVD88
@@ -318,7 +620,7 @@ timing/space, storm-dated), the model's 2010 dune crest against the 2009
 lidar (1996-2010 runs), and interior RMSE/bias against CoastSat (at the matrix
 edge rates, so not yet a fair shoreline comparison).
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-dune-ceiling-and-rebuild/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-dune-ceiling-and-rebuild/
 
 USAGE
     python HAT_dune_ceiling_rebuild.py run [--workers 6]
@@ -336,7 +638,7 @@ From the script's original header:
 HAT_excess_overwash_diagnosis.py -- why does the model overwash more than the imagery shows?
 THE QUESTION (Hannah, 2026-09-28). Every storm series, the committed one
 included, overwashes far more domains than the observed record in most image
-windows (storms-and-overwash/2026-09-28-storm-length-selection, stage 1).
+windows (storms-overwash-and-dunes/2026-09-28-storm-length-selection, stage 1).
 
 THREE EXPLANATIONS, EACH TESTED DIRECTLY (read-only: existing runs and inputs)
     1  volume   the extra overwash is real but too small to see in imagery
@@ -356,7 +658,7 @@ THREE EXPLANATIONS, EACH TESTED DIRECTLY (read-only: existing runs and inputs)
               volume, and the domain's hidden crest
     `summary` how false alarms and hits differ on each of those
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-excess-overwash-diagnosis/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-excess-overwash-diagnosis/
 ```
 
 <details><summary>Function notes (the original docstrings)</summary>
@@ -2727,7 +3029,7 @@ NOTHING IN THE MAIN CODE CHANGES.
     python HAT_storm_event_splitting.py run     # 6 runs, 5 at a time
     python HAT_storm_event_splitting.py score
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-29-event-splitting/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-29-event-splitting/
 ```
 
 Notes that were in the code:
@@ -2767,7 +3069,7 @@ From the script's original header:
 
 ```text
 HAT_storm_height_test.py -- are the storm water levels too low for Hatteras?
-WHY (storms-and-overwash/2026-09-28-dune-ceiling-per-domain): once the dunes
+WHY (storms-overwash-and-dunes/2026-09-28-dune-ceiling-per-domain): once the dunes
 match the 2009 lidar, the low spots overwash where Irene really did. But
 Irene also overwashed 47 of the 60 domains with dunes of 4.3 m and up, and the
 model manages 10: a modelled Irene Rhigh of 3.80 m MHW cannot clear them.
@@ -2795,7 +3097,7 @@ PART 2 -- sensitivity runs
 NOTHING IN THE MAIN CODE CHANGES (storm files and ceilings are swapped in
 each run's own process, as in the earlier experiments).
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-height/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-storm-height/
 
 USAGE
     python HAT_storm_height_test.py gauges
@@ -2838,7 +3140,7 @@ matches the observed record as the first priority.
 Why it is open: the committed series (v3_72) DROPS every grouped event
 longer than 72 h, which removes Isabel 2003, March 2018, Florence, Dennis
 and Nor'Ida. The 72 h limit existed only because the pre-49fd069 Barrier3D
-crashed on long storms (storms-and-overwash/2026-09-28-storm-max-duration).
+crashed on long storms (storms-overwash-and-dunes/2026-09-28-storm-max-duration).
 Barrier3D also routes each storm at its PEAK Rhigh for its WHOLE duration, so
 an event's length is a lever on how much overwash it makes, and the builder's
 24 h grouping makes some events of 150-190 h out of strings of smaller surges.
@@ -2887,7 +3189,7 @@ functions into this folder; runs are the unchanged runner with the period's
 storm file swapped in its own process (HAT_storm_max_duration._launch);
 Barrier3D is the current one (49fd069).
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-length-selection/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-storm-length-selection/
 
 USAGE
     python HAT_storm_length_selection.py build
@@ -2966,7 +3268,7 @@ around its peak, which the builder cannot do)
     96, 120, 240, nocap
     72trim
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-max-duration/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-storm-max-duration/
            storms/<window>/<window>_storms_v3_<variant>.npy (+ _summary.csv)
            runs/<variant>_<scenario>/<period>/edgeBE/<run_name>/
            logs/, tables/, figures/, NOTE.md
@@ -3072,7 +3374,7 @@ NOTHING IN THE MAIN CODE CHANGES.
     python HAT_storm_rlow_duration.py run     # 16 runs, 5 at a time
     python HAT_storm_rlow_duration.py score   # tables/scores.csv
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-rlow-and-duration/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-rlow-and-duration/
 ```
 
 ### HAT_storm_runup_by_slope.py
@@ -3109,7 +3411,7 @@ NOTHING IN THE MAIN CODE CHANGES.
 
     python HAT_storm_runup_by_slope.py slopes | build | run | score
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-10-01-runup-by-slope/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-runup-by-slope/
 ```
 
 ### HAT_trim_length_adopted.py
@@ -3121,7 +3423,7 @@ From the script's original header:
 ```text
 HAT_trim_length_adopted.py -- does the storm trim length still matter once the dunes are realistic?
 WHY (Hannah, 2026-09-28: "run the trim-length check first"). trim24 was chosen
-in storms-and-overwash/2026-09-28-storm-length-selection on the OLD dunes (held
+in storms-overwash-and-dunes/2026-09-28-storm-length-selection on the OLD dunes (held
 near 3 m MHW by the default Dmaxel), and 24 h was the shortest length tried.
 Barrier3D applies a storm's peak Rhigh for its whole duration, so the length is
 a lever on how much sand overwash moves. This re-asks the question on the
@@ -3142,7 +3444,7 @@ DuneGaps and the per-cell DuneGrowth.
 
 NOTHING IN THE MAIN CODE CHANGES.
 
-WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-trim-length-adopted/
+WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-09-28-trim-length-adopted/
 ```
 
 Notes that were in the code:

@@ -80,7 +80,7 @@ domainBE is not re-run (BE set 1 and the groin pin were fitted on the old target
 - **Periods** match Hannah's definition: calibration 1996 through end of 2008 (13 yr, unchanged); test 2009 through end of **2025** (17 yr, ending 1 Jan 2026; `last_model_year` 2025 in `hatteras_site_config.py`, was 2024).
 - **Calibration target end** is calendar 2008 ±6 months, 2007-07-01 → 2009-06-30 (the advisor's pick; leaves out Nor'Ida and 2010). `NET_CHANGE_WINDOWS` updated and targets rebuilt. The calibration end is no longer the test start. Options and scores: `experiments/target-end-window/2026-10-07-end-window-options/`.
 - **±6-month start lines tested** (Hannah's definition of the start): offset `shoreline/v3` for 1996 and 2009, built with a 5-position minimum (the 6-month windows are too thin at 10), **not CURRENT**. Scores move about 1 m, so v2 (±1 yr) stays the default: `experiments/target-end-window/2026-10-09-6mo-starts/`.
-- **Matrix re-run** (`matrix/1996_2009`, `2009_2025`); the old runs are in `output/raw_runs/archive/2026-10-09-pre-test-2025/` (calibration bit-identical; deletable once checked).
+- **Matrix re-run** (`matrix/1996_2009`, `2009_2025`); the old runs are in `output/raw_runs/archive/2026-10-09-pre-test-2025/` (calibration bit-identical; deletable once checked). (that archive was deleted 2026-10-13, along with the 10-12 matrix runs.)
 - **End rates re-solved** on the new targets (Done table above): 1996 +1.4041 / +10.3439, 2009 +32.2422 / +21.5341; matrix edgeBE re-run on them.
 
 **Next:**

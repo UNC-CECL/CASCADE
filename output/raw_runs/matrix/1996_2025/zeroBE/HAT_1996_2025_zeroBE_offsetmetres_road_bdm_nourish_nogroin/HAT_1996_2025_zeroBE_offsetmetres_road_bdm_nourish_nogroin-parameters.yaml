@@ -3,8 +3,6 @@ BayDepth: 3.0
 BermEl: 1.7
 DShoreface: 17.8
 Dmaxel: 5.5
-DuneCeilingFloor: 0.5
-DuneCeilingFromStart: true
 DuneParamStart: true
 GrowthParamStart: false
 LShoreface: 1834.9609806662193
@@ -13,7 +11,7 @@ RSLR_Constant: true
 RSLR_const: 0.005
 Rat: 0.0
 Sandbag_elevation: 1.9
-ShorefaceToe: -3806.5432923809926
+ShorefaceToe: -3803.0781073346425
 Shrub_ON: 0
 TMAX: 31
 beta: 0.04

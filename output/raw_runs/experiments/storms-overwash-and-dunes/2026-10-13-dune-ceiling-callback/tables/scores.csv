@@ -1,0 +1,7 @@
+period,variant,ceiling_m_navd88,skill,hit_rate,false_alarm_rate,hits,misses,false_alarms,crest_start_median_m_navd88,crest_end_median_m_navd88,low_quartile_start_m_navd88,low_quartile_end_m_navd88,share_cell_years_flat,alongshore_crest_sd_end_m,dunes_rebuilt,rmse_interior_m_yr,crest_end_minus_lidar_m,crest_end_vs_lidar_r
+1996_2009,percell,,0.575,0.75,0.175,51,17,113,5.73,5.64,4.08,4.31,0.036,1.44,44,1.211,0.03,0.55
+1996_2009,callback,,0.539,0.706,0.167,48,20,108,5.73,5.76,4.08,4.33,0.035,1.37,38,2.299,0.07,0.56
+1996_2009,callback2x,,0.553,0.721,0.167,49,19,108,5.73,5.72,4.08,4.2,0.031,1.33,38,1.2083,0.05,0.56
+2009_2025,percell,,0.195,0.414,0.219,65,92,117,5.39,5.15,3.24,4.18,0.087,1.79,81,1.7446,,
+2009_2025,callback,,0.188,0.401,0.213,63,94,114,5.39,5.31,3.24,4.14,0.084,1.94,72,1.8326,,
+2009_2025,callback2x,,0.205,0.433,0.228,68,89,122,5.39,5.32,3.24,3.3,0.086,1.81,128,1.7297,,

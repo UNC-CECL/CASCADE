@@ -1,0 +1,4 @@
+run,design_applied_m_mhw,hit_rate,false_alarm_rate,skill,hits,misses,false_alarms,neither,crest_end_median_m_mhw,crest_end_minus_lidar_m,crest_end_vs_lidar_r,dunes_rebuilt,rmse_interior_m_yr,endpoint_rmse_interior_m_yr,max_abs_shore_diff_vs_control_m
+matrix,3.0,0.735,0.187,0.548,50.0,18.0,121.0,525.0,5.51,-0.1,0.56,32,1.2098,1.2275,0.0
+control,3.0,0.735,0.187,0.548,50.0,18.0,121.0,525.0,5.51,-0.1,0.56,32,1.2098,1.2275,0.0
+design394,3.94,0.75,0.175,0.575,51.0,17.0,113.0,533.0,5.51,0.03,0.55,44,1.2110,1.2306,3.162

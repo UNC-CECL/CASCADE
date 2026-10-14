@@ -7,7 +7,9 @@ The matrix runs of each window and preset in order of increasing management, one
 Two versions per window and preset: rate (LRR vs the CoastSat target) and net
 change (final minus initial state vs the DEM-to-DEM net-change target, since
 2026-10-12; before it, position change vs the calendar-year total change).
-A preset with only one rung is skipped. Writes output/raw_runs/matrix/figures/.
+A preset with only one rung is skipped. Since 2026-10-12 the 30-yr full window
+(matrix/1996_2025, outside HATTERAS_PERIODS) has its own ladder too, scored
+against the 1996-2025 net change. Writes output/raw_runs/matrix/figures/.
 Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -36,8 +38,9 @@ sys.path.insert(0, str(_REPO / "scripts" / "hatteras_ms"))
 sys.path.insert(0, str(_REPO / "scripts" / "hatteras_ms" / "experiments"))
 
 import HAT_metres_1_offset_units as common  # noqa: E402
-from matrix_vs_observed import (end_year, matrix_runs, model_end_change, rates,  # noqa: E402
-                                score, window)
+from matrix_vs_observed import (RAW_RUNS, end_year, matrix_runs, model_end_change,  # noqa: E402
+                                rates, score)
+from cascade_pipeline.run_registry import find_run_dir, load_run_index  # noqa: E402
 from site_layer.hat_observed_rates import NET_CHANGE_WINDOWS, net_change_domain_csv  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style, figsize, mark_offaxis,
@@ -72,7 +75,26 @@ VERSIONS = {
         obs_text=None,           # set per window from NET_CHANGE_WINDOWS
         what="modelled net change (final minus initial state)"),
 }
+# The full window: calibration start window to test end window (coastsat_net_change.FULL)
+FULL = (1996, 2025)
+ROLE = {(1996, 2009): "Calibration", (2009, 2025): "Test", FULL: "Full window"}
 # -----------------------------------------------------------------------------
+
+
+# '1996_2009' from a (start, end) window
+def window(key):
+    return f"{key[0]}_{key[1]}"
+
+
+# The full-window matrix runs (1996 start, 2025 end), shaped like matrix_runs()
+def full_window_runs():
+    idx = load_run_index(RAW_RUNS / "run_index.csv")
+    m = idx[(idx["kind"] == "matrix") & idx["run_name"].str.startswith(f"HAT_{window(FULL)}_")].copy()
+    m = m.drop_duplicates("run_name", keep="last")
+    m["relocations_enabled"] = m["relocations_enabled"].astype(str).str.lower().eq("true")
+    m["run_dir"] = [find_run_dir(RAW_RUNS, r.run_name, window(FULL), r.source_sink_preset)
+                    for r in m.itertuples()]
+    return m
 
 
 # The shoal zones (site config), hatched gold as in add_geographic_annotations, named at the foot;
@@ -124,7 +146,7 @@ def rung_label(i, added):
 
 
 # One figure: panel k draws rungs 1..k over the observation; records each rung's scores
-def draw(version, period, preset, rungs, observed, rows_out):
+def draw(version, key, preset, rungs, observed, rows_out):
     v = VERSIONS[version]
     n = len(rungs)
     fig, axes = plt.subplots(n, 1, sharex=True, constrained_layout=True,
@@ -161,7 +183,7 @@ def draw(version, period, preset, rungs, observed, rows_out):
         row = next((x for x in rows_out if x["run_name"] == r.run_name
                     and x["preset"] == preset), None)
         if row is None:
-            row = dict(window=window(period), preset=preset, rung=k + 1, run_name=r.run_name,
+            row = dict(window=window(key), preset=preset, rung=k + 1, run_name=r.run_name,
                        adds=", ".join(rungs[k][1]) or "none")
             rows_out.append(row)
         row[f"{version}_bias"] = round(bias, 4)
@@ -170,11 +192,11 @@ def draw(version, period, preset, rungs, observed, rows_out):
     fig.legend(handles=[Line2D([], [], label=v["obs_label"], **OBSERVED)]
                + [Line2D([], [], color=c, lw=LW_NEWEST, label=lab) for c, lab in zip(colours, labels)],
                loc="outside lower center", ncol=min(n + 1, 3), frameon=False)
-    w = window(period)
+    w = window(key)
     png = OUT / w / f"management_ladder_{version}_{preset}_{w}.png"
     save(fig, png, dpi=300, close=True)
     runs = "; ".join(f"({chr(97 + i)}) {r.run_name}" for i, (r, _) in enumerate(rungs))
-    obs_text = v["obs_text"] or net_change_text(period)
+    obs_text = v["obs_text"] or net_change_text(key)
     record_caption(png, (
         f"The {w.replace('_', '–')} matrix runs, {PRESET_TEXT[preset]}, in order of "
         f"increasing management. Each panel adds one layer to the panel above and draws every run "
@@ -183,19 +205,20 @@ def draw(version, period, preset, rungs, observed, rows_out):
         f"{obs_text}. RMSE and bias of the newest rung over the interior GIS 2–89 (GIS 1 at "
         f"Cape Point, 90 at Pea Island); seaward positive. Every model line is smoothed as the "
         f"observation is (7-domain LOWESS, GIS 1–10 raw). A rung that adds nothing in this window "
-        f"is skipped. Hatched gold: the Avon (GIS 24–39) and Wimble (GIS 60–74) shoal zones. A value beyond the axis (GIS 1, observed and modelled) is marked with a triangle at the edge. The historical-relocation runs are not on the ladder "
+        f"is skipped. Hatched gold: the Avon (GIS 26–38) and Wimble (GIS 61–74) shoal zones. A value beyond the axis (GIS 1, observed and modelled) is marked with a triangle at the edge. The historical-relocation runs are not on the ladder "
         f"(relocation moves the road, not the shoreline). Runs: {runs}."))
     return png
 
 
 # The net-change target of a window, LOWESS-7 (GIS 1-10 raw), seaward +
-def net_change(period):
-    d = pd.read_csv(net_change_domain_csv(period, end_year(period)))
+def net_change(key):
+    d = pd.read_csv(net_change_domain_csv(*key))
     return d.set_index(d.columns[0])["net_change_lowess7_m"]
 
 
-def net_change_text(period):
-    (s0, s1), (e0, e1) = NET_CHANGE_WINDOWS[(period, end_year(period))]
+def net_change_text(key):
+    (s0, s1), (e0, e1) = NET_CHANGE_WINDOWS.get(key) or (NET_CHANGE_WINDOWS[(1996, 2009)][0],
+                                                         NET_CHANGE_WINDOWS[(2009, 2025)][1])
     return (f"the CoastSat net-change target (black; the mean shoreline over {e0} to {e1} minus "
             f"the mean over {s0} to {s1}, the island offset's window; 7-domain LOWESS, GIS 1–10 raw)")
 
@@ -205,9 +228,10 @@ def draw_overlay(preset, ladders):
     v = VERSIONS["net_change"]
     n = len(ladders)
     fig, axes = plt.subplots(n, 1, sharex=True, constrained_layout=True,
-                             figsize=figsize("double", height=3.6 * n + 0.6), squeeze=False)
+                             figsize=figsize("double", height=(3.6 if n < 3 else 3.1) * n + 0.6),
+                             squeeze=False)
     parts = []
-    for k, (ax, (period, (rungs, observed))) in enumerate(zip(axes[:, 0], ladders.items())):
+    for k, (ax, (key, (rungs, observed))) in enumerate(zip(axes[:, 0], ladders.items())):
         ax.plot(observed.index, observed.values, zorder=10, **OBSERVED)
         handles = [Line2D([], [], label=v["obs_label"], **OBSERVED)]
         for i, (r, added) in enumerate(rungs):
@@ -230,11 +254,11 @@ def draw_overlay(preset, ladders):
         shoals(ax)
         structures(ax, label=(k == n - 1))
         ax.set_ylabel(v["ylabel"])
-        w = window(period)
-        _title(ax, k, f"{'Calibration' if period == 1996 else 'Test'} {w.replace('_', '–')}")
+        w = window(key)
+        _title(ax, k, f"{ROLE[key]} {w.replace('_', '–')}")
         ax.legend(handles=handles, loc="upper center", ncol=2, fontsize=6.5, frameon=False,
                   bbox_to_anchor=(0.5, -0.04 if k < n - 1 else -0.13))
-        parts.append(f"({chr(97 + k)}) {w.replace('_', '–')}: {net_change_text(period)}")
+        parts.append(f"({chr(97 + k)}) {w.replace('_', '–')}: {net_change_text(key)}")
     axes[-1, 0].set_xlabel(DOMAIN_AXIS_LABEL)
     png = OUT / f"management_ladder_overlay_net_change_{preset}.png"
     save(fig, png, dpi=300, close=True)
@@ -244,7 +268,7 @@ def draw_overlay(preset, ladders):
         f"+ roads, green + beach and dune management, vermillion + fills; the last rung heaviest) "
         f"under the black target. The {v['what']}, smoothed as the target is. RMSE and bias "
         f"over the interior GIS 2–89 in the legend; seaward positive. Each rung uses the window's "
-        f"full-management end rates. Targets: " + "; ".join(parts) + ". Hatched gold: the Avon (GIS 24–39) and Wimble (GIS 60–74) "
+        f"full-management end rates. Targets: " + "; ".join(parts) + ". Hatched gold: the Avon (GIS 26–38) and Wimble (GIS 61–74) "
         f"shoal zones. A value beyond the axis "
         f"is marked with a triangle at the edge."))
     return png
@@ -254,6 +278,10 @@ def draw_overlay(preset, ladders):
 def main():
     apply_style()
     runs = matrix_runs()
+    runs["key"] = [(int(p), end_year(p)) for p in runs.period]
+    full = full_window_runs()
+    full["key"] = [FULL] * len(full)
+    runs = pd.concat([runs, full], ignore_index=True)
     for old in OUT.glob("*/management_ladder_*.png"):   # the step-panel version, 09-29
         if not old.stem.startswith(("management_ladder_rate_", "management_ladder_position_",
                                        "management_ladder_net_change_",
@@ -264,18 +292,18 @@ def main():
                 pdf.unlink()
     # Both versions for every window and preset
     rows, overlay = [], {}
-    for period in sorted(int(p) for p in runs.period.unique()):
-        obs = {"rate": common.coastsat_target(period), "net_change": net_change(period)}
+    for key in [k for k in ROLE if k in set(runs.key)]:
+        obs = {"rate": common.coastsat_target(*key), "net_change": net_change(key)}
         for preset in PRESETS:
-            sub = runs[(runs.period == period) & (runs.source_sink_preset == preset)]
+            sub = runs[(runs.key == key) & (runs.source_sink_preset == preset)]
             if sub.empty:
                 continue
             rungs = ladder(sub)
             if len(rungs) < 2:             # nothing to build up
                 continue
-            overlay.setdefault(preset, {})[period] = (rungs, obs["net_change"])
+            overlay.setdefault(preset, {})[key] = (rungs, obs["net_change"])
             for version in VERSIONS:
-                png = draw(version, period, preset, rungs, obs[version], rows)
+                png = draw(version, key, preset, rungs, obs[version], rows)
                 print(f"wrote {png.relative_to(_REPO)}  ({len(rungs)} rungs)")
     for preset, ladders in overlay.items():
         print(f"wrote {draw_overlay(preset, ladders).relative_to(_REPO)}")

@@ -40,10 +40,10 @@ Datums: MHW = 0.36 m NAVD88 (Duck, NOAA 8651370). Berm = 1.7 m NAVD88
 | `dune_file` (.npy per domain) | dam, height **above berm** | dam above berm | nowhere (`load_input.py:249`) | ✅ checked on arrays |
 | `berm_elevation` = 1.7 | m NAVD88 | m NAVD88 | `load_input.py:241` `/10 - MHW` | ✅ |
 | `MHW` = 0.36 | m NAVD88 | m NAVD88 | `load_input.py:227` `/10` | ✅ |
-| dune ceiling (since 2026-09-28): `DuneCeilingFromStart: true`, `DuneCeilingFloor: 0.5` | each dune cell's own starting crest (from the dune `.npy`), floored 0.5 m above the berm | dam above the berm, per cell | `Barrier3d.__init__`: `max(DuneDomain[0].max(axis=1), floor / 10)` | ✅ requires Barrier3D `hatteras/adopted` |
-| `Dmaxel` = 5.5 | m NAVD88 | m NAVD88 | `load_input.py:304` `/10 - MHW`; replaced by the median cell ceiling when the per-cell ceiling is on | ✅ explicit since 2026-09-28. Before that it was never set, so Barrier3D's 3.4 m NAVD88 default (3.04 m MHW, Virginia) capped every dune |
+| dune ceiling: per-cell (`DuneCeilingFromStart`, `DuneCeilingFloor`), 2026-09-28 to 10-13 | removed from the parameter file 2026-10-13; one island-wide `Dmaxel` since | — | — | the keys exist only in the local Barrier3D fork |
+| `Dmaxel` = 5.5 | m NAVD88 | m NAVD88 | `load_input.py:304` `/10 - MHW`; the one ceiling for every dune and both periods since 2026-10-13 (matches the surveyed crest height; top of the 1996-2009 overwash plateau, 4.5-5.5 m) | ✅ explicit since 2026-09-28. Before that it was never set, so Barrier3D's 3.4 m NAVD88 default (3.04 m MHW, Virginia) capped every dune |
 | `road_ele` (per domain) | m, MHW-relative | m MHW | `roadway_manager.bulldoze`: `/dz` | ✅ matches topo at the road, all 4 periods |
-| `dune_design_elevation` = 3.0 | m MHW | m MHW | roadway_manager; floored at `BermEl*10 + 1.0` | ✅ |
+| `dune_design_elevation` = 3.94 (4.3 m NAVD88, since 2026-10-13; was 3.0) | m MHW | m MHW | roadway_manager; floored at `BermEl*10 + 1.0` | ✅ |
 | `dune_minimum_elevation` = 0.0 | m MHW | m MHW | floored at `BermEl*10 + 0.3` = 1.64 m | ✅ (floor governs) |
 | BRIE `h_b_crit` | derived: berm − MHW = 1.34 m | m | `cascade.py` → `BrieCoupler` | ✅ |
 

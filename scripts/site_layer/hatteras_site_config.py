@@ -481,7 +481,10 @@ HATTERAS_BE_EDGE_ONLY = {
     # Re-solved 2026-10-12 evening for the calendar-year setup (storms 1997-2009, calendar 1996 -> 2009, offset v4),
     # five steps, residuals +0.005 / -0.035 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-1996_2009).
     # 2026-10-12 morning (v3): (+1.6765, +10.8869)
-    1996: (+1.6727, +10.7761),
+    # Re-solved 2026-10-13 for the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88),
+    # seven steps, residuals 0.000 / -0.016 m (experiments/end-domain-boundaries/2026-10-13-ends-solved-on-dune-settings-1996_2009).
+    # 2026-10-12 evening (calendar years): (+1.6727, +10.7761)
+    1996: (+0.9769, +10.8017),
     # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # /10-offset solve, 2010, superseded 2026-09-27
@@ -502,7 +505,10 @@ HATTERAS_BE_EDGE_ONLY = {
     # Re-solved 2026-10-12 evening for the calendar-year setup (storms 2010-2025, calendar 2009 -> 2025, offset v4),
     # eight steps, residuals -0.05 / +0.00 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-2009_2025).
     # 2026-10-12 morning (v3): (+29.1320, +21.7947)
-    2009: (+32.4325, +21.6164),
+    # Re-solved 2026-10-13 for the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88),
+    # seven steps, residuals -0.118 / +0.000 m (experiments/end-domain-boundaries/2026-10-13-ends-solved-on-dune-settings-2009_2025).
+    # 2026-10-12 evening (calendar years): (+32.4325, +21.6164)
+    2009: (+29.6576, +20.7639),
     # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
