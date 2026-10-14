@@ -42,7 +42,7 @@ from simplest to most complex.
 - **Next, in order:**
   1. **Rerun the groin matrix** (`HAT_run_all.py --stages 3`, started 2026-10-14 at 0.16 / 0.10) and point BE set 1 (`HAT_be_domain_solve_net_change.py`, whose start run is still a blocking-groin run) at a corrected-groin start.
   2. **Forecast** (`4-forecast/`, `groin.strength` set): the 2026 rebuild at about 0.25; at full strength from day one the model builds the fillet in about 3 years against about 9 observed, so ramp it in over 5-9 years if the timing matters. Only the southernmost of the three groins is rebuilt, so 0.25 is an upper bound.
-  3. Open: the model's fillet sits in the two domains beside the groin where the observed one spans three or four; the 2017 fill starts at GIS 6 and makes its own 35 m gap in the no-groin run.
+  3. Open: the model's fillet sits in the two domains beside the groin where the observed one spans three or four (the groins all sit in GIS 6 and the record's build-out peaks at GIS 7; a field layout across GIS 6 fits the 1967-1995 build-up better but not the hindcast windows, so the runner keeps its 5|6 face: `3-hindcast/2-blocking-1996-2025/2026-10-14-face-6-7/`); the 2017 fill starts at GIS 6 and makes its own 35 m gap in the no-groin run.
 
 **Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
 

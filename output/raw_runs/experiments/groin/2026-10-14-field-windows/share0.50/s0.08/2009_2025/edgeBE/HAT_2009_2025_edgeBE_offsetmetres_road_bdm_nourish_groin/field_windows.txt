@@ -1,0 +1,1 @@
+patched in-process by field_windows.py: the field layout (sand from GIS 5; 0.5 of it to GIS 6, the rest to GIS 7) at strength 0.08, off from 2017. The runner's report shows the GIS 5|6 groin.

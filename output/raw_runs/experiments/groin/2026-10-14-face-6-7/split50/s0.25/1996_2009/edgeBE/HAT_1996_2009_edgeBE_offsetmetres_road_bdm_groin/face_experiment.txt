@@ -1,0 +1,1 @@
+patched in-process by face_experiment.py: variant split50 at strength 0.25 from 1969; years 1968-1995 from the 1967 wet/dry shoreline at GIS 2-12, storms 1968-1983 replaying 1984-1999, RSLR 0.004, no fills, the 1996 topography. The runner's report shows the 1996 period and the GIS 5|6 groin.
