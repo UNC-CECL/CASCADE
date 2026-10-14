@@ -32,7 +32,7 @@ FIT_DOMAINS_GIS = list(range(2, 13))   # D2-D12, full range
 
 WETDRY_CHANGE_TABLE = os.path.join(
     hc.PROJECT_BASE_DIR, "hard-structures", "groin", "1-observations",
-    "analysis", "1-wetdry_photo_positions",
+    "analysis", "1-aerial_photo_gap",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
 # -----------------------------------------------------------------------------

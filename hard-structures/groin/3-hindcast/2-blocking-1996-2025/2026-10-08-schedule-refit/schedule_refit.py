@@ -13,7 +13,7 @@ process with BlockingGroinCallback patched to the schedule (rule: experiments do
 touch main code); the runner's own report still prints its default schedule, so each
 run gets a schedule.json. Every run: full management, the solved edgeBE ends,
 relocations off. Primary score: RMSE of the modelled GIS 5|6 gap change against the
-annual CoastSat gap change (1-observations/analysis/2-gap_across_groins), model mid-year vs the
+annual CoastSat gap change (1-observations/analysis/2-coastsat_gap), model mid-year vs the
 calendar-year mean, both relative to the start (model t = 0, CoastSat over the
 DEM-centred start window). Secondary: the 2026-10-05 photo-date RMSE.
 
@@ -40,7 +40,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 GROIN = REPO / "hard-structures" / "groin"
-sys.path[:0] = [str(GROIN / "1-observations" / "analysis" / "2-gap_across_groins"),
+sys.path[:0] = [str(GROIN / "1-observations" / "analysis" / "2-coastsat_gap"),
                 str(GROIN / "2-module-tests" / "3-real-planform"),
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"), str(REPO / "scripts")]

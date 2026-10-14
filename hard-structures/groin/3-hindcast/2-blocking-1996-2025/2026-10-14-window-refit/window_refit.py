@@ -50,7 +50,7 @@ STRENGTHS = {1996: (None, 0.10, 0.13, 0.16, 0.19, 0.22, 0.25),
              2009: (None, 0.04, 0.06, 0.08, 0.10, 0.12, 0.16, 0.25)}
 WINDOW = {1996: "1996_2009", 2009: "2009_2025"}
 WETDRY_CHANGE_TABLE = (REPO / "hard-structures" / "groin" / "1-observations" / "analysis"
-                       / "1-wetdry_photo_positions" / "Change_from_wetdry_1967_D2_D12.csv")
+                       / "1-aerial_photo_gap" / "Change_from_wetdry_1967_D2_D12.csv")
 # -----------------------------------------------------------------------------
 
 

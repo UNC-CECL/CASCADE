@@ -35,7 +35,7 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
                               caption, figsize, open_frame, save, _title)
 
 # --- CONFIG ------------------------------------------------------------------
-WETDRY_TABLE = (GROIN_DIR / "1-observations" / "analysis" / "1-wetdry_photo_positions"
+WETDRY_TABLE = (GROIN_DIR / "1-observations" / "analysis" / "1-aerial_photo_gap"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 SWEEP_ROOT = REPO / "output" / "calibration" / "groin" / "fullperiod_1984_2024"
 

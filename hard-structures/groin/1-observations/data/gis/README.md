@@ -6,12 +6,12 @@ reads the canonical one. Checked byte for byte on 2026-10-09.
 
 | layer | read by | copy of |
 |---|---|---|
-| `groins_hatteras.geojson` | `../../analysis/2-gap_across_groins/coastsat_gap_across_groins.py`, `../../analysis/3-shoreline_rates_by_era/HAT_groin_shoreline_analysis.py`, `../../analysis/3-shoreline_rates_by_era/shoreline_plan_view_gif.py`, `scripts/input_prep/4-mgmt-forcings/beach_nourishment.py` | this is the only copy |
+| `groins_hatteras.geojson` | `../../analysis/2-coastsat_gap/coastsat_gap_across_groins.py`, `../../analysis/4-shoreline_rates_by_era/HAT_groin_shoreline_analysis.py`, `../../analysis/5-shoreline_maps/shoreline_plan_view_gif.py`, `scripts/input_prep/4-mgmt-forcings/beach_nourishment.py` | this is the only copy |
 | `wet_dry_groin.geojson` | `HAT_groin_shoreline_analysis.py` | `data/hatteras_init/5-scr/1-observations/shoreline_inventory/wet_dry_groin.geojson` |
 | `cascade_area.geojson` | `HAT_groin_shoreline_analysis.py` (study-area filter) | `data/hatteras_init/5-scr/1-observations/shoreline_inventory/cascade_area.geojson` |
-| `HAT_domains.json` | `HAT_groin_shoreline_analysis.py` | `data/hatteras_init/5-scr/2-transect-frame/transect_domains/HAT_domains.json` (which `gap_across_groins_figures.py` and `shoreline_plan_view_gif.py` read) |
+| `HAT_domains.json` | `HAT_groin_shoreline_analysis.py` | `data/hatteras_init/5-scr/2-transect-frame/transect_domains/HAT_domains.json` (which `coastsat_gap_figures.py` and `shoreline_plan_view_gif.py` read) |
 | `transects_100m.geojson` | `HAT_groin_shoreline_analysis.py` | `data/hatteras_init/2-brie-offset/transects/transects_100m.geojson` (which the 2-brie-offset stage reads) |
-| `offshore_datum_line.geojson` | nothing | not byte-identical to the one `../../analysis/1-wetdry_photo_positions/HAT_geometric_distance_sanity_check.py` reads, `../../../3-hindcast/1-dipole-1967-2017/inputs/groin_init/island_offset/input/offshore_datum_line.geojson` |
+| `offshore_datum_line.geojson` | nothing | not byte-identical to the one `../../analysis/1-aerial_photo_gap/HAT_geometric_distance_sanity_check.py` reads, `../../../3-hindcast/1-dipole-1967-2017/inputs/groin_init/island_offset/input/offshore_datum_line.geojson` |
 | `CoastSat_shoreline_layer.geojson`, `CoastSat_polygon_layer.geojson` | nothing | CoastSat's global site layers (4,706 sites worldwide, EPSG:4326: median slope and mean trend per site), kept as reference |
 
 `shapefiles/` holds the ArcGIS originals of four of these (`Offshore_Datum_Line_UTM`,

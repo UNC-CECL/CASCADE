@@ -2,7 +2,7 @@
 
 > **Superseded.** This fits the DIPOLE groin (M = 60, f = 0.6), the reference note of 2026-08-24 that was `GROIN_PLAN.md`. Since 2026-10-05 the pinned groin is the BLOCKING groin, b = 0.6, f = 0.6 (`../2-blocking-1996-2025/2026-10-05-blocking-fit-calibration/README.md`), and the straight-coast test (`../../2-module-tests/1-straight-coast/`) found that neither module traps the real drift yet. Kept as the record of how the dipole was fitted. The observed history this note opened with moved to `../../1-observations/data/structure_history.md` on 2026-10-08. Paths below were updated to the 2026-10-08 layout; the dipole sweeps under `output/calibration/groin/` moved to `D:\archive\CASCADE_offload\output\calibration\groin\` on 2026-10-07.
 
-**Figures.** `figures/groin_timeline_and_hindcast.png` (the fillet against the module's `M_eff` schedule) is beside this note; `../../2-module-tests/figures/groin_module_logic.png` (what the dipole adds each year, and why it cannot close the gap) and `../../1-observations/analysis/1-wetdry_photo_positions/figures/groin_two_shorelines.png` are beside what they show. All three came under the project house style on 2026-09-11. Diffusion alone closes the gap at 1.5% of the observed post-2004 rate, not the "about a tenth" the module-logic footnote claimed; that tenth is roughly right for the NET change across the window, which is a different comparison.
+**Figures.** `figures/groin_timeline_and_hindcast.png` (the fillet against the module's `M_eff` schedule) is beside this note; `../../2-module-tests/figures/groin_module_logic.png` (what the dipole adds each year, and why it cannot close the gap) and `../../1-observations/analysis/1-aerial_photo_gap/figures/photo_gap_4_two_sides.png` are beside what they show. All three came under the project house style on 2026-09-11. Diffusion alone closes the gap at 1.5% of the observed post-2004 rate, not the "about a tenth" the module-logic footnote claimed; that tenth is roughly right for the NET change across the window, which is a different comparison.
 
 ---
 
@@ -150,8 +150,8 @@ Things that looked like problems and were not, or vice versa:
 | two-period sweeps | `output/calibration/groin/<period>_<preset>/` |
 | continuous 1984–2024 sweep | `output/calibration/groin/fullperiod_1984_2024/` |
 | 1967 rig | `results/sensitivity_sweep/` (runs: `runs/1967_2017_run/`) |
-| GIS analysis | `../../1-observations/analysis/3-shoreline_rates_by_era/` |
-| observed fillet table | `../../1-observations/analysis/1-wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv` |
+| GIS analysis | `../../1-observations/analysis/4-shoreline_rates_by_era/` |
+| observed fillet table | `../../1-observations/analysis/1-aerial_photo_gap/Change_from_wetdry_1967_D2_D12.csv` |
 
 **One operational rule:** never run two sweep orchestrators at once. Every
 CASCADE construction writes the shared

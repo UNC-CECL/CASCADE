@@ -71,7 +71,7 @@ OBSERVED_YEARS = [1978, 1987, 1997, 2008, 2018]
 # The validated wet/dry change table, not the dune-line CSVs (README)
 WETDRY_CHANGE_TABLE = os.path.join(
     PROJECT_BASE_DIR, "hard-structures", "groin", "1-observations",
-    "analysis", "1-wetdry_photo_positions",
+    "analysis", "1-aerial_photo_gap",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
 

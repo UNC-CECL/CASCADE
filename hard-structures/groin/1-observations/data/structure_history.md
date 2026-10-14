@@ -23,7 +23,7 @@ Sources:
 
 ## What the wet/dry surveys show
 
-Fillet = shoreline offset `GIS 5 − GIS 6` against a fixed **1967 datum**, from 24 dated wet/dry surveys (`../analysis/1-wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`). Landward-positive: a rising curve means the updrift side is holding while the downdrift side retreats, which is what a groin builds.
+Fillet = shoreline offset `GIS 5 − GIS 6` against a fixed **1967 datum**, from 24 dated wet/dry surveys (`../analysis/1-aerial_photo_gap/Change_from_wetdry_1967_D2_D12.csv`). Landward-positive: a rising curve means the updrift side is holding while the downdrift side retreats, which is what a groin builds.
 
 | phase | window | fillet | rate |
 |---|---|---|---|
@@ -40,6 +40,6 @@ The fillet peaks in **2004** and declines from there. The turning point matches 
 | 1985 → 2004 | **+52.0 m** | +2.74 m/yr | **still trapping** |
 | 2004 → 2023 | **−76.4 m** | −4.02 m/yr | **releasing** |
 
-When the gap stopped widening, from CoastSat rather than the photos, is in `../analysis/2-gap_across_groins/`.
+When the gap stopped widening, from CoastSat rather than the photos, is in `../analysis/2-coastsat_gap/`.
 
-`../analysis/1-wetdry_photo_positions/figures/groin_two_shorelines.png` is the one-picture version: the two shorelines and the gap between them.
+`../analysis/1-aerial_photo_gap/figures/photo_gap_4_two_sides.png` is the one-picture version: the two shorelines and the gap between them, from the photos. The photos and CoastSat side by side are in `../analysis/3-photos_vs_coastsat/`.

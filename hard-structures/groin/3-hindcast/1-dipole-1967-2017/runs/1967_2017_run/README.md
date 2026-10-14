@@ -21,8 +21,8 @@ authority on it.
 | `comparison/HAT_groin_effect_comparison.py` | no-groin vs groin against the observed shoreline at checkpoint years | see `comparison/README.md` |
 
 All observed targets come from
-`../../../../1-observations/analysis/1-wetdry_photo_positions/Change_from_wetdry_1967_D2_D12.csv`, made by
-`1-observations/analysis/1-wetdry_photo_positions/HAT_geometric_distance_sanity_check.py`.
+`../../../../1-observations/analysis/1-aerial_photo_gap/Change_from_wetdry_1967_D2_D12.csv`, made by
+`1-observations/analysis/1-aerial_photo_gap/HAT_geometric_distance_sanity_check.py`.
 
 The two runners descend from `HAT_groin_hindcast_1967_1997.py`, the original
 30-year (1967-1997) groin-only test. That script was deleted on 2026-10-01

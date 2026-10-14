@@ -1,6 +1,6 @@
 # 2026-10-08-schedule-refit
 
-**Question.** Does the blocking groin fit the 1996–2009 calibration period better if it starts failing in 1996 rather than at the 2004 step? The condition analysis (`hard-structures/groin/1-observations/analysis/2-gap_across_groins/`) found that the CoastSat gap across the groin stopped widening in 1995, at the last repair, rather than at Isabel. This study refits strength b and post-failure fraction f under three failure schedules and scores them on that annual CoastSat gap.
+**Question.** Does the blocking groin fit the 1996–2009 calibration period better if it starts failing in 1996 rather than at the 2004 step? The condition analysis (`hard-structures/groin/1-observations/analysis/2-coastsat_gap/`) found that the CoastSat gap across the groin stopped widening in 1995, at the last repair, rather than at Isabel. This study refits strength b and post-failure fraction f under three failure schedules and scores them on that annual CoastSat gap.
 
 **Setup.** `schedule_refit.py` drives the unchanged runner. A child process patches `cascade.groin.BlockingGroinCallback` to the schedule, and each run records its schedule in `schedule.json`. The runner's own report still prints its default schedule.
 
@@ -36,7 +36,7 @@ No groin scores 41.6 m on the annual CoastSat gap and 69.2 m on the photo dates.
 **Reading.**
 1. **On CoastSat, the three schedules score about the same (9.8–10.7 m).** Every best cell is a weak groin, at roughly 0.32–0.4 of full blocking, held nearly constant through the window. "Failure from 1996" is that constant-strength family exactly, and it scores best. The 2004 and ramp bests both sit on the f = 0.8 grid edge, which is barely a failure.
 2. **CoastSat can't tell when the groin failed; it can tell how strong the groin was.** The annual series falls steadily from 1996, so no fit wants a strong groin before 2004.
-3. **The photos want the opposite:** a strong groin (b 0.6) until a sharp failure at 2004. That rests on the 2004 survey, the one date where the photos and CoastSat disagree by 42 m (condition analysis, figure 7). Every CoastSat-best cell misses the photos by 27–32 m, and every photo-best cell misses CoastSat by 28–36 m.
+3. **The photos want the opposite:** a strong groin (b 0.6) until a sharp failure at 2004. That rests on the 2004 survey, the one date where the photos and CoastSat disagree by 42 m (`../../../1-observations/analysis/3-photos_vs_coastsat/`, figure 3). Every CoastSat-best cell misses the photos by 27–32 m, and every photo-best cell misses CoastSat by 28–36 m.
 4. **Failure from 1996 can only constrain the product b × f.** Equal products give identical runs (b 0.6/f 0.6 = b 0.9/f 0.4).
 
 ## Test 2009–2025 (not fitted)

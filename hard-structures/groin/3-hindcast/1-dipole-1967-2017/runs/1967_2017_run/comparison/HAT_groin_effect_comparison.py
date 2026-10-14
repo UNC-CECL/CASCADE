@@ -79,7 +79,7 @@ AXIS_LABEL_FONTSIZE = 12         # shared across every figure variant
 # Observed: the wet/dry-referenced change table, never a dune-line column (README)
 WETDRY_CHANGE_TABLE = os.path.join(
     PROJECT_BASE_DIR, "hard-structures", "groin", "1-observations",
-    "analysis", "1-wetdry_photo_positions",
+    "analysis", "1-aerial_photo_gap",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
 WETDRY_DOMAIN_COL = "Domain_ID"
