@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 __all__ = [
     "RUN_CONFIG", "RunConfig", "load_run_config", "describe", "preflight",
-    "field_default", "ENV_PREFIX", "IGNORE_ENV", "SETTINGS_PATH",
+    "field_default", "groin_strength_for", "ENV_PREFIX", "IGNORE_ENV", "SETTINGS_PATH",
 ]
 
 # --- CONFIG ------------------------------------------------------------------
@@ -110,10 +110,14 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("run_tag",                      ("run_tag",),           _as_str,      ""),
 
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
-    # The corrected groin (2026-10-14): share of the arriving drift held back, and the first year it no
-    # longer works (the 2017 Buxton fill); fitted 1967-2025 in hard-structures/groin/3-hindcast/
-    # 2-blocking-1996-2025/2026-10-13-pregroin-planform
-    ("groin_strength",               ("groin", "strength"),        _as_float, 0.25),
+    # The corrected groin (2026-10-14): share of the arriving drift held back, per window, for a run
+    # started from that window's observed shoreline (fitted in hard-structures/groin/3-hindcast/
+    # 2-blocking-1996-2025/2026-10-14-window-refit); `strength`, when set, overrides both and is the
+    # only way to run another start year with the groin on (0.25 over the groin's whole life, 1967-2025)
+    ("groin_strength_1996",          ("groin", "strength_1996"),   _as_float, 0.16),
+    ("groin_strength_2009",          ("groin", "strength_2009"),   _as_float, 0.10),
+    ("groin_strength",               ("groin", "strength"),        _as_opt_float, None),
+    # The first year the groin no longer works (the 2017 Buxton fill)
     ("groin_end_year",               ("groin", "end_year"),        _as_int,   2017),
 
     # Wave climate: option A since 2026-09-27; moving one earns a name token (README)
@@ -167,6 +171,19 @@ def _flatten(mapping, prefix=()) -> Dict[Tuple[str, ...], object]:
         else:
             flat[path] = value
     return flat
+
+
+# The groin's strength for a run starting in start_year: the override if set, else that window's own;
+# None for a start year with neither, which the runner refuses only when the groin is on
+def groin_strength_for(start_year: int, config=None) -> Optional[float]:
+    if config is None:
+        get = field_default
+    else:
+        def get(name):
+            return getattr(config, name)
+    if get("groin_strength") is not None:
+        return get("groin_strength")
+    return {1996: get("groin_strength_1996"), 2009: get("groin_strength_2009")}.get(int(start_year))
 
 
 # Reads hat_run.yaml, or returns nothing if it is absent or suppressed

@@ -82,7 +82,8 @@ in one tree.
 ## Deleted 2026-10-14
 
 One groin model is kept, the corrected groin (`cascade.groin.CorrectedGroinCallback`), set by
-two numbers in `hat_run.yaml`: `groin.strength` (0.25) and `groin.end_year` (2017). Removed with
+its strength per window and its end year in `hat_run.yaml` (`groin.strength_1996` 0.16,
+`groin.strength_2009` 0.10, `groin.end_year` 2017; `groin.strength` overrides both). Removed with
 the dipole (`GroinCallback`, M) and blocking (`BlockingGroinCallback`, b) groins and their
 deterioration floor f:
 
@@ -469,7 +470,10 @@ Attributes:
         (the default since 2026-09-24), "asrun" (offset / 10, the old
         units error) or "detrended".
     groin_enabled: Whether the groin callback is attached.
-    groin_strength: The share of the arriving drift the groin holds back.
+    groin_strength_1996, groin_strength_2009: The share of the arriving
+        drift the groin holds back, for a run starting in that year.
+    groin_strength: Overrides both when set (None by default); needed
+        for any other start year with the groin on.
     groin_end_year: The first year the groin no longer works.
     hs: Significant wave height, m.
     wave_period_s: Peak wave period, s.

@@ -48,7 +48,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     last_model_year,
 )
 
-from HAT_hindcast_config import field_default  # noqa: E402  (the groin's two numbers, in the job key)
+from HAT_hindcast_config import field_default, groin_strength_for  # noqa: E402  (the groin, in the job key)
 
 # --- CONFIG ------------------------------------------------------------------
 # The calibration and test periods, and the presets the matrix covers by default
@@ -58,8 +58,8 @@ ALL_PRESETS = tuple(PRESETS) + tuple(
     name for name in HATTERAS_BE_PRESETS if name not in PRESETS)
 END_YEAR = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
 LAST_MODEL_YEAR = {p: last_model_year(p) for p in HATTERAS_PERIODS}
-# The groin's strength and end year reach the runner as code defaults; they key its runs
-GROIN_STRENGTH = field_default("groin_strength")
+# The groin's strength (per window) and end year reach the runner as code defaults; they key its runs
+GROIN_STRENGTH = {p: groin_strength_for(p) for p in PERIODS}
 GROIN_END_YEAR = field_default("groin_end_year")
 
 HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
@@ -218,7 +218,7 @@ def job_key(stage, period=None, preset=None, scenario=None, groin=None,
     parts = [stage, period, preset, scenario, groin, reloc]
     # A groin run is keyed on the groin's two numbers, so changing either reruns it
     if groin:
-        parts += [f"s{GROIN_STRENGTH:g}", f"off{GROIN_END_YEAR}"]
+        parts += [f"s{GROIN_STRENGTH[period]:g}", f"off{GROIN_END_YEAR}"]
     digest = be_digest_for(period, preset)
     if digest != "empty":
         parts.append(digest)
@@ -391,7 +391,7 @@ def matrix_stage(stage, groin, manifest, args):
             + ["groin" if groin else "nogroin"])
         print(f"  [{index:>2}/{len(jobs)}] {period} {preset:<7} "
               f"{scenario:<16} reloc={reloc!s:<5} groin={groin}"
-              + (f" strength={GROIN_STRENGTH:g} off={GROIN_END_YEAR}" if groin else ""), flush=True)
+              + (f" strength={GROIN_STRENGTH[period]:g} off={GROIN_END_YEAR}" if groin else ""), flush=True)
 
         ok, seconds, detail = run_hindcast(
             period, preset, scenario, reloc, groin, overwrite,
@@ -400,7 +400,7 @@ def matrix_stage(stage, groin, manifest, args):
         if not args.dry_run:
             record(dict(key=key, stage=stage, period=period, preset=preset,
                         scenario=scenario, groin=groin, reloc=reloc,
-                        groin_strength=GROIN_STRENGTH if groin else None,
+                        groin_strength=GROIN_STRENGTH[period] if groin else None,
                         groin_end_year=GROIN_END_YEAR if groin else None,
                         ok=ok, seconds=round(seconds, 1),
                         detail=detail,
@@ -502,7 +502,8 @@ def main():
     print(f"  stages       {sorted(stages)}")
     print(f"  presets      {', '.join(args.presets)}")
     print(f"  scenarios    {', '.join(args.scenarios)}")
-    print(f"  groin        strength {GROIN_STRENGTH:g}, off from {GROIN_END_YEAR}")
+    print(f"  groin        strength " + ", ".join(f"{GROIN_STRENGTH[p]:g} ({p})" for p in PERIODS)
+          + f", off from {GROIN_END_YEAR}")
     print(f"  model state  {'NOT saved' if args.no_model_state else 'saved'}")
     print(f"  manifest     {MANIFEST}")
     print(f"  logs         {LOG_DIR}")

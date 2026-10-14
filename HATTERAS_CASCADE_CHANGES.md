@@ -24,7 +24,7 @@ The fresh-start commit already carried some local edits, made before this branch
 
 | # | change | files | kind | commit(s) | used by the hindcast |
 |---|---|---|---|---|---|
-| 1 | Groin representation: a share of the wave-driven drift held back at the face, without BRIE's leak of it, injected before BRIE's transport solve (a dipole and a blocking form before 2026-10-14) | `groin.py` (new), `cascade_groin.py` (new: `cascade.py` + a hook) | new capability | 058cc821, 5b26cb54 (+ pre-history), corrected groin 2026-10-14 | yes, `cascade_groin.Cascade` is the class the runner builds; the groin runs at strength 0.25, off from 2017 |
+| 1 | Groin representation: a share of the wave-driven drift held back at the face, without BRIE's leak of it, injected before BRIE's transport solve (a dipole and a blocking form before 2026-10-14) | `groin.py` (new), `cascade_groin.py` (new: `cascade.py` + a hook) | new capability | 058cc821, 5b26cb54 (+ pre-history), corrected groin 2026-10-14 | yes, `cascade_groin.Cascade` is the class the runner builds; the groin runs at strength 0.16 (1996-2009) and 0.10 (2009-2025), off from 2017 |
 | 2 | Where a relocated road is rebuilt is its own input (`road_relocation_setback`) | `cascade.py`, `cascade_groin.py` | interface fix | ead66e13 | yes |
 | 3 | `resize_interior_domain` aligns pre/post-storm grids by anchoring the edge that did not move | `beach_dune_manager.py` | crash fix | 9b89dfee | yes, every managed run |
 | 4 | The bulldozer dune cap limits only the sand added, not the whole dune cell | `beach_dune_manager.py` | bug fix | 4d9c3acd | yes, every managed run |
@@ -40,7 +40,7 @@ The fresh-start commit already carried some local edits, made before this branch
 **The change.**
 - `cascade/cascade_groin.py` is a copy of `cascade.py` with one addition: just before BRIE's alongshore-transport solve, `update()` calls `cascade._groin_callback(self, x_s_dt)` if one is attached (`cascade_groin.py:608-618`). With no callback, the model is bit-for-bit the same as `cascade.py`.
 - `cascade/groin.py` provides `CorrectedGroinCallback` (since 2026-10-14). Each year it moves a share `s` of BRIE's wave-driven net drift arriving at the GIS 5|6 face from the downdrift domain to the updrift one, and, within 10 cells of the face, adds back the diffusive leak BRIE would make of that sand at the groin's own bends. The leak is measured against the groin's tracked footprint (BRIE's alongshore step repeated with and without the groin's contribution), so a groin of strength 0 is exactly the no-groin run. Nothing inside BRIE or Barrier3D is edited.
-- Two numbers set it: the strength (0.25) and the first year it no longer works (2017, the Buxton fill), in `hat_run.yaml`.
+- Set in `hat_run.yaml` by its strength, per window (0.16 for 1996-2009, 0.10 for 2009-2025, fitted from each window's observed start shoreline), and the first year it no longer works (2017, the Buxton fill). Its whole-life strength, fitted from 1967, is 0.25; `groin.strength` sets one value for any start.
 
 **Effect and status.**
 - Fitted on one continuous 1967-2025 run from the 1967 shoreline against the wet/dry photo dates and annual CoastSat: it follows the gap across the groins to 17 m over the whole record (`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`). The runner reproduces the experiment runs it was fitted with to 0 m.

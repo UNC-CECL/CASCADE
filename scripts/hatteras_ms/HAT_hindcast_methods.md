@@ -264,26 +264,36 @@ adds to `x_s_dt`, and changes nothing inside BRIE or Barrier3D. Each active year
 Units and sign are BRIE's: `x_s_dt` reaches the hook in metres, and `x_s`
 increases landward, so the updrift advance is a negative `x_s_dt`.
 
-### Two numbers, fitted over the groin's whole life
+### Two numbers: a strength per window and an end year
 
 The groin is set by its **strength**, the share of the arriving drift held
-back (`groin.strength`, 0.25), and the **first year it no longer works**
-(`groin.end_year`, 2017). Both were fitted on one continuous run from the 1967
-wet/dry shoreline, two years before the groins, to 2025, scored on the gap
-across the groins against the wet/dry photo dates and annual CoastSat
-(`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`).
-Fitted era by era, the strength is 0.25 for 1969-1995, 0.25 for 1996-2009 and
-0.20-0.25 for 2010-2016 (0.25 is within 0.5 m), so one strength is kept. It is
-the minimum under three different stand-ins for the pre-1984 storms. The end
-year is the 2017 Buxton fill, placed across the whole groin field: left on, the
-groin misses 2017-2025 by 47 m.
+back, and the **first year it no longer works** (`groin.end_year`, 2017, the
+Buxton fill placed across the whole groin field: left on, the groin misses
+2017-2025 by 47 m).
 
-**Why not fit the calibration and test windows separately.** Each window's run
-starts from the observed shoreline, which already holds the fillet the groins
-built. A strength fitted that way measures how fast the model relaxes that
-fillet (0.16 on 1996-2009, 0.10 on 2010-2016), not how strong the groin is: run
-as one history, those values leave the gap 30-40 m below the record from 1996
-to 2017.
+**The hindcast windows use their own strength**: `groin.strength_1996` 0.16
+and `groin.strength_2009` 0.10, each the annual-CoastSat minimum of the gap
+across the groins for a run from that window's observed shoreline, with
+edgeBE and full management
+(`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-14-window-refit/`;
+1996-2009 13.4 m against 47.9 m with no groin, 2009-2025 9.7 m against 21.9 m).
+The drop between windows is the groin deteriorating. The 2009 value is fitted
+on the test window, so for the groin that window is not an independent test.
+
+**The groin's whole-life strength is 0.25.** Fitted on one continuous run from
+the 1967 wet/dry shoreline, two years before the groins, to 2025 against the
+wet/dry photo dates and annual CoastSat
+(`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`),
+the strength is 0.25 for 1969-1995, 0.25 for 1996-2009 and 0.20-0.25 for
+2010-2016, the minimum under three different stand-ins for the pre-1984
+storms. Run from an observed start, 0.25 overshoots (30.4 m on 1996-2009, and
+28.1 m on 2009-2025, worse than no groin): the start already holds the fillet
+the groins built, and the model's fillet is narrower than the real one, so the
+window strengths measure how fast the model relaxes the observed fillet. Run as
+one history from 1967, they leave the gap 30-40 m below the record. A run that
+starts before the fillet exists (a forecast of the rebuilt groin) sets
+`groin.strength`, which overrides both window values and is required for any
+other start year with the groin on.
 
 **Why the no-groin runs move at GIS 5|6.** The 1996 and 2009 start offsets step
 240-264 m seaward from GIS 5 to 6, against 104 m on the 1967 dune line: about

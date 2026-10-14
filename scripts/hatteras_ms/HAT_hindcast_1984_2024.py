@@ -253,7 +253,7 @@ reports.run_units_check(ELEVATION_FILE_PATHS, DUNE_FILE_PATHS,
 
 from HAT_hindcast_config import (                     # noqa: E402
     load_run_config, describe as _describe_run_config, preflight as _preflight,
-    field_default as _field_default)
+    field_default as _field_default, groin_strength_for)
 
 RUN_CONFIG = load_run_config()
 
@@ -778,10 +778,17 @@ GROIN_UPDRIFT_GIS = 6       # source: accretes
 GROIN_DOWNDRIFT_GIS = 5     # sink:   erodes
 GROIN_INSTALL_YEAR = 1969   # confirmed construction date
 
-# The groin's two numbers (hat_run.yaml): the share of the arriving drift it holds back, and the
-# first year it no longer works (the 2017 Buxton fill). Fitted on one continuous 1967-2025 run:
-# hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/
-GROIN_STRENGTH = RUN_CONFIG.groin_strength
+# The groin's two numbers (hat_run.yaml): the share of the arriving drift it holds back, which is
+# per window (fitted from each window's observed start shoreline in hard-structures/groin/3-hindcast/
+# 2-blocking-1996-2025/2026-10-14-window-refit/), and the first year it no longer works (the 2017
+# Buxton fill). Another start year needs groin.strength set; 0.25 is the whole-life strength
+GROIN_STRENGTH = groin_strength_for(START_YEAR, RUN_CONFIG)
+if GROIN_STRENGTH is None:
+    if GROIN_ENABLED:
+        raise ValueError(
+            f"no groin strength for a {START_YEAR} start: hat_run.yaml has groin.strength_1996 and "
+            f"groin.strength_2009 only. Set groin.strength (or HAT_GROIN_STRENGTH) to run it with the groin on.")
+    GROIN_STRENGTH = 0.0   # the groin is off; the callback is built for the 7.4 report only
 GROIN_END_YEAR = RUN_CONFIG.groin_end_year
 
 
