@@ -2,7 +2,11 @@
 
 **Question.** Does the corrected groin (straight-coast module 6: the drift groin plus a correction for BRIE's sand leak at the groin's bends) fit the 1996-2009 gap across the groins in the full model, and how does it do on 2009-2025?
 
-**Numbers refreshed 2026-10-12.** Every corrected-groin and no-groin number below was rerun (`python corrected_groin.py refresh`, 92 runs) under the 10-12 setup (commit `6219a55b`: six-month start lines, calendar end windows, the test period now 2009-2025 with CoastSat's gap closing by 62.0 m, not 50.4 m) and with the tracked reference (below), now the default. The conclusions held; the numbers moved by a few metres. The pinned groin (b 0.6, f 0.6) and the drift groin (b 0.1, f 0.4) were rerun on the same setup (`same_setup_runs.py`, under `groin/2026-10-12-same-setup/`); only the figures marked † come from the drift groin's own 10-08 grid, which was not rerun. The 10-09 values are in `grid_scores_2026-10-09_baseline.csv` (`python corrected_groin.py --reference baseline score`).
+**Strength superseded, 2026-10-13: see `../2026-10-13-pregroin-planform/`.** Run as one continuous history from the 1967 shoreline, the groin needs about 0.25 to 2009 and 0.20 to 2016, not the 0.16 and 0.10 fitted below. Each window here starts from the observed shoreline, which already holds the fillet, so its fitted strength is the rate that fillet relaxes at, not the groin's strength.
+
+**Refit on the calendar-year setup, 2026-10-12 night: read that section first.** The calibration and test now run on calendar-year shorelines (offset v4, storms 1997-2009 and 2010-2025, RSLR 0.002 and 0.006; commit `e9c5e663`). Only the corrected groin was refit; its results are in "The calendar-year refit" below, in `grid_scores.csv`, and in figures 1-4. Every section between here and that one reports the six-month setup and is kept as written (`grid_scores_2026-10-12_six-month.csv`). Its numbers are superseded, and rescoring those runs today would not reproduce them, because the no-groin runs and run lengths they were scored against have been replaced.
+
+**Numbers refreshed 2026-10-12 (six-month setup, superseded).** Every corrected-groin and no-groin number below was rerun (`python corrected_groin.py refresh`, 92 runs) under the 10-12 setup (commit `6219a55b`: six-month start lines, calendar end windows, the test period now 2009-2025 with CoastSat's gap closing by 62.0 m, not 50.4 m) and with the tracked reference (below), now the default. The conclusions held; the numbers moved by a few metres. The pinned groin (b 0.6, f 0.6) and the drift groin (b 0.1, f 0.4) were rerun on the same setup (`same_setup_runs.py`, under `groin/2026-10-12-same-setup/`); only the figures marked † come from the drift groin's own 10-08 grid, which was not rerun. The 10-09 values are in `grid_scores_2026-10-09_baseline.csv` (`python corrected_groin.py --reference baseline score`).
 
 **Why.** The drift groin (`../2026-10-08-drift-groin/`) fitted better than the pin, but leaked about 107 m of summed shoreline onto the island through BRIE's solve. Module 6's correction removes that leak on a straight coast (`../../../2-module-tests/`). As built, though, the correction also acted on Buxton's natural bend, changing the no-groin baseline by about 100 m (`../../../2-module-tests/3-real-planform/corrected_groin/`).
 
@@ -11,7 +15,7 @@
 - **The correction (option B, chosen 2026-10-09)** is applied to the groin's own bends only. Within 10 cells of the groin face, it is module 6's leak term for this run's BRIE shoreline minus the same term for the groin-free shoreline in that year. Since 10-12 the groin-free shoreline is this run's minus the groin's own tracked footprint, so no no-groin run is needed (section below); the 10-09 runs rebuilt it from the no-groin run instead. The zone is 10 cells, not module 6's 5, because 5 leaks on a grid-aligned coast (`../../../2-module-tests/6-long-term/`).
 - **Check (`check`):** at b 0 the run reproduces the no-groin run exactly (0.000 m in every year and domain with the tracked reference; 5 × 10⁻¹³ m with the 10-09 one). So the correction leaves the baseline untouched.
 
-Each run dir has `corrected_groin.txt`, because the runner's report and run name (`groinblock`) do not show the patch. The diagnostics CSV gains `net_drift_m3_yr`, `approach_angle_deg`, `leak_correction_m`, `max_diff_from_no_groin_m`, `footprint_max_m` and `tracked_vs_baseline_m`. Runs are under `output/raw_runs/experiments/groin/2026-10-09-corrected-groin/`: `tracked*/` the current ones, the unprefixed folders the 10-09 runs, `now_*/` the comparison runs.
+Each run dir has `corrected_groin.txt`, because the runner's report and run name (`groinblock`) do not show the patch. The diagnostics CSV gains `net_drift_m3_yr`, `approach_angle_deg`, `leak_correction_m`, `max_diff_from_no_groin_m`, `footprint_max_m` and `tracked_vs_baseline_m`. Calendar-year runs are under `output/raw_runs/experiments/groin/2026-10-12-corrected-groin-calendar/` (`--setup calendar`, the default). Six-month runs are under `output/raw_runs/experiments/groin/2026-10-09-corrected-groin/` (`--setup six-month`): `tracked*/` the tracked ones, the unprefixed folders the 10-09 runs, `now_*/` the comparison runs.
 
     python corrected_groin.py check
     python corrected_groin.py grid [--streams 4]     # b 0.02-0.3 x f 0.2-0.8, 32 runs
@@ -192,15 +196,53 @@ setup (10-12; the option-B runs rerun as `now_*`), the two-number groin, off fro
 17. **Adopted as the default** (`REFERENCE = "tracked"`); `--reference baseline` reaches the 10-09 runs and
     their scores (`grid_scores_2026-10-09_baseline.csv`). Tracked runs are filed under `tracked*/`.
 
-## Figures (2026-10-09, redrawn 2026-10-12)
+## The calendar-year refit (2026-10-12 night)
 
-`python same_setup_runs.py` (the pinned and drift groins on the 10-12 setup, once), then `python results_figures.py` draws four figures into `figures/`, with captions in `figures/supporting/CAPTIONS.md`. All runs drawn are on the 10-12 setup:
+**Setup.** The calibration and test were moved to calendar-year shorelines (start and end lines are calendar-year means; offset v4; storms 1997-2009 and 2010-2025; RSLR 0.002 and 0.006; the solved edgeBE ends for each). Row k of a run is calendar year start + k and the start line is row 0, so both periods start from a gap change of exactly zero. The runner passes the first model year to the callback, so the 2004 failure and the 2017 switch-off land in the right calendar years. `corrected_groin.py` scores this with its own `observed_change`, `model_change`, `score_annual`, `score_photos` and `split_scores`, which fall back to `schedule_refit.py`'s under `--setup six-month`. The test splits are now **2010-2016** (fully independent) and **2017-2025**. CoastSat's gap changes by −18.6 m over 1996-2009 and −60.2 m over 2009-2025; the photo dates are 1997, 2004 and 2008 in calibration, 2014-2023 in the test.
+
+**Runs.** `python corrected_groin.py check` (b 0 reproduces no groin to 0.000 m, as before), then `refresh` (98 runs plus 2 re-tests, all clean), then by hand with `periods`: calibration at s 0.20, 0.22 and 0.25, test at s 0.16 and 0.20; then `score`. Logs are in `logs/calendar/`. The pinned and drift groins were not rerun, so they have no calendar-year numbers.
+
+**Calibration, 1996-2009, the two-number groin (constant strength s; 0 from 2017, which 1996-2009 never reaches):**
+
+| s | 0.10 | 0.12 | 0.14 | 0.15 | **0.16** | 0.17 | 0.18 | **0.20** | 0.22 | **0.25** | 0.30 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| annual | 18.9 | 15.3 | 12.9 | 13.0 | **12.6** | 13.9 | 14.7 | 19.1 | 23.5 | 30.3 | 42.7 |
+| photos | 41.2 | 36.0 | 31.4 | 29.3 | 26.1 | 24.5 | 23.6 | 18.3 | 16.4 | **15.1** | 20.6 |
+| joint | 32.0 | 27.6 | 24.0 | 22.6 | 20.5 | 19.9 | 19.7 | **18.7** | 20.3 | 23.9 | 33.5 |
+
+No groin: 46.9 / 69.8 / 59.4 m (the gap closes by 91 m against 19 m observed). Across the b × f grid the best joint cell of each schedule scores 18.7-21.4 m, all at b 0.2 with f 0.8-1.0: the calibration still cannot see the 2004 failure.
+
+**Test, 2009-2025:**
+
+| run (s chosen by) | annual | photos | joint | 2010-2016 | 2017-2025 | gap change at end, model / CoastSat |
+|---|---|---|---|---|---|---|
+| no groin | 21.8 | 23.5 | 22.7 | 32.4 | **5.2** | −61.0 / −60.2 |
+| 0.12, off from 2017 (weaker than any target) | **10.1** | **9.2** | **9.7** | **12.0** | 8.2 | −60.4 / −60.2 |
+| **0.16, off from 2017 (annual CoastSat)** | 14.4 | 11.2 | 12.9 | 18.5 | 10.3 | −59.6 / −60.2 |
+| 0.18, off from 2017 | 17.6 | 13.1 | 15.5 | 23.3 | 11.5 | −58.5 / −60.2 |
+| 0.20, off from 2017 (both records) | 20.9 | 15.7 | 18.5 | 28.4 | 12.3 | −58.4 / −60.2 |
+| 0.25, off from 2017 (photos) | 28.3 | 21.3 | 25.0 | 39.6 | 14.4 | −58.0 / −60.2 |
+| three numbers: 0.2, 0.16 from 2004, off from 2017 | 14.4 | 11.2 | 12.9 | 18.5 | 10.3 | −59.6 / −60.2 |
+| 0.2, 0.16 from 2004, never off | 37.3 | 38.4 | 37.9 | 18.5 | 47.0 | −12.2 / −60.2 |
+| 0.2, 0.16 from 2004, declining 2015-2021 to 0 | 19.6 | 20.0 | 19.8 | 18.6 | 20.4 | −58.4 / −60.2 |
+
+18. **Every target now picks a stronger groin than on the six-month setup:** annual CoastSat 0.16 (was 0.12), both records 0.20 (was 0.18), the photos still 0.25. The annual minimum is flat from 0.14 to 0.16 (12.6-13.0 m).
+19. **The ranking of the targets holds.** On the test the annual-fitted strength beats the joint and photo ones on every score, and beats no groin by about 10 m (joint 12.9 against 22.7; 2010-2016 18.5 against 32.4). The photo-fitted strength does worse than no groin on 2010-2016 (39.6 m). The case for annual CoastSat as the target (findings 12-13) stands.
+20. **The test prefers a weaker groin than any target picks.** The test error rises steadily with strength, and 0.12 is the best run on every score (joint 9.7, 2010-2016 12.0 m). At 0.16 the model widens the gap by about 12 m in 2010-2011 while CoastSat's closes by 15 m. Choosing the strength from the test would be fitting to it, so 0.12 is reported, not adopted.
+21. **The groin still has to stop at the 2017 fill.** Left on, it misses 2017-2025 by 47 m; declining over 2015-2021, by 20 m; off from 2017, by 8-14 m. No groin is still best on 2017-2025 (5.2 m): every groin run lags the observed drop in 2017 by about 20 m (figure 2b), holding the sand it trapped before the fill for a year.
+22. **The three-number groin and the 0.16 two-number groin are the same run on the test**, since both hold 0.16 from 2009 to 2016. With the 2004 failure invisible in calibration, the two-number groin at 0.16, off from 2017, is the one to carry forward if the target is annual CoastSat.
+
+## Figures (2026-10-09, figures 1-4 redrawn 2026-10-12 night on the calendar-year setup)
+
+`python results_figures.py` draws figures 1-4 into `figures/`, with captions in `figures/supporting/CAPTIONS.md`, from the calendar-year runs. The pinned and drift groins have no calendar-year runs and are no longer drawn. Figure 5 and the GIF have not been redrawn and still show the six-month runs (`same_setup_runs.py` made their pinned-groin runs):
 
 | figure | question |
 |---|---|
 | `corrected_groin_1_strength_over_time` | How strong is the groin each year in each option, against the structure's history? |
-| `corrected_groin_2_gap_over_time` | Does the corrected groin reproduce the observed gap, in calibration and test? (no groin, the pinned groin, the two-number groin at 0.12 and 0.18) |
-| `corrected_groin_3_choosing_strength` | Which strength each observed record picks, and how each does on the test |
-| `corrected_groin_4_test_summary` | Every groin version on 2009-2025, before and after the 2017 fill |
+| `corrected_groin_2_gap_over_time` | Does the corrected groin reproduce the observed gap, in calibration and test? (no groin, the two-number groin at 0.16 and 0.20) |
+| `corrected_groin_3_choosing_strength` | Which strength each observed record picks, and how each (and 0.12) does on the test |
+| `corrected_groin_4_test_summary` | Every corrected-groin version on 2009-2025, before and after the 2017 fill |
 | `corrected_groin_5_plan_view` | The shorelines on a map (1.5 km windows, true scale) in 2008, 2016 and 2024: observed, no groin, pinned and corrected (`plan_view_figure.py`) |
+| `corrected_groin_on_off_<calibration|test>.gif` | The groin on against off, year by year, on the 1.5 km map with the alongshore change beside it (`groin_on_off_gif.py`; git-ignored) |
+| `corrected_groin_panels_<calibration|test>.gif` | Stacked plan views along GIS 2-12, land up: no groin, fills, the groin; accretion yellow, erosion red, cross-shore exaggerated about 3 times (`groin_panels_gif.py`, whose `render` the 10-13 study reuses; git-ignored) |
 | `corrected_groin_effect.gif` | The shoreline with and without the corrected groin, year by year on the 1.5 km map, with the gap alongside (`groin_effect_gif.py`; git-ignored, rerun to make it) |

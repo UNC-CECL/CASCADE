@@ -15,6 +15,12 @@ Fit the corrected groin (the drift groin plus a leak correction at the groin's o
     python corrected_groin.py refresh [--streams 4]      # every run the README reports, then the score
     python corrected_groin.py --reference baseline score # the 10-09 runs, with the no-groin run as reference
 
+Runs are filed by setup: the calendar-year setup (default since the 2026-10-12 evening) under
+groin/2026-10-12-corrected-groin-calendar/, the earlier ones under groin/2026-10-09-corrected-groin/
+(--setup six-month). The earlier scores are kept as written (grid_scores_2026-10-12_six-month.csv,
+grid_scores_2026-10-09_baseline.csv); rescoring them now would not reproduce them, since the
+config's test-period length and the no-groin matrix runs have since changed.
+
 The drift groin of ../2026-10-08-drift-groin/ (b of BRIE's wave-climate net drift at the updrift
 approach face, moved from GIS 5 to GIS 6 each year), plus straight-coast module 6's leak
 correction within HALF_WIDTH cells of the groin face, applied to the groin's bends only (option
@@ -63,9 +69,14 @@ import schedule_refit as sr  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = dg.RUNNER
-STUDY = "groin/2026-10-09-corrected-groin"
+# Which setup's runs: "calendar" (default since the 2026-10-12 evening: calendar-year start and end lines, storms
+# from the year after the DEM, row k of a run = calendar year period + k) or "six-month" (the 10-12 afternoon
+# refresh: DEM-date +/-6-month start lines, storms from the DEM year, row k = 1 Jan of period + k). --setup sets it
+SETUP = "calendar"
+STUDIES = {"calendar": "groin/2026-10-12-corrected-groin-calendar", "six-month": "groin/2026-10-09-corrected-groin"}
+STUDY = STUDIES[SETUP]
 RAW = dg.RAW
-LOGS = HERE / "logs"
+LOGS = HERE / "logs" / "calendar"
 HALF_WIDTH = 10                           # cells either side of the groin face; 5 leaks on a grid-aligned coast
 B_VALUES = (0.02, 0.05, 0.08, 0.1, 0.12, 0.15, 0.2, 0.3)   # the drift groin's best sat at b 0.08-0.10
 F_VALUES = (0.2, 0.4, 0.6, 0.8)
@@ -79,6 +90,7 @@ C_B = (0.1, 0.15, 0.2, 0.25, 0.3, 0.4)       # C: full b in 1995, ramping to b f
 C_F = (0.2, 0.4, 0.6, 0.8)
 OFF_YEAR = 2017                              # D: the groin passes everything from the 2017 Buxton fill on
 DECLINES = ("2015-2021r0", "2015-2021r0.33")  # D': linear decline 2015-2021 to nothing, or to the southernmost of three groins
+TWO_FINE = (0.11, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19)   # two-number strengths between schedule A's 0.1 / 0.12 / 0.15 / 0.2
 # How the groin-free shoreline for the leak correction is found: "tracked" (default since 2026-10-12) subtracts the
 # groin's own tracked footprint, so no no-groin run is needed; "baseline" uses the no-groin run (the 10-09 runs);
 # "now" is "baseline" rerun under the 10-12 setup, filed apart for the comparison. --reference sets it
@@ -125,7 +137,12 @@ def periods_label(spec):
 # no-groin-run reference rerun under the 2026-10-12 setup (six-month start lines, calendar end windows),
 # so the two can be compared on the same setup
 PREFIX = {"baseline": "", "tracked": "tracked_", "now": "now_"}
-SCORES = {"tracked": "grid_scores.csv", "baseline": "grid_scores_2026-10-09_baseline.csv"}
+
+
+def scores_file():
+    if REFERENCE == "baseline":
+        return HERE / "grid_scores_2026-10-09_baseline.csv"
+    return HERE / ("grid_scores.csv" if SETUP == "calendar" else "grid_scores_2026-10-12_six-month.csv")
 
 
 def tag(schedule="instant2004", off=None, reference=None):
@@ -349,7 +366,7 @@ def run_all(cells, streams):
 def cmd_check(_a):
     from schedule_refit import baseline_file
     ok = run_all([(CALIBRATION, 0.0, 0.6)], 1)
-    p = shoreline_file(STUDY, CALIBRATION, 0.0, 0.6)
+    p = shoreline_file(tag(), CALIBRATION, 0.0, 0.6)
     if not ok or p is None:
         sys.exit(1)
     x, base = np.load(p), np.load(baseline_file(CALIBRATION))
@@ -365,13 +382,61 @@ def schedule_cells():
             + [(CALIBRATION, b, f, "ramp1996", None) for b in C_B for f in C_F])
 
 
-# Annual RMSE before and after the 2017 fill, test period only
+# Scoring. "six-month" runs are scored as schedule_refit.py scores them (row k = 1 Jan of period + k, so year y is
+# the mean of rows y - period and y - period + 1). "calendar" runs: row k is calendar year period + k (row 0 the
+# start line), compared with CoastSat's calendar-year mean of that year minus its calendar-`period` mean, for the
+# years after the start through the last modelled year (the handoff of 2026-10-12)
+def observed_change(period):
+    if SETUP == "calendar":
+        from site_layer.hat_observed_rates import NET_CHANGE_WINDOWS
+        from site_layer.hatteras_site_config import HATTERAS_PERIODS
+        lo, hi = NET_CHANGE_WINDOWS[(period, HATTERAS_PERIODS[period]["end_year"])][0]
+        sr.START_WINDOW = {**sr.START_WINDOW, period: (lo, f"{hi} 23:59:59")}
+    return sr.coastsat_change(period)
+
+
+def model_change(path):
+    if SETUP != "calendar":
+        return sr.model_change(path)
+    x = np.load(path)
+    g = x[:, sr.DOWN] - x[:, sr.UP]
+    return g - g[0]
+
+
+def score_annual(path, period, obs):
+    if SETUP != "calendar":
+        return sr.score_annual(path, period, obs)
+    from site_layer.hatteras_site_config import last_model_year
+    m = model_change(path)
+    yrs = [y for y in range(period + 1, last_model_year(period) + 1) if y in obs.index]
+    mv, ov = np.array([m[y - period] for y in yrs]), obs.loc[yrs].to_numpy()
+    return dict(n_years=len(yrs), rmse_annual=float(np.sqrt(np.mean((mv - ov) ** 2))),
+                bias_annual=float(np.mean(mv - ov)), end_model=float(mv[-1]), end_obs=float(ov[-1]))
+
+
+def score_photos(path, period, photos):
+    if SETUP != "calendar":
+        return sr.score_photos(path, period, photos)
+    from site_layer.hatteras_site_config import last_model_year
+    g = model_change(path)
+    yrs = [y for y in photos.index if period < y <= last_model_year(period)]
+    o = np.array([photos[y] for y in yrs]) - np.interp(period, photos.index, photos.values)
+    m = np.array([g[y - period] for y in yrs])
+    return dict(rmse_photos=float(np.sqrt(np.mean((m - o) ** 2))), photo_dates=" ".join(map(str, yrs)))
+
+
+# Annual RMSE before and after the 2017 fill, test period only. Calendar runs score 2010-2016 and 2017-2025
+# (2009 is the start line, zero in both); six-month runs 2009-2016 and 2017-2024, as before
+SPLITS = {"calendar": (("rmse_2010_2016", (2010, 2016)), ("rmse_2017_2025", (2017, 2025))),
+          "six-month": (("rmse_2009_2016", (2009, 2016)), ("rmse_2017_2024", (2017, 2024)))}
+
+
 def split_scores(path, period, obs):
     if period != TEST:
         return {}
-    m = sr.model_change(path)
+    m = model_change(path)
     out = {}
-    for name, (y0, y1) in (("rmse_2009_2016", (2009, 2016)), ("rmse_2017_2024", (2017, 2024))):
+    for name, (y0, y1) in SPLITS[SETUP]:
         yrs = [y for y in range(y0, y1 + 1) if y in obs.index and y - period < len(m)]
         d = np.array([m[y - period] for y in yrs]) - obs.loc[yrs].to_numpy()
         out[name] = float(np.sqrt(np.mean(d ** 2)))
@@ -379,7 +444,7 @@ def split_scores(path, period, obs):
 
 
 def cmd_score(_a):
-    from schedule_refit import baseline_file, coastsat_change, score_annual, score_photos
+    from schedule_refit import baseline_file
     from score_instant_grid import observed_series
     photos = observed_series()
     arms = [("corrected", "instant2004", None, tag())] + [
@@ -388,7 +453,7 @@ def cmd_score(_a):
     fs = sorted(set(F_VALUES) | set(F_EDGE) | set(C_F) | set(dg.F_VALUES))
     rows = []
     for period in (CALIBRATION, TEST):
-        obs = coastsat_change(period)
+        obs = observed_change(period)
         base = baseline_file(period)
         if base.is_file():
             rows.append(dict(arm="none", schedule="", off=np.nan, period=period, b=0.0, f=np.nan,
@@ -419,7 +484,7 @@ def cmd_score(_a):
             t.loc[sel, "island_vs_none_m"] = t.loc[sel, "island_seaward_sum_m"] - float(none.island_seaward_sum_m.iloc[0])
     t["joint_rmse"] = np.sqrt((t.rmse_annual ** 2 + t.rmse_photos ** 2) / 2)
     t["strength_after_failure"] = t.b * t.f
-    t.to_csv(HERE / SCORES[REFERENCE], index=False, float_format="%.3f")
+    t.to_csv(scores_file(), index=False, float_format="%.3f")
     pd.set_option("display.width", 240)
     cal = t[(t.period == CALIBRATION) & (t.arm == "corrected")]
     print("=== calibration, best joint per schedule (corrected groin) ===")
@@ -432,7 +497,7 @@ def cmd_score(_a):
     test = t[t.period == TEST]
     print("=== test 2009-2025 ===")
     print(test[["arm", "schedule", "off", "b", "f", "strength_after_failure", "rmse_annual", "rmse_photos", "joint_rmse",
-                "rmse_2009_2016", "rmse_2017_2024", "end_model", "end_obs"]].round(1).to_string(index=False))
+                *[n for n, _ in SPLITS[SETUP]], "end_model", "end_obs"]].round(1).to_string(index=False))
 
 
 # The tracked reference against the no-groin-run reference: b 0 (must reproduce no groin), and the two-number
@@ -441,7 +506,7 @@ TRACKED_STRENGTHS = (0.12, 0.19)
 
 
 def cmd_tracked(a):
-    from schedule_refit import baseline_file, coastsat_change, score_annual, score_photos
+    from schedule_refit import baseline_file
     from score_instant_grid import observed_series
     spec = {s: f"1969:{s},2017:0" for s in TRACKED_STRENGTHS}
     cells = [(CALIBRATION, 0.0, 0.6, "instant2004", None, "tracked")] + [
@@ -453,7 +518,7 @@ def cmd_tracked(a):
     x0, base = np.load(shoreline_file(tag(reference="tracked"), CALIBRATION, 0.0, 0.6)), np.load(baseline_file(CALIBRATION))
     print(f"b 0, tracked: max |shoreline - no-groin run| over all years and domains: {np.abs(x0 - base).max():.3e} m")
     for p in (CALIBRATION, TEST):
-        obs = coastsat_change(p)
+        obs = observed_change(p)
         for s in TRACKED_STRENGTHS:
             pt = shoreline_file(tag("periods", spec[s], "tracked"), p, s, 1.0)
             pb = shoreline_file(tag("periods", spec[s], "now"), p, s, 1.0)          # same setup, no-groin reference
@@ -464,7 +529,7 @@ def cmd_tracked(a):
                 rows.append(dict(period=p, strength=s, reference=ref, rmse_annual=sa["rmse_annual"],
                                  rmse_photos=sp["rmse_photos"], end_model=sa["end_model"], end_obs=sa["end_obs"]))
             rows[-1].update(max_diff_vs_baseline_m=float(np.abs(xt - xb).max()),
-                            gap_diff_vs_baseline_m=float(np.abs(sr.model_change(pt) - sr.model_change(pb)).max()),
+                            gap_diff_vs_baseline_m=float(np.abs(model_change(pt) - model_change(pb)).max()),
                             island_diff_vs_baseline_m=float(np.abs((xt - xb).sum(axis=1)).max()),
                             tracked_vs_baseline_ref_m=float(diag.tracked_vs_baseline_m.max()))
     t = pd.DataFrame(rows)
@@ -480,8 +545,8 @@ def cmd_refresh(a):
     two = lambda s: f"1969:{s},2017:0"                                   # noqa: E731
     cal = ([(CALIBRATION, b, f) for b in B_VALUES for f in F_VALUES]
            + [(CALIBRATION, b, f) for b in B_EDGE for f in F_EDGE] + [(CALIBRATION, 0.25, f) for f in F_VALUES[1:]]
-           + schedule_cells() + [(CALIBRATION, s, 1.0, "periods", two(s)) for s in (0.16, 0.17, 0.18, 0.19)])
-    test = ([(TEST, s, 1.0, "periods", two(s)) for s in (0.12, 0.19, 0.25)]
+           + schedule_cells() + [(CALIBRATION, s, 1.0, "periods", two(s)) for s in TWO_FINE])
+    test = ([(TEST, s, 1.0, "periods", two(s)) for s in (0.12, 0.18, 0.19, 0.25)]
             + [(TEST, 0.2, 1.0, "periods", "1969:0.2,2004:0.16,2017:0")]
             + [(TEST, 0.2, f, "instant2004", off) for f in (0.8, 0.9) for off in (None, str(OFF_YEAR))]
             + [(TEST, 0.2, 1.0, "instant1996", off) for off in (None, str(OFF_YEAR))]
@@ -489,7 +554,7 @@ def cmd_refresh(a):
             + [(TEST, 0.2, 0.8, "instant2004", d) for d in DECLINES])
     ok = run_all(cal + test, a.streams)
     cmd_score(a)
-    t = pd.read_csv(HERE / SCORES[REFERENCE])
+    t = pd.read_csv(scores_file())
     c = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.fillna("") == "") & (t.schedule != "periods")]
     best = c.sort_values("joint_rmse").groupby("schedule").head(1)
     extra = [(TEST, float(r.b), float(r.f), r.schedule, off) for r in best.itertuples() for off in (None, str(OFF_YEAR))]
@@ -501,7 +566,7 @@ def cmd_refresh(a):
 
 # The test cells: each schedule's best calibration cell, with and without D
 def cmd_tests(a):
-    t = pd.read_csv(HERE / SCORES[REFERENCE])
+    t = pd.read_csv(scores_file())
     cal = t[(t.period == CALIBRATION) & (t.arm == "corrected") & (t.off.fillna("") == "")]
     best = cal.sort_values("joint_rmse").groupby("schedule").head(1)
     cells = [(TEST, float(r.b), float(r.f), r.schedule, off) for r in best.itertuples() for off in (None, OFF_YEAR)]
@@ -516,6 +581,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--reference", choices=("tracked", "baseline"), default=REFERENCE,
                     help="groin-free shoreline: the groin's tracked footprint (default) or the no-groin run (10-09)")
+    ap.add_argument("--setup", choices=tuple(STUDIES), default=SETUP,
+                    help="calendar-year setup (default) or the 10-12 afternoon six-month runs")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check")
     s = sub.add_parser("smoke")
@@ -535,6 +602,10 @@ def main():
     t.add_argument("--off", default=None, help="a switch-off year (2017) or a decline Y0-Y1rR (2015-2021r0)")
     a = ap.parse_args()
     globals()["REFERENCE"] = a.reference
+    # the 10-09 no-groin-reference runs and the 10-12 afternoon runs are filed under the 10-09 study
+    setup = "six-month" if a.reference == "baseline" else a.setup
+    globals().update(SETUP=setup, STUDY=STUDIES[setup],
+                     LOGS=HERE / "logs" / ("calendar" if setup == "calendar" else ""))
     if a.cmd == "check":
         return cmd_check(a)
     if a.cmd == "smoke":

@@ -5,9 +5,10 @@ how the strength was chosen, and the test period run by run.
 
     python results_figures.py   ->  figures/corrected_groin_<n>_<what>.png
 
-Reads the runs scored by corrected_groin.py (grid_scores.csv) and their shoreline matrices, the
-pinned and drift groins rerun on the same setup (same_setup_runs.py), and the observed gap (annual
-CoastSat and the wet/dry photo dates). Captions go to figures/supporting/CAPTIONS.md. Details: README.md.
+Reads the runs scored by corrected_groin.py (grid_scores.csv, the calendar-year setup) and their shoreline
+matrices, and the observed gap (annual CoastSat and the wet/dry photo dates). The pinned and drift groins
+were only run on the earlier six-month setup, so they are not drawn. Captions go to
+figures/supporting/CAPTIONS.md. Details: README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -25,9 +26,9 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 import corrected_groin as cgm  # noqa: E402
 import drift_groin as dg  # noqa: E402
-import same_setup_runs as ssr  # noqa: E402
 import schedule_refit as sr  # noqa: E402
 from score_instant_grid import observed_series  # noqa: E402
+from site_layer.hatteras_site_config import last_model_year  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, INK, INK_MUTED, _letter_inside, apply_style, figsize, open_frame, record_caption, save)
 
@@ -35,11 +36,11 @@ from site_layer.hat_figure_style import (  # noqa: E402
 HERE = cgm.HERE
 FIGS = HERE / "figures"
 CAL, TEST = cgm.CALIBRATION, cgm.TEST
-CHOSEN, JOINT, PHOTO = 0.12, 0.18, 0.25               # the strengths each calibration target picks
+CHOSEN, JOINT, PHOTO = 0.16, 0.20, 0.25               # the strengths each calibration target picks
+WEAKER = 0.12                                         # weaker than any pick; tests best
 OBS_C = C["LOCATOR"]                                  # observations: teal, markers only
 RUNS = {                                              # label: (colour, line style)
     "no groin": (C["BASE"], "-"),
-    "pinned groin (in the runner now)": (C["ACCENT"], "-"),
     f"corrected, {CHOSEN} to 2016": (INK, "-"),
     f"corrected, {JOINT} to 2016": (INK, (0, (3, 2))),
 }
@@ -62,7 +63,6 @@ def two_number_file(period, s):
 def run_files(period):
     return {
         "no groin": sr.baseline_file(period),
-        "pinned groin (in the runner now)": ssr.pinned_file(period),
         f"corrected, {CHOSEN} to 2016": two_number_file(period, CHOSEN),
         f"corrected, {JOINT} to 2016": two_number_file(period, JOINT),
     }
@@ -102,7 +102,7 @@ def strength_over_time():
     record_caption(png, (
         "**Tests:** nothing; this figure shows the options compared in the corrected-groin hindcast. **How to "
         "read:** each line is the corrected groin's strength, the share of the wave-climate net drift arriving at "
-        "the groin that it holds back each year (0.12 at Buxton is about 11 m of shoreline a year). Dotted lines: "
+        "the groin that it holds back each year (0.16 at Buxton is about 15 m of shoreline a year). Dotted lines: "
         "the structure's recorded events (`../../../1-observations/data/structure_history.md`); shading: the "
         "structural losses reported for 2015-2021. Arrows: the calibration (1996-2009) and test (2009-2025) "
         "periods. The pinned groin in the runner now is not drawn: its 0.6 is a share of BRIE's diffusive "
@@ -118,28 +118,28 @@ def gap_over_time():
                              gridspec_kw=dict(width_ratios=(13, 16)))
     for i, period in enumerate((CAL, TEST)):
         ax = axes[i]
-        obs = sr.coastsat_change(period)
+        obs = cgm.observed_change(period)
         files = run_files(period)
         for label, (col, ls) in RUNS.items():
-            m = sr.model_change(files[label])
-            ax.plot(period + np.arange(len(m)) + 0.5, m, color=col, ls=ls, lw=1.6 if "corrected" in label else 1.3)
-        n = len(sr.model_change(files["no groin"]))
-        obs = obs[(obs.index >= period) & (obs.index < period + n)]       # this period's years only
-        ax.plot(obs.index + 0.5, obs.values, "o-", color=OBS_C, lw=0.9, ms=3.5, mfc="white", mew=1.0)
-        yrs = [y for y in photos.index if period < y <= period + n]
+            m = cgm.model_change(files[label])
+            ax.plot(period + np.arange(len(m)), m, color=col, ls=ls, lw=1.6 if "corrected" in label else 1.3)
+        last = last_model_year(period)                                  # row k is calendar year period + k
+        obs = obs[(obs.index >= period) & (obs.index <= last)]          # this period's years only
+        ax.plot(obs.index, obs.values, "o-", color=OBS_C, lw=0.9, ms=3.5, mfc="white", mew=1.0)
+        yrs = [y for y in photos.index if period < y <= last]
         g0 = np.interp(period, photos.index, photos.values)
         ax.plot(yrs, [photos[y] - g0 for y in yrs], "s", color=OBS_C, ms=5, ls=(0, (3, 2)), lw=0.9)
         if period == TEST:
-            ax.axvline(2017.5, color=INK_MUTED, lw=0.7, ls=(0, (1, 2)))
-            ax.text(2017.7, ax.get_ylim()[1] * 0.95, "2017 fill;\ngroin off",
+            ax.axvline(2016.5, color=INK_MUTED, lw=0.7, ls=(0, (1, 2)))
+            ax.text(2016.7, ax.get_ylim()[1] * 0.95, "2017 fill;\ngroin off",
                     fontsize=6.5, color=INK_MUTED, va="top")
         ax.axhline(0, color=INK_MUTED, lw=0.5)
-        ax.set_xlim(period - 0.3, period + n + 0.3)
+        ax.set_xlim(period - 0.3, last + 0.3)
         ax.set_xlabel("Year")
         ax.grid(axis="y")
         open_frame(ax)
         _letter_inside(ax, i)
-        ax.set_title(f"{'Calibration' if period == CAL else 'Test'}, {period}-{sr.window(period)[-4:]}",
+        ax.set_title(f"{'Calibration' if period == CAL else 'Test'}, {period}-{last}",
                      loc="center", fontsize=8.5)
     axes[0].set_ylabel("Change in the gap across the\ngroins since the start (m)")
     handles = [Line2D([], [], color=col, ls=ls, lw=1.5, label=label) for label, (col, ls) in RUNS.items()]
@@ -156,11 +156,12 @@ def gap_over_time():
 # Figure 3: how the strength was chosen, and what each choice gives on the test
 def choosing_strength(sc_):
     cal = sc_[(sc_.period == CAL) & (sc_.arm == "corrected")].copy()
-    cal = cal[((cal.schedule == "instant1996") & (cal.off.fillna("") == "")) | (cal.schedule == "periods")]
+    cal = cal[((cal.schedule == "instant1996") & (cal.off.fillna("") == "") & (cal.f == 1.0))
+              | (cal.schedule == "periods")]
     cal["s"] = [r.b if r.schedule == "instant1996" else cgm.parse_periods(r.off)[0][1] for r in cal.itertuples()]
-    cal = cal.sort_values("s")
+    cal = cal.sort_values("s").drop_duplicates("s")
     test = sc_[(sc_.period == TEST) & (sc_.schedule == "periods")].copy()
-    test = test[test.off.isin([two_number(s) for s in (CHOSEN, JOINT, PHOTO)])]
+    test = test[test.off.isin([two_number(s) for s in (WEAKER, CHOSEN, JOINT, PHOTO)])]
     test["s"] = [cgm.parse_periods(o)[0][1] for o in test.off]
     test = test.sort_values("s")
     none = sc_[(sc_.period == TEST) & (sc_.arm == "none")].iloc[0]
@@ -181,15 +182,16 @@ def choosing_strength(sc_):
     ax.set_title("Calibration: each record wants a different strength", loc="center", fontsize=8)
     ax = axes[1]
     x = np.arange(len(test))
-    for k, (col, mk, name) in enumerate((("rmse_2009_2016", "o", "2009-2016"), ("rmse_2017_2024", "s", "2017-2024"))):
+    for k, (col, mk, name) in enumerate((("rmse_2010_2016", "o", "2010-2016"), ("rmse_2017_2025", "s", "2017-2025"))):
         ax.plot(x + (k - 0.5) * 0.18, test[col], mk, color=INK, mfc="white" if k else INK, ms=6, label=name,
                 ls="none")
         ax.axhline(none[col], color=C["BASE"], lw=1.0, ls="-" if k == 0 else (0, (3, 2)))
-    ax.text(len(test) - 0.5, none["rmse_2009_2016"] + 1, "no groin, 2009-2016", fontsize=6.3, color=C["BASE"],
+    ax.text(len(test) - 0.5, none["rmse_2010_2016"] + 1, "no groin, 2010-2016", fontsize=6.3, color=C["BASE"],
             ha="right", va="bottom")
-    ax.text(len(test) - 0.5, none["rmse_2017_2024"] - 1, "no groin, 2017-2024", fontsize=6.3, color=C["BASE"],
+    ax.text(len(test) - 0.5, none["rmse_2017_2025"] - 1, "no groin, 2017-2025", fontsize=6.3, color=C["BASE"],
             ha="right", va="top")
-    ax.set_xticks(x, [f"{s:g}\n({n})" for s, n in zip(test.s, ("annual", "both", "photos"))])
+    names = {WEAKER: "weaker", CHOSEN: "annual", JOINT: "both", PHOTO: "photos"}
+    ax.set_xticks(x, [f"{s:g}\n({names[s]})" for s in test.s])
     ax.set_xlim(-0.5, len(test) - 0.5)
     ax.set_ylim(0, None)
     ax.set_xlabel("Strength (calibrated on)")
@@ -198,7 +200,7 @@ def choosing_strength(sc_):
     ax.grid(axis="y")
     open_frame(ax)
     _letter_inside(ax, 1)
-    ax.set_title("Test: the annual-fitted strength predicts best", loc="center", fontsize=8)
+    ax.set_title("Test: the weaker strengths predict best", loc="center", fontsize=8)
     fig.suptitle("Which strength, and fitted to which observations?")
     png = FIGS / "corrected_groin_3_choosing_strength.png"
     save(fig, png, dpi=250, close=True)
@@ -208,23 +210,20 @@ def choosing_strength(sc_):
         "it to. **How to read:** (a) the root-mean-square error in the gap across the groins over the calibration "
         "period, 1996-2009, against the groin's strength, scored on the annual CoastSat gap (solid) and on the "
         "wet/dry photo dates (dashed); dotted lines mark the strength each target picks and the one that balances "
-        "them. (b) Each of those three strengths run on the test period, 2009-2025, with the groin off from the "
-        "2017 fill: the annual CoastSat error before (filled circles) and after (open squares) the fill; grey "
-        "lines are the run without a groin. Only 2009-2016 played no part in any choice. **Shows:** the annual "
-        f"record wants {CHOSEN}, the photos {PHOTO}. On the test the annual-fitted strength is best before the fill "
-        f"({t.loc[CHOSEN, 'rmse_2009_2016']:.1f} m, against {t.loc[JOINT, 'rmse_2009_2016']:.1f} m for {JOINT}, "
-        f"{t.loc[PHOTO, 'rmse_2009_2016']:.1f} m for {PHOTO} and {none['rmse_2009_2016']:.1f} m with no groin) and "
-        f"after it ({t.loc[CHOSEN, 'rmse_2017_2024']:.1f} m). The photo-fitted strength does no better than no "
-        "groin before the fill. Its pull toward a stronger groin rests on the 2004 survey, where the photos and "
-        "CoastSat disagree by 42 m."))
+        "them. (b) Each of those strengths, and a weaker one, run on the test period, 2009-2025, with the groin "
+        "off from the 2017 fill: the annual CoastSat error before (filled circles) and after (open squares) the "
+        "fill; grey lines are the run without a groin. Only 2010-2016 played no part in any choice. **Shows:** the "
+        f"annual record wants {CHOSEN}, the photos {PHOTO}, both together {JOINT}. On the test the error rises with "
+        f"strength before the fill: {t.loc[WEAKER, 'rmse_2010_2016']:.1f} m at {WEAKER}, "
+        f"{t.loc[CHOSEN, 'rmse_2010_2016']:.1f} m at {CHOSEN}, {t.loc[JOINT, 'rmse_2010_2016']:.1f} m at {JOINT} and "
+        f"{t.loc[PHOTO, 'rmse_2010_2016']:.1f} m at {PHOTO}, against {none['rmse_2010_2016']:.1f} m with no groin. "
+        f"The annual-fitted strength beats no groin; the photo-fitted one does worse. The test would prefer a "
+        f"groin weaker than any calibration target picks."))
 
 
 # Figure 4: every version on the test period, before and after the 2017 fill
 def test_summary(sc_):
     t = sc_[sc_.period == TEST]
-    obs = sr.coastsat_change(TEST)
-    pin_split = cgm.split_scores(ssr.pinned_file(TEST), TEST, obs)
-    drift_split = cgm.split_scores(ssr.drift_file(TEST), TEST, obs)
 
     def row(sel):
         r = t[sel]
@@ -232,58 +231,56 @@ def test_summary(sc_):
 
     rows = [
         ("no groin", row(t.arm == "none")),
-        ("pinned groin (in the runner now)", pd.Series(pin_split)),
-        ("drift groin, b 0.1 f 0.4", pd.Series(drift_split)),
         ("corrected, 0.2 then 0.16, never off", row((t.schedule == "ramp1996") & (t.off.fillna("") == "")
                                                     & (t.b == 0.2) & (t.f == 0.8))),
         ("corrected, declining 2015-2021 to 0", row(t.off == "2015-2021r0")),
         ("corrected, 0.2 then 0.16, off from 2017", row(t.off == "1969:0.2,2004:0.16,2017:0")),
         (f"corrected, {JOINT}, off from 2017", row(t.off == two_number(JOINT))),
         (f"corrected, {CHOSEN}, off from 2017", row(t.off == two_number(CHOSEN))),
+        (f"corrected, {WEAKER}, off from 2017", row(t.off == two_number(WEAKER))),
     ]
     rows = [(n, r) for n, r in rows if r is not None]
     fig, ax = plt.subplots(figsize=figsize("double", height=3.4), constrained_layout=True)
     yv = np.arange(len(rows))[::-1]
     for y, (name, r) in zip(yv, rows):
-        a, b = r["rmse_2009_2016"], r["rmse_2017_2024"]
+        a, b = r["rmse_2010_2016"], r["rmse_2017_2025"]
         ax.plot([a, b], [y, y], color=C["BASE_FILL"], lw=2.5, zorder=1)
         ax.plot(a, y, "o", color=INK, ms=6, zorder=2)
         ax.plot(b, y, "s", color=INK, mfc="white", ms=6, zorder=2)
     nb = rows[0][1]
-    ax.axvline(nb["rmse_2009_2016"], color=C["BASE"], lw=0.7, ls="-")
-    ax.axvline(nb["rmse_2017_2024"], color=C["BASE"], lw=0.7, ls=(0, (3, 2)))
+    ax.axvline(nb["rmse_2010_2016"], color=C["BASE"], lw=0.7, ls="-")
+    ax.axvline(nb["rmse_2017_2025"], color=C["BASE"], lw=0.7, ls=(0, (3, 2)))
     ax.set_yticks(yv, [n for n, _ in rows], fontsize=7)
     ax.set_xlim(0, None)
     ax.set_xlabel("Annual RMS error in the gap across the groins, test period (m)")
     ax.grid(axis="x")
     open_frame(ax)
-    ax.legend(handles=[Line2D([], [], marker="o", color=INK, ls="none", label="2009-2016"),
-                       Line2D([], [], marker="s", color=INK, mfc="white", ls="none", label="2017-2024 (after the fill)"),
+    ax.legend(handles=[Line2D([], [], marker="o", color=INK, ls="none", label="2010-2016"),
+                       Line2D([], [], marker="s", color=INK, mfc="white", ls="none", label="2017-2025 (after the fill)"),
                        Line2D([], [], color=C["BASE"], lw=0.7, label="no groin, each half")],
               loc="lower right", fontsize=6.8, frameon=False)
     fig.suptitle("How does each groin do on 2009-2025, before and after the 2017 fill?")
     png = FIGS / "corrected_groin_4_test_summary.png"
     save(fig, png, dpi=250, close=True)
-    best = rows[-1][1]
     named = dict(rows)
-    on = [r["rmse_2017_2024"] for n, r in rows[1:] if "off from 2017" not in n]
-    off = [r["rmse_2017_2024"] for n, r in rows if "off from 2017" in n]
+    ann = named[f"corrected, {CHOSEN}, off from 2017"]
+    weak = named[f"corrected, {WEAKER}, off from 2017"]
+    on = [r["rmse_2017_2025"] for n, r in rows[1:] if "off from 2017" not in n]
+    off = [r["rmse_2017_2025"] for n, r in rows if "off from 2017" in n]
     record_caption(png, (
-        "**Tests:** how each version of the groin does on the test period, 2009-2025, which was not used to fit "
-        "its strength, split at the 2017 Buxton fill. **How to read:** one row per run; the filled circle is the "
-        "annual CoastSat error in the gap across the groins for 2009-2016, the open square for 2017-2024; grey "
-        "lines mark the run without a groin. The pinned groin is the one in the runner now (b 0.6, f 0.6); the "
-        "drift groin is the corrected groin without its leak correction; all runs on the 2026-10-12 setup. "
-        f"**Shows:** every groin that stays on after 2017 misses 2017-2024 by {min(on):.0f}-{max(on):.0f} m, because "
+        "**Tests:** how each version of the corrected groin does on the test period, 2009-2025, which was not "
+        "used to fit its strength, split at the 2017 Buxton fill. **How to read:** one row per run; the filled "
+        "circle is the annual CoastSat error in the gap across the groins for 2010-2016, the open square for "
+        "2017-2025; grey lines mark the run without a groin. All runs on the calendar-year setup; the pinned and "
+        "drift groins were only run on the earlier six-month setup and are not shown. "
+        f"**Shows:** every groin that stays on after 2017 misses 2017-2025 by {min(on):.0f}-{max(on):.0f} m, because "
         "it holds the fill's sand at GIS 6 while the observed sand passed the groin field; switching the groin off "
-        f"at the fill brings that half to {min(off):.0f}-{max(off):.0f} m. Before the fill the pinned groin does best "
-        f"({named['pinned groin (in the runner now)']['rmse_2009_2016']:.1f} m), then the two-number groin at "
-        f"{CHOSEN} ({best['rmse_2009_2016']:.1f} m) and the drift groin "
-        f"({named['drift groin, b 0.1 f 0.4']['rmse_2009_2016']:.1f} m); the stronger corrected groins do worse. "
-        f"The two-number groin fitted to annual CoastSat ({CHOSEN}, off from 2017) is best on both halves of the "
-        f"corrected runs ({best['rmse_2009_2016']:.1f} and {best['rmse_2017_2024']:.1f} m). The 2017 switch-off was "
-        "suggested by the 2017-2024 misfit and is supported by the placement record, so only 2009-2016 is fully "
-        "independent (README)."))
+        f"at the fill brings that half to {min(off):.0f}-{max(off):.0f} m, still above no groin "
+        f"({nb['rmse_2017_2025']:.1f} m). Before the fill the two-number groin fitted to annual CoastSat ({CHOSEN}) "
+        f"scores {ann['rmse_2010_2016']:.1f} m against {nb['rmse_2010_2016']:.1f} m with no groin; the weaker "
+        f"{WEAKER} scores {weak['rmse_2010_2016']:.1f} and {weak['rmse_2017_2025']:.1f} m, the best of any run. The "
+        "2017 switch-off was suggested by the test misfit and is supported by the placement record, so only "
+        "2010-2016 is fully independent (README)."))
 
 
 def main():
@@ -299,12 +296,12 @@ def main():
         "calibration period it was fitted to and in the test period it was not. **How to read:** the change in "
         "the gap between GIS 6 (updrift, north) and GIS 5 (downdrift, south) since each period's start, from its "
         "own starting topography; positive means the gap widened. Teal: observed, annual CoastSat (open circles, joined) "
-        "and the wet/dry photo dates (squares, dashed). Lines: no groin (grey), the pinned groin in the runner now "
-        f"(purple), and the two-number corrected groin at {CHOSEN} (solid black, fitted to annual CoastSat) and "
+        "and the wet/dry photo dates (squares, dashed). Lines: no groin (grey) and the two-number corrected "
+        f"groin at {CHOSEN} (solid black, fitted to annual CoastSat) and "
         f"{JOINT} (dashed, fitted to both records), each off from the 2017 fill. **Shows:** without a groin the "
-        "gap closes far too fast in both periods. In the test, the pinned groin follows the observed gap until "
-        "2017 and then holds it open while the observed gap closes; the corrected groin, off from the fill, "
-        f"follows it through ({best['end_model']:.0f} m at the end against {best['end_obs']:.0f} m observed and "
+        "gap closes far too fast in both periods. Row k is calendar year start + k; each period starts on its "
+        "start year's calendar-mean line. In the test the corrected groin, off from the fill, "
+        f"follows the observed gap through ({best['end_model']:.0f} m at the end against {best['end_obs']:.0f} m observed and "
         f"{none['end_model']:.0f} m with no groin)."))
     choosing_strength(sc_)
     test_summary(sc_)

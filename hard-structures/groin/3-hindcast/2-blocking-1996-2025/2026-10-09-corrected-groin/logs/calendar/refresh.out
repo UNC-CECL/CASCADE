@@ -1,0 +1,177 @@
+0 of 98 done; running 98 in 4 streams
+22:17:33  tracked 1996_2009 b0.02_f0.8: exit 0 (2.4 min)
+22:17:33  tracked 1996_2009 b0.02_f0.2: exit 0 (2.4 min)
+22:17:33  tracked 1996_2009 b0.02_f0.4: exit 0 (2.4 min)
+22:17:33  tracked 1996_2009 b0.02_f0.6: exit 0 (2.4 min)
+22:19:57  tracked 1996_2009 b0.05_f0.4: exit 0 (2.4 min)
+22:19:57  tracked 1996_2009 b0.05_f0.2: exit 0 (2.4 min)
+22:19:57  tracked 1996_2009 b0.05_f0.8: exit 0 (2.4 min)
+22:19:57  tracked 1996_2009 b0.05_f0.6: exit 0 (2.4 min)
+22:22:12  tracked 1996_2009 b0.08_f0.4: exit 0 (2.3 min)
+22:22:12  tracked 1996_2009 b0.08_f0.6: exit 0 (2.3 min)
+22:22:12  tracked 1996_2009 b0.08_f0.2: exit 0 (2.3 min)
+22:22:12  tracked 1996_2009 b0.08_f0.8: exit 0 (2.3 min)
+22:24:30  tracked 1996_2009 b0.10_f0.4: exit 0 (2.3 min)
+22:24:30  tracked 1996_2009 b0.10_f0.2: exit 0 (2.3 min)
+22:24:30  tracked 1996_2009 b0.10_f0.6: exit 0 (2.3 min)
+22:24:31  tracked 1996_2009 b0.10_f0.8: exit 0 (2.3 min)
+22:26:38  tracked 1996_2009 b0.12_f0.2: exit 0 (2.1 min)
+22:26:39  tracked 1996_2009 b0.12_f0.8: exit 0 (2.1 min)
+22:26:40  tracked 1996_2009 b0.12_f0.6: exit 0 (2.2 min)
+22:26:40  tracked 1996_2009 b0.12_f0.4: exit 0 (2.2 min)
+22:28:47  tracked 1996_2009 b0.15_f0.2: exit 0 (2.1 min)
+22:28:48  tracked 1996_2009 b0.15_f0.8: exit 0 (2.1 min)
+22:28:49  tracked 1996_2009 b0.15_f0.6: exit 0 (2.1 min)
+22:28:49  tracked 1996_2009 b0.15_f0.4: exit 0 (2.2 min)
+22:30:55  tracked 1996_2009 b0.20_f0.2: exit 0 (2.1 min)
+22:30:56  tracked 1996_2009 b0.20_f0.4: exit 0 (2.1 min)
+22:30:56  tracked 1996_2009 b0.20_f0.8: exit 0 (2.1 min)
+22:30:56  tracked 1996_2009 b0.20_f0.6: exit 0 (2.1 min)
+22:33:03  tracked 1996_2009 b0.30_f0.2: exit 0 (2.1 min)
+22:33:04  tracked 1996_2009 b0.30_f0.6: exit 0 (2.1 min)
+22:33:04  tracked 1996_2009 b0.30_f0.4: exit 0 (2.1 min)
+22:33:04  tracked 1996_2009 b0.30_f0.8: exit 0 (2.1 min)
+22:35:12  tracked 1996_2009 b0.15_f0.9: exit 0 (2.1 min)
+22:35:12  tracked 1996_2009 b0.20_f1.0: exit 0 (2.1 min)
+22:35:13  tracked 1996_2009 b0.15_f1.0: exit 0 (2.2 min)
+22:35:13  tracked 1996_2009 b0.20_f0.9: exit 0 (2.2 min)
+22:37:19  tracked 1996_2009 b0.25_f0.9: exit 0 (2.1 min)
+22:37:20  tracked 1996_2009 b0.25_f1.0: exit 0 (2.1 min)
+22:37:20  tracked 1996_2009 b0.30_f1.0: exit 0 (2.1 min)
+22:37:20  tracked 1996_2009 b0.30_f0.9: exit 0 (2.1 min)
+22:39:27  tracked 1996_2009 b0.25_f0.4: exit 0 (2.1 min)
+22:39:27  tracked 1996_2009 b0.25_f0.6: exit 0 (2.1 min)
+22:39:28  tracked 1996_2009 b0.25_f0.8: exit 0 (2.1 min)
+22:39:29  tracked_instant1996 1996_2009 b0.02_f1.0: exit 0 (2.1 min)
+22:41:34  tracked_instant1996 1996_2009 b0.05_f1.0: exit 0 (2.1 min)
+22:41:35  tracked_instant1996 1996_2009 b0.08_f1.0: exit 0 (2.1 min)
+22:41:35  tracked_instant1996 1996_2009 b0.10_f1.0: exit 0 (2.1 min)
+22:41:36  tracked_instant1996 1996_2009 b0.12_f1.0: exit 0 (2.1 min)
+22:43:42  tracked_instant1996 1996_2009 b0.15_f1.0: exit 0 (2.1 min)
+22:43:43  tracked_instant1996 1996_2009 b0.20_f1.0: exit 0 (2.1 min)
+22:43:44  tracked_instant1996 1996_2009 b0.25_f1.0: exit 0 (2.1 min)
+22:43:44  tracked_instant1996 1996_2009 b0.30_f1.0: exit 0 (2.1 min)
+22:45:53  tracked_ramp1996 1996_2009 b0.10_f0.2: exit 0 (2.2 min)
+22:45:53  tracked_ramp1996 1996_2009 b0.10_f0.4: exit 0 (2.2 min)
+22:45:54  tracked_ramp1996 1996_2009 b0.10_f0.8: exit 0 (2.2 min)
+22:45:54  tracked_ramp1996 1996_2009 b0.10_f0.6: exit 0 (2.2 min)
+22:48:04  tracked_ramp1996 1996_2009 b0.15_f0.2: exit 0 (2.2 min)
+22:48:04  tracked_ramp1996 1996_2009 b0.15_f0.4: exit 0 (2.2 min)
+22:48:04  tracked_ramp1996 1996_2009 b0.15_f0.6: exit 0 (2.2 min)
+22:48:05  tracked_ramp1996 1996_2009 b0.15_f0.8: exit 0 (2.2 min)
+22:50:15  tracked_ramp1996 1996_2009 b0.20_f0.4: exit 0 (2.2 min)
+22:50:15  tracked_ramp1996 1996_2009 b0.20_f0.8: exit 0 (2.2 min)
+22:50:15  tracked_ramp1996 1996_2009 b0.20_f0.6: exit 0 (2.2 min)
+22:50:15  tracked_ramp1996 1996_2009 b0.20_f0.2: exit 0 (2.2 min)
+22:52:27  tracked_ramp1996 1996_2009 b0.25_f0.4: exit 0 (2.2 min)
+22:52:27  tracked_ramp1996 1996_2009 b0.25_f0.6: exit 0 (2.2 min)
+22:52:27  tracked_ramp1996 1996_2009 b0.25_f0.2: exit 0 (2.2 min)
+22:52:27  tracked_ramp1996 1996_2009 b0.25_f0.8: exit 0 (2.2 min)
+22:54:36  tracked_ramp1996 1996_2009 b0.30_f0.4: exit 0 (2.2 min)
+22:54:37  tracked_ramp1996 1996_2009 b0.30_f0.8: exit 0 (2.2 min)
+22:54:37  tracked_ramp1996 1996_2009 b0.30_f0.6: exit 0 (2.2 min)
+22:54:37  tracked_ramp1996 1996_2009 b0.30_f0.2: exit 0 (2.2 min)
+22:56:47  tracked_ramp1996 1996_2009 b0.40_f0.2: exit 0 (2.2 min)
+22:56:48  tracked_ramp1996 1996_2009 b0.40_f0.8: exit 0 (2.2 min)
+22:56:48  tracked_ramp1996 1996_2009 b0.40_f0.4: exit 0 (2.2 min)
+22:56:48  tracked_ramp1996 1996_2009 b0.40_f0.6: exit 0 (2.2 min)
+22:58:58  tracked_periods_1969-0.11_2017-0 1996_2009 b0.11_f1.0: exit 0 (2.2 min)
+22:58:59  tracked_periods_1969-0.14_2017-0 1996_2009 b0.14_f1.0: exit 0 (2.2 min)
+22:58:59  tracked_periods_1969-0.13_2017-0 1996_2009 b0.13_f1.0: exit 0 (2.2 min)
+22:58:59  tracked_periods_1969-0.16_2017-0 1996_2009 b0.16_f1.0: exit 0 (2.2 min)
+23:01:11  tracked_periods_1969-0.17_2017-0 1996_2009 b0.17_f1.0: exit 0 (2.2 min)
+23:01:11  tracked_periods_1969-0.18_2017-0 1996_2009 b0.18_f1.0: exit 0 (2.2 min)
+23:01:12  tracked_periods_1969-0.19_2017-0 1996_2009 b0.19_f1.0: exit 0 (2.2 min)
+23:02:23  tracked_periods_1969-0.12_2017-0 2009_2025 b0.12_f1.0: exit 0 (3.4 min)
+23:04:31  tracked_periods_1969-0.18_2017-0 2009_2025 b0.18_f1.0: exit 0 (3.3 min)
+23:04:32  tracked_periods_1969-0.19_2017-0 2009_2025 b0.19_f1.0: exit 0 (3.3 min)
+23:04:32  tracked_periods_1969-0.25_2017-0 2009_2025 b0.25_f1.0: exit 0 (3.3 min)
+23:05:44  tracked_periods_1969-0.2_2004-0.16_2017-0 2009_2025 b0.20_f1.0: exit 0 (3.3 min)
+23:07:51  tracked 2009_2025 b0.20_f0.8: exit 0 (3.3 min)
+23:07:53  tracked 2009_2025 b0.20_f0.9: exit 0 (3.4 min)
+23:07:54  tracked_instant2004_off2017 2009_2025 b0.20_f0.8: exit 0 (3.4 min)
+23:09:05  tracked_instant2004_off2017 2009_2025 b0.20_f0.9: exit 0 (3.4 min)
+23:11:10  tracked_instant1996 2009_2025 b0.20_f1.0: exit 0 (3.3 min)
+23:11:13  tracked_ramp1996 2009_2025 b0.20_f0.8: exit 0 (3.3 min)
+23:11:14  tracked_instant1996_off2017 2009_2025 b0.20_f1.0: exit 0 (3.3 min)
+23:12:14  tracked_ramp1996_off2017 2009_2025 b0.20_f0.8: exit 0 (3.1 min)
+23:13:44  tracked_instant2004_off2015-2021r0 2009_2025 b0.20_f0.8: exit 0 (2.6 min)
+23:13:45  tracked_instant2004_off2015-2021r0.33 2009_2025 b0.20_f0.8: exit 0 (2.5 min)
+DONE: 98/98 clean; failed []
+=== calibration, best joint per schedule (corrected groin) ===
+   schedule   b   f  rmse_annual  rmse_photos  joint_rmse  island_vs_none_m
+instant2004 0.2 1.0         19.1         18.3        18.7              12.2
+instant1996 0.2 1.0         19.1         18.3        18.7              12.2
+    periods 0.2 1.0         17.2         20.8        19.1              11.7
+   ramp1996 0.2 0.8         14.9         26.3        21.4              11.5
+=== calibration, best annual and best photos per schedule ===
+   schedule   b   f  rmse_annual  rmse_photos  joint_rmse
+    periods 0.2 1.0         12.6         26.1        20.5
+instant2004 0.2 1.0         13.0         29.3        22.6
+instant1996 0.2 1.0         13.0         29.3        22.6
+   ramp1996 0.2 0.8         14.9         26.3        21.4
+   schedule   b   f  rmse_annual  rmse_photos  joint_rmse
+instant1996 0.2 1.0         30.3         15.1        23.9
+instant2004 0.2 1.0         30.3         15.1        23.9
+   ramp1996 0.3 0.8         32.4         18.4        26.3
+    periods 0.2 1.0         17.2         20.8        19.1
+=== test 2009-2025 ===
+      arm    schedule                       off   b   f  strength_after_failure  rmse_annual  rmse_photos  joint_rmse  rmse_2010_2016  rmse_2017_2025  end_model  end_obs
+     none                                   NaN 0.0 NaN                     NaN         21.8         23.5        22.7            32.4             5.2      -61.0    -60.2
+corrected instant2004                           0.2 0.8                     0.2         37.3         38.4        37.9            18.5            47.0      -12.2    -60.2
+corrected instant2004                           0.2 0.9                     0.2         43.8         45.3        44.6            23.3            54.7       -4.0    -60.2
+corrected instant2004                      2017 0.2 0.8                     0.2         14.4         11.2        12.9            18.5            10.3      -59.6    -60.2
+corrected instant2004                      2017 0.2 0.9                     0.2         17.6         13.1        15.5            23.3            11.5      -58.5    -60.2
+corrected instant2004               2015-2021r0 0.2 0.8                     0.2         19.6         20.0        19.8            18.6            20.4      -58.4    -60.2
+corrected instant2004            2015-2021r0.33 0.2 0.8                     0.2         23.6         24.4        24.0            18.5            27.0      -42.2    -60.2
+corrected instant1996                           0.2 1.0                     0.2         49.0         50.9        49.9            28.4            60.4        1.4    -60.2
+corrected instant1996                      2017 0.2 1.0                     0.2         20.9         15.7        18.5            28.4            12.3      -58.4    -60.2
+corrected    ramp1996                           0.2 0.8                     0.2         37.3         38.4        37.9            18.5            47.0      -12.2    -60.2
+corrected    ramp1996                      2017 0.2 0.8                     0.2         14.4         11.2        12.9            18.5            10.3      -59.6    -60.2
+corrected     periods          1969:0.12,2017:0 0.1 1.0                     0.1         10.1          9.2         9.7            12.0             8.2      -60.4    -60.2
+corrected     periods          1969:0.18,2017:0 0.2 1.0                     0.2         17.6         13.1        15.5            23.3            11.5      -58.5    -60.2
+corrected     periods          1969:0.19,2017:0 0.2 1.0                     0.2         19.3         14.1        16.9            26.1            11.6      -58.5    -60.2
+corrected     periods          1969:0.25,2017:0 0.2 1.0                     0.2         28.3         21.3        25.0            39.6            14.4      -58.0    -60.2
+corrected     periods 1969:0.2,2004:0.16,2017:0 0.2 1.0                     0.2         14.4         11.2        12.9            18.5            10.3      -59.6    -60.2
+best calibration cells: [(0.2, 1.0, 'instant2004'), (0.2, 1.0, 'instant1996'), (0.2, 0.8, 'ramp1996')]
+4 of 6 done; running 2 in 4 streams
+23:16:05  tracked 2009_2025 b0.20_f1.0: exit 0 (2.2 min)
+23:16:05  tracked_instant2004_off2017 2009_2025 b0.20_f1.0: exit 0 (2.3 min)
+DONE: 2/2 clean; failed []
+=== calibration, best joint per schedule (corrected groin) ===
+   schedule   b   f  rmse_annual  rmse_photos  joint_rmse  island_vs_none_m
+instant2004 0.2 1.0         19.1         18.3        18.7              12.2
+instant1996 0.2 1.0         19.1         18.3        18.7              12.2
+    periods 0.2 1.0         17.2         20.8        19.1              11.7
+   ramp1996 0.2 0.8         14.9         26.3        21.4              11.5
+=== calibration, best annual and best photos per schedule ===
+   schedule   b   f  rmse_annual  rmse_photos  joint_rmse
+    periods 0.2 1.0         12.6         26.1        20.5
+instant2004 0.2 1.0         13.0         29.3        22.6
+instant1996 0.2 1.0         13.0         29.3        22.6
+   ramp1996 0.2 0.8         14.9         26.3        21.4
+   schedule   b   f  rmse_annual  rmse_photos  joint_rmse
+instant1996 0.2 1.0         30.3         15.1        23.9
+instant2004 0.2 1.0         30.3         15.1        23.9
+   ramp1996 0.3 0.8         32.4         18.4        26.3
+    periods 0.2 1.0         17.2         20.8        19.1
+=== test 2009-2025 ===
+      arm    schedule                       off   b   f  strength_after_failure  rmse_annual  rmse_photos  joint_rmse  rmse_2010_2016  rmse_2017_2025  end_model  end_obs
+     none                                   NaN 0.0 NaN                     NaN         21.8         23.5        22.7            32.4             5.2      -61.0    -60.2
+corrected instant2004                           0.2 0.8                     0.2         37.3         38.4        37.9            18.5            47.0      -12.2    -60.2
+corrected instant2004                           0.2 0.9                     0.2         43.8         45.3        44.6            23.3            54.7       -4.0    -60.2
+corrected instant2004                           0.2 1.0                     0.2         49.0         50.9        49.9            28.4            60.4        1.4    -60.2
+corrected instant2004                      2017 0.2 0.8                     0.2         14.4         11.2        12.9            18.5            10.3      -59.6    -60.2
+corrected instant2004                      2017 0.2 0.9                     0.2         17.6         13.1        15.5            23.3            11.5      -58.5    -60.2
+corrected instant2004                      2017 0.2 1.0                     0.2         20.9         15.7        18.5            28.4            12.3      -58.4    -60.2
+corrected instant2004               2015-2021r0 0.2 0.8                     0.2         19.6         20.0        19.8            18.6            20.4      -58.4    -60.2
+corrected instant2004            2015-2021r0.33 0.2 0.8                     0.2         23.6         24.4        24.0            18.5            27.0      -42.2    -60.2
+corrected instant1996                           0.2 1.0                     0.2         49.0         50.9        49.9            28.4            60.4        1.4    -60.2
+corrected instant1996                      2017 0.2 1.0                     0.2         20.9         15.7        18.5            28.4            12.3      -58.4    -60.2
+corrected    ramp1996                           0.2 0.8                     0.2         37.3         38.4        37.9            18.5            47.0      -12.2    -60.2
+corrected    ramp1996                      2017 0.2 0.8                     0.2         14.4         11.2        12.9            18.5            10.3      -59.6    -60.2
+corrected     periods          1969:0.12,2017:0 0.1 1.0                     0.1         10.1          9.2         9.7            12.0             8.2      -60.4    -60.2
+corrected     periods          1969:0.18,2017:0 0.2 1.0                     0.2         17.6         13.1        15.5            23.3            11.5      -58.5    -60.2
+corrected     periods          1969:0.19,2017:0 0.2 1.0                     0.2         19.3         14.1        16.9            26.1            11.6      -58.5    -60.2
+corrected     periods          1969:0.25,2017:0 0.2 1.0                     0.2         28.3         21.3        25.0            39.6            14.4      -58.0    -60.2
+corrected     periods 1969:0.2,2004:0.16,2017:0 0.2 1.0                     0.2         14.4         11.2        12.9            18.5            10.3      -59.6    -60.2
