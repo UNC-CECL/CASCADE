@@ -1,0 +1,7 @@
+0 of 4 done; running 4 in 4 streams
+21:26:44  s 0: exit 0 (3.8 min)
+21:26:44  s 0.1: exit 0 (3.8 min)
+21:26:46  s 0.16: exit 0 (3.8 min)
+21:26:46  s 0.25: exit 0 (3.8 min)
+DONE: 4/4 clean; failed []
+start check: model row 0 vs the built offset over GIS 2-12, max 0.0 m (same run)

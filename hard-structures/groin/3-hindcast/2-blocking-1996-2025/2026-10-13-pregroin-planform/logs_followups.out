@@ -1,0 +1,37 @@
+wrote storms_1968_2025_seed1_v3_split12_trim24.npy: 58 years, 562 storms
+wrote storms_1968_2025_seed2_v3_split12_trim24.npy: 58 years, 543 storms
+0 of 10 done; running 10 in 4 streams
+00:00:13  1996-2009 at 0.35: exit 0 (9.8 min)
+00:00:18  1996-2009 at 0.3: exit 0 (9.9 min)
+00:00:41  maintained 0.25, seed1: exit 0 (10.3 min)
+00:00:45  maintained 0.2, seed1: exit 0 (10.3 min)
+00:10:10  maintained 0.2, seed2: exit 0 (9.9 min)
+00:10:32  maintained 0.25, seed2: exit 0 (9.8 min)
+00:10:33  maintained 0.3, seed1: exit 0 (10.3 min)
+00:10:35  maintained 0.3, seed2: exit 0 (9.8 min)
+00:17:13  ramp to 0.25 by 1974: exit 0 (7.0 min)
+00:17:27  ramp to 0.25 by 1978: exit 0 (6.9 min)
+
+== repair ==
+              run  rmse 1996-2009  rmse 2010-2016
+           fitted            18.1             9.4
+ 1996-2009 at 0.3            17.2             7.9
+1996-2009 at 0.35            26.5             7.4
+
+== storms ==
+                    run  rmse 1978-1995
+ maintained 0.2, replay            25.3
+maintained 0.25, replay            18.3
+ maintained 0.3, replay            24.5
+  maintained 0.2, seed1            25.6
+ maintained 0.25, seed1            18.7
+  maintained 0.3, seed1            23.6
+  maintained 0.2, seed2            26.2
+ maintained 0.25, seed2            18.7
+  maintained 0.3, seed2            25.1
+
+== ramp ==
+                 run  rmse 1978-1995  rmse 1970-1977 build  rmse 1970-1995
+     fitted, no ramp            18.3                  56.5            26.6
+ramp to 0.25 by 1974            18.3                  18.0            18.3
+ramp to 0.25 by 1978            18.8                   7.6            17.7

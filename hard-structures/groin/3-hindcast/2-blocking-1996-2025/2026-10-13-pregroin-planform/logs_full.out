@@ -1,0 +1,9 @@
+0 of 6 done; running 6 in 4 streams
+21:44:30  s 0: exit 0 (3.7 min)
+21:44:33  s 0.16: exit 0 (3.7 min)
+21:44:34  s 0.25: exit 0 (3.7 min)
+21:44:35  s 0.2: exit 0 (3.7 min)
+21:47:57  s 0.3: exit 0 (3.4 min)
+21:48:00  s 0.35: exit 0 (3.5 min)
+DONE: 6/6 clean; failed []
+start check: alongshore steps over GIS 2-12, run row 0 vs the built offset, worst 0.7 m

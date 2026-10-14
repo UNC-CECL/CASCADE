@@ -1,0 +1,1 @@
+patched in-process by pregroin_planform.py: island offset Island_Shoreline_Offsets_1996_with_1967_GIS2-12_PADDED_120.csv (the 1996 shoreline with the 1967 wet/dry shape over GIS 2-12), not the metadata's shoreline/v4; the corrected groin at a constant strength 0.1 (tracked reference). The runner's report does not show either.

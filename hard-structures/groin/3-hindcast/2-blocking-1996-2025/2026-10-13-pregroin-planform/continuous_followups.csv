@@ -1,0 +1,16 @@
+test,run,rmse 1996-2009,rmse 2010-2016,rmse 1978-1995,rmse 1970-1977 build,rmse 1970-1995
+repair,fitted,18.07,9.35,,,
+repair,1996-2009 at 0.3,17.22,7.95,,,
+repair,1996-2009 at 0.35,26.46,7.45,,,
+storms,"maintained 0.2, replay",,,25.3,,
+storms,"maintained 0.25, replay",,,18.27,,
+storms,"maintained 0.3, replay",,,24.54,,
+storms,"maintained 0.2, seed1",,,25.63,,
+storms,"maintained 0.25, seed1",,,18.7,,
+storms,"maintained 0.3, seed1",,,23.62,,
+storms,"maintained 0.2, seed2",,,26.19,,
+storms,"maintained 0.25, seed2",,,18.65,,
+storms,"maintained 0.3, seed2",,,25.07,,
+ramp,"fitted, no ramp",,,18.27,56.45,26.57
+ramp,ramp to 0.25 by 1974,,,18.31,17.97,18.27
+ramp,ramp to 0.25 by 1978,,,18.76,7.55,17.7

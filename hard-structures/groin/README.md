@@ -31,18 +31,18 @@ from simplest to most complex.
 4-forecast/                not started
 ```
 
-**Where we left off (2026-10-12).** All numbers on the 10-12 setup (commit `6219a55b`: test period 2009-2025, CoastSat's gap closing by 62.0 m).
+**Where we left off (2026-10-14).** Numbers on the calendar-year setup (commit `e9c5e663`).
 
 - **Pinned in the runner, unchanged:** the blocking groin, b 0.6, f 0.6, instant failure at the 2004 step (`output/calibration/groin/joint_fit.json`, read by `HAT_run_all.py`).
-- **Module design, settled:** build on BRIE and Barrier3D, never edit them. Of the seven versions tested on straight coasts, the corrected groin (version 6: the drift groin plus a correction for BRIE's sand leak at the groin's own bends) is the one to carry forward; versions 2-5 and 7 are in `2-module-tests/archive/`. It is about 26 lines of physics plus about 15 for the reference below.
-- **No no-groin run needed** (`3-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`, findings 15-17): the correction's reference is now the groin's own tracked footprint, not a matching no-groin run. It reproduces no groin exactly at b 0 and stays within 5 m of the old method; it is the default.
-- **Best groin so far: the two-number groin**, one constant strength s 0.12 (fitted to annual CoastSat on 1996-2009) and an end year of 2017 (the Buxton fill). Test joint RMSE 14.6 m, against no groin 29.2, the pin 31.6, the drift groin 28.1 and the three-number corrected groin 16.1; best on both halves, including the independent 2009-2016 (10.3 m). In calibration the corrected groin edges out the pin (20.3-20.4 m against 22.9 m).
-- **What the decisions now look like:**
-  1. **Failure schedule:** the calibration cannot tell the schedules apart; what the test period needs is the groin off at the 2017 fill. The decline the record describes (2015-2021) fits worse (finding 10). The 2017 end was suggested by the test misfit, so only 2009-2016 is fully independent.
-  2. **Calibration target:** annual CoastSat generalises (s 0.12); the photo dates do not (s 0.25, pulled by the 2004 survey where photos and CoastSat disagree by 42 m). The joint minimum is 0.18.
+- **Module design, settled:** build on BRIE and Barrier3D, never edit them. Of the seven versions tested on straight coasts, the corrected groin (version 6: the drift groin plus a correction for BRIE's sand leak at the groin's own bends) is the one to carry forward; versions 2-5 and 7 are in `2-module-tests/archive/`. Its reference is the groin's own tracked footprint, so it needs no no-groin run (`3-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`, findings 15-17).
+- **The groin's strength, from one continuous run 1967-2025** (`3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`): a ramp to 0.25 by 1978, 0.25 to 2009 (perhaps 0.30 after the 1995 repair), 0.20 to 2016, off from the 2017 fill. It follows the observed gap to 17 m over the whole record, and 0.25 is the minimum under three different pre-1984 storm sequences.
+- **The window fits are superseded as the groin's strength.** Fitted from the observed 1996 and 2009 shorelines, the corrected groin wanted 0.16 on 1996-2009 and 0.10 on 2010-2016 (`2026-10-09-corrected-groin/`, findings 18-22). Those starts already hold the fillet, so the fits measure how fast the model relaxes it; run as one history they leave the gap 30-40 m below the record from 1996 to 2017.
+- **The jump at GIS 5|6 in no-groin runs is real planform**, not a source or sink: about 100 m of the start offsets' 240-264 m step there is the natural bend toward the cape and about 150 m the fillet the groins built (the 1967 dune line steps 104 m). Without a groin, BRIE smooths it.
+- **Settled:** the groin is off from the 2017 fill (left on, 2017-2025 misses by 47 m); the annual CoastSat gap is the target that generalises, not the photo dates alone.
 - **Next, in order:**
-  1. **Decide** the strength's target (annual CoastSat, recommended by findings 12-13) and the 2017 end.
-  2. **Decide whether the corrected groin replaces the pin.** If it does, move it from `corrected_groin.py`'s in-process patch into `cascade/groin.py` as its own callback, alongside `BlockingGroinCallback`, and point the runner at it.
+  1. **Decide whether the corrected groin replaces the pin**, and with which history: 0.25 to 2009, 0.20 to 2016, off from 2017. If it does, move it from `corrected_groin.py`'s in-process patch into `cascade/groin.py` as its own callback, alongside `BlockingGroinCallback`, point the runner at it, and rerun the 1996-2009 and 2009-2025 windows with it.
+  2. **Forecast** (`4-forecast/`): the 2026 rebuild at about 0.25, ramped in over 5-9 years; only the southernmost of the three groins is rebuilt, so 0.25 is an upper bound.
+  3. Open: the model's fillet sits in the two domains beside the groin where the observed one spans three or four; the 2017 fill starts at GIS 6 and makes its own 35 m gap in the no-groin run.
 
 **Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the pinned `joint_fit.json` is in `output/calibration/groin/`. The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
 
