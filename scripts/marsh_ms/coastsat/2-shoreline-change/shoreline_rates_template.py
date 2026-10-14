@@ -29,6 +29,7 @@ from scipy import stats
 import os
 
 os.chdir(r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\CoastSat")
+plt.rcParams["font.size"]=12
 
 # --- CONFIG ------------------------------------------------------------------
 TIMESERIES_DIR = Path("transects")  # all the transect files
@@ -63,7 +64,7 @@ def load_lookup(path: Path) -> dict[str, str]:
 
 
 # OLS slope of position vs time, with 95% CI
-def compute_lrr(df: pd.DataFrame) -> dict:
+def compute_lrr(df: pd.DataFrame, t_id: str) -> dict:
     n = len(df)
     if n < 3:
         return {"rate_m_yr": np.nan, "r_squared": np.nan, "p_value": np.nan,
@@ -71,6 +72,37 @@ def compute_lrr(df: pd.DataFrame) -> dict:
     years = (df["date"] - df["date"].min()).dt.total_seconds() / (86400 * 365.25)
     fit = stats.linregress(years, df["position_m"])
     sign = 1 if SEAWARD_POSITIVE else -1
+    slope = fit.slope
+    intercept = fit.intercept
+    r2 = fit.rvalue ** 2
+    # years for titles and saving
+    start_year = df["date"].min().date().year
+    end_year = df["date"].max().date().year
+    # plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.scatter(years, df["position_m"])
+    # slope line from LRR calc
+    y = (slope * years) + intercept
+    ax.plot(years, y, label="{0}".format(t_id))
+    # plot features
+    ax.set(
+        xlabel="time (years)",
+        ylabel="distance from baseline (m)",
+        title="LRR: {0} to {1}".format(start_year,end_year),
+        ylim=(-125, 275)
+           )
+    ax.legend(loc="lower right")
+    ax.text(0.5, 0.96, '$slope$ = {0}'.format(round(slope,2)), horizontalalignment='center',
+         verticalalignment='center', transform=ax.transAxes, fontsize=10)
+    ax.text(0.5, 0.92, '$r^2$ = {0}'.format(round(r2,2)), horizontalalignment='center',
+         verticalalignment='center', transform=ax.transAxes, fontsize=10)
+    fig.tight_layout()
+    save_dir = os.path.join("step2_output", "LRR_scatters", "{1}to{2}")
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    fig.savefig(os.path.join(save_dir,"LRR_{0}.png".format(t_id,start_year,end_year)), dpi=200)
+    plt.close(fig)
+    # return
     return {"rate_m_yr": sign * fit.slope, "r_squared": fit.rvalue ** 2,
             "p_value": fit.pvalue,
             "unc_m_yr": stats.t.ppf(0.975, n - 2) * fit.stderr,   # 95% CI half-width
@@ -149,7 +181,7 @@ def main() -> None:
         df = df[(df["date"] >= lo) & (df["date"] < hi)]
         rows.append({"transect_id": f.stem,
                      "zone_id": lookup.get(f.stem) if lookup else "all",
-                     **compute_lrr(df)})
+                     **compute_lrr(df, f.stem)})
     per_transect = pd.DataFrame(rows)
     per_transect["kept"] = per_transect.apply(keep, axis=1)
     print(f"{len(files)} transects, {lo.date()} to {(hi - pd.Timedelta(days=1)).date()}: "
