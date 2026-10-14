@@ -181,11 +181,14 @@ def main() -> None:
     if good.empty:
         raise SystemExit("nothing passed the screen")
     per_zone = (good.groupby("zone_id")
-                    .agg(mean_change_m=("change_m", "mean"),
-                         std_change_m=("change_m", "std"),
-                         mean_rate_m_yr=("rate_m_yr", "mean"),
-                         pct_landward=("change_m", lambda s: 100.0 * (s < 0).mean()),
-                         n_transects=("change_m", "size"))
+                    .agg(
+                        mean_position_start_m=("position_start_m", "mean"),
+                        mean_position_end_m=("position_end_m", "mean"),
+                        mean_change_m=("change_m", "mean"),
+                        std_change_m=("change_m", "std"),
+                        mean_rate_m_yr=("rate_m_yr", "mean"),
+                        pct_landward=("change_m", lambda s: 100.0 * (s < 0).mean()),
+                        n_transects=("change_m", "size"))
                     .reset_index()
                     .assign(interval_yr=interval_yr))
 
