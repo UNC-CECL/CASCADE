@@ -530,11 +530,30 @@ class Cascade:
         self._nourishments = []
 
         for iB3D in range(self._ny):
-            self._initial_beach_width[iB3D] = (
-                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-            )
+            # set initial beach width
+            # Select the calculated or user-defined width before constructing
+            # either manager, then initialize year zero of the evolving history.
+            if self._use_defined_beach_width is False:
+                self._initial_beach_width[iB3D] = (
+                    int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+                )  # [m]
+            elif self._use_defined_beach_width is True:
+                self._initial_beach_width[iB3D] = self._user_inputed_beach_width
+            self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
+
+            # Roadway domains share a beach with their own Outwasher, while
+            # retaining independent histories across alongshore domains.
+            # Copy the list so nourishment in one roadway domain cannot change
+            # another domain's beach width through a shared list reference.
+            if self._roadway_management_module[iB3D]:
+                self._beach_width[iB3D] = copy.deepcopy(self._beach_width[iB3D])
+            # Supply history and threshold using the same convention as
+            # BeachDuneManager and Outwasher. RoadwayManager activates its own
+            # beach-width control only after its first nourishment event.
             self._roadways.append(
                 RoadwayManager(
+                    beach_width=self._beach_width[iB3D],
+                    beach_width_threshold=self._beach_width_threshold,
                     initial_road_elevation=self._road_ele[iB3D],
                     road_width=self._road_width[iB3D],
                     road_setback=self._road_setback[iB3D],
@@ -544,27 +563,18 @@ class Cascade:
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=self._initial_beach_width[iB3D],
                     dune_mgmt_road_setback_trigger=self._dune_mgmt_road_setback_trigger[iB3D],
                     allow_causeway=self._allow_causeway[iB3D],
                 )
             )
 
-            # set initial beach width
-            if self._use_defined_beach_width is False:
-                self._initial_beach_width[iB3D] = (
-                    int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-                )  # [m]
-            elif self._use_defined_beach_width is True:
-                self._initial_beach_width[iB3D] = self._user_inputed_beach_width
-            self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
-
+            # BeachDuneManager receives the history with year zero already set;
+            # its constructor no longer accepts an initial_beach_width scalar.
             self._nourishments.append(
                 BeachDuneManager(
                     beach_width=self._beach_width[iB3D],
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=self._initial_beach_width[iB3D],
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
@@ -763,6 +773,10 @@ class Cascade:
 
             if self._roadway_management_module[iB3D]:
 
+                # Start with Cascade's latest history, including any beach-width
+                # changes made by Outwasher in the previous year.
+                self._roadways[iB3D]._beach_width = self._beach_width[iB3D]
+
                 # if the roadway drowned or was too narrow for the road to be
                 # relocated, stop managing the road!
                 # NOTE: dune heights must drop below Dmax before reset, so while
@@ -846,18 +860,10 @@ class Cascade:
                         self._roadways[iB3D].beach_width[beach_width_index - 1]
                     )
 
-                # update x_b to include a fake beach width and the dune line; we
-                # add a fake beach width for coupling with the beach nourishment
-                # module below (i.e., if half the domain is initialized with roadways
-                # and the other half with a community, I want them to start with
-                # the same beach back barrier position)
-                self._barrier3d[iB3D].x_b_TS[-1] = (
-                    self._barrier3d[iB3D].x_s
-                    + self._barrier3d[iB3D].InteriorWidth_AvgTS[-1]
-                    + np.size(
-                        self._barrier3d[iB3D].DuneDomain, 2
-                    )  # dune domain width in dam
-                    + (self._initial_beach_width[iB3D] / 10)  # dam
+                # Save roadway nourishment changes before Outwasher receives
+                # this domain's beach-width history later in the time step.
+                self._beach_width[iB3D] = copy.deepcopy(
+                    self._roadways[iB3D].beach_width
                 )
 
         # ~~~~~~~~~~~~~~ SandbagManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1032,6 +1038,22 @@ class Cascade:
         ###############################################################################
         # update BRIE for any human modifications to the barrier
         ###############################################################################
+        # Outwasher runs after roadway management and may change shoreline,
+        # interior width, and beach width. Use the completed year's geometry.
+        for iB3D in range(self._ny):
+            if self._roadway_management_module[iB3D]:
+                # Give RoadwayManager the final history after any outwash changes.
+                self._roadways[iB3D]._beach_width = self._beach_width[iB3D]
+                beach_width_index = self._barrier3d[iB3D].time_index - 1
+                # Use the evolving beach width rather than the initial width.
+                # Convert metres to decametres to match Barrier3D geometry.
+                self._barrier3d[iB3D].x_b_TS[-1] = (
+                    self._barrier3d[iB3D].x_s
+                    + self._barrier3d[iB3D].InteriorWidth_AvgTS[-1]
+                    + np.size(self._barrier3d[iB3D].DuneDomain, 2)
+                    + self._beach_width[iB3D][beach_width_index] / 10
+                )
+
         if self._alongshore_transport_module:
             [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
 
