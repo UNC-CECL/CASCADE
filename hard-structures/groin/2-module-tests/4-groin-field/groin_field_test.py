@@ -4,7 +4,7 @@ Four groins along a straight coast: which groin module behaves like a groin fiel
 
     python groin_field_test.py [--years 50]   ->  tables/, figures/
 
-The straight-coast emulator of BRIE's alongshore step (../1-straight-coast/straight_coast_test.py,
+The straight-coast emulator of BRIE's alongshore step (../1-straight-coast/1-run/straight_coast_test.py,
 imported unchanged), with four groins at a spacing of 2, 5, 10 or 20 domains instead of one, and a
 single groin at the middle face as the reference. Four modules: the source/sink dipole, the pinned
 trapping groin, the drift groin and the corrected drift groin. Each run is scored at the last year
@@ -33,7 +33,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "1-straight-coast"))
+sys.path.insert(0, str(HERE.parent / "1-straight-coast" / "1-run"))
 import straight_coast_test as sc  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, INK, INK_MUTED, _letter_inside, apply_style, figsize, open_frame, record_caption, save)

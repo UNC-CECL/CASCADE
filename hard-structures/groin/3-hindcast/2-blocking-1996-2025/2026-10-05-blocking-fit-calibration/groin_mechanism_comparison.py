@@ -28,7 +28,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
-sys.path[:0] = [str(HERE.parents[2] / "2-module-tests" / "3-real-planform"),
+sys.path[:0] = [str(HERE.parents[2] / "2-module-tests" / "3-real-planform" / "6-instant-2004-grid"),
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
                 str(REPO / "scripts" / "hatteras_ms"), str(REPO / "scripts")]
 from score_instant_grid import observed_series  # noqa: E402

@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "1-straight-coast"))   # the test, kept in place
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "1-straight-coast" / "1-run"))   # the test, kept in place
 import straight_coast_test as sc  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, INK, INK_MUTED, _letter_inside, apply_style, figsize, open_frame, record_caption, save)

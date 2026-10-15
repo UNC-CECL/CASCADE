@@ -24,7 +24,7 @@ import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE.parent / "1-straight-coast"), str(HERE.parent / "4-groin-field")]
+sys.path[:0] = [str(HERE.parent / "1-straight-coast" / "1-run"), str(HERE.parent / "4-groin-field")]
 import straight_coast_test as sc  # noqa: E402
 import groin_field_test as gf  # noqa: E402
 import fine_grid_reference as fr  # noqa: E402

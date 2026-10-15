@@ -11,7 +11,7 @@ on the coarse groin face and the field inside the updrift domain, as at Buxton. 
 transport GENESIS-style: it starts by holding the modules' blocking fraction of the drift and passes
 more sand round its tip as the fillet grows toward it, all of it once the fillet reaches the tip.
 The reference is averaged to 500 m domains and compared with each module run with one groin on the
-coarse face (../1-straight-coast/straight_coast_test.py and ../4-groin-field/groin_field_test.py,
+coarse face (../1-straight-coast/1-run/straight_coast_test.py and ../4-groin-field/groin_field_test.py,
 imported unchanged). Details: README.md beside this script.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE.parent / "1-straight-coast"), str(HERE.parent / "4-groin-field")]
+sys.path[:0] = [str(HERE.parent / "1-straight-coast" / "1-run"), str(HERE.parent / "4-groin-field")]
 import straight_coast_test as sc  # noqa: E402
 import groin_field_test as gf  # noqa: E402
 

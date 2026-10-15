@@ -26,7 +26,7 @@ import numpy as np  # noqa: E402
 from matplotlib.animation import PillowWriter  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "1-straight-coast"))   # the test, kept in place
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "1-straight-coast" / "1-run"))   # the test, kept in place
 import straight_coast_test as sc  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, INK_MUTED, _letter_inside, apply_style, figsize, open_frame)

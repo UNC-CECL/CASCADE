@@ -41,7 +41,7 @@ run_log.txt                      the 2026-10-09 run's printed tables
 
 ## Module 7: the corrected groin with a length (2026-10-09)
 
-Built on the finding above: the corrected version with GENESIS-style bypassing, blocking 0.6 × (1 − a/L)^(2/3), with a the 500 m updrift cell's build-out and L the physical groin length, untuned (`../1-straight-coast/straight_coast_test.py`, module 7; `../4-groin-field/groin_field_test.py`). It conserves sand (within 10 m on the straight coast) and its gap levels off as intended, but too low:
+Built on the finding above: the corrected version with GENESIS-style bypassing, blocking 0.6 × (1 − a/L)^(2/3), with a the 500 m updrift cell's build-out and L the physical groin length, untuned (`../1-straight-coast/1-run/straight_coast_test.py`, module 7; `../4-groin-field/groin_field_test.py`). It conserves sand (within 10 m on the straight coast) and its gap levels off as intended, but too low:
 
 - **With 110 m groins** it ends at 124 to 182 m at −30° to +10°, against the reference's 213 to 227 m, and at 37 m at +20°, against 222 m.
 - **It barely scales with L** (`fine_reference_3_length.png`, `tables/fine_reference_length_check.csv`). From 55 to 220 m groins its gap rises from 80-101 m to 159-246 m at −30° to +10°, while the reference doubles each time (108-113, 213-227, 441-461 m). Its gap error against the reference at the same L is 41 m at 55 m, 95 m at 110 m and 248 m at 220 m.

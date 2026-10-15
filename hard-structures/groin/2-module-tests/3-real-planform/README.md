@@ -2,23 +2,30 @@
 
 ## The scripts
 
-| script | question | writes, beside the script |
-|---|---|---|
-| `groin_stability_option_a.py` | is the dipole stable under option A, on the real planform? | `stability_summary.csv`, `stability_traces.csv` |
-| `launch_groin_grid.py` | the full-model grid, through the unchanged runner | runs under `output/raw_runs/experiments/<study>/`, logs in `grid_logs/` |
-| `score_groin_grid.py` | the option A grid against the observed fillet change | `grid_scores.csv` |
-| `diagnose_no_groin_relaxation.py` | why the no-groin model erases the fillet | prints; saved as `diagnose_no_groin_relaxation.txt` |
-| `blocking_groin_emulator.py` | approach 1: a groin that blocks a fraction b of transport | `blocking_groin_scores.csv` |
-| `failure_schedule_test.py` | does an instant failure at the 2003 storm fit both windows? | `failure_schedule_scores.csv` |
-| `trajectory_check.py` | the instant-failure candidates, at the observed dates | `trajectory_check.csv` |
-| `score_instant_grid.py` | the full-model instant-2004 grids against the observed gap | `instant_grid_scores.csv` |
-| `corrected_groin_real_planform.py` | the corrected trapping groin (straight-coast module 6) on the real Buxton planform, against pinned and drift (2026-10-08) | `corrected_groin/tables/`, `corrected_groin/figures/` |
+One folder per test (since 2026-10-15). Each script writes beside itself.
 
-The emulators import each other: `blocking_groin_emulator.py` takes the
+| folder | script | question | writes |
+|---|---|---|---|
+| `1-dipole-stability/` | `groin_stability_option_a.py` | is the dipole stable under option A, on the real planform? | `stability_summary.csv`, `stability_traces.csv`, `run_log.txt` |
+| `2-option-a-grid/` | `launch_groin_grid.py` | the full-model grid, through the unchanged runner | runs under `output/raw_runs/experiments/<study>/`, logs in `grid_logs/` |
+| | `score_groin_grid.py` | the option A grid against the observed fillet change | `grid_scores.csv` |
+| `3-no-groin-relaxation/` | `diagnose_no_groin_relaxation.py` | why the no-groin model erases the fillet | prints; saved as `diagnose_no_groin_relaxation.txt` |
+| `4-blocking-emulator/` | `blocking_groin_emulator.py` | approach 1: a groin that blocks a fraction b of transport | `blocking_groin_scores.csv`, `blocking_groin_emulator.txt` |
+| `5-failure-schedule/` | `failure_schedule_test.py` | does an instant failure at the 2003 storm fit both windows? | `failure_schedule_scores.csv` |
+| | `trajectory_check.py` | the instant-failure candidates, at the observed dates | `trajectory_check.csv`, `.txt` |
+| `6-instant-2004-grid/` | `score_instant_grid.py` | the full-model instant-2004 grids against the observed gap | `instant_grid_scores.csv`, `.txt` |
+| `7-corrected-groin/` | `corrected_groin_real_planform.py` | the corrected trapping groin (straight-coast module 6) on the real Buxton planform, against pinned and drift (2026-10-08) | `tables/`, `figures/` |
+
+The instant-2004 grid was launched with `2-option-a-grid/launch_groin_grid.py --study ...`; its 103 logs
+(the 100-run grid and the 3-run check) were moved from there to `6-instant-2004-grid/grid_logs/`. A new
+launch writes its logs to `2-option-a-grid/grid_logs/`.
+
+The emulators import each other across these folders: `blocking_groin_emulator.py` takes the
 planform, climates and schedule constants from `groin_stability_option_a.py`,
 which takes the solve from `../2-solver-audit/HAT_groin_solver_audit.py`;
 `failure_schedule_test.py` and `trajectory_check.py` build on
-`blocking_groin_emulator.py`. `WHERE_WE_LEFT_OFF.md` is the hand-over note of
+`blocking_groin_emulator.py`. `score_instant_grid.py`'s `observed_series` is imported by the
+hindcast studies in `../../3-hindcast/2-blocking-1996-2025/`. `WHERE_WE_LEFT_OFF.md` is the hand-over note of
 2026-09-29.
 
 **Question.** M = 60, f = 0.6 was fitted with the /10 planform at Hs 2.5 / Tp 8.0 / asym 0.7 /

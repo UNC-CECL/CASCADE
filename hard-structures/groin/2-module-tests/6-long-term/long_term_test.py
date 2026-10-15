@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE.parent / d) for d in ("1-straight-coast", "4-groin-field", "5-fine-grid-reference")]
+sys.path[:0] = [str(HERE.parent / d) for d in ("1-straight-coast/1-run", "4-groin-field", "5-fine-grid-reference")]
 import straight_coast_test as sc  # noqa: E402
 import groin_field_test as gf  # noqa: E402
 import fine_grid_reference as fr  # noqa: E402

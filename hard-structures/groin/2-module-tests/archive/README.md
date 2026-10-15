@@ -5,11 +5,12 @@ Moved here on 2026-10-12, when the module tests were trimmed to the two versions
 Kept in the repo, not deleted, because the hindcast studies under `../../3-hindcast/` cite these results,
 and version 2 is still the groin in the runner.
 
-**The code was not removed.** `../1-straight-coast/straight_coast_test.py` still defines and runs all seven
+**The code was not removed.** `../1-straight-coast/1-run/straight_coast_test.py` still defines and runs all seven
 versions (tests 4-6 and the hindcast studies import it). Versions 2-5 and 7 carry `archived=True`, so
 rerunning the test writes their tables and figures here, along with the all-version comparison figures.
-The tables every version shares (`straight_coast_summary_year50.csv`, `pelnard_considere_check.csv`,
-`conservative_solve_check.csv`) stay in `../1-straight-coast/comparison/tables/`.
+The tables every version shares stay with the kept test: `straight_coast_summary_year50.csv` and
+`pelnard_considere_check.csv` in `../1-straight-coast/1-run/comparison/tables/`, `conservative_solve_check.csv`
+in `../1-straight-coast/2-solve-check/tables/`.
 
 ```
 1-straight-coast/
@@ -26,7 +27,7 @@ The tables every version shares (`straight_coast_summary_year50.csv`, `pelnard_c
 ```
 
 The three scripts run from here: `python straight_coast_module_rules_figure.py` and so on, after
-`../1-straight-coast/straight_coast_test.py`.
+`../1-straight-coast/1-run/straight_coast_test.py`.
 
 ## The retired versions, and why
 

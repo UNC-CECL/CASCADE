@@ -24,7 +24,7 @@ import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE.parent / d) for d in ("1-straight-coast", "4-groin-field", "5-fine-grid-reference")]
+sys.path[:0] = [str(HERE.parent / d) for d in ("1-straight-coast/1-run", "4-groin-field", "5-fine-grid-reference")]
 import straight_coast_test as sc  # noqa: E402
 import groin_field_test as gf  # noqa: E402
 import long_term_test as lt  # noqa: E402
