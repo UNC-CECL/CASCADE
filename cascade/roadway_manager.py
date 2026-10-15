@@ -647,7 +647,7 @@ class RoadwayManager:
         nourishment_interval=None,
         nourishment_volume=100,
         initial_beach_width=30,
-        road_setback_trigger=20.0,
+        dune_mgmt_road_setback_trigger=20.0,
     ):
         """The RoadwayManager module
 
@@ -680,7 +680,7 @@ class RoadwayManager:
         initial_beach_width: float, optional
             Initial roadway-domain beach width [m]. Beach-width management stays
             inactive until the first nourishment event.
-        road_setback_trigger: float, optional
+        dune_mgmt_road_setback_trigger: float, optional
             Maximum road setback at which the existing dune-rebuilding process is
             permitted [m]. When the current setback is greater than this trigger,
             artificial rebuilding is skipped and the dunes continue to evolve
@@ -714,7 +714,7 @@ class RoadwayManager:
         self._nourishment_volume = nourishment_volume
         self._beach_width_threshold = 0
         self._beach_management_active = False
-        self._road_setback_trigger = road_setback_trigger
+        self._dune_mgmt_road_setback_trigger = dune_mgmt_road_setback_trigger
 
         # set relocation parameters to original values
         self._road_relocation_width = (
@@ -974,7 +974,7 @@ class RoadwayManager:
         )
 
         road_dune_rebuild_disabled = bool(
-            self._road_setback > self._road_setback_trigger
+            self._road_setback > self._dune_mgmt_road_setback_trigger
         )
         self._road_dune_rebuild_disabled_TS[self._time_index - 1] = (
             road_dune_rebuild_disabled
@@ -1059,7 +1059,7 @@ class RoadwayManager:
         # Dune min elevation should likely be altered
         if self._dune_design_elevation is None or self._dune_minimum_elevation is None:
             pass
-        elif self._road_setback > self._road_setback_trigger:
+        elif self._road_setback > self._dune_mgmt_road_setback_trigger:
             pass
         else:
             # in B3D, dune height is the height above the berm crest
@@ -1297,12 +1297,12 @@ class RoadwayManager:
         return self._beach_management_active
 
     @property
-    def road_setback_trigger(self):
-        return self._road_setback_trigger
+    def dune_mgmt_road_setback_trigger(self):
+        return self._dune_mgmt_road_setback_trigger
 
-    @road_setback_trigger.setter
+    @dune_mgmt_road_setback_trigger.setter
     def road_setback_trigger(self, value):
-        self._road_setback_trigger = value
+        self._dune_mgmt_road_setback_trigger = value
 
     @property
     def road_dune_rebuild_disabled_TS(self):
