@@ -125,7 +125,7 @@ def main():
         f"(option A waves; no storms, no Barrier3D, no sea-level rise), {lt.NY} domains. Lines: the gap between "
         "the updrift and downdrift domains, the quantity measured at Buxton. Broad grey: the 25 m reference with "
         "three 110 m groins, averaged to domains. **Shows:** see the README beside this figure for the numbers; "
-        f"at -20 degrees the corrected version's gap is {s.loc[('corrected', -20), f'gap_{last}_m']:.0f} m at year "
+        f"at -20 degrees the wave-driven groin's gap is {s.loc[('corrected', -20), f'gap_{last}_m']:.0f} m at year "
         f"{last} against the reference's {s.loc[('reference', -20), f'gap_{last}_m']:.0f} m (tables/)."))
     png = end_state(summ, last)
     record_caption(png, (

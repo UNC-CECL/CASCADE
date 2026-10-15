@@ -14,7 +14,7 @@ periodic wrap never meets the groin). The callback reads a stand-in for BRIE car
 instance's tables and the rig's shoreline, and gets `x_s_dt` as a list, as CASCADE hands it over. No
 Barrier3D, storms or sea level, except where the background family imitates what Barrier3D passes in.
 
-**Rig check.** At strength 0.6 and a 5-cell zone, on a straight coast, the callback reproduces version 6 of
+**Rig check.** At strength 0.6 and a 5-cell zone, on a straight coast, the callback reproduces the wave-driven groin of
 `1-run/` to 0.0 m at all 17 orientations, in both the updrift cell and the coast's total
 (`tables/stress_rig_check.csv`). On a straight coast the tracked groin-free shoreline is the straight line, so
 the two must agree; they do.
@@ -74,7 +74,7 @@ stopped each run and lets it finish, so the outcome can be checked against it.
      every negative angle. Nothing carries sand back across the face, but the groin keeps moving its share of
      the drift every year, so the gap grows without limit: 2,070 m (asymmetry 0.7) and 3,360 m (0.8) by
      year 100 at −20°. The same happens on any coast once the groin's own face steepens into the angles where
-     BRIE's diffusivity is zero. This is the dipole's runaway from `../TEST_PLAN.md` §2.1, now in the drift
+     BRIE's diffusivity is zero. This is the fixed-shift groin's runaway from `../TEST_PLAN.md` §2.1, now in the drift
      groin; a real groin fills to its tip and bypasses, and this module has no length.
 3. **Waves that change from year to year break it at any r.** 35 of 36 variable-wave runs leak: up to
    1,046 m at strength 0.25 and 104 to 3,841 m at 1.0. Refreshing the drift table each year does not help,

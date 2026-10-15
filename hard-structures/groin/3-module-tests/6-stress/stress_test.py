@@ -11,7 +11,7 @@ stand-in for BRIE that carries a real Brie instance's tables and the rig's shore
 CASCADE hands it x_s_dt before BRIE's solve. Every run is paired with the same run with the groin
 off, and scored on the difference. Families, each set before the runs (README.md):
 
-    0 rig check       f 0.6, 5-cell zone: must match version 6 of 1-run/ on a straight coast
+    0 rig check       f 0.6, 5-cell zone: must match the wave-driven groin of 1-run/ on a straight coast
     1 waves           one wave parameter at a time, far outside option A
     2 strength        0 to 1; 0 must be the no-groin run exactly
     3 notch           a sharp step already at the groin when it starts (Buxton's is 256 m)
@@ -244,7 +244,7 @@ def case(family, label, steady=True, **kw):
     return row, by_year
 
 
-# Family 0: the callback on a straight coast at f 0.6 and a 5-cell zone is version 6 of 1-run/
+# Family 0: the callback on a straight coast at f 0.6 and a 5-cell zone is the wave-driven groin of 1-run/
 def rig_check():
     t = sc.brie_tables()
     rows = []

@@ -1,6 +1,6 @@
 # 2026-10-13-pregroin-planform
 
-**Question.** How strong is the corrected groin (version 6) when it is working, and does one strength history reproduce the groin's whole life, 1967-2025, without resetting to the observed shoreline at 1996 and 2009? The answer sets the strength a forecast of the 2026 rebuild should use.
+**Question.** How strong is the wave-driven groin when it is working, and does one strength history reproduce the groin's whole life, 1967-2025, without resetting to the observed shoreline at 1996 and 2009? The answer sets the strength a forecast of the 2026 rebuild should use.
 
 **Why.** The calendar-year refit (`../2026-10-09-corrected-groin/`, findings 18-22) fitted 0.16 on 1996-2009 and 0.10 on 2009-2016. But each of those runs starts from the observed shoreline of its window, which already holds the fillet the groins built. A strength fitted that way says how fast the model relaxes a fillet it was handed, not how strong the groin is. The only years in which the groin builds its own fillet are before 1996.
 

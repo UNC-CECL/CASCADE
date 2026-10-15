@@ -9,12 +9,12 @@ indices, clip at zero) on an infinitely long straight coast at angle theta0: the
 the tilted line plus a periodic perturbation eta, so the tilt never meets the periodic wrap.
 One groin sits at the face between the middle two domains. The modules:
 
-    1 source/sink dipole   GroinCallback: -M updrift, +M downdrift, whatever the coast does
+    1 fixed-shift groin    (the source/sink dipole) GroinCallback: -M updrift, +M downdrift, whatever the coast does
     2 trapping, pinned     BlockingGroinCallback: cancels blocking_fraction of each cell's own diffusive coupling
     3 trapping, conserving the same, one face coefficient on both sides
     4 trapping, drift      cancels blocking_fraction of the wave-climate net drift Q_net across the face
     5 trapping, hybrid     module 4 plus module 2's row correction: blocking_fraction of BRIE's r[HI] - r[LO] mismatch at the face
-    6 trapping, corrected  module 4 plus a leak correction: near the groin, gives back what BRIE's row-scaled
+    6 wave-driven groin    (trapping, corrected) module 4 plus a leak correction: near the groin, gives back what BRIE's row-scaled
                            solve creates or destroys, 2 (r[i] - r[i-1]) (x[i] - x[i-1]) per cell, BRIE untouched
     7 corrected, length    module 6 with a groin length L: blocking_fraction (1 - a/L)^(2/3), a the updrift
                            cell's build-out, so the groin passes everything once the fillet reaches its tip
@@ -61,15 +61,15 @@ SHOWN = (-30, -10, 0, 10, 20, 30)        # orientations drawn as profiles
 PROFILE_YEARS = (1, 5, 10, 25, 50)
 BLOCKING_FRACTION = 0.6                  # share of the transport the groin holds; the 10-05 pin
                                          # (cascade.groin.BlockingGroinCallback's blocking_fraction)
-M = 12.0                                 # dipole, the best option-A dipole (2026-09-29)
+M = 12.0                                 # fixed-shift groin, the best option-A dipole (2026-09-29)
 # Versions 2-5 and 7 were retired on 2026-10-12; their results live in ../../archive/2-straight-coast/
 MODULES = {
-    "dipole": dict(folder="1-source-sink-dipole", label="Source/sink (dipole)", col=C["ADDED"]),
+    "dipole": dict(folder="fixed_shift", label="Fixed-shift", col=C["ADDED"]),
     "pinned": dict(folder="2-trapping-pinned", archived=True, label="Trapping, pinned", col=C["ACCENT"]),
     "conserving": dict(folder="3-trapping-conserving", archived=True, label="Trapping, conserving", col=C["REF"]),
     "drift": dict(folder="4-trapping-drift", archived=True, label="Trapping, drift", col=C["LATE"]),
     "hybrid": dict(folder="5-trapping-hybrid", archived=True, label="Trapping, hybrid", col=C["LOCATOR"]),
-    "corrected": dict(folder="6-trapping-corrected", label="Trapping, corrected", col=INK),
+    "corrected": dict(folder="wave_driven", label="Wave-driven", col=INK),
     "length": dict(folder="7-corrected-length", archived=True, label="Corrected, with length", col="#e7298a"),
 }
 CORRECTION_HALF_WIDTH = 5                # module 6: cells either side of the groin face that get the leak correction
@@ -364,7 +364,7 @@ def comparison_figures(t, summary, frames):
         "arrow is the net longshore drift toward the groin. A groin that traps drift builds out on the right "
         "and cuts back on the left. Each panel has its own vertical range. **Shows:** on coasts turned "
         "against the drift (negative angles) every trapping version builds out updrift; at 0 degrees only the "
-        "drift version and the dipole change the coast; on coasts turned with the drift (positive angles) the "
+        "drift version and the fixed-shift groin change the coast; on coasts turned with the drift (positive angles) the "
         "pinned version builds out on the wrong (downdrift) side, and the conserving and drift versions cut "
         "back both sides, the sand lost through BRIE's solve "
         f"(summary table: comparison/tables/straight_coast_summary_year50.csv; e.g. at +20 degrees the "

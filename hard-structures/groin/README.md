@@ -17,37 +17,48 @@ from simplest to most complex.
         4-shoreline_rates_by_era/  wide view, ±60 km: rates by era and decade, how far the effect reaches
         5-shoreline_maps/          the shoreline each year as true-scale maps: groin window, whole coast
 2-module-explained/        how each groin module works, step by step; figures and GIFs, no new tests
-    1-dipole/                  version 1, the source/sink dipole: where it acted and why its sand did not balance
-    2-corrected/               version 6, the corrected groin (the runner's groin): how it works
+    1-fixed-shift/             the fixed-shift groin (once 'the fixed-shift groin'): where it acted and why its sand did not balance
+    2-wave-driven/             the wave-driven groin (once 'corrected'; the runner's groin): how it works
 3-module-tests/            what the module does on its own; no Buxton fit
     TEST_PLAN.md               the 2026-09-11 design for the idealized rig
-    1-solver-audit/            the dipole in BRIE's alongshore solve alone
-    2-straight-coast/          version 1 (dipole) vs version 6 (corrected) on straight coasts, -40 to +40 deg
+    1-solver-audit/            the fixed-shift groin in BRIE's alongshore solve alone
+    2-straight-coast/          the fixed-shift against the wave-driven groin on straight coasts, -40 to +40 deg
     3-groin-field/             four groins on one straight coast: which module behaves like a groin field
     4-fine-grid-reference/     a real-sized field on a 25 m grid as the yardstick for the modules
     5-long-term/               the modules over 200 years: stable, conserving, levelling off?
     6-stress/                  the runner's groin pushed until it breaks; where its bounds come from
     7-mirror/                  drift from either direction: the groin mirrors exactly, BRIE nearly
-    8-real-planform/           the full model on the real planform: dipole, blocking and corrected groins
+    8-real-planform/           the full model on the real planform: fixed-shift, blocking and wave-driven groins
     archive/                   the retired versions 2-5 and 7 (version 2 is still the runner's groin)
 4-hindcast/                the module fitted to Buxton in real model runs
-    1-dipole-1967-2017/        SUPERSEDED: the dipole (M, f) fit on the 1967-2017 rig
+    1-dipole-1967-2017/        SUPERSEDED: the fixed-shift groin (the M, f dipole) fit on the 1967-2017 rig
     2-blocking-1996-2025/      the blocking groin on the calibration and test periods
 5-forecast/                not started
 ```
+
+**The two modules' names (since 2026-10-15).** Figures, tables and READMEs call the two groin modules by
+what sets how much sand they move:
+
+| name | what it does each year | once called | code |
+|---|---|---|---|
+| **fixed-shift groin** | moves a fixed amount (M) from the downdrift to the updrift domain, whatever the waves do | the dipole, source/sink dipole, version 1 | `GroinCallback` (removed 563a542e); key `"dipole"` in the test rig |
+| **wave-driven groin** | holds back a share of the drift the waves bring to the groin, and cancels the sand BRIE's step would make or lose at its bends | the corrected groin, version 6 | `CorrectedGroinCallback` (the runner's groin); key `"corrected"` in the test rig |
+
+Dated study folders (`4-hindcast/1-dipole-1967-2017/`, `2026-10-09-corrected-groin/`) and `3-module-tests/archive/`
+keep the names they were run under.
 
 **Where we left off (2026-10-14; bounds added 2026-10-15).** Numbers on the calendar-year setup (commit `e9c5e663`).
 
 - **Decision (2026-10-15): two separate window fits.** The groin keeps its own strength in each hindcast window, 0.16 for 1996-2009 and 0.10 for 2009-2025, off from the 2017 fill, because it kept deteriorating (2003 damage, 2015-21 decay). The 2009 value is fitted on that window, so for the groin 2009-2025 is a second fit, not an independent test; the split-sample result below is the groin's validation. A strength carried from the calibration window into the test (before/after the 2003 damage) was considered and left for later.
 - **Validated by split sample (2026-10-15).** Calibrated on 1996-2009 (0.16) and run unchanged on 2009-2025, the groin cuts the gap error from 21.9 m (no groin) to 14.1 m, skill 0.59 against no groin; the reverse transfer has skill 0.84. Only the groin's strength is held out (`4-hindcast/2-blocking-1996-2025/2026-10-15-split-sample/`). A mirror check shows the groin handles drift from either direction identically (`3-module-tests/7-mirror/`).
 - **Since 2026-10-15 the module has stated bounds and stops a run outside them** (`GroinOutsideTestedRange`; see "The module's bounds" below). Both Buxton windows run unaffected and bit-identical. The groin-on wave sweep's asymmetry 0.7 and 0.8 cells (`output/raw_runs/sensitivity/waveasym/`, run 2026-10-14/15) are outside the bounds: they show the groin breaking, not the coast's sensitivity to asymmetry.
-- **In the runner since 2026-10-14: the corrected groin**, `cascade.groin.CorrectedGroinCallback`, the only groin left. Set in `scripts/hatteras_ms/hat_run.yaml` by the share of the arriving drift held back, per window since the afternoon of 2026-10-14 (`groin.strength_1996` 0.16, `groin.strength_2009` 0.10; `groin.strength` overrides both), and `groin.end_year` 2017. At its defaults the runner reproduces the refit runs to 0 m in both windows. The dipole (M, f) and blocking (b, f) groins, the M/f sweeps (`scripts/hatteras_ms/groin-sweep/`) and the driver's sweep and joint-fit stages were removed the same day; the last commit with them is `4d937b79`.
-- **Module design:** build on BRIE and Barrier3D, never edit them. Of the seven versions tested on straight coasts, the corrected groin (version 6: the drift groin plus a correction for BRIE's sand leak at the groin's own bends) is the one carried forward; versions 2-5 and 7 are in `3-module-tests/archive/`. Its reference is the groin's own tracked footprint, so it needs no no-groin run (`4-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`, findings 15-17).
+- **In the runner since 2026-10-14: the wave-driven groin**, `cascade.groin.CorrectedGroinCallback`, the only groin left. Set in `scripts/hatteras_ms/hat_run.yaml` by the share of the arriving drift held back, per window since the afternoon of 2026-10-14 (`groin.strength_1996` 0.16, `groin.strength_2009` 0.10; `groin.strength` overrides both), and `groin.end_year` 2017. At its defaults the runner reproduces the refit runs to 0 m in both windows. The fixed-shift groin (M, f) and blocking (b, f) groins, the M/f sweeps (`scripts/hatteras_ms/groin-sweep/`) and the driver's sweep and joint-fit stages were removed the same day; the last commit with them is `4d937b79`.
+- **Module design:** build on BRIE and Barrier3D, never edit them. Of the seven versions tested on straight coasts, the wave-driven groin (version 6, once "corrected": the drift groin plus a correction for BRIE's sand leak at the groin's own bends) is the one carried forward; versions 2-5 and 7 are in `3-module-tests/archive/`. Its reference is the groin's own tracked footprint, so it needs no no-groin run (`4-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`, findings 15-17).
 - **The groin's strength, from one continuous run 1967-2025** (`4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`): 0.25 from installation to 2009 (perhaps 0.30 after the 1995 repair), 0.20-0.25 to 2016 (0.25 within 0.5 m, so one strength is kept), off from the 2017 fill. It follows the observed gap to 17 m over the whole record, and 0.25 is the minimum under three different pre-1984 storm sequences.
 - **The matrix runs use the window strengths, not 0.25.** Each hindcast window starts from its observed shoreline, which already holds the fillet. From there 0.25 overshoots (1996-2009 30.4 m against 13.4 m at 0.16; 2009-2025 28.1 m, worse than no groin's 21.9 m, against 9.7 m at 0.10). Refit on today's runner in `4-hindcast/2-blocking-1996-2025/2026-10-14-window-refit/`, matching the 10-12 fit (`2026-10-09-corrected-groin/`, findings 18-22) to 0.1 m. The window strengths measure how fast the model relaxes the observed fillet, not the groin itself: run as one history from 1967 they leave the gap 30-40 m below the record. 0.25 stays the groin's whole-life strength, for runs that start before the fillet exists. The 2009 value is fitted on the test window, so for the groin that window is not an independent test.
 - **The jump at GIS 5|6 in no-groin runs is real planform**, not a source or sink: about 100 m of the start offsets' 240-264 m step there is the natural bend toward the cape and about 150 m the fillet the groins built (the 1967 dune line steps 104 m). Without a groin, BRIE smooths it.
 - **Next, in order:**
-  1. **Point BE set 1** (`HAT_be_domain_solve_net_change.py`, whose start run is still a blocking-groin run) at a corrected-groin start. The groin matrix was rerun at 0.16 / 0.10 on 2026-10-14 (22 of 22 runs). Against the CoastSat net change (full management, edgeBE) the groin helps in 1996-2009 near the groin (GIS 2-12: 21.7 against 25.5 m without it; island-wide 19.0 against 19.6 m) and makes no difference in 2009-2025, where it is weak and off from 2017 (`2026-10-14-window-refit/matrix_groin_effect_figure.py`). The record's 1996-2009 erosion at GIS 7-14 (15-38 m) is in no run, and is not a groin-reach problem (`2026-10-14-fillet-shape/`, finding 5).
+  1. **Point BE set 1** (`HAT_be_domain_solve_net_change.py`, whose start run is still a blocking-groin run) at a wave-driven-groin start. The groin matrix was rerun at 0.16 / 0.10 on 2026-10-14 (22 of 22 runs). Against the CoastSat net change (full management, edgeBE) the groin helps in 1996-2009 near the groin (GIS 2-12: 21.7 against 25.5 m without it; island-wide 19.0 against 19.6 m) and makes no difference in 2009-2025, where it is weak and off from 2017 (`2026-10-14-window-refit/matrix_groin_effect_figure.py`). The record's 1996-2009 erosion at GIS 7-14 (15-38 m) is in no run, and is not a groin-reach problem (`2026-10-14-fillet-shape/`, finding 5).
   2. **Forecast** (`5-forecast/`, `groin.strength` set): the 2026 rebuild at about 0.25; at full strength from day one the model builds the fillet in about 3 years against about 9 observed, so ramp it in over 5-9 years if the timing matters. Only the southernmost of the three groins is rebuilt, so 0.25 is an upper bound.
   3. Open: the model's fillet sits in the two domains beside the groin where the observed one spans three or four (the groins all sit in GIS 6 and the record's build-out peaks at GIS 7; a field layout across GIS 6 fits the 1967-1995 build-up better but not the hindcast windows, so the runner keeps its 5|6 face: `4-hindcast/2-blocking-1996-2025/2026-10-14-face-6-7/`); the 2017 fill starts at GIS 6 and makes its own 35 m gap in the no-groin run.
 
@@ -126,7 +137,7 @@ diffusivity at the groin is non-zero and moderate: a fixed wave climate near the
 under 45° and a strength up to 0.5. Within this range it conserves sand and reaches a steady fillet; outside it
 the model stops the run."*
 
-**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The dipole (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
+**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The fixed-shift groin (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
 
 ## Conventions
 
@@ -134,7 +145,7 @@ the model stops the run."*
 - **Scripts follow `scripts/STYLE.md`** (header and author block, one-line comments, CONFIG block, reasoning in the folder README), since 2026-10-01.
 - **Figures** follow the house style; each PNG has its PDF in `supporting/` or beside it, and its caption in `CAPTIONS.md`.
 - **Experiments are dated** (`YYYY-MM-DD-<question>/`) inside a numbered step, and never edit the main code: they drive the unchanged runner with an in-process patch.
-- **Code these studies ran against.** The dipole (`GroinCallback`) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the corrected groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+- **Code these studies ran against.** The fixed-shift (`GroinCallback`, the fixed-shift groin) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
 
 ## Layout history
 

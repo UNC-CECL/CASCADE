@@ -14,7 +14,7 @@ One folder per test (since 2026-10-15). Each script writes beside itself.
 | `5-failure-schedule/` | `failure_schedule_test.py` | does an instant failure at the 2003 storm fit both windows? | `failure_schedule_scores.csv` |
 | | `trajectory_check.py` | the instant-failure candidates, at the observed dates | `tables/trajectory_check.csv`, `.txt` |
 | `6-instant-2004-grid/` | `score_instant_grid.py` | the full-model instant-2004 grids against the observed gap | `tables/instant_grid_scores.csv`, `.txt` |
-| `7-corrected-groin/` | `corrected_groin_real_planform.py` | the corrected trapping groin (straight-coast module 6) on the real Buxton planform, against pinned and drift (2026-10-08) | `tables/`, `figures/` |
+| `7-wave-driven-groin/` | `wave_driven_groin_real_planform.py` | the corrected trapping groin (straight-coast module 6) on the real Buxton planform, against pinned and drift (2026-10-08) | `tables/`, `figures/` |
 
 The instant-2004 grid was launched with `2-option-a-grid/launch_groin_grid.py --study ...`; its 103 logs
 (the 100-run grid and the 3-run check) were moved from there to `6-instant-2004-grid/logs/`. A new

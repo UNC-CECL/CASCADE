@@ -113,7 +113,7 @@ def gap_and_profiles(frame, prof, score):
         f"({ref_end.loc[-20, fr.LENGTH_SENSITIVITY_M[0]]:.0f}, {ref_end.loc[-20, fr.GROIN_LENGTH_M]:.0f} and "
         f"{ref_end.loc[-20, fr.LENGTH_SENSITIVITY_M[1]]:.0f} m at -20 degrees for the three lengths); at +30 degrees, where "
         "the drift is a tenth of its grid-aligned value, it is still filling at year 50. No module has a groin length, so "
-        "none levels off at a length. At -20 degrees the corrected version "
+        "none levels off at a length. At -20 degrees the wave-driven groin "
         f"ends at {sm.loc[('corrected', -20), 'module_gap_end_m']:.0f} m against the reference's "
         f"{sm.loc[('corrected', -20), 'ref_gap_end_m']:.0f} m; at +20 degrees it holds only "
         f"{sm.loc[('corrected', 20), 'module_gap_end_m']:.0f} m, the drift version "
@@ -151,7 +151,7 @@ def errors(score):
         "read:** (a) the root-mean-square difference in the gap between the updrift and downdrift domains over "
         f"years 1 to 50; (b) the same for the shoreline after 50 years, over the {2 * fr.WINDOW + 2} domains "
         "around the groin. Lower is closer. **Shows:** averaged over the seven orientations, the gap error is "
-        f"{mean.loc['corrected', 'gap_rmse_m']:.0f} m for the corrected version, {mean.loc['drift', 'gap_rmse_m']:.0f} m "
+        f"{mean.loc['corrected', 'gap_rmse_m']:.0f} m for the wave-driven groin, {mean.loc['drift', 'gap_rmse_m']:.0f} m "
         f"drift, {mean.loc['dipole', 'gap_rmse_m']:.0f} m dipole and {mean.loc['pinned', 'gap_rmse_m']:.0f} m pinned; "
         f"the shoreline error {mean.loc['corrected', 'profile_rmse_m']:.0f}, {mean.loc['drift', 'profile_rmse_m']:.0f}, "
         f"{mean.loc['dipole', 'profile_rmse_m']:.0f} and {mean.loc['pinned', 'profile_rmse_m']:.0f} m. The corrected "
@@ -190,7 +190,7 @@ def length_check(lengths):
     save(fig, png, dpi=250, close=True)
     sub = lengths[lengths.theta0_deg <= 10]
     record_caption(png, (
-        "**Tests:** whether the corrected groin with a groin length (module 7) makes the gap across the groin "
+        "**Tests:** whether the wave-driven groin with a groin length (module 7) makes the gap across the groin "
         "scale with the groin's length the way a real-sized field does. **How to read:** the gap between the "
         "updrift and downdrift domains after 50 years against the groin length L, for the 25 m reference (solid, "
         "circles) and module 7 on BRIE's 500 m grid with the same L (dashed, pink triangles), one shade per "

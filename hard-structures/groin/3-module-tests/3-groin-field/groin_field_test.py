@@ -273,7 +273,7 @@ def main():
         "diffusive part of the transport and the diffusivity is zero there; at +20 degrees the pinned version "
         "builds out below each groin instead of above it, and the drift version's field loses "
         f"{-fs.loc[('drift', 20, SPACINGS[-1]), 'net_change_m']:.0f} m of summed shoreline at the widest spacing, against "
-        f"{fs.loc[('corrected', 20, SPACINGS[-1]), 'net_change_m']:+.0f} m for the corrected version. "
+        f"{fs.loc[('corrected', 20, SPACINGS[-1]), 'net_change_m']:+.0f} m for the wave-driven groin. "
         "Each panel has its own vertical range (tables/groin_field_profiles.csv)."))
     png = scorecard_figure(field, card)
     th_scored = sorted(field[field.scored].theta0_deg.unique())
@@ -290,7 +290,7 @@ def main():
         f"single isolated groin, when the groins are {SPACINGS[0]} domains apart than when they are {SPACINGS[-1]} apart, "
         f"and at {SPACINGS[-1]} apart "
         f"holds at least {MERGE_FAR_MIN:.0%} of what the isolated groin holds; it is one result per orientation, "
-        "repeated down the block. **Shows:** the corrected version passes the first three tests in "
+        "repeated down the block. **Shows:** the wave-driven groin passes the first three tests in "
         f"{int(card.loc['corrected', 'conserves'])}, {int(card.loc['corrected', 'sawtooth'])} and "
         f"{int(card.loc['corrected', 'lee_cut'])} of {int(card.loc['corrected', 'cases'])} cases, more than any "
         "other; it fails conservation only at +20 degrees, where so little sand moves that a small imbalance is a "
@@ -299,7 +299,7 @@ def main():
         f"{SPACINGS[0]} domains apart each still hold most of what an isolated groin holds: no version has a groin "
         "length to cap the offset. The pinned version "
         f"conserves sand in {int(card.loc['pinned', 'conserves'])} cases, four of them at 0 degrees where it moves "
-        f"nothing, and holds sand at every groin in only {int(card.loc['pinned', 'sawtooth'])}. The dipole and "
+        f"nothing, and holds sand at every groin in only {int(card.loc['pinned', 'sawtooth'])}. The fixed-shift groin and "
         f"drift versions conserve sand in {int(card.loc['dipole', 'conserves'])} and "
         f"{int(card.loc['drift', 'conserves'])} of {int(card.loc['drift', 'cases'])} cases "
         "(tables/groin_field_scorecard.csv)."))
