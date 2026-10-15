@@ -18,6 +18,7 @@ from cascade.marsh_dynamics import Marsh
 from cascade.marsh_dynamics import evolvemarsh as evolve_cascade
 from cascade.marsh_dynamics import decompose as decomp_cascade
 from cascade.marsh_dynamics import adjust_decomp_array_size
+from cascade.marsh_dynamics import thin_layer_placement
 
 # BMFTC versions
 from evolvemarsh import evolvemarsh as evolve_bmft
@@ -624,4 +625,27 @@ def test_decomp_arrays(test_array, sc):
 
     assert_array_almost_equal(marsh_class._yearly_decomp_elev_TS[c], test_array)
 
+
+test_array1 = np.zeros([10,10])
+test_array2 = np.ones([10,10])
+test_array3 = np.random.uniform(low=0, high=1, size=(10,10))
+@pytest.mark.parametrize("initial_elev", [test_array1, test_array2, test_array3])
+def test_thin_layer_placement(initial_elev):
+    min_tlp = 0.1
+    max_tlp = 0.5
+    updated_elev = thin_layer_placement(
+        full_int_domain=copy.deepcopy(initial_elev),
+        min_TLP_elev=min_tlp,
+        max_TLP_elev=max_tlp
+    )
+    # all elevs (originally less than max TLP) should be between min and max
+    orig_low_cells = updated_elev[initial_elev < max_tlp]
+    new_low_cells = updated_elev[updated_elev < max_tlp]
+    if len(orig_low_cells) > 0:
+        assert np.min(new_low_cells) >= min_tlp and np.max(new_low_cells) <= max_tlp
+    # higher elevs (originally greater than max TLP) should be unchanged
+    orig_high_cells = initial_elev[initial_elev > max_tlp]
+    new_high_cells = updated_elev[updated_elev > max_tlp]
+    if len(orig_high_cells)>0:
+        assert_array_almost_equal(orig_high_cells, new_high_cells)
 
