@@ -28,7 +28,7 @@ python photo_gap_figures.py                     # the GIF takes a few minutes
 
 The CSVs stay at this level because the hindcast fits and the sweep config read them by path. The
 geojsons the sanity check reads are the 1967 rig's inputs
-(`../../../3-hindcast/1-dipole-1967-2017/inputs/groin_init/island_offset/input/`). Until 2026-10-08 the
+(`../../../4-hindcast/1-dipole-1967-2017/inputs/groin_init/island_offset/input/`). Until 2026-10-08 the
 script sat in the rig's `input_prep/shoreline_position/` and its products in the rig's
 `shoreline_position_output/`; until 2026-10-09 the two sanity-check PNGs sat loose here and the
 two-shorelines figure had its own `1-observations/figures/` folder.
@@ -59,7 +59,7 @@ whole table, the two domains either side of the groins, then the rates.
 | 1 | `photo_gap_1_wetdry_lines` | what was digitized? | 24 dated wet/dry lines, 1967-2023, over GIS 2-12 and close up at the groins; the lines fan out most just south of the groins |
 | 2 | `photo_gap_2_measuring_position` | how does one survey become a position per domain? | clip the line at each domain, sample 25 points, take each point's due-east distance to the north-south datum line ~7.4 km offshore, average, subtract 1967. Because the datum runs north-south, it is an east-west distance: the shoreline at GIS 5-6 runs about 21° from north, so a change reads about 7% larger than the shore-normal change, on both sides about alike |
 | 3 | `photo_gap_3_positions_by_domain` | where did each domain's shoreline go, survey by survey? | the position table drawn whole: everything retreats, GIS 4-5 just south of the groins far more than GIS 6-8 north of them |
-| 4 | `photo_gap_4_two_sides` | where was each side, and how wide was the gap? | GIS 6 minus GIS 5: the gap grew to 155 m in 1995, was 135 m in 1996 and 74 m in 2023. Animated as `photo_gap_4_two_sides.gif` (git-ignored, rerun to make it) |
+| 4 | `photo_gap_4_two_sides` | where was each side, and how wide was the gap? | GIS 6 minus GIS 5: the gap grew to 155 m in 1995, was 135 m in 1996 and 74 m in 2023. Animated as `photo_gap_4_two_sides.gif`, and as `photo_gap_4_two_sides_v2.gif` without the story line at the top (both git-ignored, rerun to make them) |
 | 5 | `photo_gap_5_stage_rates` | how fast did the gap change in each stage? | +11.2 m/yr building (1967-78), +1.6 to the peak (1978-95), −1.4 after the last repair (1996-2016) |
 | 6 | `photo_gap_6_placement` | where along GIS 4-8 did the shoreline build out and retreat, and how big is the gap across GIS 5/6 and 6/7? | in 100 m strips the shoreline rises steadily across the field, from the deepest retreat in GIS 4-5, through zero between the groins (about 170 m north of the southern groin), to the most building-out (+20-30 m by 1989-95) at the 6/7 boundary, falling off through GIS 7. The 5/6 gap is 97-155 m over 1978-97, the 6/7 gap 14-44 m. Added 2026-10-14 |
 
@@ -83,7 +83,7 @@ From the photos alone (figure 6): the starved side begins at the southern groin 
 the northern groins, at 6/7. Domain means hide this: GIS 6 averages a ramp from about −50 m to +30 m
 (1989), so its mean held near zero, the 5/6 gap is large and the 6/7 gap small. A single boundary groin can
 place either the starved side (5/6) or the fillet (6/7) at a boundary, not both. The CoastSat rates and the
-two records together are in `../2-coastsat_gap/` figure 9 and `../3-photos_vs_coastsat/` figure 6.
+two records together are in `../2-coastsat_gap/` figure 10 and `../3-photos_vs_coastsat/` figure 6.
 
 ## The scripts in detail
 

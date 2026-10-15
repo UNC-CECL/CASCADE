@@ -30,7 +30,7 @@ from shapely.ops import transform as shp_transform
 # --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 GROIN = REPO / "hard-structures" / "groin"
-INPUT_DIR  = str(GROIN / "3-hindcast" / "1-dipole-1967-2017" / "inputs" / "groin_init" / "island_offset" / "input")
+INPUT_DIR  = str(GROIN / "4-hindcast" / "1-dipole-1967-2017" / "inputs" / "groin_init" / "island_offset" / "input")
 OUTPUT_DIR = str(GROIN / "1-observations" / "analysis" / "1-aerial_photo_gap")
 FIGURE_DIR = os.path.join(OUTPUT_DIR, "figures")
 

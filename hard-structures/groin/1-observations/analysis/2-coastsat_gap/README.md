@@ -10,11 +10,11 @@ What condition was the Buxton groin in when the calibration period starts in 199
 
 ## Main findings (2026-10-08)
 
-1. **The gap stopped widening in 1995, at the last repair, not at Hurricane Isabel (2003).** Both gap definitions break at 1995 (90% ranges 1992–1998 and 1991–2000). The 2002–2005 timing the model assumes holds only 1–2% of the bootstrap fits, and the break stays at 1994–96 under every robustness check. *Figures 5, 6, 8.*
-2. **After 1995 the groin's effect fades slowly; it does not collapse.** The gap widened about +4 m/yr before the break and slipped about −1.4 to −2.4 m/yr after it. The 1996–2003 rate is not distinguishable from zero, and a separate 2004 drop (about −14 m) is within two standard errors of zero in every fit. *Figures 7, 8.*
-3. **The 1995 peak is partly storm loss on the south side, not trapping.** The 1991–95 widening is mostly GIS 5 retreating (about −98 m against −24 m on the north side), with Hurricane Gordon in 1994. *Figure 4.*
+1. **The gap stopped widening in 1995, at the last repair, not at Hurricane Isabel (2003).** Both gap definitions break at 1995 (90% ranges 1992–1998 and 1991–2000). The 2002–2005 timing the model assumes holds only 1–2% of the bootstrap fits, and the break stays at 1994–96 under every robustness check. *Figures 5, 7, 9.*
+2. **After 1995 the gap narrows because the south side recovers, not because the groin lets go of the north side.** Split into its sides (figure 6), the break is all GIS 5: it retreated −10.9 ± 1.6 m/yr through 1991–95, with Hurricane Gordon in 1994, then recovered +2.0 ± 1.8 m/yr through 1996–2003 (GIS 4 +4.2), while GIS 6 held (−0.3 ± 1.4, then −0.2 ± 0.4 m/yr), as did GIS 7-8. So the 1995 break marks the end of a storm's extra widening, not the start of the groin's failure. From 2004 both sides retreat with the coast north of the field (GIS 6 −1.3, GIS 5 −1.6, GIS 7 −2.0, GIS 8 −2.6 m/yr) and the gap holds until the 2017 fill; a separate 2004 drop in the gap (about −14 m) is within two standard errors of zero in every fit. The gap's −1.4 to −2.4 m/yr after the break (figure 8) is this recovery. Corrected 2026-10-14; it read "the groin's effect fades slowly". *Figures 6, 8, 9.*
+3. **The 1995 peak is partly storm loss on the south side, not trapping.** The 1991–95 widening is mostly GIS 5 retreating (about −98 m against −24 m on the north side), with Hurricane Gordon in 1994. *Figures 4, 6.*
 4. **The photos disagree at one date.** The 2004 survey, which pinned b in the 2026-10-05 calibration, sits 42 m above CoastSat; see `../3-photos_vs_coastsat/`.
-5. **For the model:** by the decision rule above, this points to an earlier failure. The schedule refit that followed (`../../../3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`) found that, scored on CoastSat, the best groin is weak (b × f ≈ 0.32–0.36), and that failing from 1996 fits slightly best and matches the repair record. Its post-failure strength equals the current pin's, so test and forward runs would not change. The choice of schedule is still open.
+5. **For the model:** by the decision rule above, this pointed to an earlier failure. Finding 2 qualifies that: a groin weakened from 1996 to fit the post-1995 narrowing is fitting the south side's recovery from Gordon, which the observations do not attribute to the groin. In the record the groin's hold on the north side shows no break until the coast-wide retreat from 2004, and the gap itself holds until the 2017 fill and the reported structural losses (2015-2021). The schedule refit that followed (`../../../4-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`) found that, scored on CoastSat, the best groin is weak (b × f ≈ 0.32–0.36), and that failing from 1996 fits slightly best and matches the repair record. Its post-failure strength equals the current pin's, so test and forward runs would not change. The choice of schedule is still open.
 
 **Caveats.** CoastSat before 1999 rests on 5–13 Landsat images a year per transect.
 
@@ -57,18 +57,20 @@ Each panel title is the question the panel answers. Each caption in `figures/sup
 | 3 | `coastsat_gap_3_transects_to_sides` | how do the transects become one position per side? | the mean of a side's transect anomalies in years where at least half have data; before the fill they move together, after it transect 0077 (just south of the southern groin) rises with GIS 5. Added 2026-10-14 |
 | 4 | `coastsat_gap_4_side_positions` | which side of the groins moved? | the 1991–95 widening is mostly the south side retreating (GIS 5 about −98 m against GIS 6 about −24 m, with Gordon in 1994). After 2017 the south side gains fill sand |
 | 5 | `coastsat_gap_5_gap_and_break` | when did the gap stop widening? | 1995 in both gaps (90% ranges 1992–98 and 1991–2000) |
-| 6 | `coastsat_gap_6_break_year` | which break year fits best, and how certain is it? | 1995; 2002–05, the model's failure timing, holds 1–2% of the bootstraps |
-| 7 | `coastsat_gap_7_era_rates` | how are the era rates fitted, and was the gap widening or narrowing? | a least-squares line through each era's annual gap; widening before the repair, slightly narrowing 1996–2003 (not distinguishable from zero), flat 2004–16 |
-| 8 | `coastsat_gap_8_robustness` | does the break hold under other fits, and is there a separate 2004 drop? | the break stays at 1994–96; no 2004 step is clearly different from zero |
-| 9 | `coastsat_gap_9_placement` | which boundary does the CoastSat rate pattern point to, GIS 5/6 or 6/7? | over 1984-95 the rate steps at the southern groin, −4.7 to −7.9 m/yr south of it against −1.3 to −3.4 north, with no second step at 6/7 (GIS 6 −2.4, GIS 7 −3.3, GIS 8 −2.4 m/yr). The 5/6 gap widened +4.5 ± 1.1 m/yr, the 6/7 gap −0.2 ± 0.6. Later eras reverse the step at the southern groin and still show none at 6/7. Added 2026-10-14 |
+| 6 | `coastsat_gap_6_break_sides` | which side moved when the gap stopped widening? | the south side. GIS 5 retreated −10.9 ± 1.6 m/yr through 1991-95 (Gordon) and recovered +2.0 ± 1.8 m/yr through 1996-2003, while GIS 6 held (−0.3, −0.2 m/yr) as GIS 7-8 did. From 2004 both sides retreat with the coast north of the field. Throughout, GIS 6 moves with GIS 7-8; the groin's mark on the gap is in how the south side moves. Added 2026-10-14 |
+| 7 | `coastsat_gap_7_break_year` | which break year fits best, and how certain is it? | 1995; 2002–05, the model's failure timing, holds 1–2% of the bootstraps |
+| 8 | `coastsat_gap_8_era_rates` | how are the era rates fitted, and was the gap widening or narrowing? | a least-squares line through each era's annual gap; widening before the repair, slightly narrowing 1996–2003 (not distinguishable from zero), flat 2004–16 |
+| 9 | `coastsat_gap_9_robustness` | does the break hold under other fits, and is there a separate 2004 drop? | the break stays at 1994–96; no 2004 step is clearly different from zero |
+| 10 | `coastsat_gap_10_placement` | which boundary does the CoastSat rate pattern point to, GIS 5/6 or 6/7? | over 1984-95 the rate steps at the southern groin, −4.7 to −7.9 m/yr south of it against −1.3 to −3.4 north, with no second step at 6/7 (GIS 6 −2.4, GIS 7 −3.3, GIS 8 −2.4 m/yr). The 5/6 gap widened +4.5 ± 1.1 m/yr, the 6/7 gap −0.2 ± 0.6. Later eras reverse the step at the southern groin and still show none at 6/7. Added 2026-10-14 |
 
 The figures follow the analysis: transects (1), one transect to annual means (2), transects to sides (3),
-the two sides (4), the gap and its break (5-6), era rates (7), robustness (8). Figures 2-3 read
+the two sides (4), the gap and its break (5), which side made the break (6), how certain it is (7), era
+rates (8), robustness (9), and the placement question (10). Figures 2-3 read
 `tables/transect_annual.csv`. Until 2026-10-14 the figures were `gap_across_groins_<n>_*` (numbered 0-8),
-then for a day `coastsat_gap_1`-`_6`; 2-6 of those are now 4-8.
+then for a day `coastsat_gap_1`-`_6`; 2-6 of those are now 4, 5, 7, 8 and 9.
 
 
-An earlier figure 8, the failure schedules, is a model setting, not an observation. Since 2026-10-08 it is `schedule_refit_0_failure_schedules.png` in `../../../3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/figures/`.
+An earlier figure 8, the failure schedules, is a model setting, not an observation. Since 2026-10-08 it is `schedule_refit_0_failure_schedules.png` in `../../../4-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/figures/`.
 
 ## Result
 
@@ -83,10 +85,10 @@ An earlier figure 8, the failure schedules, is a model setting, not an observati
 
 **Reading.**
 1. **The gap stopped widening at the 1995 last repair, not at Isabel.** Both gap definitions put the break at 1995. It stays at 1994–96 under every robustness check, and the 2003–04 timing gets 1–2% of the bootstrap mass. On the decision rule, this points to an earlier failure.
-2. **What follows is a slow decline, not a collapse.** The 1996–2003 rate is not distinguishable from zero. The 2004 step is less than two standard errors in every fit. Adding the step lowers the BIC in only one of the eight fits (GIS 6 minus GIS 5, 1995 left out), and then by 0.1.
+2. **What follows is the south side recovering, not a collapse.** The 1996–2003 rate is not distinguishable from zero, and it is GIS 5 regaining what Gordon took while GIS 6 holds (figure 6). The 2004 step is less than two standard errors in every fit. Adding the step lowers the BIC in only one of the eight fits (GIS 6 minus GIS 5, 1995 left out), and then by 0.1.
 3. **The 1995 peak is partly the south side being eroded.** The gap's rise in 1991–95 is mainly GIS 5 retreating, so the peak may be partly storm damage downdrift (Gordon) rather than trapping. The photos show it too (`../1-aerial_photo_gap/`).
 4. **The photos and CoastSat agree, except at 2004:** see `../3-photos_vs_coastsat/` (figure 3).
-5. **For the model:** the 2026-10-05 calibration fit says b is "well pinned down by the 2004 date", which is the date CoastSat contradicts. The refit should score b and f against the annual CoastSat gap and try schedules that start weakening in 1996 (done: `../../../3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`).
+5. **For the model:** the 2026-10-05 calibration fit says b is "well pinned down by the 2004 date", which is the date CoastSat contradicts. The refit should score b and f against the annual CoastSat gap and try schedules that start weakening in 1996 (done: `../../../4-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`).
 
 **Caveats.**
 - CoastSat before 1999 rests on 5–13 Landsat images a year per transect.
@@ -107,7 +109,7 @@ These labels say "last repair" at 1996. Relabel or move them if the figures are 
 
 ## Next
 
-Done 2026-10-08: `3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`. All three schedules reach about 10 m on the annual CoastSat gap (no groin 41.6 m). The best is failure from 1996 at b × f 0.36, a weak, constant groin. The current pin fits the photos (4.0 m) but scores 29.2 m on CoastSat. From 2009 the two are identical, because both have b × f 0.36. The choice of schedule is still open; see that README.
+Done 2026-10-08: `4-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`. All three schedules reach about 10 m on the annual CoastSat gap (no groin 41.6 m). The best is failure from 1996 at b × f 0.36, a weak, constant groin. The current pin fits the photos (4.0 m) but scores 29.2 m on CoastSat. From 2009 the two are identical, because both have b × f 0.36. The choice of schedule is still open; see that README.
 
 ## Tables
 
@@ -116,9 +118,11 @@ Done 2026-10-08: `3-hindcast/2-blocking-1996-2025/2026-10-08-schedule-refit/`. A
 | `gap_annual.csv` | annual gap and side anomalies, with the transect count behind each value |
 | `gap_breakpoint.csv` | hinge fits, bootstrap interval, two-break and step tests, BIC |
 | `gap_robustness.csv` | break year, its interval, the step and BIC under each check |
-| `break_profile.csv`, `break_bootstrap.csv`, `hinge_fit.csv` | the curves behind figures 5–6 |
+| `break_profile.csv`, `break_bootstrap.csv`, `hinge_fit.csv` | the curves behind figures 5 and 7 |
 | `era_rates.csv` | gap rate ± SE per era, both CoastSat gaps |
 | `transects_used.csv` | transect ids, side and UTM ends |
 | `boundary_gaps.csv` | the GIS 5, 6 and 7 side means (each about its 1984-2016 mean) and the gap across 5/6 and 6/7 (figure 9) |
 | `alongshore_rates.csv` | every GIS 4-8 transect's least-squares rate in each era and after the fill, with its northing from the southern groin (figure 9) |
+| `domain_positions.csv` | each GIS 4-8 domain's annual mean position, the mean of its transects about their own 1984-2016 means (figure 6) |
+| `domain_era_rates.csv` | each GIS 4-8 domain's rate ± SE in 1984-90, 1991-95, 1996-2003 and 2004-16 (figure 6) |
 | `transect_annual.csv` | each transect's annual mean, image count, whether the year is used (at least 3 images), its 1984-2016 mean and the anomaly (figures 2-3) |

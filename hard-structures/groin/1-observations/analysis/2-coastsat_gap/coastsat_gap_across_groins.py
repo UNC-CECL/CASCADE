@@ -15,7 +15,9 @@ the aerial photos are in ../1-aerial_photo_gap/, the two compared in ../3-photos
 
 For the groin-placement question (GIS 5/6 or 6/7) it also writes the gap across both
 boundaries from the GIS 5, 6 and 7 side means, and every GIS 4-8 transect's rate in each
-era, located by northing from the southern groin.
+era, located by northing from the southern groin; and each GIS 4-8 domain's position and
+rate before, through and after Hurricane Gordon and the 1995 repair, to show which side moved
+when the gap stopped widening.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -56,6 +58,8 @@ ERAS = ((1984, 1995), (1996, 2003), (2004, 2016))   # to the last repair, after 
 BOUNDARIES = ((5, 6), (6, 7))        # the two candidate places for the model groin, (south, north) domain
 PROFILE_DOMAINS = (4, 5, 6, 7, 8)    # the alongshore profile
 PROFILE_ERAS = ERAS + ((2017, 2025),)                # the three eras, and after the fill
+# What the 1995 break is made of: each domain's rate before the storm, through Gordon, and after the repair
+SIDE_ERAS = ((1984, 1990), (1991, 1995), (1996, 2003), (2004, 2016))
 # Robustness: (label, fit window, years left out)
 CHECKS = (("as fitted", FIT, ()), ("from 1988", (1988, FIT[1]), ()),
           ("1995 left out", FIT, (1995,)), ("to 2013", (FIT[0], 2013), ()))
@@ -219,8 +223,22 @@ def alongshore_rates():
     return pd.DataFrame(rows).sort_values(["era", "northing"])
 
 
+# Each GIS 4-8 domain's mean position (about each transect's own fit-window mean) and its rate per era
+def domain_positions():
+    lut = pd.read_csv(FRAME / "transect_domain_lookup.csv")
+    pos = pd.DataFrame({f"gis{d}_m": side_series(lut.loc[lut["domain_number"] == d, "transect_id"].tolist())[0]
+                        for d in PROFILE_DOMAINS}).rename_axis("year")
+    rates = [dict(domain=int(c[3:-2]), era=f"{lo}-{hi}", **dict(zip(("rate_m_yr", "se_m_yr", "n_years"),
+                                                                     era_rate(pos[c], lo, hi))))
+             for c in pos.columns for lo, hi in SIDE_ERAS]
+    return pos, pd.DataFrame(rates)
+
+
 def main():
     TABLES.mkdir(exist_ok=True)
+    pos, side_rates = domain_positions()
+    pos.to_csv(TABLES / "domain_positions.csv", float_format="%.2f")
+    side_rates.to_csv(TABLES / "domain_era_rates.csv", index=False, float_format="%.3f")
     boundary_gaps().to_csv(TABLES / "boundary_gaps.csv", float_format="%.2f")
     alongshore_rates().to_csv(TABLES / "alongshore_rates.csv", index=False, float_format="%.3f")
     groups = sides()

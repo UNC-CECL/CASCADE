@@ -7,7 +7,7 @@ the chainage table in `../4-shoreline_rates_by_era/tables/`. It is for seeing wh
 shoreline moved; the numbers are in `../2-coastsat_gap/` (the gap each year) and
 `../4-shoreline_rates_by_era/` (rates by era).
 
-**Who reads it.** `../../../3-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/plan_view_figure.py`
+**Who reads it.** `../../../4-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/plan_view_figure.py`
 imports `shoreline_plan_view_gif.py` for its map layers, unchanged.
 
 Until 2026-10-13 these were part of `../4-shoreline_rates_by_era/`: the script at its top level,

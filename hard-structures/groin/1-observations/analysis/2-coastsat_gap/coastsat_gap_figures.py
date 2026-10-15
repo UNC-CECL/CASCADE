@@ -6,9 +6,9 @@ The CoastSat gap figures, drawn from the tables coastsat_gap_across_groins.py wr
 
 CoastSat only. One figure per step, in the order of the analysis: (1) the transects,
 (2) one transect's images to annual means, (3) transects to one position per side,
-(4) the two sides together, (5) the gap and when it stopped widening, (6) how certain
-that year is, (7) how the rate in each era is fitted, (8) whether the break survives
-other fits, (9) each transect's rate along GIS 4-8 and the gap across both candidate
+(4) the two sides together, (5) the gap and when it stopped widening, (6) which side
+moved when it did, (7) how certain that year is, (8) how the rate in each era is fitted,
+(9) whether the break survives other fits, (10) each transect's rate along GIS 4-8 and the gap across both candidate
 model boundaries (GIS 5/6 and 6/7). Each panel title is
 the question it answers; captions (what it tests, how to read it, what it shows) go
 to figures/supporting/CAPTIONS.md. The photos are drawn in ../1-aerial_photo_gap/,
@@ -388,7 +388,80 @@ def fig_gap():
         "`../3-photos_vs_coastsat/`."))
 
 
-# 6. How certain the break year is
+# 6. What the 1995 break is made of: which side moved, against the coast either side
+def fig_break_sides():
+    pos = tab("domain_positions").set_index("year")
+    rates = tab("domain_era_rates")
+    dcol = {4: SIDE_COL["downdrift"], 5: SIDE_COL["downdrift"], 6: SIDE_COL["updrift"], 7: "0.35", 8: "0.62"}
+    dlab = {4: "GIS 4", 5: "GIS 5, south side (downdrift)", 6: "GIS 6, north side (updrift)", 7: "GIS 7", 8: "GIS 8"}
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2), constrained_layout=True,
+                             gridspec_kw=dict(height_ratios=(1.3, 1)))
+    ax = axes[0]
+    for lo, hi, name in ((1991, 1995.5, "Gordon loss"), (1995.5, 2003.5, "south side recovers")):
+        ax.axvspan(lo, hi, color=C["BASE_FILL"] if name == "Gordon loss" else C["ADDED_FILL"], alpha=0.35, lw=0,
+                   zorder=0)
+        ax.text((lo + hi) / 2, 0.03, name, transform=ax.get_xaxis_transform(), ha="center", fontsize=6.6,
+                color=INK_MUTED)
+    for d in (8, 7, 4, 5, 6):
+        main = d in (5, 6)
+        ax.plot(pos.index, pos[f"gis{d}_m"], color=dcol[d], lw=1.6 if main else 0.8, marker="o" if main else None,
+                ms=2.8, ls="-" if main or d == 7 else (0, (3, 2)) if d == 4 else (0, (1, 1.2)), alpha=1 if main else 0.85, label=dlab[d],
+                zorder=4 if main else 3)
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.set_xlim(1983, 2027)
+    fill_shade(ax)
+    events(ax)
+    chart(ax)
+    ax.set_ylabel(f"Position (m), + seaward\nabout {FIT[0]}-{FIT[1]} mean")
+    question(ax, 0, "Which side moved when the gap stopped widening?")
+    ax.legend(frameon=False, fontsize=6.6, loc="lower left", ncol=2)
+
+    ax = axes[1]
+    eras = list(dict.fromkeys(rates["era"]))
+    doms = (4, 5, 6, 7, 8)
+    w = 0.15
+    for k, d in enumerate(doms):
+        s = rates[rates["domain"] == d].set_index("era").reindex(eras)
+        x = np.arange(len(eras)) + (k - 2) * w
+        ax.bar(x, s["rate_m_yr"], width=w * 0.9, yerr=s["se_m_yr"], color=dcol[d],
+               alpha=1 if d in (5, 6) else 0.5, capsize=1.5, error_kw=dict(lw=0.6), label=f"GIS {d}")
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    names = ("before", "Gordon,\nto the repair", "after the repair,\nto Isabel", "after Isabel,\nto the fill")
+    ax.set_xticks(range(len(eras)), [f"{n}\n{e}" for n, e in zip(names, eras)], fontsize=6.6)
+    ax.set_ylabel("Rate (m/yr) ± 1 SE\n+ = building out")
+    chart(ax)
+    question(ax, 1, "How fast did each domain move in each era?")
+    ax.legend(frameon=False, fontsize=6.4, ncol=5, loc="upper left")
+    png = out("6_break_sides")
+    save(fig, png, close=True)
+    r = rates.set_index(["domain", "era"])["rate_m_yr"]
+    se = rates.set_index(["domain", "era"])["se_m_yr"]
+    g = tab("gap_annual")
+    gd = g[g["gap"] == "domain"].set_index("year")["gap_m"]
+    record_caption(png, (
+        "**Tests:** whether the gap stopped widening in 1995 because the groin stopped holding the north side, or "
+        "because the south side moved. **How to read:** (a) Each domain's CoastSat position, the mean of its "
+        f"transects about their own {FIT[0]}-{FIT[1]} means (figure 3): GIS 6, the north (updrift) side, in blue; "
+        "GIS 5, the south (downdrift) side, in gold; GIS 4 (dashed gold) further south and GIS 7-8 (grey) further "
+        "north (GIS 7 solid, GIS 8 dotted), for comparison. Shading: 1991-1995, the years of Hurricane Gordon's (1994) loss on the south side; "
+        "1996-2003, from the last repair (1995) to Hurricane Isabel (2003). (b) Each domain's least-squares rate in "
+        "each era, ± 1 standard error. **Shows:** the 1995 break is the south side, not the north. Through "
+        f"1991-1995 GIS 5 retreated {r[5, '1991-1995']:+.1f} ± {se[5, '1991-1995']:.1f} m/yr (GIS 4 "
+        f"{r[4, '1991-1995']:+.1f}) while GIS 6 held ({r[6, '1991-1995']:+.1f} ± {se[6, '1991-1995']:.1f}), as GIS 7-8 "
+        f"did ({r[7, '1991-1995']:+.1f}, {r[8, '1991-1995']:+.1f}): the gap "
+        f"widened to {gd[1995]:.0f} m above its 1984-2016 mean in 1995 by storm loss downdrift. From 1996 to 2003 "
+        f"the south side recovered ({r[5, '1996-2003']:+.1f} ± {se[5, '1996-2003']:.1f}, GIS 4 "
+        f"{r[4, '1996-2003']:+.1f}) while GIS 6 still held ({r[6, '1996-2003']:+.1f} ± {se[6, '1996-2003']:.1f}): "
+        "the gap narrowed because the south side came back, not because the groin let the north side go. From "
+        f"2004 both sides retreated (GIS 6 {r[6, '2004-2016']:+.1f}, GIS 5 {r[5, '2004-2016']:+.1f} m/yr), as the "
+        f"coast north of the field did (GIS 7 {r[7, '2004-2016']:+.1f}, GIS 8 {r[8, '2004-2016']:+.1f}), so the gap "
+        "held; GIS 6 still lost ground a little more slowly than its northern neighbours. Throughout, GIS 6 moves "
+        "with GIS 7-8: in CoastSat the north side behaves like the coast north of it, and the groin's mark on the "
+        "gap is in how the south side moves (starved, cut by Gordon, recovering). The 1995 annual means mix months "
+        "before and after the repair, whose month is not recorded."))
+
+
+# 7. How certain the break year is
 def fig_break():
     prof, boots = tab("break_profile"), tab("break_bootstrap")
     fig, axes = plt.subplots(1, 2, figsize=figsize("double", height=3.2), constrained_layout=True)
@@ -415,7 +488,7 @@ def fig_break():
     question(ax, 1, "How certain is that year?", inside=True)
     handles = [Patch(color=COL[n], label=f"CoastSat, {NAME[n]}") for n in ("domain", "near_field")]
     fig.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False)
-    png = out("6_break_year")
+    png = out("7_break_year")
     save(fig, png, close=True)
     br = tab("gap_breakpoint").set_index("gap")
     record_caption(png, (
@@ -432,7 +505,7 @@ def fig_break():
         f"{100 * br.loc['near_field', 'boot_share_le_1997']:.0f}%."))
 
 
-# 7. How the gap's rate in each era is fitted
+# 8. How the gap's rate in each era is fitted
 def fig_eras():
     e = tab("era_rates")
     g = tab("gap_annual")
@@ -468,7 +541,7 @@ def fig_eras():
     chart(ax)
     question(ax, 1, "Each line's slope")
     ax.legend(frameon=False, fontsize=6.3, loc="lower left")
-    png = out("7_era_rates")
+    png = out("8_era_rates")
     save(fig, png, close=True)
     record_caption(png, (
         "**Tests:** whether the gap widened (groin trapping), held, or narrowed in each era of the "
@@ -480,7 +553,7 @@ def fig_eras():
         "are compared in `../3-photos_vs_coastsat/`."))
 
 
-# 8. Whether the break survives other fits
+# 9. Whether the break survives other fits
 def fig_robust():
     r = tab("gap_robustness")
     checks = list(dict.fromkeys(r["check"]))
@@ -512,7 +585,7 @@ def fig_robust():
     handles = [Line2D([], [], color=COL[n], marker="o", ms=4, ls="none", label=f"CoastSat, {NAME[n]}")
                for n in ("domain", "near_field")]
     fig.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False)
-    png = out("8_robustness")
+    png = out("9_robustness")
     save(fig, png, close=True)
     record_caption(png, (
         "**Tests:** whether the 1995 break depends on choices in the fit, and whether the data also "
@@ -527,7 +600,7 @@ def fig_robust():
         "with 1995 left out), by 0.1 (tables/gap_robustness.csv)."))
 
 
-# 9. Where along the coast the shoreline retreated fastest in each era, and the gap across both boundaries
+# 10. Where along the coast the shoreline retreated fastest in each era, and the gap across both boundaries
 def fig_placement():
     r = tab("alongshore_rates")
     b = tab("boundary_gaps").set_index("year")
@@ -575,7 +648,7 @@ def fig_placement():
     ax.set_xlabel("Year")
     question(ax, 1, "How did the gap across each candidate boundary change?")
     fig.legend(*ax.get_legend_handles_labels(), loc="outside lower center", ncol=2, frameon=False, fontsize=7)
-    png = out("9_placement")
+    png = out("10_placement")
     save(fig, png, close=True)
     w = r[r["era"] == f"{ERAS[0][0]}-{ERAS[0][1]}"].set_index("transect_id")
     south_of = w[w["from_south_groin_m"] < 0]
@@ -603,7 +676,8 @@ def fig_placement():
 
 def main():
     apply_style()
-    for f in (fig_map, fig_transect, fig_to_sides, fig_sides, fig_gap, fig_break, fig_eras, fig_robust, fig_placement):
+    for f in (fig_map, fig_transect, fig_to_sides, fig_sides, fig_gap, fig_break_sides, fig_break, fig_eras, fig_robust,
+              fig_placement):
         f()
         print(f"drew {f.__name__}")
 

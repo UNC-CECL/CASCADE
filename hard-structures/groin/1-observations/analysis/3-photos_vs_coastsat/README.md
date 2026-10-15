@@ -78,7 +78,7 @@ Over the calibration (1996-2009) both fell by a similar amount (5/6 −19 m, 6/7
   leave GIS 6 holding against GIS 5 (5/6 gap ~140 m in 1996), and a 5/6 groin should leave a small
   6/7 gap.
 The photo and CoastSat profiles behind this are `../1-aerial_photo_gap/` figure 6 and `../2-coastsat_gap/`
-figure 9.
+figure 10.
 
 ## The figures, in reading order
 
@@ -87,7 +87,7 @@ figure 9.
 | 1 | `photos_vs_coastsat_1_what_the_gap_is` | what is the gap, and how does each record measure it? | the north-side position minus the south-side position; both sides retreated (by 1996 the north 49 m, the south 183 m since 1967), and the 135 m between them is the groin's effect. Was `gap_across_groins_0`; its animation is now `../1-aerial_photo_gap/figures/photo_gap_4_two_sides.gif` |
 | 2 | `photos_vs_coastsat_2_one_scale` | how are the two records put on one scale? | before: CoastSat sits about its own 1984-2016 mean, far from the photos; after: each CoastSat side moved by one constant (north −45 m, south −162 m) onto the same side's photos over their 13 shared pre-fill years, and the lines run through the squares. Added 2026-10-14 |
 | 3 | `photos_vs_coastsat_3_gap_and_agreement` | how wide was the gap in both records, and how far is each photo from CoastSat? | 142 m in 1996 (CoastSat), a slow slip with no step at Isabel, 64 m by 2026. Before the fill every difference is inside the ±23 m one-day scatter but the 2004 gap (+42 m); after it both sides of the photos sit 18-24 m landward while the gap agrees. Added 2026-10-14; it replaces `photos_vs_coastsat_3_do_they_agree` (was `gap_across_groins_7`), whose differences are panel (b) here |
-| 4 | `photos_vs_coastsat_4_era_rates` | do the two records give the same rates? | yes before the repair; after 2004 CoastSat is flat while the photos fall. Was `gap_across_groins_5`, without the near-field gap (in `../2-coastsat_gap/` figure 7) |
+| 4 | `photos_vs_coastsat_4_era_rates` | do the two records give the same rates? | yes before the repair; after 2004 CoastSat is flat while the photos fall. Was `gap_across_groins_5`, without the near-field gap (in `../2-coastsat_gap/` figure 8) |
 | 5 | `photos_vs_coastsat_5_state_in_1996` | what state was the groin in at 1996? | a full-sized gap a year after the last repair, no longer widening, no collapse before 2015-21. Was `gap_across_groins_8` |
 | 6 | `photos_vs_coastsat_6_placement` | what is the observed gap across GIS 5/6 and across 6/7, on one scale, at the calibration and test keys? | 5/6: 142 m in 1996, 123 m in 2009, 63 m in 2025. 6/7: 31, 15 and 13 m; it never widened while the groins worked (−0.2 ± 0.6 m/yr over 1984-95, against +4.5 ± 1.1 at 5/6). The two records agree to 14 m RMS at 5/6 and 5 m at 6/7. Targets in `tables/placement_targets.csv`. Added 2026-10-14 |
 

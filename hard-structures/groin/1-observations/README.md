@@ -36,7 +36,9 @@ analysis/                      one folder per study, in reading order: scripts a
   1995 peak of 155 m (photos). CoastSat gives +4.5 m/yr over 1984-95.
 - **Stopped widening in 1995**, the last repair, not at Isabel (2003): the break is 1995 (90% range
   1992-98) and holds under every check; a 2002-05 break gets 1-2% of the bootstraps.
-- **Faded slowly, then went with the fill.** After 1995 the gap narrowed about 1.4-2.4 m/yr, with
+- **Then the south side recovered, and the gap went with the fill.** After 1995 the gap narrowed about
+  1.4-2.4 m/yr, but that is GIS 5 regaining what Gordon took (1996-2003) while GIS 6 held; from 2004
+  both sides retreat with the coast north of the field (`analysis/2-coastsat_gap/` figure 6). There is
   no separate drop at 2004. It fell about 40 m around the 2017 fill, as the reported structural
   losses (2015-2021) began.
 - **One date disagrees.** The photos and CoastSat agree within 13 m except the 2004 survey, 42 m
@@ -55,11 +57,11 @@ south side.
 - `analysis/1-aerial_photo_gap/Change_from_wetdry_1967_D2_D12.csv`: every hindcast fit, the
   figures, `scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_config.py`.
 - `analysis/2-coastsat_gap/`: the blocking-groin fits from the 2026-10-08 schedule refit on
-  (`../3-hindcast/2-blocking-1996-2025/`), which import its CoastSat gap.
+  (`../4-hindcast/2-blocking-1996-2025/`), which import its CoastSat gap.
 - `analysis/4-shoreline_rates_by_era/tables/groin_analysis_chainage_all.csv`: the dipole sweep's
   target (`scripts/hatteras_ms/groin-sweep/`), and the input to `analysis/5-shoreline_maps/`.
 - `analysis/5-shoreline_maps/shoreline_plan_view_gif.py`: its map layers feed the corrected groin's
-  plan-view figure (`../3-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/plan_view_figure.py`).
+  plan-view figure (`../4-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/plan_view_figure.py`).
 - `data/gis/groins_hatteras.geojson`: `scripts/input_prep/4-mgmt-forcings/beach_nourishment.py`.
 - `data/gis/transects_100m.geojson`: `analysis/4-shoreline_rates_by_era/`; the 2-brie-offset stage
   reads its byte-identical twin (`data/hatteras_init/2-brie-offset/transects/README.md`).

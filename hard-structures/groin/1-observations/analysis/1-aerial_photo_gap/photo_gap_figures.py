@@ -373,8 +373,8 @@ STORY = ((1969, "1967: the first survey. Both sides start at zero; there is no g
                 "the south side gains, the north side keeps retreating, and the gap shrinks."))
 
 
-# 4, animated: the two shorelines and the gap through the photo record
-def gif_sides():
+# 4, animated: the two shorelines and the gap through the photo record; v2 drops the story line at the top
+def gif_sides(story_line=True):
     from matplotlib.animation import FuncAnimation, PillowWriter
     s = tab("photo_gap_annual").set_index("year")
     years = np.arange(1967, s.index.max() + 0.001, 0.25)
@@ -382,10 +382,10 @@ def gif_sides():
     south = np.interp(years, s.index, s["south_m"])
     frames = list(range(len(years))) + [len(years) - 1] * 25          # hold the last frame
     fig = plt.figure(figsize=figsize("double", height=4.2))
-    gs = fig.add_gridspec(1, 2, width_ratios=(0.55, 1), left=0.07, right=0.98, top=0.80, bottom=0.12, wspace=0.28)
+    gs = fig.add_gridspec(1, 2, width_ratios=(0.55, 1), left=0.07, right=0.98, top=0.80 if story_line else 0.88, bottom=0.12, wspace=0.28)
     ax, at = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
     story = fig.text(0.5, 0.975, "", ha="center", va="top", fontsize=8.2)
-    stamp = fig.text(0.07, 0.86, "", fontsize=11, fontweight="bold")
+    stamp = fig.text(0.07, 0.86 if story_line else 0.94, "", fontsize=11, fontweight="bold")
 
     at.set_xlim(1965, 2025)
     at.set_ylim(-215, 20)
@@ -453,14 +453,19 @@ def gif_sides():
         dyn.append(at.annotate("", xy=(yr, so), xytext=(yr, n),
                                arrowprops=dict(arrowstyle="<->", color=C["ACCENT"], lw=1.2)))
         stamp.set_text(f"{int(yr)}")
-        story.set_text(next(t for end, t in STORY if yr < end or end == STORY[-1][0]))
+        if story_line:
+            story.set_text(next(t for end, t in STORY if yr < end or end == STORY[-1][0]))
         return []
 
     anim = FuncAnimation(fig, draw, frames=frames, blit=False)
-    gif = FIGS / "photo_gap_4_two_sides.gif"
+    gif = FIGS / ("photo_gap_4_two_sides.gif" if story_line else "photo_gap_4_two_sides_v2.gif")
     anim.save(gif, writer=PillowWriter(fps=12), dpi=110)
     plt.close(fig)
     print("wrote", gif)
+
+
+def gif_sides_v2():
+    gif_sides(story_line=False)
 
 
 # 5. The gap's rate in each stage
@@ -598,7 +603,7 @@ def fig_placement():
 
 def main():
     apply_style()
-    for f in (fig_lines, fig_measure, fig_domains, fig_sides, gif_sides, fig_eras, fig_placement):
+    for f in (fig_lines, fig_measure, fig_domains, fig_sides, gif_sides, gif_sides_v2, fig_eras, fig_placement):
         f()
         print(f"drew {f.__name__}")
 

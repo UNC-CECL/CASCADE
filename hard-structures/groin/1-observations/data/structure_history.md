@@ -1,6 +1,6 @@
 # Buxton groin — the observed history
 
-What the structure is and what the shoreline did around it. None of this depends on the model. Split from `GROIN_PLAN.md` (reference note of 2026-08-24) on 2026-10-08. The dipole fit that note also held is now `../../3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md`.
+What the structure is and what the shoreline did around it. None of this depends on the model. Split from `GROIN_PLAN.md` (reference note of 2026-08-24) on 2026-10-08. The dipole fit that note also held is now `../../4-hindcast/1-dipole-1967-2017/dipole_fit_notes.md`.
 
 **Structure history:** installed **1969** · last repaired **1995** (south groin, 184 ft of steel sheet piling after Hurricane Gordon 1994; CSE 2013, report 2403-PHASE1-FR, p. 20) · storm damage **2003**. Until 2026-10-08 this line said 1996; no source gave 1996. The old ramp's onset of 1996 is the first year after the repair. The field spans northing 3901373–3901789, entirely inside GIS 6, so the groin is the face between GIS 5 (downdrift, south) and GIS 6 (updrift, north).
 
