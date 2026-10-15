@@ -266,7 +266,7 @@ THE GROIN, 2026-10-14. The corrected groin, by two numbers: the share of
 the drift arriving at the GIS 5|6 face it holds back (strength, 0.25), and the
 first year it no longer works (end_year, 2017, the Buxton fill). Both fitted on
 one continuous 1967-2025 run against the wet/dry photo dates and annual
-CoastSat (hard-structures/groin/3-hindcast/2-blocking-1996-2025/
+CoastSat (hard-structures/groin/4-hindcast/2-blocking-1996-2025/
 2026-10-13-pregroin-planform/). The dipole M, the blocking b and the floor f
 went with their groins.
 ```
@@ -2537,7 +2537,7 @@ not shore-normal. Under option A BRIE's diffusivity at 0 deg is negative
 GIS 6 sits near -12 deg where it is positive. x_s is a uniform base plus
 island_offset, so the offset alone gives the angle BRIE's first solve reads
 (forward difference, as brie.py). No groin: shore-normal, as before.
-Found 2026-09-29: hard-structures/groin/2-module-tests/2-solver-audit/
+Found 2026-09-29: hard-structures/groin/3-module-tests/1-solver-audit/
 2026-09-29-option-a-real-planform/.
 ```
 

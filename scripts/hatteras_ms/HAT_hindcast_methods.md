@@ -275,7 +275,7 @@ Buxton fill placed across the whole groin field: left on, the groin misses
 and `groin.strength_2009` 0.10, each the annual-CoastSat minimum of the gap
 across the groins for a run from that window's observed shoreline, with
 edgeBE and full management
-(`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-14-window-refit/`;
+(`hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-14-window-refit/`;
 1996-2009 13.4 m against 47.9 m with no groin, 2009-2025 9.7 m against 21.9 m).
 The drop between windows is the groin deteriorating. The 2009 value is fitted
 on the test window, so for the groin that window is not an independent test.
@@ -283,7 +283,7 @@ on the test window, so for the groin that window is not an independent test.
 **The groin's whole-life strength is 0.25.** Fitted on one continuous run from
 the 1967 wet/dry shoreline, two years before the groins, to 2025 against the
 wet/dry photo dates and annual CoastSat
-(`hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`),
+(`hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`),
 the strength is 0.25 for 1969-1995, 0.25 for 1996-2009 and 0.20-0.25 for
 2010-2016, the minimum under three different stand-ins for the pre-1984
 storms. Run from an observed start, 0.25 overshoots (30.4 m on 1996-2009, and
@@ -493,7 +493,7 @@ readable off the animation instead of only off the rate figure.
 #### Why this cannot be built from the padded offset files
 
 The obvious construction -- `Island_Dune_Offsets_2004` minus
-`Island_Dune_Offsets_1984` -- is wrong, and quietly so. `island_offset_hybrid.py`
+`Island_Dune_Offsets_1984` -- is wrong, and quietly so. `step2_raw_offsets_to_island_offset.py`
 computes each year independently as
 
 ```python

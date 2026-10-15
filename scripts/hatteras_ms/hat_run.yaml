@@ -125,7 +125,7 @@ offset_mode: metres
 # The strength is per window. Each window starts from its observed shoreline,
 # which already holds the fillet the groins built, so it needs less than the
 # groin's whole-life strength (0.25, fitted on one continuous 1967-2025 run in
-# hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-
+# hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-
 # planform/), which overshoots from either start. Fitted on annual CoastSat in
 # 2026-10-14-window-refit/; the drop from 1996 to 2009 is the groin
 # deteriorating. The 2009 value is fitted on the test window, so for the groin

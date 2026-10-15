@@ -2695,7 +2695,7 @@ D5-D6 differential the WRONG WAY -- observed is -2.47 m/yr, and the model goes
 -0.55 at f = 0 to -0.18 at f = 1. Deterioration is doing real work.
 
 M AND f ARE SET FROM DIFFERENT EVIDENCE, AND THAT IS DELIBERATE.
-The authority for these values is hard-structures/groin/3-hindcast/1-dipole-1967-2017/dipole_fit_notes.md
+The authority for these values is hard-structures/groin/4-hindcast/1-dipole-1967-2017/dipole_fit_notes.md
 (2026-08-24); this note summarises it and must not diverge from it. The
 figures testing it, and what each one showed, are described in
 scripts/hatteras_ms/groin-sweep/CALIBRATION_FIGURES.md -- the PNGs themselves
@@ -2995,7 +2995,7 @@ Change_from_wetdry_1967_D2_D12.csv covers D2-D12 -- ELEVEN real domains.
 11 real + 15 buffer + 15 buffer = 41, the rig's exact domain count.
 
 The rig was sized to the extent of the 1967 observations. Its sweep is at
-hard-structures/groin/3-hindcast/1-dipole-1967-2017/results/sensitivity_sweep/.
+hard-structures/groin/4-hindcast/1-dipole-1967-2017/results/sensitivity_sweep/.
 
 RE-RUN 2026-08-30 ON 1984-start/v1; f MOVED ONTO THE PRODUCTION VALUE.
 The rig had been resolving topo_dirs() with no product -- the same omission

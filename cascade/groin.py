@@ -9,7 +9,7 @@ to ``x_s_dt``, and changes nothing inside BRIE or Barrier3D.
 Two numbers describe it at Buxton: a strength, the share of the arriving drift the groin
 holds back (0.25), and the year it stops working (2017, the Buxton fill). Both were fitted on
 one continuous 1967-2025 run against the wet/dry photo dates and annual CoastSat
-(hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/).
+(hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/).
 
 The earlier groins this module held, a fixed -M/+M dipole and a blocking groin that cancelled
 a share b of BRIE's diffusive exchange (each with a deterioration floor f), were removed on
@@ -82,7 +82,7 @@ class CorrectedGroinCallback:
        zero, so the run is the no-groin run.
 
     **The tested range.** The module is a simplified groin, tested on straight
-    coasts and on Buxton (hard-structures/groin/2-module-tests/7-stress/). Each
+    coasts and on Buxton (hard-structures/groin/3-module-tests/6-stress/). Each
     year it is installed it stops the run with :class:`GroinOutsideTestedRange`
     when the run leaves that range: the wave climate changes during the run;
     the groin makes or loses more than ``SAND_TOLERANCE_M`` (or
@@ -96,7 +96,7 @@ class CorrectedGroinCallback:
     ``(from_year, strength)`` pairs: the strength holds from each year until
     the next. A groin working at 0.25 until a 2017 fill is
     ``[(1969, 0.25), (2017, 0.0)]``. Fitted on Buxton over 1967-2025 in
-    hard-structures/groin/3-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/.
+    hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/.
 
     Parameters
     ----------
@@ -108,10 +108,10 @@ class CorrectedGroinCallback:
         As :class:`GroinCallback`.
     half_width : int
         Cells either side of the face the leak correction acts on (10: 5 leaks on
-        a grid-aligned coast, hard-structures/groin/2-module-tests/6-long-term/).
+        a grid-aligned coast, hard-structures/groin/3-module-tests/5-long-term/).
     """
     kind: str = "corrected"
-    # The tested range (hard-structures/groin/2-module-tests/7-stress/): outside it the run stops
+    # The tested range (hard-structures/groin/3-module-tests/6-stress/): outside it the run stops
     SAND_TOLERANCE_M: float = 10.0         # the groin may make or lose this much summed shoreline ...
     SAND_TOLERANCE_FRACTION: float = 0.05  # ... or this share of its footprint's gross, whichever is larger
     MAX_FACE_ANGLE_DEG: float = 45.0       # the groin face's steepest tested angle (Buxton's: 16-29 deg)
@@ -214,7 +214,7 @@ class CorrectedGroinCallback:
                 f"the end of the {n_domains} domains; it does not wrap, so the groin would leak sand there.")
 
     def _check_tested_range(self, brie, x_s, near):
-        """Stop the run once it leaves the conditions the module was tested in (7-stress/README.md).
+        """Stop the run once it leaves the conditions the module was tested in (6-stress/README.md).
 
         Three checks, each year the groin is installed: BRIE's wave climate is the one the run
         started with (the drift table is read once); the groin's footprint (this shoreline less
@@ -227,20 +227,20 @@ class CorrectedGroinCallback:
         elif not np.array_equal(brie._coast_diff, self._coast_diff0):
             raise GroinOutsideTestedRange(
                 "the wave climate changed during the run; the groin module is tested only with one "
-                "wave climate for the whole run (hard-structures/groin/2-module-tests/7-stress/).")
+                "wave climate for the whole run (hard-structures/groin/3-module-tests/6-stress/).")
         net = float(np.sum(self._a))
         gross = float(np.sum(np.abs(self._a)))
         if abs(net) > max(self.SAND_TOLERANCE_M, self.SAND_TOLERANCE_FRACTION * gross):
             raise GroinOutsideTestedRange(
                 f"the groin has {'made' if net < 0 else 'lost'} {abs(net):.1f} m of summed shoreline "
                 f"(footprint gross {gross:.1f} m), more than the module's tolerance; BRIE's diffusion at the "
-                "groin is outside the range the module was tested in (hard-structures/groin/2-module-tests/7-stress/).")
+                "groin is outside the range the module was tested in (hard-structures/groin/3-module-tests/6-stress/).")
         face = abs(180.0 * np.arctan2(x_s[self._hi] - x_s[self._lo], brie._dy) / np.pi)
         if face > self.MAX_FACE_ANGLE_DEG:
             raise GroinOutsideTestedRange(
                 f"the groin face is at {face:.1f} deg, steeper than {self.MAX_FACE_ANGLE_DEG:g} deg; past this "
                 "BRIE's diffusion no longer carries sand back across the groin and the fillet grows without "
-                "limit (hard-structures/groin/2-module-tests/7-stress/).")
+                "limit (hard-structures/groin/3-module-tests/6-stress/).")
 
     def __call__(self, cascade, x_s_dt):
         """Move a share of the arriving drift across the face, and cancel BRIE's leak of it.
