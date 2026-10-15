@@ -635,6 +635,7 @@ class RoadwayManager:
 
     def __init__(
         self,
+        beach_width,
         initial_road_elevation=1.7,
         road_width=30,
         road_setback=30,
@@ -646,13 +647,15 @@ class RoadwayManager:
         allow_causeway=False,
         nourishment_interval=None,
         nourishment_volume=100,
-        initial_beach_width=30,
+        beach_width_threshold=0,
         dune_mgmt_road_setback_trigger=20.0,
     ):
         """The RoadwayManager module
 
         Parameters
         ----------
+        beach_width: list, required
+            Beach-width history [m], with year zero initialized by the caller.
         initial_road_elevation: float, optional
             Initial elevation of the roadway [m MHW]; road relocation elevations
             are built to grade based on setback.
@@ -677,9 +680,9 @@ class RoadwayManager:
             If None, nourishment occurs only when explicitly requested.
         nourishment_volume: float, optional
             Volume of nourished sand along a cross-shore transect [m^3/m].
-        initial_beach_width: float, optional
-            Initial roadway-domain beach width [m]. Beach-width management stays
-            inactive until the first nourishment event.
+        beach_width_threshold: float, optional
+            Beach width [m] at which dune migration turns back on. Beach-width
+            management stays inactive until the first nourishment event.
         dune_mgmt_road_setback_trigger: float, optional
             Maximum road setback at which the existing dune-rebuilding process is
             permitted [m]. When the current setback is greater than this trigger,
@@ -712,7 +715,7 @@ class RoadwayManager:
         self._nourishment_interval = nourishment_interval
         self._nourishment_counter = nourishment_interval
         self._nourishment_volume = nourishment_volume
-        self._beach_width_threshold = 0
+        self._beach_width_threshold = beach_width_threshold
         self._beach_management_active = False
         self._dune_mgmt_road_setback_trigger = dune_mgmt_road_setback_trigger
 
@@ -766,8 +769,7 @@ class RoadwayManager:
         self._relocation_incomplete_TS = np.zeros(self._nt, dtype=bool)
         self._historical_relocation_requested_TS = np.zeros(self._nt, dtype=bool)
         self._forced_relocation_TS = np.zeros(self._nt, dtype=bool)
-        self._beach_width = [np.nan] * self._nt
-        self._beach_width[0] = initial_beach_width
+        self._beach_width = beach_width
         self._nourishment_TS = np.zeros(self._nt)
         self._nourishment_volume_TS = np.zeros(self._nt)
         self._dune_migration_on = [np.nan] * self._nt
