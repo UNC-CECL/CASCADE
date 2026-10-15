@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from scipy.stats import uniform
 
-from cascade.groin import CorrectedGroinCallback
+from cascade.groin import CorrectedGroinCallback, GroinOutsideTestedRange
 
 NY = 40
 UP, DOWN = 21, 20          # updrift is the higher index, as at Buxton
@@ -85,3 +85,47 @@ def test_off_after_the_end_year():
     out = g(fake_cascade(x), np.zeros(NY))
     assert g.blocking_applied_TS == [0.0]
     assert np.array_equal(out, np.zeros(NY))
+
+
+def test_a_face_past_89_5_degrees_does_not_index_past_the_table():
+    x = np.zeros(NY)
+    x[5] = 1.0e6                                  # a ~90 degree face far from the groin
+    g = groin()
+    cascade = fake_cascade(x)
+    brie = cascade._brie_coupler._brie
+    brie._coast_diff = np.full(brie._wave_climl, 8000.0)   # as long as BRIE's: _wave_climl entries
+    for _ in range(2):                            # the second call re-steps last year's footprint
+        g(cascade, np.zeros(NY))
+
+
+def test_the_correction_zone_must_fit_inside_the_domains():
+    with pytest.raises(GroinOutsideTestedRange):
+        CorrectedGroinCallback(3, 2, [(1969, 0.25)], start_year=2000, install_year=1969, n_domains=NY)
+    CorrectedGroinCallback(10, 9, [(1969, 0.25)], start_year=2000, install_year=1969, n_domains=NY)
+
+
+def test_a_changed_wave_climate_stops_the_run():
+    x = np.linspace(0.0, -500.0, NY)
+    g = groin()
+    g(fake_cascade(x), np.zeros(NY))
+    with pytest.raises(GroinOutsideTestedRange, match="wave climate"):
+        g(fake_cascade(x, diffusivity=9000.0), np.zeros(NY))
+
+
+def test_a_face_steeper_than_the_tested_range_stops_the_run():
+    x = np.linspace(0.0, -500.0, NY)
+    x[UP:] -= 1000.0                              # the groin face at about 63 degrees
+    with pytest.raises(GroinOutsideTestedRange, match="groin face"):
+        groin()(fake_cascade(x), np.zeros(NY))
+
+
+def test_a_groin_that_makes_or_loses_sand_stops_the_run():
+    x = np.linspace(0.0, -500.0, NY)
+    g = groin()
+    cascade = fake_cascade(x)
+    g(cascade, np.zeros(NY))
+    g._a = np.zeros(NY)
+    g._a[DOWN] = 2 * g.SAND_TOLERANCE_M             # a footprint that is all loss: past the tolerance
+    g._prev = None                                  # keep this footprint rather than re-stepping it
+    with pytest.raises(GroinOutsideTestedRange, match="lost"):
+        g(cascade, np.zeros(NY))

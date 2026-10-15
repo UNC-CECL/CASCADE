@@ -1,0 +1,272 @@
+ theta0  updrift_1run_m  updrift_callback_m  reach_1run_m  reach_callback_m  max_diff_m
+    -40         139.191             139.191         2.147             2.147         0.0
+    -35         118.611             118.611         2.221             2.221         0.0
+    -30         107.738             107.738         2.185             2.185         0.0
+    -25         104.704             104.704         2.950             2.950         0.0
+    -20         107.402             107.402         4.037             4.037         0.0
+    -15         113.358             113.358         5.036             5.036         0.0
+    -10         128.594             128.594         6.542             6.542         0.0
+     -5         151.026             151.026         9.010             9.010         0.0
+      0         163.684             163.684       -12.469           -12.469         0.0
+      5         165.310             165.310       -27.108           -27.108         0.0
+     10         144.205             144.205       -20.000           -20.000         0.0
+     15          44.878              44.878        18.006            18.006         0.0
+     20          23.066              23.066        12.799            12.799         0.0
+     25          11.264              11.264         1.234             1.234         0.0
+     30           1.653               1.653         1.346             1.346         0.0
+     35           5.251               5.251         0.029             0.029         0.0
+     40          16.305              16.305         0.202             0.202         0.0
+                     passes  finite  conserves  angle_ok
+family     strength                                     
+background 0.25        0.86     1.0       0.86      1.00
+           1.00        0.76     1.0       0.76      1.00
+cycling    0.25        0.43     1.0       0.43      1.00
+           1.00        0.29     1.0       0.29      1.00
+long       0.25        1.00     1.0       1.00      1.00
+           1.00        0.71     1.0       0.71      1.00
+notch      0.25        0.79     1.0       0.79      1.00
+           1.00        0.76     1.0       0.76      1.00
+placement  0.25        0.52     1.0       0.52      1.00
+           1.00        0.36     1.0       0.36      1.00
+strength   0.00        1.00     1.0       1.00      1.00
+           0.10        1.00     1.0       1.00      1.00
+           0.25        1.00     1.0       1.00      1.00
+           0.50        1.00     1.0       1.00      1.00
+           0.75        0.86     1.0       0.86      1.00
+           1.00        0.86     1.0       0.86      1.00
+switch-off 0.25        0.86     1.0       0.86      1.00
+           1.00        0.71     1.0       0.71      1.00
+variable   0.25        0.06     1.0       0.06      1.00
+           1.00        0.00     1.0       0.00      0.33
+waves      0.25        0.69     1.0       0.76      0.82
+           1.00        0.59     1.0       0.61      0.74
+
+227 of 596 runs fail
+    family               case  theta0  strength  gap_vs_nogroin_m  net_vs_nogroin_m  max_angle_deg  gap_change_last20pct_m  conserves  angle_ok steady
+     waves            ahf=0.1     -30       0.2            2228.0           -5640.4           81.0                   244.6      False     False  False
+     waves            ahf=0.3     -30       0.2            2682.3           -3250.3           80.4                   249.1      False     False   True
+     waves            ahf=0.7     -30       0.2              21.7            -841.8           34.8                     9.1      False      True  False
+     waves           asym=0.7     -30       0.2            2131.5             -83.0           78.3                    92.1       True     False   True
+     waves           asym=0.8     -30       0.2            3895.4            -429.8           83.2                   460.8       True     False  False
+     waves           asym=0.9     -30       0.2            4679.2            2409.2           84.2                   731.9      False     False  False
+ placement               lo=0     -30       0.2              92.9             145.9           37.5                     1.7      False      True   True
+ placement               lo=1     -30       0.2              93.7             127.1           37.4                     2.7      False      True   True
+ placement               lo=2     -30       0.2              94.1             115.3           37.4                     2.0      False      True   True
+ placement              lo=58     -30       0.2              94.7            -127.5           37.5                     3.1      False      True   True
+ placement              lo=59     -30       0.2              93.7            -146.6           37.4                     4.3      False      True   True
+     waves            ahf=0.1     -30       1.0            4158.5           -8276.8           83.5                   355.9      False     False   True
+     waves            ahf=0.3     -30       1.0            4257.4           -3083.8           83.7                   337.0      False     False   True
+     waves            ahf=0.6     -30       1.0              65.5            -130.8           36.4                     4.1      False      True   True
+     waves            ahf=0.7     -30       1.0             497.4           -5769.9           44.6                   -25.0      False      True   True
+     waves           asym=0.7     -30       1.0            4769.3            -507.1           84.3                   393.2       True     False   True
+     waves           asym=0.8     -30       1.0            8528.1           29518.4           86.9                   354.0      False     False   True
+     waves           asym=0.9     -30       1.0            8521.3           31214.6           86.9                    56.0      False     False   True
+   cycling        5 on, 5 off     -30       1.0              46.6             -77.2           50.7                    -0.4      False      True   True
+ placement               lo=0     -30       1.0             394.1             517.4           53.9                     7.5      False      True   True
+ placement               lo=1     -30       1.0             398.9             401.7           53.9                    10.1      False      True   True
+ placement               lo=2     -30       1.0             401.0             301.4           54.0                    10.7      False      True   True
+ placement               lo=5     -30       1.0             402.6             139.7           54.1                     4.5      False      True   True
+ placement              lo=58     -30       1.0             398.1            -373.7           53.9                     9.7      False      True   True
+ placement              lo=59     -30       1.0             394.6            -462.0           53.9                     7.7      False      True   True
+     waves            ahf=0.1     -20       0.2            4449.2           -3843.8           83.8                   535.7      False     False  False
+     waves            ahf=0.3     -20       0.2            3399.1           -1393.3           82.0                   402.0      False     False  False
+     waves           asym=0.7     -20       0.2            2073.2            -122.5           77.5                   121.2       True     False   True
+     waves           asym=0.8     -20       0.2            3368.7            -421.9           81.9                   393.4       True     False  False
+     waves           asym=0.9     -20       0.2            4355.0            7477.4           83.7                   741.6      False     False  False
+   cycling        5 on, 5 off     -20       0.2              16.6             -14.2           28.4                     0.9      False      True   True
+ placement               lo=0     -20       0.2              99.3             136.4           29.4                     0.8      False      True   True
+ placement               lo=1     -20       0.2              99.5             110.0           29.4                     0.8      False      True   True
+ placement               lo=2     -20       0.2              99.6              94.0           29.4                     0.8      False      True   True
+ placement               lo=5     -20       0.2             100.2              44.1           29.4                     0.7      False      True   True
+ placement              lo=58     -20       0.2              99.5            -107.2           29.4                     0.8      False      True   True
+ placement              lo=59     -20       0.2              99.4            -130.0           29.4                     0.8      False      True   True
+     waves            ahf=0.1     -20       1.0            5452.9           -4635.6           84.9                   617.9      False     False  False
+     waves            ahf=0.3     -20       1.0            4499.8           -1955.4           83.9                   502.6      False     False  False
+     waves            ahf=0.7     -20       1.0             423.8             159.9           31.7                    14.3      False      True   True
+     waves           asym=0.7     -20       1.0            4320.0            -529.3           83.6                   347.6       True     False   True
+     waves           asym=0.8     -20       1.0            6894.4           22961.7           86.3                    33.8      False     False   True
+     waves           asym=0.9     -20       1.0            7111.8           24175.4           86.4                   206.9      False     False   True
+   cycling        5 on, 5 off     -20       1.0              48.1            -136.1           44.7                     1.4      False      True   True
+ placement               lo=0     -20       1.0             352.0             549.5           46.9                     6.4      False      True   True
+ placement               lo=1     -20       1.0             352.7             366.1           46.9                     4.0      False      True   True
+ placement               lo=2     -20       1.0             353.3             271.1           46.9                     1.3      False      True   True
+ placement               lo=5     -20       1.0             354.7             104.5           47.0                     1.7      False      True   True
+ placement              lo=58     -20       1.0             353.0            -311.7           46.9                     4.2      False      True   True
+ placement              lo=59     -20       1.0             352.6            -385.9           46.9                     6.3      False      True   True
+     waves            ahf=0.1     -10       0.2             140.1             -19.6           24.4                    31.7       True      True  False
+     waves            ahf=0.3     -10       0.2            1266.0            -433.9           69.5                   419.3      False     False  False
+     waves            ahf=0.7     -10       0.2             214.2             -18.8           33.0                   -19.7      False      True   True
+     waves           asym=0.7     -10       0.2            1901.4            -164.2           75.9                   117.1       True     False   True
+     waves           asym=0.8     -10       0.2            2782.1            -395.9           80.0                   315.1       True     False  False
+     waves           asym=0.9     -10       0.2            3914.0           11451.7           82.9                   668.2      False     False  False
+   cycling        5 on, 5 off     -10       0.2              34.5             -17.0           23.1                     0.8      False      True   True
+ placement               lo=0     -10       0.2             135.9             155.6           24.1                     1.8      False      True   True
+ placement               lo=1     -10       0.2             137.7              84.7           24.3                     0.6      False      True   True
+ placement               lo=2     -10       0.2             138.0              60.5           24.3                     0.4      False      True   True
+ placement              lo=58     -10       0.2             137.9             -67.7           24.3                     0.5      False      True   True
+ placement              lo=59     -10       0.2             137.5             -96.7           24.3                     2.2      False      True   True
+     waves            ahf=0.1     -10       1.0            3367.1           -2562.9           81.7                   366.7      False     False  False
+     waves            ahf=0.3     -10       1.0            2961.6           -1179.6           80.6                   330.1      False     False  False
+     waves           asym=0.7     -10       1.0            3805.4            -685.2           82.7                   303.0       True     False   True
+     waves           asym=0.8     -10       1.0            5646.0           18968.8           85.1                    74.1      False     False   True
+     waves           asym=0.9     -10       1.0            5495.3           22110.1           85.3                    89.5      False     False   True
+switch-off     on 50, off 100     -10       1.0               4.3             -17.4           43.7                    -4.2      False      True   None
+   cycling        5 on, 5 off     -10       1.0              64.5             -53.2           42.7                     1.0      False      True   True
+ placement               lo=0     -10       1.0             388.8             238.1           43.7                    -0.1      False      True   True
+ placement               lo=1     -10       1.0             388.9             260.5           43.7                    -0.2      False      True   True
+ placement               lo=2     -10       1.0             389.0             126.3           43.7                    -0.1      False      True   True
+ placement              lo=58     -10       1.0             389.3            -111.5           43.7                    -0.1      False      True   True
+ placement              lo=59     -10       1.0             389.1            -218.4           43.7                    -0.2      False      True   True
+     waves            ahf=0.7       0       0.2             330.2             -31.0           35.2                    -2.6      False      True   True
+     waves           asym=0.7       0       0.2            1581.6            -312.8           72.4                   163.4       True     False  False
+     waves           asym=0.8       0       0.2            2007.8            -956.2           76.0                   205.6      False     False   True
+     waves           asym=0.9       0       0.2            3562.5           13757.2           82.0                   652.3      False     False  False
+background              noise       0       0.2             215.7              44.2           26.2                    -7.1      False      True   None
+ placement               lo=0       0       0.2             210.1              89.9           22.8                     1.0      False      True   True
+ placement               lo=1       0       0.2             210.4              54.5           22.8                     1.0      False      True   True
+ placement               lo=2       0       0.2             210.7              34.1           22.8                     1.1      False      True   True
+ placement              lo=58       0       0.2             207.4            -305.8           22.6                    -0.1      False      True   True
+ placement              lo=59       0       0.2             206.5            -499.6           22.4                     5.2      False      True   True
+     waves           asym=0.7       0       1.0            3069.1           -2263.7           80.7                   192.6      False     False   True
+     waves           asym=0.8       0       1.0            3954.0           16258.1           83.4                    38.8      False     False   True
+     waves           asym=0.9       0       1.0            4857.5           16840.5           84.0                   231.1      False     False   True
+     waves             Hs=3.0       0       1.0             468.9             328.5           43.3                     1.9      False      True   True
+     waves             Hs=3.5       0       1.0             477.3            2549.1           73.1                    -0.4      False     False   True
+background              noise       0       1.0             461.2             109.1           44.1                   -10.9      False      True   None
+ placement               lo=0       0       1.0             457.7             319.4           42.6                     0.6      False      True   True
+ placement               lo=1       0       1.0             459.6             239.3           42.6                     2.2      False      True   True
+ placement               lo=2       0       1.0             458.9             170.2           42.6                     0.4      False      True   True
+ placement              lo=58       0       1.0             440.3           -1125.1           41.6                     2.7      False      True   True
+ placement              lo=59       0       1.0             436.4           -1528.4           41.1                     6.4      False      True   True
+      long             500 yr       0       1.0             473.0            -156.7           43.5                    -1.4      False      True   True
+     waves           asym=0.9      10       0.2            2527.7           40026.4           78.4                   582.0      False     False  False
+     waves             Hs=2.5      10       0.2             115.1              49.3           12.0                     9.7      False      True   True
+     waves             Hs=3.0      10       0.2             122.8             132.2           12.4                     7.7      False      True   True
+     waves             Hs=3.5      10       0.2             194.4            5422.4           28.3                     2.7      False      True   True
+     notch         notch=-300      10       0.2              71.8              33.2           37.8                     6.4      False      True   True
+     notch         notch=-150      10       0.2              86.3              34.3           25.5                     7.9      False      True   True
+     notch          notch=150      10       0.2             134.3              91.6           14.4                     0.5      False      True   True
+     notch          notch=300      10       0.2             150.4              53.8           23.0                   -13.4      False      True   True
+switch-off     on 50, off 100      10       0.2               1.3              22.6           11.6                    -0.5      False      True   None
+   cycling        5 on, 5 off      10       0.2               6.0              38.5           11.6                     0.1      False      True   True
+ placement               lo=0      10       0.2              86.5             201.9           11.6                     4.5      False      True   True
+ placement               lo=1      10       0.2              89.3             187.6           11.6                     5.6      False      True   True
+ placement               lo=2      10       0.2              89.6             177.9           11.6                     6.1      False      True   True
+ placement               lo=5      10       0.2              96.9             103.8           11.6                     8.7      False      True   True
+ placement              lo=58      10       0.2              86.3            -163.4           11.6                     6.6      False      True   True
+ placement              lo=59      10       0.2              84.1            -180.1           11.6                     6.0      False      True   True
+     waves            ahf=0.6      10       1.0             516.0             139.8           41.4                    -7.1      False      True   True
+     waves            ahf=0.7      10       1.0             541.5             157.1           45.2                     0.0      False      True   True
+     waves           asym=0.7      10       1.0            2069.8            3434.3           75.7                   153.0      False     False   True
+     waves           asym=0.8      10       1.0            4588.2           52320.4           83.7                   118.7      False     False   True
+     waves           asym=0.9      10       1.0            5422.0           71634.0           85.2                    42.2      False     False   True
+     waves             Hs=3.0      10       1.0             456.1            7133.1           40.5                   -12.3      False      True   True
+     waves             Hs=3.5      10       1.0             509.7           17213.4           53.4                    -1.6      False      True   True
+   cycling        5 on, 5 off      10       1.0             134.0              90.0           27.6                     4.2      False      True   True
+ placement               lo=0      10       1.0             415.3             635.9           33.2                     9.3      False      True   True
+ placement               lo=1      10       1.0             413.3             543.2           33.5                     6.0      False      True   True
+ placement               lo=2      10       1.0             414.5             450.6           33.4                     6.3      False      True   True
+ placement               lo=5      10       1.0             419.9             189.4           33.7                     4.4      False      True   True
+ placement              lo=58      10       1.0             417.7            -617.4           33.1                    11.9      False      True   True
+ placement              lo=59      10       1.0             414.0            -727.1           33.0                    11.0      False      True   True
+     waves            ahf=0.6      20       0.2             356.3           13507.2           39.2                    99.8      False      True  False
+     waves            ahf=0.7      20       0.2             536.7            1448.4           40.8                     1.9      False      True   True
+     waves           asym=0.7      20       0.2              85.3           16530.1           39.1                    -7.9      False      True   True
+     waves           asym=0.8      20       0.2             533.1           43802.1           49.0                   118.0      False      True  False
+     waves           asym=0.9      20       0.2            2244.0           67626.8           75.9                   700.2      False     False  False
+     waves             Hs=3.0      20       0.2             303.9           47428.9           55.8                   -13.5      False      True   True
+     waves             Hs=3.5      20       0.2             331.1           62445.8           59.2                   -15.4      False      True   True
+     notch         notch=-300      20       0.2              16.0              20.7           43.9                    -0.1      False      True   True
+     notch         notch=-150      20       0.2              15.8              21.9           33.6                    -0.9      False      True   True
+     notch          notch=300      20       0.2              14.9              52.1           24.3                     0.0      False      True   True
+   cycling        5 on, 5 off      20       0.2               1.8              13.3           20.7                     0.1      False      True   True
+background              noise      20       0.2              21.0              53.1           23.5                     2.4      False      True   None
+     waves            ahf=0.1      20       1.0            2967.1            2489.4           80.9                   341.3      False     False  False
+     waves            ahf=0.5      20       1.0              82.2              66.8           22.9                     0.2      False      True   True
+     waves            ahf=0.6      20       1.0             579.3           17948.8           48.9                     1.1      False      True   True
+     waves            ahf=0.7      20       1.0             595.9            2754.2           71.8                    -7.7      False     False   True
+     waves           asym=0.6      20       1.0              82.2              66.8           22.9                     0.2      False      True   True
+     waves           asym=0.7      20       1.0             944.6           24143.7           60.6                    91.7      False     False   True
+     waves           asym=0.8      20       1.0            1603.9           51130.5           73.9                   154.9      False     False   True
+     waves           asym=0.9      20       1.0            1947.9           67717.9           78.0                   159.2      False     False   True
+     waves             Hs=2.0      20       1.0              82.2              66.8           22.9                     0.2      False      True   True
+     waves             Hs=2.5      20       1.0             399.8           22135.5           39.5                     0.3      False      True   True
+     waves             Hs=3.0      20       1.0             570.9           50264.2           51.5                   -12.2      False      True   True
+     waves             Hs=3.5      20       1.0             505.4           67219.5           56.3                   -91.6      False      True  False
+     notch         notch=-300      20       1.0              82.4             222.4           43.9                    11.9      False      True   True
+     notch         notch=-150      20       1.0              79.7             184.8           33.6                     0.8      False      True   True
+     notch          notch=-50      20       1.0              79.8              88.4           24.9                     0.9      False      True   True
+     notch           notch=50      20       1.0              82.1              46.5           22.7                     0.4      False      True   True
+     notch          notch=150      20       1.0              81.4              41.6           24.8                     2.2      False      True   True
+     notch          notch=300      20       1.0              78.8             121.2           26.9                    -0.5      False      True   True
+switch-off     on 50, off 100      20       1.0               0.8              66.7           22.9                    -0.4      False      True   None
+   cycling        5 on, 5 off      20       1.0              -0.2             458.3           23.5                    -1.7      False      True   True
+background            retreat      20       1.0              82.2              66.8           22.9                     0.2      False      True   None
+background              noise      20       1.0              76.5              63.2           23.7                     3.3      False      True   None
+background              pulse      20       1.0              82.2              66.8           22.9                     0.2      False      True   None
+ placement               lo=0      20       1.0              81.6             201.8           22.9                     0.6      False      True   True
+ placement               lo=1      20       1.0              81.7             184.2           22.9                     0.5      False      True   True
+ placement               lo=2      20       1.0              81.3             170.5           22.9                     2.8      False      True   True
+ placement               lo=5      20       1.0              79.6             103.1           22.9                     0.6      False      True   True
+ placement               lo=9      20       1.0              82.2              66.8           22.9                     0.2      False      True   True
+ placement              lo=30      20       1.0              82.2              66.8           22.9                     0.2      False      True   True
+ placement              lo=58      20       1.0              80.7            -127.6           22.9                     0.7      False      True   True
+ placement              lo=59      20       1.0              81.0            -142.4           22.9                    11.5      False      True   True
+      long             500 yr      20       1.0              79.9              74.2           22.9                    -0.4      False      True   True
+  strength             s=0.75      20       0.8              55.0              25.7           22.2                     0.2      False      True   True
+  strength              s=1.0      20       1.0              82.2              66.8           22.9                     0.2      False      True   True
+     waves            ahf=0.1      30       0.2            6680.5            6198.9           85.9                   852.6      False     False  False
+     waves            ahf=0.6      30       0.2             140.7           41381.2           58.0                    -9.6      False      True   True
+     waves            ahf=0.7      30       0.2             556.1           41243.4           65.8                   -16.6      False     False   True
+     waves           asym=0.8      30       0.2            -124.4           39049.5           51.8                     2.9      False      True   True
+     waves           asym=0.9      30       0.2            -167.2           59855.3           57.1                    -2.0      False      True   True
+     notch         notch=-300      30       0.2               3.7              10.2           49.7                     0.0      False      True   True
+     notch          notch=300      30       0.2               3.7              13.9           33.5                     0.0      False      True   True
+background              noise      30       0.2               3.3              13.7           32.7                    -0.3      False      True   None
+     waves            ahf=0.1      30       1.0            5297.0            5032.1           85.0                   622.7      False     False  False
+     waves            ahf=0.3      30       1.0            4312.2            1892.9           83.8                   658.0      False     False  False
+     waves            ahf=0.6      30       1.0             460.9           41628.7           53.3                    59.7      False      True  False
+     waves            ahf=0.7      30       1.0             663.9           43552.7           69.3                    -1.6      False     False   True
+     waves           asym=0.7      30       1.0            -254.7           31145.5           51.5                    -3.7      False      True   True
+     waves           asym=0.8      30       1.0            -312.4           51648.5           56.7                     6.7      False      True   True
+     waves           asym=0.9      30       1.0            -445.4           69998.6           61.0                   -25.3      False     False   True
+     notch         notch=-300      30       1.0               7.9              43.4           49.7                     0.0      False      True   True
+     notch         notch=-150      30       1.0               7.9              18.1           41.3                     0.0      False      True   True
+     notch          notch=150      30       1.0               7.9               8.0           31.8                     0.0      False      True   True
+     notch          notch=300      30       1.0              22.3             204.5           33.5                     0.0      False      True   True
+background              noise      30       1.0              20.8              19.5           32.7                     7.5      False      True   None
+  variable seed 1, as written     -20       0.2              20.7             146.9           45.2                   -68.0      False      True   None
+  variable  seed 1, refreshed     -20       0.2             -41.4            -357.7           58.0                  -229.2      False      True   None
+  variable seed 2, as written     -20       0.2             444.4              66.2           47.9                   380.6      False      True   None
+  variable  seed 2, refreshed     -20       0.2             520.3             -91.5           58.0                   414.8      False      True   None
+  variable seed 3, as written     -20       0.2              92.9             152.1           41.0                   -81.7      False      True   None
+  variable  seed 3, refreshed     -20       0.2              25.6             -53.3           52.8                  -147.5      False      True   None
+  variable seed 1, as written     -20       1.0             212.4            1634.5           67.8                  -110.2      False     False   None
+  variable  seed 1, refreshed     -20       1.0              96.0           -2330.2           73.4                  -960.6      False     False   None
+  variable seed 2, as written     -20       1.0            1274.0             461.3           70.0                   945.6      False     False   None
+  variable  seed 2, refreshed     -20       1.0            1373.8            -659.0           75.5                   938.9      False     False   None
+  variable seed 3, as written     -20       1.0             485.7            2858.2           66.6                  -178.2      False     False   None
+  variable  seed 3, refreshed     -20       1.0             109.0            -626.2           70.0                  -585.0      False     False   None
+  variable seed 1, as written       0       0.2              27.6            -447.3           32.3                  -164.6      False      True   None
+  variable  seed 1, refreshed       0       0.2             -23.2           -1007.9           43.1                  -301.1      False      True   None
+  variable seed 2, as written       0       0.2             450.5            -430.3           40.2                   337.8      False      True   None
+  variable  seed 2, refreshed       0       0.2             462.8            -590.4           44.8                   297.0      False      True   None
+  variable seed 3, as written       0       0.2             166.5           -1046.3           31.4                  -103.8      False      True   None
+  variable  seed 3, refreshed       0       0.2              74.4            -841.7           36.8                  -158.3      False      True   None
+  variable seed 1, as written       0       1.0             160.3            -253.1           61.7                  -323.0      False     False   None
+  variable  seed 1, refreshed       0       1.0             189.4           -1764.6           71.3                  -864.7      False     False   None
+  variable seed 2, as written       0       1.0            1204.4           -1819.9           66.7                   896.6      False     False   None
+  variable  seed 2, refreshed       0       1.0            1178.7           -3467.9           68.5                   684.5      False     False   None
+  variable seed 3, as written       0       1.0             477.5           -3677.2           61.7                  -158.3      False     False   None
+  variable  seed 3, refreshed       0       1.0             143.7            -437.3           70.4                  -687.6      False     False   None
+  variable seed 1, as written      20       0.2              25.4              40.6           21.7                    10.3      False      True   None
+  variable  seed 1, refreshed      20       0.2             -48.6             732.0           26.3                   -49.5      False      True   None
+  variable  seed 2, refreshed      20       0.2              28.4             904.8           33.4                   -69.6      False      True   None
+  variable seed 3, as written      20       0.2              47.8              22.0           22.5                    27.8      False      True   None
+  variable  seed 3, refreshed      20       0.2              30.7             439.3           26.1                    19.3      False      True   None
+  variable seed 1, as written      20       1.0             112.0             599.5           26.9                    -9.8      False      True   None
+  variable  seed 1, refreshed      20       1.0            -154.4            3841.3           48.9                  -106.4      False      True   None
+  variable seed 2, as written      20       1.0             203.5            -103.6           30.9                    54.3      False      True   None
+  variable  seed 2, refreshed      20       1.0             167.9            3667.0           47.2                  -251.9      False      True   None
+  variable seed 3, as written      20       1.0             280.3             204.4           34.0                   104.2      False      True   None
+  variable  seed 3, refreshed      20       1.0             144.1            3760.4           43.6                    84.5      False      True   None

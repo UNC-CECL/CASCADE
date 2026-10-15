@@ -37,7 +37,11 @@ from typing import Dict, List
 
 import numpy as np
 
-__all__ = ["CorrectedGroinCallback"]
+__all__ = ["CorrectedGroinCallback", "GroinOutsideTestedRange"]
+
+
+class GroinOutsideTestedRange(ValueError):
+    """The run has left the conditions the groin module was tested in; its results would not hold."""
 
 
 def _check_pads(updrift_pad, downdrift_pad, n_domains):
@@ -77,6 +81,17 @@ class CorrectedGroinCallback:
        footprint. With ``s`` at 0 the footprint and the correction are exactly
        zero, so the run is the no-groin run.
 
+    **The tested range.** The module is a simplified groin, tested on straight
+    coasts and on Buxton (hard-structures/groin/2-module-tests/7-stress/). Each
+    year it is installed it stops the run with :class:`GroinOutsideTestedRange`
+    when the run leaves that range: the wave climate changes during the run;
+    the groin makes or loses more than ``SAND_TOLERANCE_M`` (or
+    ``SAND_TOLERANCE_FRACTION`` of its footprint) of summed shoreline, which
+    happens where BRIE's diffusion at the groin is strong; or the groin face is
+    steeper than ``MAX_FACE_ANGLE_DEG``, past which BRIE's diffusivity is clipped
+    to zero there and the fillet grows without limit. It also refuses, when
+    built, a correction zone that runs past either end of the domains.
+
     The strength is set per year by ``strength_history``, a list of
     ``(from_year, strength)`` pairs: the strength holds from each year until
     the next. A groin working at 0.25 until a 2017 fill is
@@ -96,6 +111,10 @@ class CorrectedGroinCallback:
         a grid-aligned coast, hard-structures/groin/2-module-tests/6-long-term/).
     """
     kind: str = "corrected"
+    # The tested range (hard-structures/groin/2-module-tests/7-stress/): outside it the run stops
+    SAND_TOLERANCE_M: float = 10.0         # the groin may make or lose this much summed shoreline ...
+    SAND_TOLERANCE_FRACTION: float = 0.05  # ... or this share of its footprint's gross, whichever is larger
+    MAX_FACE_ANGLE_DEG: float = 45.0       # the groin face's steepest tested angle (Buxton's: 16-29 deg)
 
     def __init__(
         self,
@@ -108,6 +127,7 @@ class CorrectedGroinCallback:
         half_width: int = 10,
     ) -> None:
         _check_pads(updrift_pad, downdrift_pad, n_domains)
+        self._check_zone(min(updrift_pad, downdrift_pad), max(updrift_pad, downdrift_pad), half_width, n_domains)
         history = sorted((int(y), float(s)) for y, s in strength_history)
         if not history or any(not (0.0 <= s <= 1.0) for _, s in history):
             raise ValueError("strength_history needs (year, strength) pairs with strength in [0, 1].")
@@ -133,6 +153,7 @@ class CorrectedGroinCallback:
         self.leak_correction_m_TS: List[float] = []
         self.footprint_max_m_TS: List[float] = []
         self._call_count: int = 0
+        self._coast_diff0 = None
         self._q_net = None
         self._a = None
         self._prev = None
@@ -158,25 +179,68 @@ class CorrectedGroinCallback:
         return -conv[first:first + len(pdf)]
 
     @staticmethod
-    def _leak(brie, x):
+    def _diffusion_number(brie, x):
+        """BRIE's diffusion number r = D dt / (2 dy^2) at each cell's forward face, clipped at zero.
+
+        The angle index is clipped to the last entry of ``_coast_diff`` (``_wave_climl - 1``).
+        BRIE's own step (brie.py:1297) clips one past it, which fails at faces steeper than ~89.5 deg.
+        """
+        theta = 180.0 * np.arctan2(np.roll(x, -1) - x, brie._dy) / np.pi
+        k = np.clip(np.round(90 - theta).astype(int), 1, brie._wave_climl - 1)
+        return np.maximum(0.0, brie._coast_diff[k] * brie._dt / 2 / brie._dy ** 2)
+
+    @classmethod
+    def _leak(cls, brie, x):
         """The leak term 2 (r_i - r_{i-1}) (x_i - x_{i-1}) for shoreline x, from BRIE's diffusivity."""
         step = np.roll(x, -1) - x
-        theta = 180.0 * np.arctan2(step, brie._dy) / np.pi
-        k = np.clip(np.round(90 - theta).astype(int), 1, brie._wave_climl - 1)
-        r = np.maximum(0.0, brie._coast_diff[k] * brie._dt / 2 / brie._dy ** 2)
+        r = cls._diffusion_number(brie, x)
         return 2 * (r - np.roll(r, 1)) * np.roll(step, 1)
 
-    @staticmethod
-    def _brie_step(brie, x, dx):
+    @classmethod
+    def _brie_step(cls, brie, x, dx):
         """BRIE's implicit alongshore step (brie.py:1293-1326) for shoreline x and change dx."""
         from scipy.sparse import csr_matrix
         from scipy.sparse.linalg import spsolve
-        theta = 180.0 * np.arctan2(np.roll(x, -1) - x, brie._dy) / np.pi
-        k = np.maximum(1, np.minimum(brie._wave_climl, np.round(90 - theta).astype(int)))
-        r = np.maximum(0.0, brie._coast_diff[k] * brie._dt / 2 / brie._dy ** 2)
+        r = cls._diffusion_number(brie, x)
         dv = np.r_[-r[-1], -r[1:], 1 + 2 * r, -r[0:-1], -r[0]]
         rhs = x + r * (np.roll(x, -1) - 2 * x + np.roll(x, 1)) + dx
         return spsolve(csr_matrix((dv, (brie._di, brie._dj))), rhs)
+
+    def _check_zone(self, lo, hi, half_width, n_domains):
+        """Raise unless the correction zone fits inside the array: it does not wrap round the ends."""
+        if lo + 1 - half_width < 0 or hi + half_width - 1 > n_domains - 1:
+            raise GroinOutsideTestedRange(
+                f"the correction zone ({half_width} cells either side of the face {lo}|{hi}) runs past "
+                f"the end of the {n_domains} domains; it does not wrap, so the groin would leak sand there.")
+
+    def _check_tested_range(self, brie, x_s, near):
+        """Stop the run once it leaves the conditions the module was tested in (7-stress/README.md).
+
+        Three checks, each year the groin is installed: BRIE's wave climate is the one the run
+        started with (the drift table is read once); the groin's footprint (this shoreline less
+        the groin-free one) sums to within SAND_TOLERANCE_M or SAND_TOLERANCE_FRACTION of its
+        gross, so the groin is not making or losing sand; and the groin face is no steeper than
+        MAX_FACE_ANGLE_DEG, past which BRIE's diffusion stops carrying sand back across it.
+        """
+        if self._coast_diff0 is None:
+            self._coast_diff0 = np.array(brie._coast_diff, dtype=float, copy=True)
+        elif not np.array_equal(brie._coast_diff, self._coast_diff0):
+            raise GroinOutsideTestedRange(
+                "the wave climate changed during the run; the groin module is tested only with one "
+                "wave climate for the whole run (hard-structures/groin/2-module-tests/7-stress/).")
+        net = float(np.sum(self._a))
+        gross = float(np.sum(np.abs(self._a)))
+        if abs(net) > max(self.SAND_TOLERANCE_M, self.SAND_TOLERANCE_FRACTION * gross):
+            raise GroinOutsideTestedRange(
+                f"the groin has {'made' if net < 0 else 'lost'} {abs(net):.1f} m of summed shoreline "
+                f"(footprint gross {gross:.1f} m), more than the module's tolerance; BRIE's diffusion at the "
+                "groin is outside the range the module was tested in (hard-structures/groin/2-module-tests/7-stress/).")
+        face = abs(180.0 * np.arctan2(x_s[self._hi] - x_s[self._lo], brie._dy) / np.pi)
+        if face > self.MAX_FACE_ANGLE_DEG:
+            raise GroinOutsideTestedRange(
+                f"the groin face is at {face:.1f} deg, steeper than {self.MAX_FACE_ANGLE_DEG:g} deg; past this "
+                "BRIE's diffusion no longer carries sand back across the groin and the fillet grows without "
+                "limit (hard-structures/groin/2-module-tests/7-stress/).")
 
     def __call__(self, cascade, x_s_dt):
         """Move a share of the arriving drift across the face, and cancel BRIE's leak of it.
@@ -225,6 +289,8 @@ class CorrectedGroinCallback:
         near = np.abs(np.arange(ny) - (lo + 0.5)) <= self.half_width
         corr = np.where(near, self._leak(brie, x_s) - self._leak(brie, x_none), 0.0)
         x_s_dt += corr
+        if active:
+            self._check_tested_range(brie, x_s, near)
         g = corr.copy()
         g[lo] += dx_lo
         g[hi] += dx_hi

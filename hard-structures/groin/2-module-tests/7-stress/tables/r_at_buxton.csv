@@ -1,0 +1,79 @@
+set,run,r_face_min,r_face_max,r_zone_max,ang_min,ang_max
+matrix option A,HAT_1996_2009_edgeBE_offsetmetres_noroad_bdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5711
+matrix option A,HAT_1996_2009_edgeBE_offsetmetres_noroad_nobdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5708
+matrix option A,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5711
+matrix option A,HAT_1996_2009_edgeBE_offsetmetres_road_nobdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5708
+matrix option A,HAT_1996_2009_edgeBE_offsetmetres_road_reloc_bdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5711
+matrix option A,HAT_1996_2009_edgeBE_offsetmetres_road_reloc_nobdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5708
+matrix option A,HAT_1996_2009_zeroBE_offsetmetres_noroad_bdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5718
+matrix option A,HAT_1996_2009_zeroBE_offsetmetres_noroad_nobdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5714
+matrix option A,HAT_1996_2009_zeroBE_offsetmetres_road_bdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5718
+matrix option A,HAT_1996_2009_zeroBE_offsetmetres_road_nobdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5714
+matrix option A,HAT_1996_2009_zeroBE_offsetmetres_road_reloc_bdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5718
+matrix option A,HAT_1996_2009_zeroBE_offsetmetres_road_reloc_nobdm_groin,0.0572,0.0678,0.1020,-28.6136,-24.5714
+matrix option A,HAT_2009_2025_edgeBE_offsetmetres_noroad_bdm_nourish_groin,0.0431,0.0599,0.1139,-25.8199,-19.7592
+matrix option A,HAT_2009_2025_edgeBE_offsetmetres_noroad_nobdm_groin,0.0318,0.0599,0.1139,-25.8199,-16.4540
+matrix option A,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nonourish_groin,0.0375,0.0599,0.1139,-25.8199,-17.9441
+matrix option A,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin,0.0431,0.0599,0.1139,-25.8199,-19.7592
+matrix option A,HAT_2009_2025_edgeBE_offsetmetres_road_nobdm_groin,0.0318,0.0599,0.1139,-25.8199,-16.4522
+matrix option A,HAT_2009_2025_zeroBE_offsetmetres_noroad_bdm_nourish_groin,0.0431,0.0599,0.1139,-25.8199,-19.8160
+matrix option A,HAT_2009_2025_zeroBE_offsetmetres_noroad_nobdm_groin,0.0346,0.0599,0.1139,-25.8199,-16.5103
+matrix option A,HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nonourish_groin,0.0375,0.0599,0.1139,-25.8199,-17.9542
+matrix option A,HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nourish_groin,0.0431,0.0599,0.1139,-25.8199,-19.7875
+matrix option A,HAT_2009_2025_zeroBE_offsetmetres_road_nobdm_groin,0.0346,0.0599,0.1139,-25.8199,-16.5086
+sweep waveahf0p3,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p3,0.1542,0.2491,0.4399,-27.8633,-18.5958
+sweep waveahf0p4,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p4,0.1097,0.1377,0.2651,-27.8633,-21.2031
+sweep waveahf0p45,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p45,0.0875,0.0914,0.1777,-27.8633,-22.4377
+sweep waveahf0p51,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p51,0.0541,0.0640,0.0848,-29.3129,-26.0334
+sweep waveahf0p52,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p52,0.0523,0.0603,0.0677,-29.3008,-26.8203
+sweep waveahf0p53,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p53,0.0472,0.0565,0.0633,-29.3397,-27.0386
+sweep waveahf0p54,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p54,0.0420,0.0528,0.0528,-29.2540,-26.7760
+sweep waveahf0p55,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveahf0p55,0.0369,0.0490,0.0490,-29.1678,-27.1298
+sweep waveahf0p3,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p3,0.1765,0.3233,0.4399,-25.6646,-9.9592
+sweep waveahf0p4,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p4,0.1182,0.1650,0.2651,-25.6646,-12.2853
+sweep waveahf0p45,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p45,0.0891,0.0931,0.1880,-25.6646,-14.2123
+sweep waveahf0p51,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p51,0.0438,0.0541,0.0970,-26.2810,-22.7839
+sweep waveahf0p52,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p52,0.0359,0.0482,0.0927,-26.4537,-23.2279
+sweep waveahf0p53,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p53,0.0328,0.0472,0.0762,-26.6532,-23.6603
+sweep waveahf0p54,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p54,0.0257,0.0420,0.0730,-27.1233,-24.2330
+sweep waveahf0p55,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveahf0p55,0.0246,0.0369,0.0706,-27.0738,-24.6857
+sweep waveasym0p5,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveasym0p5,0.1023,0.1854,0.1854,-27.8633,-15.2621
+sweep waveasym0p55,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveasym0p55,0.0804,0.1253,0.1253,-27.8633,-18.3733
+sweep waveasym0p65,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveasym0p65,0.0051,0.0221,0.1375,-40.9292,-27.8633
+sweep waveasym0p7,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveasym0p7,0.0000,0.0000,0.1612,-56.2066,-27.8633
+sweep waveasym0p8,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveasym0p8,0.0000,0.0000,0.2085,-60.4799,-27.8633
+sweep waveasym0p5,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveasym0p5,0.1023,0.1744,0.1744,-25.6646,-14.7680
+sweep waveasym0p55,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveasym0p55,0.0755,0.1171,0.1171,-25.6646,-16.6495
+sweep waveasym0p65,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveasym0p65,0.0027,0.0156,0.1375,-35.9022,-25.6646
+sweep waveasym0p7,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveasym0p7,0.0000,0.0000,0.1612,-44.8927,-25.6646
+sweep waveasym0p8,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveasym0p8,0.0000,0.0000,0.2298,-48.7976,-25.6646
+sweep waveHs0p75,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs0p75,0.0141,0.0141,0.0196,-28.3016,-27.6181
+sweep waveHs1,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs1,0.0215,0.0224,0.0311,-28.3750,-27.1112
+sweep waveHs1p25,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs1p25,0.0293,0.0318,0.0441,-28.4359,-26.3396
+sweep waveHs1p5,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs1p5,0.0387,0.0438,0.0660,-28.5429,-25.6111
+sweep waveHs1p75,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs1p75,0.0468,0.0554,0.0834,-28.5078,-25.1711
+sweep waveHs2p25,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs2p25,0.0649,0.0809,0.1358,-28.7222,-24.3192
+sweep waveHs2p5,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs2p5,0.0759,0.0946,0.1588,-28.8323,-23.8093
+sweep waveHs2p75,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs2p75,0.0874,0.1089,0.1829,-28.9433,-23.5664
+sweep waveHs3,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveHs3,0.0943,0.1238,0.2079,-29.0544,-23.4273
+sweep waveHs0p75,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs0p75,0.0124,0.0158,0.0374,-31.3924,-25.3503
+sweep waveHs1,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs1,0.0197,0.0242,0.0514,-29.7353,-25.1144
+sweep waveHs1p25,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs1p25,0.0266,0.0318,0.0614,-28.2026,-23.7167
+sweep waveHs1p5,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs1p5,0.0316,0.0405,0.0736,-26.9386,-22.1897
+sweep waveHs1p75,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs1p75,0.0376,0.0490,0.0931,-25.7929,-20.8295
+sweep waveHs2p25,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs2p25,0.0481,0.0714,0.1358,-25.8480,-19.0535
+sweep waveHs2p5,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs2p5,0.0523,0.0836,0.1588,-25.8770,-18.1828
+sweep waveHs2p75,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs2p75,0.0602,0.0962,0.1829,-25.9069,-17.7339
+sweep waveHs3,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveHs3,0.0632,0.1094,0.2295,-25.9374,-17.1686
+sweep waveTp10,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveTp10,0.0606,0.0718,0.1081,-28.6486,-24.9914
+sweep waveTp12,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveTp12,0.0628,0.0745,0.1121,-28.6703,-24.9482
+sweep waveTp6,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveTp6,0.0520,0.0648,0.0976,-28.5870,-24.4747
+sweep waveTp7,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveTp7,0.0564,0.0669,0.1006,-28.6053,-24.5866
+sweep waveTp8,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveTp8,0.0579,0.0687,0.1034,-28.6214,-24.7449
+sweep waveTp9,HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin_waveTp9,0.0593,0.0703,0.1058,-28.6358,-24.8707
+sweep waveTp10,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveTp10,0.0457,0.0635,0.1206,-25.8276,-19.9859
+sweep waveTp12,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveTp12,0.0474,0.0658,0.1251,-25.8314,-19.9756
+sweep waveTp6,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveTp6,0.0413,0.0573,0.1089,-25.8137,-19.6781
+sweep waveTp7,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveTp7,0.0426,0.0591,0.1123,-25.8180,-19.8406
+sweep waveTp8,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveTp8,0.0437,0.0607,0.1153,-25.8217,-20.1765
+sweep waveTp9,HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin_waveTp9,0.0447,0.0621,0.1181,-25.8249,-20.2314
