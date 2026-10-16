@@ -775,7 +775,7 @@ GROIN_INSTALL_YEAR = 1969   # confirmed construction date
 
 # The groin's two numbers (hat_run.yaml): the share of the arriving drift it holds back, which is
 # per window (fitted from each window's observed start shoreline in hard-structures/groin/4-hindcast/
-# 2-blocking-1996-2025/2026-10-14-window-refit/), and the first year it no longer works (the 2017
+# 3-wave-driven-1967-2025/2026-10-14-window-refit/), and the first year it no longer works (the 2017
 # Buxton fill). Another start year needs groin.strength set; 0.25 is the whole-life strength
 GROIN_STRENGTH = groin_strength_for(START_YEAR, RUN_CONFIG)
 if GROIN_STRENGTH is None:

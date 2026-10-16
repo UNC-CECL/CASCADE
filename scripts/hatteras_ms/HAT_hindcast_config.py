@@ -112,7 +112,7 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
     # The corrected groin (2026-10-14): share of the arriving drift held back, per window, for a run
     # started from that window's observed shoreline (fitted in hard-structures/groin/4-hindcast/
-    # 2-blocking-1996-2025/2026-10-14-window-refit); `strength`, when set, overrides both and is the
+    # 3-wave-driven-1967-2025/2026-10-14-window-refit); `strength`, when set, overrides both and is the
     # only way to run another start year with the groin on (0.25 over the groin's whole life, 1967-2025)
     ("groin_strength_1996",          ("groin", "strength_1996"),   _as_float, 0.16),
     ("groin_strength_2009",          ("groin", "strength_2009"),   _as_float, 0.10),

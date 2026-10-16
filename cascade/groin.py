@@ -9,7 +9,7 @@ to ``x_s_dt``, and changes nothing inside BRIE or Barrier3D.
 Two numbers describe it at Buxton: a strength, the share of the arriving drift the groin
 holds back (0.25), and the year it stops working (2017, the Buxton fill). Both were fitted on
 one continuous 1967-2025 run against the wet/dry photo dates and annual CoastSat
-(hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/).
+(hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-13-pregroin-planform/).
 
 The earlier groins this module held, a fixed -M/+M dipole and a blocking groin that cancelled
 a share b of BRIE's diffusive exchange (each with a deterioration floor f), were removed on
@@ -96,7 +96,7 @@ class CorrectedGroinCallback:
     ``(from_year, strength)`` pairs: the strength holds from each year until
     the next. A groin working at 0.25 until a 2017 fill is
     ``[(1969, 0.25), (2017, 0.0)]``. Fitted on Buxton over 1967-2025 in
-    hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/.
+    hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-13-pregroin-planform/.
 
     Parameters
     ----------

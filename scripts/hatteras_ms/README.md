@@ -263,12 +263,14 @@ runner reads it as an experiment tag.
 
 ```text
 THE GROIN, 2026-10-14. The corrected groin, by two numbers: the share of
-the drift arriving at the GIS 5|6 face it holds back (strength, 0.25), and the
-first year it no longer works (end_year, 2017, the Buxton fill). Both fitted on
-one continuous 1967-2025 run against the wet/dry photo dates and annual
-CoastSat (hard-structures/groin/4-hindcast/2-blocking-1996-2025/
-2026-10-13-pregroin-planform/). The dipole M, the blocking b and the floor f
-went with their groins.
+the drift arriving at the GIS 5|6 face it holds back (strength), and the
+first year it no longer works (end_year, 2017, the Buxton fill). The strength
+is set per window, 0.16 from 1996 and 0.10 from 2009, fitted from each
+window's observed shoreline on the annual CoastSat gap
+(hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-14-window-refit/);
+strength overrides both, 0.25 for a run that starts before the fillet exists
+(one continuous 1967-2025 run, 2026-10-13-pregroin-planform/ there). The
+dipole M, the blocking b and the floor f went with their groins.
 ```
 
 ```text

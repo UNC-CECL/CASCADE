@@ -43,7 +43,7 @@ The fresh-start commit already carried some local edits, made before this branch
 - Set in `hat_run.yaml` by its strength, per window (0.16 for 1996-2009, 0.10 for 2009-2025, fitted from each window's observed start shoreline), and the first year it no longer works (2017, the Buxton fill). Its whole-life strength, fitted from 1967, is 0.25; `groin.strength` sets one value for any start.
 
 **Effect and status.**
-- Fitted on one continuous 1967-2025 run from the 1967 shoreline against the wet/dry photo dates and annual CoastSat: it follows the gap across the groins to 17 m over the whole record (`hard-structures/groin/4-hindcast/2-blocking-1996-2025/2026-10-13-pregroin-planform/`). The runner reproduces the experiment runs it was fitted with to 0 m.
+- Fitted on one continuous 1967-2025 run from the 1967 shoreline against the wet/dry photo dates and annual CoastSat: it follows the gap across the groins to 17 m over the whole record (`hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-13-pregroin-planform/`). The runner reproduces the experiment runs it was fitted with to 0 m.
 - Open problems:
   - At full strength from installation it builds the fillet in about 3 years against about 9 observed.
   - The model's fillet sits in two domains; the observed one spans three or four.

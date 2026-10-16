@@ -3,7 +3,7 @@
 **Question.** Buxton's drift runs south, so every run so far has the drift arriving from one side. A sign or
 side error that only shows when the drift comes from the other direction would go unseen. The standard check:
 run the mirror image of a coast and see whether the groin gives the mirror image of the result. Asked for on
-2026-10-15, with the split-sample validation (`../../4-hindcast/2-blocking-1996-2025/2026-10-15-split-sample/`).
+2026-10-15, with the split-sample validation (`../../4-hindcast/3-wave-driven-1967-2025/2026-10-15-split-sample/`).
 
 **Setup.** The straight-coast rig of `../6-stress/` with the runner's `CorrectedGroinCallback`. Mirroring
 reverses the domain order: the coast at θ0 becomes −θ0, the groin face LO|LO+1 becomes NY−2−LO, and the waves

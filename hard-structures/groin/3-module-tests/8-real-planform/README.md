@@ -25,7 +25,7 @@ planform, climates and schedule constants from `groin_stability_option_a.py`,
 which takes the solve from `../1-solver-audit/HAT_groin_solver_audit.py`;
 `failure_schedule_test.py` and `trajectory_check.py` build on
 `blocking_groin_emulator.py`. `score_instant_grid.py`'s `observed_series` is imported by the
-hindcast studies in `../../4-hindcast/2-blocking-1996-2025/`. `WHERE_WE_LEFT_OFF.md` is the hand-over note of
+hindcast studies in `../../4-hindcast/2-blocking-1996-2025/` and `../../4-hindcast/3-wave-driven-1967-2025/`. `WHERE_WE_LEFT_OFF.md` is the hand-over note of
 2026-09-29.
 
 **Question.** M = 60, f = 0.6 was fitted with the /10 planform at Hs 2.5 / Tp 8.0 / asym 0.7 /

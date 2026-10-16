@@ -78,7 +78,7 @@ Each figure's Tests / How to read / Shows caption is in its `figures/supporting/
    year at first and 38 m by year 60. The gap is 104 m after year 1, 204 m at year 25 and 215 m at year 60.
 7. **On the real coast** the correction also acts on Buxton's natural bend, changing the no-groin baseline
    (`../8-real-planform/7-wave-driven-groin/`). The Buxton hindcast therefore applies it to the groin's own
-   bends only (option B, `../../4-hindcast/2-blocking-1996-2025/2026-10-09-corrected-groin/`).
+   bends only (option B, `../../4-hindcast/3-wave-driven-1967-2025/2026-10-09-corrected-groin/`).
 
 Run: `python 1-run/straight_coast_test.py [--years 50]` (about a minute), then
 `python 2-solve-check/straight_coast_conservative_solve_check.py` and the figure scripts in 3 and 4.

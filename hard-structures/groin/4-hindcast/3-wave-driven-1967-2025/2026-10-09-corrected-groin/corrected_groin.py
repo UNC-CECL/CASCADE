@@ -21,7 +21,7 @@ groin/2026-10-12-corrected-groin-calendar/, the earlier ones under groin/2026-10
 grid_scores_2026-10-09_baseline.csv); rescoring them now would not reproduce them, since the
 config's test-period length and the no-groin matrix runs have since changed.
 
-The drift groin of ../2026-10-08-drift-groin/ (b of BRIE's wave-climate net drift at the updrift
+The drift groin of ../../2-blocking-1996-2025/2026-10-08-drift-groin/ (b of BRIE's wave-climate net drift at the updrift
 approach face, moved from GIS 5 to GIS 6 each year), plus straight-coast module 6's leak
 correction within HALF_WIDTH cells of the groin face, applied to the groin's bends only (option
 B): each year the correction is computed for this run's BRIE shoreline and for the groin-free
@@ -59,7 +59,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 GROIN = REPO / "hard-structures" / "groin"
-sys.path[:0] = [str(HERE.parent / "2026-10-08-drift-groin"), str(HERE.parent / "2026-10-08-schedule-refit"),
+sys.path[:0] = [str(HERE.parent.parent / "2-blocking-1996-2025" / "2026-10-08-drift-groin"), str(HERE.parent.parent / "2-blocking-1996-2025" / "2026-10-08-schedule-refit"),
                 str(GROIN / "1-observations" / "analysis" / "2-coastsat_gap"),
                 str(GROIN / "3-module-tests" / "8-real-planform" / "6-instant-2004-grid"),
                 str(REPO / "scripts" / "hatteras_ms" / "groin-sweep"),
@@ -238,7 +238,7 @@ def _launch():
             def q_net(theta):
                 return float(self._q_net[int(np.clip(np.round(90 - theta), 1, brie._wave_climl - 1))])
 
-            # The drift groin, as ../2026-10-08-drift-groin/drift_groin.py
+            # The drift groin, as ../../2-blocking-1996-2025/2026-10-08-drift-groin/drift_groin.py
             toward_lower = q_net(angle(hi)) < 0
             approach = angle(hi) if toward_lower else angle(lo - 1)
             qv = q_net(approach)
