@@ -573,7 +573,8 @@ From the script's original header:
 Does the model overwash where and when the imagery shows washover? The
 observed presence/absence record (1-observations/overwash_observations.csv)
 against the overwash Barrier3D records in the hindcast runs, for the two
-current windows, 1996-2010 and 2010-2024.
+calendar-year windows: calibration (1996 DEM, storms 1997-2009) and test
+(2009 DEM, storms 2010-2025).
 
     python scripts/input_prep/8-overwash-analysis/4-vs-model/overwash_vs_model.py
 
@@ -612,9 +613,28 @@ WHAT IS AND IS NOT A MISMATCH
 
 THE RUNS
     The managed runs are the comparison (the imagery is the managed island):
-    edgeBE, road + beach/dune manager (+ fills in 2010-2024), no groin. The
-    natural runs (no road, no manager) are in the tables for contrast.
+    edgeBE, road + beach/dune manager (+ fills in 2010-2025), groin on. The
+    natural runs (no road, no manager, no groin) are in the tables for contrast.
+    Until 2026-10-16 the runs were the old 1996-2010 / 2010-2024 windows
+    without the groin.
 ```
+
+**overwash_timeline.py (2026-10-16).** The plain view Hannah asked for: years across, GIS up.
+Each image is a framed pair on its date: left, teal where the model overwashed since the
+previous image (overwash_vs_model.compare, the same matching the scores use, so Isabel 2003
+pairs with the May 2004 image); right, the image (black seen, grey none, hatched not assessed).
+The per-year QowTS shading (< 1, 1-10, 10-50, > 50 m3/m) sits faded behind. Strips: (a) domains
+per image, model vs observed; (c) per-domain share of images / model years. Storm names on top,
+run header band. Checked 10-16: matching two intervals back instead of one gains 0 / 3 hits and
+adds 78 / 39 false alarms, so the misses are not an imagery-timing problem.
+
+**Calendar-year rerun (2026-10-16).** WINDOWS is keyed by the matrix folder
+(1996_2009, 2009_2025); the storm file, the image window and the model-year
+dates come from first_model_year/last_model_year in HATTERAS_PERIODS. The test
+storms run through 2025, so storms_vs_overwash.py reads the through-2025 Duck
+gauge and WIS records (the env defaults end in 2024). Outputs renamed by
+storm years (1997_2009, 2010_2025, 1997_2025); the old-window PDFs are in git
+history before this date.
 
 **The figure (2026-10-01).** One per window: (a) an island map, each domain
 coloured by its class over the whole window (agreed in at least one image,

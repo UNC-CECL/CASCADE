@@ -3,13 +3,14 @@ Does the model overwash where and when the imagery shows washover?
 
     python scripts/input_prep/8-overwash-analysis/4-vs-model/overwash_vs_model.py
 
-The observed record against Barrier3D's overwash in the 1996-2010 and 2010-2024
-hindcast runs, each image against the storms since the previous one. Details: scripts/input_prep/8-overwash-analysis/README.md.
+The observed record against Barrier3D's overwash in the calendar-year calibration
+(storms 1997-2009) and test (storms 2010-2025) runs, each image against the storms
+since the previous one. Details: scripts/input_prep/8-overwash-analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-01
+Version: 2026-10-16
 """
 
 from __future__ import annotations
@@ -37,14 +38,16 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
+from site_layer.hatteras_site_config import first_model_year, last_model_year  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
+# Keyed by the matrix folder (DEM year, end year); the storms run first_model_year..last_model_year
 WINDOWS = {
-    (1996, 2010): {"managed": "HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin",
-                   "natural": "HAT_1996_2010_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
-    (2010, 2024): {"managed": "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin",
-                   "natural": "HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
+    (1996, 2009): {"managed": "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin",
+                   "natural": "HAT_1996_2009_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
+    (2009, 2025): {"managed": "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin",
+                   "natural": "HAT_2009_2025_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
 }
 THRESHOLDS = (0.0, 1.0, 5.0)        # m3/m
 # -----------------------------------------------------------------------------
@@ -63,6 +66,17 @@ CLASS_LABELS = ["Observed and modelled", "Observed, not modelled", "Modelled, no
 C_OBS, C_MOD = "0.15", "#01665e"       # observed and modelled lines and bars
 
 
+# The calendar years a window's run steps through (its storm file's window)
+def model_years(window):
+    return first_model_year(window[0]), last_model_year(window[0])
+
+
+# How a window is written in captions and table rows: the storm years it runs
+def label(window):
+    a, b = model_years(window)
+    return f"{a}-{b}"
+
+
 # A run's overwash per model year and domain (QowTS, m3/m), and its name
 def load_qow(window, arm):
     name = WINDOWS[window][arm]
@@ -74,7 +88,7 @@ def load_qow(window, arm):
 
 # Per model year: the end date of its largest storm, and of every storm
 def storm_dates(window):
-    f = env.storm_summary_file(*window)          # the series the matrix runs on
+    f = env.storm_summary_file(*model_years(window))   # the series the matrix runs on
     s = pd.read_csv(f, parse_dates=["StartTime", "EndTime"])
     s["dated"] = s.EndTime - GRACE
     largest = s.loc[s.groupby("time").Rhigh.idxmax()].set_index("time").dated
@@ -84,8 +98,9 @@ def storm_dates(window):
 
 # Images whose storms the run covers, each with its comparison window
 def images_in(window, obs):
-    start = pd.Timestamp(f"{window[0]}-01-01")
-    end = pd.Timestamp(f"{window[1]}-01-01")        # the last modelled storm year ends here
+    first, last = model_years(window)
+    start = pd.Timestamp(f"{first}-01-01")
+    end = pd.Timestamp(f"{last + 1}-01-01")         # the last modelled storm year ends here
     imgs = (obs[["Obs_ID", "Imagery_Date"]].drop_duplicates()
             .assign(date=lambda d: pd.to_datetime(d.Imagery_Date)).sort_values("date")
             .reset_index(drop=True))
@@ -110,7 +125,7 @@ def compare(window, arm, obs, thr):
             m_big = any(im["from"] < largest[t] <= im.date for t in yrs if t in largest)
             m_any = any(im["from"] < d <= im.date for t in yrs if t in every for d in every[t])
             ob = o.get(gis, np.nan)
-            rows.append(dict(window=f"{window[0]}-{window[1]}", arm=arm, run=name, threshold=thr,
+            rows.append(dict(window=label(window), arm=arm, run=name, threshold=thr,
                              obs_id=im.Obs_ID, image=im.date.date(), since=im["from"].date(),
                              partial=bool(im.partial), gis=gis, observed=ob,
                              model=int(m_big), model_any_storm=int(m_any),
@@ -166,7 +181,7 @@ def town_rows(ax):
 
 # Map + per-image counts + image-by-domain matrix, for one window (managed, headline threshold)
 def figure(df, window, geom):
-    d = df[(df.window == f"{window[0]}-{window[1]}") & (df.arm == "managed") & (df.threshold == HEADLINE_THR)]
+    d = df[(df.window == label(window)) & (df.arm == "managed") & (df.threshold == HEADLINE_THR)]
     imgs = d[["obs_id", "image", "since", "partial"]].drop_duplicates().reset_index(drop=True)
     n = len(imgs)
     grid = np.full((90, n), UNASSESSED)
@@ -233,12 +248,12 @@ def figure(df, window, geom):
                columnspacing=1.2)
 
     ow.VS_MODEL.mkdir(parents=True, exist_ok=True)
-    out = save(fig, ow.VS_MODEL / f"overwash_vs_model_{window[0]}_{window[1]}.png")
+    out = save(fig, ow.VS_MODEL / f"overwash_vs_model_{label(window).replace('-', '_')}.png")
     plt.close(fig)
     s = scores(d)
     record_caption(out[0],
-        f"Washover seen in the imagery against overwash in the model, {window[0]}-{window[1]}, the managed "
-        f"run ({d.run.iloc[0]}, storm series {env.DEFAULT_STORM_VARIANT}). Teal means the model overwashed a "
+        f"Washover seen in the imagery against overwash in the model, storm years {label(window)}, the managed "
+        f"run (groin on, {d.run.iloc[0]}, storm series {env.DEFAULT_STORM_VARIANT}). Teal means the model overwashed a "
         "domain: dark when the image also shows washover there, light when it does not. Amber is washover "
         "the model missed. Light grey: neither; hatched: domain not assessed in that image. "
         "(a) Each domain over the whole window: dark teal if model and image agreed in at least one image, "

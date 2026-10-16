@@ -10,7 +10,7 @@ and overwash against storm size. Details: scripts/input_prep/8-overwash-analysis
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-01
+Version: 2026-10-16
 """
 from __future__ import annotations
 
@@ -43,11 +43,34 @@ from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E40
 ARM = "managed"                       # the matrix run overwash_vs_model draws
 HIT_C, MISS_C, FA_C = ovm.CLASS_COLOURS[:3]      # the agreement classes of overwash_vs_model
 OBS_C, MOD_C = "0.15", HIT_C
-WINDOW_C = {(1996, 2010): C_1984, (2010, 2024): C_1997}   # earlier red, later blue
+WINDOW_C = dict(zip(ovm.WINDOWS, (C_1984, C_1997)))   # calibration red, test blue
 FEW_ASSESSED = 30                     # an image assessing fewer domains than this is drawn light / hollow
 LABEL_IMAGES = {"2004-05-25": "Isabel", "2011-08-27": "Irene", "2018-08-22": "2018", "2013-04-06": "2012-13"}
-OUT = ow.VS_MODEL / "storms_vs_overwash_1996_2024.png"
+OUT = ow.VS_MODEL / "storms_vs_overwash_1997_2025.png"
+# The test storms run through 2025, past the default records (end 2024); these are the ones they were built from
+DUCK_GAUGE_2025 = env.WATER_LEVEL_DIR / "8651370_DUCK_19840101_20251231_NAVD.csv"
+WIS_2025 = env.WIS_DIR / "ST63228_19840101_20251231_export_plus_archive.csv"
 # -----------------------------------------------------------------------------
+
+
+# Both runs' storm summaries as one record, each event tagged with the run that spends it (pi)
+def load_storms(forcing):
+    parts = []
+    for i, window in enumerate(ovm.WINDOWS):
+        f = env.storm_summary_file(*ovm.model_years(window))
+        df = pd.read_csv(f, parse_dates=["StartTime", "EndTime"])
+        df["pi"] = i
+        parts.append(df)
+    # "period" in the summary is the wave period (Tp, s), not the hindcast period
+    df = pd.concat(parts, ignore_index=True).rename(columns={"period": "tp_s"})
+    df["peak"] = [forcing.TWL.loc[s:e].idxmax() for s, e in zip(df.StartTime, df.EndTime)]
+    df["rhigh_m"] = df.Rhigh * 10.0
+    if not np.allclose(forcing.TWL.loc[df.peak].values - sf.MHW_NAVD88, df.rhigh_m, atol=0.01):
+        raise RuntimeError("rebuilt TWL does not reproduce the summary's Rhigh; the peak hours are wrong")
+    trimmed = df["trimmed_from"] if "trimmed_from" in df else pd.Series(0, index=df.index)
+    df["raw_hours"] = np.where(trimmed > 0, trimmed, df.duration)
+    df["frac_year"] = df.peak.dt.year + (df.peak.dt.dayofyear - 1 + df.peak.dt.hour / 24) / 365.25
+    return df
 
 
 # Each model year's lowest dune crest per domain (m MHW), GIS 1-90, from the matrix run
@@ -62,7 +85,7 @@ def crest_by_year(window):
         crest = dd.max(axis=2) if dd.ndim == 3 else dd
         low = (crest.min(axis=1) + b._BermEl) * 10                  # the lowest point a storm must clear
         for t in range(1, len(low)):
-            rows.append(dict(year=window[0] + t - 1, gis=gis, crest_m=low[t]))
+            rows.append(dict(year=ovm.model_years(window)[0] + t - 1, gis=gis, crest_m=low[t]))
     return pd.DataFrame(rows)
 
 
@@ -108,7 +131,8 @@ def frac_year(t):
 # (a) storms against the model's lowest crests, through time
 def panel_storms(ax, storms, crests):
     q = crests.groupby("year").crest_m.quantile([0.1, 0.5, 0.9]).unstack()
-    for (a, b) in ovm.WINDOWS:
+    for window in ovm.WINDOWS:
+        a, b = ovm.model_years(window)
         qq = q.loc[(q.index >= a) & (q.index <= b)]
         x = np.r_[qq.index.values, qq.index.values[-1] + 1]
         ext = lambda s: np.r_[s.values, s.values[-1]]  # noqa: E731
@@ -130,7 +154,7 @@ def panel_scores(ax, scores):
     for j, (win, s) in enumerate(scores.items()):
         xs = np.arange(len(names)) + (j - 0.5) * w
         vals = [s[k] for k, _ in names]
-        ax.bar(xs, vals, width=w, color=WINDOW_C[win], lw=0, label=f"{win[0]}–{win[1]}")
+        ax.bar(xs, vals, width=w, color=WINDOW_C[win], lw=0, label=ovm.label(win).replace("-", "–"))
         for x, v in zip(xs, vals):
             ax.text(x, max(v, 0) + 0.02, f"{v:.2f}", ha="center", va="bottom", fontsize=7, color=INK)
     ax.set_xticks(np.arange(len(names)), [lab for _, lab in names])
@@ -152,7 +176,7 @@ def panel_images(ax, imgs):
         ax.bar(x, f, width=0.45, bottom=h + m, color=FA_C, lw=0, alpha=alpha)
     ax.set_ylabel("Domains")
     ax.set_ylim(0, 90)
-    ax.set_xlim(1996, 2025)
+    ax.set_xlim(1997, 2026)
 
 
 # (d) observed and modelled share against the largest storm between images
@@ -191,7 +215,8 @@ def panel_alongshore(ax, d):
 # (f) per domain, the model's lowest crest against the storms of each window
 def panel_crest(ax, crests, storms):
     for win, colour in WINDOW_C.items():
-        cr = crests[(crests.year >= win[0]) & (crests.year <= win[1])]
+        a, b = ovm.model_years(win)
+        cr = crests[(crests.year >= a) & (crests.year <= b)]
         med = cr.groupby("gis").crest_m.median().reindex(range(1, 91))
         ax.plot(med.index, med.values, color=colour, lw=1.2, zorder=3)
         s = storms[storms.pi == list(ovm.WINDOWS).index(win)]
@@ -208,17 +233,18 @@ def panel_crest(ax, crests, storms):
 def main():
     apply_style()
     obs = pd.read_csv(ow.OBSERVATIONS / "overwash_observations.csv")
+    env.DUCK_GAUGE_FILE, env.WIS_FILE = DUCK_GAUGE_2025, WIS_2025   # sf.load_forcing reads these
     forcing = sf.load_forcing()
-    storms = sf.classify(sf.load_record(env.DEFAULT_STORM_VARIANT, forcing), forcing)
+    storms = sf.classify(load_storms(forcing), forcing)
     allcells, imgs, crests, scores = [], [], [], {}
-    for window, keep_to in zip(ovm.WINDOWS, (2009, 2024)):
+    for window in ovm.WINDOWS:
         s = storms[storms.pi == list(ovm.WINDOWS).index(window)]
         d = cells(window, obs)
         allcells.append(d)
         imgs.append(per_image(window, d, s, obs))
         scores[window] = skill(d)
         cr = crest_by_year(window)
-        crests.append(cr[cr.year <= keep_to])
+        crests.append(cr)
     d = pd.concat(allcells, ignore_index=True)
     imgs = pd.concat(imgs, ignore_index=True).sort_values("image").reset_index(drop=True)
     crests = pd.concat(crests, ignore_index=True)
@@ -245,7 +271,7 @@ def main():
     for ax in (ax_a, ax_c):
         for x in imgs.image.map(frac_year):
             ax.axvline(x, color=C["GRID"], lw=0.5, zorder=0)
-        ax.axvline(2010, color=INK_MUTED, lw=0.6, ls=":", zorder=0)
+        ax.axvline(ovm.model_years(list(ovm.WINDOWS)[1])[0], color=INK_MUTED, lw=0.6, ls=":", zorder=0)
     plt.setp(ax_a.get_xticklabels(), visible=False)
     plt.setp(ax_e.get_xticklabels(), visible=False)
     for ax in (ax_a, ax_b, ax_c, ax_d, ax_e, ax_f):
@@ -263,8 +289,8 @@ def main():
                Line2D([], [], color=MOD_C, marker="o", lw=0, ms=4, label="Modelled (d)"),
                Line2D([], [], color="0.5", marker="o", mfc="white", lw=0, ms=4,
                       label=f"< {FEW_ASSESSED} domains assessed"),
-               Line2D([], [], color=C_1984, lw=1.2, label="Crest, 1996–2010 run (f)"),
-               Line2D([], [], color=C_1997, lw=1.2, label="Crest, 2010–2024 run (f)"),
+               Line2D([], [], color=C_1984, lw=1.2, label="Crest, calibration run (f)"),
+               Line2D([], [], color=C_1997, lw=1.2, label="Crest, test run (f)"),
                Line2D([], [], color="0.4", lw=0.9, ls="--", label="Typical yearly max storm (f)")]
     fig.legend(handles=handles, loc="outside lower center", ncol=4, frameon=False)
 
@@ -273,18 +299,19 @@ def main():
     r_o = spearmanr(k.largest_rhigh_m, k.observed_pct).statistic
     r_m = spearmanr(k.largest_rhigh_m, k.modelled_pct).statistic
     r_om = spearmanr(full.observed_pct, full.modelled_pct).statistic
-    sc = "; ".join(f"{w[0]}–{w[1]}: {v['hits']} hits, {v['misses']} misses, {v['false_alarms']} false alarms, "
+    sc = "; ".join(f"{ovm.label(w)}: {v['hits']} hits, {v['misses']} misses, {v['false_alarms']} false alarms, "
                    f"{v['neither']} correct negatives" for w, v in scores.items())
     caption(fig, (
-        f"How well the hindcast reproduces the overwash record, 1996–2024 (managed matrix runs, storm series "
+        f"How well the hindcast reproduces the overwash record, storm years 1997–2025 (managed matrix runs, "
+        f"groin on: {', '.join(ovm.WINDOWS[w][ARM] for w in ovm.WINDOWS)}; storm series "
         f"{env.DEFAULT_STORM_VARIANT}). Each assessed image-and-domain pair is a hit (overwash in the image and "
         f"the model), a miss (image only), a false alarm (model only) or a correct negative; modelled = "
         f"overwash > 0 m³/m in a model year whose largest storm falls between the previous image and this one "
         f"(overwash_vs_model's rule). (a) Every storm the model runs (Duck gauge water level + Stockdon runup, "
         f"slope 0.06), drawn from the berm ({sf.BERM_MHW:.2f} m MHW, dashed) to its peak and coloured by type "
         f"(HURDAT2), over the model's own dunes: each domain's lowest dune crest at the end of each model year, "
-        f"10th–90th percentile across GIS 1–90 (band) and median (line). The 1996–2010 run supplies 1996–2009, the "
-        f"2010–2024 run 2010–2024 (dotted line). (b) Hit rate = hits / (hits + misses); false-alarm rate = false "
+        f"10th–90th percentile across GIS 1–90 (band) and median (line). The calibration run (1996 DEM) supplies "
+        f"1997–2009, the test run (2009 DEM) 2010–2025 (dotted line). (b) Hit rate = hits / (hits + misses); false-alarm rate = false "
         f"alarms / (false alarms + correct negatives); skill = the difference (Peirce skill score; 0 = no better "
         f"than chance, 1 = perfect). {sc}. (c) Each image's assessed domains by outcome; correct negatives are "
         f"the rest up to the domains assessed. (d) The share of assessed domains overwashed, observed and "
@@ -292,14 +319,14 @@ def main():
         f"≥ {FEW_ASSESSED} domains only: observed {r_o:.2f}, modelled {r_m:.2f}; observed against modelled "
         f"{r_om:.2f}. (e) For each domain, the number of images in which it was a hit, a miss or a false alarm, "
         f"both windows together. (f) Each domain's lowest dune crest in the model, median over the run's years, "
-        f"per window, with the median of each year's largest storm (dashed, same colour): where the crest sits "
+        f"per run, with the median of each year's largest storm (dashed, same colour): where the crest sits "
         f"below the dashed line, a typical year's largest storm overwashes that domain. Berm dotted. Images "
         f"assessing fewer than {FEW_ASSESSED} of the 90 domains (Feb 2022, Apr 2023, Oct 2023) are drawn light in "
         f"(c) and hollow in (d)."))
     out = save(fig, OUT, close=True)
     ow.VS_MODEL_TABLES.mkdir(parents=True, exist_ok=True)
     imgs.to_csv(ow.VS_MODEL_TABLES / "storms_vs_overwash_by_image.csv", index=False)
-    pd.DataFrame([dict(window=f"{w[0]}_{w[1]}", **v) for w, v in scores.items()]).to_csv(
+    pd.DataFrame([dict(window=ovm.label(w).replace("-", "_"), **v) for w, v in scores.items()]).to_csv(
         ow.VS_MODEL_TABLES / "storms_vs_overwash_skill.csv", index=False)
     for w, v in scores.items():
         print(w, {k: round(x, 2) if isinstance(x, float) else x for k, x in v.items()})
