@@ -276,15 +276,16 @@ def coastsat_layers(start_year):
             label="CoastSat LRR (2004-2024)", period_start=2004,
             csv_path=str(COASTSAT_BASE_DIR / "2004_2024"
                          / "transect_lrr_full.csv")),
-        # The 1996 and 2010 windows (added 2026-09-11)
-        CoastSatDataset(
-            label="CoastSat LRR (1996-2010)", period_start=1996,
-            csv_path=str(COASTSAT_BASE_DIR / "1996_2010"
-                         / "transect_lrr_full.csv")),
-        CoastSatDataset(
-            label="CoastSat LRR (2010-2024)", period_start=2010,
-            csv_path=str(COASTSAT_BASE_DIR / "2010_2024"
-                         / "transect_lrr_full.csv")),
+        # The calibration and test windows, built from the period table as
+        # the runner builds them (section 8.1). Literal 1996_2010 / 2010_2024
+        # here drew the 1996 sweep against a window it was not scored on and
+        # had no 2009 dataset at all (2026-10-15).
+        *[CoastSatDataset(
+            label=f"CoastSat LRR ({period_component(start).replace('_', '-')})",
+            period_start=start,
+            csv_path=str(COASTSAT_BASE_DIR / period_component(start)
+                         / "transect_lrr_full.csv"))
+          for start in (1996, 2009)],
     ]
     series = build_coastsat_series(
         datasets, active_period_start=start_year, lowess_config=LOWESS_CONFIG,
