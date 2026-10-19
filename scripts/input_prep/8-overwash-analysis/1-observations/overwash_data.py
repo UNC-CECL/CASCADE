@@ -9,7 +9,7 @@ taken after it (7-day grace). Nothing is plotted here. Details: scripts/input_pr
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-10-19
 """
 
 from __future__ import annotations
@@ -34,11 +34,39 @@ OUT_DIR = ow.OVERWASH_ROOT
 XLSX = ow.WORKBOOK
 
 # --- CONFIG ------------------------------------------------------------------
+# The model windows, by the storm years each run steps through: an image belongs to a
+# window when its year does (the same images overwash_vs_model.images_in picks).
+# The full record keeps the run's label, 1996-2025; its storms start in 1997.
 PERIODS = {
-    "period1": (1984, 2004),
-    "period2": (2004, 2024),
-    "combined": (1984, 2024),
+    "1997_2009": (1997, 2009),     # calibration
+    "2010_2025": (2010, 2025),     # test
+    "1996_2025": (1997, 2025),     # full record
 }
+FULL = "1996_2025"
+PERIOD_ROLE = {"1997_2009": "calibration", "2010_2025": "test", "1996_2025": "full record"}
+
+# "1997–2009" for a window tag; the full record by its run label, 1996–2025
+def period_label(tag):
+    return tag.replace("_", "–")
+
+
+# The images of a window: rows of obs whose year falls in it
+def period_images(obs, tag):
+    lo, hi = PERIODS[tag]
+    return [int(i) for i in obs.index[obs["Year"].between(lo, hi)]]
+
+
+# The imagery sources of a set of images, in words, with the years each covers
+def sources_text(obs, idx):
+    sub = obs.loc[idx]
+    parts = []
+    for src, g in sub.groupby("Source", sort=False):
+        name = ("the Hapke and Henderson (2007) delineations"
+                if "Hapke" in str(src) else f"{src} imagery")
+        y0, y1 = g["Year"].min(), g["Year"].max()
+        parts.append(f"{name} ({y0}" + (f"–{y1})" if y1 != y0 else ")"))
+    return " and ".join(parts)
+
 
 # Matches ANN_TOWN_SPANS in the site config; Tri-Village is Rodanthe, Waves and Salvo
 SECTIONS = [

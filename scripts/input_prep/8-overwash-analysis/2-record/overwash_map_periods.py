@@ -1,8 +1,8 @@
 """
-Where on Hatteras Island overwash was observed, and when, for the two model periods.
+Where on Hatteras Island overwash was observed, and when, for the calibration and test windows.
 
-    python scripts/input_prep/8-overwash-analysis/2-record/overwash_map_periods.py   # one figure per period
-    python scripts/input_prep/8-overwash-analysis/2-record/overwash_map_periods.py --both   # plus the two-period figure
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_map_periods.py   # one figure per window
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_map_periods.py --both   # plus the two-window figure
 
 The island with its 90 domains shaded by images showing overwash, beside one
 column per image. Details: scripts/input_prep/8-overwash-analysis/README.md.
@@ -10,7 +10,7 @@ column per image. Details: scripts/input_prep/8-overwash-analysis/README.md.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-10-19
 """
 
 from __future__ import annotations
@@ -39,12 +39,14 @@ sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "8-overwash-analysis"
 from site_layer.hat_figure_style import (C, FIG_H_MAX, INK, INK_MUTED, _north_arrow,   # noqa: E402
                               _scalebar, _title, apply_style, figsize, save,
                               spines_for_image)
-from overwash_data import (OUT_DIR, PERIODS, SECTIONS, assign_capture,   # noqa: E402
-                           load_observations, load_storms, upsert_caption)
+from overwash_data import (OUT_DIR, SECTIONS, assign_capture,   # noqa: E402
+                           load_observations, load_storms, period_images,
+                           period_label, sources_text, upsert_caption)
 
 from site_layer import hat_overwash as ow  # noqa: E402
-FIG_DIR = ow.MAP
-OUT_PNG = FIG_DIR / "overwash_map_periods.png"
+FIG_DIR = ow.WHEN
+# The two windows drawn, calibration then test
+TAGS = ("1997_2009", "2010_2025")
 
 from site_layer import hat_map_layers as _ml  # noqa: E402
 DOMAIN_FILE = _ml.DOMAIN_BOXES
@@ -243,48 +245,49 @@ def head_band_in(obs, per, storm_names, tags, one_line=False):
 
 # Caption
 
-# The CAPTIONS.md entry for the figure of the given periods
-def caption_text(tags, per):
+# The CAPTIONS.md entry for the figure of the given windows
+def caption_text(tags, per, obs):
     one = len(tags) == 1
-    span = {"period1": "1984–2004", "period2": "2004–2024"}
-    src = {"period1": "the Hapke and Henderson (2007) delineations",
-           "period2": "Google Earth imagery"}
+    span = {t: period_label(t) for t in tags}
+    role = {"1997_2009": "calibration", "2010_2025": "test"}
     if one:
         t = tags[0]
         letters = "(a) the island, (b) the images"
-        imgs = f"{per[t]['n_img']} images in {span[t]}"
-        srcs = f"The images are {src[t]}"
+        imgs = f"{per[t]['n_img']} images taken {span[t]}"
+        srcs = "The images are " + sources_text(obs, per[t]["idx"])
         top = f"Most-hit domains: {per[t]['top']}."
         sides = ("domain numbers every ten on the ocean side, reaches on the "
                  "sound side, villages in black")
+        what = f"in the {role[t]} window (storms {span[t]})"
     else:
-        letters = "(a) 1984–2004 and (c) 2004–2024 the island, (b) and (d) the images"
-        imgs = (f"{per['period1']['n_img']} images in 1984–2004, "
-                f"{per['period2']['n_img']} in 2004–2024, 2004 counted in both")
-        srcs = ("Period 1 images are the Hapke and Henderson (2007) "
-                "delineations, Period 2 images are Google Earth")
-        top = (f"Most-hit domains: {per['period1']['top']} in 1984–2004; "
-               f"{per['period2']['top']} in 2004–2024.")
+        a, b = tags
+        letters = f"(a) {span[a]} and (c) {span[b]} the island, (b) and (d) the images"
+        imgs = (f"{per[a]['n_img']} images taken {span[a]}, "
+                f"{per[b]['n_img']} taken {span[b]}")
+        srcs = "The images are " + sources_text(obs, per[a]["idx"] + per[b]["idx"])
+        top = (f"Most-hit domains: {per[a]['top']} in {span[a]}; "
+               f"{per[b]['top']} in {span[b]}.")
         sides = "domain numbers every ten on the ocean side"
+        what = f"in the calibration (storms {span[a]}) and test (storms {span[b]}) windows"
     return (
-        f"Observed overwash on Hatteras Island, "
-        f"{span[tags[0]] if one else 'by period'}, on the island outline "
-        f"(NC 1:80k coastline, UTM 18N); {letters}. The island: the 90 CASCADE "
+        f"Observed overwash on Hatteras Island {what}, on the island outline "
+        f"(NC 1:80k coastline, UTM 18N); {letters}. An image belongs to a window "
+        f"when it was taken in one of the window's storm years, as in the model "
+        f"comparison. The island: the 90 CASCADE "
         f"domain boxes clipped to land, each shaded by the number of images "
         f"showing it overwashed (unshaded = none; {imgs}); the shade scale is "
-        f"the same in both periods' figures. NC-12 as the dark line; {sides}. "
+        f"the same in both windows' figures. NC-12 as the dark line; {sides}. "
         f"The images: one column per image in date order, "
         f"level with the island beside it, purple where the domain was overwashed "
         f"in that image, dotted where the image does not reach the domain; the "
         f"column head under the strip gives the date (* poor or partial image) "
         f"and the named storm that image is the first to show (+n more), by the "
-        f"date rule of the heatmap figure. {srcs}. 2004 belongs to both "
-        f"periods. {top}")
+        f"date rule of the image-by-domain figure. {srcs}. {top}")
 
 
 # Write one figure's entry into CAPTIONS.md
 def write_caption(name, text):
-    p = upsert_caption(name, "map", text)
+    p = upsert_caption(name, "when", text)
     print(f"  wrote {p.relative_to(REPO)}  ({name})")
 
 
@@ -294,7 +297,7 @@ def write_caption(name, text):
 def render(tags, out_name, geo, per, cols, vmax, obs, matrix, domains,
            storm_names):
     dom, land, road, bounds = geo
-    span = {"period1": "1984–2004", "period2": "2004–2024"}
+    span = {t: period_label(t) for t in tags}
     n_per = len(tags)
     pair = n_per > 1
 
@@ -347,7 +350,7 @@ def render(tags, out_name, geo, per, cols, vmax, obs, matrix, domains,
 
     strip_ref = "(b)" if len(tags) == 1 else "(b, d)"
     handles = [mpatches.Patch(fc=CLR_LAND, ec=CLR_BOX, lw=0.4,
-                              label="domain, no overwash in the period")]
+                              label="domain, no overwash in the window")]
     handles += [mpatches.Patch(fc=cols[i], ec="none",
                                label=f"{i + 1} image{'s' if i else ''}")
                 for i in range(vmax)]
@@ -370,7 +373,7 @@ def render(tags, out_name, geo, per, cols, vmax, obs, matrix, domains,
     out = FIG_DIR / out_name
     save(fig, out, close=True)
     print(f"  wrote {out.relative_to(REPO)} (+ .pdf)")
-    write_caption(out_name, caption_text(tags, per))
+    write_caption(out_name, caption_text(tags, per, obs))
 
 
 # Main
@@ -390,9 +393,8 @@ def main(argv):
             storm_names.setdefault(s["capture"], []).append(nm)
 
     per = {}
-    for tag in ("period1", "period2"):
-        lo, hi = PERIODS[tag]
-        idx = [int(i) for i in obs.index[obs["Year"].between(lo, hi)]]
+    for tag in TAGS:
+        idx = period_images(obs, tag)
         n_ow = np.nansum(matrix[idx], axis=0)
         counts = {int(d): int(n) for d, n in zip(domains, n_ow)}
         order = np.argsort(-n_ow)[:3]
@@ -400,14 +402,14 @@ def main(argv):
         per[tag] = dict(idx=idx, counts=counts, n_img=len(idx),
                         vmax=int(n_ow.max()), top=top)
 
-    vmax = max(per["period1"]["vmax"], per["period2"]["vmax"], 1)
+    vmax = max(max(per[t]["vmax"] for t in TAGS), 1)
     cols = count_cmap(vmax)
     common = (geo, per, cols, vmax, obs, matrix, domains, storm_names)
 
-    render(["period1"], "overwash_map_period1.png", *common)
-    render(["period2"], "overwash_map_period2.png", *common)
+    for tag in TAGS:
+        render([tag], f"overwash_map_by_image_{tag}.png", *common)
     if "--both" in argv:
-        render(["period1", "period2"], "overwash_map_periods.png", *common)
+        render(list(TAGS), "overwash_map_by_image_" + "_".join(TAGS) + ".png", *common)
 
 
 if __name__ == "__main__":

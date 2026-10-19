@@ -1805,7 +1805,7 @@ the model starts from beside that DEM, so it is dated like the DEM.
 1996: the 1996 ALACE lidar, flown 1996-10-09..16 -> 1995-10-12..1997-10-12
 2010: the 2009 USACE NCMP lidar, flown 2009-08-10..24 -> 2008-08-17..2010-08-17
 These are the windows of the shoreline v2 builds (CURRENT since the same
-day). Only the OFFSET reads this table -- island_offset_hybrid's default raw
+day). Only the OFFSET reads this table -- step2_raw_offsets_to_island_offset's default raw
 file -- so it departs from [[cascade-period-is-the-calendar-year]] for the
 offset alone; observed change, rates and scoring keep their calendar windows
 and never read it. The anchors live in coastsat_mean_shoreline.SURVEY_ANCHORS.
@@ -1988,7 +1988,7 @@ HATTERAS_PERIODS[year]["road_setback_file"] carries.
 
 ```text
 The stem a build's three files share, e.g. Island_Dune_Offsets_1996.
-island_offset_hybrid.py names its outputs from this rather than keeping a
+step2_raw_offsets_to_island_offset.py names its outputs from this rather than keeping a
 second spelling of them (2026-09-22).
 ```
 
@@ -2091,7 +2091,7 @@ one LINE vintage's per-transect stations.
 ```text
 raw_offsets/<start>_<end>_shoreline_offset_raw.csv -- the per-transect
 stations of one averaging window's mean shoreline, the shoreline
-counterpart of dune_raw_file(). Written by duneline_to_raw_offsets.py from
+counterpart of dune_raw_file(). Written by step1_line_to_raw_offsets.py from
 the mean-shoreline geojson, which hat_observed_rates owns.
 ```
 
@@ -3666,7 +3666,7 @@ no filtering at all; BeachDuneConfig now rejects the fraction scale.
 Path of the padded offset file, relative to INIT_ROOT.
 
 120 domains in the base geometry. An extended geometry reads its own
-build under <year>/ext/<geometry>/ (island_offset_hybrid.py --geometry),
+build under <year>/ext/<geometry>/ (step2_raw_offsets_to_island_offset.py --geometry),
 which is not a version and does not move CURRENT; the path is returned
 unchecked because every period resolves here at import and only the
 period being run needs the file to exist -- the runner checks that.

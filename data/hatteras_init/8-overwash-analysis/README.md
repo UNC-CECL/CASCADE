@@ -1,7 +1,7 @@
 # 8-overwash-analysis
 
 The observed overwash record on Hatteras Island, 1984–2024, and the figures
-of it. Scripts: `scripts/input_prep/8-overwash-analysis/`.
+of it (the record figures cover the model windows, 1996–2025). Scripts: `scripts/input_prep/8-overwash-analysis/`.
 
 ```
 1-observations/                     THE RECORD, and the record reshaped
@@ -10,16 +10,17 @@ of it. Scripts: `scripts/input_prep/8-overwash-analysis/`.
                                     sheet; edit here.
     overwash_observations.csv       long form: Obs_ID, date, year, season, domain, overwash
     storms_by_image.csv             per storm: last day, first image after it, days between
-2-record/                           what the record shows
-    heatmaps/
-        overwash_heatmap_period1.png            1984–2004
-        overwash_heatmap_period2.png            2004–2024
-        overwash_heatmap_combined.png           1984–2024, period bars on the left
-        overwash_heatmap_combined_uniform.png   same, one row per year (no gap collapse)
-    map/
-        overwash_map_period1.png                the island 1984–2004, domains shaded by
-        overwash_map_period2.png                images with overwash; same shade scale in both
-                                                (overwash_map_periods.png, side by side, with --both)
+2-record/                           what the record shows (reorganised 2026-10-19)
+    1-where/                        which parts of the island overwash most, all images together
+        overwash_where_record_1996_2025.png       domains shaded by images with overwash,
+                                                  19 images taken 1997-2025, three hotspot zooms
+    2-when/                         which images showed it, domain by domain
+        overwash_by_image_1997_2009.png           image x domain grid + storms, calibration window
+        overwash_by_image_2010_2025.png           the same, test window
+        overwash_by_image_1996_2025.png           the same, full model window, window bars on the left
+        overwash_map_by_image_1997_2009.png       the island beside one column per image; same
+        overwash_map_by_image_2010_2025.png       shade scale in both
+        overwash_map_by_image_1997_2009_2010_2025.png   the two side by side (--both)
 3-vs-footprint/                     the record against the 1984 footprint
     overwash_vs_footprint_alongshore.png    images, footprint bars and flags, by domain
     overwash_vs_footprint_summary.png       shift by overwash status; share overwashed per action
@@ -55,8 +56,16 @@ top-level `vs-footprint/`. Resolve every path through
 model-comparison script in `scripts/analyze_output/overwash/` reads the
 workbook through it too.
 
-Period 1 rows are the Hapke and Henderson (2007) delineations; Period 2
-rows are read from Google Earth imagery. 2004 belongs to both periods.
+The windows are the model's: calibration (storms 1997-2009), test (storms
+2010-2025) and the full record, labelled 1996-2025 like its run (storms
+1997-2025). An image belongs to a window when it was taken in one of the
+window's storm years, the same images 4-vs-model compares, so the 1984-1996
+images appear only in the vs-footprint figures. Before 2026-10-19 the figures
+used 1984-2004 / 2004-2024 / 1984-2024 and sat in heatmaps/ and map/; their
+PDFs are in git history. A same-layout map of the overwash_events polygons in the
+ArcGIS project (1984-2004, year field only) was made and removed the same day:
+its years sit outside the model windows. Its script was never committed. Images to 1998 are the Hapke and Henderson (2007)
+delineations; from 2004 they are read from Google Earth imagery.
 The domain axis is the CASCADE domain, 1 at Cape Point to 90 at Pea
 Island; the map draws the boxes from `D:/Hatteras_GIS/domains.geojson`.
 

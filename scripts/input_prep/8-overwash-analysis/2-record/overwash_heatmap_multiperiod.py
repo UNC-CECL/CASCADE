@@ -1,9 +1,9 @@
 """
-Observed overwash per image and per domain, with the storm record beside it, one figure per period.
+Observed overwash per image and per domain, with the storm record beside it, one figure per model window.
 
     python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py
-    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py period2
-    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py combined --uniform-years
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py 2010_2025
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py 1996_2025 --uniform-years
 
 Writes the heatmaps, the long-form observation and storm tables, and the
 CAPTIONS.md entries. Details: scripts/input_prep/8-overwash-analysis/README.md.
@@ -11,7 +11,7 @@ CAPTIONS.md entries. Details: scripts/input_prep/8-overwash-analysis/README.md.
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-22
+Version: 2026-10-19
 """
 
 from __future__ import annotations
@@ -37,12 +37,13 @@ from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, FIG_H_MAX, INK,  
                               INK_MUTED, _title, apply_style, figsize,
                               open_frame, save, spines_for_image,
                               town_bands)
-from overwash_data import (OUT_DIR, PERIODS, SECTIONS, assign_capture,   # noqa: E402
+from overwash_data import (FULL, OUT_DIR, PERIODS, SECTIONS, assign_capture,   # noqa: E402
                            load_observations, load_storms,
-                           observations_long, storms_table, upsert_caption)
+                           observations_long, period_images, period_label,
+                           sources_text, storms_table, upsert_caption)
 
 from site_layer import hat_overwash as ow  # noqa: E402
-FIG_DIR = ow.HEATMAPS
+FIG_DIR = ow.WHEN
 # The long-form tables are the record reshaped, so they sit beside it.
 TAB_DIR = ow.OBSERVATIONS
 
@@ -195,13 +196,13 @@ def draw_matrix(ax, rows, domains, matrix):
     _title(ax, 0, "overwash observed, per image and domain")
 
 
-# Two thin columns marking Period 1 (1984-2004) and Period 2 (2004-2024)
+# Two thin columns marking the calibration (1997-2009) and test (2010-2025) windows
 def draw_period_bars(ax, rows):
     ax.set_xlim(0, 2)
     ax.set_ylim(rows[-1]["y1"], 0)
     ax.axis("off")
-    spans = [(1984, 2004, "Period 1  1984–2004", 0),
-             (2004, 2024, "Period 2  2004–2024", 1)]
+    spans = [(*PERIODS["1997_2009"], "Calibration  1997–2009", 0),
+             (*PERIODS["2010_2025"], "Test  2010–2025", 1)]
     for lo, hi, text, col in spans:
         ys = [r for r in rows if any(lo <= y <= hi for y in r["years"])]
         if not ys:
@@ -381,7 +382,7 @@ def matrix_legend(fig, x, y):
 def make_figure(tag, period, obs, domains, matrix, storms, collapse, out):
     rows = build_rows(obs, period, collapse)
     placed = place_storms(rows, storms, obs, period)
-    combined = tag == "combined"
+    combined = tag == FULL
     n_d = len(domains)
 
     # Layout in inches at the printed width, then fractions
@@ -437,12 +438,10 @@ def caption_text(tag, period, rows, placed, obs, storms):
     lo, hi = period
     n_img = sum(1 for r in rows if r["kind"] == "obs")
     gaps = [r["label"] for r in rows if r["kind"] == "gap"]
-    src = ("Period 1 rows are the Hapke and Henderson (2007) delineations, "
-           "Period 2 rows are read from Google Earth imagery"
-           if tag == "combined" else
-           "Rows are the Hapke and Henderson (2007) delineations"
-           if tag == "period1" else
-           "Rows are read from Google Earth imagery")
+    src = "Rows are " + sources_text(obs, period_images(obs, tag))
+    if tag == FULL:
+        src += ("; the bars on the left mark the calibration (storms 1997–2009) "
+                "and test (storms 2010–2025) windows")
     unmatched = [s for s in storms if lo <= s["year"] <= hi and not s["matched"]]
     ex = "; ".join(
         f"{s['name']} ({s['month']} {s['year']}) → "
@@ -450,7 +449,8 @@ def caption_text(tag, period, rows, placed, obs, storms):
            if s['capture'] is not None else "no image yet")
         for s in unmatched[:6])
     return (
-        f"Observed overwash on Hatteras Island, {lo}–{hi}. "
+        f"Observed overwash on Hatteras Island, {period_label(tag)} "
+        f"(images taken in the model window's storm years, {lo}–{hi}). "
         f"(a) One row per image assessed ({n_img} images, labelled by year and "
         f"date; * poor or partial image), one column per CASCADE domain, 1 at "
         f"Cape Point to 90 at Pea Island; the light bands are the villages, "
@@ -468,20 +468,19 @@ def caption_text(tag, period, rows, placed, obs, storms):
         f"image taken after the storm; e.g. {ex}. The rule is the first image "
         f"on or after the storm's last listed day, with a 7-day grace; the "
         f"May 2022 nor'easter is routed to the Oct 2023 image by hand. "
-        f"(d) Number of images showing each domain overwashed. 2004 belongs to "
-        f"both periods.")
+        f"(d) Number of images showing each domain overwashed.")
 
 
 # Write each figure's entry into CAPTIONS.md
 def write_captions(entries):
     for name, text in entries:
-        p = upsert_caption(name, "heatmaps", text)
+        p = upsert_caption(name, "when", text)
     print(f"  wrote {p.relative_to(REPO)}")
 
 
 # Main
 
-# Run: every period asked for (all three by default), the tables and the captions
+# Run: every window asked for (all three by default), the tables and the captions
 def main(argv):
     apply_style()
     FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -500,7 +499,7 @@ def main(argv):
     for tag in tags:
         period = PERIODS[tag]
         suffix = "_uniform" if uniform else ""
-        out = FIG_DIR / f"overwash_heatmap_{tag}{suffix}.png"
+        out = FIG_DIR / f"overwash_by_image_{tag}{suffix}.png"
         rows, placed = make_figure(tag, period, obs, domains, matrix, storms,
                                    collapse=not uniform, out=out)
         entries.append((out.name, caption_text(tag, period, rows, placed, obs, storms)))

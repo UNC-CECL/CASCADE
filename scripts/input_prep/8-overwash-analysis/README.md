@@ -12,8 +12,9 @@ Split into steps 2026-09-22 to match the data tree, which was already
 | file | what it does |
 |---|---|
 | `1-observations/overwash_data.py` | Reads the workbook (observation matrix, storm reference sheet) and decides, from dates, which image first shows each storm. No plotting. Imported by all three of the others, which is why it sits in the step it builds rather than in a folder of its own. |
-| `2-record/overwash_heatmap_multiperiod.py` | The heatmap figure, one per period (`period1`, `period2`, `combined`), plus the two tables and `CAPTIONS.md`. |
-| `2-record/overwash_map_periods.py` | The island map, one figure per period, with the domains shaded by images with overwash and the date strip beside it; `--both` adds the side-by-side figure. Needs `D:/Hatteras_GIS` (domain boxes, coastline). |
+| `2-record/overwash_heatmap_multiperiod.py` | The image x domain grid with the storms beside it, one per model window (`1997_2009`, `2010_2025`, `1996_2025`), into `2-record/2-when/`, plus the two tables and `CAPTIONS.md`. |
+| `2-record/overwash_map_periods.py` | The island map beside one column per image, for the calibration and test windows, into `2-record/2-when/`; `--both` adds the side-by-side figure. Its `draw_island` and `load_geometry` are shared with the other maps and `4-vs-model/`. |
+| `2-record/overwash_record_heatmap.py` | Where overwash recurs (`2-record/1-where/`): domain boxes shaded by images with overwash over the full model window, 1996-2025, per-domain bars and three true-scale hotspot zooms. |
 | `3-vs-footprint/overwash_vs_footprint.py` | Sets the overwash seen between the two dune-line frames (Aug 1985 to Oct 1997, nine images) against the rows the 1984 reconstruction adds and removes, per domain; contingency, lists, flags and three figures (alongshore, summary, three-panel island map). Reads the footprint, the road relocation table and the shoreline rates as inputs. |
 
 `superseded_20260910/`, the May 2026 single-period script whose paths were
@@ -24,11 +25,12 @@ and `git show <commit>^:<path>`.
 ## Run
 
 ```
-python 2-record/overwash_heatmap_multiperiod.py                 # all three periods
-python 2-record/overwash_heatmap_multiperiod.py period2         # one period
-python 2-record/overwash_heatmap_multiperiod.py combined --uniform-years
-python 2-record/overwash_map_periods.py                         # one per period
+python 2-record/overwash_heatmap_multiperiod.py                 # all three windows
+python 2-record/overwash_heatmap_multiperiod.py 2010_2025       # one window
+python 2-record/overwash_heatmap_multiperiod.py 1996_2025 --uniform-years
+python 2-record/overwash_map_periods.py                         # one per window
 python 2-record/overwash_map_periods.py --both                  # plus side by side
+python 2-record/overwash_record_heatmap.py                      # where, 1996-2025 images
 python 3-vs-footprint/overwash_vs_footprint.py                  # vs the 1984 footprint
 ```
 
@@ -627,6 +629,28 @@ The per-year QowTS shading (< 1, 1-10, 10-50, > 50 m3/m) sits faded behind. Stri
 per image, model vs observed; (c) per-domain share of images / model years. Storm names on top,
 run header band. Checked 10-16: matching two intervals back instead of one gains 0 / 3 hits and
 adds 78 / 39 false alarms, so the misses are not an imagery-timing problem.
+
+**Ocean-reachable scoring (2026-10-16, ad hoc, no table written).** The calendar-year cells
+joined to the reachability flags of the 10-13 sound-side study
+(output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-soundside-overwash/
+observed_overwash_by_source.csv: ocean run-up since the previous image vs the domain's lowest
+crest in the 1996 / 2009 survey). Managed, groin on, threshold 0; all 1405 cells matched.
+
+| | cells | hits | misses | false alarms | correct neg. | hit rate | FA rate | skill |
+|---|---|---|---|---|---|---|---|---|
+| 1997-2009 all | 714 | 45 | 23 | 38 | 608 | 0.66 | 0.06 | 0.60 |
+| 1997-2009 ocean-reachable | 164 | 45 | 7 | 35 | 77 | 0.87 | 0.31 | 0.55 |
+| 2010-2025 all | 691 | 30 | 127 | 35 | 499 | 0.19 | 0.07 | 0.13 |
+| 2010-2025 ocean-reachable | 294 | 30 | 57 | 35 | 172 | 0.34 | 0.17 | 0.18 |
+
+The model never overwashes where the ocean cannot reach (0 hits, 3 false alarms in all).
+Restricting drops the unreachable misses but also most correct negatives, so the hit rate
+rises more than the skill. Irene (20) and Mar 2024 (16) carry 36 of the 57 reachable test
+misses: the run-up beat the 2009 surveyed crest, but the model's dunes had grown toward the
+5.5 m NAVD88 cap and stood above it (the single cap removes the real low spots). The
+groin-off 10-13 run gives the same reachable hit rates (45/52, 30/87). A lower cap does not
+help (HAT_dune_ceiling_range.py: test skill 0.07-0.14 for 4.5-6.0 m). Not yet in
+storms_vs_overwash.py.
 
 **Calendar-year rerun (2026-10-16).** WINDOWS is keyed by the matrix folder
 (1996_2009, 2009_2025); the storm file, the image window and the model-year

@@ -9,7 +9,7 @@ and the comparisons against the footprint and the model. Details: scripts/site_l
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-19
 """
 
 from __future__ import annotations
@@ -29,8 +29,10 @@ OBSERVATIONS = OVERWASH_ROOT / "1-observations"
 WORKBOOK = OBSERVATIONS / "Hatteras_Overwash_Data.xlsx"
 
 RECORD = OVERWASH_ROOT / "2-record"
-HEATMAPS = RECORD / "heatmaps"
-MAP = RECORD / "map"
+# Where overwash recurs, all images together (island maps)
+WHERE = RECORD / "1-where"
+# Which images showed it, per domain (image x domain grids, island + image columns)
+WHEN = RECORD / "2-when"
 
 VS_FOOTPRINT = OVERWASH_ROOT / "3-vs-footprint"
 VS_FOOTPRINT_TABLES = VS_FOOTPRINT / "tables"
@@ -42,8 +44,8 @@ ARCHIVE = OVERWASH_ROOT / "archive"
 
 # The label each figure's CAPTIONS.md entry carries, in the order entries are sorted
 CAPTION_FOLDERS = {
-    "heatmaps": "2-record/heatmaps",
-    "map": "2-record/map",
+    "where": "2-record/1-where",
+    "when": "2-record/2-when",
     "vs-footprint": "3-vs-footprint",
     "vs-model": "4-vs-model",
 }
@@ -51,7 +53,7 @@ CAPTION_FOLDERS = {
 
 if __name__ == "__main__":
     for name in ("OVERWASH_ROOT", "CAPTIONS", "OBSERVATIONS", "WORKBOOK",
-                 "RECORD", "HEATMAPS", "MAP", "VS_FOOTPRINT",
+                 "RECORD", "WHERE", "WHEN", "VS_FOOTPRINT",
                  "VS_FOOTPRINT_TABLES", "VS_MODEL", "VS_MODEL_TABLES", "ARCHIVE"):
         path = globals()[name]
         print(f"{'ok' if path.exists() else 'MISSING':8} {name:20} "
