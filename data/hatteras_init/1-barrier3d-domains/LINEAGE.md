@@ -407,3 +407,17 @@ Kept on C: although its name says 1996: `1996-start/1-extraction/aerial-review/`
 (the only copy of v1's windows, 64 KB). Scripts that read the offloaded folders
 fail on the missing paths until they are copied back; retiring that code is a
 separate step.
+
+**Scripts deleted the same day** (in git at 2046d67b, recover with
+`git show 2046d67b:<path>`): all 30 under
+`scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/`,
+`scripts/input_prep/8-overwash-analysis/3-vs-footprint/overwash_vs_footprint.py`,
+`scripts/input_prep/0-elevation/2-produce/HAT_dem_duneline_coverage.py`,
+`scripts/input_prep/0-elevation/3-figures/HAT_plot_duneline_offset.py`, and the
+crest experiment (`HAT_run_crest_experiment.py`, `HAT_plot_crest_experiment.py`,
+`HAT_score_road_position.py`, `HAT_score_relocation_timing.py`). Their outputs
+in `0-elevation/2009-2014-1996-duneline/` went to D: with the rest. The
+aerial-photo reader the mean-shoreline figures borrowed from the imagery review
+moved, unchanged, to `scripts/site_layer/hat_aerial_imagery.py`. The 1984 and
+2004 entries in `HATTERAS_PERIODS` stay: the 1996 and 2009 road setbacks are
+derived from the 1984 and 2004 measurements.

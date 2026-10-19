@@ -81,11 +81,12 @@ under their OLD paths:
 archive_purge_20260826/0903/0907.csv       records of the August/September deletions
 ```
 
-Their tracked READMEs and CSVs are also in git history. The scripts that read
-them (`scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/`,
-`HAT_rerun_arm.py` and `HAT_run_crest_experiment.py` pinning v1,
-`overwash_vs_footprint.py`) fail on the missing paths until the folders are
-copied back; retiring that code is a separate step.
+Their tracked READMEs and CSVs are also in git history. The scripts that
+made and read them were deleted the same day and are in git at 2046d67b
+(`scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/`,
+the crest experiment and its scorers, `overwash_vs_footprint.py`, the 1984
+dune-line checks in `0-elevation/`). `HAT_rerun_arm.py` can still pin a v1 run
+once v1 is copied back.
 
 ## Which period uses which DEM
 

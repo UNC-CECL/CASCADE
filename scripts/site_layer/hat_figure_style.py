@@ -901,10 +901,7 @@ A map also takes the map elements: `scale_bar_km`, `north_dart`, `water_label`,
 `figure_making/island/study_area_figures.py` (`fig_study_area`) is the worked example.
 
 Every figure script under `scripts/` that draws for this project calls
-`apply_style()` first. `0-elevation/3-figures/HAT_plot_duneline_offset.py` also
-re-exports these names, so `import HAT_plot_duneline_offset as off` still gives
-`off.INK`, `off._title()` and so on to the scripts that take their map loaders
-from it.
+`apply_style()` first.
 
 ## The rules
 

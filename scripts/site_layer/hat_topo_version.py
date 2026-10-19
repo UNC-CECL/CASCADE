@@ -525,7 +525,7 @@ def dune_topo_root(product: str) -> Path:
     return product_dir(product) / "dune-topo"
 
 
-# The two halves of stage 1: 1-extraction/ and 2-domain-reconstruction-1984/; dune-topo/ at the root
+# The extraction half of a product; dune-topo/ sits beside it at the product root
 EXTRACTION_SUB = "1-extraction"
 
 
@@ -543,125 +543,6 @@ def npy_dirs(product: str) -> tuple[Path, Path]:
 def picks_dir(product: str) -> Path:
     """Where the dune-search windows of a product live (one JSON per version)."""
     return extraction_dir(product) / "picks"
-
-
-# The seaward-row-insert folder: 1996-start only (was 1984-start), contained here so callers cannot get it wrong.
-# Offloaded with the retired 1984 start on 2026-10-19 to
-# D:/archive/CASCADE_offload/data/hatteras_init/1-barrier3d-domains/1984-start/; these paths name nothing until it is back
-_INSERT_SCOPE = {"1996-start": "2-domain-reconstruction-1984"}
-
-
-def insert_scope_dir(product: str) -> Path:
-    """The seaward-row-insert folder. Raises for a product that has none."""
-    sub = _INSERT_SCOPE.get(canonical_product(product))
-    if sub is None:
-        raise SystemExit(
-            f"\n{product!r} has no 2-domain-reconstruction-1984 folder. Only "
-            f"{', '.join(_INSERT_SCOPE)} carries the seaward-row insert.\n")
-    return product_dir(product) / sub
-
-
-# The insert figure sections, numbered in the order the argument runs; anything else raises
-INSERT_FIGURE_SECTIONS = ("1-measurement", "2-extent", "3-placement", "4-fill", "5-build", "6-result")
-# Inside a section: island/ figures, and example-domain figures by the sign of their N
-SIGN_SUBFOLDERS = ("rows-added", "rows-removed", "unchanged")
-INSERT_FIGURE_SUBFOLDERS = {
-    "1-measurement": SIGN_SUBFOLDERS,
-    "2-extent": ("island",),
-    "3-placement": ("seaward", "behind-road",
-                    "road-check", *(f"road-check/{s}" for s in SIGN_SUBFOLDERS),
-                    "imagery-review", "imagery-review/island", *(f"imagery-review/{s}" for s in SIGN_SUBFOLDERS)),
-    "4-fill": ("island", *SIGN_SUBFOLDERS),
-    "5-build": (),
-    "6-result": ("island", *SIGN_SUBFOLDERS),
-}
-
-# The data of the same steps, in subfolders named like the figure sections
-INSERT_SCOPE_STEPS = INSERT_FIGURE_SECTIONS
-
-
-def insert_scope_step(product: str, step: str, sub: str | None = None) -> Path:
-    """The data folder of one step of the insert work (tables, reports), or a
-    named subfolder of it (3-placement has `imagery-review`). Created if
-    absent. `step` is one of INSERT_SCOPE_STEPS; anything else raises."""
-    if step not in INSERT_SCOPE_STEPS:
-        raise SystemExit(
-            f"\n{step!r} is not an insert step. Use one of {', '.join(INSERT_SCOPE_STEPS)}.\n")
-    d = insert_scope_dir(product) / step
-    if sub is not None:
-        d = d / sub
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
-def rows_sign_sub(n_cells: int) -> str:
-    """The sign subfolder for a domain whose footprint is `n_cells` rows."""
-    return "rows-added" if n_cells > 0 else ("rows-removed" if n_cells < 0 else "unchanged")
-
-
-def footprint_n_cells(product: str, domain: int) -> int:
-    """N for one domain from the footprint table (footprint_1984_by_domain.csv)."""
-    import csv
-    p = insert_scope_step(product, "2-extent") / "footprint_1984_by_domain.csv"
-    if not p.is_file():
-        raise SystemExit(f"\n{p} not found - run HAT_footprint_1984.py first\n")
-    for r in csv.DictReader(open(p, newline="")):
-        if int(r["domain"]) == int(domain):
-            return int(r["n_cells"])
-    raise SystemExit(f"\ndomain {domain} is not in {p}\n")
-
-
-def insert_figures_dir_for_domain(product: str, section: str, domain: int,
-                                  under: str | None = None) -> Path:
-    """Where a figure of ONE example domain goes: the section's rows-added/ or
-    rows-removed/ (or unchanged/) by the sign of that domain's N, optionally
-    under a named subfolder (`under="road-check"`, `under="imagery-review"`). Created if absent."""
-    s = rows_sign_sub(footprint_n_cells(product, domain))
-    return insert_figures_dir(product, section, f"{under}/{s}" if under else s)
-
-
-def insert_figures_dir(product: str, section: str | None = None,
-                       sub: str | None = None) -> Path:
-    """Where insert figures are written, created if it does not exist.
-
-    `section` is one of INSERT_FIGURE_SECTIONS. Omit it for the folder root,
-    which holds only the README, CAPTIONS.md and the `frozen/` figures no
-    script can rebuild - no plotter should write there. `sub` is a subfolder
-    of the section (INSERT_FIGURE_SUBFOLDERS: `island/`, a placement, or a
-    sign folder - use insert_figures_dir_for_domain for the latter); anything
-    else raises, for the same reason a wrong section does. Section roots hold
-    no figures either (2026-09-08).
-
-    IT MAKES THE DIRECTORY. Not a pure lookup, deliberately: none of the eight
-    plotters calls mkdir, so before the sections existed they all depended on
-    `figures/` already being on disk and every one of them would have failed on
-    a fresh checkout. Doing it in the one place that knows the layout is one
-    change instead of eight, and it cannot be forgotten by a ninth plotter.
-    """
-    base = insert_scope_dir(product) / "figures"
-    if section is not None:
-        if section not in INSERT_FIGURE_SECTIONS:
-            raise SystemExit(
-                f"\n{section!r} is not an insert-figure section. Use one of "
-                f"{', '.join(INSERT_FIGURE_SECTIONS)}.\n")
-        base = base / section
-    if sub is not None:
-        allowed = INSERT_FIGURE_SUBFOLDERS.get(section, ())
-        if sub not in allowed:
-            raise SystemExit(
-                f"\n{sub!r} is not a subfolder of {section!r}. "
-                f"{'Use one of ' + ', '.join(allowed) if allowed else 'It has none'}.\n")
-        base = base / sub
-    base.mkdir(parents=True, exist_ok=True)
-    return base
-
-
-def duneline_shift_dir(product: str) -> Path:
-    """The duneline-shift directory for a product. Read AND write path."""
-    sub = _INSERT_SCOPE.get(canonical_product(product))
-    base = product_dir(product)
-    # the measurement of N is step 1 of the insert work (moved 2026-09-09)
-    return (base / sub / "1-measurement" / "duneline-shift") if sub else (base / "duneline-shift")
 
 
 # "bridged" (HAT_bridge_dropouts.py): a third state beside "nodata", not a replacement
@@ -731,29 +612,6 @@ def versions(product: str) -> list[str]:
     root = dune_topo_root(product)
     return sorted(p.name for p in root.iterdir()
                   if p.is_dir()) if root.is_dir() else []
-
-
-def require_version(product: str, version: str, what: str = "") -> Path:
-    """The version's directory, or a loud exit naming what IS on disk.
-
-    For scripts that carry a version LITERAL instead of resolving through
-    CURRENT -- the seaward-row-insert plotters name the layer they draw. On
-    2026-09-07 the 1984-start layers v3-v8 were deleted (Hannah's decision:
-    keep only unmodified topography), so a literal that was valid the day it
-    was written now names nothing. Failing here, before any array is opened,
-    says so in one line instead of a FileNotFoundError deep in a plotting loop.
-    """
-    d = dune_topo_root(product) / version
-    if d.is_dir():
-        return d
-    raise SystemExit(
-        f"\n{product}/dune-topo/{version} does not exist"
-        + (f" ({what})" if what else "") + ".\n"
-        f"versions present: {versions(product) or '(none)'}\n"
-        f"The 1984-start layers v3-v8 were deleted 2026-09-07 -- see\n"
-        f"  {DOMAIN_ROOT / 'archive_purge_20260907.csv'}\n"
-        f"Rebuild one with HAT_insert_seaward_rows.py --dst-version <name>, or "
-        f"pass a version that is on disk.\n")
 
 
 def env_override_name(product: str) -> str:

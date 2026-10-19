@@ -10,13 +10,12 @@ Site zooms, an island view and the ribbon; needs the D: drive for the photos. De
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-10-19
 """
 
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import shutil
 import sys
 from pathlib import Path
@@ -123,17 +122,10 @@ def photo_timing(imagery, window):
             f"over that gap as well as through the day's water level and waves.")
 
 
-REVIEW_SCRIPT = (_REPO / "scripts" / "input_prep" / "1-barrier3d-domains"
-                 / "2-domain-reconstruction-1984" / "3-placement" / "imagery-review"
-                 / "HAT_imagery_review_1984.py")
-
-
-# The 1984 imagery review, for its Imagery reader (one copy of it)
+# The aerial-photo reader (Imagery, year_files, AERIAL_ROOT); was the 1984 imagery review's until 2026-10-19
 def _review_module():
-    spec = importlib.util.spec_from_file_location("imagery_review", REVIEW_SCRIPT)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    from site_layer import hat_aerial_imagery
+    return hat_aerial_imagery
 
 
 # Included transects with their direction, in alongshore order
@@ -526,7 +518,7 @@ def main(argv=None) -> int:
     imagery = []
     years = a.photo_years or range(window.lo.year, window.hi.year + 1)
     for y in years:
-        if R._year_files(y):
+        if R.year_files(y):
             im = R.Imagery(y, CRS)
             if y in PHOTO_SOURCES:
                 im.date = PHOTO_SOURCES[y]["date"]

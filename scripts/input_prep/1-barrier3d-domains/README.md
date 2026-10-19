@@ -2,9 +2,9 @@
 
 > **2026-10-19:** the data products were renamed for the runs that read them,
 > `1984-start/` -> `1996-start/` and `2004-start/` -> `2009-start/`, and the shared
-> inputs moved into `shared/`. The 1984 reconstruction data under
-> `2-domain-reconstruction-1984/` was offloaded to D:, so its scripts here do not
-> run until it is copied back. Older notes below keep the old names;
+> inputs moved into `shared/`. The 1984 reconstruction was retired: its data went
+> to D: and its scripts (`2-domain-reconstruction-1984/`, 30 files) were deleted;
+> recover them with `git show 2046d67b:<path>`. Older notes below keep the old names;
 > `data/hatteras_init/1-barrier3d-domains/LINEAGE.md` has the mapping.
 
 Takes the `domain_<N>.npy` elevation arrays that `0-elevation` produces and
@@ -17,34 +17,20 @@ turns them into the two things Barrier3D initialises from:
 Input is metres NAVD88; output is Barrier3D's native decameters. That
 conversion happens here and nowhere downstream.
 
-## The stage in two halves
+## The stage
 
 ```
-1-extraction/                      DEM -> the domain arrays (v1, v2): the first half of the stage
+1-extraction/                      DEM -> the domain arrays
     HAT_dune_topo_extractor.py     the whole chain: pick -> extract -> figures
     nodata_audit/                  the dropout bridge
-2-domain-reconstruction-1984/      v2 -> v3: the 1984 domains reconstructed from the 1996-based DEM,
-                                   one subfolder per step, in the order the argument runs (2026-09-09)
-    1-measurement/                 how far the dune line moved: the shift N comes from, and its per-domain plotters
-    2-extent/                      how many rows, which domains: the footprint table, the scope report
-    3-placement/                   WHERE the rows go: the road placement check; imagery-review/ (batch, window, summary)
-    4-fill/                        what the rows contain: the copy fill, the fill plotters, the explainers
-    5-build/                       HAT_build_footprint_version.py (-> dune-topo/v3)
-    6-result/                      the hindcast on v3 against v2, and the version comparisons
 ```
 
-**Two halves, one stage** (2026-09-09, Hannah). Both halves hand the runner the
-same thing, a dune-topo version under `1984-start/`, so the reconstruction is
-not a pipeline stage of its own: its data live here, its inputs include the
-stage-4 road offset measured on v2, and once v3 exists that offset is measured
-again on it. A stage between 1 and 2 would claim a linear order the method
-does not have.
-
-The footprint steps mirror `data/.../1984-start/2-domain-reconstruction-1984/<step>/` and
-its `figures/<step>/`; paths are resolved through `hat_topo_version`
-(`insert_scope_step`, `insert_figures_dir`, `duneline_shift_dir`), never built
-by hand. Every script finds the repo root by walking up from its own file, so
-the depth does not matter to it.
+Until 2026-10-19 a second half, `2-domain-reconstruction-1984/`, rebuilt the
+1984 domains from the 1996-based DEM (v2 -> v3, six steps). It went with the
+1984 start: its data are on
+`D:/archive/CASCADE_offload/data/hatteras_init/1-barrier3d-domains/1984-start/`,
+and its scripts are in git at 2046d67b. The aerial-photo reader it held, which
+the mean-shoreline figures use, moved to `scripts/site_layer/hat_aerial_imagery.py`.
 
 Run it from anywhere. `MODE` selects `"pick"` (drag a cross-shore dune search
 window per domain, saved to JSON after each one, safe to quit and resume),
@@ -277,11 +263,10 @@ renumber). What this script WRITES.
 Since 2026-09-04 it no longer decides what is
 READ: dune-topo/CURRENT outranks it in
 hat_topo_version.resolve_version. Do not point
-this at v3-v8 (layers built ON v2) - a re-run
-would overwrite their arrays. Guide: 1984-start/
-2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md.
+this at a version you did not mean to replace -
+a re-run overwrites its arrays.
 To change the default, edit CURRENT; for one
-run, HAT_TOPO_VERSION_1984_START.
+run, HAT_TOPO_VERSION_1996_START (or _2009_START).
 ```
 
 ```text
