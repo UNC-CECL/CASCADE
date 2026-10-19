@@ -318,7 +318,7 @@ def fig_events():
         f"{int(kept.sum())} of {int(raw.sum())} hours, {100 * kept.sum() / raw.sum():.0f}%. The trim keeps each "
         "storm's peak and about two tidal cycles around it; Barrier3D applies an event's peak Rhigh for every "
         "hour it lasts, so untrimmed events would multiply overwash volume "
-        "(experiments/storms-and-overwash/2026-09-28-trim-length-adopted). Events are split before trimming, "
+        "(experiments/storms-overwash-and-dunes/2026-09-28-trim-length-adopted). Events are split before trimming, "
         f"wherever consecutive storm hours are {SPLIT_GAP_H} h or more apart, so a second storm in a chain "
         "keeps its own peak.")
     return out

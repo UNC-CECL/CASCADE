@@ -5,7 +5,7 @@ The hindcast result figure: both periods' full-management runs against the LOWES
     python scripts/figure_making/model_output/hindcast_final_figure_lowess.py [--preset edgeBE]
 
 Scores over D11-D89 and the canonical D2-D89 on the figure; reads the nogroin
-matrix runs of the 1996-2015 and 2010-2026 windows. Writes
+matrix runs of the 1996-2009 and 2009-2025 windows. Writes
 output/comparisons/hindcast_calibrated/ and output/figures/5-results/hindcast_<preset>.png.
 Details: scripts/figure_making/model_output/README.md.
 
@@ -59,9 +59,9 @@ from HAT_metres_1_offset_units import smooth_like_target         # noqa: E402
 LOWESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
               / "2-calibrate" / "be_zone_residual_fit.py")
 
-# The two windows, ends from HATTERAS_PERIODS; full management carries fills in both since 1996-2015
+# The two windows, ends from HATTERAS_PERIODS; 1996-2009 has no fills, so its full-management run is road_bdm
 GROIN = "nogroin"
-_CHAIN = ((1996, "road_bdm_nourish", "a", C_1984), (2010, "road_bdm_nourish", "b", C_1997))
+_CHAIN = ((1996, "road_bdm", "a", C_1984), (2009, "road_bdm_nourish", "b", C_1997))
 PERIODS = {}
 for _st, _scen, _panel, _colour in _CHAIN:
     _end = HATTERAS_PERIODS[_st]["end_year"]
@@ -76,7 +76,7 @@ RESERVED_COLOUR = "#FF8C00"
 # Non-overlapping place-label spans (D9-D10 go to Cape Point, as assign_physical_zone does)
 PLACE_LABELS = [
     (1, 10, "Cape Point"), (11, 20, "Buxton"), (21, 31, "Avon"),
-    (32, 59, "Mid-island"), (60, 74, "Wimble Shoals"),
+    (32, 60, "Mid-island"), (61, 74, "Wimble Shoals"),
     (75, 83, "Rodanthe"), (84, 90, "Pea Island"),
 ]
 # -----------------------------------------------------------------------------
@@ -154,8 +154,8 @@ PRESETS = {
         series="CASCADE edgeBE",
         config="edgeBE source/sink: the D1 and D90 edge values only, no interior "
                "correction. Full management (roadway + beach/dune; nourishment: "
-               "Rodanthe 2014 in 1996–2015, and Rodanthe 2014, Buxton 2017 and 2022 and "
-               "Avon 2022 in 2010–2026); the Buxton groin is off, the nogroin matrix arm.",
+               "none in 1996–2009, and Rodanthe 2014, Buxton 2017 and 2022 and "
+               "Avon 2022 in 2009–2025); the Buxton groin is off, the nogroin matrix arm.",
         zone_note="NO interior source/sink correction was applied anywhere, so the frozen "
                   "zone set does not divide these domains; the edge values are kept because "
                   "they are solved by buffer-cell reproduction rather than fitted to a "
@@ -166,9 +166,9 @@ PRESETS = {
         title="CASCADE hindcast with no source/sink field, against the CoastSat LOWESS reference, Cape Hatteras",
         series="CASCADE zeroBE",
         config="zeroBE: no background-erosion field anywhere, the D1/D90 edges included. "
-               "Full management (roadway + beach/dune; nourishment: Rodanthe 2014 in "
-               "1996–2015, and Rodanthe 2014, Buxton 2017 and 2022 and Avon 2022 in "
-               "2010–2026); the Buxton groin is off, the nogroin matrix arm.",
+               "Full management (roadway + beach/dune; nourishment: none in "
+               "1996–2009, and Rodanthe 2014, Buxton 2017 and 2022 and Avon 2022 in "
+               "2009–2025); the Buxton groin is off, the nogroin matrix arm.",
         zone_note="No source/sink field was applied anywhere, edges included, so the edges "
                   "carry no absorber and are free to run away from the target."),
 }
@@ -177,7 +177,7 @@ PRESETS = {
 # Run: load both periods, score both windows, draw, save both copies
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    # calibBE is not solved on the 1996/2010 chain, so edgeBE is the default.
+    # calibBE is not solved on the 1996/2009 chain, so edgeBE is the default.
     parser.add_argument("--preset", default="edgeBE", choices=sorted(PRESETS))
     args = parser.parse_args()
     vocab = PRESETS[args.preset]

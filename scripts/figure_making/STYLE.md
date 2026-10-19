@@ -1,6 +1,6 @@
 # Hatteras figure style
 
-Written 2026-10-02 18:28 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
+Written 2026-10-12 12:49 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
 module is the source, this page is its rendering. `HAT_figure_style_sheet.png`
 beside it shows every colour, the elevation classes, a chart and a map drawn
 under the rules.

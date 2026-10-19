@@ -390,7 +390,7 @@ WHAT CHANGED 2026-09-17, and why
     town_bands() and structures() now, so they match the reach figures
     exactly and cannot disagree with the config.
   * BOTH SHOAL ZONES. Only Wimble was drawn; HATTERAS_ANNOTATIONS.shoal_zones
-    has Avon Shoals (GIS 24-39) as well, and both are real (Hannah,
+    has Avon Shoals (GIS 24-39 then; 26-38 since 2026-10-12) as well, and both are real (Hannah,
     2026-09-17: "do both").
   * THE PLACE NAMES CAME OFF THE CANVAS. Buxton / Avon / Tri-Village / Salvo /
     Waves / Rodanthe were printed in the data area; the house style puts that

@@ -51,7 +51,7 @@ from site_layer.hat_figure_style import figure_dir as _figure_dir  # noqa: E402
 OUTPUT_DIR         = str(_figure_dir("inputs", "1-domains", "initial_island"))   # rule 1
 
 # Orientation years: every hindcast period start
-YEARS = (1984, 1996, 2004, 2010)
+YEARS = (1984, 1996, 2004, 2009)
 
 # Which extraction: resolved like the runner resolves it, never pinned
 from site_layer.hat_topo_version import (topo_dirs, array_name,  # scripts/, on sys.path above
@@ -62,7 +62,7 @@ from site_layer.hat_topo_version import BUFFER_DIR as _BUFFER_DIR   # noqa: E402
 
 # array_name() is the single definition of these filenames, shared with the extractor
 
-# The topography product is resolved per year: 1984/1996 and 2004/2010 differ (README)
+# The topography product is resolved per year: 1984/1996 and 2004/2009 differ (README)
 from site_layer.hat_topo_version import DOMAIN_ROOT as _B3D_ROOT  # noqa: E402
 BARRIER3D_DIR       = str(_B3D_ROOT)
 BUFFER_DIR          = str(_BUFFER_DIR)

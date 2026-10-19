@@ -1163,7 +1163,7 @@ showed, which is a different claim and has to say so.
 
 ```text
 First row per (domain, transect), then the mean of the transects in each
-domain -- the same two steps island_offset_hybrid.py takes, so this and
+domain -- the same two steps step2_raw_offsets_to_island_offset.py takes, so this and
 the build differ only by the build's zeroing.
 ```
 

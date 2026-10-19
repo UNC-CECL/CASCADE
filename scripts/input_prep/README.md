@@ -11,7 +11,7 @@ work runs, and where the data tree is grouped the same way the names match.
 1-barrier3d-domains/  the extraction: interiors and dune arrays per domain
     1-extraction/  2-domain-reconstruction-1984/ (1-measurement .. 6-result)
 2-brie-offset/        where each domain sits cross-shore at model year zero
-    1-produce/        duneline_to_raw_offsets -> island_offset_hybrid, and
+    1-produce/        step1_line_to_raw_offsets -> step2_raw_offsets_to_island_offset, and
                       build_island_offset.py, the one command that runs both
     2-figures/        version comparison, the 1:1 offset profile
 3-env-forcings/       sea level, storms, waves  (data: 1-records/ 2-rslr/ 3-storms/)

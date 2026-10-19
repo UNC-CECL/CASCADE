@@ -105,12 +105,12 @@ step, for the builds the current runs read (1996 and 2010 starts).
 Writes output/figures/3-model-inputs/2-brie-offset/offset_build_<year>.png.
 
 THE STEPS DRAWN (the producers, not re-implemented)
-    1. duneline_to_raw_offsets.py intersects the dune line with the 100 m
+    1. step1_line_to_raw_offsets.py intersects the dune line with the 100 m
        transects. Each transect starts on the offshore datum line and runs
        west across the island; the STATION of a crossing is its distance
        along the transect from the datum. The raw file the build kept is read,
        not recomputed.
-    2. island_offset_hybrid.py averages the ~5 transects of each 500 m domain
+    2. step2_raw_offsets_to_island_offset.py averages the ~5 transects of each 500 m domain
        and subtracts the smallest domain mean, so the offset is 0 at the most
        seaward domain and positive landward.
     3. cascade_pipeline.hindcast.pad_offset_ring closes BRIE's periodic line

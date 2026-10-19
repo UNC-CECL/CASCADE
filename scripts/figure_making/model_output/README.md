@@ -13,6 +13,7 @@ and `git show <commit>^:<path>`.
 ```
 hindcast_final_figure_lowess.py  THE hindcast result: both periods against the LOWESS curve
 scenario_grid.py                 every scenario x preset x period on one page
+groin_effect_buxton.py           GIS 1-10 position change, full management with vs without the groin
 gis11_relocation_drown_figure.py why GIS 11 drowns at a 30 m relocation setback
 planview_evolution_gif.py        animated plan view of one run: elevation and the road
 rerender_run_figures.py          redraw a finished run's figures without re-running it
@@ -1188,3 +1189,23 @@ Returns:
 ```
 
 </details>
+
+### groin_effect_buxton.py
+
+The groin's effect at the cape end (2026-10-19). The run's
+shoreline_position_change_with_buffers figure, drawn by the same
+`plot_annotated_rate_comparison` call and settings, cut to GIS 1-10 at +/-55 m,
+with the no-groin run added as a grey dashed line. The pair is the edgeBE
+full-management run (road + bdm, plus nourish for 2009_2025); values past
++/-55 m get the house off-axis triangles and are named in the caption. `--window 1996_2009` (default) or
+`2009_2025`; the pair is in PAIRS. Model values are unsmoothed, as every figure
+treats GIS 1-10.
+
+Both runs share the edgeBE end value at GIS 1, solved with the groin on, so the
+no-groin line near GIS 1 is the groin removed with the ends held, not a
+separately fitted no-groin model; the caption says so.
+
+Transect dots are shifted half a domain south: domain d's transects run d to
+d+1 in along-coast/500 + 1, while the model and the domain means sit on d. The
+run figures (`plot_annotated_rate_comparison`) plot the dots unshifted, so
+there they sit half a domain north of their own domain mean.

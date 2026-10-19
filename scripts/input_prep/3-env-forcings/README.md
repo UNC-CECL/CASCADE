@@ -700,7 +700,7 @@ less than weather_grouping hours apart can make one event of 100-190 h, and
 the original rule DROPPED any event longer than max_storm_dur -- which at
 72 h removed Isabel 2003, March 2018, Florence, Dennis and Nor'Ida. The 72
 existed only because the pre-49fd069 Barrier3D crashed on long storms
-(experiments/storms-and-overwash/2026-09-28-storm-max-duration). "trim"
+(experiments/storms-overwash-and-dunes/2026-09-28-storm-max-duration). "trim"
 keeps every event and cuts one longer than max_storm_dur to the
 max_storm_dur hours around its peak TWL; Rhigh, Rlow and the period are taken
 from what is kept. The defaults (drop, 72) reproduce the v3_72 files.
@@ -717,7 +717,7 @@ the minimum duration is folded into the piece before it (after, for the
 first), so no hour the grouped event counted is lost. Each piece is then an
 event of its own (trimmed, dated by its own start). Omitted, events are not
 split and the older series rebuild exactly.
-(experiments/storms-and-overwash/2026-09-29-event-splitting)
+(experiments/storms-overwash-and-dunes/2026-09-29-event-splitting)
 ```
 
 ```text

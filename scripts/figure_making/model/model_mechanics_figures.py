@@ -43,16 +43,16 @@ from storm_replay import replay  # noqa: E402
 OUT = figure_dir("mechanics")   # one sub-folder per model: barrier3d/, brie/, cascade/, storm_routing/
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
 DAM = 10.0                      # Barrier3D decametre -> metre
-RUN_NATURAL = ("1996_2010", "edgeBE", "HAT_1996_2010_edgeBE_offsetmetres_noroad_nobdm_nogroin")
-RUN_ROAD = ("1996_2010", "edgeBE", "HAT_1996_2010_edgeBE_offsetmetres_road_nobdm_nogroin")
+RUN_NATURAL = ("1996_2009", "edgeBE", "HAT_1996_2009_edgeBE_offsetmetres_noroad_nobdm_nogroin")
+RUN_ROAD = ("1996_2009", "edgeBE", "HAT_1996_2009_edgeBE_offsetmetres_road_nobdm_nogroin")
 # The fill pair differs only in the fills: same road, same beach/dune management
-RUN_NOURISH = ("2010_2024", "edgeBE", "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin")
-RUN_NOURISH_OFF = ("2010_2024", "edgeBE", "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nonourish_nogroin")
+RUN_NOURISH = ("2009_2025", "edgeBE", "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin")
+RUN_NOURISH_OFF = ("2009_2025", "edgeBE", "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nonourish_nogroin")
 STORM_GIS, STORM_T = 6, 11      # 2006 storms: an intact dune (mean crest 2.9 m) that 40% of storms overtop
 BUDGET_GIS = 45                 # the project's example domain (site/domain_schematic)
 ROAD_GIS = 13                   # most overwash cleared off NC-12 in the road run
 NOURISH_GIS, NOURISH_YEAR = 86, 2014   # Rodanthe emergency fill, GIS 84-89
-ORDER_START, ORDER_YEARS = 1996, 14
+ORDER_START, ORDER_YEARS = 1996, 13   # the 1996-2009 run length
 # -----------------------------------------------------------------------------
 
 
@@ -191,7 +191,7 @@ def fig_barrier3d_storm_year():
     out = save(fig, OUT / "barrier3d" / "barrier3d_storm_year.png")
     plt.close(fig)
     record_caption(out[0],
-        f"Barrier3D through one storm year: GIS {STORM_GIS}, model year {year} (the natural 1996-2010 run, "
+        f"Barrier3D through one storm year: GIS {STORM_GIS}, model year {year} (the natural 1996-2009 run, "
         "edgeBE, no road, no beach/dune management). (a) The year's storms in the order the model applies them: "
         "each bar runs from Rlow to Rhigh, the total water level range above MHW over the hours the water "
         f"stood above the berm ({berm:.2f} m MHW). Barrier3D grows the dune first and then tests EVERY storm of "

@@ -41,6 +41,7 @@ STEPS = [
     ("3-model-inputs", "0 elevation", [S + "figure_making/pipeline/0-elevation/dem_composition_figures.py"]),
     ("3-model-inputs", "1 domain extraction", [S + "figure_making/pipeline/1-barrier3d-domains/domain_extraction_figures.py"]),
     ("3-model-inputs", "1 dune crest heights", [S + "figure_making/pipeline/1-barrier3d-domains/dune_crest_figures.py"]),
+    ("3-model-inputs", "1 dune crest statistics", [S + "figure_making/pipeline/1-barrier3d-domains/dune_crest_statistics.py"]),
     ("3-model-inputs", "1 initial island", [S + "figure_making/island/initialization_figures.py"]),
     ("3-model-inputs", "2 BRIE offset", [S + "figure_making/pipeline/2-brie-offset/offset_build_figures.py"]),
     ("3-model-inputs", "3 storms", [S + "figure_making/pipeline/3-storms/storm_construction_figures.py"]),

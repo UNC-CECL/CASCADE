@@ -534,7 +534,7 @@ run to the end of the grid and report the whole island as fillet.
 ```text
 An extended geometry (2026-09-16) reaches beyond the surveyed raw; its
 domains are in raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv
-(duneline_to_raw_offsets.py --extension), same columns. Read only when
+(step1_line_to_raw_offsets.py --extension), same columns. Read only when
 the geometry needs it, so a base run never touches the file.
 ```
 
@@ -756,7 +756,7 @@ Returns:
 ```text
 The padded island offset: buffers, real domains, buffers, closed smoothly.
 
-The one definition of the padding. island_offset_hybrid.py writes the
+The one definition of the padding. step2_raw_offsets_to_island_offset.py writes the
 offset files with it (every v1 since 2026-09-24), and build_island_offset
 re-closes with it, so a file built by it is exactly what metres mode hands
 Cascade.
@@ -947,12 +947,12 @@ Returns:
 Mean distance from the offshore datum to the dune line, per GIS domain.
 
 The absolute quantity the padded offset files are built from, BEFORE
-island_offset_hybrid.py subtracts that year's own minimum. Absolute
+step2_raw_offsets_to_island_offset.py subtracts that year's own minimum. Absolute
 distances share a fixed datum across years, so differencing two of them is
 a real shoreline change; differencing the padded files is not.
 
 One row per transect (`LineID`) is kept before averaging, mirroring
-island_offset_hybrid.py:108-113, so a transect sampled at many points does
+step2_raw_offsets_to_island_offset.py:108-113, so a transect sampled at many points does
 not outweigh one sampled at few.
 
 Args:

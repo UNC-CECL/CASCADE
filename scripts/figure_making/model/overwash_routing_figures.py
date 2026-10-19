@@ -129,7 +129,7 @@ def fig_storm_routing_check():
     plt.close(fig)
     q_saved = float(np.asarray(b.QowTS)[T])
     record_caption(out[0],
-        f"The storm replay is the model: GIS {GIS}, the {y0 + T - 1} storms of the natural 1996-2010 run. "
+        f"The storm replay is the model: GIS {GIS}, the {y0 + T - 1} storms of the natural 1996-2009 run. "
         "(a) The interior after replaying the year's real storms through Barrier3d.update() from the grid the "
         f"run saved entering the year, minus the grid the run saved at the end of the year, aligned for the "
         f"trailing bay rows update() drops and the year's shoreline change ({-shift:+d} cell{'s' if abs(shift) != 1 else ''}): "
@@ -211,7 +211,7 @@ def fig_storm_routing_ladder():
     plt.close(fig)
     crest = (b.DuneDomain[T - 1].max(axis=1) + b.BermEl) * DAM
     record_caption(out[0],
-        f"The same Barrier3D grid (GIS {GIS}, entering {y0 + T - 1}, natural 1996-2010 run) hit by four "
+        f"The same Barrier3D grid (GIS {GIS}, entering {y0 + T - 1}, natural 1996-2009 run) hit by four "
         f"{DURATION_H} h storms of rising strength, each replayed through the model's own update from that "
         f"grid. The dune's lowest crest is {crest.min():.2f} m and its mean crest {crest.mean():.2f} m MHW; "
         "the four storms put Rhigh below every crest, between the two, and above the mean, and the last "
@@ -338,7 +338,7 @@ def fig_storm_routing_response():
     out = save(fig, OUT / "storm_routing" / "storm_routing_response.png")
     plt.close(fig)
     record_caption(out[0],
-        f"Does overwash grow with the storm? GIS {GIS} entering {y0 + T - 1} (natural 1996-2010 run), one "
+        f"Does overwash grow with the storm? GIS {GIS} entering {y0 + T - 1} (natural 1996-2009 run), one "
         f"{DURATION_H} h storm at a time replayed through Barrier3D, Rhigh stepped from below the lowest dune "
         f"crest to above the highest (crest after the year's dune growth: lowest {grown.min():.2f} m dotted, "
         f"mean {grown.mean():.2f} m solid; berm {berm:.2f} m). Left: Rlow at the berm, run-up routing. "

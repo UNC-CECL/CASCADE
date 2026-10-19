@@ -201,8 +201,8 @@ ANN_TOWN_SPANS = {
 }
 ANN_VILLAGE_LINES = {"Salvo": 69, "Waves": 74, "Rodanthe": 80}
 ANN_GROINS        = {"Buxton Groin": 5.5}   # boundary between domains 5 and 6
-ANN_WIMBLE_SHOALS = (60, 74)
-ANN_AVON_SHOALS   = (24, 39)   # Avon Shoals influence zone (same feature type as Wimble Shoals)
+ANN_WIMBLE_SHOALS = (61, 74)
+ANN_AVON_SHOALS   = (26, 38)   # Avon Shoals influence zone (same feature type as Wimble Shoals)
 # Annotation colours
 ANN_C_TOWN_SPAN    = "#90AFC5"
 ANN_C_WIMBLE       = "#E0A800"   # amber - both shoal zones share this color
