@@ -370,7 +370,7 @@ ON THE TIDE
     correction -- which is good evidence these series are already tidally
     corrected, but it is not a statement from the download, and nothing in
     this repository records one. See PROVENANCE.md. It matters less than it
-    looks: island_offset_hybrid.py zeroes each build on its own minimum, so a
+    looks: step2_raw_offsets_to_island_offset.py zeroes each build on its own minimum, so a
     UNIFORM tidal bias cancels entirely and only the alongshore VARIATION in
     beach slope (0.04-0.06 here) survives, worth a few metres.
 
@@ -400,10 +400,8 @@ USAGE
     python coastsat_mean_shoreline.py --window-dates 1995-10-12 1997-10-12
 
 THEN (the offset build, which this script does not do)
-    duneline_to_raw_offsets.py --duneline <the geojson above>
-        --out 1995_1997_shoreline_offset_raw.csv
-    island_offset_hybrid.py --year 1996 --source shoreline --version v1
-        --raw-file <the raw file above>
+    build_island_offset.py --year 1996 --source shoreline
+        (reads the geojson above through SHORELINE_WINDOW_FOR_YEAR; --line to name another)
 ```
 
 Notes that were in the code:
@@ -411,7 +409,7 @@ Notes that were in the code:
 ```text
 The CRS the 1984, 2009 and 2023 dune lines declare. The 100 m transects are
 EPSG:3725, NAD83(NSRS2007) / UTM 18N, which is the same grid to within the
-null transform, and duneline_to_raw_offsets.py reprojects anyway.
+null transform, and step1_line_to_raw_offsets.py reprojects anyway.
 ```
 
 ```text
@@ -420,7 +418,7 @@ not a mean of a seasonal cycle.
 ```
 
 ```text
-Copied into the raw offsets file by duneline_to_raw_offsets.LINE_META, so a
+Copied into the raw offsets file by step1_line_to_raw_offsets.LINE_META, so a
 shoreline-derived raw file carries as full a provenance as a dune-derived one.
 ```
 
@@ -523,7 +521,7 @@ n_crossings and takes one crossing per transect.
 ```text
 ONE LineString, with the properties a digitised dune line carries.
 
-duneline_to_raw_offsets.py exits on a file holding more than one feature
+step1_line_to_raw_offsets.py exits on a file holding more than one feature
 and copies LINE_META across, so this has to be a single feature and it is
 worth filling the metadata in: the raw offsets file is where a reader
 meets this line next.
@@ -955,7 +953,7 @@ so the figure always shows the lines the net-change targets difference: the
 1996 start (±1 yr of the ALACE flights), the 2009 calibration end and test
 start (±1 yr of the USACE flights), and the 2025 test end (±6 months of
 2025-08-17; no DEM). Each line is placed in the offshore-datum frame with the
-offset build's own intersection (`duneline_to_raw_offsets.intersect`), averaged
+offset build's own intersection (`step1_line_to_raw_offsets.intersect`), averaged
 per domain, so the 1996 and 2009 stations equal the stored shoreline-offset
 raw files (checked to 0.005 m). Colours: 1996 red, 2009 blue, 2025 amber
 (purple is the dune line's in the duneline_vs_shoreline figure). No spread

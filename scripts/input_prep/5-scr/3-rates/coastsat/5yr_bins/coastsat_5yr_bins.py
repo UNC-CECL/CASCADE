@@ -122,7 +122,7 @@ ANN_PIERS = {
     "Rodanthe Pier": (79, ANN_PIER_LABEL_Y),
 }
 ANN_GROINS        = {"Buxton Groin": 5.5}
-ANN_WIMBLE_SHOALS = (60, 74)
+ANN_WIMBLE_SHOALS = (61, 74)
 
 ANN_C_TOWN_SPAN    = "#90AFC5"   # steel blue for town span shading
 ANN_C_WIMBLE       = "#E0A800"   # gold for Wimble Shoals shading

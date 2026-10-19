@@ -49,7 +49,7 @@ DEFAULT_WINDOW = (1995, 1997)
 # The house minimum, from coastsat_lrr.MIN_OBS
 DEFAULT_MIN_OBS = 10
 
-# Copied into the raw offsets file by duneline_to_raw_offsets.LINE_META
+# Copied into the raw offsets file by step1_line_to_raw_offsets.LINE_META
 SOURCE_TYPE = "Landsat 5/7/8 via CoastSat (coastsat.space)"
 
 # The lidar surveys a period's start topography is built on, for --centred-on
@@ -583,7 +583,7 @@ coastsat.space carries `beach_slope`, `cil` and `ciu` -- the per-transect
 slope used for tidal correction and its confidence interval -- which is good
 evidence these chainages are already tidally corrected. **Nothing in this
 repository records a statement from the download, so it is not asserted
-here.** The exposure is limited: `island_offset_hybrid.py` zeroes each build
+here.** The exposure is limited: `step2_raw_offsets_to_island_offset.py` zeroes each build
 on its own minimum, so a uniform tidal bias cancels completely and only the
 alongshore variation in beach slope (0.04-0.06 here) survives, worth a few
 metres.

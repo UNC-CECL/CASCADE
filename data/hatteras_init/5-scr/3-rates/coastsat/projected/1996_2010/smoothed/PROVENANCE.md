@@ -1,6 +1,6 @@
 # 3-rates/coastsat/projected/1996_2010/smoothed - provenance
 
-Written 2026-09-30 14:05 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product projected), beside the raw comparison one level up.
+Written 2026-10-12 12:47 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product projected), beside the raw comparison one level up.
 
 **Projected shoreline change** = the 1996-2024 LRR x 14 yr, evaluated over 1996-2010 -- a window the rate was NOT fitted on. That is what makes it a projection.
 

@@ -1,6 +1,6 @@
 # 3-rates/coastsat/total_change/1996_2015 - provenance
 
-Written 2026-10-03 22:00 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product total_change).
+Written 2026-10-12 12:47 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product total_change).
 
 ## Which product this is
 

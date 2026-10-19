@@ -308,7 +308,7 @@ THE FIGURES   data/hatteras_init/5-scr/4-comparisons/duneline_positions/
         Distance from the dune line to the NC-12 centreline per domain, one
         line per year: along each 100 m transect, the road's station minus
         the dune's (both measured from the offshore datum by
-        duneline_to_raw_offsets.intersect, the function that builds the dune
+        step1_line_to_raw_offsets.intersect, the function that builds the dune
         stations), positive where the road is landward of the dune. Road
         line per year: 1978 export for 1997, 2008 export for 2009 (the
         model's ROAD_LINE_FOR_YEAR), today's NC-12 for 2023
@@ -357,7 +357,7 @@ zoom is the tens of metres between them. Each site now shows a 3-domain
 
 ```text
 Per transect: the station of the SEAWARD-most road crossing (the one
-nearest the dune). duneline_to_raw_offsets.intersect takes the landward-
+nearest the dune). step1_line_to_raw_offsets.intersect takes the landward-
 most, right for a dune line but not for a road: at Buxton (GIS 8-9) the
 transects also cross the leg of NC-12 that turns west toward Frisco, and
 the landward-most rule put the road 1.6-2 km inland there (first draw,
@@ -547,7 +547,7 @@ scale. At the island scale a 10 m difference is a hair; one domain
 Per domain, each window's mean station from the offshore datum.
 
 Computed in memory with the offset build's own intersection
-(duneline_to_raw_offsets.intersect on its 100 m transects), so the 2-yr
+(step1_line_to_raw_offsets.intersect on its 100 m transects), so the 2-yr
 line needs no raw file in 2-brie-offset before step 3 writes one, and both
 windows go through the identical code. One value per transect first, then
 the domain mean, as compare_offset_sources._raw_domain_means does.
@@ -604,7 +604,7 @@ SURVEY DATES
     2024 the 2023 one).
 
 METHOD
-    Every raw dune file is built by duneline_to_raw_offsets.py since
+    Every raw dune file is built by step1_line_to_raw_offsets.py since
     2026-09-15 (1984 and 2004 were ArcGIS exports until that afternoon, one
     metre landward of the exact crossing; see raw_offsets/PROVENANCE.md), so
     a change between any two years carries no method term.

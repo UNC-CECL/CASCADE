@@ -413,16 +413,16 @@ def island_figure(t, d, cal, dem, period, folder):
 # The two lines as the offset build sees them (Hannah, 2026-09-29
 
 OFFSET_PRODUCER = (_REPO / "scripts" / "input_prep" / "2-brie-offset" / "1-produce"
-                   / "duneline_to_raw_offsets.py")
+                   / "step1_line_to_raw_offsets.py")
 # SECTIONS and GRID_COLS as compare_offset_sources.py sets them (its 2 x 3 note
 SECTIONS = ((1, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90))
 GRID_COLS = 3
 
 
-# duneline_to_raw_offsets.py, loaded as a module
+# step1_line_to_raw_offsets.py, loaded as a module
 def _offset_producer():
     import importlib.util
-    spec = importlib.util.spec_from_file_location("duneline_to_raw_offsets", OFFSET_PRODUCER)
+    spec = importlib.util.spec_from_file_location("step1_line_to_raw_offsets", OFFSET_PRODUCER)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -529,7 +529,7 @@ def datum_figure(cal, dem, period, folder):
         "the bottom. In each wide panel both are the distance from the shared "
         "offshore datum along the 100 m model transects, averaged per 500 m "
         "domain, with the ocean on the right; they are computed with the offset "
-        "build's own intersection (duneline_to_raw_offsets.intersect), so the two "
+        "build's own intersection (step1_line_to_raw_offsets.intersect), so the two "
         "go through identical code. At this scale the two profiles print as one "
         "line, so the narrow strip beside each panel draws the difference itself "
         "on the same domain axis: 2-yr minus 3-yr, blue to the right where the "

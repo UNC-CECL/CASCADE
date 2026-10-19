@@ -1,6 +1,6 @@
 # smoothed_lowess7 — provenance
 
-Written 2026-09-29 22:57 by `scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py`.
+Written 2026-10-12 12:48 by `scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py`.
 
 Both curves LOWESS-smoothed at **7 domains (3.5 km)**, at transect resolution, with GIS 1–10 kept at their raw domain means (the scoring target's Oregon Inlet treatment, Hannah's choice 2026-09-22). The dune line always follows the sub-period.
 

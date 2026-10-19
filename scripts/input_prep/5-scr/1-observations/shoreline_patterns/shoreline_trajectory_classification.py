@@ -79,7 +79,7 @@ ANN_TOWN_SPANS = {
 ANN_VILLAGE_LINES = {"Salvo": 69, "Waves": 74, "Rodanthe": 80}
 ANN_PIERS         = {"Avon Pier": 26, "Rodanthe Pier": 79}
 ANN_GROINS        = {"Buxton Groin": 5.5}
-ANN_WIMBLE_SHOALS = (60, 74)
+ANN_WIMBLE_SHOALS = (61, 74)
 
 ANN_C_TOWN_SPAN    = "#90AFC5"
 ANN_C_WIMBLE       = "#E0A800"

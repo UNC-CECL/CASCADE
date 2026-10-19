@@ -1,5 +1,5 @@
 """
-Where the dune line sat across the island in 1997, 2009 and 2023, the lines for model years 1996, 2010 and 2024.
+Where the dune line sat across the island in 1997, 2009 and 2023, the lines for model years 1996, 2009 and 2024.
 
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py --no-imagery
@@ -58,7 +58,7 @@ CRS = "EPSG:6347"                         # NAD83(2011) UTM 18N, the 2023 mosaic
 IMAGERY = Path("D:/Hatteras_GIS/Aerial/2023/2023_full_aerial.tif")
 IMAGERY_LABEL = "2023 NOAA NGS orthomosaic"
 N = 90
-PERIOD_YEARS = (1996, 2010, 2024)
+PERIOD_YEARS = (1996, 2009, 2024)
 YEAR_C = {1997: "#9a9a9a", 2009: "#4b6a88", 2023: "#141414"}   # the ordered ramp
 LINE_LW = 1.3
 ROAD_LW = 0.9
@@ -85,8 +85,8 @@ def _import(name, path):
     return mod
 
 
-D2R = _import("duneline_to_raw_offsets", _REPO / "scripts" / "input_prep"
-              / "2-brie-offset" / "1-produce" / "duneline_to_raw_offsets.py")
+D2R = _import("step1_line_to_raw_offsets", _REPO / "scripts" / "input_prep"
+              / "2-brie-offset" / "1-produce" / "step1_line_to_raw_offsets.py")
 
 
 # Inputs
@@ -172,6 +172,7 @@ def beach_width():
                                    where=f"id IN ({','.join(repr(i) for i in ids)})")
     layer = layer.to_crs(CRS).set_index("id")
     # shoreline positions at the three dates, from the stored endpoint products
+    # (the 1996_2010/2010_2024 folder names are old labels; the dates are the 1997, 2009 and 2023 lines')
     a = pd.read_csv(coastsat_endpoint_csv(1996, 2010, "transect")).set_index("transect_id")
     b = pd.read_csv(coastsat_endpoint_csv(2010, 2024, "transect")).set_index("transect_id")
     shore = {int(a["start_vintage"].iloc[0]): a["position_start_m"],
@@ -362,7 +363,7 @@ def overview_figure(dom, outline, lines):
     _year_legend(fig, roads=False)
     caption(fig, (
         "Where the digitized dune line sat along Hatteras Island in 1997, 2009 and "
-        "2023, the lines that stand for the model years 1996, 2010 and 2024, "
+        "2023, the lines that stand for the model years 1996, 2009 and 2024, "
         "north-up in three segments at one common scale: (a) Cape Point to Avon, "
         "GIS 1–30; (b) Avon to the Tri-Village, GIS 31–60; (c) the Tri-Village to "
         "GIS 90. Light grey 1997, slate 2009, black 2023, over the island outline "
@@ -509,7 +510,7 @@ def zoom_figures(dom, lines, roads, sites, imagery):
 def _zoom_caption(what, imagery, sheet=False):
     head = "" if sheet else f"The dune line at {what}, in 1997, 2009 and 2023. "
     return (head + "Solid lines: the digitized dune lines, light grey 1997, slate "
-            "2009 and black 2023 (standing in for the model years 1996, 2010 and "
+            "2009 and black 2023 (standing in for the model years 1996, 2009 and "
             "2024), edged for contrast. White dashed lines: the NC-12 centreline, "
             "dotted for the 1978 alignment (used for 1997), short dashes for 2008 "
             "(used for 2009) and long dashes for today's NCDOT alignment (2023). "
@@ -551,7 +552,7 @@ def context_figure(table, value, ylabel, stem, what, how):
                       for v in YEAR_C)
     caption(fig, (f"{what} by GIS domain (1 at Cape Point, 90 at Pea Island) in "
                   "1997, 2009 and 2023, the dune lines that stand for the model years "
-                  f"1996, 2010 and 2024: {how} Each line is the domain mean. Island "
+                  f"1996, 2009 and 2024: {how} Each line is the domain mean. Island "
                   f"means: {means}. Village spans are shaded; the solid hairline is "
                   "the Buxton groin and the dotted hairlines are the Avon and "
                   "Rodanthe piers."))
