@@ -1,0 +1,16 @@
+{"start": 1996, "variant": "control", "ceiling_m_navd88": null, "returncode": 0, "minutes": 6.2}
+{"start": 1996, "variant": "p99_r015_030", "ceiling_m_navd88": null, "returncode": 0, "minutes": 6.2}
+{"start": 1996, "variant": "p99_r010_020", "ceiling_m_navd88": null, "returncode": 0, "minutes": 6.4}
+{"start": 1996, "variant": "p99_r005_015", "ceiling_m_navd88": null, "returncode": 0, "minutes": 6.7}
+{"start": 2009, "variant": "control", "ceiling_m_navd88": null, "returncode": 0, "minutes": 8.8}
+{"start": 2009, "variant": "p99_r015_030", "ceiling_m_navd88": null, "returncode": 0, "minutes": 8.9}
+{"start": 2009, "variant": "p99_r010_020", "ceiling_m_navd88": null, "returncode": 0, "minutes": 9.4}
+{"start": 2009, "variant": "p99_r005_015", "ceiling_m_navd88": null, "returncode": 0, "minutes": 9.6}
+{"start": 1996, "variant": "c55_r025_045", "ceiling_m_navd88": null, "returncode": 0, "minutes": 5.6}
+{"start": 1996, "variant": "c55_r015_030", "ceiling_m_navd88": null, "returncode": 0, "minutes": 5.8}
+{"start": 1996, "variant": "c55_r010_020", "ceiling_m_navd88": null, "returncode": 0, "minutes": 6.0}
+{"start": 1996, "variant": "c55_r005_015", "ceiling_m_navd88": null, "returncode": 0, "minutes": 6.2}
+{"start": 2009, "variant": "c55_r025_045", "ceiling_m_navd88": null, "returncode": 0, "minutes": 8.4}
+{"start": 2009, "variant": "c55_r015_030", "ceiling_m_navd88": null, "returncode": 0, "minutes": 8.9}
+{"start": 2009, "variant": "c55_r010_020", "ceiling_m_navd88": null, "returncode": 0, "minutes": 9.2}
+{"start": 2009, "variant": "c55_r005_015", "ceiling_m_navd88": null, "returncode": 0, "minutes": 9.5}

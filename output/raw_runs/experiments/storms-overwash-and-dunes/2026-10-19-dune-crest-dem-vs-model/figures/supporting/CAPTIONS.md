@@ -1,0 +1,7 @@
+# Captions — figures
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`dune_crest_dem_vs_model_year0_year3_1996_start.png`.** Dune crest along Hatteras Island from the starting DEM (black/grey) and the managed matrix run at model year 3 (colour); faint lines are the 10 m cells, bold lines the 500 m domain medians. Model year 0 equals the DEM to within 6 mm, so it is the black line. Left axis is crest elevation; right axis is height above the berm (1.7 m NAVD88), the quantity Barrier3D carries. Dashed: the dune ceiling (Dmaxel 5.5 m NAVD88, 3.8 m above the berm); dotted: NC-12 rebuild height (4.3 m NAVD88). b: crest change per 10 m cell from the DEM to model year 3 (blue gain, red loss).
+
+**`dune_crest_dem_vs_model_year0_year3_2009_start.png`.** Dune crest along Hatteras Island from the starting DEM (black/grey) and the managed matrix run at model year 3 (colour); faint lines are the 10 m cells, bold lines the 500 m domain medians. Model year 0 equals the DEM to within 6 mm, so it is the black line. Left axis is crest elevation; right axis is height above the berm (1.7 m NAVD88), the quantity Barrier3D carries. Dashed: the dune ceiling (Dmaxel 5.5 m NAVD88, 3.8 m above the berm); dotted: NC-12 rebuild height (4.3 m NAVD88). b: crest change per 10 m cell from the DEM to model year 3 (blue gain, red loss).
