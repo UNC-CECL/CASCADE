@@ -4,9 +4,9 @@ Five averaging windows, the same methods for each of the 1996, 2009 and 2025 tar
 10-07 end-line figures but as shoreline POSITION, not net change (the advisor's request, 2026-10-12).
 
     python target_shoreline_positions.py  ->  figures/target_shoreline_positions_<year>_<frame>.png
-                                              for year 1996, 2009, 2025 and the two frames below
+                                              for year 1996, 2009, 2025 and the three frames below
 
-Two position frames, one figure per year and frame, alongshore by GIS domain:
+Three position frames, one figure per year and frame, alongshore by GIS domain:
   coastsat_baseline   CoastSat's own cross-shore position: distance from each CoastSat transect's
                       origin, averaged per domain over the transects every window of that year
                       includes. The baseline steps between CoastSat sites, and the steps are in
@@ -14,12 +14,15 @@ Two position frames, one figure per year and frame, alongshore by GIS domain:
   from_1996_calendar  distance seaward of the calendar-1996 mean shoreline, the same fixed line
                       for all three years (Hannah, 2026-10-12), all on the 100 m model transects
                       by the island-offset build's own intersection.
+  from_2009_calendar  the same, seaward of the calendar-2009 mean shoreline, the start line of the
+                      test (2009 -> 2025), so the 2025 figure reads as the change the test is
+                      scored against (Hannah, 2026-10-13).
 Lines are 7-domain LOWESS (GIS 1-10 raw); the raw domain means are written to CSV only. No runs.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-12
+Version: 2026-10-13
 """
 from __future__ import annotations
 
@@ -48,7 +51,6 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 GIS = pd.RangeIndex(1, 91)
 DATA_END = "13 Jan 2026"                       # last CoastSat position
-REFERENCE = ("1996-01-01", "1996-12-31")      # the fixed line the second frame is measured from
 # The same five methods applied to each target year Y (Hannah, 2026-10-12), each with one colour
 # in every figure; the calendar year (the advisor's proposal) is drawn last, on top. All lines one
 # width. All windows built at min 5 positions per transect.
@@ -92,6 +94,18 @@ FRAMES = {
              "line in all three panels, so panel (a)'s proposed line is zero by construction: every line "
              "is intersected with the 100 m model transects by the island-offset build's own intersection "
              "(step1_line_to_raw_offsets.intersect) and averaged per 500 m GIS domain.")),
+    "from_2009_calendar": dict(
+        ylabel="Cross-shore position (m)\nrelative to the 2009 mean shoreline (+ seaward)",
+        subtitle="Cross-shore shoreline position relative to the calendar-year 2009 mean shoreline (start of test)",
+        zero=True,
+        ylim=(-100.0, 100.0),            # the same as the 1996 frame
+        how=("Distance seaward of the calendar-2009 mean shoreline (1 Jan-31 Dec 2009), the start line of "
+             "the test period, the same fixed line in all three panels, so the 2009 figure's proposed line "
+             "is zero by construction and the 2025 figure shows the 2009→2025 change the test is scored "
+             "against; subtracting one fixed line shifts every window alike, so the spread between windows "
+             "is the same as in the other frames. Every line is intersected with the 100 m model transects "
+             "by the island-offset build's own intersection (step1_line_to_raw_offsets.intersect) and "
+             "averaged per 500 m GIS domain.")),
 }
 # -----------------------------------------------------------------------------
 
@@ -121,11 +135,11 @@ def coastsat_positions():
     return pd.DataFrame(out).reindex(GIS)
 
 
-# Per domain, distance seaward of the calendar-1996 mean shoreline, all on the model transects
-def calendar_1996_positions():
-    st = datum_stations([(key(w), w, None) for y in YEARS.values() for w, _, _ in y["windows"]])
+# Per domain, distance seaward of one calendar-year mean shoreline, all on the model transects
+def calendar_positions(st, ref_year):
+    ref = METHODS["calendar"][0](ref_year)
     # stations grow landward, so the reference's station minus a line's is + seaward of it
-    return st.rsub(st[key(REFERENCE)], axis=0).reindex(GIS)
+    return st.rsub(st[key(ref)], axis=0).reindex(GIS)
 
 
 # One year's windows in one frame, as the 10-07 end-line figures: one panel, legend below
@@ -196,8 +210,10 @@ def figure(pos, n_obs, frame, year, png, palette=None):
 def main():
     n_obs = {key(w): int(pd.read_csv(mean_shoreline_csv(*w)).query("included").n_obs.median())
              for y in YEARS.values() for w, _, _ in y["windows"]}
+    st = datum_stations([(key(w), w, None) for y in YEARS.values() for w, _, _ in y["windows"]])
     for frame, pos in (("coastsat_baseline", coastsat_positions()),
-                       ("from_1996_calendar", calendar_1996_positions())):
+                       ("from_1996_calendar", calendar_positions(st, 1996)),
+                       ("from_2009_calendar", calendar_positions(st, 2009))):
         for year in YEARS:
             out = figure(pos, n_obs, frame, year,
                          HERE / "figures" / frame / f"target_shoreline_positions_{year}_{frame}.png")
