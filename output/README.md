@@ -81,3 +81,9 @@ is described in `raw_runs/experiments/OFFLOADED.md`. Figure producer
 `scripts/figure_making/pipeline/7-source-sink/be_method_figures.py` reads `ends.json`
 from three September end-solve studies that are now on D:; it runs only with the
 drive plugged in.
+
+## Moved to D: on 2026-10-09
+
+| what | why |
+|---|---|
+| `figures/3-model-inputs/inputs_overview_{1996_2010,2010_2024}`, `figures/3-model-inputs/5-observed-target/observed_target_{1996_2010,2010_2024}`, `figures/5-results/hindcast_{edgeBE,zeroBE}` (PNG + PDF in `supporting/`) | figures on the old 1996-2010 / 2010-2024 windows; their producers still hardcode those windows, so `regenerate_all_figures.py` redraws them until updated |
