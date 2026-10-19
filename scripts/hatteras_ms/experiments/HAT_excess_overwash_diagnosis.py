@@ -30,7 +30,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-28-excess-overwash-diagnosis"
+TAG = "storms-overwash-and-dunes/2026-09-28-excess-overwash-diagnosis"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 N_ROWS = 10          # interior rows (100 m) behind the dune row searched for a higher crest
 DAM = 10.0

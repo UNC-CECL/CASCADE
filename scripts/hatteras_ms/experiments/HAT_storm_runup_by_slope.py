@@ -40,7 +40,7 @@ import HAT_storm_max_duration as MD  # noqa: E402
 import HAT_storm_event_splitting as ES  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-10-01-runup-by-slope"
+TAG = "storms-overwash-and-dunes/2026-10-01-runup-by-slope"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 # Both windows read the 2009 lidar: the 1996 ALACE beach graft gives 19 unmeasurable domains and slopes to 0.72
 DEM_PRODUCT = {1996: "2009-2014", 2010: "2009-2014"}

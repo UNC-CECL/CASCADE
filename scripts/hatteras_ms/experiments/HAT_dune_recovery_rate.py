@@ -35,7 +35,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "input_prep" / "8-overwash-ana
 import HAT_storm_max_duration as MD  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-10-01-dune-recovery-rate"
+TAG = "storms-overwash-and-dunes/2026-10-01-dune-recovery-rate"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 RATES_M = {"control": 0.0, "rec015": 0.15, "rec030": 0.30, "rec050": 0.50}   # m/yr to the front dune row
 SCENARIOS = ("full_management", "natural")

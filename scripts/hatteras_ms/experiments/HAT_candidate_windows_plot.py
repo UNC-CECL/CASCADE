@@ -1,10 +1,16 @@
 """
 Observed against modelled shoreline change rate on the candidate windows, both smoothed at the same widths.
 
-    python scripts/hatteras_ms/experiments/HAT_candidate_windows_plot.py
+    python scripts/hatteras_ms/experiments/HAT_candidate_windows_plot.py [--matrix | --buffer] [--calib 1996_2010]
 
 Reads the runs HAT_candidate_windows.py made (zeroBE, and the last edgeBE solve
 step) and writes figures and a score table to the experiment's figures/ folder.
+--matrix reads the current no-groin matrix full-management runs instead (fills,
+run length, footprints and ends as configured now) and writes to the matrix study's figures/.
+--buffer reads the HAT_buffer_orientation.py runs (GIS 91-100 from the real coast, GIS 90
+re-solved) and writes to the buffer study's figures/.
+--calib 1996_2010 (with --matrix) swaps the calibration panel for the HAT_window_1996_2010.py runs
+and writes to the 1996-2010 window study's figures/.
 Details: output/raw_runs/experiments/candidate-windows/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -47,8 +53,13 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 
 # --- CONFIG ------------------------------------------------------------------
-EXP_DIR = (PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "candidate-windows"
-           / "2026-10-02-candidate-windows")
+EXPERIMENTS = PROJECT_ROOT / "output" / "raw_runs" / "experiments"
+THEME = EXPERIMENTS / "candidate-windows"
+# One study folder per question, filed by topic; each holds its own runs and figures
+EXP_DIR = EXPERIMENTS / "end-domain-boundaries" / "2026-10-02-ends-solved-on-candidate-windows"
+MATRIX_DIR = THEME / "2026-10-04-matrix-on-candidate-windows"
+BUFFER_DIR = EXPERIMENTS / "island-offset" / "2026-10-04-northern-buffer-from-real-coast"
+WINDOW_1996_2010_DIR = THEME / "2026-10-04-window-1996-2010"
 OUT = EXP_DIR / "figures"
 # Observed window -> model period (start, end)
 WINDOWS = {"1996_2015": (1996, 2015), "2010_2026": (2010, 2026)}
@@ -73,8 +84,34 @@ from site_layer.hatteras_site_config import HATTERAS_BE_EDGE_ONLY  # noqa: E402
 ADOPTED_2010_GIS1 = HATTERAS_BE_EDGE_ONLY[2010][0]
 
 
-# The run directory: zeroBE's single run, or edgeBE's last solve step
+# Set by --matrix: read the matrix runs, not the experiment's own
+USE_MATRIX = False
+MATRIX_OUT = MATRIX_DIR / "figures"
+USE_BUFFER = False
+BUFFER_OUT = BUFFER_DIR / "figures"
+CALIB = "1996_2015"          # the calibration window's stem; --calib 1996_2010 swaps it
+
+
+# The run directory: zeroBE's single run, or edgeBE's last solve step (or the matrix full-management run)
 def run_dir(start, preset):
+    if start == 1996 and CALIB == "1996_2010":
+        import json
+        base = WINDOW_1996_2010_DIR / "runs"
+        label = ("zero" if preset == "zeroBE" else
+                 f"step{json.loads((base / 'solve_summary.json').read_text())['best']['step']}")
+        hits = list((base / f"{preset}_{label}").rglob("tables/shoreline_change_rate.csv"))
+        return hits[0].parent.parent if hits else None
+    if USE_BUFFER:
+        # The buffer test runs zeroBE only, so the buffer is the one difference from the matrix
+        if preset != "zeroBE":
+            return None
+        hits = list((BUFFER_DIR / "runs" / f"{start}_zeroBE_zero").rglob("tables/shoreline_change_rate.csv"))
+        return hits[0].parent.parent if hits else None
+    if USE_MATRIX:
+        end = WINDOWS[next(k for k, v in WINDOWS.items() if v[0] == start)][1]
+        d = (PROJECT_ROOT / "output" / "raw_runs" / "matrix" / f"{start}_{end}" / preset
+             / f"HAT_{start}_{end}_{preset}_offsetmetres_road_bdm_nourish_nogroin")
+        return d if (d / "tables" / "shoreline_change_rate.csv").is_file() else None
     runs = EXP_DIR / "runs"
     if preset == "zeroBE":
         cands = [runs / f"{RUN_KEY[start]}_zeroBE_zero"]
@@ -103,9 +140,15 @@ def model_curve(start, preset, width):
 
 # The end rates (GIS 1, GIS 90) a run imposed, from its index row
 def end_rates(run_path):
+    if USE_MATRIX or USE_BUFFER:
+        import json
+        m = json.loads(next(run_path.glob("*_run_metadata.json")).read_text(encoding="utf-8"))
+        flat = json.dumps(m)
+        import re
+        g = [float(re.search(rf'"be_rate_gis{k}_m_yr": *(-?[0-9.eE+-]+)', flat).group(1)) for k in (1, 90)]
+        return g[0], g[1]
     idx = pd.read_csv(PROJECT_ROOT / "output" / "raw_runs" / "run_index.csv")
-    tag = ("candidate-windows/2026-10-02-candidate-windows/runs/"
-           + run_path.parents[2].name)
+    tag = run_path.parents[2].relative_to(EXPERIMENTS).as_posix()
     row = idx[(idx["run_name"] == run_path.name) & (idx["tag"] == tag)].iloc[-1]
     return float(row["be_rate_gis1_m_yr"]), float(row["be_rate_gis90_m_yr"])
 
@@ -133,7 +176,8 @@ def frame(ax, half, fills, label=True):
 # Panels are clipped to +-CLIP m/yr (Hannah, 2026-10-02); a value beyond gets an edge marker and its number
 CLIP = 5.0
 MISFIT_CLIP = 4.0
-PRESETS = ("edgeBE", "zeroBE")
+PRESETS_ALL = ("edgeBE", "zeroBE")
+PRESETS = PRESETS_ALL
 # edgeBE solid dark green, zeroBE light green dotted on top: they coincide away from the ends
 PRESET_LS = {"edgeBE": "-", "zeroBE": (0, (1, 1.6))}
 PRESET_C = {"edgeBE": MODEL_C, "zeroBE": "#74c476"}
@@ -173,16 +217,13 @@ def clipped_frame(ax, label):
     ax.yaxis.set_major_locator(MultipleLocator(1))
 
 
-# A quiet alongshore frame: village bands, faint shoal tints, structure hairlines; names only where asked
+# A quiet alongshore frame: village bands, hatched shoal boxes, structure hairlines; names only where asked
 def quiet_frame(ax, clip, label):
     ax.set_xlim(0.5, cw.N_DOMAINS + 0.5)
     ax.set_ylim(-clip, clip)
     cw.town_bands(ax, label=label, shade="0.95")
-    for name, (lo, hi) in cw.HATTERAS_ANNOTATIONS.shoal_zones.items():
-        ax.axvspan(lo - 0.5, hi + 0.5, color=cw.SHOAL_C, alpha=0.10, lw=0, zorder=0.5)
-        if label:
-            ax.text((lo + hi) / 2, 0.03, name, transform=ax.get_xaxis_transform(),
-                    ha="center", va="bottom", fontsize=7, color=cw.SHOAL_TEXT)
+    # The house hatched, outlined shoal box (2026-10-05): a flat tint mixed with the village grey and split each shoal in two
+    cw.draw_shoals(ax, label=label)
     ax.axhline(0, color=cw.INK_MUTED, lw=0.7, zorder=2)
     ax.yaxis.set_major_locator(MultipleLocator(2))
     ax.yaxis.set_minor_locator(MultipleLocator(1))
@@ -245,12 +286,11 @@ def fit_panels(with_reference=False, presets=PRESETS, only=None):
                                 lw=0, zorder=8)
             ax.plot(x, obs, color=FIT_C[("obs", w)], lw=1.6 if w == b else 1.3,
                     zorder=12 if w == b else 11, solid_capstyle="round")
-            mark_clipped(ax, obs, CLIP, FIT_C[("obs", w)])
+            # Observed curves run off the axis unmarked (2026-10-04); the caption gives the Cape Point values
             if with_reference:
                 ref, _ = ls.curve_and_band(REFERENCE, w)
                 ax.plot(ref.index.to_numpy(float), ref, color=FIT_C[("ref", w)],
                         lw=1.2, ls=REF_DASH, zorder=11.5)
-                mark_clipped(ax, ref, CLIP, FIT_C[("ref", w)])
             for preset, z in (("zeroBE", 9), ("edgeBE", 10)):
                 if preset not in presets:
                     continue
@@ -260,7 +300,7 @@ def fit_panels(with_reference=False, presets=PRESETS, only=None):
                 ax.plot(m.index.to_numpy(float), m, color=c,
                         lw=(1.0 if thin else 1.4) * (1 if w == b else 0.9),
                         zorder=z + (0.5 if w == b else 0), solid_capstyle="round")
-                mark_clipped(ax, m, CLIP, c)
+                pass  # model curves also run off the axis unmarked (2026-10-04); the caption gives the values
         model_txt = "" if stem == f"{m0}_{m1}" else f"  (model {m0}–{m1})"
         letter = f"({chr(97 + k)})  " if len(rows) > 1 else ""
         ax.set_title(f"{letter}{WINDOW_ROLE[stem]}, "
@@ -290,9 +330,15 @@ def fit_panels(with_reference=False, presets=PRESETS, only=None):
             h.append(Line2D([], [], color=c, lw=1.2 if thin else 1.6,
                             ls=REF_DASH if key == "ref" else "-"))
             labels.append(f"{name}, {w} domains")
+    # Say what each rate is compared against (2026-10-04)
+    note = ("In each panel the model and CoastSat linear-regression rates (LRR) are fitted over the same "
+            "window, the one in the panel title"
+            + (f"; the dashed line is CoastSat over {REFERENCE.replace('_', '–')}" if with_reference else ""))
     fig.legend(h, labels, loc="outside lower center", ncol=len(keys),
-               frameon=False, fontsize=8 if len(keys) <= 3 else 7)
-    e96, e10 = end_rates(run_dir(1996, "edgeBE")), end_rates(run_dir(2010, "edgeBE"))
+               frameon=False, fontsize=8 if len(keys) <= 3 else 7,
+               title=note, title_fontsize=7.5 if len(keys) <= 3 else 7)
+    e96, e10 = ((end_rates(run_dir(1996, "edgeBE")), end_rates(run_dir(2010, "edgeBE")))
+                if "edgeBE" in presets else (None, None))
     caption(fig, (
         "Observed and modelled shoreline change rate by GIS domain (1 at Cape "
         "Point, 90 at Pea Island) on "
@@ -316,11 +362,20 @@ def fit_panels(with_reference=False, presets=PRESETS, only=None):
            "adopted value, so that model's agreement at Cape Point is forced. "
            if "edgeBE" in presets and e10[0] > 3 * ADOPTED_2010_GIS1 else "")
         + 
-        "All runs are full management (fills in the window included), no groin, no "
-        "relocation. Grey bands are the villages, amber tints the offshore shoals; the "
+        ("Runs are the 2026-10-04 matrix: the 2017 Buxton fill included, Buxton fills on GIS 6–16, "
+           "Rodanthe 2014 on GIS 82–88, the 1996 period run through 2015 (20 years). "
+           if USE_MATRIX and CALIB == "1996_2015" else "")
+        + ("The 1996–2010 run is the same setup ended in December 2010 (15 years, no fill in the window), "
+           "both ends re-solved on that window; the 2010–2026 run is the 2026-10-04 matrix. "
+           if CALIB == "1996_2010" else "")
+        + ("Buffer test: the same setup as the 2026-10-04 matrix, but the first 10 northern buffer cells "
+           "(GIS 91–100) follow the 1997 / 2009 dune line north of GIS 90, the Hermite closure wrapping the "
+           "rest. zeroBE only. " if USE_BUFFER else "")
+        + "All runs are full management (fills in the window included), no groin, no "
+        "relocation. Grey bands are the villages, hatched amber boxes the offshore shoals; the "
         "solid hairline is the Buxton groin, the dotted ones the Avon and Rodanthe "
-        f"piers. The y axis is clipped at ±{CLIP:g} m/yr; a value beyond it is marked "
-        "by a triangle at the edge, with the largest labelled."))
+        f"piers. The y axis is clipped at ±{CLIP:g} m/yr; curves that leave it run off the edge unmarked "
+        "(at GIS 1 in 2010–2026, CoastSat reaches +10.0 m/yr and the end-solved model matches it)."))
     span = "_and_".join(st for st, _ in rows)
     stem = f"fit_{tag}_{span}_lowess5_and_lowess7"
     out = save(fig, OUT / tag / SUBDIR[only] / (stem + (f"_with_{REFERENCE}"
@@ -331,7 +386,9 @@ def fit_panels(with_reference=False, presets=PRESETS, only=None):
 
 # What the model lines are, for a fit caption
 def ends_txt(presets, e96, e10):
-    ends = (f"(1996–2015: GIS 1 {e96[0]:+.2f}, GIS 90 {e96[1]:+.2f}; 2010–2026: "
+    if presets == ("zeroBE",):
+        return "Green is the model with no source or sink anywhere (zeroBE). "
+    ends = (f"({CALIB.replace('_', '–')}: GIS 1 {e96[0]:+.2f}, GIS 90 {e96[1]:+.2f}; 2010–2026: "
             f"GIS 1 {e10[0]:+.2f}, GIS 90 {e10[1]:+.2f} m/yr)")
     if len(presets) > 1:
         return ("Green is edgeBE, which carries end rates solved against the observed "
@@ -395,7 +452,7 @@ def misfit(presets=PRESETS):
         f"±{MISFIT_CLIP:g} m/yr; a value beyond it is marked by a triangle at the "
         "edge, with the largest labelled."))
     out = save(fig, OUT / tag / SUBDIR[None]
-               / f"misfit_{tag}_1996_2015_and_2010_2026_lowess5_and_lowess7")
+               / f"misfit_{tag}_{CALIB}_and_2010_2026_lowess5_and_lowess7")
     plt.close(fig)
     return out
 
@@ -446,7 +503,7 @@ def score_dots(table):
         _title(ax, k, title)
     h = [Line2D([], [], marker="o", lw=0, color=INK, markerfacecolor=INK),
          Line2D([], [], marker="o", lw=0, color=INK, markerfacecolor="white")]
-    fig.legend(h, ["edgeBE", "zeroBE"], loc="outside lower center", ncol=2,
+    fig.legend([h[PRESETS_ALL.index(p)] for p in PRESETS], list(PRESETS), loc="outside lower center", ncol=2,
                frameon=False)
     caption(fig, (
         "Model skill on the candidate windows over GIS 2–89, after both sides are "
@@ -455,20 +512,34 @@ def score_dots(table):
         "solved against the window), open dots zeroBE (no source or sink); black is "
         "1996–2015, purple 2010–2026. Values are in "
         "supporting/observed_vs_model_scores.csv."))
-    out = save(fig, OUT / BOTH / SUBDIR[None]
-               / f"scores_{BOTH}_1996_2015_and_2010_2026_lowess5_and_lowess7")
+    out = save(fig, OUT / preset_tag(PRESETS) / SUBDIR[None]
+               / f"scores_{preset_tag(PRESETS)}_{CALIB}_and_2010_2026_lowess5_and_lowess7")
     plt.close(fig)
     return out
 
 
 # Run: the score table and the three figures
 def main() -> int:
+    global USE_MATRIX, USE_BUFFER, OUT, PRESETS
+    if "--matrix" in sys.argv:
+        USE_MATRIX, OUT = True, MATRIX_OUT
+    if "--buffer" in sys.argv:
+        USE_BUFFER, OUT, PRESETS = True, BUFFER_OUT, ("zeroBE",)
+    if "--calib" in sys.argv:
+        global CALIB, WINDOWS, WINDOW_C, WINDOW_ROLE, SUBDIR
+        CALIB = sys.argv[sys.argv.index("--calib") + 1]
+        a, b = (int(x) for x in CALIB.split("_"))
+        WINDOWS = {CALIB: (a, b), "2010_2026": (2010, 2026)}
+        WINDOW_C = {CALIB: WINDOW_C["1996_2015"], "2010_2026": WINDOW_C["2010_2026"]}
+        WINDOW_ROLE = {CALIB: "Calibration window", "2010_2026": "Test window"}
+        SUBDIR = {CALIB: f"1-calibration_{CALIB}", "2010_2026": "2-test_2010_2026", None: "3-both_windows"}
+        OUT = WINDOW_1996_2010_DIR / "figures"
     apply_style()
     table = score_table()
-    csv = support_dir(OUT / BOTH / SUBDIR[None]) / "observed_vs_model_scores.csv"
+    csv = support_dir(OUT / preset_tag(PRESETS) / SUBDIR[None]) / "observed_vs_model_scores.csv"
     table.to_csv(csv, index=False)
     written = []
-    for presets in (PRESETS, ("edgeBE",), ("zeroBE",)):
+    for presets in ((PRESETS,) if USE_BUFFER else (PRESETS, ("edgeBE",), ("zeroBE",))):
         for only in (None, *WINDOWS):
             written += fit_panels(presets=presets, only=only)
             written += fit_panels(with_reference=True, presets=presets, only=only)

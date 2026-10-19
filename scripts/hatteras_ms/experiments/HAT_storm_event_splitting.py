@@ -37,7 +37,7 @@ import HAT_storm_max_duration as MD  # noqa: E402
 import HAT_storm_length_selection as S  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-29-event-splitting"
+TAG = "storms-overwash-and-dunes/2026-09-29-event-splitting"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 WORKTREE = PROJECT_ROOT.parent / "Barrier3D"          # hatteras/adopted is checked out there
 VARIANTS = ("trim24", "g12", "split12")

@@ -37,7 +37,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 # --- CONFIG ------------------------------------------------------------------
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 BUILDER = PROJECT_ROOT / "scripts" / "input_prep" / "3-env-forcings" / "3-storms" / "historical_storm_creation_v3_HAT.py"
-TAG = "storms-and-overwash/2026-09-28-storm-max-duration"
+TAG = "storms-overwash-and-dunes/2026-09-28-storm-max-duration"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
 CONTROL_MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"   # where the 72 h controls compared here now live

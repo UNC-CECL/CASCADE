@@ -34,7 +34,7 @@ import HAT_storm_length_selection as S  # noqa: E402
 import HAT_dune_ceiling_rebuild as E  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-28-dune-ceiling-per-domain"
+TAG = "storms-overwash-and-dunes/2026-09-28-dune-ceiling-per-domain"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 CEILINGS = ("dom_median", "dom_p25", "cell")
 STORMS = ("trim24", "drop72")

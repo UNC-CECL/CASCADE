@@ -29,7 +29,7 @@ import storms_vs_overwash as SV  # noqa: E402
 from site_layer import hat_overwash as ow  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-10-01-dune-recovery-diagnosis"
+TAG = "storms-overwash-and-dunes/2026-10-01-dune-recovery-diagnosis"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 AT_BERM_M = 0.5          # a dune cell within this of the berm counts as flattened
 MAX_YEARS = 50           # regrowth longer than this is reported as never

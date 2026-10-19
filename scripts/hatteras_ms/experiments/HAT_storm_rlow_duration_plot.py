@@ -136,7 +136,7 @@ def main():
         f"peak {a['peak']:.2f} m MHW, equivalent {a['d_eq']} h. "
         f"(b) {b['name']}: {b['hours_above']} h above the berm ({b['start']:%d %b %H:%M}–{b['end']:%d %b %H:%M}), "
         f"peak {b['peak']:.2f} m MHW, equivalent {b['d_eq']} h. "
-        "Experiment storms-and-overwash/2026-10-01-rlow-and-duration; not adopted."))
+        "Experiment storms-overwash-and-dunes/2026-10-01-rlow-and-duration; not adopted."))
     save(fig, OUT, close=True)
     for f in facts:
         print(f"{f['name']}: {f['start']} .. {f['end']}  {f['hours_above']} h above berm, "

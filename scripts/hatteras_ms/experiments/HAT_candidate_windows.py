@@ -41,7 +41,7 @@ HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py
 BUILDER = (PROJECT_ROOT / "scripts" / "input_prep" / "3-env-forcings" / "3-storms"
            / "historical_storm_creation_v3_HAT.py")
 SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
-TAG = "candidate-windows/2026-10-02-candidate-windows"
+TAG = "end-domain-boundaries/2026-10-02-ends-solved-on-candidate-windows"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 INPUTS = EXP_DIR / "inputs"
 

@@ -39,7 +39,7 @@ import HAT_dune_ceiling_rebuild as E  # noqa: E402
 import HAT_dune_ceiling_per_domain as P  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-28-storm-height"
+TAG = "storms-overwash-and-dunes/2026-09-28-storm-height"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 DATA = EXP_DIR / "data"
 

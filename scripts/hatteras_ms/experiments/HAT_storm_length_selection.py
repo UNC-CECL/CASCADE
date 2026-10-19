@@ -39,7 +39,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_max_duration as MD  # noqa: E402  (builder functions, launcher)
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-28-storm-length-selection"
+TAG = "storms-overwash-and-dunes/2026-09-28-storm-length-selection"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
 CONTROL_MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "archive" / "2026-09-28-loess10-ends" / "matrix"   # where the drop72 controls scored here now live

@@ -38,7 +38,7 @@ import HAT_storm_length_selection as S  # noqa: E402
 import HAT_storm_event_splitting as ES  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-10-01-rlow-and-duration"
+TAG = "storms-overwash-and-dunes/2026-10-01-rlow-and-duration"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 VARIANTS = ("split12", "rlow", "dureq", "rlow_dureq")
 SCENARIOS = ("full_management", "natural")

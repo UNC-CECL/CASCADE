@@ -34,7 +34,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-28-trim-length-adopted"
+TAG = "storms-overwash-and-dunes/2026-09-28-trim-length-adopted"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 # ../Barrier3D-adopted is gone; ../Barrier3D carries the same branch (hatteras/adopted)
 WORKTREE = next((p for p in (PROJECT_ROOT.parent / "Barrier3D-adopted", PROJECT_ROOT.parent / "Barrier3D")

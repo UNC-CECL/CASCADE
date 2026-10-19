@@ -33,7 +33,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_storm_length_selection as S  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-and-overwash/2026-09-28-dune-ceiling-and-rebuild"
+TAG = "storms-overwash-and-dunes/2026-09-28-dune-ceiling-and-rebuild"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 DMAX = (3.4, 5.5, 7.5, 9.0)
 RULES = ("current", "nolower", "nolower43")
