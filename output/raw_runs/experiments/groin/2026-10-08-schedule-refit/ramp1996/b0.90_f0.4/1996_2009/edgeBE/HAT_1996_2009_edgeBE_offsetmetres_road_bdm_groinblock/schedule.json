@@ -1,0 +1,11 @@
+{
+  "schedule": "ramp1996",
+  "install_year": 1969,
+  "deterioration_delay_years": 26,
+  "deterioration_year": 1995,
+  "deterioration_mode": "linear_ramp",
+  "deterioration_ramp_years": 8.0,
+  "blocking_b": 0.9,
+  "deterioration_f": 0.4,
+  "note": "patched in-process by schedule_refit.py; the runner's report prints its default"
+}
