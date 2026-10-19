@@ -3,21 +3,27 @@
 The fixed-shift groin and the wave-driven groin as maps, year by year, on coasts of many angles.
 
     python straight_coast_fixed_shift_vs_wave_driven_map_gif.py   ->  figures/straight_coast_fixed_shift_vs_wave_driven_map.gif
+    python straight_coast_fixed_shift_vs_wave_driven_map_gif.py --module fixed-shift
+                                                 ->  ../5-fixed-shift/figures/straight_coast_fixed_shift_map.gif
+    python straight_coast_fixed_shift_vs_wave_driven_map_gif.py --module wave-driven
+                                                 ->  ../6-wave-driven/figures/straight_coast_wave_driven_map.gif
 
 The animated companion of straight_coast_fixed_shift_vs_wave_driven_map_figure.py: true-scale, north-up maps of each coast at
 its own angle, from -30 to +30 degrees, the fixed-shift groin on the top row and the wave-driven groin below, each year
 for 50 years. Each map shows the straight start coast, the shoreline that year, the sand built out (gold) and
-cut back (red) since the start, the groin, the net drift (arrow length scaled to its size on that coast) and
-the running total of sand made or lost over the 61-cell reach. Reruns both modules in straight_coast_test.py's
-emulator of BRIE's alongshore step to keep every year (about a minute). The GIF is git-ignored; rerun to make it.
+cut back (red) since the start, the groin and the net drift (arrow length scaled to its size on that coast),
+under one wave climate, printed in the header. Reruns both modules in straight_coast_test.py's
+emulator of BRIE's alongshore step to keep every year (about a minute). --module animates one version alone,
+one row. The GIF and its year-50 preview are git-ignored; rerun to make them.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-14
+Version: 2026-10-16
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 import matplotlib
@@ -30,64 +36,78 @@ from matplotlib.patches import Patch  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "1-run"))   # the test, in ../1-run/
 import straight_coast_test as sc  # noqa: E402
+from map_geometry import draw_coast, shoreline  # noqa: E402
 from site_layer.hat_figure_style import C, C_1984_FILL, INK, INK_MUTED, apply_style  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = Path(__file__).resolve().parent / "figures" / "straight_coast_fixed_shift_vs_wave_driven_map.gif"
-VERSIONS = (("dipole", "Fixed-shift groin", "moves a fixed 12 m a year, whatever the waves do"),
-            ("corrected", "Wave-driven groin", "holds back 60% of the drift arriving, sand balanced"))
+HERE = Path(__file__).resolve().parent
+OUT = HERE / "figures" / "straight_coast_fixed_shift_vs_wave_driven_map.gif"
+VERSIONS = (("dipole", "Fixed-shift groin", "moves a fixed 12 m a year,\nwhatever the waves do"),
+            ("corrected", "Wave-driven groin", "holds back 60% of the drift\narriving, sand balanced"))
+ALONE = {                            # --module: the version animated alone, and its own folder
+    "fixed-shift": ("dipole", HERE.parent / "5-fixed-shift" / "figures" / "straight_coast_fixed_shift_map.gif"),
+    "wave-driven": ("corrected", HERE.parent / "6-wave-driven" / "figures" / "straight_coast_wave_driven_map.gif"),
+}
 ANGLES = (-30, -20, -10, 0, 10, 20, 30)
 YEARS = 50
-CELLS = 3                            # cells drawn either side of the groin
+CELLS = 3                            # cells in view either side of the groin
+DRAWN = CELLS + 3                    # cells drawn, so a turned coast still fills the view
+FILLS = dict(land=dict(facecolor=C["ADDED_FILL"], alpha=0.55), sea=dict(facecolor=C["WATER"], alpha=0.45),
+             built=dict(facecolor=C["ADDED"], alpha=0.75), cut=dict(facecolor=C_1984_FILL, alpha=0.95))
 HALF_WIDTH_M = 1150.0                # map half-width east-west about the groin, the same on every map
 GROIN_DRAWN_M = 250.0                # length drawn; in the model the groin is a face between two cells
-BALANCED_M = 30.0                    # the sand-balance band used in the comparison figure
 HOLD = 20                            # frames the last year is held
+HEADER = (                           # the lines under the year stamp: (text, colour)
+    ("Waves on every coast:  Hs {Hs:g} m  ·  Tp {Tp:g} s  ·  asymmetry {asym:g}  ·  "
+     "high-angle fraction {ahf:g}".format(**sc.CLIMATE), INK),
+    ("Coast angle: negative turned against the drift, positive turned with it; the drift fades toward +32° "
+     "and reverses beyond", INK_MUTED),
+    ("True scale, north up, 1.5 km either side of the groin  ·  each 500 m cell's shoreline moves as one  ·  "
+     "BRIE's alongshore step alone", INK_MUTED),
+)
+# Layout in inches, so the header sits just above the maps whatever the number of rows
+FIG_W = 11.0
+H_HEAD, H_TITLE, H_PANEL, H_GAP, H_FOOT = 1.0, 0.22, 1.85, 0.12, 0.42
 # -----------------------------------------------------------------------------
 
 
-def runs():
+def runs(versions):
     sc.PROFILE_YEARS = tuple(range(1, YEARS + 1))            # keep every year, not just the five sampled
     t = sc.brie_tables()
     out = {}
-    for name, *_ in VERSIONS:
+    for name, *_ in versions:
         for a in ANGLES:
             rows, prof = sc.run(t, a, name, YEARS)
             out[name, a] = dict(prof=np.array([prof[y] for y in range(1, YEARS + 1)]),
-                                total=rows.reach_change_m.to_numpy(),
                                 drift=abs(float(sc.drift(t, a)[0])))
     return out
 
 
-# A shoreline as a north-up polyline: cell k (offset from the groin, + north) spans northing (k - 1) to k
-# cells, so the groin face (between offsets 0 and 1) sits at 0; each cell's shoreline moves as one
-def shoreline(theta, offs, seaward):
-    tan = np.tan(np.deg2rad(theta))
-    xs, ys = [], []
-    for k, s in zip(offs, seaward):
-        y0, y1 = (k - 1) * sc.DY_M, k * sc.DY_M
-        xs += [-tan * y0 + s, -tan * y1 + s]
-        ys += [y0, y1]
-    return np.array(xs), np.array(ys)
-
-
-def main():
+def main(module="both"):
     apply_style()
-    data = runs()
+    if module == "both":
+        versions, out = VERSIONS, OUT
+    else:
+        versions, out = tuple(v for v in VERSIONS if v[0] == ALONE[module][0]), ALONE[module][1]
+    n = len(versions)
+    data = runs(versions)
     offs = np.arange(sc.NY) - sc.LO
-    keep = (offs >= -CELLS + 1) & (offs <= CELLS)
+    keep = (offs >= -DRAWN + 1) & (offs <= DRAWN)
     qmax = max(d["drift"] for d in data.values())
-    fig, axes = plt.subplots(2, len(ANGLES), figsize=(11.0, 6.4))
-    fig.subplots_adjust(left=0.06, right=0.995, top=0.84, bottom=0.08, wspace=0.04, hspace=0.14)
-    stamp = fig.text(0.5, 0.985, "", ha="center", va="top", fontsize=13, fontweight="bold")
-    fig.text(0.5, 0.94, "Coast angle: negative turned against the drift, positive turned with it; the drift "
-             "fades toward +32° and reverses beyond. True scale, north up, 1.5 km either side of the groin; each 500 m "
-             "cell's shoreline moves as one. BRIE's alongshore step alone, option A waves.", ha="center", wrap=True, va="top", fontsize=8.5, color=INK_MUTED)
-    for i, (name, title, rule) in enumerate(VERSIONS):
-        y = 0.83 - i * 0.375 - 0.18
-        fig.text(0.012, y, title, rotation=90, ha="center", va="center", fontsize=9.5, fontweight="bold",
+    fig_h = H_FOOT + n * H_PANEL + (n - 1) * (H_GAP + H_TITLE) + H_TITLE + H_HEAD
+    fig, axes = plt.subplots(n, len(ANGLES), figsize=(FIG_W, fig_h), squeeze=False)
+    fig.subplots_adjust(left=0.06, right=0.995, top=1 - (H_HEAD + H_TITLE) / fig_h, bottom=H_FOOT / fig_h,
+                        wspace=0.04, hspace=(H_GAP + H_TITLE) / H_PANEL)
+    stamp = fig.text(0.5, 1 - 0.1 / fig_h, "", ha="center", va="top", fontsize=13, fontweight="bold")
+    for k, (line, col) in enumerate(HEADER):
+        fig.text(0.5, 1 - (0.46 + 0.17 * k) / fig_h, line, ha="center", va="top", fontsize=8.5 if k == 0 else 8,
+                 color=col, fontweight="bold" if k == 0 else "normal")
+    for i, (name, title, rule) in enumerate(versions):
+        box = axes[i, 0].get_position()
+        y = (box.y0 + box.y1) / 2
+        fig.text(0.011, y, title, rotation=90, ha="center", va="center", fontsize=9.5, fontweight="bold",
                  color=C["ADDED"] if name == "dipole" else INK)
-        fig.text(0.032, y, rule, rotation=90, ha="center", va="center", fontsize=7, color=INK_MUTED)
+        fig.text(0.034, y, rule, rotation=90, ha="center", va="center", fontsize=7, linespacing=1.3, color=INK_MUTED)
     fig.legend(handles=[Line2D([], [], color=INK_MUTED, lw=1.0, ls=(0, (4, 2)), label="start: a straight coast"),
                         Line2D([], [], color=INK, lw=1.5, label="shoreline this year"),
                         Patch(facecolor=C["ADDED"], alpha=0.75, label="built out since the start"),
@@ -99,18 +119,15 @@ def main():
     def draw(k):
         yr = min(k, YEARS - 1)
         stamp.set_text(f"Year {yr + 1}")
-        for i, (name, *_) in enumerate(VERSIONS):
+        for i, (name, *_) in enumerate(versions):
             for j, a in enumerate(ANGLES):
                 ax = axes[i, j]
                 ax.clear()
                 d = data[name, a]
-                x0, y0 = shoreline(a, offs[keep], np.zeros(keep.sum()))
-                x1, y1 = shoreline(a, offs[keep], d["prof"][yr][keep])
+                x0, y0 = shoreline(a, offs[keep], np.zeros(keep.sum()), sc.DY_M)
+                x1, y1 = shoreline(a, offs[keep], d["prof"][yr][keep], sc.DY_M)
                 xmin, xmax = -HALF_WIDTH_M, HALF_WIDTH_M
-                ax.fill_betweenx(y1, xmin, x1, color=C["ADDED_FILL"], alpha=0.55, lw=0, zorder=0)
-                ax.fill_betweenx(y1, x1, xmax, color=C["WATER"], alpha=0.45, lw=0, zorder=0)
-                ax.fill_betweenx(y0, x0, x1, where=x1 >= x0, color=C["ADDED"], alpha=0.75, lw=0, zorder=1)
-                ax.fill_betweenx(y0, x1, x0, where=x1 < x0, color=C_1984_FILL, alpha=0.95, lw=0, zorder=1)
+                draw_coast(ax, a, offs[keep], d["prof"][yr][keep], sc.DY_M, **FILLS)
                 ax.plot(x0, y0, color=INK_MUTED, lw=0.9, ls=(0, (4, 2)), zorder=3)
                 ax.plot(x1, y1, color=INK, lw=1.4, zorder=4)
                 nx, ny = np.cos(np.deg2rad(a)), np.sin(np.deg2rad(a))
@@ -124,11 +141,6 @@ def main():
                     ax.annotate("", xy=(-tan * (yc - half) + off, yc - half), xytext=(-tan * (yc + half) + off, yc + half),
                                 arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=1.1, clip_on=True),
                                 annotation_clip=True, zorder=6)
-                tot = d["total"][yr]
-                ok = abs(tot) <= BALANCED_M
-                ax.text(0.5, 0.015, f"sand made/lost\n{tot:+,.0f} m", transform=ax.transAxes, ha="center",
-                        va="bottom", fontsize=7, fontweight="bold", color=C["REF"] if ok else C["GROIN"],
-                        bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85), zorder=8)
                 ax.set_xlim(xmin, xmax)
                 ax.set_ylim(-CELLS * sc.DY_M, CELLS * sc.DY_M)
                 ax.set_aspect("equal")
@@ -136,18 +148,21 @@ def main():
                 ax.set_yticks([])
                 if i == 0:
                     ax.set_title(f"{a:+d}°" if a else "0°", fontsize=9)
-                if i == 1 and j == 0:
+                if i == n - 1 and j == 0:
                     ax.plot([-HALF_WIDTH_M + 100, -HALF_WIDTH_M + 600], [CELLS * sc.DY_M - 200] * 2, color=INK, lw=2, zorder=8)
                     ax.text(-HALF_WIDTH_M + 350, CELLS * sc.DY_M - 160, "500 m", ha="center", fontsize=6.5, zorder=8)
         return []
 
     anim = FuncAnimation(fig, draw, frames=YEARS + HOLD, blit=False)
-    anim.save(OUT, writer=PillowWriter(fps=6), dpi=100)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    anim.save(out, writer=PillowWriter(fps=6), dpi=100)
     draw(YEARS - 1)
-    fig.savefig(OUT.with_suffix(".png").with_name(OUT.stem + "_year50_preview.png"), dpi=100)
+    fig.savefig(out.with_suffix(".png").with_name(out.stem + "_year50_preview.png"), dpi=100)
     plt.close(fig)
-    print(f"wrote {OUT.relative_to(sc.REPO)}")
+    print(f"wrote {out.relative_to(sc.REPO)}")
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--module", choices=("both", "fixed-shift", "wave-driven"), default="both")
+    main(ap.parse_args().module)

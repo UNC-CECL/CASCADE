@@ -47,3 +47,8 @@ Runs: `output/raw_runs/experiments/groin/2026-10-14-window-refit/<strength>/<win
 ## What changed in the runner
 
 `hat_run.yaml` `groin.strength_1996` 0.16 and `groin.strength_2009` 0.10, with an optional `groin.strength` that overrides both (and is required for any other start year with the groin on; 0.25 for a run that starts before the fillet exists, such as a forecast of the rebuilt groin). `HAT_run_all.py` keys each period's groin runs on that period's strength. At its defaults the runner reproduces the 0.16 and 0.10 runs here to 0.0 m (`output/raw_runs/experiments/groin/2026-10-14-window-refit-check/`).
+
+## Figures
+
+- `figures/matrix_groin_effect_full_management_edgeBE.png` (`matrix_groin_effect_figure.py`): net change along the island, groin on vs off, both windows.
+- `figures/groin_simple_<calibration|test>.gif` (`groin_simple_gif.py`; git-ignored): shoreline change since the start around the groins, year by year, without and with the groin, over the fixed start and the observed change (CoastSat net-change target). Calibration 1996-2009 at 0.16 (GIS 1-15); test 2009-2025 at 0.10, off from 2017 (GIS 2-15). Matrix runs, full management, edgeBE.

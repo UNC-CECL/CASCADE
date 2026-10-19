@@ -19,6 +19,7 @@ from simplest to most complex.
 2-module-explained/        how each groin module works, step by step; figures and GIFs, no new tests
     1-fixed-shift/             the fixed-shift groin (once 'the fixed-shift groin'): where it acted and why its sand did not balance
     2-wave-driven/             the wave-driven groin (once 'corrected'; the runner's groin): how it works
+    3-brie-sand-balance/       why BRIE's step makes or loses sand at a sharp bend (unmodified BRIE, several shapes)
 3-module-tests/            what the module does on its own; no Buxton fit
     TEST_PLAN.md               the 2026-09-11 design for the idealized rig
     1-solver-audit/            the fixed-shift groin in BRIE's alongshore solve alone

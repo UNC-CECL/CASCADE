@@ -1,0 +1,15 @@
+check,value
+dune cells migrated in wall domains,0.0
+lowest crest in wall domains (m),1.2
+crest floor (m),1.2
+first year the shoreline is held,17.0
+"shoreline put back by the wall, summed (m)",1253.52
+"sand added per wall domain, mean (m3/m)",2011.5
+"sand added per wall domain, last 10 yr mean (m3/m/yr)",57.65
+"overwash in wall domains, no wall (m3/m)",2244.1
+"overwash in wall domains, wall (m3/m)",354.5
+"summed shoreline change, no wall (m)",-2296.26
+"summed shoreline change, wall (m)",-1458.65
+"wall-domain change vs no wall, mean (m)",125.5
+"neighbour change vs no wall, max (m)",84.06
+"neighbour change vs no wall, min (m)",12.72

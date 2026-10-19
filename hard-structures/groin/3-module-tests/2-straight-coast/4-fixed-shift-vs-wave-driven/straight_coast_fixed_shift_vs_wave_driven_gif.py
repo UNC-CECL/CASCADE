@@ -3,10 +3,15 @@
 The fixed-shift groin and the wave-driven groin side by side, year by year, on two straight coasts.
 
     python straight_coast_fixed_shift_vs_wave_driven_gif.py   ->  figures/straight_coast_fixed_shift_vs_wave_driven.gif
+    python straight_coast_fixed_shift_vs_wave_driven_gif.py --module fixed-shift
+                                                 ->  ../5-fixed-shift/figures/straight_coast_fixed_shift.gif
+    python straight_coast_fixed_shift_vs_wave_driven_gif.py --module wave-driven
+                                                 ->  ../6-wave-driven/figures/straight_coast_wave_driven.gif
 
 Reruns both modules in straight_coast_test.py's emulator of BRIE's alongshore step (about 20 s), keeping
 every year's shoreline, and animates them as plan views: land below the shoreline, ocean above, the
-groin in red, and each panel's running total of sand gained or lost. The GIF is git-ignored; rerun to make it.
+groin in red, and each panel's running total of sand gained or lost. --module animates one version alone.
+The GIF is git-ignored; rerun to make it.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -15,6 +20,7 @@ Version: 2026-10-12
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 import matplotlib
@@ -28,12 +34,17 @@ import straight_coast_test as sc  # noqa: E402
 from site_layer.hat_figure_style import C, INK, INK_MUTED, apply_style, figsize  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = Path(__file__).resolve().parent / "figures" / "straight_coast_fixed_shift_vs_wave_driven.gif"
+HERE = Path(__file__).resolve().parent
+OUT = HERE / "figures" / "straight_coast_fixed_shift_vs_wave_driven.gif"
 PAIR = (("dipole", "Fixed-shift groin",
          f"moves a fixed {sc.M:g} m a year north,\nwhatever the waves do"),
         ("corrected", "Wave-driven groin",
          f"holds back {sc.BLOCKING_FRACTION:.0%} of the drift arriving,\nand puts back BRIE's lost or made sand"))
 ANGLES = ((-20, "coast turned against the drift (−20°)"), (10, "coast turned with the drift (+10°)"))
+ALONE = {                           # --module: the version animated alone, and its own folder
+    "fixed-shift": ("dipole", HERE.parent / "5-fixed-shift" / "figures" / "straight_coast_fixed_shift.gif"),
+    "wave-driven": ("corrected", HERE.parent / "6-wave-driven" / "figures" / "straight_coast_wave_driven.gif"),
+}
 YEARS = 50
 CELLS = 12                          # cells either side of the groin drawn
 HOLD = 20                           # frames the last year is held
@@ -41,11 +52,11 @@ HOLD = 20                           # frames the last year is held
 
 
 # Every year's shoreline (seaward +, updrift at positive offsets) and the reach's total sand change
-def runs():
+def runs(pair):
     sc.PROFILE_YEARS = tuple(range(1, YEARS + 1))            # keep every year, not just the five sampled
     t = sc.brie_tables()
     out = {}
-    for name, *_ in PAIR:
+    for name, *_ in pair:
         for a, _ in ANGLES:
             rows, prof = sc.run(t, a, name, YEARS)
             out[name, a] = dict(
@@ -54,25 +65,32 @@ def runs():
     return out
 
 
-def main():
+def main(module="both"):
     apply_style()
-    data = runs()
+    if module == "both":
+        pair, out = PAIR, OUT
+    else:
+        pair, out = tuple(p for p in PAIR if p[0] == ALONE[module][0]), ALONE[module][1]
+    data = runs(pair)
     offs = np.arange(sc.NY) - sc.LO                       # as the tables' domain_from_groin; the groin face is at +0.5
     keep = (offs >= -CELLS) & (offs <= CELLS + 1)
     lim = max(np.abs(d["prof"][:, keep]).max() for d in data.values()) * 1.1
-    fig, axes = plt.subplots(2, 2, figsize=figsize("double", height=5.4), sharex=True, sharey=True)
-    fig.subplots_adjust(left=0.1, right=0.98, top=0.82, bottom=0.1, hspace=0.32, wspace=0.08)
+    n = len(pair)
+    fig, axes = plt.subplots(2, n, figsize=figsize("double" if n == 2 else "single", height=5.4), sharex=True,
+                             sharey=True, squeeze=False)
+    left = 0.1 if n == 2 else 0.18
+    fig.subplots_adjust(left=left, right=0.98, top=0.82, bottom=0.1, hspace=0.32, wspace=0.08)
     stamp = fig.text(0.5, 0.975, "", ha="center", va="top", fontsize=12, fontweight="bold")
-    for j, (name, title, rule) in enumerate(PAIR):
-        fig.text(0.1 + 0.445 * j + 0.22, 0.925, title, ha="center", fontsize=9.5, fontweight="bold",
-                 color=sc.MODULES[name]["col"])
-        fig.text(0.1 + 0.445 * j + 0.22, 0.905, rule, ha="center", va="top", fontsize=7, color=INK_MUTED)
+    for j, (name, title, rule) in enumerate(pair):
+        xc = left + (0.98 - left) * (j + 0.5) / n
+        fig.text(xc, 0.925, title, ha="center", fontsize=9.5, fontweight="bold", color=sc.MODULES[name]["col"])
+        fig.text(xc, 0.905, rule, ha="center", va="top", fontsize=7, color=INK_MUTED)
 
     def draw(k):
         yr = min(k, YEARS - 1)
         stamp.set_text(f"Year {yr + 1}")
         for i, (a, label) in enumerate(ANGLES):
-            for j, (name, *_) in enumerate(PAIR):
+            for j, (name, *_) in enumerate(pair):
                 ax = axes[i, j]
                 ax.clear()
                 d = data[name, a]
@@ -105,10 +123,13 @@ def main():
         return []
 
     anim = FuncAnimation(fig, draw, frames=YEARS + HOLD, blit=False)
-    anim.save(OUT, writer=PillowWriter(fps=5), dpi=110)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    anim.save(out, writer=PillowWriter(fps=5), dpi=110)
     plt.close(fig)
-    print(f"wrote {OUT.relative_to(sc.REPO)}")
+    print(f"wrote {out.relative_to(sc.REPO)}")
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--module", choices=("both", "fixed-shift", "wave-driven"), default="both")
+    main(ap.parse_args().module)

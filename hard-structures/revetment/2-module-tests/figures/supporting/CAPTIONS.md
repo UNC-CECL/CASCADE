@@ -1,0 +1,7 @@
+# Captions — figures
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`revetment_how_it_works.png`.** How the simple revetment works, in cross-section (schematic, not to scale; ocean to the left). (a) With no wall, Barrier3D moves the dune line with the shoreline, so the island rolls back. (b) The wall fixes the dune line and floors the dune crest (dashed purple, 1.2 m above the berm); the beach in front is bookkeeping, the gap from the shoreline to the wall, starting at Barrier3D's implicit beach width (30 m in the test). (c) The shoreline keeps retreating and the gap shrinks by the same amount each year; storms that don't top the crest no longer overwash. (d) The wall is repaired, so it never fails: once the gap reaches 0, the shoreline is put back at the wall each year through CASCADE's nourishment path, and the sand that takes (orange) is tallied as a hidden nourishment. A real wall adds no sand; the beach in front lowers instead, which the model has no beach to show. Dotted: the profile at build.
+
+**`revetment_yearly_loop.png`.** What the simple revetment does each model year. It runs around cascade.update() like the nourishment schedule and edits nothing in CASCADE, BRIE or Barrier3D: before the year it switches dune migration off and floors the dune crest; after it, it moves the gap by the shoreline change and, once the shoreline has reached the wall, puts it back with the sand that takes.

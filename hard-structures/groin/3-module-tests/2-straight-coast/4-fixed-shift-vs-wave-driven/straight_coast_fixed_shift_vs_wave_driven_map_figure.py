@@ -3,25 +3,31 @@
 The fixed-shift groin and the wave-driven groin drawn as maps: the coast at its own angle, true scale.
 
     python straight_coast_fixed_shift_vs_wave_driven_map_figure.py   ->  figures/straight_coast_fixed_shift_vs_wave_driven_map.png
+    python straight_coast_fixed_shift_vs_wave_driven_map_figure.py --module fixed-shift
+                                                 ->  ../5-fixed-shift/figures/straight_coast_fixed_shift_map.png
+    python straight_coast_fixed_shift_vs_wave_driven_map_figure.py --module wave-driven
+                                                 ->  ../6-wave-driven/figures/straight_coast_wave_driven_map.png
 
 The comparison figure plots shoreline change against cell number, which hides the coast itself. This draws
 the same runs (the year-0, 10 and 50 profiles in each version's tables/) in plan view, 1:1, north up: the
 straight start coast at its orientation, the shoreline after 10 and 50 years, the sand built out or cut back
-between the start and year 50, the groin, and the net drift. Reads the tables straight_coast_test.py writes;
-nothing is rerun.
+between the start and year 50, the groin, and the net drift, with the wave climate every coast shares.
+--module maps one version alone. Reads the tables straight_coast_test.py writes; nothing is rerun.
 
 Geometry, from straight_coast_test.run(): cells are 500 m alongshore with the higher index to the north; the
 start coast's landward position grows by tan(theta0) x 500 m per cell, so a positive angle trends west going
 north and a negative one east (Buxton's coast at GIS 5-6 runs about 21 degrees east of north, near -20 here);
-the net drift runs south, so the north side is updrift. Each cell's shoreline moves as one, as in BRIE.
+the net drift runs south, so the north side is updrift. Each cell's shoreline moves as one, as in BRIE, so each
+is drawn as a rectangle along the coast moved shore-normal (map_geometry.py).
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-14
+Version: 2026-10-16
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -36,6 +42,9 @@ from matplotlib.patches import Patch  # noqa: E402
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
+sys.path.insert(0, str(HERE.parent / "1-run"))   # the test, for its wave climate
+import straight_coast_test as sc  # noqa: E402
+from map_geometry import draw_coast, shoreline  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, C_1984_FILL, INK, INK_MUTED, MAP_TEXT_DARK, apply_style, figsize, north_dart, record_caption, save,
     scale_bar_km, spines_for_image)
@@ -45,13 +54,21 @@ RUN = HERE.parent / "1-run"                    # the test's tables
 OUT = HERE / "figures" / "straight_coast_fixed_shift_vs_wave_driven_map.png"
 VERSIONS = (("fixed_shift", "Fixed-shift groin", C["ADDED"]),
             ("wave_driven", "Wave-driven groin", INK))
+ALONE = {                            # --module: the version mapped alone, and its own folder
+    "fixed-shift": ("fixed_shift", HERE.parent / "5-fixed-shift" / "figures" / "straight_coast_fixed_shift_map.png"),
+    "wave-driven": ("wave_driven", HERE.parent / "6-wave-driven" / "figures" / "straight_coast_wave_driven_map.png"),
+}
 ANGLES = ((-20, "coast turned against the drift (−20°)"), (10, "coast turned with the drift (+10°)"))
 DY_M = 500.0                         # cell length alongshore, as straight_coast_test.DY_M
-CELLS = 3                            # cells drawn either side of the groin
+CELLS = 3                            # cells in view either side of the groin
+DRAWN = CELLS + 3                    # cells drawn, so a turned coast still fills the view
+FILLS = dict(land=dict(facecolor=C["ADDED_FILL"], alpha=0.55), sea=dict(facecolor=C["WATER"], alpha=0.45),
+             built=dict(facecolor=C["ADDED"], alpha=0.75), cut=dict(facecolor=C_1984_FILL, alpha=0.95))
 HALF_WIDTH_M = 800.0                 # map half-width east-west about the groin, the same on every map
 YEARS = (10, 50)                     # shorelines drawn besides the start
 GROIN_DRAWN_M = 250.0                # length drawn; in the model the groin is a face between two cells
-BALANCED_M = 30.0                    # the sand-balance band used in the comparison figure
+WAVES = ("Waves on every coast: Hs {Hs:g} m, Tp {Tp:g} s, asymmetry {asym:g}, "
+         "high-angle fraction {ahf:g}").format(**sc.CLIMATE)
 # -----------------------------------------------------------------------------
 
 
@@ -65,41 +82,31 @@ def by_year(folder):
     return t
 
 
-# One shoreline as a north-up polyline: cell k (offset from the groin, + north) spans northing
-# (k - 0.5) x DY to (k + 0.5) x DY minus half a cell, so the groin face (between offsets 0 and 1) sits at 0
-def shoreline(theta, seaward):
-    xs, ys = [], []
-    tan = np.tan(np.deg2rad(theta))
-    for k, s in seaward.items():
-        y0, y1 = (k - 1) * DY_M, k * DY_M
-        xs += [-tan * y0 + s, -tan * y1 + s]
-        ys += [y0, y1]
-    return np.array(xs), np.array(ys)
-
-
-def main():
+def main(module="both"):
     apply_style()
-    fig = plt.figure(figsize=figsize("double", height=5.0), constrained_layout=True)
+    if module == "both":
+        versions, out = VERSIONS, OUT
+    else:
+        versions, out = tuple(v for v in VERSIONS if v[0] == ALONE[module][0]), ALONE[module][1]
+    n = len(versions)
+    fig = plt.figure(figsize=figsize("double" if n == 2 else "single", height=5.0), constrained_layout=True)
     subs = fig.subfigures(1, 2, wspace=0.03)
-    axes = [ax for s in subs for ax in s.subplots(1, 2)]
+    axes = [ax for s in subs for ax in np.atleast_1d(s.subplots(1, n))]
     shades = {10: "0.55", 50: INK}
     results = {}
     for i, (theta, label) in enumerate(ANGLES):
-        for j, (folder, title, col) in enumerate(VERSIONS):
-            ax = axes[2 * i + j]
+        for j, (folder, title, col) in enumerate(versions):
+            ax = axes[n * i + j]
             p = profiles(folder)
-            p = p[(p["theta0_deg"] == theta) & p["domain_from_groin"].between(-CELLS + 1, CELLS)]
-            start = pd.Series(0.0, index=sorted(p["domain_from_groin"].unique()))
-            x0, y0 = shoreline(theta, start)
-            lines = {yr: shoreline(theta, p[p["year"] == yr].set_index("domain_from_groin")["seaward_m"].sort_index())
-                     for yr in YEARS}
-            x50, y50 = lines[YEARS[-1]]
+            p = p[(p["theta0_deg"] == theta) & p["domain_from_groin"].between(-DRAWN + 1, DRAWN)]
+            seaward = {yr: p[p["year"] == yr].set_index("domain_from_groin")["seaward_m"].sort_index()
+                       for yr in YEARS}
+            offs = seaward[YEARS[-1]].index.to_numpy()
+            x0, y0 = shoreline(theta, offs, np.zeros(len(offs)), DY_M)
+            lines = {yr: shoreline(theta, offs, v.to_numpy(), DY_M) for yr, v in seaward.items()}
             xmin, xmax = -HALF_WIDTH_M, HALF_WIDTH_M
-            # land west of the year-50 shoreline, sea east; built out (gold) or cut back (red) since the start
-            ax.fill_betweenx(y50, xmin, x50, color=C["ADDED_FILL"], alpha=0.55, lw=0, zorder=0)
-            ax.fill_betweenx(y50, x50, xmax, color=C["WATER"], alpha=0.45, lw=0, zorder=0)
-            ax.fill_betweenx(y0, x0, x50, where=x50 >= x0, color=C["ADDED"], alpha=0.75, lw=0, zorder=1)
-            ax.fill_betweenx(y0, x50, x0, where=x50 < x0, color=C_1984_FILL, alpha=0.95, lw=0, zorder=1)
+            # land behind the year-50 shoreline, sea in front; built out (gold) or cut back (red) since the start
+            draw_coast(ax, theta, offs, seaward[YEARS[-1]].to_numpy(), DY_M, **FILLS)
             ax.plot(x0, y0, color=INK_MUTED, lw=1.0, ls=(0, (4, 2)), zorder=3)
             for yr, (x, y) in lines.items():
                 ax.plot(x, y, color=shades[yr], lw=1.0 if yr != YEARS[-1] else 1.5, zorder=4)
@@ -118,15 +125,9 @@ def main():
             b = by_year(folder)
             b = b[(b["theta0_deg"] == theta) & (b["year"] == YEARS[-1])].iloc[0]
             results[folder, theta] = b
-            tot = float(b["reach_change_m"])
-            ok = abs(tot) <= BALANCED_M
             ax.text(0.04, 0.985, f"year 50:\nnorth side {b['updrift_seaward_m']:+.0f} m\n"
                     f"south side {b['downdrift_seaward_m']:+.0f} m", transform=ax.transAxes, fontsize=6.6, va="top",
                     color=INK, bbox=dict(boxstyle="square,pad=0.2", fc="white", ec="none", alpha=0.85), zorder=8)
-            ax.text(0.04, 0.83, f"sand made or lost:\n{tot:+,.0f} m" + (" (balanced)" if ok else ""),
-                    transform=ax.transAxes, fontsize=6.6, va="top", fontweight="bold",
-                    color=C["REF"] if ok else C["GROIN"],
-                    bbox=dict(boxstyle="square,pad=0.2", fc="white", ec="none", alpha=0.85), zorder=8)
             ax.set_xlim(xmin, xmax)
             ax.set_ylim(-(CELLS - 0.0) * DY_M, CELLS * DY_M)
             ax.set_aspect("equal")
@@ -135,18 +136,27 @@ def main():
             spines_for_image(ax)
             if j == 0:
                 scale_bar_km(ax, length_m=500, segments=1, unit="m", x=0.08, y=0.07, text_kw=MAP_TEXT_DARK)
-            if j == 1:
+            if j == n - 1:
                 north_dart(ax, (xmax - 170, -(CELLS - 0.6) * DY_M), arrow_m=220, text_kw=MAP_TEXT_DARK)
-            ax.set_title(title, fontsize=8.5, color=col if j == 0 else INK, fontweight="bold")
-        subs[i].suptitle(label[0].upper() + label[1:], fontsize=9)
+            if n == 2:
+                ax.set_title(title, fontsize=8.5, color=col if j == 0 else INK, fontweight="bold")
+        head = label[0].upper() + label[1:]
+        subs[i].suptitle(head if n == 2 else head.replace(" (", "\n("), fontsize=9)
     handles = [Line2D([], [], color=INK_MUTED, lw=1.0, ls=(0, (4, 2)), label="start: a straight coast"),
                Line2D([], [], color=shades[10], lw=1.0, label="year 10"),
                Line2D([], [], color=shades[50], lw=1.5, label="year 50"),
                Patch(facecolor=C["ADDED"], alpha=0.75, label="built out since the start"),
                Patch(facecolor=C_1984_FILL, alpha=0.95, label="cut back since the start"),
                Line2D([], [], color=C["GROIN"], lw=2.6, label="groin (drawn 250 m)")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False, fontsize=7)
-    save(fig, OUT, close=True)
+    fig.legend(handles=handles, loc="outside lower center", ncol=3 if n == 2 else 2, frameon=False, fontsize=7,
+               title=WAVES if n == 2 else WAVES.replace(": ", ":\n"), title_fontsize=7)
+    if n == 1:
+        fig.suptitle(versions[0][1], fontsize=10, fontweight="bold")
+    save(fig, out, close=True)
+    if n == 1:
+        record_caption(out, alone_caption(versions[0][0], results))
+        print(f"wrote {out.relative_to(REPO)}")
+        return
     d20, c20 = results["fixed_shift", -20], results["wave_driven", -20]
     d10, c10 = results["fixed_shift", 10], results["wave_driven", 10]
     record_caption(OUT, (
@@ -158,9 +168,8 @@ def main():
         "sand cut back. Red bar: the groin, drawn shore-normal and 250 m long for visibility; in the model it is "
         "a face between two 500 m cells, and each cell's shoreline moves as one, which is why the shorelines "
         "step. The net longshore drift runs south, so the north side is updrift. Top left of each map: the cells "
-        "either side of the groin at year 50; bottom: the sand gained or lost over the 61-cell reach, green when "
-        f"within ±{BALANCED_M:.0f} m. BRIE's alongshore step alone under option A waves; no storms, no "
-        "Barrier3D, no sea-level rise. **Shows:** the wave-driven groin builds a fillet against its "
+        "either side of the groin at year 50. Below the key: the wave climate, the same on every coast. BRIE's "
+        "alongshore step alone; no storms, no Barrier3D, no sea-level rise. **Shows:** the wave-driven groin builds a fillet against its "
         f"north face and cuts the south side back by the same amount on both coasts ({c20['updrift_seaward_m']:+.0f} "
         f"/ {c20['downdrift_seaward_m']:+.0f} m at −20 degrees, {c10['updrift_seaward_m']:+.0f} / "
         f"{c10['downdrift_seaward_m']:+.0f} m at +10), the shape of a real groin, with the sand balanced. The "
@@ -173,5 +182,35 @@ def main():
     print(f"wrote {OUT.relative_to(REPO)}")
 
 
+# The caption of one version mapped alone (--module)
+def alone_caption(folder, results):
+    a, b = results[folder, -20], results[folder, 10]
+    how = ("**How to read:** plan view at true scale (1:1), north up, ocean to the east, 1.5 km of coast either "
+           "side of the groin; left the coast at −20 degrees (trends east going north, close to Buxton's own coast "
+           "at GIS 5-6), right +10 degrees (trends west going north). Dashed: the straight start coast. Grey: the "
+           "shoreline after 10 years; black: after 50. Gold: sand built out between the start and year 50; red: "
+           "sand cut back. Red bar: the groin, drawn shore-normal and 250 m long for visibility; in the model it "
+           "is a face between two 500 m cells, and each cell's shoreline moves as one, which is why the shorelines "
+           "step. The net longshore drift runs south, so the north side is updrift. Top left of each map: the "
+           "cells either side of the groin at year 50. Below the key: the wave climate, the same on both coasts. "
+           "BRIE's alongshore step alone; no storms, no Barrier3D, no sea-level rise. The two versions side by side are in "
+           "`straight_coast_fixed_shift_vs_wave_driven_map.png`. ")
+    if folder == "wave_driven":
+        return ("**Tests:** nothing new; the wave-driven groin's straight-coast runs drawn as maps, so the coast's "
+                "shape can be seen. " + how + "**Shows:** a fillet against the groin's north face and the south "
+                f"side cut back by the same amount on both coasts ({a['updrift_seaward_m']:+.0f} / "
+                f"{a['downdrift_seaward_m']:+.0f} m at −20 degrees, {b['updrift_seaward_m']:+.0f} / "
+                f"{b['downdrift_seaward_m']:+.0f} m at +10), the shape of a real groin, with the sand balanced.")
+    return ("**Tests:** nothing new; the fixed-shift groin's straight-coast runs drawn as maps, so the coast's "
+            "shape can be seen. " + how + "**Shows:** not the shape of a groin: on the coast turned against the "
+            f"drift both sides build out ({a['updrift_seaward_m']:+.0f} / {a['downdrift_seaward_m']:+.0f} m) and "
+            f"the reach gains {a['reach_change_m']:+,.0f} m of sand from nowhere; on the coast turned with the "
+            f"drift both sides retreat ({b['updrift_seaward_m']:+.0f} / {b['downdrift_seaward_m']:+.0f} m) and "
+            f"{abs(b['reach_change_m']):,.0f} m is lost. That is BRIE's solve leaking at the bend the groin makes "
+            "(`brie_sand_balance_at_a_step.png`), not the groin.")
+
+
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--module", choices=("both", "fixed-shift", "wave-driven"), default="both")
+    main(ap.parse_args().module)

@@ -1,0 +1,404 @@
+<title>BRIE Sand Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,650&family=Public+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single worksheet column, like a lab handout; each step is a numbered exercise with its own check. */
+:root {
+  --paper: #fbfcfd;
+  --sheet: #ffffff;
+  --ink: #1d2733;
+  --muted: #5d6b79;
+  --rule: #d9e1e8;
+  --grid: #eef3f7;
+  --sand: #f2dca8;
+  --sea: #d4e6f3;
+  --pos: #2166ac;     /* positions */
+  --rate: #b97a10;    /* rate */
+  --angle: #7b3294;   /* angle */
+  --bad: #b2182b;
+  --good: #2c6e49;
+  --hl: #fff2cf;
+  --code-bg: #f3f6f9;
+  --display: "Newsreader", Georgia, "Times New Roman", serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12171d; --sheet: #182029; --ink: #e5ebf1; --muted: #9aa8b6; --rule: #2c3846; --grid: #1c2530;
+    --sand: #6b5426; --sea: #1f3a52; --pos: #7fb3e6; --rate: #e0aa47; --angle: #c69be0; --bad: #f08080;
+    --good: #7fcf9f; --hl: #3a3220; --code-bg: #1f2833; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12171d; --sheet: #182029; --ink: #e5ebf1; --muted: #9aa8b6; --rule: #2c3846; --grid: #1c2530;
+  --sand: #6b5426; --sea: #1f3a52; --pos: #7fb3e6; --rate: #e0aa47; --angle: #c69be0; --bad: #f08080;
+  --good: #7fcf9f; --hl: #3a3220; --code-bg: #1f2833; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font: 16px/1.6 var(--body);
+  padding-inline: 16px;
+  padding-block: 32px 64px;
+}
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 28px; }
+header, section { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 24px clamp(16px, 4vw, 32px); min-width: 0; }
+h1, h2 { font-family: var(--display); font-weight: 650; text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 2.6rem); }
+h2 { font-size: 1.55rem; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+h2 .n { font-family: var(--mono); font-size: 0.9rem; color: var(--muted); letter-spacing: 0.06em; }
+p { margin: 0; max-width: 68ch; }
+.stack { display: grid; gap: 14px; }
+.eyebrow { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lede { font-size: 1.08rem; }
+.muted { color: var(--muted); }
+code, .code { font-family: var(--mono); font-size: 0.92em; }
+pre.code { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 14px; margin: 0; overflow-x: auto; line-height: 1.5; }
+.pos { color: var(--pos); font-weight: 600; }
+.rate { color: var(--rate); font-weight: 600; }
+.angle { color: var(--angle); font-weight: 600; }
+.bad { color: var(--bad); font-weight: 700; }
+.good { color: var(--good); font-weight: 700; }
+mark.hlc { background: var(--hl); color: inherit; padding: 0 2px; border-radius: 2px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 100%; }
+th, td { border-bottom: 1px solid var(--rule); padding: 6px 8px; text-align: center; white-space: nowrap; }
+th { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+td.given { font-family: var(--mono); }
+input[type="text"] {
+  font: 0.95rem var(--mono); width: 6.5em; padding: 4px 6px; border: 1px solid var(--rule); border-radius: 3px;
+  background: var(--sheet); color: var(--ink); text-align: center;
+}
+input.wide { width: 16em; }
+input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--pos); outline-offset: 2px; }
+input.ok { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+input.no { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button {
+  font: 600 0.9rem var(--body); padding: 7px 14px; border-radius: 4px; border: 1px solid var(--ink);
+  background: var(--ink); color: var(--sheet); cursor: pointer;
+}
+button.quiet { background: transparent; color: var(--ink); border-color: var(--rule); }
+.status { font-size: 0.88rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule); color: var(--muted); }
+.status.done { color: var(--good); border-color: var(--good); }
+.status.part { color: var(--rate); border-color: var(--rate); }
+.hint { border-left: 3px solid var(--rate); padding: 8px 12px; background: var(--code-bg); border-radius: 0 4px 4px 0; }
+.mc { display: grid; gap: 8px; }
+.mc label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.feedback { font-weight: 600; }
+svg { width: 100%; height: auto; display: block; }
+.coastfig { border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.85rem; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; background: currentColor; vertical-align: middle; }
+.sandbox-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.sandbox-grid label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); text-align: center; }
+.sandbox-grid input { width: 100%; }
+.total { font-family: var(--display); font-size: 1.6rem; font-weight: 650; }
+.toggle { display: flex; gap: 0; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; width: fit-content; }
+.toggle button { border: 0; border-radius: 0; background: transparent; color: var(--ink); }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+footer { font-size: 0.85rem; color: var(--muted); max-width: 860px; margin: 0 auto; }
+@media (max-width: 560px) { .sandbox-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: no-preference) { input { transition: border-color .15s, box-shadow .15s; } }
+</style>
+
+<main>
+  <header class="stack">
+    <div class="eyebrow">Worksheet · CASCADE groin study · BRIE alongshore step</div>
+    <h1>Where does the sand go? Working BRIE's step by hand</h1>
+    <p class="lede">You will do, with a pencil and this page, exactly what BRIE does to the shoreline in one year: work out each section's angle, turn it into a rate, update the positions, and then check whether the sand adds up. Every number here is BRIE's own, from an unmodified <code>brie.Brie</code> with only its alongshore step switched on (option A waves: Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle fraction 0.5).</p>
+    <p>The coast has <strong>six sections, 500 m each</strong>, on BRIE's looped coast (the last section's north neighbour is section 0). A 100 m headland covers sections 2, 3 and 4. BRIE stores each section's shoreline position <span class="pos">x</span> measured landward, so the headland sections have the smaller x.</p>
+    <div class="coastfig" id="fig-start"></div>
+    <div class="tablewrap"><table aria-label="Starting positions">
+      <tr><th>section i</th><td class="given">0</td><td class="given">1</td><td class="given">2</td><td class="given">3</td><td class="given">4</td><td class="given">5</td></tr>
+      <tr><th>x[i] (m)</th><td class="given pos">1000</td><td class="given pos">1000</td><td class="given pos">900</td><td class="given pos">900</td><td class="given pos">900</td><td class="given pos">1000</td></tr>
+    </table></div>
+    <p class="muted">Work through the steps in order. Each has a <em>Check</em> button that marks your entries green or red, a hint, and an answer you can reveal. Use a minus sign for negative numbers.</p>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="stack" id="s1">
+    <h2><span class="n">STEP 1</span>Read the angle line</h2>
+    <p>This is how BRIE works out each section's shoreline angle (brie.py, lines 820–828, condensed):</p>
+    <pre class="code">theta = 180 * np.arctan2( <mark class="hlc">x_s[np.r_[1:ny, 0]]</mark> - x_s , dy ) / np.pi</pre>
+    <p><code>np.r_[1:ny, 0]</code> builds a list of index numbers: the numbers from 1 up to (but not including) <code>ny</code>, then a 0 on the end. Here <code>ny = 6</code>.</p>
+    <div class="stack">
+      <label>1a. What list does <code>np.r_[1:6, 0]</code> give? <input type="text" class="wide" id="q1a" placeholder="e.g. 4, 2, 0, …"></label>
+      <label>1b. So <code>x_s[np.r_[1:6, 0]]</code> lines up, for section 1, the position of which section? <input type="text" id="q1b"></label>
+      <fieldset class="mc" style="border:0;padding:0;margin:0">
+        <legend style="margin-bottom:6px">1c. Does the angle line use the section to the <strong>south</strong> (x[i−1]) at all?</legend>
+        <label><input type="radio" name="q1c" value="yes"> Yes, it averages the north and south sides</label>
+        <label><input type="radio" name="q1c" value="no"> No, only x[i+1] − x[i], the north neighbour</label>
+      </fieldset>
+    </div>
+    <div class="actions"><button data-check="1">Check</button><button class="quiet" data-hint="1">Hint</button><button class="quiet" data-answer="1">Show answers</button><span class="status" id="st1">not checked</span></div>
+    <div class="hint" id="h1" hidden>Count from 1 up to 5 (6 is left out), then add a 0. The list's first entry is what section 0 gets, the second what section 1 gets, and so on.</div>
+    <p class="feedback" id="f1"></p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="stack" id="s2">
+    <h2><span class="n">STEP 2</span>Each section's angle</h2>
+    <p>For each section, take its <strong>north</strong> neighbour's position minus its own, then
+      <span class="angle">θ[i] = atan( (x[i+1] − x[i]) / 500 m )</span> in degrees. (Section 5's north neighbour is section 0.)</p>
+    <div class="tablewrap"><table>
+      <tr><th>i</th><th>x[i]</th><th>x[i+1]</th><th class="pos">x[i+1] − x[i]</th><th class="angle">θ[i] (°)</th></tr>
+      <tbody id="t2"></tbody>
+    </table></div>
+    <div class="actions"><button data-check="2">Check</button><button class="quiet" data-hint="2">Hint</button><button class="quiet" data-answer="2">Show answers</button><span class="status" id="st2">not checked</span></div>
+    <div class="hint" id="h2" hidden>Section 1: its north neighbour is section 2, so x[2] − x[1] = 900 − 1000 = −100, and atan(−100 / 500) = atan(−0.2) = −11.3°. Most sections have a flat north side and an angle of 0.</div>
+    <p class="feedback" id="f2"></p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="stack" id="s3">
+    <h2><span class="n">STEP 3</span>Turn each angle into one rate</h2>
+    <p>BRIE looks up the wave climate's diffusivity <em>D</em> at the angle (its table <code>coast_diff</code>, lines 1294–1309), then
+      <span class="rate">r[i] = max(0, D × dt / 2 / dy²) = max(0, D / 500,000)</span> with dt = 1 year and dy = 500 m. A negative D becomes a rate of 0.</p>
+    <div class="tablewrap"><table aria-label="BRIE's diffusivity at the angles you need">
+      <tr><th>angle θ</th><td class="given angle">0°</td><td class="given angle">−11.3°</td><td class="given angle">+11.3°</td></tr>
+      <tr><th>D from BRIE's table (m²/yr)</th><td class="given">−119.3</td><td class="given">9,214.4</td><td class="given">56,934.8</td></tr>
+    </table></div>
+    <p>Give each rate to three decimal places.</p>
+    <div class="tablewrap"><table>
+      <tr><th>i</th><th class="angle">θ[i]</th><th>D</th><th class="rate">r[i]</th></tr>
+      <tbody id="t3"></tbody>
+    </table></div>
+    <fieldset class="mc" style="border:0;padding:0;margin:0">
+      <legend style="margin-bottom:6px">3b. Section 2 is part of the headland. Why is its rate 0?</legend>
+      <label><input type="radio" name="q3b" value="a"> Headland sections are fixed in BRIE</label>
+      <label><input type="radio" name="q3b" value="b"> Its north side (the boundary 2 | 3) is flat, so its angle is 0 and D is negative</label>
+      <label><input type="radio" name="q3b" value="c"> Its south side is too steep</label>
+    </fieldset>
+    <div class="actions"><button data-check="3">Check</button><button class="quiet" data-hint="3">Hint</button><button class="quiet" data-answer="3">Show answers</button><span class="status" id="st3">not checked</span></div>
+    <div class="hint" id="h3" hidden>Section 1: θ = −11.3°, D = 9,214.4, so r = 9,214.4 / 500,000 = 0.018. Every section with θ = 0 has D = −119.3, which max(0, …) turns into 0.</div>
+    <p class="feedback" id="f3"></p>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="stack" id="s4">
+    <h2><span class="n">STEP 4</span>Update the positions</h2>
+    <p>The update (lines 1315–1324) uses the positions on <strong>both</strong> sides, but only the one rate you found:</p>
+    <pre class="code">change[i] = <span class="rate">r[i]</span> × ( <span class="pos">x[i+1]</span> − 2·x[i] + <span class="pos">x[i−1]</span> )
+          = <span class="rate">r[i]</span> × ( x[i+1] − x[i] )   +   <span class="rate">r[i]</span> × ( x[i−1] − x[i] )
+            └─ exchange with north ─┘     └─ exchange with south ─┘</pre>
+    <p>Fill in both parts for each section, to two decimal places. (This is BRIE's explicit half-step; Step 6 comes back to the full year.)</p>
+    <div class="tablewrap"><table>
+      <tr><th>i</th><th class="rate">r[i]</th><th>x[i−1]</th><th>x[i]</th><th>x[i+1]</th><th class="pos">with north</th><th class="pos">with south</th></tr>
+      <tbody id="t4"></tbody>
+    </table></div>
+    <div class="actions"><button data-check="4">Check</button><button class="quiet" data-hint="4">Hint</button><button class="quiet" data-answer="4">Show answers</button><span class="status" id="st4">not checked</span></div>
+    <div class="hint" id="h4" hidden>Section 1: with north = 0.018 × (900 − 1000) = −1.84; with south = 0.018 × (1000 − 1000) = 0. Any section with rate 0 has both parts 0, however steep its sides are.</div>
+    <p class="feedback" id="f4"></p>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="stack" id="s5">
+    <h2><span class="n">STEP 5</span>Balance the books at each boundary</h2>
+    <p>Every boundary is shared by two sections, and each writes down its own number for the exchange across it: the section to the south from its "with north" column, the section to the north from its "with south" column. If sand only moved across the boundary, the two would cancel. Copy them across from Step 4 and add them up.</p>
+    <div class="tablewrap"><table>
+      <tr><th>boundary</th><th>south section's book</th><th>north section's book</th><th class="bad">left over</th></tr>
+      <tbody id="t5"></tbody>
+      <tr><th>whole island</th><td></td><td></td><td><input type="text" id="q5tot"></td></tr>
+    </table></div>
+    <div class="actions"><button data-check="5">Check</button><button class="quiet" data-hint="5">Hint</button><button class="quiet" data-answer="5">Show answers</button><span class="status" id="st5">not checked</span></div>
+    <div class="hint" id="h5" hidden>Boundary 1 | 2: the south section is 1 and books its "with north" (−1.84); the north section is 2 and books its "with south" (0). Left over −1.84. A positive total means the summed x grew: the shoreline moved landward overall, so sand was lost.</div>
+    <p class="feedback" id="f5"></p>
+  </section>
+
+  <!-- STEP 6 -->
+  <section class="stack" id="s6">
+    <h2><span class="n">STEP 6</span>What if both sides used one rate?</h2>
+    <p>Suppose the boundary 1 | 2 had a single rate, 0.018, and both sections used it.</p>
+    <div class="stack">
+      <label>6a. What would section 2 book for the exchange across 1 | 2? &nbsp;0.018 × (x[1] − x[2]) = <input type="text" id="q6a"></label>
+      <label>6b. Then what is left over at 1 | 2? <input type="text" id="q6b"></label>
+    </div>
+    <div class="actions"><button data-check="6">Check</button><button class="quiet" data-answer="6">Show answers</button><span class="status" id="st6">not checked</span></div>
+    <p class="feedback" id="f6"></p>
+    <div class="hint">
+      <p><strong>The full year.</strong> BRIE's step has a second, implicit half that uses the same per-section rates, so the real year from <code>Brie.update()</code> moves the summed x by <strong class="bad">+15.0 m</strong> (your explicit half gave +9.54). That is 15 m of shoreline × 500 m × 19.8 m active depth ≈ <strong>148,000 m³ of sand</strong> gone in one year, with nothing removing any. A copy of these three lines reproduces <code>Brie.update()</code> to three decimals.</p>
+    </div>
+  </section>
+
+  <!-- SANDBOX -->
+  <section class="stack" id="s7">
+    <h2><span class="n">SANDBOX</span>Try your own coast</h2>
+    <p>Change any position, or start from a preset. The page runs the same three lines with BRIE's own diffusivity table and shows each section's angle and rate, each boundary's left-over, and the island's total. Switch to <em>one rate per boundary</em> to see every left-over go to zero.</p>
+    <div class="actions">
+      <button class="quiet" data-preset="headland">Worksheet headland</button>
+      <button class="quiet" data-preset="straight">Straight</button>
+      <button class="quiet" data-preset="ramped">Ramped headland</button>
+      <button class="quiet" data-preset="bay">Bay</button>
+      <button class="quiet" data-preset="tilted">Notch</button>
+    </div>
+    <div class="sandbox-grid" id="sbx"></div>
+    <div class="toggle" role="group" aria-label="Rule">
+      <button id="modeBrie" aria-pressed="true">BRIE as written</button>
+      <button id="modeShared" aria-pressed="false">One rate per boundary</button>
+    </div>
+    <div class="coastfig" id="fig-sbx"></div>
+    <div class="legend"><span style="color:var(--angle)">angle θ of the north boundary</span><span style="color:var(--rate)">rate r</span><span style="color:var(--bad)">sand made or lost at a boundary</span></div>
+    <div class="tablewrap"><table>
+      <tr><th>i</th><th class="angle">θ[i]</th><th class="rate">r[i]</th><th class="pos">with north</th><th class="pos">with south</th><th>boundary</th><th class="bad">left over</th></tr>
+      <tbody id="tsb"></tbody>
+    </table></div>
+    <p>Island total this half-step: <span class="total" id="sbtot">0</span> <span class="muted">m of summed x (+ = shoreline moved landward = sand lost)</span></p>
+    <p class="muted">Things to try: put x[3] back to 1000 (a smaller headland); make the headland's edges ramp in steps of 25 m; tilt the whole coast by 10 m a section.</p>
+  </section>
+</main>
+<footer><p>Built from hard-structures/groin/2-module-explained/3-brie-sand-balance (CASCADE). BRIE code lines refer to brie.py in BRIE 1.0.1. The worksheet covers the explicit half of BRIE's Crank–Nicolson step; the sandbox does too.</p></footer>
+
+<script>
+(() => {
+  const CD = [993.254, 7267.256, 13672.894, 20151.948, 26673.052, 33213.981, 39756.819, 46286.066, 52787.735, 59248.873, 65657.284, 72001.359, 78269.969, 84452.393, 90538.275, 96517.592, 102380.638, 108118.007, 113720.592, 119179.581, 124486.454, 129632.991, 134611.27, 139413.676, 144032.905, 148461.969, 152694.206, 156723.282, 160543.198, 164148.302, 167533.288, 170693.208, 173623.473, 176319.865, 178778.534, 180996.01, 182969.205, 184695.417, 186172.333, 187398.033, 188370.995, 189090.093, 189554.602, 189764.198, 189718.961, 189419.371, 188866.314, 188061.076, 187005.344, 185701.208, 184151.153, 182358.06, 180325.205, 178056.251, 175555.251, 172826.638, 169875.225, 166706.199, 163325.119, 159737.908, 155950.848, 151970.582, 147804.101, 143458.746, 138942.2, 134262.49, 129427.978, 124447.365, 119329.688, 114084.323, 108720.991, 103249.76, 97681.062, 92025.706, 86294.902, 80500.294, 74654.0, 68768.681, 62857.615, 56934.823, 51015.227, 45114.89, 39251.368, 33444.246, 27716.001, 22093.473, 16610.593, 11314.098, 6278.061, 1657.049, -119.294, 5.355, 413.39, 1005.944, 1737.796, 2581.925, 3519.822, 4537.666, 5624.506, 6771.27, 7970.185, 9214.415, 10497.817, 11814.782, 13160.114, 14528.949, 15916.697, 17318.989, 18731.649, 20150.664, 21572.165, 22992.409, 24407.771, 25814.733, 27209.874, 28589.87, 29951.486, 31291.575, 32607.076, 33895.012, 35152.492, 36376.706, 37564.931, 38714.528, 39822.944, 40887.711, 41906.453, 42876.878, 43796.79, 44664.08, 45476.737, 46232.84, 46930.567, 47568.193, 48144.09, 48656.731, 49104.688, 49486.636, 49801.351, 50047.712, 50224.702, 50331.406, 50367.014, 50330.819, 50222.219, 50040.711, 49785.898, 49457.483, 49055.268, 48579.155, 48029.142, 47405.322, 46707.878, 45937.086, 45093.303, 44176.97, 43188.606, 42128.798, 40998.203, 39797.532, 38527.548, 37189.053, 35782.876, 34309.859, 32770.839, 31166.628, 29497.982, 27765.567, 25969.913, 24111.352, 22189.927, 20205.27, 18156.414, 16041.496, 13857.261, 11598.138, 9254.334, 6806.976, 4210.387, 661.357];
+  const CLIML = 180, DY = 500, DT = 1;
+  const X0 = [1000, 1000, 900, 900, 900, 1000];
+  const n6 = X0.length;
+
+  // numpy's round: halves go to the even neighbour
+  const npRound = v => { const f = Math.floor(v), d = v - f; if (Math.abs(d - 0.5) < 1e-9) return f % 2 === 0 ? f : f + 1; return Math.round(v); };
+  function brie(x, shared) {
+    const n = x.length, nx = i => (i + 1) % n, pv = i => (i - 1 + n) % n;
+    const th = x.map((v, i) => 180 * Math.atan2(x[nx(i)] - v, DY) / Math.PI);
+    const D = th.map(t => CD[Math.min(CD.length - 1, Math.max(1, Math.min(CLIML, npRound(90 - t))))]);
+    const r = D.map(d => Math.max(0, d * DT / 2 / DY ** 2));
+    const north = x.map((v, i) => r[i] * (x[nx(i)] - v));
+    const south = x.map((v, i) => r[i] * (x[pv(i)] - v));
+    const left = x.map((v, i) => shared ? 0 : north[i] + south[nx(i)]);   // boundary i | i+1
+    const southBook = north, northBook = x.map((v, i) => shared ? -north[i] : south[nx(i)]);
+    return { th, D, r, north, south, left, southBook, northBook, total: left.reduce((a, b) => a + b, 0) };
+  }
+  const A = brie(X0, false);
+
+  const num = s => { if (s == null) return NaN; const t = String(s).trim().replace(/[−–]/g, "-").replace(/,/g, ""); return t === "" ? NaN : Number(t); };
+  const fmt = (v, d = 2) => { const s = Math.abs(v) < 0.5 * 10 ** -d ? "0" : (v > 0 ? "+" : "") + v.toFixed(d); return s.replace("-", "−"); };
+  const el = id => document.getElementById(id);
+  const inp = (id, w) => `<input type="text" id="${id}" aria-label="${id}"${w ? ` style="width:${w}"` : ""}>`;
+
+  // ---------- coast drawing ----------
+  function coastSVG(x, opts = {}) {
+    const n = x.length, W = 720, H = 230, padL = 10, padR = 10, top = 34, base = 196;
+    const cw = (W - padL - padR) / n, ref = Math.max(...x), span = Math.max(100, Math.max(...x) - Math.min(...x));
+    const sea = x.map(v => (ref - v) / span * 95);          // seaward height in px
+    const y = s => base - 60 - s;
+    let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plan view of the six sections">`;
+    g += `<rect x="0" y="0" width="${W}" height="${H}" fill="var(--sea)"/>`;
+    for (let i = 0; i < n; i++) g += `<rect x="${padL + i * cw}" y="${y(sea[i])}" width="${cw + 0.5}" height="${H - y(sea[i])}" fill="var(--sand)"/>`;
+    let d = `M ${padL} ${y(sea[0])}`;
+    for (let i = 0; i < n; i++) { d += ` H ${padL + (i + 1) * cw}`; if (i < n - 1) d += ` V ${y(sea[i + 1])}`; }
+    g += `<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="2.4"/>`;
+    for (let i = 1; i < n; i++) g += `<line x1="${padL + i * cw}" x2="${padL + i * cw}" y1="${Math.max(y(sea[i - 1]), y(sea[i]))}" y2="${H}" stroke="var(--rate)" stroke-dasharray="3 3" stroke-width="0.8" opacity="0.6"/>`;
+    for (let i = 0; i < n; i++) {
+      const cx = padL + (i + 0.5) * cw;
+      g += `<text x="${cx}" y="${H - 10}" text-anchor="middle" font-family="var(--body)" font-size="13" fill="var(--ink)">section ${i}</text>`;
+      g += `<text x="${cx}" y="${H - 30}" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--pos)">x = ${Math.round(x[i])}</text>`;
+      if (opts.res) {
+        g += `<text x="${cx}" y="18" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--angle)">θ ${fmt(opts.res.th[i], 1)}°</text>`;
+        g += `<text x="${cx}" y="36" text-anchor="middle" font-family="var(--mono)" font-size="12" font-weight="600" fill="var(--rate)">r ${opts.res.r[i].toFixed(3)}</text>`;
+      }
+    }
+    if (opts.res) {
+      const lv = opts.res.left, mx = Math.max(0.5, ...lv.map(Math.abs));
+      for (let i = 0; i < n - 1; i++) {
+        if (Math.abs(lv[i]) < 0.005) continue;
+        const bx = padL + (i + 1) * cw, by = Math.min(y(sea[i]), y(sea[i + 1])) - 18, rad = 5 + 12 * Math.abs(lv[i]) / mx;
+        g += `<circle cx="${bx}" cy="${by}" r="${rad}" fill="var(--bad)" opacity="0.85"/>`;
+        g += `<text x="${bx}" y="${by - rad - 4}" text-anchor="middle" font-family="var(--mono)" font-size="12" font-weight="600" fill="var(--bad)">${fmt(lv[i])}</text>`;
+      }
+      if (Math.abs(lv[n - 1]) >= 0.005) g += `<text x="${W - 12}" y="${y(sea[n - 1]) - 8}" text-anchor="end" font-family="var(--mono)" font-size="12" fill="var(--bad)">${n - 1}|0: ${fmt(lv[n - 1])}</text>`;
+    }
+    g += `<text x="${W - 12}" y="${opts.res ? 58 : 20}" text-anchor="end" font-family="var(--body)" font-size="12" fill="var(--muted)">north →</text>`;
+    return g + "</svg>";
+  }
+  el("fig-start").innerHTML = coastSVG(X0);
+
+  // ---------- tables ----------
+  const nx = i => (i + 1) % n6, pv = i => (i - 1 + n6) % n6;
+  el("t2").innerHTML = X0.map((v, i) => `<tr><td>${i}</td><td class="given">${v}</td><td class="given">${X0[nx(i)]}</td><td>${inp("d" + i)}</td><td>${inp("th" + i)}</td></tr>`).join("");
+  el("t3").innerHTML = X0.map((v, i) => `<tr><td>${i}</td><td class="given angle">${fmt(A.th[i], 1)}°</td><td class="given">${A.D[i].toFixed(1)}</td><td>${inp("r" + i)}</td></tr>`).join("");
+  el("t4").innerHTML = X0.map((v, i) => `<tr><td>${i}</td><td class="given rate">${A.r[i].toFixed(3)}</td><td class="given">${X0[pv(i)]}</td><td class="given">${v}</td><td class="given">${X0[nx(i)]}</td><td>${inp("no" + i)}</td><td>${inp("so" + i)}</td></tr>`).join("");
+  el("t5").innerHTML = X0.map((v, i) => `<tr><td>${i} | ${nx(i)}</td><td>${inp("bs" + i)}</td><td>${inp("bn" + i)}</td><td>${inp("bl" + i)}</td></tr>`).join("");
+
+  // ---------- answers and checking ----------
+  const KEY = {
+    1: [["q1a", "1, 2, 3, 4, 5, 0", v => v.replace(/[\[\]\s]/g, "") === "1,2,3,4,5,0"], ["q1b", "2", v => num(v) === 2]],
+    2: X0.flatMap((v, i) => [["d" + i, String(X0[nx(i)] - v), s => Math.abs(num(s) - (X0[nx(i)] - v)) < 0.5],
+                             ["th" + i, A.th[i].toFixed(1), s => Math.abs(num(s) - A.th[i]) < 0.15]]),
+    3: X0.map((v, i) => ["r" + i, A.r[i].toFixed(3), s => Math.abs(num(s) - A.r[i]) < 0.0011]),
+    4: X0.flatMap((v, i) => [["no" + i, A.north[i].toFixed(2), s => Math.abs(num(s) - A.north[i]) < 0.04],
+                             ["so" + i, A.south[i].toFixed(2), s => Math.abs(num(s) - A.south[i]) < 0.04]]),
+    5: X0.flatMap((v, i) => [["bs" + i, A.southBook[i].toFixed(2), s => Math.abs(num(s) - A.southBook[i]) < 0.04],
+                             ["bn" + i, A.northBook[i].toFixed(2), s => Math.abs(num(s) - A.northBook[i]) < 0.04],
+                             ["bl" + i, A.left[i].toFixed(2), s => Math.abs(num(s) - A.left[i]) < 0.05]])
+       .concat([["q5tot", A.total.toFixed(2), s => Math.abs(num(s) - A.total) < 0.06]]),
+    6: [["q6a", "1.84", s => Math.abs(num(s) - 1.84) < 0.04], ["q6b", "0", s => Math.abs(num(s)) < 0.04]],
+  };
+  const RADIO = { 1: ["q1c", "no"], 3: ["q3b", "b"] };
+  const FEED = {
+    1: "Right: the angle for section i reads only x[i+1] − x[i]. The south neighbour never enters this line.",
+    2: "Right: only sections 1 and 4 have a sloping north side. Section 1 faces the headland's south edge (−11.3°), section 4 sits on its north edge (+11.3°).",
+    3: "Right: two sections out of six have a rate, and both come from their north side. Sections 2 and 3 are on the headland but have rate 0.",
+    4: "Right: only sections 1 and 4 change, and only through their north exchange. Their neighbours across those boundaries, 2 and 5, have rate 0, so they do not change at all.",
+    5: "Right: at 1 | 2 section 1 books −1.84 and section 2 books 0; at 4 | 5 section 4 books +11.39 and section 5 books 0. Nothing cancels, and the island's summed x grows by 9.54 m: sand has been lost.",
+    6: "Right: with one rate for both sides the books are −1.84 and +1.84, and nothing is left over. Do that at every boundary and the island keeps its sand exactly.",
+  };
+  function check(k) {
+    let ok = 0, tot = 0;
+    for (const [id, , test] of KEY[k] || []) {
+      const e = el(id); tot++;
+      const good = e.value.trim() !== "" && test(e.value);
+      e.classList.toggle("ok", good); e.classList.toggle("no", !good); if (good) ok++;
+    }
+    if (RADIO[k]) {
+      tot++; const [name, want] = RADIO[k]; const sel = document.querySelector(`input[name="${name}"]:checked`);
+      if (sel && sel.value === want) ok++;
+    }
+    const st = el("st" + k);
+    st.textContent = ok === tot ? "all right" : `${ok} of ${tot} right`;
+    st.className = "status " + (ok === tot ? "done" : ok ? "part" : "");
+    const f = el("f" + k);
+    if (ok === tot) { f.textContent = FEED[k]; f.className = "feedback good"; }
+    else { f.textContent = "Some entries are off (red). Try the hint, or check signs: north neighbour minus your own section."; f.className = "feedback bad"; }
+  }
+  function answer(k) {
+    for (const [id, ans] of KEY[k] || []) { const e = el(id); e.value = ans.replace("-", "−"); }
+    if (RADIO[k]) { const [name, want] = RADIO[k]; document.querySelector(`input[name="${name}"][value="${want}"]`).checked = true; }
+    check(k);
+  }
+  document.querySelectorAll("[data-check]").forEach(b => b.addEventListener("click", () => check(b.dataset.check)));
+  document.querySelectorAll("[data-answer]").forEach(b => b.addEventListener("click", () => answer(b.dataset.answer)));
+  document.querySelectorAll("[data-hint]").forEach(b => b.addEventListener("click", () => { const h = el("h" + b.dataset.hint); h.hidden = !h.hidden; }));
+
+  // ---------- sandbox ----------
+  const PRESETS = {
+    headland: [1000, 1000, 900, 900, 900, 1000],
+    straight: [1000, 1000, 1000, 1000, 1000, 1000],
+    ramped: [1000, 950, 900, 900, 950, 1000],
+    bay: [900, 900, 1000, 1000, 1000, 900],
+    tilted: [1000, 1000, 1000, 950, 1000, 1000],
+  };
+  let shared = false;
+  el("sbx").innerHTML = X0.map((v, i) => `<label for="sx${i}">x[${i}]<input type="text" id="sx${i}" value="${v}"></label>`).join("");
+  function runSandbox() {
+    const x = X0.map((v, i) => { const t = num(el("sx" + i).value); return Number.isFinite(t) ? t : v; });
+    const R = brie(x, shared);
+    el("fig-sbx").innerHTML = coastSVG(x, { res: R });
+    el("tsb").innerHTML = x.map((v, i) => `<tr><td>${i}</td><td class="angle">${fmt(R.th[i], 1)}°</td><td class="rate">${R.r[i].toFixed(3)}</td><td class="pos">${fmt(R.north[i])}</td><td class="pos">${fmt(R.south[i])}</td><td>${i} | ${(i + 1) % x.length}</td><td class="${Math.abs(R.left[i]) < 0.005 ? "good" : "bad"}">${fmt(R.left[i])}</td></tr>`).join("");
+    const t = el("sbtot"); t.textContent = fmt(R.total) + " m"; t.className = "total " + (Math.abs(R.total) < 0.005 ? "good" : "bad");
+  }
+  el("sbx").addEventListener("input", runSandbox);
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+    PRESETS[b.dataset.preset].forEach((v, i) => { el("sx" + i).value = v; }); runSandbox();
+  }));
+  const setMode = s => { shared = s; el("modeBrie").setAttribute("aria-pressed", String(!s)); el("modeShared").setAttribute("aria-pressed", String(s)); runSandbox(); };
+  el("modeBrie").addEventListener("click", () => setMode(false));
+  el("modeShared").addEventListener("click", () => setMode(true));
+  runSandbox();
+})();
+</script>

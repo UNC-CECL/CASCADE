@@ -32,8 +32,16 @@ One folder per test (since 2026-10-15). Each holds its script(s) and what they w
 2-solve-check/              straight_coast_conservative_solve_check.py: the drift groin under a face-centred
                             (conservative) solve; tables/conservative_solve_check.csv
 3-sand-balance-at-a-step/   brie_sand_balance_figure.py: does BRIE's step conserve sand at a bend?
-4-fixed-shift-vs-wave-driven/                 the side-by-side figure and maps of the fixed-shift and wave-driven groins, and their GIFs
+4-fixed-shift-vs-wave-driven/  the side-by-side figure and maps of the fixed-shift and wave-driven groins, and their
+                            GIFs; each script's --module fixed-shift / wave-driven draws one groin alone into 5 or 6
+                            (map_geometry.py: the maps' cells as rectangles along the coast, moved shore-normal)
+5-fixed-shift/              figures/: the fixed-shift groin alone (the comparison's left column, maps and GIFs)
+6-wave-driven/              figures/: the wave-driven groin alone (the comparison's right column, maps and GIFs)
 ```
+
+`5-fixed-shift/` and `6-wave-driven/` hold no scripts (since 2026-10-16): their figures are made by the four
+scripts in `4-fixed-shift-vs-wave-driven/` with `--module fixed-shift` or `--module wave-driven`, so the
+single-groin and side-by-side versions can never drift apart.
 
 The figures that explain how each version works (once `5-dipole-explained/` and `6-corrected-explained/`
 here) are in `../../2-module-explained/1-fixed-shift/` and `2-wave-driven/` since 2026-10-15. Their scripts import
@@ -49,8 +57,10 @@ Each figure's Tests / How to read / Shows caption is in its `figures/supporting/
 | `3-sand-balance-at-a-step/figures/brie_sand_balance_at_a_step.png` | Does BRIE's alongshore step keep the island's total sand constant when nothing is added or removed? (`brie_sand_balance_figure.py`) |
 | `4-fixed-shift-vs-wave-driven/figures/straight_coast_fixed_shift_vs_wave_driven.png` | How do the two differ? Side by side: the rule, the shoreline at −20° and +10° over 50 years, each side at year 50, and the sand budget, against orientation (`straight_coast_fixed_shift_vs_wave_driven_figure.py`) |
 | `4-fixed-shift-vs-wave-driven/figures/straight_coast_fixed_shift_vs_wave_driven.gif` | The same, year by year, as maps, with each panel's running sand total (`straight_coast_fixed_shift_vs_wave_driven_gif.py`; git-ignored, rerun to make it) |
-| `4-fixed-shift-vs-wave-driven/figures/straight_coast_fixed_shift_vs_wave_driven_map.png` | What do the two do to the coast's shape? The −20° and +10° runs as true-scale, north-up maps: the coast at its own angle, the shoreline at years 10 and 50, the sand built out and cut back, the groin and the drift (`straight_coast_fixed_shift_vs_wave_driven_map_figure.py`; reads the tables, reruns nothing) |
-| `4-fixed-shift-vs-wave-driven/figures/straight_coast_fixed_shift_vs_wave_driven_map.gif` | The same maps year by year over 50 years, on seven coasts from −30° to +30°, dipole above and corrected below, with each map's running sand total and a drift arrow sized to that coast's drift (`straight_coast_fixed_shift_vs_wave_driven_map_gif.py`, about a minute; the GIF and its year-50 preview PNG are git-ignored, rerun to make them) |
+| `4-fixed-shift-vs-wave-driven/figures/straight_coast_fixed_shift_vs_wave_driven_map.png` | What do the two do to the coast's shape? The −20° and +10° runs as true-scale, north-up maps: the coast at its own angle, the shoreline at years 10 and 50, the sand built out and cut back, the groin and the drift, with the wave climate under the key (`straight_coast_fixed_shift_vs_wave_driven_map_figure.py`; reads the tables, reruns nothing) |
+| `4-fixed-shift-vs-wave-driven/figures/straight_coast_fixed_shift_vs_wave_driven_map.gif` | The same maps year by year over 50 years, on seven coasts from −30° to +30°, the fixed-shift groin above and the wave-driven groin below, a drift arrow sized to that coast's drift, and the shared wave climate in the header (`straight_coast_fixed_shift_vs_wave_driven_map_gif.py`, about a minute; the GIF and its year-50 preview PNG are git-ignored, rerun to make them) |
+| `5-fixed-shift/figures/straight_coast_fixed_shift{,_map}.{png,gif}` | The four figures above for the fixed-shift groin alone, on its own axes (each script with `--module fixed-shift`; GIFs git-ignored) |
+| `6-wave-driven/figures/straight_coast_wave_driven{,_map}.{png,gif}` | The same for the wave-driven groin alone (`--module wave-driven`) |
 
 ## Findings
 

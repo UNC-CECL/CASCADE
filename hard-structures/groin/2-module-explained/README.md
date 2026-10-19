@@ -14,6 +14,8 @@ briefly here and is now with the fixed-shift groin's Buxton fit in `../4-hindcas
 2-wave-driven/      the wave-driven groin: a share of the drift the waves bring held back, sand balanced (once
                     'the corrected groin', straight-coast version 6; CorrectedGroinCallback, the runner's
                     groin since 2026-10-13)
+3-brie-sand-balance/ why BRIE's alongshore step makes or loses sand at a sharp bend, from unmodified
+                    BRIE on several coastline shapes: the reason the wave-driven groin needs its leak correction
 ```
 
 ## Figures
