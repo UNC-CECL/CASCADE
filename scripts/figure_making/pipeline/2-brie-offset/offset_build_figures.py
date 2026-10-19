@@ -1,5 +1,5 @@
 """
-How the BRIE shoreline offset is built from a digitised dune line, step by step, for the 1996 and 2010 starts.
+How the BRIE shoreline offset is built from a digitised dune line, step by step, for the 1996 and 2009 starts.
 
     python scripts/figure_making/pipeline/2-brie-offset/offset_build_figures.py
 
@@ -39,7 +39,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 from cascade_pipeline.hindcast import pad_offset_ring  # noqa: E402
 OUT = figure_dir("inputs", "2-brie-offset")
-YEARS = (1996, 2010)
+YEARS = (1996, 2009)
 ZOOM_GIS = (44, 47)
 BUFFERS = 15
 DATUM_X = 460198.45        # the offshore datum line the transects start on (EPSG:3725)
@@ -181,7 +181,7 @@ def fig_offset_build(year, transects, boxes):
         f"is panel b. (b) GIS {ZOOM_GIS[0]}-{ZOOM_GIS[1]}: each transect's crossing with the dune line (points, "
         "alternating colour by domain; shaded bands are the 500 m domain boxes). The station of a crossing is "
         "its distance along the transect from the datum, measured exactly in shapely "
-        "(duneline_to_raw_offsets.py; the landward-most crossing where a transect meets the line twice); the "
+        "(step1_line_to_raw_offsets.py; the landward-most crossing where a transect meets the line twice); the "
         "arrow gives one transect's station, the datum lying off the panel to the right. "
         "(c) Every transect's station (grey) and the mean of the ~5 transects in each domain (black), drawn "
         "with the datum at the top so landward is down. The smallest domain mean (dashed, "

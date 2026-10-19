@@ -1,17 +1,18 @@
 """
-Dune line -> raw per-transect offsets: the ArcGIS step, redone in shapely.
+A line (dune line or mean shoreline) -> raw per-transect offsets: the ArcGIS step, redone in shapely.
 
-    python scripts/input_prep/2-brie-offset/1-produce/duneline_to_raw_offsets.py --duneline duneline_1997.geojson --out 1997_v2_duneline_offset_raw.csv
-    python scripts/input_prep/2-brie-offset/1-produce/duneline_to_raw_offsets.py --duneline duneline_1997.geojson --extension
+    python scripts/input_prep/2-brie-offset/1-produce/step1_line_to_raw_offsets.py --line duneline_1997.geojson --out 1997_duneline_offset_raw.csv
+    python scripts/input_prep/2-brie-offset/1-produce/step1_line_to_raw_offsets.py --line <mean_shoreline>.geojson --out 1995-10-12_1997-10-12_shoreline_offset_raw.csv
+    python scripts/input_prep/2-brie-offset/1-produce/step1_line_to_raw_offsets.py --line duneline_1997.geojson --extension
 
-Intersects the line with the 100 m transects and writes the raw offset CSV
-island_offset_hybrid.py reads; --validate-against checks it against an
+Intersects any one-feature line with the 100 m transects and writes the raw offset CSV
+step2_raw_offsets_to_island_offset.py reads; --validate-against checks it against an
 ArcGIS export. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-18
+Version: 2026-10-08
 """
 
 from __future__ import annotations
@@ -44,7 +45,7 @@ TRANSECT_FILE = TRANSECT_FILE_100M
 
 FIRST_DOMAIN, LAST_DOMAIN = 1, 90
 
-# Metadata columns copied from the dune-line feature when it carries them (the 1997 lines do
+# Metadata columns copied from the line's feature when it carries them (the 1997 lines do
 LINE_META = ("feature_type", "year", "source_type", "method", "editor",
              "edit_date", "notes")
 # -----------------------------------------------------------------------------
@@ -138,7 +139,8 @@ def validate(out_df, gis_path):
 # Run: intersect, write the raw CSV, validate if asked
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--duneline", required=True)
+    ap.add_argument("--line", required=True,
+                    help="a one-feature line geojson: a path, or a name under dunelines/")
     ap.add_argument("--out", default=None,
                     help="required unless --extension, which has its own home")
     ap.add_argument("--validate-against", default=None,
@@ -147,7 +149,7 @@ def main(argv=None):
                     help="the transects beyond GIS 1-90, to raw_offsets/ext/")
     a = ap.parse_args(argv)
 
-    line_path = _resolve(a.duneline, DUNELINE_DIR)
+    line_path = _resolve(a.line, DUNELINE_DIR)
     if a.extension:
         if a.validate_against:
             ap.error("--validate-against has no GIS export to check in extension mode")
@@ -172,7 +174,7 @@ def main(argv=None):
         lines = lines.to_crs(transects.crs)
     feat = lines.iloc[0]
 
-    print(f"Dune line : {line_path}")
+    print(f"Line      : {line_path}")
     print(f"Transects : {TRANSECT_FILE}  ({len(transects)} "
           + (f"beyond GIS {FIRST_DOMAIN}-{LAST_DOMAIN}, numbered "
              f"{transects.domain_id.min()}..{transects.domain_id.max()} by northing"
@@ -181,6 +183,7 @@ def main(argv=None):
     df = intersect(transects, feat.geometry)
     for col in LINE_META:
         df[col] = feat[col] if col in lines.columns else ""
+    # Column name kept from the dune-only days; the raw files and the version comparison read it
     df["duneline_file"] = line_path.name
     df["transect_file"] = TRANSECT_FILE.name
     df["built"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")

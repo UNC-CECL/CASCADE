@@ -9,8 +9,8 @@ runner reads the one named by `CURRENT`.
 ```
 1-produce/
     build_island_offset.py        the driver: a dune line in, a padded model input out
-    duneline_to_raw_offsets.py    dune line -> raw per-transect offsets (the ArcGIS step, in shapely)
-    island_offset_hybrid.py       raw offsets -> relative offset per domain, padded to 120
+    step1_line_to_raw_offsets.py    dune line -> raw per-transect offsets (the ArcGIS step, in shapely)
+    step2_raw_offsets_to_island_offset.py       raw offsets -> relative offset per domain, padded to 120
     colleague_old_version/        a colleague's original scripts, kept as they were (not restyled)
 2-figures/
     compare_offset_sources.py     dune line against shoreline for one start year
@@ -28,7 +28,7 @@ word when the scripts were brought in line with `scripts/STYLE.md`
 
 ### 1-produce/build_island_offset.py
 
-A digitised dune line in, a model input out: the padded 120-domain island offset for one start year.
+A line in, a model input out: the padded 120-domain island offset for one start year, from a dune line or a mean shoreline.
 
 From the script's original header:
 
@@ -39,10 +39,10 @@ the padded 120-domain file a hindcast start reads, following the same steps
 that were run by hand until 2026-09-15 (Hannah: "one driver that chains the
 two steps"):
 
-    1. duneline_to_raw_offsets.py   line x 100 m transects -> per-transect
+    1. step1_line_to_raw_offsets.py   line x 100 m transects -> per-transect
                                     stations from the offshore datum, written
                                     to raw_offsets/<vintage>_duneline_offset_raw.csv
-    2. island_offset_hybrid.py      first row per transect, domain mean, zeroed
+    2. step2_raw_offsets_to_island_offset.py      first row per transect, domain mean, zeroed
                                     on the minimum, padded to 120 with the
                                     model's smooth wrap-around -> <year>/v<n>/
     3. HAT_compare_offset_versions  the new build against the previous one,
@@ -63,24 +63,29 @@ VERSIONS
     the one the runner reads (hatteras_site_config._island_offset_file).
     A version is never overwritten; ask for the next one. Each version folder
     keeps a copy of the raw file it was built from, so it can be rebuilt with
-    island_offset_hybrid.py --raw-file after the vintage's raw has moved on.
+    step2_raw_offsets_to_island_offset.py --raw-file after the vintage's raw has moved on.
 
 USAGE
-    python build_island_offset.py --duneline duneline_1984.geojson --year 1984
-    python build_island_offset.py --duneline duneline_1997.geojson --year 1996 \
-        --compare-with v1
-    python build_island_offset.py --duneline duneline_2009.geojson --year 2010   # once in the table
+    python build_island_offset.py --year 1996                      # the start's dune line
+    python build_island_offset.py --year 1996 --source shoreline   # the start's mean shoreline
+    python build_island_offset.py --year 1996 --line duneline_1997.geojson --compare-with v1
 
+    --source S         duneline (default) or shoreline: the feature the line is,
+                       which picks <year>/<source>/, the raw file name and the
+                       stem of the outputs
+    --line L           the line geojson, a path or a file name under dunelines/
+                       or mean_shoreline/<window>/ (default: the start's own,
+                       through DUNE_LINE_FOR_YEAR or SHORELINE_WINDOW_FOR_YEAR;
+                       a line that does not match the table is refused)
     --version vN       name the version (default: the next free one)
-    --compare-with X   a version folder under <year>/ to compare against
+    --compare-with X   a version folder under <year>/<source>/ to compare against
                        (default: the previous version, else a superseded_*
                        folder if one exists, else no comparison)
     --validate-against a GIS export of the same line, passed to step 1
     --no-current       build but leave CURRENT as it is
 
 EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
-    python build_island_offset.py --duneline duneline_1997.geojson --year 1996 \
-        --geometry n115
+    python build_island_offset.py --year 1996 --geometry n115   # dune line only
 
     Runs step 1 with --extension (the transects beyond GIS 1-90, numbered on
     the continued grid, to raw_offsets/ext/) and step 2 with --geometry (the
@@ -98,8 +103,9 @@ recovered from a metadata file and from memory).
 ```
 
 ```text
-<year>/duneline/ since 2026-09-22: this driver only ever builds from a
-dune line, so it writes into that source's folder, not the start's.
+<year>/<source>/ since 2026-09-22: a build writes into its source's folder,
+not the start's. The driver took --source on 2026-10-08; until then it built
+only from a dune line and the shoreline steps were run by hand.
 ```
 
 <details><summary>Function notes (the original docstrings)</summary>
@@ -120,9 +126,9 @@ then a provenance file in <year>/ext/<geometry>/.
 
 </details>
 
-### 1-produce/duneline_to_raw_offsets.py
+### 1-produce/step1_line_to_raw_offsets.py
 
-Dune line -> raw per-transect offsets: the ArcGIS step, redone in shapely.
+A line (dune line or mean shoreline) -> raw per-transect offsets: the ArcGIS step, redone in shapely.
 
 From the script's original header:
 
@@ -134,7 +140,7 @@ Every file in data/hatteras_init/2-brie-offset/raw_offsets/ was, until
 the buffer with 1 m points generated along the 100 m transects, and export the
 attribute table. The distance that matters is ORIG_LEN, the station of the
 point along its transect measured from the transect's start on the offshore
-datum line. island_offset_hybrid.py then keeps one point per transect, averages
+datum line. step2_raw_offsets_to_island_offset.py then keeps one point per transect, averages
 the ~5 transects in each 500 m domain, and pads for CASCADE.
 
 This script does the same intersection in shapely, so a re-digitised line can
@@ -147,7 +153,7 @@ match, mean difference -1.01 m, sd 0.32 m, worst 1.9 m. The constant metre is
 the GIS convention, not geometry: of the ~3 one-metre stations inside the
 1.5 m buffer the export lists the LANDWARD-most first, and the downstream
 scripts take the first row per transect. The exact intersection sits ~1 m
-seaward of it. This cancels in island_offset_hybrid.py (each year is zeroed
+seaward of it. This cancels in step2_raw_offsets_to_island_offset.py (each year is zeroed
 on its own minimum) and cancels in an end-year difference of two files built
 by THIS script; a difference between a GIS-built and a shapely-built file
 carries the metre. Pass --validate-against to reproduce those numbers.
@@ -157,13 +163,14 @@ WHICH CROSSING when a transect meets the line more than once: the landward-most
 count is written to n_crossings so those transects can be found.
 
 USAGE
-    python duneline_to_raw_offsets.py --duneline duneline_1997.geojson         --out 1997_v2_duneline_offset_raw.csv         --validate-against 1997_duneline_offset_raw.csv
+    python step1_line_to_raw_offsets.py --line duneline_1997.geojson         --out 1997_v2_duneline_offset_raw.csv         --validate-against 1997_duneline_offset_raw.csv
 
-    --duneline   a file under 2-brie-offset/dunelines/, or a path
+    --line       any one-feature line (a dune line or a mean shoreline): a
+                 file under 2-brie-offset/dunelines/, or a path
     --out        a file name under 2-brie-offset/raw_offsets/, or a path
 
 EXTENSION MODE (2026-09-16, the Pea Island extension experiment)
-    python duneline_to_raw_offsets.py --duneline duneline_1997.geojson --extension
+    python step1_line_to_raw_offsets.py --line duneline_1997.geojson --extension
 
     The 172 transects the surveyed polygon join left without a domain -- Pea
     Island north of GIS 90, and the last kilometre south of GIS 1 -- are given
@@ -225,7 +232,7 @@ disk beside the layer it extends.
 
 </details>
 
-### 1-produce/island_offset_hybrid.py
+### 1-produce/step2_raw_offsets_to_island_offset.py
 
 Raw per-transect offsets -> the relative island offset per domain, padded to 120 domains for the model.
 
@@ -275,7 +282,7 @@ name, which for 1996 meant a copy of the 1997 file.
 VERSIONED OUTPUT (2026-09-15). A start year can hold more than one build
 when its dune line is re-digitised: 1996/v1/ is the build from the v1 1997
 line (ArcGIS intersection), 1996/v2/ from duneline_1997_v2 (shapely
-intersection, duneline_to_raw_offsets.py). Which one the runner reads is the
+intersection, step1_line_to_raw_offsets.py). Which one the runner reads is the
 CURRENT file in <year>/, resolved by hatteras_site_config.island_offset_file.
 Without --version the files land flat in <year>/, as 1984 and 2004 still are.
 ```
@@ -651,7 +658,7 @@ From the script's original header:
 Two builds of one start year: where did the island offset move?
 
 Compares two versions under data/hatteras_init/2-brie-offset/<year>/ (the
-unpadded 90-domain files each version's island_offset_hybrid.py run wrote) and,
+unpadded 90-domain files each version's step2_raw_offsets_to_island_offset.py run wrote) and,
 when both versions have a raw per-transect file, the ABSOLUTE distances behind
 them. The unpadded files are each zeroed on their own minimum, so their
 difference is the change the MODEL sees; the raw files share the offshore
@@ -661,7 +668,7 @@ Written 2026-09-15 for 1996 v1 (the ArcGIS intersection of duneline_1997) vs
 v2 (the shapely intersection of duneline_1997_v2, local corrections only).
 The raw comparison uses the v1 line re-intersected by the SAME shapely script,
 so the 1 m station convention of the GIS export (see
-duneline_to_raw_offsets.py) does not appear as a change.
+step1_line_to_raw_offsets.py) does not appear as a change.
 
 Outputs, in <year>/<b>/:
     offset_<year>_<a>_vs_<b>.csv    per domain: both versions, both frames
@@ -706,7 +713,7 @@ window changed (2026-09-29, the DEM-centred shoreline v2).
 ```text
 (method, line file, built date) behind one raw file, read from the file.
 
-duneline_to_raw_offsets.py stamps `built_by`, `built` and `duneline_file`
+step1_line_to_raw_offsets.py stamps `built_by`, `built` and `duneline_file`
 on every row; the ArcGIS exports it replaced (raw_offsets/superseded_
 20260915_gis_exports/) carry none, so an export's line is unknown unless
 the caller names it (--line-a/--line-b). Until 2026-09-23 panel (b) was
@@ -730,7 +737,7 @@ From the script's original header:
 
 ```text
 The padded offset profile at true 1:1 scale
-The buffer diagnostic that island_offset_hybrid.py draws stretches 7.5 km of
+The buffer diagnostic that step2_raw_offsets_to_island_offset.py draws stretches 7.5 km of
 cross-shore offset across a panel that spans 72 km alongshore, so the island
 reads as a deep V. This draws the same padded profile with equal axes: 1 m
 alongshore is 1 m cross-shore, the way a map draws it (Hannah, 2026-09-16).

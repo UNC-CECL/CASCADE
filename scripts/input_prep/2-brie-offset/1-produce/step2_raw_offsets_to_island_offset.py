@@ -1,7 +1,7 @@
 """
 Raw per-transect offsets -> the relative island offset per domain, padded to 120 domains for the model.
 
-    python scripts/input_prep/2-brie-offset/1-produce/island_offset_hybrid.py --year 1996 --version v1
+    python scripts/input_prep/2-brie-offset/1-produce/step2_raw_offsets_to_island_offset.py --year 1996 --version v1
 
 Relative offset per domain (metres, baseline = minimum), buffer domains
 closed with a Hermite curve, written unpadded and padded with a diagnostic

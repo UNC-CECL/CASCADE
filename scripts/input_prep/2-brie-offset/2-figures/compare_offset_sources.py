@@ -10,7 +10,7 @@ in the start year's comparison folder. Details: scripts/input_prep/2-brie-offset
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-06
+Version: 2026-10-07
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from site_layer import hat_topo_version as _tv  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
-    C, FIG_W_DOUBLE, INK_MUTED, _title, apply_style, caption, save)
+    C, FIG_W_DOUBLE, INK_MUTED, _title, apply_style, caption, save, town_bands)
 
 # --- CONFIG ------------------------------------------------------------------
 # HOW EACH SOURCE IS NAMED AND DRAWN
@@ -288,8 +288,39 @@ def main(argv=None):
     for p in paths:
         print("  wrote {0}".format(p))
 
+    for p in _one_panel(out, ya, yb, a, b, lab_a, lab_b, year, out_dir / (stem + "_one_panel")):
+        print("  wrote {0}".format(p))
+
     _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, baseline_shift, stem, ver)
     print("  wrote {0}".format(out_dir / "README.md"))
+
+
+# The whole island in one horizontal panel: alongshore across the page, ocean at the top
+def _one_panel(out, ya, yb, a, b, lab_a, lab_b, year, path):
+    dom = out.index.to_numpy()
+    va, vb = ya.to_numpy(), yb.to_numpy()
+    fig, ax = plt.subplots(figsize=(FIG_W_DOUBLE, 3.4), constrained_layout=True)
+    ax.fill_between(dom, va, vb, color=SOURCE_STYLE[b]["fill"], lw=0, zorder=2,
+                    label="beach (shoreline to dune line)")
+    ax.plot(dom, va, color=SOURCE_STYLE[a]["colour"], lw=1.3, zorder=4, label=lab_a)
+    ax.plot(dom, vb, color=SOURCE_STYLE[b]["colour"], lw=1.3, ls=(0, (4, 2)), zorder=5,
+            label=lab_b)
+    ax.set_xlim(dom.min() - 0.5, dom.max() + 0.5)
+    ax.invert_yaxis()          # stations grow landward, so the ocean is up
+    ax.xaxis.set_major_locator(mticker.MultipleLocator(10))
+    town_bands(ax, where="bottom")
+    ax.set_xlabel("GIS domain (south → north)")
+    ax.set_ylabel("Distance from the offshore datum (m)\nlandward ↓   ↑ ocean")
+    ax.legend(loc="upper left", fontsize=7, frameon=False)
+    beach = va - vb
+    caption(fig, (
+        "The {year} dune line and CoastSat shoreline along the whole of Hatteras, "
+        "as distance from the shared offshore datum averaged per 500 m domain; "
+        "south at the left, ocean at the top. The band between them is the beach, "
+        "{lo:.0f}–{hi:.0f} m wide, which at this scale is a sliver against the "
+        "~6 km of cape curvature; the six-panel version zooms in on it.").format(
+            year=year, lo=beach.min(), hi=beach.max()))
+    return save(fig, path, close=True)
 
 
 # The README beside the comparison
