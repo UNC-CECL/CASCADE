@@ -32,7 +32,7 @@ from site_layer import hat_topo_version as htv  # noqa: E402
 # Config - mirrors HAT_dune_topo_extractor.py
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 VERSION_OVERRIDE = None
 OFFSET_YEAR = 1984
 

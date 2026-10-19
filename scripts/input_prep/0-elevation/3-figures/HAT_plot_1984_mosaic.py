@@ -1,5 +1,5 @@
 """
-Review figures for the 1984-start DEM: what each of the three surveys contributed, and how far beach start moved.
+Review figures for the 1996-start DEM: what each of the three surveys contributed, and how far beach start moved.
 
     python scripts/input_prep/0-elevation/3-figures/HAT_plot_1984_mosaic.py
 
@@ -319,7 +319,7 @@ def fig_island(elev, surv, extent, gdf, roads):
                              sharex=True, sharey=True, constrained_layout=True)
     # Wording parallels the gapfill figure's panel titles
     im = panel_elev(axes[0], 0, only09, extent, vmin, vmax, "2009 survey")
-    panel_elev(axes[1], 1, elev, extent, vmin, vmax, "1984-start surface")
+    panel_elev(axes[1], 1, elev, extent, vmin, vmax, "1996-start surface")
     panel_survey(axes[2], 2, surv, extent, "survey source")
 
     for ax in axes:
@@ -341,7 +341,7 @@ def fig_island(elev, surv, extent, gdf, roads):
     # Concise survey labels: the panels are ~40 mm wide
     fig.legend(handles=survey_legend(concise=True) + rh,
                loc="outside lower center", ncol=6, frameon=False)
-    caption(fig, "The 1984-start topography, every domain on one 10 m grid. "
+    caption(fig, "The 1996-start topography, every domain on one 10 m grid. "
                  f"(a) the 2009 survey alone, {n09:,} cells; (b) the surface "
                  f"the extractor reads, {n09 + n96 + n14:,} cells "
                  f"(+{n96 + n14:,}); (c) the survey each cell came from. "
@@ -372,7 +372,7 @@ def fig_zoom(elev, surv, extent, gdf, roads, dom_ids, slug, cap):
     fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=fh),
                              sharex=True, sharey=True, constrained_layout=True)
     im = panel_elev(axes[0], 0, only09, extent, vmin, vmax, "2009 survey")
-    panel_elev(axes[1], 1, elev, extent, vmin, vmax, "1984-start surface")
+    panel_elev(axes[1], 1, elev, extent, vmin, vmax, "1996-start surface")
     panel_survey(axes[2], 2, surv, extent, "survey source")
 
     for ax in axes:
@@ -454,7 +454,7 @@ def fig_shift():
         Patch(facecolor=C["REF"], alpha=0.25,
               label="within one 10 m cell")],
         loc="outside lower center", ncol=3, frameon=False)
-    caption(fig, "Where the 1984-start surface moves each domain's cross-shore "
+    caption(fig, "Where the 1996-start surface moves each domain's cross-shore "
                  f"window origin. {n_sea} domains move at least one 10 m "
                  f"Barrier3D cell seaward and {n_land} move one landward; "
                  "shifts inside the band are below the model's resolution. "
@@ -465,7 +465,7 @@ def fig_shift():
                  "Domain 1 is at Cape Point in the south, domain 90 at Pea "
                  "Island in the north; village spans are shaded along the top."
             if no_road else
-            "Where the 1984-start surface moves each domain's cross-shore "
+            "Where the 1996-start surface moves each domain's cross-shore "
             f"window origin. {n_sea} domains move at least one 10 m Barrier3D "
             f"cell seaward and {n_land} move one landward. Domain 1 is at Cape "
             "Point in the south, domain 90 at Pea Island in the north.")

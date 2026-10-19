@@ -31,7 +31,7 @@ from site_layer import hat_topo_version as htv  # noqa: E402
 from cascade_pipeline import roadway  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 SRC_VERSION = "v1"
 DST_VERSION = "v2"
 DAM_TO_M = 10.0

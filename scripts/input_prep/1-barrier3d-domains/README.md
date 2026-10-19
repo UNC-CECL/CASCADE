@@ -1,5 +1,12 @@
 # 1-barrier3d-domains - dune heights and interior topography
 
+> **2026-10-19:** the data products were renamed for the runs that read them,
+> `1984-start/` -> `1996-start/` and `2004-start/` -> `2009-start/`, and the shared
+> inputs moved into `shared/`. The 1984 reconstruction data under
+> `2-domain-reconstruction-1984/` was offloaded to D:, so its scripts here do not
+> run until it is copied back. Older notes below keep the old names;
+> `data/hatteras_init/1-barrier3d-domains/LINEAGE.md` has the mapping.
+
 Takes the `domain_<N>.npy` elevation arrays that `0-elevation` produces and
 turns them into the two things Barrier3D initialises from:
 
@@ -53,8 +60,8 @@ it:
 
     from site_layer.hat_topo_version import topo_dirs, array_path, array_name
 
-Version numbers restart at `v1` **per product**: `1984-start/v1` and
-`2004-start/v1` are different surfaces from different DEMs. See
+Version numbers restart at `v1` **per product**: `1996-start/v1` (offloaded) and
+`2009-start/v1` are different surfaces from different DEMs. See
 `data/hatteras_init/1-barrier3d-domains/LINEAGE.md`.
 
 Because the resolver locates this file **by path**, moving or renaming it
@@ -75,7 +82,7 @@ file name has to be set by hand to match. `STRAIGHTEN = True` writes
 
 `STRAIGHTEN = False` is also **how you get an oblique-uncorrected control** -
 there is no separate script for it, and the unstraightened control windows
-live in `data/.../1-barrier3d-domains/control-picks/`.
+live in `data/.../1-barrier3d-domains/shared/control-picks/`.
 
 ## The road overlay is display only
 
@@ -253,8 +260,8 @@ data/hatteras_init/1-barrier3d-domains/ - see scripts/site_layer/hat_topo_versio
 Added 2026-08-25 when the tree went period-first; before that there was only
 one topography and both hindcast periods read it.
 
-"1984-start"   from DEM 2009-2014-1996  (1996 ALACE, no road boundary)
-"2004-start"   from DEM 2009-2014       (the baseline gap fill)
+"1996-start"   from DEM 2009-2014-1996  (1996 ALACE, no road boundary)   was "1984-start"
+"2009-start"   from DEM 2009-2014       (the baseline gap fill)        was "2004-start"
 "forecast"     from a 2025 DEM, later
 ```
 

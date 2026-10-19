@@ -91,7 +91,7 @@ PRODUCTS: dict[str, Product] = {
                  "1996 NOAA/NASA ALACE (override, no road boundary)"),
         audit_name="mosaic_1984_audit.csv",
         built_by="scripts/input_prep/0-elevation/2-produce/HAT_dem_1984_mosaic.py",
-        summary="The 1984-start DEM. As 2009-2014, plus the 1996 ALACE survey "
+        summary="The 1996-start DEM. As 2009-2014, plus the 1996 ALACE survey "
                 "OVERWRITING measured ground wherever ALACE has data. No road "
                 "boundary since 2026-08-26 - the landward limit is the ALACE "
                 "swath edge, so the graft seam lands at the dune toe.",

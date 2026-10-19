@@ -74,7 +74,7 @@ SAVE_SETTINGS_SHEET = True   # per-domain settings/results sheet (csv + xlsx)
 # Paths
 
 # Run layout: one folder per settings version (tree in README); which product this run builds
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 
 # scripts/ on the path, so array names come from the one resolver
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))   # scripts/ (1-extraction/ since 2026-09-09)

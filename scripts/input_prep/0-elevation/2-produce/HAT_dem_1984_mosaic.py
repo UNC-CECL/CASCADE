@@ -1,5 +1,5 @@
 """
-Build the 1984-start DEM: 2009 + 2014, with the 1996 ALACE beach and foredune laid over them.
+Build the 1996-start DEM: 2009 + 2014, with the 1996 ALACE beach and foredune laid over them.
 
     python scripts/input_prep/0-elevation/2-produce/HAT_dem_1984_mosaic.py
 

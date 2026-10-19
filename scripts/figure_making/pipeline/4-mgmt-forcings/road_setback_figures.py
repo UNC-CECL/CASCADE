@@ -37,7 +37,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 OUT = figure_dir("inputs", "4-management")
 EXAMPLE_GIS = 31
 EXAMPLE_YEAR = 2004          # the measurement the 2009 run reads unchanged
-PRODUCT = {1984: "1984-start", 2004: "2004-start"}
+PRODUCT = {1984: "1996-start", 2004: "2009-start"}
 # -----------------------------------------------------------------------------
 
 
@@ -200,10 +200,10 @@ def fig_inputs():
     record_caption(out[0],
         "The NC-12 setbacks the two runs read, metres landward of interior row 0, and where they come from. "
         "(a) The 1996 run: no NC-12 line of 1996 vintage exists, so its file is the 1984 measurement (the "
-        "1978-digitised line on the 1984-start extraction) with the one relocation between the two dates "
+        "1978-digitised line on the 1996-start extraction) with the one relocation between the two dates "
         f"applied, the 1989 Pea Island move (arrows, GIS {moved_1996[0]}-{moved_1996[-1]}; displacements read "
         "from HATTERAS_ROAD_EVENTS, the same values the model fires). (b) The 2009 run: the 2004 measurement "
-        "(the 2008-digitised line on the 2004-start extraction), copied unchanged because no relocation falls "
+        "(the 2008-digitised line on the 2009-start extraction), copied unchanged because no relocation falls "
         "between 2004 and 2009. Open circles are each domain's measured median over its alongshore profiles "
         "and the band their 10th-90th percentile; the line is the model-facing value after the producer's two "
         "flagged corrections, negative setbacks floored to 0 (down triangles) and roads drowning at start moved "

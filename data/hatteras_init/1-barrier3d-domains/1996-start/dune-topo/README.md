@@ -1,4 +1,10 @@
-# 1984-start `dune-topo` — version index
+# 1996-start `dune-topo` — version index (was 1984-start)
+
+> **2026-10-19: only `v2` is here.** The folder was renamed from `1984-start/` when the 1984
+> start was retired, and `v1` and `v3` were offloaded (SHA-256 verified) to
+> `D:\archive\CASCADE_offload\data\hatteras_init\1-barrier3d-domains\1984-start\dune-topo\`.
+> The text below describes all three as they stood before; paths in it use the old name.
+> To run on an offloaded version, copy it back and set `HAT_TOPO_VERSION_1996_START`.
 
 Two versions, both **extractions** (all 90 domains cut from the DEM by
 `HAT_dune_topo_extractor.py`), no rows added, no cell modified:

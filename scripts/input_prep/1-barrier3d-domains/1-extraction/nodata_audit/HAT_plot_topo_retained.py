@@ -34,7 +34,7 @@ from site_layer.hat_elevation_products import product as elevation_product  # no
 
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 DEM_PRODUCT = "2009-2014-1996"     # alongshore georeferencing only
 VERSION_OVERRIDE = None            # None -> hat_topo_version resolves it
 

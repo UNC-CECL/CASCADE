@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 NCFMP_DIR = Path(r"D:\Hatteras_GIS\Elevation\Polygons\2014"
                  r"\2014_NCFMP_NC_DEM_P1_J1437737")
 DOMAIN_EPSG = 3725                 # the resampled 10 m rasters

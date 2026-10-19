@@ -368,3 +368,42 @@ untouched: a layer can be rebuilt from `v2` and
 recipe in the guide.
 
 Sizes and reasons: `archive_purge_20260907.csv`.
+
+## 2026-10-19 — renamed for the runs that read them; retired starts offloaded
+
+Hannah: only the 1996 and 2009 starts go forward. The products are renamed for
+the run that reads them; the DEMs, arrays and versions are unchanged.
+
+| before | after | DEM | CURRENT |
+|---|---|---|---|
+| `1984-start/` | `1996-start/` | 2009-2014-1996 | `v2` |
+| `2004-start/` | `2009-start/` | 2009-2014 | `v1` |
+
+The shared inputs (`buffer/`, `domain-clips-1m/`, `control-picks/`,
+`npy-arrays_2009_unfilled/`, `domain-geojson/`) moved into `shared/`, and
+`figures/` was added for figures comparing the two starts.
+
+`hat_topo_version.py` carries the rename: `PRODUCTS`, `YEAR_PRODUCT` (1996 and
+2009 listed first so `year_for_product()` answers them; the retired 1984 and
+2004 keys map to the same folders until their `HATTERAS_PERIODS` entries go),
+`LEGACY_PRODUCTS` + `canonical_product()` so an old name in run metadata or a
+script still resolves, and the old `HAT_TOPO_VERSION_1984_START` /
+`_2004_START` variables are still read. Run metadata and RUN_MANIFESTs keep the
+old names; they record what happened.
+
+Offloaded to `D:\archive\CASCADE_offload\data\hatteras_init\1-barrier3d-domains\`
+under the OLD paths, every file SHA-256 verified before the originals were removed:
+
+| path | files | MB | why |
+|---|---|---|---|
+| `1984-start/2-domain-reconstruction-1984/` | 177 | 508.5 | the 1984 footprint work; the 1984 start is retired |
+| `1984-start/dune-topo/v1/` | 459 | 68.6 | original pick set; only the 09-01 tree and pea1989base ran on it |
+| `1984-start/dune-topo/v3/` | 370 | 16.4 | v2 + the 1984 footprint behind the road |
+| `2004-start/duneline-shift/` | 3 | 0.1 | 2004-start measurement |
+| `archive_purge_20260826/0903/0907.csv` | 3 | <0.1 | the earlier purge logs |
+
+Kept on C: although its name says 1996: `1996-start/1-extraction/aerial-review/`
+(live for the 1996 run) and `1996-start/1-extraction/picks/HAT_dune_search_windows_v1.json`
+(the only copy of v1's windows, 64 KB). Scripts that read the offloaded folders
+fail on the missing paths until they are copied back; retiring that code is a
+separate step.

@@ -75,7 +75,7 @@ def topo_for(product: str):
     return topo, ver
 
 
-PRODUCT_DEFAULT = "2004-start"
+PRODUCT_DEFAULT = "2009-start"
 
 # Resolved from the product, not a literal
 
@@ -88,19 +88,19 @@ OUT_DIR = ROADS_DIR
 
 # Scenarios: 'initial' reads a setback CSV, 'relocation' the historical events
 SCENARIOS = [
-    dict(label="1984 initial", kind="initial", product="1984-start",
+    dict(label="1984 initial", kind="initial", product="1996-start",
          source=road_setback_file(1984)),
-    dict(label="2004 initial", kind="initial", product="2004-start",
+    dict(label="2004 initial", kind="initial", product="2009-start",
          source=road_setback_file(2004)),
     # THE TWO DERIVED VINTAGES, added 2026-09-11 with the 1996-2010 and 2010-2024 periods
-    dict(label="1996 initial (derived)", kind="initial", product="1984-start",
+    dict(label="1996 initial (derived)", kind="initial", product="1996-start",
          source=road_setback_file(1996)),
     # Audited at zero modelled retreat: the worst case, so clean here is clean always
     *[
         dict(label=f"{e.year} relocation (GIS "
                    f"{min(e.displacement_m)}-{max(e.displacement_m)}) "
                    f"- zero-retreat bound",
-             kind="relocation", product="1984-start",
+             kind="relocation", product="1996-start",
              note=f"{e.note}. Current 1984 setback + measured displacement "
                   f"(mean_signed_landward_m, road_relocation_1978_2008.csv), "
                   f"evaluated at zero modelled retreat - the upper bound of "

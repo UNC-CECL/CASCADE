@@ -1,7 +1,7 @@
 """
 How one domain's Barrier3D arrays are cut from the 10 m DEM, step by step, with the extractor's own code.
 
-    python scripts/figure_making/pipeline/1-barrier3d-domains/domain_extraction_figures.py [--gis 45] [--product 2004-start]
+    python scripts/figure_making/pipeline/1-barrier3d-domains/domain_extraction_figures.py [--gis 45] [--product 2009-start]
 
 Uses HAT_dune_topo_extractor and the product's saved picks; stops if the
 result differs from the saved arrays. Writes
@@ -176,7 +176,7 @@ def fig_extraction(gis, product):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gis", type=int, default=45)
-    ap.add_argument("--product", default="2004-start")
+    ap.add_argument("--product", default="2009-start")
     a = ap.parse_args()
     apply_style()
     print("->", fig_extraction(a.gis, a.product)[0].relative_to(REPO))

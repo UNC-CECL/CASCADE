@@ -34,11 +34,11 @@ from site_layer import hat_topo_version as htv  # noqa: E402
 from site_layer.hat_elevation_products import product as elevation_product  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 VERSION_OVERRIDE = None
 
 # The DEM each product's npy-arrays were exported from (HAT_export_to_numpy.py)
-ELEVATION_FOR_PRODUCT = {"1984-start": "2009-2014-1996", "2004-start": "2009-2014"}
+ELEVATION_FOR_PRODUCT = {"1996-start": "2009-2014-1996", "2009-start": "2009-2014"}
 
 FIRST_GIS, LAST_GIS = 1, 90
 DAM_TO_M = 10.0

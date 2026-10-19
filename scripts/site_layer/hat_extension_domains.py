@@ -64,7 +64,7 @@ def geometry_label(name: str) -> str:
 # The whole-island polygons (Hannah, 2026-09-16 evening)
 
 # Two join rules, each reproducing its surveyed input: join_lines (dune-line), join_origins (CoastSat)
-EXTENDED_DOMAIN_POLYGONS = (INIT_ROOT / "1-barrier3d-domains" / "domain-geojson"
+EXTENDED_DOMAIN_POLYGONS = (INIT_ROOT / "1-barrier3d-domains" / "shared" / "domain-geojson"
                             / "domains_pea_hatteras_120.geojson")
 EXTENDED_POLYGON_ID = "ID"
 

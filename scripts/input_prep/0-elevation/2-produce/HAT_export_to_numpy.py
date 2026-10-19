@@ -1,8 +1,8 @@
 """
 Step 3 of 3: convert each 10 m domain raster to the .npy array HAT_dune_topo_extractor.py reads.
 
-    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py --product 2009-2014-1996   # -> 1984-start
-    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py                            # -> 2004-start
+    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py --product 2009-2014-1996   # -> 1996-start
+    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py                            # -> 2009-start
 
 Writes data/hatteras_init/1-barrier3d-domains/<period>/npy-arrays/ (m NAVD88,
 -10 nodata) and npy-arrays_survey/ (provenance). Details: scripts/input_prep/0-elevation/README.md.
@@ -54,7 +54,7 @@ ID_PATTERN = re.compile(r"resampled_domain_(\w+)_filled\.tif$")
 
 DEM_YEAR = "2009"
 # WHICH PERIOD PRODUCT these arrays are for
-TOPO_TARGET = "1984-start" if SOURCE_TAG == "2009-2014-1996" else "2004-start"
+TOPO_TARGET = "1996-start" if SOURCE_TAG == "2009-2014-1996" else "2009-start"
 if "--target" in sys.argv:
     TOPO_TARGET = sys.argv[sys.argv.index("--target") + 1]
 

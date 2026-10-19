@@ -164,7 +164,7 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}  "
 
 # No per-period array names here: build_domain_file_paths() delegates to the resolver
 
-# Which extraction: resolved by topo_dirs(); an old one only by override, e.g. topo_dirs("2004-start", override="v3")
+# Which extraction: resolved by topo_dirs(); an old one only by override, e.g. topo_dirs("2009-start", override="v3")
 from site_layer.hat_topo_version import topo_dirs, current_topo_versions  # scripts/, on sys.path above
 from site_layer.hat_topo_version import BUFFER_DIR as _BUFFER_DIR
 

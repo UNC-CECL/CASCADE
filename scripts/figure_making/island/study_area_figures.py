@@ -89,7 +89,7 @@ FIRST = HATTERAS_DOMAINS.first_gis_id
 LAST = FIRST + HATTERAS_DOMAINS.num_real_domains - 1
 N_BUFFER = HATTERAS_DOMAINS.num_buffer_domains
 EXAMPLE_GIS = 45
-TOPO_PRODUCT = "2004-start"
+TOPO_PRODUCT = "2009-start"
 
 # The vector base map: pale water, ivory land, grey edges
 WATER_MAP = "#e9eff4"
@@ -1837,7 +1837,7 @@ def reach_mosaic(product, dom, lo, hi, margin_cells=8):
 # The whole reach's elevation, in three stacked sections
 def fig_reach_elevation(dom):
     groups = ((1, 30), (31, 60), (61, 90))
-    products = ("1984-start", "2004-start")
+    products = ("1996-start", "2009-start")
     cmap, norm, bounds = elevation_cmap()
     mosaics = {(g, p): reach_mosaic(p, dom, *g) for g in groups for p in products}
     # every strip of a group shares one cross-shore window: the union of its two products
@@ -1884,8 +1884,8 @@ def fig_reach_elevation(dom):
     out = save(fig, fig_path("reach_elevation"), vector=False, dpi=300)
     record_caption(out[0],
         "The reach at the model's 10 m resolution, before the dune search: the per-domain elevation "
-        "arrays of the 1984-start extraction (the 2009–2014 lidar with the 1996 ALACE survey grafted on "
-        "the ocean side, upper strip of each pair) and the 2004-start extraction (the 2009–2014 lidar "
+        "arrays of the 1996-start extraction (the 2009–2014 lidar with the 1996 ALACE survey grafted on "
+        "the ocean side, upper strip of each pair) and the 2009-start extraction (the 2009–2014 lidar "
         "alone, lower strip), in the elevation classes of the house style, m NAVD88, water below 0 m. "
         "Each domain is 50 cells (500 m) alongshore by 200 cells (2000 m) cross-shore. The domains are "
         "placed at their eastings and the strip is then sheared by the linear alongshore trend of the box "

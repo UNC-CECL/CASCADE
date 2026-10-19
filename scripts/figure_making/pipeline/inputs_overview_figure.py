@@ -59,9 +59,9 @@ FIGURE_NAMES = {1996: "inputs_overview_1996_2010.png", 2010: "inputs_overview_20
 PERIOD_COLOUR = {1996: C_1984, 2010: C_1997}
 # Where each period's setback file comes from (4-management/road_setback_inputs)
 SETBACK_SOURCE = {
-    1996: "the 1984 measurement (the 1978-digitised line on the 1984-start extraction) with the 1989 "
+    1996: "the 1984 measurement (the 1978-digitised line on the 1996-start extraction) with the 1989 "
           "Pea Island relocation applied",
-    2010: "the 2004 measurement (the 2008-digitised line on the 2004-start extraction), unchanged because "
+    2010: "the 2004 measurement (the 2008-digitised line on the 2009-start extraction), unchanged because "
           "no relocation falls between 2004 and 2010",
 }
 TARGET_WINDOW = 7          # LOWESS width in domains, as the runner scores

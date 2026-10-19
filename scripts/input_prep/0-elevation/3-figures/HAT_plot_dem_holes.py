@@ -31,7 +31,7 @@ from site_layer.hat_elevation_products import product  # noqa: E402
 
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"        # which npy-arrays folder
+TOPO_PRODUCT = "1996-start"        # which npy-arrays folder
 DEM_PRODUCT = "2009-2014-1996"     # which elevation product it came from
 SLUG = "1984dem"
 

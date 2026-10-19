@@ -67,8 +67,8 @@ def setback_csv(year: int) -> Path:
     return DATA / HATTERAS_PERIODS[year]["road_setback_file"]
 
 
-# RoadElevation.csv was sampled on the 2004-start surface: for 2004 the gap must be ~0
-ROAD_ELEV_PRODUCT = "2004-start"
+# RoadElevation.csv was sampled on the 2009-start surface: for 2004 the gap must be ~0
+ROAD_ELEV_PRODUCT = "2009-start"
 
 # 1984 runs the 1996 graft, whose survey offset is left uncorrected and recorded here
 from site_layer.hat_elevation_products import product as _elprod  # noqa: E402

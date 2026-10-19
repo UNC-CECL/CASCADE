@@ -2,7 +2,7 @@
 Which Barrier3D domains does a script read: which product, and which version within it?
 
     from site_layer.hat_topo_version import topo_dirs, domain_arrays
-    TOPO_DIR, DUNE_DIR, VERSION = topo_dirs("2004-start")
+    TOPO_DIR, DUNE_DIR, VERSION = topo_dirs("2009-start")
 
 Resolved once (environment, then CURRENT, then the extractor literal), with the
 road, dune-line and offset paths beside it; a name not on disk raises. Details: scripts/site_layer/README.md.
@@ -10,7 +10,7 @@ road, dune-line and offset paths beside it; a name not on disk raises. Details: 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-06
+Version: 2026-10-19
 """
 
 from __future__ import annotations
@@ -25,14 +25,16 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
 
-# Shared across products: the buffer domains either side of the 90 real ones
-BUFFER_DIR = DOMAIN_ROOT / "buffer"
-
-# The other shared inputs under 1-barrier3d-domains/
-DOMAIN_CLIPS_DIR = DOMAIN_ROOT / "domain-clips-1m"
-CONTROL_PICKS_DIR = DOMAIN_ROOT / "control-picks"
-UNFILLED_2009_DIR = DOMAIN_ROOT / "npy-arrays_2009_unfilled"
-DOMAIN_GEOJSON_DIR = DOMAIN_ROOT / "domain-geojson"
+# Inputs shared by every product, under 1-barrier3d-domains/shared/ since 2026-10-19
+SHARED_DIR = DOMAIN_ROOT / "shared"
+# The buffer domains either side of the 90 real ones
+BUFFER_DIR = SHARED_DIR / "buffer"
+DOMAIN_CLIPS_DIR = SHARED_DIR / "domain-clips-1m"
+CONTROL_PICKS_DIR = SHARED_DIR / "control-picks"
+UNFILLED_2009_DIR = SHARED_DIR / "npy-arrays_2009_unfilled"
+DOMAIN_GEOJSON_DIR = SHARED_DIR / "domain-geojson"
+# Figures that compare products, so belong to neither
+DOMAIN_FIGURES_DIR = DOMAIN_ROOT / "figures"
 
 
 def domain_clip_file(domain: int, kind: str = "resampled") -> Path:
@@ -43,18 +45,27 @@ def domain_clip_file(domain: int, kind: str = "resampled") -> Path:
     return DOMAIN_CLIPS_DIR / f"domain_{d}" / f"{kind}_domain_{d}.tif"
 
 # What topo_dirs() resolves when no product is named
-DEFAULT_PRODUCT = "2004-start"
+DEFAULT_PRODUCT = "2009-start"
 
-PRODUCTS = ("1984-start", "2004-start", "forecast")
+# Named for the period that reads them since 2026-10-19; the DEMs and versions are unchanged
+PRODUCTS = ("1996-start", "2009-start", "forecast")
+# The names before 2026-10-19, still in run metadata and old scripts; resolved to the new ones
+LEGACY_PRODUCTS = {"1984-start": "1996-start", "2004-start": "2009-start"}
 
 # Which product a hindcast period reads, by start year: the single definition
 YEAR_PRODUCT = {
-    1984: "1984-start",
-    2004: "2004-start",
-    # The 1996 and 2009 periods share those products; ask product_for_year()
-    1996: "1984-start",
-    2009: "2004-start",  # was key 2010 until 2026-10-05; the period starts in its DEM year
+    # First, so year_for_product() answers 1996 and 2009
+    1996: "1996-start",
+    2009: "2009-start",  # was key 2010 until 2026-10-05; the period starts in its DEM year
+    # The retired 1984 and 2004 periods read the same DEMs; kept until their config entries go
+    1984: "1996-start",
+    2004: "2009-start",
 }
+
+
+def canonical_product(product: str) -> str:
+    """The product name on disk today, translating a pre-2026-10-19 name."""
+    return LEGACY_PRODUCTS.get(product, product)
 
 # Which NC-12 line a period's road is measured from, by true vintage: the single definition
 ROAD_LINE_VINTAGES = (1978, 2008)
@@ -464,6 +475,7 @@ def year_for_product(product: str, strict: bool = True):
     it must have a defined behaviour for None -- see PRODUCT_YEAR in
     HAT_dune_topo_extractor.py, which falls back to plotting every year.
     """
+    product = canonical_product(product)
     for year, prod in YEAR_PRODUCT.items():
         if prod == product:
             return int(year)
@@ -501,6 +513,7 @@ def _extractor_state() -> tuple[str | None, str | None]:
 
 
 def product_dir(product: str) -> Path:
+    product = canonical_product(product)
     if product not in PRODUCTS:
         raise SystemExit(
             f"\nunknown topography product {product!r}. Known: "
@@ -532,13 +545,15 @@ def picks_dir(product: str) -> Path:
     return extraction_dir(product) / "picks"
 
 
-# The seaward-row-insert folder: 1984-start only, contained here so callers cannot get it wrong
-_INSERT_SCOPE = {"1984-start": "2-domain-reconstruction-1984"}
+# The seaward-row-insert folder: 1996-start only (was 1984-start), contained here so callers cannot get it wrong.
+# Offloaded with the retired 1984 start on 2026-10-19 to
+# D:/archive/CASCADE_offload/data/hatteras_init/1-barrier3d-domains/1984-start/; these paths name nothing until it is back
+_INSERT_SCOPE = {"1996-start": "2-domain-reconstruction-1984"}
 
 
 def insert_scope_dir(product: str) -> Path:
     """The seaward-row-insert folder. Raises for a product that has none."""
-    sub = _INSERT_SCOPE.get(product)
+    sub = _INSERT_SCOPE.get(canonical_product(product))
     if sub is None:
         raise SystemExit(
             f"\n{product!r} has no 2-domain-reconstruction-1984 folder. Only "
@@ -643,7 +658,7 @@ def insert_figures_dir(product: str, section: str | None = None,
 
 def duneline_shift_dir(product: str) -> Path:
     """The duneline-shift directory for a product. Read AND write path."""
-    sub = _INSERT_SCOPE.get(product)
+    sub = _INSERT_SCOPE.get(canonical_product(product))
     base = product_dir(product)
     # the measurement of N is step 1 of the insert work (moved 2026-09-09)
     return (base / sub / "1-measurement" / "duneline-shift") if sub else (base / "duneline-shift")
@@ -749,7 +764,15 @@ def env_override_name(product: str) -> str:
     global override set for one period would silently resolve to a real, wrong
     directory for the other instead of failing.
     """
-    return "HAT_TOPO_VERSION_" + product.upper().replace("-", "_")
+    return "HAT_TOPO_VERSION_" + canonical_product(product).upper().replace("-", "_")
+
+
+def _legacy_env_names(product: str) -> list[str]:
+    """The pre-2026-10-19 variable names for a product (HAT_TOPO_VERSION_1984_START),
+    still honoured so an old pin is not silently dropped."""
+    new = canonical_product(product)
+    return ["HAT_TOPO_VERSION_" + old.upper().replace("-", "_")
+            for old, cur in LEGACY_PRODUCTS.items() if cur == new]
 
 
 def resolve_version(product: str, override: str | None = None) -> str:
@@ -757,10 +780,10 @@ def resolve_version(product: str, override: str | None = None) -> str:
         return override
 
     # The environment outranks CURRENT and the extractor literal, so a caller can pick a version
-    env_name = env_override_name(product)
-    from_env = os.environ.get(env_name, "").strip()
-    if from_env:
-        return from_env
+    for env_name in (env_override_name(product), *_legacy_env_names(product)):
+        from_env = os.environ.get(env_name, "").strip()
+        if from_env:
+            return from_env
 
     # CURRENT before the extractor literal; without a CURRENT file, as before
     current = dune_topo_root(product) / "CURRENT"
@@ -769,7 +792,7 @@ def resolve_version(product: str, override: str | None = None) -> str:
         if name:
             return name
     ex_product, ex_version = _extractor_state()
-    if ex_version and ex_product == product:
+    if ex_version and canonical_product(ex_product or "") == canonical_product(product):
         return ex_version
     avail = versions(product)
     if len(avail) == 1:
@@ -800,6 +823,10 @@ def current_topo_versions() -> dict[str, str]:
             out[product] = resolve_version(product, None)
         except (SystemExit, FileNotFoundError, OSError, ValueError):
             continue
+    # Runs made before 2026-10-19 record the old names; answer for those too
+    for old, new in LEGACY_PRODUCTS.items():
+        if new in out:
+            out[old] = out[new]
     return out
 
 
@@ -810,7 +837,7 @@ def topo_dirs(product: str | None = None,
     Raises with what IS on disk rather than returning a path that will later
     read as "no arrays for this domain".
     """
-    product = product or DEFAULT_PRODUCT
+    product = canonical_product(product or DEFAULT_PRODUCT)
     name = resolve_version(product, override)
     run = dune_topo_root(product) / name
     topo, dune = run / "topography", run / "dunes"

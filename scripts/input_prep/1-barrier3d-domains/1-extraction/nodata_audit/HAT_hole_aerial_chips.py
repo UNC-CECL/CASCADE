@@ -31,7 +31,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TOPO_PRODUCT = "1984-start"
+TOPO_PRODUCT = "1996-start"
 AERIAL_DIR = Path(r"D:\Hatteras_GIS\Aerial\1996_henderson\1996_georef_TIF")
 DOMAIN_EPSG = 3725
 GRID_M = 10.0
