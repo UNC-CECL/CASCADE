@@ -247,7 +247,7 @@ ZONE_DISPLAY_NAMES = {
 # Alongshore annotation
 
 # The village spans come from the site config through `town_bands()`, so this file cannot disagree with it
-ANN_WIMBLE_SHOALS = (60, 74)
+ANN_WIMBLE_SHOALS = (61, 74)
 ANN_PIERS   = {"Avon pier": 26, "Rodanthe pier": 79}
 ANN_GROINS  = {"Buxton groin": 5.5}
 

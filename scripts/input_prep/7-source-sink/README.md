@@ -14,7 +14,9 @@ copies under `data/hatteras_init/7-source-sink/` are exported FROM it by stage
 | stage | file | what it does |
 |---|---|---|
 | `1-prepare/` | `backfill_run_lrr.py` | Adds `lrr_m_yr` / `lrr_r2` to run rate CSVs written before the LRR estimator existed, recovering them exactly from each run's own `*_shoreline_matrix.npy`. A precondition, not a fit: stage 2 reads the LRR column and stops if a run lacks it. All 191 current runs already carry it — this is for a restored archive. |
-| `2-calibrate/` | `be_zone_residual_fit.py` | The calibration. LOWESS-smooths the observed rate, differences it against the base-run LRR, identifies spatially coherent zones with a named mechanism, and writes `DOMAIN_BE_RATES*.txt` plus the metrics tables. |
+| `2-calibrate/` | `be_zone_candidates.py` | **Zone rework, step 2.** Candidate zones from the step 1 residuals for scenario A (shared) and B (per period). Writes `zone_candidates_edgeBE.csv` and `2-method/zone_candidates_edgeBE.png`. No physics yet. |
+| | `be_zone_residuals.py` | **Zone rework, step 1 (2026-10-12), on the DEM-to-DEM periods.** The residual the edgeBE full-management run leaves against the net-change target, per domain, for calibration 1996-2009 and test 2009-2025, in metres and as m/yr over the run. Writes `zone_residuals_edgeBE.csv` and, for the `1996_2009__2009_2025` pair, each figure twice, in `1-field/1-rate/` (m/yr) and `1-field/2-net-change/` (m from the starting shoreline): both periods, each period alone, and the overlap (where the two periods agree). Diagnostic: it chooses no zones and writes nothing to the config. |
+| | `be_zone_residual_fit.py` | The calibration. LOWESS-smooths the observed rate, differences it against the base-run LRR, identifies spatially coherent zones with a named mechanism, and writes `DOMAIN_BE_RATES*.txt` plus the metrics tables. |
 | | `be_apply_fit_to_config.py` | Writes those rates into `hatteras_site_config.py`, preserving the two locked ends and the zone labels that a bare paste would destroy. `--add` accumulates instead of replacing. |
 | | `be_edge_domain_solve.py` | The two locked end domains (GIS 1, 90), which are solved separately by Newton steps on a secant rather than fitted from a residual. Reads finished runs and prints the next probe; it does not run the model. |
 | `3-figures/` | `plot_be_convergence.py` | Did the fixed-point solve converge, and was the zone set fixed before it ran. |
@@ -43,6 +45,37 @@ typed as a literal:
 Grep the name before renaming or moving either. A stale literal here does not
 raise where it is written -- `spec_from_file_location` builds a spec from a
 path that no longer exists, and the failure arrives at `exec_module`.
+
+## The zone rework (2026-10-12, in progress)
+
+The source/sink is being rebuilt step by step for the DEM-to-DEM periods, around zones on the net-change target rather than a rate in every domain (BE set 1, `HAT_be_domain_solve_net_change.py`, which fit calibration almost exactly and did not carry into test).
+
+| step | script | status |
+|---|---|---|
+| 1. residual per domain, both periods | `2-calibrate/be_zone_residuals.py` | done 2026-10-12 |
+| 2. candidate zones: ±0.5 m/yr, at least 3 adjacent domains, one sign; GIS 1, 90 and 5-7 excluded | `2-calibrate/be_zone_candidates.py` | done 2026-10-12 |
+| 3. physical-sense screen: mechanism with independent evidence, not another module's job, plausible volume, width and shape, island-wide budget | | next |
+| 4. build scenario A (shared zones and rates) and B (per period); iterate magnitude only | | |
+| 5. re-screen the fitted rates | | |
+| 6. compare A and B over calibration, test and the full window | | |
+
+### Where we left off (2026-10-13)
+
+- **Done:** steps 1 and 2 re-run on the calendar-year setup (offset v4, calendar-year targets, calibration 13 yr from 1997, test 16 yr from 2010, end rates re-solved 10-12 night). The step 1 figures are now in two views: `1-field/1-rate/` (m/yr) and `1-field/2-net-change/` (m from the starting shoreline), each with both periods, each period alone, and the overlap. The rate axis is ±5 m/yr and the metre axis ±80 m.
+- **Open question (Hannah):** the cape, GIS 1-10. GIS 1 is excluded (end rate) and GIS 5-7 too (groin); GIS 2-4 and 8-10 are eligible, so T1 (Cape Point source, GIS 2-4) and C1 (Buxton sink, GIS 8-14) are candidates. The recommendation is to keep them and name "Cape Point dynamics" as a mechanism in step 3, which must show each isn't the end rate, the groin or the Buxton fills. The alternatives are to exclude 1-10 entirely, or to treat 2-10 (without 5-7) as one cape zone.
+- **Next:** step 3, the physical-sense screen. Draft a table of every candidate zone (S1-S4, C1-C10, T1-T7) with its implied volume (rate × 500 m × shoreface height), a proposed mechanism, the independent evidence for it, whether another module already covers it, and the island-wide budget. It needs Hannah's evidence and reference volumes. The new shared sink S2 (GIS 23-25, about −1.0 to −1.3 m/yr, fails ±1) needs a mechanism or is dropped.
+- **Re-run steps 1-2** whenever the targets, offsets or edgeBE runs change. If the refit groin is pinned, re-run them on the groin-on runs.
+- **Uncommitted:** both zone scripts, their data and figures, these READMEs, and the removal of the old 7-source-sink products (along with the other uncommitted matrix/ladder work).
+
+The earlier calibration's data products (1984/2004 and 1996/2010 pairs, `prebe/`, `4-export/`, `archive/`) were removed from `data/hatteras_init/7-source-sink/` on 2026-10-12 and are in git history. The scripts that read them (`be_apply_fit_to_config.py`, `3-figures/plot_be_*.py`, `4-export/export_be_calibration.py`) no longer run as they stand; the sections below describe that earlier method.
+
+Steps 1 and 2 were re-run on 2026-10-13 against the calendar-year setup (offset v4, calendar-year targets, calibration 13 yr from 1997, test 16 yr from 2010, end rates re-solved). The results from the morning of 10-12 (offset v3) are replaced.
+
+Step 2 result (`zone_candidates_edgeBE.csv`, `2-method/zone_candidates_edgeBE.png`): scenario A, shared, has 4 zones: sources S1 GIS 16-20, S3 28-32 and S4 67-72, and a sink S2 at GIS 23-25 (19 domains; the three sources also beyond ±1 m/yr, the sink not). Scenario B has 10 calibration zones (C1-C10, 64 domains, 7 also at ±1) and 7 test zones (T1-T7, 44 domains, 5 also at ±1).
+
+Step 1 result (edgeBE, no groin, interior GIS 2-89): calibration mean −0.14 m/yr, RMS 18.9 m, 69 of 88 domains beyond ±0.5 m/yr; test mean +0.54 m/yr, RMS 24.4 m, 53 of 88. The two patterns correlate at r = 0.22. A missing source in both periods north of Buxton (GIS 16-20), at Avon Shoals (GIS 28-32) and at Wimble Shoals (GIS 67-72), and a missing sink in both at GIS 23-25; missing sinks at Buxton (GIS 8-14) and Rodanthe to Pea Island (GIS 75-89) in calibration only; a test source at Cape Point (GIS 2-4).
+
+Where the periods agree (`1-field/1-rate/zone_residuals_rate_overlap_edgeBE.png`; beyond ±0.5 m/yr in both): a source in both at GIS 16-20, 28-32 and 67-72 (16 domains); a sink in both at GIS 5, 7-9, 23-25, 51 and 75-76 (10); opposite signs at GIS 6, 12-14, 34-37, 63-66, 79-80 and 87-89 (17). The other 45 are within ±0.5 m/yr in at least one period.
 
 ## Stage 2 is a loop, not three steps in a row
 
