@@ -25,12 +25,14 @@ from matplotlib import pyplot as plt
 from matplotlib import colormaps
 
 from cascade.tools.plotters import plot_ElevAnimation_CASCADE, plot_dune_domain, plot_ModelTransects
-# from tools.outwash_plotters import plot_Elev_CASCADE_subplots
+from tools.outwash_plotters import plot_Elev_CASCADE_subplots
 
+plot_transects = False
+plot_subplots = True
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 # rname_array = ["r025", "r035"]
-rname_array = ["r025"]
+rname_array = ["r035"]
 for rname in rname_array:
 
     # naming parameters
@@ -245,11 +247,102 @@ for rname in rname_array:
         blues = blues_cmap(np.linspace(0.2, 1, n))  # n evenly spaced colors
 
         # the cascade plotter for transects. plots the 10th transect
-        plot_ModelTransects(
-            cascade=b3d_obj,
-            time_step=np.arange(0,max_year, interval, dtype=int),
-            iB3D=0)
+        if plot_transects:
+            plot_ModelTransects(
+                cascade=b3d_obj,
+                time_step=np.arange(0,max_year, interval, dtype=int),
+                iB3D=0)
 
+        # subplots
+        if plot_subplots:
+            # barrier3d
+            plot_Elev_CASCADE_subplots(
+                cascade=b3d_obj,
+                directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
+                TMAX_MGMT=0,
+                name="{0}_storm{1}_b3d_new_elev".format(rname, storm_num),
+                TMAX_SIM=tmax_b3d,
+                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100],  # array with the timesteps you want to plot
+                main_plot_title="baseline",  # title of the main plot (string)
+                ny=1,
+                beach_management_ny=None,  # list of bool the length of ny, or None for all False
+                roadway_management_ny=None,
+                y_lim=(150, 210),
+                z_lim=6,
+                z_bot=-3,
+                fig_size=(15, 6),
+                fig_eps=False,
+                km_on=False,
+                meters_on=True,
+                outwash_scenario=False,
+                n_cols=6,
+            )
+            # 100%
+            plot_Elev_CASCADE_subplots(
+                cascade=outwash100_obj,
+                directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
+                TMAX_MGMT=tmax_b3d,
+                name="{0}_storm{1}_100_new_elev".format(rname, storm_num),
+                TMAX_SIM=tmax_b3d,
+                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100],  # array with the timesteps you want to plot
+                main_plot_title="100% washout to shoreface",  # title of the main plot (string)
+                ny=1,
+                beach_management_ny=None,  # list of bool the length of ny, or None for all False
+                roadway_management_ny=None,
+                y_lim=(150, 210),
+                z_lim=6,
+                z_bot=-3,
+                fig_size=(15, 6),
+                fig_eps=False,
+                km_on=False,
+                meters_on=True,
+                outwash_scenario=True,
+                n_cols=6
+            )
+            # 50%
+            plot_Elev_CASCADE_subplots(
+                cascade=outwash50_obj,
+                directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
+                TMAX_MGMT=tmax_b3d,
+                name="{0}_storm{1}_50_new_elev".format(rname, storm_num),
+                TMAX_SIM=tmax_b3d,
+                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100],  # array with the timesteps you want to plot
+                main_plot_title="50% washout to shoreface",  # title of the main plot (string)
+                ny=1,
+                beach_management_ny=None,  # list of bool the length of ny, or None for all False
+                roadway_management_ny=None,
+                y_lim=(150, 210),
+                z_lim=6,
+                z_bot=-3,
+                fig_size=(15, 6),
+                fig_eps=False,
+                km_on=False,
+                meters_on=True,
+                outwash_scenario=True,
+                n_cols=6
+            )
+            # 0%
+            plot_Elev_CASCADE_subplots(
+                cascade=outwash0_obj,
+                directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
+                TMAX_MGMT=tmax_b3d,
+                name="{0}_storm{1}_0_new_elev".format(rname, storm_num),
+                TMAX_SIM=tmax_b3d,
+                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41],  # array with the timesteps you want to plot
+                main_plot_title="0% washout to shoreface",  # title of the main plot (string)
+                ny=1,
+                beach_management_ny=None,  # list of bool the length of ny, or None for all False
+                roadway_management_ny=None,
+                y_lim=(150, 210),
+                z_lim=6,
+                z_bot=-3,
+                fig_size=(15, 6),
+                fig_eps=False,
+                km_on=False,
+                meters_on=True,
+                outwash_scenario=True,
+                n_cols=6
+            )
 
         # # SHOREFACE PLOT
         # fig1, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, figsize=(12, 12), sharex="all")  # create 4 subplots, one per scenario

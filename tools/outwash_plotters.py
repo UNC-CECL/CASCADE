@@ -14,7 +14,7 @@
 """----------------------------------------------------
 Copyright (C) 2022 Lexi Van Blunk
 ----------------------------------------------------"""
-
+import math
 import os
 
 import imageio
@@ -546,6 +546,8 @@ def plot_Elev_CASCADE_subplots(
     fig_eps=False,
     km_on=False,
     meters_on=True,
+    outwash_scenario=True,
+    n_cols=None,
 ):
     """
     :param cascade: a cascade model object
@@ -606,17 +608,22 @@ def plot_Elev_CASCADE_subplots(
     if not os.path.exists(directory):
         os.makedirs(directory)
     os.chdir(directory)
-    newpath = name
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
+    # newpath = name
+    # if not os.path.exists(newpath):
+    #     os.makedirs(newpath)
+    # os.chdir(newpath)
 
     maxMGMT = np.max(TMAX_MGMT)
     plt.rcParams.update({"font.size": 10})
 
     # establish the whole figure (not subplots yet)
     plot_num = 1
-    n_cols = len(plot_timesteps)
+    if n_cols is None:
+        n_cols = len(plot_timesteps)
+    if len(plot_timesteps) > n_cols:  # we need multiple rows
+        n_rows = math.ceil(len(plot_timesteps)/n_cols)
+    else:
+        n_rows=1
     if fig_size is not None:
         elevFig2 = plt.figure(figsize=fig_size)
     else:
@@ -704,7 +711,7 @@ def plot_Elev_CASCADE_subplots(
                         BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
 
                 outwash_years = [1, 21, 41, 61, 81]
-                if t not in outwash_years:
+                if t not in outwash_years or outwash_scenario is False:
                     # Make animation frame domain
                     # so this is now in meters
                     Domain = barrier3d[iB3D].DomainTS[t] * 10
@@ -715,7 +722,7 @@ def plot_Elev_CASCADE_subplots(
                     Dunes = np.flipud(Dunes)
                     Beach = BeachDomain * 10
                     Domain = np.flip(np.vstack([Beach, Dunes, Domain]), 1)
-                    Domain[Domain < 0] = -3
+                    # Domain[Domain < 0] = -3
                     widthTS = len(Domain)
                     OriginTstart = int(cellular_shoreline_post_humans)
                     OriginTstop = OriginTstart + widthTS
@@ -726,14 +733,15 @@ def plot_Elev_CASCADE_subplots(
                 else:
                     # use the outwash domains instead (these contain the beach
                     # and dunes already, need to flip?)
-                    Domain = np.flip(outwash[iB3D]._post_outwash_full_domain_TS[t] * 10)
-                    # Dunes = (
-                    #     barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
-                    # ) * 10
-                    # Dunes = np.rot90(Dunes)
-                    # Dunes = np.flipud(Dunes)
-                    # Beach = BeachDomain * 10
-                    # Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
+                    # Domain = np.flip(outwash[iB3D]._post_outwash_full_domain_TS[t] * 10)
+                    Domain = barrier3d[iB3D].DomainTS[t] * 10
+                    Dunes = (
+                        barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
+                    ) * 10
+                    Dunes = np.rot90(Dunes)
+                    Dunes = np.flipud(Dunes)
+                    Beach = BeachDomain * 10
+                    Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
                     # Domain[Domain < 0] = -3
                     widthTS = len(Domain)
                     OriginTstart = int(cellular_shoreline_post_humans)
@@ -746,7 +754,7 @@ def plot_Elev_CASCADE_subplots(
         # Plot to subplot and save final figure
         plt.rcParams.update({"font.size": 10})
 
-        ax = elevFig2.add_subplot(1, n_cols, plot_num)
+        ax = elevFig2.add_subplot(n_rows, n_cols, plot_num)
         cax = ax.pcolormesh(
             AnimateDomain,
             cmap="terrain",
@@ -827,7 +835,8 @@ def plot_Elev_CASCADE_subplots(
         # plt.rcParams.update({"font.size": 10})
         plot_num += 1
 
-    plt.subplots_adjust(top=0.8, bottom=0.2, left=0.06, right=0.95)
+    plt.subplots_adjust(top=0.9, bottom=0.12, left=0.06, right=0.95, hspace=0.3)  # for plot size (15,8)
+    # plt.subplots_adjust(top=0.8, bottom=0.2, left=0.06, right=0.95)  # for plot size (15,3)
     # plt.subplots_adjust(left=0.05, bottom=0.1, right=0.06, top=0.15, wspace=-0.5)
 
     # once we make the entire plot, save it
