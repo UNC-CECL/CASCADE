@@ -241,7 +241,8 @@ Five references answer the questions this one does not:
   the `cascade/` model package for Hatteras: what was wrong, the change, its
   effect and evidence, plus defects still in the code and upstream work this
   branch lacks. The Barrier3D side is `HATTERAS_FIXES.md` on the local
-  Barrier3D branch `hatteras/adopted`.
+  Barrier3D branch `hatteras/adopted`; the one Barrier3D change the hindcast
+  needs travels with this branch as [`barrier3d-patch/`](barrier3d-patch/README.md).
 
 
 ```
@@ -256,6 +257,7 @@ scripts/          all code
 data/hatteras_init/   every model input, numbered by stage 0-9
 output/               everything the model produced
 tests/                the suite
+barrier3d-patch/      the one change made to published Barrier3D, and how to install it
 hard-structures/      the groin study: its own layout (data beside code),
                       but scripts/STYLE.md for its scripts since 2026-10-01
 ```

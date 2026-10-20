@@ -172,4 +172,4 @@ Merging upstream would bring these in and would need the Hatteras changes (1-4) 
 2. Offer 3 (the `resize_interior_domain` crash fix) and 4 (cap on added sand) as bug fixes. Both are small and self-contained.
 3. Offer the groin hook (1) inside `cascade.py`, not as a second class, with `groin.py` as an optional module.
 4. Reconcile 2 with upstream's own `road_relocation_setback`.
-5. Do this together with the Barrier3D side (`HATTERAS_FIXES.md` on `hatteras/adopted`, still local): the hindcast needs both.
+5. Do this together with the Barrier3D side: since 2026-10-20 one fix (`route_overwash`), distributed with this repository as `barrier3d-patch/`.
