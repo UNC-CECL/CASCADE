@@ -327,7 +327,7 @@ def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
     years, s_eff = groin_trapping_schedule(callback, start_year, end_year)
 
     print(f"\ngroin                 {'ENABLED' if enabled else 'disabled'}"
-          f"   (cascade.groin.CorrectedGroinCallback, pre-AST hook)")
+          f"   (cascade.groin.GroinCallback, pre-AST hook)")
     print(f"structure             updrift GIS {updrift_gis} (pad {up_pad}) "
           f"/ downdrift GIS {downdrift_gis} (pad {down_pad}), "
           f"installed {install_year}")

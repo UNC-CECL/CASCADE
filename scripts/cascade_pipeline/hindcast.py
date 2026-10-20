@@ -374,12 +374,12 @@ def groin_trapping_schedule(callback, start_year, end_year):
     """The groin's strength for every model year of a period.
 
     Reads the callback's strength history without running it.
-    `_effective_trapping_rate` is a pure function of the year -- it does not
+    `strength` is a pure function of the year -- it does not
     touch `_call_count` -- so querying it here leaves the callback's year
     counter at zero for the actual run.
 
     Args:
-        callback: A CorrectedGroinCallback.
+        callback: A GroinCallback.
         start_year: First model year.
         end_year: Last model year, exclusive.
 
@@ -387,7 +387,7 @@ def groin_trapping_schedule(callback, start_year, end_year):
         A (years, strength) tuple of 1-D arrays.
     """
     years = np.arange(start_year, end_year)
-    m_eff = np.array([callback._effective_trapping_rate(int(y)) for y in years])
+    m_eff = np.array([callback.strength(int(y)) for y in years])
     return years, m_eff
 
 
@@ -936,7 +936,7 @@ def run_cascade_simulation(
     if _states != run_years + 1:
         print(f"\n  NOTE: {_states} annual states for {run_years} run_years "
               f"(expected {run_years + 1}) -- the run ended early")
-    if groin_callback is not None and len(groin_callback.year_TS) == 0:
+    if groin_callback is not None and len(groin_callback.record) == 0:
         print("\n" + "!" * 74)
         print("WARNING: the groin callback was never called. The pre-AST hook")
         print("in cascade_groin.py is missing, so this run is identical to a")
@@ -957,11 +957,11 @@ def run_cascade_simulation(
         pd.DataFrame(nourishment_log).to_csv(_bn_csv, index=False)
         print(f"  nourishment log ({len(nourishment_log)} events): {_bn_csv}")
 
-    if groin_callback is not None and groin_callback.year_TS:
+    if groin_callback is not None and groin_callback.record:
         _groin_csv = str(write_path(run_dir, "groin_csv", name))
         pd.DataFrame(groin_callback.diagnostics_frame()).to_csv(
             _groin_csv, index=False)
-        print(f"  groin diagnostics ({len(groin_callback.year_TS)} yrs): "
+        print(f"  groin diagnostics ({len(groin_callback.record)} yrs): "
               f"{_groin_csv}")
 
     return cascade

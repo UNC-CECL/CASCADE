@@ -117,7 +117,7 @@ offset_mode: metres
 # scenario is run twice, groin off first, so section 12.3 has a paired
 # baseline identical in every other token.
 #
-# The corrected groin (cascade.groin.CorrectedGroinCallback, since 2026-10-14):
+# The wave-driven groin (cascade.groin.GroinCallback, since 2026-10-14):
 # it holds back a share of the wave-driven drift arriving at the GIS 5|6 face,
 # from its 1969 installation until the year it stops working. The dipole (M)
 # and blocking (b, f) groins this replaced were removed the same day.

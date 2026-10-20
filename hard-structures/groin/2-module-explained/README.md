@@ -10,9 +10,9 @@ briefly here and is now with the fixed-shift groin's Buxton fit in `../4-hindcas
 
 ```
 1-fixed-shift/      the fixed-shift groin: a fixed amount moved across the groin every year (once 'the
-                    source/sink dipole', straight-coast version 1; GroinCallback, removed in 563a542e)
+                    source/sink dipole', straight-coast version 1; the old GroinCallback, removed in 563a542e)
 2-wave-driven/      the wave-driven groin: a share of the drift the waves bring held back, sand balanced (once
-                    'the corrected groin', straight-coast version 6; CorrectedGroinCallback, the runner's
+                    'the corrected groin', straight-coast version 6; GroinCallback, the runner's
                     groin since 2026-10-13)
 3-brie-sand-balance/ why BRIE's alongshore step makes or loses sand at a sharp bend, from unmodified
                     BRIE on several coastline shapes: the reason the wave-driven groin needs its leak correction

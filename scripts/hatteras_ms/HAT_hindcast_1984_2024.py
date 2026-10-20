@@ -52,7 +52,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-from cascade.groin import CorrectedGroinCallback
+from cascade.groin import GroinCallback
 
 from cascade_pipeline import nourishment, roadway
 from cascade_pipeline import reports
@@ -791,12 +791,11 @@ GROIN_END_YEAR = RUN_CONFIG.groin_end_year
 
 # GROIN_CB is built either way for the 7.4 report; GROIN_CALLBACK is the one attached
 
-GROIN_CB = CorrectedGroinCallback(
+GROIN_CB = GroinCallback(
     updrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS),
     downdrift_pad=HATTERAS_DOMAINS.gis_to_pad(GROIN_DOWNDRIFT_GIS),
     strength_history=[(GROIN_INSTALL_YEAR, GROIN_STRENGTH), (GROIN_END_YEAR, 0.0)],
     start_year=FIRST_MODEL_YEAR,
-    install_year=GROIN_INSTALL_YEAR,
     n_domains=HATTERAS_DOMAINS.total_domains,
 )
 GROIN_CALLBACK = GROIN_CB if GROIN_ENABLED else None

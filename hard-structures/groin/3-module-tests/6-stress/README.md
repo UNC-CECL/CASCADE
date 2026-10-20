@@ -5,7 +5,7 @@ asks where it stops behaving: push each input past where the Buxton hindcast use
 groin keeps the sand balance, stays stable, and settles. Asked for on 2026-10-15 ("try to break it"). What
 came out of it, the module's tested range and the guard that now enforces it, is at the end.
 
-**What is tested.** The runner's own groin, `cascade.groin.CorrectedGroinCallback`, imported as it stands in
+**What is tested.** The runner's own groin, `cascade.groin.GroinCallback`, imported as it stands in
 `cascade/` (not a copy, unlike tests 1-6): the drift groin plus the leak correction against the tracked
 groin-free shoreline, with the runner's 10-cell correction zone. It is driven on the straight-coast rig of
 `../2-straight-coast/1-run/`: 61 domains of 500 m, one groin at the middle face, BRIE's implicit alongshore

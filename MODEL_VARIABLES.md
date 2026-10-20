@@ -182,7 +182,7 @@ Run settings from `scripts/hatteras_ms/hat_run.yaml`, overridable by `HAT_*` var
 | `relocations` | None | Historical road relocations on/off |
 | `offset_mode` | metres | How the island offset is built |
 | `geometry` | base | Reach (90 real domains) |
-| `groin_enabled` | False | CorrectedGroinCallback on/off |
+| `groin_enabled` | False | GroinCallback on/off |
 | `groin_strength_1996` | 0.16 | Share of the arriving drift the groin holds back, 1996 start |
 | `groin_strength_2009` | 0.10 | Share of the arriving drift the groin holds back, 2009 start |
 | `groin_strength` | None | Overrides both when set; needed for any other start year (0.25 = whole-life strength) |

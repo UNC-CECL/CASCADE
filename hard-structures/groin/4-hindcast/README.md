@@ -1,6 +1,6 @@
 # 4-hindcast — the groin module fitted to Buxton
 
-**Code these studies ran against.** The fixed-shift (`GroinCallback`, the fixed-shift groin) and blocking (`BlockingGroinCallback`) groins that the scripts in `1-dipole-1967-2017/` and `2-blocking-1996-2025/` use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+**Code these studies ran against.** The fixed-shift (the old `GroinCallback`, the fixed-shift groin) and blocking (`BlockingGroinCallback`) groins that the scripts in `1-dipole-1967-2017/` and `2-blocking-1996-2025/` use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
 
 The module inside real model runs of Hatteras, scored against `../1-observations/`. Numbered in the order they were done; the first two are superseded.
 

@@ -81,10 +81,10 @@ in one tree.
 
 ## Deleted 2026-10-14
 
-One groin model is kept, the corrected groin (`cascade.groin.CorrectedGroinCallback`), set by
+One groin model is kept, the wave-driven groin (`cascade.groin.GroinCallback`), set by
 its strength per window and its end year in `hat_run.yaml` (`groin.strength_1996` 0.16,
 `groin.strength_2009` 0.10, `groin.end_year` 2017; `groin.strength` overrides both). Removed with
-the dipole (`GroinCallback`, M) and blocking (`BlockingGroinCallback`, b) groins and their
+the dipole (the old `GroinCallback`, M) and blocking (`BlockingGroinCallback`, b) groins and their
 deterioration floor f:
 
 * `groin-sweep/` -- the M and f sweeps, the joint fit and their figures

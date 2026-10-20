@@ -13,7 +13,7 @@ the drift held back across the groin, and the leak correction that cancels the s
 or lose at the groin's bends. The yearly loop repeats straight_coast_test.run() for the wave-driven groin so
 the two parts can be drawn apart; it is checked against run()'s own profile. Reruns one coast (seconds).
 
-The wave-driven groin is cascade/groin.py CorrectedGroinCallback, the runner's groin since 2026-10-13. Like
+The wave-driven groin is cascade/groin.py GroinCallback, the runner's groin since 2026-10-13. Like
 the fixed-shift groin it sits on the sandbox Cascade's `_groin_callback` (cascade/cascade_groin.py) and edits x_s_dt,
 the shoreline change each domain hands to BRIE. On a straight coast the groin-free shoreline has no bends,
 so the runner's footprint-based correction equals the rig's leak_correction().
@@ -155,7 +155,7 @@ def main():
     save(fig, OUT, dpi=250, close=True)
     record_caption(OUT, (
         "**Tests:** nothing new; this figure explains where the wave-driven groin ("
-        "`CorrectedGroinCallback`, the runner's groin since 2026-10-13) acts in a CASCADE model year. The "
+        "`GroinCallback`, the runner's groin since 2026-10-13) acts in a CASCADE model year. The "
         "companion of `../1-fixed-shift/figures/fixed_shift_1_in_the_model_year.png`. **How to read:** (a) the order "
         "within one year: every Barrier3D domain runs first, including its background erosion (BE), and hands "
         "BRIE its shoreline change for the year; the groin then edits that change, in the same place the fixed-shift groin "

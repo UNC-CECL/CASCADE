@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Try to break the runner's groin: CorrectedGroinCallback under forcing it was never fitted to.
+Try to break the runner's groin: GroinCallback under forcing it was never fitted to.
 
     python stress_test.py   ->  tables/stress_runs.csv, tables/stress_by_year.csv.gz
 
-The runner's own callback (cascade.groin.CorrectedGroinCallback, imported unchanged) on the
+The runner's own callback (cascade.groin.GroinCallback, imported unchanged) on the
 straight-coast rig of ../2-straight-coast/1-run/: 61 domains of 500 m, one groin at the middle
 face, BRIE's implicit alongshore step alone on an infinitely long tilted coast. The callback reads a
 stand-in for BRIE that carries a real Brie instance's tables and the rig's shoreline, as
@@ -46,9 +46,9 @@ REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path[:0] = [str(HERE.parent / "2-straight-coast" / "1-run"), str(REPO)]
 import straight_coast_test as sc  # noqa: E402
 from brie import Brie  # noqa: E402
-from cascade.groin import CorrectedGroinCallback, GroinOutsideTestedRange  # noqa: E402
+from cascade.groin import GroinCallback, GroinOutsideTestedRange  # noqa: E402
 
-DIFFUSION_NUMBER = CorrectedGroinCallback._diffusion_number   # BRIE's r at each face, as the callback reads it
+DIFFUSION_NUMBER = GroinCallback._diffusion_number   # BRIE's r at each face, as the callback reads it
 
 # --- CONFIG ------------------------------------------------------------------
 NY, DY_M, DT_YR = sc.NY, sc.DY_M, sc.DT_YR      # 61 domains of 500 m, 1-year step
@@ -82,7 +82,7 @@ _BRIE = {}
 
 
 # The runner's callback, its tested-range guard recording when it would stop the run instead of stopping it
-class Recording(CorrectedGroinCallback):
+class Recording(GroinCallback):
     def __init__(self, *args, **kw):
         self.guard_year, self.guard_reason, self.trace = None, None, []
         super().__init__(*args, **kw)
@@ -93,11 +93,11 @@ class Recording(CorrectedGroinCallback):
         except GroinOutsideTestedRange as e:
             self.guard_year, self.guard_reason = 0, str(e).split(";")[0]
 
-    def _check_tested_range(self, brie, x_s, near):
+    def _check_tested_range(self, brie, x_s):
         self.trace.append((float(np.sum(self._a)), float(np.sum(np.abs(self._a))),
                            float(abs(np.degrees(np.arctan2(x_s[self._hi] - x_s[self._lo], brie._dy))))))
         try:
-            super()._check_tested_range(brie, x_s, near)
+            super()._check_tested_range(brie, x_s)
         except GroinOutsideTestedRange as e:
             if self.guard_year is None:
                 self.guard_year, self.guard_reason = self.start_year + self._call_count - 1, str(e).split(";")[0]
@@ -132,7 +132,7 @@ def brie_step(b, slope, eta, dx):
 
 # Net drift toward higher index on the undisturbed coast, m3/yr, as the callback reads it
 def drift0(b, theta0):
-    return float(CorrectedGroinCallback._drift_table(b)[int(np.clip(round(90 - theta0), 1, b._wave_climl - 1))])
+    return float(GroinCallback._drift_table(b)[int(np.clip(round(90 - theta0), 1, b._wave_climl - 1))])
 
 
 # One run: the callback in front of BRIE's step every year; returns one row per year
@@ -152,7 +152,7 @@ def run(theta0, years=YEARS, strength=0.25, history=None, climate=OPTION_A, clim
     eta0 = eta.copy()
     history = history if history is not None else [(1, strength)]
     cb = Recording(updrift_pad=up, downdrift_pad=down, strength_history=history,
-                                start_year=1, install_year=1, n_domains=NY, half_width=half_width)
+                                start_year=1, n_domains=NY, half_width=half_width)
     fake = SimpleNamespace(_brie_coupler=SimpleNamespace(_brie=None))
     bg_cum = np.zeros(NY)
     rows, crashed = [], None
@@ -182,10 +182,10 @@ def run(theta0, years=YEARS, strength=0.25, history=None, climate=OPTION_A, clim
                          net_m=float(-dev.sum()), gross_m=float(np.abs(dev).sum()),
                          max_angle_deg=float(np.abs(theta).max()),
                          finite=bool(np.isfinite(eta).all()),
-                         strength=cb.blocking_applied_TS[-1] if groin else 0.0,
-                         held_m=-cb.applied_dx_updrift_TS[-1] if groin else 0.0,
-                         correction_m=cb.leak_correction_m_TS[-1] if groin else 0.0,
-                         drift_m3_yr=cb.net_drift_m3_yr_TS[-1] if groin else np.nan,
+                         strength=cb.record[-1]["strength_applied"] if groin else 0.0,
+                         held_m=-cb.record[-1]["applied_dx_updrift_m"] if groin else 0.0,
+                         correction_m=cb.record[-1]["leak_correction_m"] if groin else 0.0,
+                         drift_m3_yr=cb.record[-1]["net_drift_m3_yr"] if groin else np.nan,
                          r_face=float(r_now[lo]), r_zone_max=float(r_now[zone].max())))
         if groin and cb.trace:
             rows[-1].update(footprint_net_m=cb.trace[-1][0], footprint_gross_m=cb.trace[-1][1],

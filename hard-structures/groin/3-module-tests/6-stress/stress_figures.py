@@ -104,7 +104,7 @@ def waves_figure(t):
     save(fig, png, dpi=250, close=True)
     opt = d[(d.case == "asym=0.6")]
     record_caption(png, (
-        "**Tests:** whether the runner's groin (`cascade.groin.CorrectedGroinCallback`, unchanged, 10-cell "
+        "**Tests:** whether the runner's groin (`cascade.groin.GroinCallback`, unchanged, 10-cell "
         "correction zone) keeps the sand balance and stays stable when one wave parameter at a time is moved far "
         "from option A (Hs 2.0, Tp 7.5, asymmetry 0.6, high-angle fraction 0.5). **How to read:** BRIE's "
         "alongshore step alone on a straight coast, one groin, 100 years; each cell is one run, scored against the "

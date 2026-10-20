@@ -58,7 +58,7 @@ NET_KEY = {1996: (1996, 2009), 2009: (2009, 2025)}
 # domain north), or "field" (GIS 5 to GIS 7 across GIS 6) with `share` of the gain kept in GIS 6
 def patch_groin(variant, share=0.0):
     import cascade.groin as cg
-    base = cg.CorrectedGroinCallback
+    base = cg.GroinCallback
 
     class MovedGroin(base):
         def __init__(self, updrift_pad, downdrift_pad, *a, **kw):
@@ -74,14 +74,14 @@ def patch_groin(variant, share=0.0):
             if variant == "field" and share:
                 # Move a share of this year's updrift gain from GIS 7 into the field, in the step and in the
                 # groin's own contribution the tracked footprint is built from
-                dx = share * self.applied_dx_updrift_TS[-1]
+                dx = share * self.record[-1]["applied_dx_updrift_m"]
                 xp, dxp, g, ap = self._prev
                 for arr in (x_s_dt, dxp, g):
                     arr[self._hi] -= dx
                     arr[self._mid] += dx
             return x_s_dt
 
-    cg.CorrectedGroinCallback = MovedGroin
+    cg.GroinCallback = MovedGroin
 
 
 def member(share, s):

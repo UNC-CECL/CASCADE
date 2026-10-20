@@ -239,7 +239,7 @@ does.
 
 ## 7. `hard_structures` / groin -- Buxton groin field
 
-`cascade/groin.py`'s `CorrectedGroinCallback` attaches to a run through
+`cascade/groin.py`'s `GroinCallback` attaches to a run through
 `cascade._groin_callback` and is called once per model year from inside
 `Cascade.update()`, immediately before the alongshore-transport solve
 (`cascade/cascade_groin.py`). It reads BRIE's shoreline and wave-climate tables,

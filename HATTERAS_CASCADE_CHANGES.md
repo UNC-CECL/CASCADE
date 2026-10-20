@@ -39,7 +39,7 @@ The fresh-start commit already carried some local edits, made before this branch
 
 **The change.**
 - `cascade/cascade_groin.py` is a copy of `cascade.py` with one addition: just before BRIE's alongshore-transport solve, `update()` calls `cascade._groin_callback(self, x_s_dt)` if one is attached (`cascade_groin.py:608-618`). With no callback, the model is bit-for-bit the same as `cascade.py`.
-- `cascade/groin.py` provides `CorrectedGroinCallback` (since 2026-10-14). Each year it moves a share `s` of BRIE's wave-driven net drift arriving at the GIS 5|6 face from the downdrift domain to the updrift one, and, within 10 cells of the face, adds back the diffusive leak BRIE would make of that sand at the groin's own bends. The leak is measured against the groin's tracked footprint (BRIE's alongshore step repeated with and without the groin's contribution), so a groin of strength 0 is exactly the no-groin run. Nothing inside BRIE or Barrier3D is edited.
+- `cascade/groin.py` provides `GroinCallback` (since 2026-10-14). Each year it moves a share `s` of BRIE's wave-driven net drift arriving at the GIS 5|6 face from the downdrift domain to the updrift one, and, within 10 cells of the face, adds back the diffusive leak BRIE would make of that sand at the groin's own bends. The leak is measured against the groin's tracked footprint (BRIE's alongshore step repeated with and without the groin's contribution), so a groin of strength 0 is exactly the no-groin run. Nothing inside BRIE or Barrier3D is edited.
 - Set in `hat_run.yaml` by its strength, per window (0.16 for 1996-2009, 0.10 for 2009-2025, fitted from each window's observed start shoreline), and the first year it no longer works (2017, the Buxton fill). Its whole-life strength, fitted from 1967, is 0.25; `groin.strength` sets one value for any start.
 
 **Effect and status.**
@@ -48,7 +48,7 @@ The fresh-start commit already carried some local edits, made before this branch
   - At full strength from installation it builds the fillet in about 3 years against about 9 observed.
   - The model's fillet sits in two domains; the observed one spans three or four.
   - The three-groin field's strength is an upper bound for the single groin rebuilt in 2026.
-- Replaced on 2026-10-14: the dipole `GroinCallback` (a fixed −M/+M a year, fitted M = 60 m/yr, f = 0.6, which moved about half the reach's sediment budget past one groin) and the `BlockingGroinCallback` (a share b of BRIE's diffusive exchange cancelled at the face, pinned b 0.6, f 0.6). Git keeps both (last at commit `4d937b79`); the studies are in `hard-structures/groin/`.
+- Replaced on 2026-10-14: the old dipole `GroinCallback` (a fixed −M/+M a year, fitted M = 60 m/yr, f = 0.6, which moved about half the reach's sediment budget past one groin) and the `BlockingGroinCallback` (a share b of BRIE's diffusive exchange cancelled at the face, pinned b 0.6, f 0.6). Git keeps both (last at commit `4d937b79`); the studies are in `hard-structures/groin/`.
 - The "groin progradation ceiling" of 2026-09-11 was the Barrier3D `route_overwash` crash (`HATTERAS_FIXES.md` §1), not a groin limit.
 
 **Evidence.** The module docstring; `tests/test_groin.py`; `hard-structures/groin/README.md` and its studies.

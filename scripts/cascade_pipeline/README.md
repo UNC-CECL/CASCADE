@@ -864,12 +864,12 @@ Raises:
 The groin's strength for every model year of a period.
 
 Reads the callback's strength history without running it.
-`_effective_trapping_rate` is a pure function of the year -- it does not
+`strength` is a pure function of the year -- it does not
 touch `_call_count` -- so querying it here leaves the callback's year
 counter at zero for the actual run.
 
 Args:
-    callback: A CorrectedGroinCallback.
+    callback: A GroinCallback.
     start_year: First model year.
     end_year: Last model year, exclusive.
 
@@ -1112,7 +1112,7 @@ Args:
         against.
     parameter_file: Barrier3D parameter yaml name, resolved by
         CASCADE inside data_base.
-    groin_callback: A CorrectedGroinCallback to attach, or None.
+    groin_callback: A GroinCallback to attach, or None.
     relocation_setback_m: Standard distance behind the dune line, in
         metres, that a relocated roadway is rebuilt at. None leaves every
         domain relocating to its own measured setback, which is CASCADE's
@@ -1141,7 +1141,7 @@ Args:
     relocations_enabled: Global toggle for relocation events.
     setback_check: {gis: measured_setback_m} reported beside relocations.
     nourishment_schedule: A NourishmentSchedule, or None for no fills.
-    groin_callback: The attached CorrectedGroinCallback, for diagnostics output.
+    groin_callback: The attached GroinCallback, for diagnostics output.
     progress: Optional tqdm-like object with update() and write().
         When given, the year counter advances the bar and every event
         message is written through it, so the messages scroll above a

@@ -2,7 +2,7 @@
 
 > **Superseded 2026-10-14** by the wave-driven groin (`../3-wave-driven-1967-2025/`), the runner's only groin since then. Kept as the record of how the blocking pin was fitted and of the two groin versions (drift, conserving) tried on the way to the wave-driven one. The wave-driven studies lived here until 2026-10-15.
 
-**Code these studies ran against.** The fixed-shift (`GroinCallback`, the fixed-shift groin) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+**Code these studies ran against.** The fixed-shift (the old `GroinCallback`, the fixed-shift groin) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
 
 The blocking groin (`cascade.groin.BlockingGroinCallback`) fitted on the calibration period 1996-2009 and checked on the test period 2009-2025, with full management, the solved edgeBE ends and relocations off. Scored on the GIS 5|6 gap against the wet/dry photos and, from 10-08, the annual CoastSat gap.
 

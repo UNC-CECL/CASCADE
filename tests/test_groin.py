@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from scipy.stats import uniform
 
-from cascade.groin import CorrectedGroinCallback, GroinOutsideTestedRange
+from cascade.groin import GroinCallback, GroinOutsideTestedRange
 
 NY = 40
 UP, DOWN = 21, 20          # updrift is the higher index, as at Buxton
@@ -40,12 +40,12 @@ def fake_cascade(x_s, diffusivity=8000.0, drift=1.0e5):
 
 
 def groin(history=((1969, 0.25), (2017, 0.0)), start=2000):
-    return CorrectedGroinCallback(UP, DOWN, list(history), start_year=start, install_year=1969, n_domains=NY)
+    return GroinCallback(UP, DOWN, list(history), start_year=start, n_domains=NY)
 
 
 def test_strength_follows_the_history():
     g = groin()
-    assert [g._effective_trapping_rate(y) for y in (1968, 1969, 2016, 2017, 2030)] == [0.0, 0.25, 0.25, 0.0, 0.0]
+    assert [g.strength(y) for y in (1968, 1969, 2016, 2017, 2030)] == [0.0, 0.25, 0.25, 0.0, 0.0]
 
 
 def test_history_must_be_shares():
@@ -57,7 +57,7 @@ def test_history_must_be_shares():
 
 def test_pads_must_be_adjacent():
     with pytest.raises(ValueError):
-        CorrectedGroinCallback(UP + 1, DOWN, [(1969, 0.25)], start_year=2000, install_year=1969, n_domains=NY)
+        GroinCallback(UP + 1, DOWN, [(1969, 0.25)], start_year=2000, n_domains=NY)
 
 
 def test_zero_strength_changes_nothing():
@@ -67,7 +67,7 @@ def test_zero_strength_changes_nothing():
     for _ in range(3):
         out = g(cascade, np.zeros(NY))
         assert np.array_equal(out, np.zeros(NY))
-    assert g.footprint_max_m_TS == [0.0, 0.0, 0.0]
+    assert [r["footprint_max_m"] for r in g.record] == [0.0, 0.0, 0.0]
 
 
 def test_the_groin_moves_sand_from_downdrift_to_updrift_and_conserves_it():
@@ -83,7 +83,7 @@ def test_off_after_the_end_year():
     x = np.linspace(0.0, -500.0, NY)
     g = groin(start=2017)
     out = g(fake_cascade(x), np.zeros(NY))
-    assert g.blocking_applied_TS == [0.0]
+    assert [r["strength_applied"] for r in g.record] == [0.0]
     assert np.array_equal(out, np.zeros(NY))
 
 
@@ -100,8 +100,8 @@ def test_a_face_past_89_5_degrees_does_not_index_past_the_table():
 
 def test_the_correction_zone_must_fit_inside_the_domains():
     with pytest.raises(GroinOutsideTestedRange):
-        CorrectedGroinCallback(3, 2, [(1969, 0.25)], start_year=2000, install_year=1969, n_domains=NY)
-    CorrectedGroinCallback(10, 9, [(1969, 0.25)], start_year=2000, install_year=1969, n_domains=NY)
+        GroinCallback(3, 2, [(1969, 0.25)], start_year=2000, n_domains=NY)
+    GroinCallback(10, 9, [(1969, 0.25)], start_year=2000, n_domains=NY)
 
 
 def test_a_changed_wave_climate_stops_the_run():
