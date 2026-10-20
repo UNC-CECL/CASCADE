@@ -13,6 +13,38 @@ has not yet been proposed to the Barrier3D repository.
 | 3 | gap discharge, `Discharge[:, 0, start:stop]` | comment only: `stop` is inclusive, so each gap's last cell gets no water |
 | 4 | `C = 0  # Initialize` in the overwash loop | comment only: it overwrites the inundation momentum constant (added in b11b880, 2024) |
 
+### Pending, not applied (2026-10-20)
+
+**5. `DuneGrowth`: stop dunes above Dmax from shrinking.** Upstream computes
+`G = growthparam * D * (1 - D / Dmax) * reduc` and adds it to `D`. Above Dmax,
+`(1 - D / Dmax)` is negative, so every dune taller than the cap shrinks toward
+it each year with no storm. A tall DEM crest or a fill above Dmaxel reaches the
+cap in 1-2 years. The planned edit adds one line between computing `G` and
+updating `DuneDomain[t, :, q]`:
+
+```python
+G = np.maximum(G, 0)  # HAH: dunes above Dmax hold; they don't shrink toward it
+```
+
+It has to be elementwise because `G` is an array along the shore, so
+`if G < 0:` would raise. What it changes:
+
+- Cells below Dmax grow exactly as before. Cells above Dmax hold through the
+  growth step and still lose height to storms and to `DiffuseDunes`.
+- The sand budget. `Qdg` sums the same `G`. Today a shrinking cell's negative
+  `G` offsets the sand that growing cells take from the shoreface, and
+  `if Qdg < 0: Qdg = 0` throws away any surplus, so the lost sand is deleted,
+  not returned to the beach. With the clamp, growing cells pay their full cost.
+  In years with cells above the cap, `Qdg` rises slightly and the shoreline
+  retreats a little more. Runs will not match earlier ones exactly.
+- Edge case: if `Dmax` is 0, `D / Dmax` is inf or nan, and `np.maximum` keeps
+  the nan. That can't happen with Dmaxel 5.5 m.
+
+It can't be a CASCADE callback, because a callback sees `DuneDomain` only after
+storms have also changed it and can't separate the two. When it's applied, mark
+it `HAH:`, record it in `HATTERAS_FIXES.md`, remake the patch, and re-run the
+dune-crest comparison, since this changes model inputs.
+
 Each change is marked `HAH:` in the code. The full record, with evidence, is
 `HATTERAS_FIXES.md` on the local Barrier3D branch `hatteras/adopted`; the
 CASCADE side is [`HATTERAS_CASCADE_CHANGES.md`](../HATTERAS_CASCADE_CHANGES.md).
