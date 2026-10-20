@@ -2,19 +2,19 @@ BarrierLength: 500
 BayDepth: 3.0
 BermEl: 1.7
 DShoreface: 22.25
-# DUNE CEILING (2026-10-13, Hannah). One island-wide Dmaxel, as in base
-# Barrier3D: 5.5 m NAVD88, the same for both periods. Chosen 2026-09-28 because
-# model dunes grow to the ceiling in ~5 yr and 5.5 m brought the modelled crests
-# within 0.2 m of the 2009 lidar median; confirmed 2026-10-13 on the 1996-2009
-# overwash plateau (skill 0.59-0.63 for 4.5-5.5 m, collapse above ~5.6 m where
-# dunes outgrow Isabel's 5.58 m run-up) and held fixed for 2009-2025. Not a
-# fitted optimum: anything 4.5-5.5 m does as well. It replaces Barrier3D's 3.4 m
-# NAVD88 default (Virginia), which held every Hatteras dune near 3 m MHW. The
-# per-cell ceilings of 2026-09-28 to 10-13 (DuneCeilingFromStart,
-# DuneCeilingFloor, a local Barrier3D change) were dropped to stay on the base
-# model. Record (scripts/hatteras_ms/experiments/README.md):
-# output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-range/
-Dmaxel: 5.5
+# DUNE CEILING (2026-10-20, Hannah and her advisor). Dmax = 10.5 m above the berm,
+# so Dmaxel = BermEl 1.7 + 10.5 = 12.2 m NAVD88, one island-wide value, both
+# periods (Barrier3D: Dmax = Dmaxel - BermEl). Near the tallest crest in the
+# 1996 DEM (12.1 m), so the ceiling is the measured dune height and the growth
+# rate (rmin/rmax 0-0.01, set in the runner) keeps dunes from growing too fast.
+# With it the 1996 run's 2010 median crest is 5.46 m vs the 2009 lidar's 5.39 m;
+# low dunes end ~1 m high; Isabel 43/48 domains. Do not pair this ceiling with
+# fast growth: at 0.55-0.95 every dune grows to ~12 m and overwash stops. The ends
+# were solved on the previous 5.5 m / 0.55-0.95 settings and need re-solving.
+# Record: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-19-dune-growth-low-rates/NOTE.md
+# Was 5.5 m NAVD88 (2026-10-13 to 10-20; 2026-10-13-dune-ceiling-range/), and
+# Barrier3D's 3.4 m default (Virginia) before that.
+Dmaxel: 12.2
 DuneParamStart: true
 GrowthParamStart: false
 LShoreface: 2640.0497975182934
@@ -26,7 +26,10 @@ Sandbag_elevation: 1.9
 ShorefaceToe: -11863.344242424242
 Shrub_ON: 0
 TMAX: 21
-beta: 0.04
+# BEACH SLOPE (2026-10-20). 0.06, the slope the storm series' run-up was built
+# with. CASCADE overwrites this key from Cascade(beta=...) every run, so the value
+# that counts is BEACH_SLOPE in HAT_hindcast_1984_2024 (notebook and .py). Was 0.04.
+beta: 0.06
 dune_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\buffer\sample_1_dune.npy
 elevation_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\buffer\sample_1_topography.npy
 enable_sandbags: false

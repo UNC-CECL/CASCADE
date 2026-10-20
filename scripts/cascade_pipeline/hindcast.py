@@ -718,7 +718,7 @@ def build_cascade(
     enable_shoreline_offset, shoreline_offset,
     wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction,
     berm_elevation, MHW, data_base, parameter_file, groin_callback=None,
-    relocation_setback_m=None,
+    relocation_setback_m=None, beta=0.04,
 ):
     """Constructs a Cascade and attaches the groin, without stepping it.
 
@@ -755,6 +755,8 @@ def build_cascade(
             Wave climate. wave_height also sets BRIE's shoreface depth,
             d_sf = 8.9 * Hs (brie.py:270).
         berm_elevation, MHW: Barrier3D datums.
+        beta: Beach slope. CASCADE writes it into the parameter yaml;
+            it sets the managed domains' starting beach width.
         data_base: Datadir handed to Cascade -- the directory the
             parameter file and the padded input files are resolved
             against.
@@ -780,6 +782,7 @@ def build_cascade(
 
         berm_elevation=berm_elevation,
         MHW=MHW,
+        beta=beta,
 
         wave_height=wave_height,
         wave_period=wave_period,

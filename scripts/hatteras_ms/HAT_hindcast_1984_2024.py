@@ -1089,9 +1089,10 @@ print("  road events via cascade_pipeline.roadway.apply_historical_event")
 
 NUM_CORES = 1        # >1 has crashed on this configuration; leave at 1
 
-# Dune growth (Barrier3D logistic growth bounds)
-RMIN = [0.55] * HATTERAS_DOMAINS.total_domains
-RMAX = [0.95] * HATTERAS_DOMAINS.total_domains
+# Dune growth (Barrier3D logistic growth bounds). 0-0.01 since 2026-10-20, paired with
+# Dmax 10.5 m above the berm (Dmaxel 12.2 m, parameter file); was 0.55-0.95
+RMIN = [0.0] * HATTERAS_DOMAINS.total_domains
+RMAX = [0.01] * HATTERAS_DOMAINS.total_domains
 
 # Dune rebuild thresholds, m MHW
 
@@ -1125,6 +1126,7 @@ assert _WAVE_VALUES == {
 # Datums
 BERM_ELEVATION = 1.7    # m NAVD88, Hatteras Island, NCDOT-derived via NC State
 MHW_ELEVATION = 0.36    # m NAVD88, Duck NC gauge (NOAA 8651370)
+BEACH_SLOPE = 0.06      # Barrier3D beta; the storm series' run-up slope (since 2026-10-20)
 
 # Sandbags: off for the hindcast
 
@@ -1189,6 +1191,7 @@ cascade = build_cascade(
     wave_angle_high_fraction=FIXED_WAVE_ANGLE_HIGH_FRACTION,
     berm_elevation=BERM_ELEVATION,
     MHW=MHW_ELEVATION,
+    beta=BEACH_SLOPE,
     data_base=HATTERAS_DATA_BASE,
     parameter_file=str(RUN_PARAMETER_FILE),
     groin_callback=GROIN_CALLBACK,

@@ -53,6 +53,7 @@ STEPS = [
     ("3-model-inputs", "inputs overview", [S + "figure_making/pipeline/inputs_overview_figure.py"]),
     ("4-model-mechanics", "model mechanics", [S + "figure_making/model/model_mechanics_figures.py"]),
     ("4-model-mechanics", "storm routing", [S + "figure_making/model/overwash_routing_figures.py"]),
+    ("4-model-mechanics", "parameter yaml table", [S + "figure_making/model/barrier3d_parameters_table.py"]),
     ("5-results", "hindcast edgeBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "edgeBE"]),
     ("5-results", "hindcast zeroBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "zeroBE"]),
     ("5-results", "scenario grid", [S + "figure_making/model_output/scenario_grid.py"]),

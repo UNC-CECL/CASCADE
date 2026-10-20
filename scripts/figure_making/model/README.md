@@ -8,6 +8,8 @@ to `output/figures/4-model-mechanics/<model>/`.
 model_mechanics_figures.py   Barrier3D storm year and budget, BRIE diffusion and
                              asymmetry, the coupling split and loop, management
 overwash_routing_figures.py  where water and sand go in a storm; routing checks
+barrier3d_parameters_table.py  the parameter yaml as a table: CASCADE default vs
+                             each period's run copy, elevations in NAVD88 and MHW
 storm_replay.py              module: replays storms through a saved domain's own
                              update() and captures the routing arrays
 ```
