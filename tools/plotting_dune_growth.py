@@ -3,17 +3,16 @@
 
 """
 plot the two equations that control dune growth rates based on user inputs
-dunes grow fastest when they are at a low height and slowest when they are near their maximum height
+dunes grow fastest when they are at a medium height and slowest when they are near their maximum height
 
-Eqn 1: change in dune growth over time
+Eqn 1: change in dune growth over time (derivative of Equation 2)
 dH/dt = r*H[1-(H/Hmax)]
 ----- variables ------
 dH/dt - change in dune height over time
 r - characteristic dune growth rate (mean of rmin and rmax)
-H - current dune height
+H - current dune height (x variable)
 Hmax - maximum dune height
 
-Integrate equation 1 to get Equation 2
 
 Eqn 2: logistic curve equation
 H = (Hmax*Ho) / [(Hmax-Ho)e^(-n) + Ho]
@@ -21,7 +20,7 @@ H = (Hmax*Ho) / [(Hmax-Ho)e^(-n) + Ho]
 H - dune height at some time
 Hmax - maximum dune height
 Ho - initial dune height
-n - years
+n - years, I think (x variable)
 
 
 """
@@ -72,7 +71,7 @@ for hm in hmax:
         m+=1
 ax1.legend(title="r values")
 ax1.set_ylabel("dH/dt")
-ax1.set_xlabel("dune height from 0 to Hmax")
+ax1.set_xlabel("dune height (H) from 0 to Hmax")
 ax1.set_xlim([0,np.max(hmax)])
 # ax1.set_title(r"$\frac{dH}{dt} = rH[1-(\frac{H}{H_{max}})]$")
 ax1.text(0.02, y=0.8, s=r"$\frac{dH}{dt} = rH[1-(\frac{H}{H_{max}})]$",
@@ -101,7 +100,7 @@ for hm in hmax:
         ax1.plot(x_values, y_values,ls="solid", label=ho, marker=markers[m], c=color)
         m+=1
 ax1.legend(title="ho values")
-ax1.set_ylabel("H")
+ax1.set_ylabel("dune height (H)")
 ax1.set_xlabel("years")
 ax1.set_ylim([0,np.max(hmax)+0.5])
 ax1.set_xlim(0,n_years)
