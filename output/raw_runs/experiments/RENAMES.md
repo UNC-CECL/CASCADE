@@ -27,3 +27,14 @@ The offloaded studies on `D:\archive\CASCADE_offload\output\raw_runs\experiments
 `HAT_end_solve_net_change.py` picks the topic from the solve's window. The topic names use hyphens because the run registry reads any `<4 digits>_<4 digits>` folder as a period folder. The offloaded solves on D: keep `end-domain-boundaries/`.
 
 Renames before 2026-10-07 are in `chains/RENAMES.md` on D:.
+
+## 2026-10-21: the dune growth rate fits moved to data/
+
+The two studies that set the runner's `DUNE_GROWTH_RATES` are model inputs, not experiments. Their write-up,
+tables and figures moved; the runs and logs stay in `dunes/` because the run registry files every run under
+`output/raw_runs/`, so the run tags are unchanged.
+
+| old | new |
+|---|---|
+| `dunes/2026-10-20-stable-dune-growth-rate-topo-v3/{NOTE.md, tables/, figures/}` | `data/hatteras_init/1-barrier3d-domains/1996-start/dune-growth-rate/{README.md, tables/, figures/}` |
+| `dunes/2026-10-20-test-period-growth-rate/tables/` | `data/hatteras_init/1-barrier3d-domains/2009-start/dune-growth-rate/tables/` (README.md new) |

@@ -23,6 +23,8 @@ dune-topo/
     CURRENT              v2
     v2/                  extraction on the 2026-09-02 re-pick, NC-12 visible;
                          what the road tree measures against
+dune-growth-rate/        where the runner's growth rate for this start (0.01-0.03) comes from:
+                         README, tables, figures (since 2026-10-21; runs in output/raw_runs/)
 ```
 
 `v2` is an unmodified extraction: no rows added, no cell edited.

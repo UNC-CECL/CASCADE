@@ -13,8 +13,9 @@ DShoreface: 22.25
 # offset corrected (dune-topo v3). Do not pair this ceiling with fast growth: at 0.55-0.95 every dune grows to
 # ~12 m and overwash stops. The ends were re-solved on these settings on 2026-10-20
 # (hatteras_site_config.HATTERAS_BE_EDGE_ONLY).
-# Record: output/raw_runs/experiments/dunes/2026-10-20-stable-dune-growth-rate-topo-v3/NOTE.md
-# (the rate), 2026-10-20-stable-dune-growth-rate/NOTE.md (method, before the ALACE fix) and
+# Record: data/hatteras_init/1-barrier3d-domains/1996-start/dune-growth-rate/README.md (the rate;
+# 2009-start/dune-growth-rate/ for 2009-2025), and in output/raw_runs/experiments/dunes/
+# 2026-10-20-stable-dune-growth-rate/NOTE.md (method, before the ALACE fix) and
 # 2026-10-19-dune-growth-low-rates/NOTE.md
 # Was 5.5 m NAVD88 (2026-10-13 to 10-20; 2026-10-13-dune-ceiling-range/), and
 # Barrier3D's 3.4 m default (Virginia) before that.

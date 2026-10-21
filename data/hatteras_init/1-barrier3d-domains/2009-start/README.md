@@ -19,6 +19,8 @@ until 2026-10-19, when the 2004 start was retired; nothing in the arrays changed
 dune-topo/
     CURRENT              v1
     v1/                  topography/  dunes/  figures/  RUN_MANIFEST.txt
+dune-growth-rate/        where the runner's growth rate for this start (0.02-0.04) comes from:
+                         README, tables, figures (since 2026-10-21; runs in output/raw_runs/)
 ```
 
 ## History

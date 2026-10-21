@@ -232,6 +232,10 @@ data/hatteras_init/1-barrier3d-domains/**
 # version to measure against. duneline_retreat_1984_1997.csv in particular is
 # where N comes from for every seaward-row insert version.
 !data/hatteras_init/1-barrier3d-domains/**/duneline-shift/*.csv
+# The dune growth rate fits (2026-10-21): small tables and the figures' PDFs and captions, the record of
+# where the runner's DUNE_GROWTH_RATES come from
+!data/hatteras_init/1-barrier3d-domains/*/dune-growth-rate/tables/*.csv
+!data/hatteras_init/1-barrier3d-domains/*/dune-growth-rate/figures/supporting/*
 data/hatteras_init/3-env-forcings/1-records/water_level/noaa_cache_8651370/
 data/hatteras_init/3-env-forcings/1-records/WIS_raw_data/
 data/hatteras_init/4-mgmt-forcing/road_offset/raster/

@@ -65,6 +65,10 @@ CHECK_RATES = ((0.01, 0.02), (0.02, 0.02), (0.01, 0.03))
 
 G.TAG, G.EXP_DIR = TAG, U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 EXP_DIR = G.EXP_DIR
+# Tables and figures: the study set the runner's 1996 growth rate, so since 2026-10-21 they sit with the 1996
+# start's inputs; the runs stay in EXP_DIR. v2 (before the ALACE correction) keeps its experiment folder
+from site_layer import hat_topo_version as _tv  # noqa: E402
+OUT_DIR = EXP_DIR if TOPO == "v2" else _tv.product_dir("1996-start") / "dune-growth-rate"
 
 
 def jobs():
@@ -110,7 +114,7 @@ def figure(t):
     ax.legend(frameon=False, fontsize=6.5, loc="upper left")
     ax.grid(axis="y", color=fs.GRID_C, lw=0.5)
     fs.open_frame(ax)
-    path = EXP_DIR / "figures" / "stable_dune_growth_rate_1996_2009.png"
+    path = OUT_DIR / "figures" / "stable_dune_growth_rate_1996_2009.png"
     fs.save(fig, path, close=True)
     fs.record_caption(path, "Growth rate from stable dunes, 1996 start, Dmax 10.5 m above the berm (Dmaxel 12.2 m "
                       "NAVD88), groin on. Model median dune crest on 1 January 2010 minus the 2009 lidar median on "
@@ -141,8 +145,8 @@ def check():
             row[f"image_{image}"] = T.major(d, image)
         rows.append(row)
     t = pd.DataFrame(rows)
-    (EXP_DIR / "tables").mkdir(parents=True, exist_ok=True)
-    t.to_csv(EXP_DIR / "tables" / "island_and_test_check.csv", index=False)
+    (OUT_DIR / "tables").mkdir(parents=True, exist_ok=True)
+    t.to_csv(OUT_DIR / "tables" / "island_and_test_check.csv", index=False)
     with pd.option_context("display.width", 300, "display.max_columns", 30):
         for w, g in t.groupby("window"):
             print(g.dropna(axis=1, how="all").to_string(index=False), "\n")
@@ -162,12 +166,12 @@ def main():
         t.insert(0, "rate", f"{r[0]:.3f}-{r[1]:.3f}")
         out.append(t)
     t = pd.concat(out)
-    (EXP_DIR / "tables").mkdir(parents=True, exist_ok=True)
-    t.round(3).to_csv(EXP_DIR / "tables" / "stable_dune_scores.csv", index=False)
+    (OUT_DIR / "tables").mkdir(parents=True, exist_ok=True)
+    t.round(3).to_csv(OUT_DIR / "tables" / "stable_dune_scores.csv", index=False)
     end = t[t.survey == 2009].pivot(index="rate", columns="group", values="error")
     traj = t[t.survey > START].groupby(["rate", "group"]).error.apply(lambda e: np.sqrt((e ** 2).mean())).unstack()
     summary = pd.concat({"2010 error vs 2009 lidar (m)": end, "RMSE over the surveys (m)": traj}, axis=1)
-    summary.round(3).to_csv(EXP_DIR / "tables" / "stable_dune_summary.csv")
+    summary.round(3).to_csv(OUT_DIR / "tables" / "stable_dune_summary.csv")
     print(t[t.survey == 2009].groupby("group")[["lidar_median"]].first().round(2).to_string(), "\n")
     print(summary.round(2).to_string())
     print("all seven domains, 2010 error by mean r:", figure(t).round(3).to_dict())

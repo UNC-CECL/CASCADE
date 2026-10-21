@@ -1093,7 +1093,7 @@ NUM_CORES = 1        # >1 has crashed on this configuration; leave at 1
 # Dmax 10.5 m above the berm (Dmaxel 12.2 m, parameter file): on the 1996 start with the ALACE
 # offset corrected (dune-topo v3) its mean, 0.02, reproduces the 2009 crest of the stable dunes
 # (GIS 59-62, 20-22), and the range doubles the cell-to-cell spread of a fixed rate
-# (dunes/2026-10-20-stable-dune-growth-rate-topo-v3/NOTE.md); was 0.55-0.95
+# (data/.../1996-start/dune-growth-rate/README.md); was 0.55-0.95
 RMIN = [0.01] * HATTERAS_DOMAINS.total_domains
 RMAX = [0.03] * HATTERAS_DOMAINS.total_domains
 

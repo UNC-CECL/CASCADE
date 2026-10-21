@@ -18,7 +18,9 @@ The dune ceiling (Dmaxel), the growth rate (rmin, rmax) and the design height, a
 | `2026-10-19-dune-growth-low-rates` | Low growth rates, ranked on the surveyed dune trajectory. | No growth fits the trajectory best (P10 RMSE 0.76 vs 2.20 m for the control), at a cost of skill 0.51 vs 0.59. | record |
 | `2026-10-19-dune-crest-vs-surveys` | Modelled dunes against the 2014-2019 surveys. | The real low dunes stayed low; the control fills them in 3-4 years (alongshore r 0.18 by 2019); the grid winner is closer (0.59-0.76). | record |
 | `2026-10-20-dune-findings-figures` | Three summary figures of the 10-13 and 10-19 findings. | Figures in `figures/`, numbers in `tables/`. | record |
-| `2026-10-20-stable-dune-growth-rate` | With Dmax 10.5 m above the berm, what growth rate keeps stable dunes stable 1996-2009 (advisor's method)? | Mean r 0.005 (0-0.01) closest on the seven stable domains (−0.11 m). | **current**; Dmaxel 12.2 m, r 0.005-0.01 |
+| `2026-10-20-stable-dune-growth-rate` | With Dmax 10.5 m above the berm, what growth rate keeps stable dunes stable 1996-2009 (advisor's method)? | Mean r 0.005 (0-0.01) closest on the seven stable domains (−0.11 m). | superseded 2026-10-20 by the `-topo-v3` re-run on the corrected 1996 start; its NOTE.md still sets out the selection |
+| `2026-10-20-stable-dune-growth-rate-topo-v3` | The same on the 1996 start with the ALACE offset corrected. | r 0.02 fits (+0.01 m); 0.01-0.03 adopted. | **current**, but runs only: the write-up, tables and figures moved to `data/hatteras_init/1-barrier3d-domains/1996-start/dune-growth-rate/` on 2026-10-21 |
+| `2026-10-20-test-period-growth-rate` | Does 2009-2025 want a faster growth rate? | 0.02-0.04 tracks the 2014-2019 median crest within 0.16 m; adopted for 2009. | **current**, but runs only: the write-up and table moved to `data/hatteras_init/1-barrier3d-domains/2009-start/dune-growth-rate/` on 2026-10-21 |
 
 **Status**: **current** means its answer is in use now. **record** means a finished check, kept so the number can be traced. **superseded** means a later study replaced the answer.
 

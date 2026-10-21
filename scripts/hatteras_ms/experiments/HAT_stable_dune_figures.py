@@ -4,7 +4,7 @@ Why the stable dunes at GIS 59-62 and 20-22 can calibrate the dune growth rate r
     python scripts/hatteras_ms/experiments/HAT_stable_dune_figures.py
 
 Figures for the stable-dune study (HAT_stable_dune_growth_rate.py, run it first),
-written to its figures/ folder in reading order:
+written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026-10-21) in reading order:
   stable_dune_fig1_where       shoreline change, dune change and overwash per domain, 1996-2009:
                                the two stretches meet all three conditions
   stable_dune_fig2_profiles    1996 and 2009 DEM profiles at the stable stretches: dune and beach in place
@@ -52,7 +52,7 @@ from site_layer.hat_elevation_products import product  # noqa: E402
 X, tv = S.X, S.tv
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = R.EXP_DIR / "figures"
+OUT = R.OUT_DIR / "figures"
 C96, C09 = fs.C_1984, "#c8880f"            # house period colours: 1996 red, 2009 amber
 STABLE = R.GROUPS                           # {"GIS 59-62": (...), "GIS 20-22": (...)}
 STABLE_C = R.GROUP_COLOURS
