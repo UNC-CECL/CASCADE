@@ -5,17 +5,21 @@ Why the stable dunes at GIS 59-62 and 20-22 can calibrate the dune growth rate r
 
 Figures for the stable-dune study (HAT_stable_dune_growth_rate.py, run it first),
 written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026-10-21), one subfolder per
-topic: 1-selection (fig1, fig3), 2-observed-dunes (fig2, fig4, fig7-9), 3-model-fit (the fit figures). In reading order:
+topic: 1-selection (fig1, fig3), 2-observed-dunes, 3-model-fit (the fit figures). 2-observed-dunes is split by
+domain: all-stable-domains/ (fig2, fig4, fig8, fig9) and one folder per stable domain, gis<N>/, with every
+observed-dune figure for that domain alone (stable_dune_gis<N>_*). In reading order:
   stable_dune_fig1_where       shoreline change, dune change and overwash per domain, 1996-2009:
                                the two stretches meet all three conditions
   stable_dune_fig2_profiles    1996 and 2009 DEM profiles at the stable stretches: dune and beach in place
   stable_dune_fig3_excluded    the same at two excluded domains: a growing beach, a retreating shoreline
   stable_dune_fig4_surveys     crests through all nine 1996-2009 lidar surveys: no storm losses
-  stable_dune_fig7_dem_gis<N>  one per stable domain: the 1996 and 2009 1 m DEMs and their difference, north up,
-                               with the dune window and each row's picked crest: the same dune in both
+  stable_dune_gis<N>_dem       the 1996 and 2009 1 m DEMs and their difference, north up, with the dune window
+                               and each row's picked crest: the same dune in both (was fig7)
+  stable_dune_gis<N>_profile, _surveys, _alongshore, _crest_shift
+                               fig2, fig4, fig8 and fig9 for that domain alone
   stable_dune_fig8_alongshore  crest along the shore in every survey: 1996 and 2009 rise and dip together
   stable_dune_fig9_crest_shift how far the picked crest moved cross-shore, 1996 to 2009
-    (fig7-9 alone, no model runs needed: HAT_stable_dune_figures.py dems)
+    (the gis<N> sets, fig8 and fig9 alone, no model runs needed: HAT_stable_dune_figures.py dems)
   stable_dune_fit_trajectory   why 0.01-0.03: the adopted rate against every survey, cell spread shown
   stable_dune_fit_error_by_rate every rate tested, from tables/stable_dune_summary.csv
   stable_dune_fit_spread       a range keeps the median and doubles the spread of a fixed rate
@@ -29,7 +33,7 @@ is the 2009 DEM wherever ALACE has no data, so unmasked cells would fake stabili
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-20
+Version: 2026-10-21
 """
 from __future__ import annotations
 
@@ -64,7 +68,10 @@ OUT = R.OUT_DIR / "figures"
 # One subfolder per point the figures make, in reading order (2026-10-21)
 TOPICS = {"stable_dune_fig1_where": "1-selection", "stable_dune_fig3_excluded": "1-selection",
           "stable_dune_fit_trajectory": "3-model-fit",
-          "stable_dune_fit_error_by_rate": "3-model-fit", "stable_dune_fit_spread": "3-model-fit"}   # everything else: 2-observed-dunes
+          "stable_dune_fit_error_by_rate": "3-model-fit", "stable_dune_fit_spread": "3-model-fit"}
+# Everything else is 2-observed-dunes, split by the domains a figure covers: one folder per stable domain
+# (stable_dune_gis<N>_*) and all-stable-domains for the figures that compare them (2026-10-21)
+OBSERVED = "2-observed-dunes"
 C96, C09 = fs.C_1984, "#c8880f"            # house period colours: 1996 red, 2009 amber
 STABLE = R.GROUPS                           # {"GIS 59-62": (...), "GIS 20-22": (...)}
 STABLE_C = R.GROUP_COLOURS
@@ -76,8 +83,16 @@ SOURCES = {"1996-start": ("2009-2014-1996", 1996), "2009-start": ("2009-2014", 2
 # -----------------------------------------------------------------------------
 
 
+def folder(name):
+    if name in TOPICS:
+        return TOPICS[name]
+    if name.startswith("stable_dune_gis"):
+        return f"{OBSERVED}/gis{name.split('_')[2][3:]}"
+    return f"{OBSERVED}/all-stable-domains"
+
+
 def save(fig, name, caption):
-    path = OUT / TOPICS.get(name, "2-observed-dunes") / f"{name}.png"
+    path = OUT / folder(name) / f"{name}.png"
     fs.save(fig, path, close=True)
     fs.record_caption(path, caption + " Producer: HAT_stable_dune_figures.py.")
     print(path, flush=True)
@@ -101,13 +116,17 @@ def survey_table():
     return t[t.status == "ok"]
 
 
-# Domain-median crest per survey, on cells with a dune in every survey and not at the window's landward edge
-def domain_crests():
+# Crest per cell and survey, on cells with a dune in every survey and not at the window's landward edge
+def cell_crests():
     t = survey_table()
     w = t.pivot_table(index=["gis", "cell"], columns="survey", values="crest_m_navd88").dropna()
     edge = pd.read_csv(tv.product_dir("1996-start") / "survey-crests" / "survey_dune_crests.csv") \
         .groupby(["gis", "cell"]).at_landward_edge.any()
-    w = w[~edge.reindex(w.index).fillna(True)]
+    return w[~edge.reindex(w.index).fillna(True)]
+
+
+def domain_crests():
+    w = cell_crests()
     return w.groupby(level="gis").median(), w.groupby(level="gis").size()
 
 
@@ -367,7 +386,7 @@ def fig_dem_maps(gis):
     shift = (p09[both] - p96[both]) * fs.CELL_M
     label = next(lab for lab, doms in STABLE.items() if gis in doms)
     fig.suptitle(f"GIS {gis} ({label})", fontsize=8, fontweight="bold", x=0.01, ha="left")
-    save(fig, f"stable_dune_fig7_dem_gis{gis}",
+    save(fig, f"stable_dune_gis{gis}_dem",
          f"The same dune in both surveys, GIS {gis}. (a) The 1996 lidar (ALACE, lowered 0.24 m) and (b) the 2009 "
          f"lidar (USACE) at 1 m, north up, true scale, over a hillshade; grey where that year's own survey has no "
          f"data (the 1996 start is the 2009 DEM there, so it is not shown). (c) 2009 minus 1996: blue gain, red "
@@ -380,34 +399,41 @@ def fig_dem_maps(gis):
             if gis in STABLE["GIS 20-22"] else ""))
 
 
-def fig_alongshore():
+# One stretch (or one domain) of crests alongshore; returns the 1996-2009 alongshore r and median rise
+def alongshore_panel(ax, doms, label, i=None, name=None):
     t = survey_table()
+    s = t[t.gis.isin(doms)].copy()
+    s["x"] = (s.gis - min(doms)) * 500 + s.cell * fs.CELL_M + 5
+    w = s.pivot_table(index="x", columns="survey", values="crest_m_navd88")
+    for year in w.columns:
+        if year not in (1996, 2009):
+            ax.plot(w.index, w[year], color="0.8", lw=0.6, zorder=1)
+    # 1996 and 2009 from the 1 m DEMs the maps show (the table's 1996 is NOAA's coarse grid, a bias check)
+    for start, year, col in (("1996-start", 1996, C96), ("2009-start", 2009, C09)):
+        h = np.concatenate([crest_picks(start, g)[1] for g in doms])
+        w[year] = pd.Series(h, index=(np.arange(len(h)) * fs.CELL_M + 5)).reindex(w.index).to_numpy()
+        ax.plot(w.index, w[year], color=col, lw=1.4, label=f"Observed: {year} lidar DEM (1 m)", zorder=3)
+    both = w[[1996, 2009]].dropna()
+    r = np.corrcoef(both[1996], both[2009])[0, 1]
+    ax.plot([], [], color="0.8", lw=0.6, label="Observed: the 1997-2005 surveys (3-9 m grids)")
+    for g in list(doms)[1:]:
+        ax.axvline((g - min(doms)) * 500, color=fs.INK_MUTED, lw=0.5, ls=":")
+    for g in doms if name is None else ():        # one domain: its name is in the corner label
+        ax.text((g - min(doms)) * 500 + 250, 9.3, f"GIS {g}", ha="center", fontsize=6.5, color=fs.INK_MUTED)
+    ax.text(0.99, 0.04, f"{name or label}: 1996 vs 2009 alongshore r = {r:.2f}, median rise "
+            f"{np.median(both[2009] - both[1996]):+.2f} m", transform=ax.transAxes, ha="right", fontsize=6.5,
+            color=STABLE_C[label], fontweight="bold")
+    if name is None:
+        ax.text(0.01, 0.04, label, transform=ax.transAxes, fontsize=7, fontweight="bold", color=STABLE_C[label])
+    ax.set(xlim=(0, len(doms) * 500), ylim=(3, 9.8), ylabel="Dune crest (m NAVD88)")
+    finish(ax, i)
+    return r, np.median(both[2009] - both[1996])
+
+
+def fig_alongshore():
     fig, axes = plt.subplots(2, 1, figsize=fs.figsize("double", height=4.2), layout="constrained", sharey=True)
     for i, (ax, (label, doms)) in enumerate(zip(axes, STABLE.items())):
-        s = t[t.gis.isin(doms)].copy()
-        s["x"] = (s.gis - min(doms)) * 500 + s.cell * fs.CELL_M + 5
-        w = s.pivot_table(index="x", columns="survey", values="crest_m_navd88")
-        for year in w.columns:
-            if year not in (1996, 2009):
-                ax.plot(w.index, w[year], color="0.8", lw=0.6, zorder=1)
-        # 1996 and 2009 from the 1 m DEMs the maps show (the table's 1996 is NOAA's coarse grid, a bias check)
-        for start, year, col in (("1996-start", 1996, C96), ("2009-start", 2009, C09)):
-            h = np.concatenate([crest_picks(start, g)[1] for g in doms])
-            w[year] = pd.Series(h, index=(np.arange(len(h)) * fs.CELL_M + 5)).reindex(w.index).to_numpy()
-            ax.plot(w.index, w[year], color=col, lw=1.4, label=f"Observed: {year} lidar DEM (1 m)", zorder=3)
-        both = w[[1996, 2009]].dropna()
-        r = np.corrcoef(both[1996], both[2009])[0, 1]
-        ax.plot([], [], color="0.8", lw=0.6, label="Observed: the 1997-2005 surveys (3-9 m grids)")
-        for g in doms[1:]:
-            ax.axvline((g - min(doms)) * 500, color=fs.INK_MUTED, lw=0.5, ls=":")
-        for g in doms:
-            ax.text((g - min(doms)) * 500 + 250, 9.3, f"GIS {g}", ha="center", fontsize=6.5, color=fs.INK_MUTED)
-        ax.text(0.99, 0.04, f"{label}: 1996 vs 2009 alongshore r = {r:.2f}, median rise "
-                f"{np.median(both[2009] - both[1996]):+.2f} m", transform=ax.transAxes, ha="right", fontsize=6.5,
-                color=STABLE_C[label], fontweight="bold")
-        ax.text(0.01, 0.04, label, transform=ax.transAxes, fontsize=7, fontweight="bold", color=STABLE_C[label])
-        ax.set(xlim=(0, len(doms) * 500), ylim=(3, 9.8), ylabel="Dune crest (m NAVD88)")
-        finish(ax, i)
+        alongshore_panel(ax, doms, label, i)
     axes[-1].set_xlabel("Alongshore distance, south to north (m)")
     fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=3)
     save(fig, "stable_dune_fig8_alongshore",
@@ -419,14 +445,19 @@ def fig_alongshore():
          "(above 9 m) appear in no other survey.")
 
 
+# Cross-shore move of the picked crest, 2009 minus 1996 (m, + landward), on rows picked in both years
+def crest_shift(g):
+    p96, _, _ = crest_picks("1996-start", g)
+    p09, _, _ = crest_picks("2009-start", g)
+    ok = (p96 >= 0) & (p09 >= 0)
+    return (p09[ok] - p96[ok]) * fs.CELL_M
+
+
 def fig_crest_shift():
     rows = []
     for label, doms in STABLE.items():
         for g in doms:
-            p96, _, _ = crest_picks("1996-start", g)
-            p09, _, _ = crest_picks("2009-start", g)
-            ok = (p96 >= 0) & (p09 >= 0)
-            rows += [dict(group=label, shift=s) for s in (p09[ok] - p96[ok]) * fs.CELL_M]
+            rows += [dict(group=label, shift=s) for s in crest_shift(g)]
     d = pd.DataFrame(rows)
     fig, ax = plt.subplots(figsize=fs.figsize("single", height=2.7), layout="constrained")
     bins = np.arange(-65, 70, 10)
@@ -444,6 +475,98 @@ def fig_crest_shift():
          "seven stable domains (rows picked in both years). Positions are 10 m model cells, so 0 means the same "
          f"cell. {within:.0%} of rows are within one cell: the crest picked in 2009 is the 1996 dune, not a "
          "different ridge.")
+
+
+# --- one stable domain: every observed-dune figure for it, in its own folder -------------
+def stretch_of(gis):
+    return next(lab for lab, doms in STABLE.items() if gis in doms)
+
+
+def fig_domain_profile(gis):
+    fig, ax = plt.subplots(figsize=fs.figsize("single", height=2.8), layout="constrained")
+    profile_panel(ax, gis, None)
+    ax.set_ylabel("Elevation (m NAVD88)")
+    ax.legend(frameon=False, fontsize=6.5, loc="upper left")
+    save(fig, f"stable_dune_gis{gis}_profile",
+         f"Cross-shore profile at GIS {gis} (in the {stretch_of(gis)} stretch) from the 1996 and 2009 lidar DEMs, in the same "
+         f"frame (the 1996 start's, 10 m cells; line: median of the domain's 50 alongshore rows, band: 25th-75th "
+         f"percentile; only cells covered by that year's own survey). Grey: the dune window the model reads its "
+         f"dune from. As stable_dune_fig2_profiles, for this domain alone.")
+
+
+def fig_domain_surveys(gis):
+    w = cell_crests().loc[gis]
+    years = [int(y) for y in w.columns]
+    lab = stretch_of(gis)
+    fig, ax = plt.subplots(figsize=fs.figsize("single", height=2.8), layout="constrained")
+    ax.fill_between(years, w.quantile(0.25).to_numpy(), w.quantile(0.75).to_numpy(), color=STABLE_C[lab],
+                    alpha=0.2, lw=0, label="Observed: middle half of the cells")
+    ax.plot(years, w.median().to_numpy(), color=STABLE_C[lab], lw=2, marker="o", ms=4,
+            label=f"Observed: GIS {gis}, median")
+    ax.axvline(2003.7, color=fs.INK_MUTED, lw=0.6, ls="--")
+    ax.text(2003.8, 9.25, "Isabel", fontsize=6.5, color=fs.INK_MUTED)
+    ax.axhline(5.58, color=fs.INK_MUTED, lw=0.6, ls="-.")
+    ax.text(1996, 5.62, "Isabel run-up, 5.58 m", fontsize=6, color=fs.INK_MUTED)
+    ax.set(xlabel="Survey year", ylabel="Dune crest (m NAVD88)", xlim=(1995.5, 2010.2), ylim=(4, 9.5))
+    ax.legend(frameon=False, fontsize=6.5, loc="lower right")
+    finish(ax)
+    rise = w[2009].median() - w[1996].median()
+    save(fig, f"stable_dune_gis{gis}_surveys",
+         f"Dune crest at GIS {gis} (in the {lab} stretch) through all nine lidar surveys, 1996-2009: median and middle half of "
+         f"the {len(w)} 10 m cells with a dune in every survey. The median rose {rise:+.2f} m from 1996 to 2009, "
+         f"with no drop after Isabel (2004 survey). 1996-2005 surveys are 3-9 m grids, 2009 the 1 m DEM. As "
+         f"stable_dune_fig4_surveys, for this domain alone.")
+
+
+def fig_domain_alongshore(gis):
+    lab = stretch_of(gis)
+    fig, ax = plt.subplots(figsize=fs.figsize("double", height=2.5), layout="constrained")
+    r, rise = alongshore_panel(ax, (gis,), lab, name=f"GIS {gis}")
+    ax.set_xlabel("Alongshore distance, south to north (m)")
+    fig.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=3)
+    save(fig, f"stable_dune_gis{gis}_alongshore",
+         f"Dune crest along GIS {gis} (in the {lab} stretch), one value per 10 m model row (the highest 10 m cell in the model's "
+         f"dune window). Red and amber: the 1 m 1996 and 2009 DEMs; grey: the 1997-2005 surveys, coarser grids. "
+         f"1996 and 2009 correlate alongshore at r = {r:.2f} and the median row rose {rise:+.2f} m. Gaps: rows a "
+         f"survey did not cover. As stable_dune_fig8_alongshore, for this domain alone." + spike_note(gis))
+
+
+# A single 1996 row above 9 m, seen in no other survey, drags r down at GIS 21 and 22: report r without it
+def spike_note(gis):
+    a, b = crest_picks("1996-start", gis)[1], crest_picks("2009-start", gis)[1]
+    ok = ~np.isnan(a) & ~np.isnan(b)
+    spike = ok & (a >= 9)
+    if not spike.any():
+        return ""
+    keep = ok & ~spike
+    return (f" The single-row 1996 spike above 9 m appears in no other survey; without it r = "
+            f"{np.corrcoef(a[keep], b[keep])[0, 1]:.2f}.")
+
+
+def fig_domain_crest_shift(gis):
+    d = crest_shift(gis)
+    lab = stretch_of(gis)
+    fig, ax = plt.subplots(figsize=fs.figsize("single", height=2.6), layout="constrained")
+    ax.hist(d, bins=np.arange(-65, 70, 10), color=STABLE_C[lab], rwidth=0.85, label=f"Observed: GIS {gis}")
+    within = np.mean(np.abs(d) <= fs.CELL_M)
+    ax.axvline(0, color=fs.INK, lw=0.6, ls="--")
+    ax.text(0.98, 0.95, f"{within:.0%} of {len(d)} rows within\none 10 m cell", transform=ax.transAxes,
+            ha="right", va="top", fontsize=6.5)
+    ax.set(xlabel="Crest position, 2009 minus 1996 (m, + landward)", ylabel="10 m rows")
+    ax.legend(frameon=False, fontsize=6.5, loc="upper left")
+    finish(ax)
+    save(fig, f"stable_dune_gis{gis}_crest_shift",
+         f"How far the picked dune crest moved cross-shore between the 1996 and 2009 lidar at GIS {gis} (in the {lab} stretch), "
+         f"per 10 m row picked in both years. 0 means the same 10 m cell; {within:.0%} of rows are within one "
+         f"cell. As stable_dune_fig9_crest_shift, for this domain alone.")
+
+
+def fig_domain(gis):
+    fig_dem_maps(gis)
+    fig_domain_profile(gis)
+    fig_domain_surveys(gis)
+    fig_domain_alongshore(gis)
+    fig_domain_crest_shift(gis)
 
 
 # --- why 0.01-0.03 ---------------------------------------------------------------------
@@ -608,9 +731,9 @@ def main():
         fig_fit_errors()
         fig_fit_spread()
         return
-    if len(sys.argv) > 1 and sys.argv[1] == "dems":           # only the same-dune figures (no model runs needed)
+    if len(sys.argv) > 1 and sys.argv[1] == "dems":           # only the same-dune and per-domain figures (no model runs)
         for g in sorted(g for doms in STABLE.values() for g in doms):
-            fig_dem_maps(g)
+            fig_domain(g)
         fig_alongshore()
         fig_crest_shift()
         return
@@ -627,6 +750,10 @@ def main():
                  "shoreline retreated (-2.2 m/yr); the crest held while the dune lost width, which r cannot "
                  "represent.", EXCLUDED)
     fig_surveys()
+    for g in sorted(g for doms in STABLE.values() for g in doms):
+        fig_domain(g)
+    fig_alongshore()
+    fig_crest_shift()
     fig_fit_trajectory()
     fig_fit_errors()
     fig_fit_spread()

@@ -1,0 +1,13 @@
+# Captions — gis59
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`stable_dune_gis59_dem.png`.** The same dune in both surveys, GIS 59. (a) The 1996 lidar (ALACE, lowered 0.24 m) and (b) the 2009 lidar (USACE) at 1 m, north up, true scale, over a hillshade; grey where that year's own survey has no data (the 1996 start is the 2009 DEM there, so it is not shown). (c) 2009 minus 1996: blue gain, red loss. Dashed: the model's dune window, the band of 10 m cells each row's crest is searched in. Dots: the crest picked in each 10 m alongshore row from that year's DEM, averaged to 10 m as the model sees it. The picks follow one ridge in both years: 98% of the 50 rows picked in both years are within one 10 m cell of each other. Producer: HAT_stable_dune_figures.py.
+
+**`stable_dune_gis59_profile.png`.** Cross-shore profile at GIS 59 (in the GIS 59-62 stretch) from the 1996 and 2009 lidar DEMs, in the same frame (the 1996 start's, 10 m cells; line: median of the domain's 50 alongshore rows, band: 25th-75th percentile; only cells covered by that year's own survey). Grey: the dune window the model reads its dune from. As stable_dune_fig2_profiles, for this domain alone. Producer: HAT_stable_dune_figures.py.
+
+**`stable_dune_gis59_surveys.png`.** Dune crest at GIS 59 (in the GIS 59-62 stretch) through all nine lidar surveys, 1996-2009: median and middle half of the 50 10 m cells with a dune in every survey. The median rose +0.91 m from 1996 to 2009, with no drop after Isabel (2004 survey). 1996-2005 surveys are 3-9 m grids, 2009 the 1 m DEM. As stable_dune_fig4_surveys, for this domain alone. Producer: HAT_stable_dune_figures.py.
+
+**`stable_dune_gis59_alongshore.png`.** Dune crest along GIS 59 (in the GIS 59-62 stretch), one value per 10 m model row (the highest 10 m cell in the model's dune window). Red and amber: the 1 m 1996 and 2009 DEMs; grey: the 1997-2005 surveys, coarser grids. 1996 and 2009 correlate alongshore at r = 0.73 and the median row rose +1.03 m. Gaps: rows a survey did not cover. As stable_dune_fig8_alongshore, for this domain alone. Producer: HAT_stable_dune_figures.py.
+
+**`stable_dune_gis59_crest_shift.png`.** How far the picked dune crest moved cross-shore between the 1996 and 2009 lidar at GIS 59 (in the GIS 59-62 stretch), per 10 m row picked in both years. 0 means the same 10 m cell; 98% of rows are within one cell. As stable_dune_fig9_crest_shift, for this domain alone. Producer: HAT_stable_dune_figures.py.
