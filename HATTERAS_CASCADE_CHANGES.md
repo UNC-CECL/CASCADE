@@ -38,7 +38,7 @@ The fresh-start commit already carried some local edits, made before this branch
 **What was missing.** CASCADE has no hard structures. The Buxton groins trap alongshore sand, building an updrift fillet and a downdrift notch, and nothing in BRIE or Barrier3D can represent that.
 
 **The change.**
-- `cascade/cascade_groin.py` is a copy of `cascade.py` with one addition: just before BRIE's alongshore-transport solve, `update()` calls `cascade._groin_callback(self, x_s_dt)` if one is attached (`cascade_groin.py:608-618`). With no callback, the model is bit-for-bit the same as `cascade.py`.
+- `cascade/cascade_groin.py` is a copy of `cascade.py` with one addition: just before BRIE's alongshore-transport solve, `update()` calls `cascade._groin_callback(self, x_s_dt)` if one is attached (`cascade_groin.py:612-614`). With no callback, the model is bit-for-bit the same as `cascade.py`.
 - `cascade/groin.py` provides `GroinCallback` (since 2026-10-14). Each year it moves a share `s` of BRIE's wave-driven net drift arriving at the GIS 5|6 face from the downdrift domain to the updrift one, and, within 10 cells of the face, adds back the diffusive leak BRIE would make of that sand at the groin's own bends. The leak is measured against the groin's tracked footprint (BRIE's alongshore step repeated with and without the groin's contribution), so a groin of strength 0 is exactly the no-groin run. Nothing inside BRIE or Barrier3D is edited.
 - Set in `hat_run.yaml` by its strength, per window (0.16 for 1996-2009, 0.10 for 2009-2025, fitted from each window's observed start shoreline), and the first year it no longer works (2017, the Buxton fill). Its whole-life strength, fitted from 1967, is 0.25; `groin.strength` sets one value for any start.
 
@@ -59,7 +59,7 @@ The fresh-start commit already carried some local edits, made before this branch
 
 **What was wrong.** One `road_setback` did two jobs. It placed the road at t = 0, and the yearly update re-read it as the distance a relocated road is rebuilt at. A caller wanting a standard rebuild clearance had to overwrite `cascade._road_setback` after construction. That only worked because the constructor had already used the value.
 
-**The change.** `Cascade(..., road_relocation_setback=None)` in both classes. The yearly update reads it (`cascade_groin.py:713`). `None` keeps the old behaviour exactly: each domain relocates to its own measured offset.
+**The change.** `Cascade(..., road_relocation_setback=None)` in both classes. The yearly update reads it (`cascade_groin.py:710`). `None` keeps the old behaviour exactly: each domain relocates to its own measured offset.
 
 **Effect.** Proven a no-op for existing runs: same arm and topography, every domain's rate matches to zero and the road-management table is identical row for row. It removes the post-construction overwrite from the pipeline.
 
@@ -145,7 +145,7 @@ None of these were changed in `cascade/`. The pipeline or the reporting handles 
 
 | behaviour | where | consequence | how the hindcast handles it |
 |---|---|---|---|
-| `update()` copies its own `_nourishment_volume[iB3D]` and `_dune_design_elevation[iB3D]` into each `BeachDuneManager` just before calling it | `cascade_groin.py:802-809` | a volume written onto `cascade.nourishments[i]` is overwritten, and every fill silently used the 100 m³/m init default (Avon 2022: 100 instead of 841 m³/m) | volumes are written to the Cascade-level list by `cascade_pipeline/nourishment.py` (`NourishmentSchedule.apply_to_cascade`); `verify_nourishment()` reads the manager's own `_nourishment_volume_TS` to confirm |
+| `update()` copies its own `_nourishment_volume[iB3D]` and `_dune_design_elevation[iB3D]` into each `BeachDuneManager` just before calling it | `cascade_groin.py:801-806` | a volume written onto `cascade.nourishments[i]` is overwritten, and every fill silently used the 100 m³/m init default (Avon 2022: 100 instead of 841 m³/m) | volumes are written to the Cascade-level list by `cascade_pipeline/nourishment.py` (`NourishmentSchedule.apply_to_cascade`); `verify_nourishment()` reads the manager's own `_nourishment_volume_TS` to confirm |
 | the beach/dune manager runs on the union of community zones and nourished domains, all period | runner footprint | where it overlaps the roadway footprint, both managers run: overwash removed twice and `ShorelineChangeTS` pinned at 0 | reported, not corrected; asserted against the finished run |
 | a fill is an instantaneous step in `x_s`, and BRIE's Crank-Nicolson solve rings at the grid scale (r ≈ 1.05) | `shoreface_nourishment`; `brie.py` ~1294 | alternating ±m wiggles next to recent fills, decaying ~40%/yr | model rates are an OLS slope (LRR), which averages the ringing |
 | BRIE's alongshore solve is not volume-conserving | `brie.py` | the reach mean drifts; the groin's own share of the leak is corrected at its bends (`groin.py`) | the shoreline score is demeaned |
