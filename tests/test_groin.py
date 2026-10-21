@@ -1,4 +1,4 @@
-"""Tests for cascade.groin: the corrected groin's schedule, its zero-strength identity and its direction.
+"""Tests for cascade.groin: the corrected groin's schedule, its zero-strength identity, its direction and its spread.
 
 The callback reads BRIE's state through ``cascade._brie_coupler._brie``, so a stand-in
 carrying exactly the attributes it reads is enough to pin its arithmetic. Whether it
@@ -129,3 +129,47 @@ def test_a_groin_that_makes_or_loses_sand_stops_the_run():
     g._last_year = None                             # keep this footprint rather than re-stepping it
     with pytest.raises(GroinOutsideTestedRange, match="lost"):
         g(cascade, np.zeros(NY))
+
+
+SET_E = (0.0, 2 / 3, 1 / 3)       # Buxton's fit: none of the loss on the updrift pad, 2/3 and 1/3 beyond it
+
+
+def stepped_coast(updrift, step_m=200.0):
+    """A level coast with the updrift side standing step_m seaward (x_s landward +) of the downdrift side."""
+    x = np.zeros(NY)
+    if updrift == UP:
+        x[UP:] -= step_m
+    else:
+        x[:DOWN + 1] -= step_m
+    return x
+
+
+@pytest.mark.parametrize("updrift, downdrift, away", [(UP, DOWN, 1), (DOWN, UP, -1)])
+def test_the_spread_moves_the_updrift_loss_to_the_pads_beyond_and_conserves_it(updrift, downdrift, away):
+    x = stepped_coast(updrift)
+    plain = GroinCallback(updrift, downdrift, [(1969, 0.25)], start_year=2000, n_domains=NY)
+    spread = GroinCallback(updrift, downdrift, [(1969, 0.25)], start_year=2000, n_domains=NY,
+                           spread_weights=SET_E)
+    difference = spread(fake_cascade(x), np.zeros(NY)) - plain(fake_cascade(x), np.zeros(NY))
+    loss_m = spread.record[-1]["spread_loss_m"]
+    assert loss_m > 0.0 and plain.record[-1]["spread_loss_m"] == 0.0
+    # x_s is landward +: the updrift pad is given its loss back, the two pads beyond take 2/3 and 1/3 of it
+    expected = np.zeros(NY)
+    expected[updrift] = -loss_m
+    expected[updrift + away] = 2 / 3 * loss_m
+    expected[updrift + 2 * away] = 1 / 3 * loss_m
+    assert np.allclose(difference, expected, atol=1e-12)
+    assert abs(difference.sum()) < 1e-9
+
+
+def test_the_spread_is_off_while_the_groin_is():
+    x = stepped_coast(UP)
+    g = GroinCallback(UP, DOWN, [(2010, 0.25)], start_year=2000, n_domains=NY, spread_weights=SET_E)
+    assert np.array_equal(g(fake_cascade(x), np.zeros(NY)), np.zeros(NY))
+    assert g.record[-1]["spread_loss_m"] == 0.0
+
+
+@pytest.mark.parametrize("weights", [(0.5, 0.5, 0.5), (-0.1, 0.6, 0.5), (1.0, 0.0)])
+def test_spread_weights_must_be_three_shares_summing_to_one(weights):
+    with pytest.raises(ValueError, match="spread_weights"):
+        GroinCallback(UP, DOWN, [(1969, 0.25)], start_year=2000, n_domains=NY, spread_weights=weights)

@@ -69,7 +69,8 @@ keep the names they were run under.
 
 `GroinCallback` is attached to a `Cascade` instance as `cascade._groin_callback` and called once per
 model year, just before BRIE's alongshore-transport solve. It reads BRIE's shoreline and wave-climate tables,
-adds to `x_s_dt`, and changes nothing inside BRIE or Barrier3D. Each year it adds two parts:
+adds to `x_s_dt`, and changes nothing inside BRIE or Barrier3D. Each year it adds two parts, and a third
+if the spread is set:
 
 1. **The drift groin.** BRIE's net alongshore drift for the wave climate is read from BRIE's own tables at
    the shoreline angle where the drift arrives at the face between the two pads, and converted to shoreline
@@ -82,12 +83,21 @@ adds to `x_s_dt`, and changes nothing inside BRIE or Barrier3D. Each year it add
    alongshore step for last year (`brie.py` lines 1293-1326) is repeated with and without the groin's own
    contribution, and the difference is the footprint. At `s` = 0 the footprint and the correction are exactly
    zero, so the run is the no-groin run.
+3. **The spread (optional, `spread_weights`).** A real fillet is wider than one 500 m domain (about 3 km in
+   the record), but in the model the step at the face relaxes into the updrift pad alone. Each year the loss
+   the updrift pad is about to take across the face, BRIE's own term `2 r (x_down - x_up)`, is shared with
+   the first and second pads beyond it in the given shares: the updrift pad is given back what the others
+   take. Sand is conserved, it acts only while the groin works and the updrift pad stands seaward, and it is
+   part of the groin's own contribution, so the footprint and the leak correction include it. The default
+   `(1, 0, 0)` is no spread. Buxton's fit is `(0, 2/3, 1/3)`: the groin field (GIS 6) holds its sand and the
+   fillet loses it from GIS 7-8 (`4-hindcast/3-wave-driven-1967-2025/2026-10-20-spread-relaxation/`).
 
 **Settings.** `strength_history` is a list of `(from_year, strength)` pairs; each strength holds until the
 next, and the first year is the install year (strength 0 before it; there is no separate `install_year`
 since 2026-10-20). A groin at 0.25 until the 2017 fill is `[(1969, 0.25), (2017, 0.0)]`. Each year's
 numbers are kept in `record` and written out by `diagnostics_frame()`. `half_width` defaults to 10
-cells: at 5 it leaks on a grid-aligned coast (`3-module-tests/5-long-term/`).
+cells: at 5 it leaks on a grid-aligned coast (`3-module-tests/5-long-term/`). `spread_weights` (three shares
+summing to 1) defaults to `(1, 0, 0)`; each year's spread is in `record` as `spread_loss_m`.
 
 **Conventions (checked against `brie_coupler`).** `x_s_dt` is passed to BRIE in metres (`brie_coupler`
 converts back to decametres). `x_s` increases landward, so a negative `x_s_dt` is a seaward advance. The

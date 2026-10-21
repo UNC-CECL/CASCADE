@@ -1,7 +1,8 @@
 
 """The wave-driven groin: holds back a share of BRIE's alongshore drift, without BRIE leaking it away.
 
-A CASCADE callback (``cascade._groin_callback``), called once per model year just before BRIE's
+Optionally (``spread_weights``) the loss the updrift pad takes across the groin face each year is shared with
+the two pads beyond it, for a fillet wider than one domain. A CASCADE callback (``cascade._groin_callback``), called once per model year just before BRIE's
 alongshore solve; it only adds to ``x_s_dt``. Units are metres, ``x_s`` is landward positive, and
 pads are padded array indices from the runner. How it works, its tested range and its Buxton fit:
 hard-structures/groin/README.md.
@@ -46,10 +47,11 @@ def _table_index(brie, angle_deg):
 class GroinCallback:
     """A groin that holds back a share of the drift arriving at its face, and cancels BRIE's leak of it.
 
-    Each year it adds two parts to ``x_s_dt``: the drift groin (a share of BRIE's net drift, the
-    strength, moved from the downdrift to the updrift pad) and the leak correction (BRIE's diffusive
-    term at the groin's own bends, cancelled within ``half_width`` cells of the face). It stops the
-    run with :class:`GroinOutsideTestedRange` outside its tested range.
+    Each year it adds to ``x_s_dt``: the drift groin (a share of BRIE's net drift, the strength, moved
+    from the downdrift to the updrift pad), the leak correction (BRIE's diffusive term at the groin's
+    own bends, cancelled within ``half_width`` cells of the face) and, with ``spread_weights``, the
+    spread (the updrift pad's coming loss across the face shared with the two pads beyond it). It
+    stops the run with :class:`GroinOutsideTestedRange` outside its tested range.
 
     Parameters
     ----------
@@ -64,12 +66,17 @@ class GroinCallback:
         Number of padded domains.
     half_width : int
         Cells either side of the face the leak correction acts on.
+    spread_weights : sequence of 3 floats
+        Shares of the updrift pad's yearly loss across the face taken from the updrift pad and the
+        first and second pads beyond it (away from the face); non-negative, summing to 1. The default
+        ``(1, 0, 0)`` leaves the loss on the updrift pad: no spread. Buxton's fit is ``(0, 2/3, 1/3)``.
     """
     kind: str = "corrected"
     # The tested range: outside it the run stops (README "The module's bounds")
     SAND_TOLERANCE_M: float = 10.0         # summed shoreline the groin may make or lose, m ...
     SAND_TOLERANCE_FRACTION: float = 0.05  # ... or this share of its footprint's gross, whichever is larger
     MAX_FACE_ANGLE_DEG: float = 45.0       # steepest tested groin face, deg
+    NO_SPREAD = (1.0, 0.0, 0.0)            # the whole loss across the face on the updrift pad
 
     def __init__(
         self,
@@ -79,6 +86,7 @@ class GroinCallback:
         start_year: int,
         n_domains: int,
         half_width: int = 10,
+        spread_weights=NO_SPREAD,
     ) -> None:
         history = sorted((int(year), float(strength)) for year, strength in strength_history)
         if not history or any(not (0.0 <= strength <= 1.0) for _, strength in history):
@@ -93,6 +101,15 @@ class GroinCallback:
         self._lo_pad: int = min(self.updrift_pad, self.downdrift_pad)
         self._hi_pad: int = max(self.updrift_pad, self.downdrift_pad)
         self._check_zone(self._lo_pad, self._hi_pad, self.half_width, self.n_domains)
+        self.spread_weights = tuple(float(weight) for weight in spread_weights)
+        if (len(self.spread_weights) != 3 or any(weight < 0.0 for weight in self.spread_weights)
+                or abs(sum(self.spread_weights) - 1.0) > 1e-9):
+            raise ValueError("spread_weights needs 3 non-negative shares summing to 1.")
+        # The updrift pad and the two beyond it, away from the face
+        away = 1 if self.updrift_pad == self._hi_pad else -1
+        self._spread_pads = tuple(self.updrift_pad + away * step for step in range(3))
+        if min(self._spread_pads) < 0 or max(self._spread_pads) > self.n_domains - 1:
+            raise ValueError(f"the spread pads {self._spread_pads} run past the end of the {self.n_domains} domains.")
 
         self.record: List[Dict[str, object]] = []   # one row per model year
         self._call_count: int = 0
@@ -228,10 +245,20 @@ class GroinCallback:
         if active:
             self._check_tested_range(brie, x_s_m)
 
+        # Spread: the updrift pad's coming loss across the face (BRIE's term), shared with the two pads beyond it
+        spread_loss_m = 0.0
+        if self.spread_weights != self.NO_SPREAD:
+            coming_loss_m = (2 * self._diffusion_number(brie, x_s_m)[self.updrift_pad]
+                             * (x_s_m[self.downdrift_pad] - x_s_m[self.updrift_pad]))
+            if strength > 0.0 and coming_loss_m > 0.0:   # only while the groin works and the updrift pad stands out
+                spread_loss_m = coming_loss_m
+        self._apply_spread(x_s_dt, spread_loss_m)
+
         # Keep this year's state and the groin's own contribution for next year's footprint
         groin_dx_m = leak_correction_m.copy()
         groin_dx_m[lo_pad] += trap_lo_m
         groin_dx_m[hi_pad] += trap_hi_m
+        self._apply_spread(groin_dx_m, spread_loss_m)
         self._last_year = _LastYear(x_s_m.copy(), np.asarray(x_s_dt, dtype=float).copy(), groin_dx_m,
                                     self._footprint_m)
 
@@ -249,8 +276,18 @@ class GroinCallback:
             approach_angle_deg=float(face_angles_deg[arrival_face]),
             leak_correction_m=float(leak_correction_m.sum()),
             footprint_max_m=float(np.abs(self._footprint_m).max()),
+            spread_loss_m=float(spread_loss_m),
         ))
         return x_s_dt
+
+    def _apply_spread(self, dx_m, spread_loss_m):
+        """Give the updrift pad back the shares of the loss the two pads beyond it take instead (landward +)."""
+        if spread_loss_m == 0.0:
+            return
+        updrift, first_beyond, second_beyond = self._spread_pads
+        dx_m[updrift] -= (1 - self.spread_weights[0]) * spread_loss_m
+        dx_m[first_beyond] += self.spread_weights[1] * spread_loss_m
+        dx_m[second_beyond] += self.spread_weights[2] * spread_loss_m
 
     @property
     def mean_trapping_rate_m_yr(self) -> float:
@@ -268,6 +305,7 @@ class GroinCallback:
             install_year=self.install_year,
             start_year=self.start_year,
             half_width=self.half_width,
+            spread_weights=list(self.spread_weights),
             years_active=sum(row["groin_active"] for row in self.record),
             mean_trapping_rate_m_yr=self.mean_trapping_rate_m_yr,
             cumulative_updrift_m=float(np.sum([row["applied_dx_updrift_m"] for row in self.record])),
