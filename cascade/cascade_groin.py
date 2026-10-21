@@ -609,14 +609,7 @@ class Cascade:
         h_b_dt = list(h_b_dt)
         self._barrier3d = list(b3d)
 
-        # ── GROIN HOOK (inert unless a callback is attached) ──────────────────
-        # A runner may attach `cascade._groin_callback` to inject an alongshore
-        # source/sink into x_s_dt BEFORE BRIE's alongshore-transport solve, so
-        # that BRIE diffuses the perturbation into an updrift fillet / downdrift
-        # notch on its own. The callback is called with (self, x_s_dt) and must
-        # return the (possibly modified) x_s_dt list. Units: meters/step, the
-        # same space update_ast() passes to BRIE. Default None => no behavior
-        # change whatsoever (existing runs are bit-for-bit identical).
+        # optional groin: adjust x_s_dt (m/step) before BRIE's alongshore solve
         if getattr(self, "_groin_callback", None) is not None:
             x_s_dt = self._groin_callback(self, x_s_dt)
 
