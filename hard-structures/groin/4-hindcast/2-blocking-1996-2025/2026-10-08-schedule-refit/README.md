@@ -13,7 +13,7 @@
 Common to every run:
 - full management, the solved edgeBE ends, relocations off;
 - the grid is b 0.3–0.9 × f 0.1–0.8, 49 cells per schedule, 147 runs, all clean;
-- runs are filed under `output/raw_runs/experiments/groin/2026-10-08-schedule-refit/<schedule>/<b_f>/`.
+- runs are filed under `output/raw_runs/experiments/groin-blocking/2026-10-08-schedule-refit/<schedule>/<b_f>/`.
 
 **Checks.**
 - The 2004 schedule at b 0.6/f 0.6 is bit-identical to the 10-05 run.

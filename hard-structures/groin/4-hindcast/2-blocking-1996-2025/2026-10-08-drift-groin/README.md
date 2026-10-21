@@ -6,7 +6,7 @@
 
 **Setup.** `drift_groin.py` drives the unchanged runner with `BlockingGroinCallback` replaced in a child process. Each year the groin reads the angle of the face just updrift of GIS 5|6, looks up the wave climate's net drift there from BRIE's own tables, and moves `b · Q_net · dt / (dy · depth)` from GIS 5 to GIS 6 through `x_s_dt`. The amounts are equal and opposite, so `applied_net_m` is 0. Everything else is the 10-05 setup: full management, the solved edgeBE ends, relocations off, instant failure at the 2004 step (b falls to b·f). Each run dir has `drift_groin.txt`, because the runner's report and run name (`groinblock`) do not show the patch. The diagnostics CSV gains `net_drift_m3_yr` and `approach_angle_deg`.
 
-Grid: b 0.02-0.6 × f 0.1-0.8 (56 runs) under `output/raw_runs/experiments/groin/2026-10-08-drift-groin/`. b 0.6 moves about 56 m/yr at Buxton, about ten times the pin, so the grid reaches low.
+Grid: b 0.02-0.6 × f 0.1-0.8 (56 runs) under `output/raw_runs/experiments/groin-blocking/2026-10-08-drift-groin/`. b 0.6 moves about 56 m/yr at Buxton, about ten times the pin, so the grid reaches low.
 
 **Scores.** `grid_scores.csv`: the 10-05 photo-date RMSE and the 10-08 annual CoastSat RMSE of the GIS 5|6 gap change, the groin's applied budget, seaward change at GIS 3, 4, 7, 8, and `island_vs_none_m`, the island's summed seaward change against the no-groin run (BRIE's leak at the groin's bends). The pinned arm (10-05 runs) and the no-groin baseline are scored beside it.
 

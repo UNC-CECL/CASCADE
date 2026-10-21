@@ -146,7 +146,7 @@ of its footprint's gross, whichever is larger: `SAND_TOLERANCE_M`, `SAND_TOLERAN
 face is steeper than 45° (`MAX_FACE_ANGLE_DEG`). When it is built, it refuses a correction zone that runs past
 the ends. On the stress test these stop 225 of the 227 runs that break, mostly by year 2. Both Buxton windows
 run with the checks silent and identical to the matrix runs (0.0 m); asymmetry 0.8 is stopped in 2000 and
-high-angle 0.3 in year 3 (`output/raw_runs/experiments/2026-10-15-groin-guard-check/`).
+high-angle 0.3 in year 3 (`output/raw_runs/experiments/code-checks/2026-10-15-groin-guard-check/`).
 
 **Caveats for reporting.**
 
@@ -174,7 +174,7 @@ diffusivity at the groin is non-zero and moderate: a fixed wave climate near the
 under 45° and a strength up to 0.5. Within this range it conserves sand and reaches a steady fillet; outside it
 the model stops the run."*
 
-**Model output is not here.** Runs are under `output/raw_runs/experiments/groin/<study>/`; the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The fixed-shift groin (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
+**Model output is not here.** Runs are under `output/raw_runs/experiments/groin-blocking/<study>/` and `groin-wave-driven/<study>/` (`groin/` on D:); the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The fixed-shift groin (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
 
 ## Conventions
 

@@ -27,7 +27,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-13-dune-ceiling-domain-value"
+TAG = "dunes/2026-10-13-dune-ceiling-domain-value"
 PERCENTILES = {"dom50": 50, "dom75": 75}      # of the domain's starting cell crests
 FLOOR_DAM = 0.05                              # DuneCeilingFloor, 0.5 m above the berm
 # -----------------------------------------------------------------------------

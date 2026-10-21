@@ -15,7 +15,7 @@ strength keeps.
     python split_sample.py run   [--streams 4]
     python split_sample.py score                 # -> split_sample_scores.csv
 
-Runs: `output/raw_runs/experiments/groin/2026-10-15-split-sample/<strength>/<window>/`. Logs: `logs/`. The
+Runs: `output/raw_runs/experiments/groin-wave-driven/2026-10-15-split-sample/<strength>/<window>/`. Logs: `logs/`. The
 scores match the window refit's runs of the same cells to 0.0 m.
 
 ## Results

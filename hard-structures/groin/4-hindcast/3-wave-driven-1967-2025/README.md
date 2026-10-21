@@ -15,4 +15,4 @@ The studies before 2026-10-14 patched the groin in-process (`corrected_groin.py`
 
 After the 2017 Buxton fill the groin is off; the fill's placement at GIS 6 makes its own gap (`../2-blocking-1996-2025/2026-10-05-blocking-fit-calibration/`).
 
-Run output is under `output/raw_runs/experiments/groin/<study>/`. Run metadata written before 2026-10-15 still names these folders under `2-blocking-1996-2025/`.
+Run output is under `output/raw_runs/experiments/groin-wave-driven/<study>/` (`groin/<study>/` before 2026-10-20). Run metadata written before 2026-10-15 still names these folders under `2-blocking-1996-2025/`.

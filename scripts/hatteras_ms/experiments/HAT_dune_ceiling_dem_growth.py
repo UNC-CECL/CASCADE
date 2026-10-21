@@ -30,7 +30,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-19-dune-ceiling-dem-growth"
+TAG = "dunes/2026-10-19-dune-ceiling-dem-growth"
 CEILING_PCT = 99                     # percentile of the starting-DEM crests used as the ceiling
 RANGES = {"control": None,           # parameter file: Dmaxel 5.5 m NAVD88, rmin/rmax 0.55/0.95
           "p99_r005_015": (0.05, 0.15), "p99_r010_020": (0.10, 0.20), "p99_r015_030": (0.15, 0.30),

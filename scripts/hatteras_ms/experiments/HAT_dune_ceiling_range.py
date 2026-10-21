@@ -28,7 +28,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-13-dune-ceiling-range"
+TAG = "dunes/2026-10-13-dune-ceiling-range"
 CEILINGS = {"c450": 4.5, "c500": 5.0, "c525": 5.25, "c550": None, "c575": 5.75, "c600": 6.0,   # m NAVD88
             "c840": 8.4, "c1210": 12.1,   # 2009 lidar crest P95 and maximum: "the DEM maximum" as a ceiling
             "c539": 5.39, "c573": 5.73}   # each period's own starting-DEM median crest (2009, 1996)

@@ -50,7 +50,7 @@ RAW = PROJECT_ROOT / "output" / "raw_runs"
 EXP_ROOT = RAW / "experiments" / "source-sink"
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"
 # The pinned calibration run every solve starts from (end rates + blocking groin b 0.6 f 0.6)
-START_RUNS = {1996: RAW / "experiments" / "groin" / "2026-10-05-blocking-fit-dem-to-dem" / "b0.60_f0.6"
+START_RUNS = {1996: RAW / "experiments" / "groin-blocking" / "2026-10-05-blocking-fit-dem-to-dem" / "b0.60_f0.6"
               / "1996_2009" / "edgeBE" / "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groinblock"}
 GIS = np.arange(HATTERAS_DOMAINS.first_gis_id, HATTERAS_DOMAINS.last_gis_id + 1)
 # -----------------------------------------------------------------------------

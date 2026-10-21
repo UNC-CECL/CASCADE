@@ -47,7 +47,7 @@ sys.path[:0] = [str(GROIN / "1-observations" / "analysis" / "2-coastsat_gap"),
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-STUDY = "groin/2026-10-08-schedule-refit"
+STUDY = "groin-blocking/2026-10-08-schedule-refit"
 RAW = REPO / "output" / "raw_runs"
 LOGS = HERE / "logs"
 INSTALL = 1969

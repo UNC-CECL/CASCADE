@@ -632,7 +632,7 @@ adds 78 / 39 false alarms, so the misses are not an imagery-timing problem.
 
 **Ocean-reachable scoring (2026-10-16, ad hoc, no table written).** The calendar-year cells
 joined to the reachability flags of the 10-13 sound-side study
-(output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-soundside-overwash/
+(output/raw_runs/experiments/storms-overwash/2026-10-13-soundside-overwash/
 observed_overwash_by_source.csv: ocean run-up since the previous image vs the domain's lowest
 crest in the 1996 / 2009 survey). Managed, groin on, threshold 0; all 1405 cells matched.
 

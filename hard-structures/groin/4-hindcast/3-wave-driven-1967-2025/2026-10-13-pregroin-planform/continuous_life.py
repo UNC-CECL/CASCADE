@@ -44,7 +44,7 @@ cgm, REPO, HERE = pp.cgm, pp.REPO, pp.HERE
 # --- CONFIG ------------------------------------------------------------------
 FIRST, LAST = 1968, 2025                    # storm years; row 0 is the 1967 start
 RSLR = 0.004
-STUDY = "groin/2026-10-13-continuous-1967-2025"
+STUDY = "groin-wave-driven/2026-10-13-continuous-1967-2025"
 STORMS = HERE / "inputs" / "storms_1968_2025_v3_split12_trim24.npy"
 STAND_IN_FROM = 1984                        # 1968-1983 replay the recorded 1984-1999
 SPECS = {                                   # label: strength from each year on

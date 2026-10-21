@@ -123,7 +123,7 @@ by the balance rule, in runs that broke it for some years and came back within t
 42 Buxton-like rig runs (strength 0.25 or less, −30° to −10°) it stops one, which starts with a 50° face (a
 300 m step on a −30° coast).
 
-**In the full model** (`output/raw_runs/experiments/2026-10-15-groin-guard-check/`, NOTE.md there): both
+**In the full model** (`output/raw_runs/experiments/code-checks/2026-10-15-groin-guard-check/`, NOTE.md there): both
 Buxton windows at option A run with the guard silent, and their shorelines are identical to the matrix runs
 (0.0 m). Asymmetry 0.8 is stopped in 2000 (face 46.3°); high-angle 0.3 in its third year (10.8 m lost
 against 111.2 m gross).

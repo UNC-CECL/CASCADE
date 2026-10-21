@@ -34,7 +34,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 DEFAULT_YAML = REPO / "data" / "default_cascade_variables" / "barrier3d-default-parameters.yaml"
-RUN_ROOT = REPO / "output" / "raw_runs" / "experiments" / "2026-10-20-groin-cleanup-check" / "new"
+RUN_ROOT = REPO / "output" / "raw_runs" / "experiments" / "code-checks" / "2026-10-20-groin-cleanup-check" / "new"
 RUN_YAMLS = {   # period label -> that run's copy of the parameter yaml
     "1996–2009": RUN_ROOT / "1996_2009" / "edgeBE" / "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin"
                  / "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin-parameters.yaml",

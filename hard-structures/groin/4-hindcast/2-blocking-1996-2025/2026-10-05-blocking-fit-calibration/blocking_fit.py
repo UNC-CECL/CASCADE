@@ -8,7 +8,7 @@ Fit the blocking groin (b, f) on the 1996-2009 calibration period, then check it
 
 Every run: full management, the solved edgeBE ends, relocations off, failure instant from
 the 2004 step. Scored by the D5-D6 gap change at the wet/dry photo dates inside the window
-(the 2026-09-29 date RMSE). Runs file under experiments/groin/2026-10-05-blocking-fit-dem-to-dem/.
+(the 2026-09-29 date RMSE). Runs file under experiments/groin-blocking/2026-10-05-blocking-fit-dem-to-dem/.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -39,7 +39,7 @@ from site_layer.hatteras_site_config import HATTERAS_PERIODS, run_years  # noqa:
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-STUDY = "groin/2026-10-05-blocking-fit-dem-to-dem"
+STUDY = "groin-blocking/2026-10-05-blocking-fit-dem-to-dem"
 RAW = REPO / "output" / "raw_runs"
 LOGS = HERE / "logs"
 B_VALUES = (0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)

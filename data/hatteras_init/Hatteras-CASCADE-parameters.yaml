@@ -11,7 +11,7 @@ DShoreface: 22.25
 # low dunes end ~1 m high; Isabel 43/48 domains. Do not pair this ceiling with
 # fast growth: at 0.55-0.95 every dune grows to ~12 m and overwash stops. The ends
 # were solved on the previous 5.5 m / 0.55-0.95 settings and need re-solving.
-# Record: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-19-dune-growth-low-rates/NOTE.md
+# Record: output/raw_runs/experiments/dunes/2026-10-19-dune-growth-low-rates/NOTE.md
 # Was 5.5 m NAVD88 (2026-10-13 to 10-20; 2026-10-13-dune-ceiling-range/), and
 # Barrier3D's 3.4 m default (Virginia) before that.
 Dmaxel: 12.2

@@ -24,7 +24,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-13-dune-growth-rate"
+TAG = "dunes/2026-10-13-dune-growth-rate"
 RANGES = {"r025_065": (0.25, 0.65), "r035_085": (0.35, 0.85), "r075_115": (0.75, 1.15)}
 # -----------------------------------------------------------------------------
 

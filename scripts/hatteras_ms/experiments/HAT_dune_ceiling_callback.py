@@ -28,7 +28,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-13-dune-ceiling-callback"
+TAG = "dunes/2026-10-13-dune-ceiling-callback"
 FLOOR_DAM = 0.05             # lowest cell ceiling, 0.5 m above the berm (the fork's DuneCeilingFloor)
 SCALAR = {"callback": "median", "callback2x": "twice_max"}   # the domain's scalar Barrier3D ceiling
 EPS = 1e-9                   # below this the scalar logistic term is zero and cannot carry a growth rate

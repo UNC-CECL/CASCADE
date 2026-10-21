@@ -4,7 +4,7 @@
 
 **Setup.**
 - Driver: `scripts/hatteras_ms/HAT_be_domain_solve_net_change.py solve --period 1996`.
-- Start (step 0): the pinned calibration run, `experiments/groin/2026-10-05-blocking-fit-dem-to-dem/b0.60_f0.6/`. It has the solved end rates (+1.4981 / +10.5659), the blocking groin (b 0.6, f 0.6) and zero elsewhere.
+- Start (step 0): the pinned calibration run, `experiments/groin-blocking/2026-10-05-blocking-fit-dem-to-dem/b0.60_f0.6/`. It has the solved end rates (+1.4981 / +10.5659), the blocking groin (b 0.6, f 0.6) and zero elsewhere.
 - Every pass: full management, groin on, relocations off, current (option A) waves. The whole field is passed through `HAT_BE_OVERRIDE`.
 - Residual: the net-change target (`coastsat/net_change/1996_2009`, 7-domain LOWESS, GIS 1–10 raw) minus the model's raw end-minus-start shoreline.
 - Update: rate += 0.8 × residual / gain. The gain is 13 m per m/yr (the run length), or 4.4 at GIS 90.

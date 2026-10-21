@@ -34,7 +34,7 @@ import window_refit as wr  # noqa: E402  (its run and score, pointed at this stu
 FIT = {1996: 0.16, 2009: 0.10}            # each window's own fit (2026-10-14-window-refit)
 WHOLE_LIFE = 0.25                         # 1967-2025 fit (2026-10-13-pregroin-planform); not independent
 OTHER = {1996: 2009, 2009: 1996}
-wr.STUDY = "groin/2026-10-15-split-sample"
+wr.STUDY = "groin-wave-driven/2026-10-15-split-sample"
 wr.RAW = wr.REPO / "output" / "raw_runs" / "experiments" / wr.STUDY
 wr.LOGS = HERE / "logs"
 wr.STRENGTHS = {p: (None, FIT[p], FIT[OTHER[p]], WHOLE_LIFE) for p in FIT}

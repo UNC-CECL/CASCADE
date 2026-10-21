@@ -26,9 +26,9 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "storms-overwash-and-dunes" / \
+OUT = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "storms-overwash" / \
     "2026-10-13-overwash-scoring-tolerance"
-EXP = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "storms-overwash-and-dunes"
+EXP = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "dunes"
 RUNS = {"single 5.5 m (adopted)": "2026-10-13-dune-ceiling-range/runs/c550",
         "per-cell (fork)": "2026-10-13-dune-ceiling-uniform/runs/percell",
         "per-domain median": "2026-10-13-dune-ceiling-domain-value/runs/dom50"}

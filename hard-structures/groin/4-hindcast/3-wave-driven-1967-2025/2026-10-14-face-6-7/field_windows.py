@@ -43,9 +43,9 @@ for p in (REPO / "scripts", REPO / "scripts" / "hatteras_ms", REPO / "scripts" /
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-STUDY = "groin/2026-10-14-field-windows"
+STUDY = "groin-wave-driven/2026-10-14-field-windows"
 RAW = REPO / "output" / "raw_runs" / "experiments" / STUDY
-REFIT = REPO / "output" / "raw_runs" / "experiments" / "groin" / "2026-10-14-window-refit"
+REFIT = REPO / "output" / "raw_runs" / "experiments" / "groin-wave-driven" / "2026-10-14-window-refit"
 LOGS = HERE / "logs" / "windows"
 WINDOW = {1996: "1996_2009", 2009: "2009_2025"}
 STRENGTHS = {1996: (0.10, 0.13, 0.16, 0.19, 0.22), 2009: (0.06, 0.08, 0.10, 0.12, 0.16)}

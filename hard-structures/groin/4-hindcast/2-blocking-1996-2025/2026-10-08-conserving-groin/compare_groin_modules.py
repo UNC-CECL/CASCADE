@@ -42,7 +42,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-RAW = REPO / "output" / "raw_runs" / "experiments" / "groin"
+RAW = REPO / "output" / "raw_runs" / "experiments" / "groin-blocking"
 PIN = RAW / "2026-10-05-blocking-fit-dem-to-dem"
 CONS = RAW / "2026-10-08-conserving-groin"
 NOGROIN = (REPO / "output" / "raw_runs" / "matrix" / "1996_2009" / "edgeBE"

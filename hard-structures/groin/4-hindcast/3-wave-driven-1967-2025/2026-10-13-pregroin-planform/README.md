@@ -89,4 +89,4 @@ Fills on (Rodanthe 2014, Buxton 2017 and 2022, Avon 2022; the 1971 and 1973 Buxt
 | `figures/continuous_gap_1967_2025.png` | the gap 1967-2025: no groin, the window fits run continuously, the fitted history; the strength each uses (caption in `figures/supporting/CAPTIONS.md`) |
 | `figures/*.gif` | stacked plan views, from `../2026-10-09-corrected-groin/groin_panels_gif.py`'s `render`; git-ignored, rerun to make them |
 
-Runs are under `output/raw_runs/experiments/groin/2026-10-13-pregroin-planform/`, `2026-10-13-pregroin-full-life/`, `2026-10-13-continuous-1967-2025/` and its `-seed1`, `-seed2` variants.
+Runs are under `output/raw_runs/experiments/groin-wave-driven/2026-10-13-pregroin-planform/`, `2026-10-13-pregroin-full-life/`, `2026-10-13-continuous-1967-2025/` and its `-seed1`, `-seed2` variants.

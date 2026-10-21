@@ -5,7 +5,7 @@
 **Setup.** `blocking_fit.py` drives the unchanged runner:
 - full management, the solved edgeBE ends (+1.4981 / +10.5659), relocations off;
 - groin failure instant from the 2004 step;
-- runs filed under `output/raw_runs/experiments/groin/2026-10-05-blocking-fit-dem-to-dem/`.
+- runs filed under `output/raw_runs/experiments/groin-blocking/2026-10-05-blocking-fit-dem-to-dem/`.
 
 The score is the gap change at the wet/dry photo dates inside the window, compared with the observed change from the interpolated start value (the 2026-09-29 date RMSE). Calibration has only **three** dates: 1997, 2004 and 2008. The grid covers b 0.3–0.9 × f 0.1–0.8 (49 runs, all clean). Scores are in `grid_scores.csv`; logs are in `logs/`.
 

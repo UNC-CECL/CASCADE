@@ -41,7 +41,7 @@ GIS = pd.RangeIndex(1, 91)
 RUNS = {
     "zeroBE, no groin": RAW / "matrix/2009_2025/zeroBE/HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nourish_nogroin",
     "edgeBE, no groin": RAW / "matrix/2009_2025/edgeBE/HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin",
-    "edgeBE + groin": RAW / ("experiments/groin/2026-10-05-blocking-fit-dem-to-dem/b0.60_f0.6/2009_2025/edgeBE/"
+    "edgeBE + groin": RAW / ("experiments/groin-blocking/2026-10-05-blocking-fit-dem-to-dem/b0.60_f0.6/2009_2025/edgeBE/"
                              "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groinblock"),
     "domainBE + groin": RAW / "matrix/2009_2025/domainBE/HAT_2009_2025_domainBE_offsetmetres_road_bdm_nourish_groinblock",
 }

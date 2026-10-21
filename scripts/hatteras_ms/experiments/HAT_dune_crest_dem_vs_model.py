@@ -39,7 +39,7 @@ from site_layer.hat_topo_version import product_for_year, topo_dirs  # noqa: E40
 from site_layer.hatteras_site_config import first_model_year  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-19-dune-crest-dem-vs-model"
+TAG = "dunes/2026-10-19-dune-crest-dem-vs-model"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 ARM = "managed"          # the production runs; "natural" is in the table too
 LATE_YEAR = 3            # model year compared with the DEM

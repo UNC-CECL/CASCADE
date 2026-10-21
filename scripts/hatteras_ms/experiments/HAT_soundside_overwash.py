@@ -31,9 +31,9 @@ import HAT_dune_ceiling_range as R  # noqa: E402
 import HAT_dune_ceiling_uniform as U  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "storms-overwash-and-dunes" / \
+OUT = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "storms-overwash" / \
     "2026-10-13-soundside-overwash"
-RUN = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "storms-overwash-and-dunes" / \
+RUN = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "dunes" / \
     "2026-10-13-dune-ceiling-range" / "runs" / "c550"          # the adopted single 5.5 m ceiling
 MHW_NAVD88_M = 0.36
 SOUND = {"8652587": "Oregon Inlet Marina", "8654467": "USCG Hatteras", "8653215": "Rodanthe (sound)"}

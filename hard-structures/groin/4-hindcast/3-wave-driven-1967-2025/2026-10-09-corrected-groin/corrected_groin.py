@@ -16,7 +16,7 @@ Fit the corrected groin (the drift groin plus a leak correction at the groin's o
     python corrected_groin.py --reference baseline score # the 10-09 runs, with the no-groin run as reference
 
 Runs are filed by setup: the calendar-year setup (default since the 2026-10-12 evening) under
-groin/2026-10-12-corrected-groin-calendar/, the earlier ones under groin/2026-10-09-corrected-groin/
+groin-wave-driven/2026-10-12-corrected-groin-calendar/, the earlier ones under groin-wave-driven/2026-10-09-corrected-groin/
 (--setup six-month). The earlier scores are kept as written (grid_scores_2026-10-12_six-month.csv,
 grid_scores_2026-10-09_baseline.csv); rescoring them now would not reproduce them, since the
 config's test-period length and the no-groin matrix runs have since changed.
@@ -73,7 +73,7 @@ RUNNER = dg.RUNNER
 # from the year after the DEM, row k of a run = calendar year period + k) or "six-month" (the 10-12 afternoon
 # refresh: DEM-date +/-6-month start lines, storms from the DEM year, row k = 1 Jan of period + k). --setup sets it
 SETUP = "calendar"
-STUDIES = {"calendar": "groin/2026-10-12-corrected-groin-calendar", "six-month": "groin/2026-10-09-corrected-groin"}
+STUDIES = {"calendar": "groin-wave-driven/2026-10-12-corrected-groin-calendar", "six-month": "groin-wave-driven/2026-10-09-corrected-groin"}
 STUDY = STUDIES[SETUP]
 RAW = dg.RAW
 LOGS = HERE / "logs" / "calendar"

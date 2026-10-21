@@ -41,7 +41,7 @@ import HAT_dune_ceiling_uniform as U  # noqa: E402
 import HAT_dune_ceiling_dem_growth as DG  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "storms-overwash-and-dunes/2026-10-19-dune-ceiling-growth-grid"
+TAG = "dunes/2026-10-19-dune-ceiling-growth-grid"
 EXP_DIR = U.PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 CEILINGS = (5.0, 5.5, 6.0, 6.5)                       # m NAVD88
 RATES = ((0.15, 0.30), (0.25, 0.45), (0.35, 0.55))    # rmin, rmax

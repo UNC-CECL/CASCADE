@@ -150,7 +150,7 @@ in-process; the runner is unchanged, so its metadata and printout still say
 3.0 for the variant (the scorer reads the applied value off the saved
 roadway managers). 1996-2009, full_management, edgeBE, no groin.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-design-height/tables/scores.csv`):
+Results 2026-10-13 (`output/raw_runs/experiments/dunes/2026-10-13-dune-design-height/tables/scores.csv`):
 
 | | control (3.0) | 3.94 |
 |---|---|---|
@@ -178,7 +178,7 @@ are replaced in-process with one value (5.0, 5.5, 6.0, 6.5 m NAVD88; the
 starting crest medians are 5.73 in 1996 and 5.39 in 2009). Managed edgeBE,
 both periods, design height 3.94 m MHW, no groin.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-uniform/tables/scores.csv`):
+Results 2026-10-13 (`output/raw_runs/experiments/dunes/2026-10-13-dune-ceiling-uniform/tables/scores.csv`):
 
 | | per-cell | 5.0 | 5.5 | 6.0 | 6.5 |
 |---|---|---|---|---|---|
@@ -209,7 +209,7 @@ the median (dom50) or 75th percentile (dom75) of its starting cell crests,
 in-process only. Same setup as HAT_dune_ceiling_uniform.py, whose per-cell and
 island-wide runs it scores alongside.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-domain-value/tables/scores.csv`):
+Results 2026-10-13 (`output/raw_runs/experiments/dunes/2026-10-13-dune-ceiling-domain-value/tables/scores.csv`):
 
 | | per-cell | dom50 | dom75 | uniform 5.0 |
 |---|---|---|---|---|
@@ -236,7 +236,7 @@ in-process to 0.25-0.65 (CASCADE default), 0.35-0.85 (Barrier3D default) and
 0.75-1.15; the 0.55-0.95 control is HAT_dune_ceiling_uniform.py's per-cell run.
 Managed edgeBE, both periods, design height 3.94 m MHW, per-cell ceilings.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-growth-rate/tables/scores.csv`):
+Results 2026-10-13 (`output/raw_runs/experiments/dunes/2026-10-13-dune-growth-rate/tables/scores.csv`):
 
 | | 0.25-0.65 | 0.35-0.85 | 0.55-0.95 (current) | 0.75-1.15 |
 |---|---|---|---|---|
@@ -276,7 +276,7 @@ cell shared by both dune rows, so the back row is approximate.
 - `callback2x` (scalar Dmax = twice the domain's tallest cell ceiling; also
   corrects D for the RSLR SeaLevel() applies before growth): stable.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-dune-ceiling-callback/tables/scores.csv`):
+Results 2026-10-13 (`output/raw_runs/experiments/dunes/2026-10-13-dune-ceiling-callback/tables/scores.csv`):
 
 | | fork per-cell | callback2x |
 |---|---|---|
@@ -369,7 +369,7 @@ observed overwash nearby). "Wrong place" is the same model output shifted
 alongshore by 10-80 domains, averaged: a score that survives the shift is
 timing, not location.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-overwash-scoring-tolerance/scores.csv`), skill / skill with the overwash in the wrong place:
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash/2026-10-13-overwash-scoring-tolerance/scores.csv`), skill / skill with the overwash in the wrong place:
 
 | 1996-2009 | strict | any storm | +1 image | +1 domain |
 |---|---|---|---|---|
@@ -420,7 +420,7 @@ overwash implausible. NOAA sound-gauge peaks (Oregon Inlet 8652587, USCG
 Hatteras 8654467) for named storms mark high sound water (>= 1 m above MHW).
 Scored on the adopted single 5.5 m run.
 
-Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-13-soundside-overwash/`):
+Results 2026-10-13 (`output/raw_runs/experiments/storms-overwash/2026-10-13-soundside-overwash/`):
 
 | | 1996-2009 | 2009-2025 |
 |---|---|---|

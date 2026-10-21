@@ -36,7 +36,7 @@ from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 RAW = REPO / "output" / "raw_runs"
-STUDY = RAW / "experiments" / "groin" / "2026-10-05-blocking-fit-dem-to-dem"
+STUDY = RAW / "experiments" / "groin-blocking" / "2026-10-05-blocking-fit-dem-to-dem"
 PERIODS = ((1996, 2009), (2009, 2025))
 PAD = 15                                   # padded index of GIS 1
 ZOOM = (1, 20)

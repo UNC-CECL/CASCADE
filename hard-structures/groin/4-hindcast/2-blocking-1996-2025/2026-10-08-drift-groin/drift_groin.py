@@ -51,8 +51,8 @@ sys.path[:0] = [str(HERE.parent / "2026-10-08-schedule-refit"),
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-STUDY = "groin/2026-10-08-drift-groin"
-PIN_STUDY = "groin/2026-10-05-blocking-fit-dem-to-dem"
+STUDY = "groin-blocking/2026-10-08-drift-groin"
+PIN_STUDY = "groin-blocking/2026-10-05-blocking-fit-dem-to-dem"
 RAW = REPO / "output" / "raw_runs"
 LOGS = HERE / "logs"
 B_VALUES = (0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6)   # b 0.6 moves ~56 m/yr at Buxton, ~10x the pin

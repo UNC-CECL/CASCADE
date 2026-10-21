@@ -15,4 +15,4 @@ The module inside real model runs of Hatteras, scored against `../1-observations
                         (0.16 / 0.10) and the whole-life 0.25 from 1967
 ```
 
-Run output for all three is under `output/raw_runs/experiments/groin/` and `output/calibration/`; only scripts, tables, figures and logs are here.
+Run output for all three is under `output/raw_runs/experiments/groin-blocking/` and `groin-wave-driven/` (`groin/` on D: and before 2026-10-20) and `output/calibration/`; only scripts, tables, figures and logs are here.

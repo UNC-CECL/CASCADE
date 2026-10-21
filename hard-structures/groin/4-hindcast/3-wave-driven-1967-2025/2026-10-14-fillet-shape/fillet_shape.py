@@ -36,7 +36,7 @@ from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 OBSERVED = (REPO / "hard-structures" / "groin" / "1-observations" / "analysis" / "1-aerial_photo_gap"
             / "Change_from_wetdry_1967_D2_D12.csv")      # landward +, from the 1967 wet/dry line
-RUNS = REPO / "output" / "raw_runs" / "experiments" / "groin" / "2026-10-13-pregroin-full-life"
+RUNS = REPO / "output" / "raw_runs" / "experiments" / "groin-wave-driven" / "2026-10-13-pregroin-full-life"
 START = 1967                   # row k of a run's shoreline matrix is the end of 1967 + k
 YEARS = (1974, 1978)
 GIS = np.arange(2, 13)

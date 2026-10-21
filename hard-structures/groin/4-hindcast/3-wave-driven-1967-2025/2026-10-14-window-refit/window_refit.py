@@ -41,7 +41,7 @@ import corrected_groin as cg  # noqa: E402  (scoring only; its run code needs co
 
 # --- CONFIG ------------------------------------------------------------------
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-STUDY = "groin/2026-10-14-window-refit"
+STUDY = "groin-wave-driven/2026-10-14-window-refit"
 RAW = REPO / "output" / "raw_runs" / "experiments" / STUDY
 LOGS = HERE / "logs"
 END_YEAR = 2017

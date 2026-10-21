@@ -47,7 +47,7 @@ sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "2-brie-offset" / "1-pr
 
 # --- CONFIG ------------------------------------------------------------------
 PERIOD = 1996                               # the calibration run's setup
-STUDY = "groin/2026-10-13-pregroin-planform"
+STUDY = "groin-wave-driven/2026-10-13-pregroin-planform"
 WETDRY = REPO / "hard-structures" / "groin" / "1-observations" / "data" / "gis" / "wet_dry_groin.geojson"
 START_LINE_YEAR, TARGET_LINE_YEAR = 1967, 1978   # before the groins; after their build-up
 MIN_CROSSINGS = 3                           # transects a domain needs on the 1967 line to be covered
@@ -58,7 +58,7 @@ LOGS = HERE / "logs"
 # The full maintained life, `--full`: storms 1968-1995 (installed 1969, last repaired 1995), its own study
 FULL_FIRST, FULL_LAST = 1968, 1995
 FULL_RSLR = 0.004                           # the 1984 period's Duck fit (0.00391 m/yr over 1984-2004)
-FULL_STUDY = "groin/2026-10-13-pregroin-full-life"
+FULL_STUDY = "groin-wave-driven/2026-10-13-pregroin-full-life"
 FULL_STRENGTHS = (0.0, 0.16, 0.20, 0.25, 0.30, 0.35)
 STORMS_OUT = HERE / "inputs" / "storms_1968_1995_v3_split12_trim24.npy"
 STAND_IN_FROM = 1984                        # 1968-1983 replay the recorded 1984-1999; 1984-1995 are their own years
