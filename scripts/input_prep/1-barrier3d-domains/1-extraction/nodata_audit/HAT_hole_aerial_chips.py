@@ -29,10 +29,11 @@ REPO = next(
     if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1996-start"
-AERIAL_DIR = Path(r"D:\Hatteras_GIS\Aerial\1996_henderson\1996_georef_TIF")
+AERIAL_DIR = GIS_ROOT / "aerial_imagery" / "1996" / "usgs_henderson" / "frames"
 DOMAIN_EPSG = 3725
 GRID_M = 10.0
 

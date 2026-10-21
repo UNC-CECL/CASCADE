@@ -68,39 +68,40 @@ sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "1-barrier3d-domains" /
 import HAT_dune_topo_extractor as X  # noqa: E402
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hat_elevation_products import product  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-POLYGONS = Path(r"D:\Hatteras_GIS\Elevation\Polygons")
-POINTS = Path(r"D:\Hatteras_GIS\Elevation\Points")
+POLYGONS = GIS_ROOT / "elevation" / "dem"
+POINTS = GIS_ROOT / "elevation" / "lidar"
 # Per start: the product whose 1 m clips set the grid, and its surveys:
 # year -> (kind, file or tile glob, flight dates from the metadata, the model state compared, note)
 STARTS = {
     "2009-start": ("2009-2014", {
-        2014: ("mosaic", POLYGONS / "2014/2014_NOAA_Post_Sandy_DEM_Job1076021/2014_full.tif",
+        2014: ("mosaic", POLYGONS / "2014/noaa_2014_NOAA_Post_Sandy_DEM_Job1076021/2014_full.tif",
                "2013-11 to 2014-06", "2014-01-01", ""),
-        2016: ("mosaic", POLYGONS / "2016/2016_USACE_post_matthew_Job1076022/2016_full.tif",
+        2016: ("mosaic", POLYGONS / "2016/noaa_2016_USACE_post_matthew_Job1076022/2016_full.tif",
                "2016-10 to 2016-12", "2017-01-01", ""),
-        2017: ("mosaic", POLYGONS / "2017/usace2017_east_coast_dem_Job1076023/2017_full.tif",
+        2017: ("mosaic", POLYGONS / "2017/noaa_usace2017_east_coast_dem_Job1076023/2017_full.tif",
                "2017-06 to 2017-08", "2017-01-01", ""),
-        2018: ("mosaic", POLYGONS / "2018/usace2018_post_florence_dem_Job1076024/2018_full.tif",
+        2018: ("mosaic", POLYGONS / "2018/noaa_usace2018_post_florence_dem_Job1076024/2018_full.tif",
                "2018-10", "2019-01-01", ""),
-        2019: ("mosaic", POLYGONS / "2019/nc2019_dunex_Job1076025/2019_full.tif",
+        2019: ("mosaic", POLYGONS / "2019/noaa_nc2019_dunex_Job1076025/2019_full.tif",
                "2019-09 to 2019-10", "2020-01-01", ""),
     }),
     "1996-start": ("2009-2014-1996", {
-        1996: ("raster", POINTS / "1996/beta_1996_FallEC_J114106/1996_full.tif",
+        1996: ("raster", POINTS / "1996/noaa_beta_1996_FallEC_J114106/1996_full.tif",
                "1996-08 to 1996-10", "1997-01-01", "coarse grid of the survey the starting dunes came from: bias check"),
-        1997: ("raster", POINTS / "1997/1997_FallEC_Job1111523.tif", "1997-09 to 1997-10", "1998-01-01", ""),
-        1998: ("raster", POINTS / "1998/beta_1998_FallEC_J114104/*.tif", "1998-09", "1999-01-01", ""),
-        1999: ("raster", POINTS / "1999/beta_1999_SC-NC-VA_Post-Dennis_J114103/*.tif", "1999-09",
+        1997: ("raster", POINTS / "1997/noaa_1997_FallEC_Job1111523/1997_FallEC_Job1111523.tif", "1997-09 to 1997-10", "1998-01-01", ""),
+        1998: ("raster", POINTS / "1998/noaa_beta_1998_FallEC_J114104/*.tif", "1998-09", "1999-01-01", ""),
+        1999: ("raster", POINTS / "1999/noaa_beta_1999_SC-NC-VA_Post-Dennis_J114103/*.tif", "1999-09",
                "2000-01-01", "post-Dennis, flown before Floyd; the model state includes Floyd"),
-        2000: ("raster", POINTS / "2000/2000_full.tif", "2000-02 to 2000-03", "2000-01-01", ""),
-        2001: ("raster", POINTS / "2001/2001_NC_PhaseI_Job1135397/2001_NC_PhaseI_Job1135397.tif",
+        2000: ("raster", POINTS / "2000/noaa_beta_2000_Spring_NC_ATM_J136368/2000_full.tif", "2000-02 to 2000-03", "2000-01-01", ""),
+        2001: ("raster", POINTS / "2001/noaa_2001_NC_PhaseI_Job1135397/2001_NC_PhaseI_Job1135397.tif",
                "2001-01 to 2001-03", "2001-01-01", "unclassified returns: buildings or vegetation can raise a crest"),
-        2004: ("raster", POINTS / "2004/beta_2004_PreIvan_J114100/*.tif", "2004-04 to 2004-09", "2004-01-01",
+        2004: ("raster", POINTS / "2004/noaa_beta_2004_PreIvan_J114100/*.tif", "2004-04 to 2004-09", "2004-01-01",
                "after Isabel (2003)"),
-        2005: ("raster", POINTS / "2005/beta_2005_Topobathy_J114099/*.tif", "2005-08 to 2005-11", "2006-01-01", ""),
-        2009: ("mosaic", POLYGONS / "2009/usace2009_nc_dem_Job1076020/2009_full.tif", "2009-08", "2010-01-01",
+        2005: ("raster", POINTS / "2005/noaa_beta_2005_Topobathy_J114099/*.tif", "2005-08 to 2005-11", "2006-01-01", ""),
+        2009: ("mosaic", POLYGONS / "2009/noaa_usace2009_nc_dem_Job1076020/2009_full.tif", "2009-08", "2010-01-01",
                "the calibration end, here on the 1996 windows"),
     }),
 }
@@ -111,7 +112,7 @@ STARTS = {
 # are shifted by those amounts (Hannah); 2000 (+0.10) and 2001 (-0.10, unclassified) are left as measured
 SURVEY_VERTICAL_OFFSET_M = {"1996-start": {1996: -0.24, 1997: -0.34, 1999: -0.32}}
 # The road check: every survey against the 2009 lidar on the 2008 NC-12 line
-REF_2009 = POLYGONS / "2009/usace2009_nc_dem_Job1076020/2009_full.tif"
+REF_2009 = POLYGONS / "2009/noaa_usace2009_nc_dem_Job1076020/2009_full.tif"
 ROAD_LINE = tv.MGMT_ROOT / "road_offset" / "raw_offset" / "2008" / "nc12_2008.geojson"
 RELOCATED_1999 = range(9, 14)            # GIS 9-13: NC-12 moved in 1999, not the same pavement
 # A raster without a CRS (the 2000 mosaic) sits on the clips' UTM 18N grid in metres

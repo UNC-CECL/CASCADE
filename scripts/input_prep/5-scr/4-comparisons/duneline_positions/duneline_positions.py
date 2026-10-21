@@ -43,6 +43,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     support_dir, town_bands,
 )
 from site_layer.hat_map_layers import ISLAND_OUTLINE, NC_COAST  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 from site_layer.hat_observed_rates import (  # noqa: E402
     DOMAIN_BOXES, DUNELINE_POSITIONS, TRANSECT_LAYER, coastsat_endpoint_csv,
     transect_lookup,
@@ -55,7 +56,7 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 CRS = "EPSG:6347"                         # NAD83(2011) UTM 18N, the 2023 mosaic's
-IMAGERY = Path("D:/Hatteras_GIS/Aerial/2023/2023_full_aerial.tif")
+IMAGERY = GIS_ROOT / "aerial_imagery" / "2023" / "2023_full_aerial.tif"
 IMAGERY_LABEL = "2023 NOAA NGS orthomosaic"
 N = 90
 PERIOD_YEARS = (1996, 2009, 2024)

@@ -68,7 +68,7 @@ DOMAIN_STYLE = dict(color="white", zorder=4,
 # Photographs that are not the USGS Henderson release
 USGS_REF = "doi 10.5066/P1CXBCDW, stated accuracy 1.2 m"
 PHOTO_SOURCES = {
-    # D:\Hatteras_GIS\Aerial\2008, 2008_IOCM_NaturalColorImagery_J1129187_metadata.xml
+    # D:\Hatteras_GIS\aerial_imagery\2008\noaa_2008_IOCM_NaturalColorImagery_J1129187, 2008_IOCM_NaturalColorImagery_J1129187_metadata.xml
     2008: dict(date="2008-03-26", label="26–27 March 2008", short="NOAA NGS orthomosaic",
                ref="the NOAA NGS colour orthomosaic flown 2008-03-26/27 (InPort 48695)"),
 }

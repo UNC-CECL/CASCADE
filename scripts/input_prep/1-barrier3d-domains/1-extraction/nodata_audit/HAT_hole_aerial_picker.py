@@ -36,6 +36,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 from site_layer import hat_topo_version as htv  # noqa: E402
 import HAT_hole_aerial_chips as chips  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 # Chip half-widths are PER HOLE, not fixed
@@ -46,20 +47,20 @@ ZOOM_WIDE = 2.6                   # wide view = this x the close one
 # Imagery sources
 
 # Imagery: 1996 is primary, the rest corroborate; the NIR band is verified, not assumed (README)
-AERIAL_ROOT = Path(r"D:\Hatteras_GIS\Aerial")
+AERIAL_ROOT = GIS_ROOT / "aerial_imagery"
 SOURCES = [
     dict(key="1996", label="1996 scanned",  res=1.00, zooms=2, nir=None,
-         glob="1996_henderson/1996_georef_TIF/*.tif"),
+         glob="1996/usgs_henderson/frames/*.tif"),
     dict(key="2019", label="2019 NGS",      res=0.30, zooms=1, nir=None,
-         glob="2019/*.tif"),
+         glob="2019/**/*.tif"),
     dict(key="2008", label="2008 IOCM",     res=0.50, zooms=1, nir=None,
-         glob="2008/*.tif"),
+         glob="2008/**/*.tif"),
     dict(key="2014", label="2014 4-band",   res=0.35, zooms=1, nir=4,
-         glob="2014/2014_4BandImagery_J1406387/*.tif"),
+         glob="2014/noaa_2014_4BandImagery_J1472573/*.tif"),
     dict(key="2018", label="2018 NAIP",     res=0.60, zooms=1, nir=4,
-         glob="2018/2018_4BandImagery_NAIP_NC_J1406390/*.tif"),
+         glob="2018/noaa_2018_4BandImagery_NAIP_NC_J1406390/*.tif"),
     dict(key="2004", label="2004 colour",   res=1.46, zooms=1, nir=None,
-         glob="2004_Henry/*.tif"),
+         glob="2004/**/*.tif"),
 ]
 POND, DROPOUT, UNCLEAR = "POND", "DROPOUT", "UNCLEAR"
 KEYMAP = {"w": POND, "g": DROPOUT, "u": UNCLEAR}
@@ -158,7 +159,8 @@ class ImagerySource:
     def __init__(self, cfg):
         import glob as _g
         self.__dict__.update(cfg)
-        self.files = sorted(_g.glob(str(AERIAL_ROOT / cfg["glob"])))
+        # ** reaches the tiles under <year>/noaa_<job>/ beside the year's mosaic
+        self.files = sorted(_g.glob(str(AERIAL_ROOT / cfg["glob"]), recursive=True))
         self.boxes = []
         self.crs = None
         for p in self.files:

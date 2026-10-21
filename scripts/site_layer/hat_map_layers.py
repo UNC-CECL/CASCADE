@@ -21,6 +21,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from site_layer.hat_observed_rates import DOMAIN_BOXES  # noqa: E402,F401
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 
 _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(_p for _p in _HERE.parents
@@ -32,7 +33,7 @@ MAP_ELEMENTS = INIT_ROOT / "map_elements"
 ISLAND_OUTLINE = MAP_ELEMENTS / "hatteras_outline" / "HAT_island_outline.shp"
 # The coast around it (sound shores, Ocracoke, Pea Island) for maps reaching past the island
 NC_COAST = MAP_ELEMENTS / "nc_coast_80k" / "nc_80k_hatteras_window.geojson"
-NC_COAST_SOURCE = Path("D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp")
+NC_COAST_SOURCE = GIS_ROOT / "coastline" / "nc_80k" / "nc_80k.shp"
 NC_COAST_PAD_M = 25_000.0
 # Natural Earth 1:10m states for the regional locator inset.
 NE_STATES = MAP_ELEMENTS / "natural_earth" / "ne_10m_states_southeast_us.geojson"

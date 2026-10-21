@@ -28,9 +28,6 @@ from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
 from rasterio.windows import Window, from_bounds
 
-POLY_ROOT = Path(r"D:\Hatteras_GIS\Elevation\Polygons")
-BASE_DEM = POLY_ROOT / "2009" / "usace2009_nc_dem_Job1076020" / "2009_full.tif"
-DOMAIN_FILE = Path(r"D:\Hatteras_GIS\domains.geojson")
 DOMAIN_ID_FIELD = "domain_id"
 # Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
@@ -46,7 +43,11 @@ from pathlib import Path as _ELP
 _elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_elevation_products as _el  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
+POLY_ROOT = GIS_ROOT / "elevation" / "dem"
+BASE_DEM = POLY_ROOT / "2009" / "noaa_usace2009_nc_dem_Job1076020" / "2009_full.tif"
+DOMAIN_FILE = GIS_ROOT / "domains.geojson"
 # Source-selection/, where the committed copies are
 OUT_DIR = _el.source_selection_dir()
 

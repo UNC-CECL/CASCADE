@@ -24,7 +24,9 @@ from affine import Affine
 from rasterio.warp import reproject, transform_bounds, Resampling
 from shapely.geometry import box as _box
 
-AERIAL_ROOT = Path(r"D:\Hatteras_GIS\Aerial")
+from site_layer.hat_gis_root import GIS_ROOT
+
+AERIAL_ROOT = GIS_ROOT / "aerial_imagery"
 AERIAL_DOI = "10.5066/P1CXBCDW"
 AERIAL_ACCURACY_M = 1.2       # from the USGS metadata, 1984 and 1997 alike
 
@@ -33,15 +35,15 @@ AERIAL_ACCURACY_M = 1.2       # from the USGS metadata, 1984 and 1997 alike
 def year_files(year: int) -> list[Path]:
     mosaics = [Path(p) for p in glob.glob(str(AERIAL_ROOT / f"{year}*" / f"{year}_full_aerial.tif"))]
     frames = []
-    for pat in (AERIAL_ROOT / f"{year}_henderson" / "**" / f"{year}_*.tif",
-                AERIAL_ROOT / "Henderson_Hatteras2025" / "Hatteras_Georeferenced_DRAFT" / str(year)
-                / "**" / f"{year}_*.tif"):
+    for pat in (AERIAL_ROOT / str(year) / "usgs_henderson" / "**" / f"{year}_*.tif",
+                AERIAL_ROOT / "_delivered" / "usgs_henderson_2025_draft" / "Hatteras_Georeferenced_DRAFT"
+                / str(year) / "**" / f"{year}_*.tif"):
         frames += [Path(p) for p in glob.glob(str(pat), recursive=True)]
-    # 1984's frames sit under 1984_georef_TIF/Input and fill the mosaic's gaps
+    # The frames sit under <year>/usgs_henderson/frames and fill the mosaic's gaps
     bad = ("zip", "thumbnail")
     frames = [p for p in frames if p.suffix.lower() == ".tif"
               and not any(b in q.lower() for q in p.parts for b in bad)]
-    # the 2025 draft duplicates the henderson folders: keep one copy per name
+    # the 2025 draft duplicates the usgs_henderson folders: keep one copy per name
     seen, out = set(), []
     for p in sorted(frames):
         if p.name not in seen:
@@ -53,8 +55,8 @@ def year_files(year: int) -> list[Path]:
 
 # The flight date from the frame names (YEAR_MMDD_...), or the year
 def year_date(year: int) -> str:
-    for pat in (AERIAL_ROOT / f"{year}_henderson" / "**" / f"{year}_*",
-                AERIAL_ROOT / "Henderson_Hatteras2025" / "**" / f"{year}_*"):
+    for pat in (AERIAL_ROOT / str(year) / "usgs_henderson" / "**" / f"{year}_*",
+                AERIAL_ROOT / "_delivered" / "usgs_henderson_2025_draft" / "**" / f"{year}_*"):
         for p in glob.glob(str(pat), recursive=True):
             m = re.match(rf"{year}_(\d{{2}})(\d{{2}})_", Path(p).name)
             if m:

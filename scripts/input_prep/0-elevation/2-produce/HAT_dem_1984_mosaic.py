@@ -40,8 +40,8 @@ OUTPUT_DIR = _product(PRODUCT_TAG, check=False).gapfill_1m
 AUDIT_CSV = "mosaic_1984_audit.csv"
 
 # the override source
-OVERRIDE_DIR = (gf.GIS_ROOT / "Elevation" / "Polygons" / "1996"
-                / "1996_FallEC_J1441002")
+OVERRIDE_DIR = (gf.GIS_ROOT / "elevation" / "dem" / "1996"
+                / "noaa_1996_FallEC_J1441002")
 OVERRIDE_GLOB = "*_FallEC_*t*.tif"     # the two data tiles, not the clippoly
 OVERRIDE_TAG = "1996_NASA_ALACE"
 OVERRIDE_YEAR = 1996

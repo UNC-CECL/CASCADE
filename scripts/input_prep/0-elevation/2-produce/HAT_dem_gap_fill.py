@@ -48,14 +48,14 @@ _elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
 from site_layer import hat_elevation_products as _el  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 ELEVATION_DIR = _el.ELEVATION_ROOT
-GIS_ROOT = Path(r"D:\Hatteras_GIS")
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 
-BASE_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2009"
-                 / "usace2009_nc_dem_Job1076020" / "2009_full.tif")
+BASE_DEM_PATH = (GIS_ROOT / "elevation" / "dem" / "2009"
+                 / "noaa_usace2009_nc_dem_Job1076020" / "2009_full.tif")
 
 # Fill source: 2014 NOAA Post-Sandy DEM, chosen by measured dry-gap coverage (see README)
-FILL_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2014"
-                 / "2014_NOAA_Post_Sandy_DEM_Job1076021" / "2014_full.tif")
+FILL_DEM_PATH = (GIS_ROOT / "elevation" / "dem" / "2014"
+                 / "noaa_2014_NOAA_Post_Sandy_DEM_Job1076021" / "2014_full.tif")
 FILL_SOURCE_TAG = "2014_NOAA_PostSandy"
 FILL_SOURCE_YEAR = 2014
 

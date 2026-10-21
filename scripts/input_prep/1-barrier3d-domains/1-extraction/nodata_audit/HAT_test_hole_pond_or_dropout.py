@@ -27,11 +27,11 @@ REPO = next(
     if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer import hat_topo_version as htv  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 TOPO_PRODUCT = "1996-start"
-NCFMP_DIR = Path(r"D:\Hatteras_GIS\Elevation\Polygons\2014"
-                 r"\2014_NCFMP_NC_DEM_P1_J1437737")
+NCFMP_DIR = GIS_ROOT / "elevation" / "dem" / "2014" / "noaa_2014_NCFMP_NC_DEM_P1_J1437737"
 DOMAIN_EPSG = 3725                 # the resampled 10 m rasters
 GRID_M = 10.0
 
