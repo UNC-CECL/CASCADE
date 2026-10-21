@@ -16,8 +16,7 @@ should rarely touch them and growth alone sets their change.
 Runs: the 1996 start, managed edgeBE, groin on, through the grid study's launcher,
 one per rate (RATES). Score per domain group: model minus lidar domain-median
 crest at each survey's model state, on the cells the survey covers; the headline
-is 1 January 2010 against the 2009 lidar. Figure: that error against the mean
-growth rate, per group (figures/stable_dune_growth_rate_1996_2009.png).
+is 1 January 2010 against the 2009 lidar. Figures: HAT_stable_dune_figures.py.
 "check" runs CHECK_RATES on both starts and scores them island-wide as
 HAT_low_growth_test_period.py does (dune trajectory, major-event images, overwash
 skill, shoreline RMSE), to compare 0.005-0.01 with the adopted 0-0.01.
@@ -32,12 +31,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
+import numpy as np
+import pandas as pd
 
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
@@ -95,38 +90,6 @@ def score(variant):
     return pd.DataFrame(rows)
 
 
-# 2010 model minus 2009 lidar against the mean growth rate, one line per group and all seven domains
-def figure(t):
-    end = t[t.survey == 2009].copy()
-    end["r_mean"] = end.rate.map(lambda s: np.mean([float(x) for x in s.split("-")]))
-    fig, ax = plt.subplots(figsize=fs.figsize("single", height=2.9), layout="constrained")
-    ax.axhline(0, color=fs.INK, lw=0.8, ls="--")
-    ax.text(0.0405, 0.04, "matches the 2009 lidar", ha="right", va="bottom", fontsize=6.5, color=fs.INK)
-    for label, g in end.groupby("group"):
-        g = g.sort_values("r_mean")
-        ax.plot(g.r_mean, g.error, color=GROUP_COLOURS[label], lw=1.6, marker="o", ms=4,
-                label=f"Model, {label} (lidar median {g.lidar_median.iloc[0]:.2f} m)")
-    w = {k: len(v) for k, v in GROUPS.items()}
-    pooled = end.groupby("r_mean").apply(lambda g: np.average(g.error, weights=g.group.map(w)))
-    ax.plot(pooled.index, pooled.values, color=fs.INK_MUTED, lw=1.0, ls=":", label="All seven domains")
-    ax.set(xlabel="Mean dune growth rate, r",
-           ylabel="Model minus lidar, median\ndune crest, 2009 (m)")
-    ax.legend(frameon=False, fontsize=6.5, loc="upper left")
-    ax.grid(axis="y", color=fs.GRID_C, lw=0.5)
-    fs.open_frame(ax)
-    path = OUT_DIR / "figures" / ("3-model-fit" if OUT_DIR != EXP_DIR else "") / "stable_dune_growth_rate_1996_2009.png"
-    fs.save(fig, path, close=True)
-    fs.record_caption(path, "Growth rate from stable dunes, 1996 start, Dmax 10.5 m above the berm (Dmaxel 12.2 m "
-                      "NAVD88), groin on. Model median dune crest on 1 January 2010 minus the 2009 lidar median on "
-                      "the same 10 m cells, for two stretches with a stable shoreline (CoastSat 1996-2009 LRR within "
-                      "+/-0.5 m/yr), no observed overwash in 1996-2009 and dunes present and changing gently in all "
-                      "nine surveys: GIS 59-62 (Mid-island / Wimble Shoals) and GIS 20-22 (Buxton-Avon / Avon). "
-                      "Dotted: the seven domains together. Rates are rmin-rmax ranges plotted at their mean. "
-                      "Producer: HAT_stable_dune_growth_rate.py.")
-    print(path)
-    return pooled
-
-
 def check():
     import HAT_low_growth_test_period as T            # importing it re-points the launcher; point it back
     G.TAG, G.EXP_DIR = TAG, EXP_DIR
@@ -174,7 +137,6 @@ def main():
     summary.round(3).to_csv(OUT_DIR / "tables" / "stable_dune_summary.csv")
     print(t[t.survey == 2009].groupby("group")[["lidar_median"]].first().round(2).to_string(), "\n")
     print(summary.round(2).to_string())
-    print("all seven domains, 2010 error by mean r:", figure(t).round(3).to_dict())
 
 
 if __name__ == "__main__":

@@ -5,19 +5,21 @@ Why the stable dunes at GIS 59-62 and 20-22 can calibrate the dune growth rate r
 
 Figures for the stable-dune study (HAT_stable_dune_growth_rate.py, run it first),
 written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026-10-21), one subfolder per
-topic: 1-selection (fig1, fig3), 2-observed-dunes (fig2, fig4, fig7-9), 3-model-fit (fig5, fig6). In reading order:
+topic: 1-selection (fig1, fig3), 2-observed-dunes (fig2, fig4, fig7-9), 3-model-fit (the fit figures). In reading order:
   stable_dune_fig1_where       shoreline change, dune change and overwash per domain, 1996-2009:
                                the two stretches meet all three conditions
   stable_dune_fig2_profiles    1996 and 2009 DEM profiles at the stable stretches: dune and beach in place
   stable_dune_fig3_excluded    the same at two excluded domains: a growing beach, a retreating shoreline
   stable_dune_fig4_surveys     crests through all nine 1996-2009 lidar surveys: no storm losses
-  stable_dune_fig5_model       model crest for several r against the surveys
-  stable_dune_fig6_rate        (drawn by HAT_stable_dune_growth_rate.py) model minus lidar against r
   stable_dune_fig7_dem_gis<N>  one per stable domain: the 1996 and 2009 1 m DEMs and their difference, north up,
                                with the dune window and each row's picked crest: the same dune in both
   stable_dune_fig8_alongshore  crest along the shore in every survey: 1996 and 2009 rise and dip together
   stable_dune_fig9_crest_shift how far the picked crest moved cross-shore, 1996 to 2009
     (fig7-9 alone, no model runs needed: HAT_stable_dune_figures.py dems)
+  stable_dune_fit_trajectory   why 0.01-0.03: the adopted rate against every survey, cell spread shown
+  stable_dune_fit_error_by_rate every rate tested, from tables/stable_dune_summary.csv
+  stable_dune_fit_spread       a range keeps the median and doubles the spread of a fixed rate
+    (the fit figures alone: HAT_stable_dune_figures.py fit)
 Profiles: the 1 m gap-filled DEMs of the 1996 and 2009 starts (same clip grid),
 averaged to 10 m as the starts are and put in the 1996 start's cross-shore frame
 by the survey-crest code. A 10 m cell is drawn only where all its core 1 m
@@ -61,7 +63,8 @@ X, tv = S.X, S.tv
 OUT = R.OUT_DIR / "figures"
 # One subfolder per point the figures make, in reading order (2026-10-21)
 TOPICS = {"stable_dune_fig1_where": "1-selection", "stable_dune_fig3_excluded": "1-selection",
-          "stable_dune_fig5_model": "3-model-fit"}   # everything else: 2-observed-dunes
+          "stable_dune_fit_trajectory": "3-model-fit",
+          "stable_dune_fit_error_by_rate": "3-model-fit", "stable_dune_fit_spread": "3-model-fit"}   # everything else: 2-observed-dunes
 C96, C09 = fs.C_1984, "#c8880f"            # house period colours: 1996 red, 2009 amber
 STABLE = R.GROUPS                           # {"GIS 59-62": (...), "GIS 20-22": (...)}
 STABLE_C = R.GROUP_COLOURS
@@ -69,11 +72,6 @@ PROFILE_DOMAINS = (61, 21)                  # one per stable stretch
 EXCLUDED = {44: "beach building out", 65: "shoreline retreating"}
 SHORE_BAND = 0.5                            # m/yr: the stable-shoreline condition
 MIN_CELLS = 25                              # domains with fewer fully surveyed cells are left blank in fig1
-MODEL_RATES = {(0.0, 0.0): ("r = 0 (no growth)", "0.70", 1.0),
-               (0.01, 0.02): ("r 0.01-0.02", "#92c5de", 1.2),
-               (0.02, 0.02): ("r = 0.02", fs.INK, 2.0),
-               (0.03, 0.03): ("r = 0.03", "#f4a582", 1.0),
-               (0.04, 0.04): ("r = 0.04", fs.C_1984, 1.0)}
 SOURCES = {"1996-start": ("2009-2014-1996", 1996), "2009-start": ("2009-2014", 2009)}
 # -----------------------------------------------------------------------------
 
@@ -176,8 +174,6 @@ def fig_where():
     b.bar(gis, ch, 0.8, color=np.where(ch.abs() <= 1.0, fs.INK_MUTED, "0.78"))
     b.axhline(0, color=fs.INK, lw=0.6)
     b.set(ylabel="Dune crest change,\n1996–2009 lidar (m)")
-    b.text(0.99, 0.95, f"blank: fewer than {MIN_CELLS} cells with a dune in all nine surveys", transform=b.transAxes,
-           ha="right", va="top", fontsize=6.5, color=fs.INK_MUTED)
     finish(b, 1)
     ov = ovw.reindex(gis).fillna(0)
     c.bar(gis, ov, 0.8, color=fs.C_1984)
@@ -191,7 +187,8 @@ def fig_where():
     save(fig, "stable_dune_fig1_where",
          "Where the dunes were stable, 1996-2009. (a) Shoreline change rate per domain (CoastSat linear "
          "regression, 1996-2009); dark bars lie within +/-0.5 m/yr. (b) Change in the domain-median dune crest "
-         "between the 1996 and 2009 lidar surveys, on the 10 m cells with a dune in all nine surveys. (c) Number of "
+         "between the 1996 and 2009 lidar surveys, on the 10 m cells with a dune in all nine surveys; blank where a "
+         "domain has fewer than 25 such cells. (c) Number of "
          "imagery dates showing overwash. Shaded: GIS 20-22 (Buxton-Avon / Avon) and GIS 59-62 (Mid-island / "
          "Wimble Shoals), where the shoreline held, no overwash was seen and the dune changed gently; these "
          "calibrate the growth rate.")
@@ -253,51 +250,19 @@ def fig_surveys():
          "rather than storm damage: the process r controls. 1996-2005 surveys are 3-9 m grids, 2009 the 1 m DEM.")
 
 
-def model_group_series(variant):
-    mod = V.model_crests(R.START, variant)
-    first = V.PERIODS[R.START][1]
-    surv = V.surveys(R.START)
-    out = {}
-    for label, doms in STABLE.items():
-        s = surv[surv.gis.isin(doms)]
-        cells = s.dropna(subset=["crest"]).groupby(["gis", "cell"]).size()
-        cells = cells[cells == s.survey.nunique()].index           # cells with a crest in every survey
-        idx = np.array([(g - 1) * R.CELLS + c for g, c in cells])
-        yrs = first + np.arange(mod.shape[0])
-        out[label] = (yrs, np.median(mod[:, idx], axis=1), cells)
-    return out
+# Model crest per saved state, GIS 1-90 x 50 cells, m NAVD88. The run's own buffer count, not today's config:
+# these runs have 15 buffers a side, the site config 30 since 2026-10-21, so DOM.gis_to_pad would read the wrong
+# domains. Buffers are symmetric, so GIS 1 sits (domains - 90) / 2 in
+_CRESTS = {}
 
 
-def fig_model():
-    surv = V.surveys(R.START)
-    fig, axes = plt.subplots(1, 2, figsize=fs.figsize("double", height=3.1), layout="constrained", sharey=True)
-    series = {r: model_group_series(R.G.name(R.CEILING, r, groin=True)) for r in MODEL_RATES}
-    for i, (ax, label) in enumerate(zip(axes, STABLE)):
-        for r, (lab, col, lw) in MODEL_RATES.items():
-            yrs, med, _ = series[r][label]
-            ax.plot(yrs, med, color=col, lw=lw, label=f"Model, {lab}")
-        cells = series[(0.0, 0.0)][label][2]
-        s = surv.set_index(["gis", "cell"]).loc[cells].reset_index()
-        pts = s.groupby("survey").agg(state=("model_state", "first"), crest=("crest", "median"))
-        ax.plot([int(x[:4]) for x in pts.state], pts.crest, ls="none", marker="o", ms=5, mfc="white", mec=fs.INK,
-                mew=1.3, label="Observed: lidar surveys", zorder=6)
-        ax.text(0.97, 0.05, label, transform=ax.transAxes, ha="right", fontsize=7, fontweight="bold",
-                color=STABLE_C[label])
-        yrs, med, _ = series[(0.0, 0.0)][label]
-        ax.annotate("year 1: road sand\nbulldozed onto dunes", (yrs[1], med[1]), xytext=(yrs[1] + 0.6, med[1] + 0.9),
-                    fontsize=6, color=fs.INK_MUTED, arrowprops=dict(arrowstyle="-", color=fs.INK_MUTED, lw=0.6))
-        ax.set(xlabel="Year (1 January)", xlim=(1996.5, 2010.5), ylim=(5, 9))
-        finish(ax, i)
-    axes[0].set_ylabel("Median dune crest (m NAVD88)")
-    fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=5)
-    save(fig, "stable_dune_fig5_model",
-         "Model against the surveys at the stable stretches, 1996 start, Dmax 10.5 m above the berm, groin on. "
-         "Median crest of the cells with a dune in every survey, for four growth rates; circles: the lidar on the "
-         "same cells, at the model state each survey's flight dates point to. With no growth the model dunes stay "
-         "flat while the real ones rose; 0.02 follows the surveys on the corrected 1996 start (ALACE -0.24 m); "
-         "faster rates outgrow them. The first-year rise at every rate, including no growth, is the roadway manager bulldozing "
-         "3,400-5,100 m3 of sand above its road elevation onto the dunes once, in the road-managed domains "
-         "(GIS 20 and 59-62; 21-22 are a community zone without it).")
+def model_crests(variant):
+    if variant not in _CRESTS:
+        c = R.U.load(R.G.run_dir(R.START, variant))
+        pad = (len(c.barrier3d) - 90) // 2
+        cc = [np.asarray(c.barrier3d[pad + g - 1].DuneDomain, float).max(axis=2) * 10 for g in range(1, 91)]
+        _CRESTS[variant] = np.stack(cc, axis=1).reshape(cc[0].shape[0], -1) + V.BERM_NAVD88
+    return _CRESTS[variant]
 
 
 # --- same dune in both DEMs ------------------------------------------------------------
@@ -481,9 +446,168 @@ def fig_crest_shift():
          "different ridge.")
 
 
+# --- why 0.01-0.03 ---------------------------------------------------------------------
+ADOPTED = (0.01, 0.03)
+SPREAD_RATES = {(0.02, 0.02): "Model, r = 0.02 (fixed)", (0.01, 0.03): "Model, r 0.01-0.03 (adopted)",
+                (0.005, 0.035): "Model, r 0.005-0.035"}
+
+
+def rate_label(r):
+    return f"r = {r[0]:g}" if r[0] == r[1] else f"r {r[0]:g}-{r[1]:g}"
+
+
+# The stable cells with a crest in every survey, per stretch, as flat model indices; and the survey table on them
+def stable_cells():
+    surv = V.surveys(R.START)
+    out = {}
+    for label, doms in STABLE.items():
+        s = surv[surv.gis.isin(doms)]
+        n = s.dropna(subset=["crest"]).groupby(["gis", "cell"]).size()
+        cells = n[n == s.survey.nunique()].index
+        out[label] = (np.array([(g - 1) * R.CELLS + c for g, c in cells]),
+                      s.set_index(["gis", "cell"]).loc[cells].reset_index())
+    return out
+
+
+def model_at(mod, state):
+    return mod[int(state[:4]) - V.PERIODS[R.START][1]]
+
+
+def fig_fit_trajectory():
+    cells = stable_cells()
+    runs = {r: model_crests(R.G.name(R.CEILING, r, groin=True)) for r in ((0.0, 0.0), ADOPTED, (0.04, 0.04))}
+    fig, axes = plt.subplots(1, 2, figsize=fs.figsize("double", height=3.0), layout="constrained", sharey=True)
+    for i, (ax, label) in enumerate(zip(axes, STABLE)):
+        idx, s = cells[label]
+        yrs = V.PERIODS[R.START][1] + np.arange(runs[ADOPTED].shape[0])
+        m = runs[ADOPTED][:, idx]
+        ax.fill_between(yrs, *np.percentile(m, [25, 75], axis=1), color=fs.INK, alpha=0.12, lw=0,
+                        label="Model, r 0.01-0.03: middle half of cells")
+        ax.plot(yrs, np.median(m, axis=1), color=fs.INK, lw=2.0, label="Model, r 0.01-0.03 (adopted): median")
+        for r, ls in (((0.0, 0.0), ":"), ((0.04, 0.04), "--")):
+            med = np.median(runs[r][:, idx], axis=1)
+            ax.plot(yrs, med, color=fs.INK_MUTED, lw=0.9, ls=ls)
+            ax.text(yrs[-1] + 0.15, med[-1], "no growth" if r[0] == 0 else "r = 0.04", fontsize=6, va="center",
+                    color=fs.INK_MUTED)
+        g = s.groupby("survey").agg(state=("model_state", "first"), med=("crest", "median"),
+                                    q1=("crest", lambda x: x.quantile(0.25)), q3=("crest", lambda x: x.quantile(0.75)))
+        x = np.array([int(v[:4]) for v in g.state]) + 0.08     # nudge off the model line so both show
+        ax.errorbar(x, g.med, yerr=[g.med - g.q1, g.q3 - g.med], fmt="o", ms=5, mfc="white", mec=STABLE_C[label],
+                    mew=1.4, ecolor=STABLE_C[label], elinewidth=1, capsize=0, zorder=6,
+                    label="Observed: lidar survey, median and middle half")
+        ax.text(0.97, 0.05, f"{label} ({len(idx)} cells)", transform=ax.transAxes, fontsize=7, fontweight="bold",
+                color=STABLE_C[label], ha="right")
+        ax.set(xlabel="Year (1 January)", xlim=(1996.6, 2011.3))
+        finish(ax, i)
+    axes[0].set_ylabel("Dune crest (m NAVD88)")
+    fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=3)
+    save(fig, "stable_dune_fit_trajectory",
+         "The adopted growth rate follows the stable dunes through 1996-2009. Model crests with r 0.01-0.03 (line: "
+         "median; band: middle half of the cells) against every lidar survey on the same cells (circles: median; "
+         "bars: middle half), at the model state each survey's flight dates point to. 1996 start corrected for the "
+         "ALACE offset, Dmax 10.5 m above the berm, groin on. Dotted: no growth; dashed: r = 0.04. 1996-2005 "
+         "surveys are 3-9 m grids, which read sharp crests somewhat low. The first-year rise in every run, no growth "
+         "included, is the roadway manager bulldozing 3,400-5,100 m3 of sand above its road elevation onto the dunes "
+         "once, in the road-managed domains (GIS 20 and 59-62; 21-22 are a community zone without it).")
+
+
+# Per rate and stretch, from the scored tables (HAT_stable_dune_growth_rate.py score, made with the runs):
+# 2010 model minus 2009 lidar, and RMSE over the surveys after 1996; n = domains, for the pooled point
+def fit_errors():
+    t = pd.read_csv(R.OUT_DIR / "tables" / "stable_dune_summary.csv", header=[0, 1], index_col=0)
+    rows = []
+    for rate, row in t.iterrows():
+        r = tuple(float(x) for x in rate.split("-"))
+        for label, doms in STABLE.items():
+            rows.append(dict(rate=r, group=label, n=len(doms), end=row[("2010 error vs 2009 lidar (m)", label)],
+                             rmse=row[("RMSE over the surveys (m)", label)]))
+    return pd.DataFrame(rows)
+
+
+def fig_fit_errors():
+    d = fit_errors()
+    order = sorted(R.RATES, key=lambda r: (np.mean(r), r[1] - r[0]))
+    y = {r: k for k, r in enumerate(order)}
+    fig, axes = plt.subplots(1, 2, figsize=fs.figsize("double", height=3.4), layout="constrained", sharey=True,
+                             gridspec_kw=dict(width_ratios=[1.5, 1]))
+    for i, (ax, col, xl) in enumerate(zip(axes, ("end", "rmse"), ("Model minus lidar, median crest,\n2009 survey (m)",
+                                                                  "RMSE of the median crest over\nthe surveys after 1996 (m)"))):
+        ax.axhspan(y[ADOPTED] - 0.45, y[ADOPTED] + 0.45, color="0.9", zorder=0)
+        for label in STABLE:
+            g = d[d.group == label]
+            ax.plot(g[col], g.rate.map(y), ls="none", marker="o", ms=4.5, color=STABLE_C[label],
+                    label=f"Model minus lidar, {label}")
+        pooled = d.groupby(d.rate.map(str)).apply(lambda g: np.average(g[col], weights=g.n))
+        ax.plot([pooled[str(r)] for r in order], range(len(order)), ls="none", marker="D", ms=3.5, mfc="white",
+                mec=fs.INK, mew=1.0, label="All seven domains")
+        if col == "end":
+            ax.axvline(0, color=fs.INK, lw=0.8, ls="--")
+        ax.set(xlabel=xl)
+        ax.grid(axis="x", color=fs.GRID_C, lw=0.5)
+        fs.open_frame(ax)
+        fs._letter_inside(ax, i)
+    axes[0].set_yticks(range(len(order)), [rate_label(r) + ("  (adopted)" if r == ADOPTED else "") for r in order])
+    axes[0].set_ylim(-0.6, len(order) - 0.4)
+    axes[0].set_ylabel("Growth rate (rmin-rmax), by mean")
+    fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=3)
+    save(fig, "stable_dune_fit_error_by_rate",
+         "Every growth rate tested on the stable dunes, 1996 start (ALACE offset corrected), Dmax 10.5 m above the "
+         "berm, groin on, ordered by mean rate. (a) Model minus lidar median crest at the 2009 survey, per stretch "
+         "and for the seven domains together; 0 matches the lidar. (b) RMSE of the median crest over the "
+         "surveys after 1996. Numbers from tables/stable_dune_summary.csv. Rates averaging 0.02 (0.02, 0.01-0.03, 0.005-0.035) are the ones near zero at both "
+         "stretches with the lowest RMSE; slower rates leave the dunes too low, faster ones too high. Shaded: the "
+         "adopted range.")
+
+
+def fig_fit_spread():
+    cells = stable_cells()
+    obs, mods = [], {r: [] for r in SPREAD_RATES}
+    runs = {r: model_crests(R.G.name(R.CEILING, r, groin=True)) for r in SPREAD_RATES}
+    for label in STABLE:
+        idx, s = cells[label]
+        w = s.pivot_table(index=["gis", "cell"], values="crest", columns="survey")
+        obs.append((w[2009] - w[1996]).to_numpy())
+        st96 = s[s.survey == 1996].model_state.iloc[0]
+        st09 = s[s.survey == 2009].model_state.iloc[0]
+        for r, mod in runs.items():
+            mods[r].append(model_at(mod, st09)[idx] - model_at(mod, st96)[idx])
+    series = [("Observed: lidar, 1996 to 2009", np.concatenate(obs), "0.55")] + \
+             [(lab, np.concatenate(mods[r]), fs.INK if r == ADOPTED else "#92c5de") for r, lab in SPREAD_RATES.items()]
+    fig, ax = plt.subplots(figsize=fs.figsize("double", height=3.0), layout="constrained")
+    for k, (lab, v, col) in enumerate(series):
+        y = len(series) - 1 - k
+        parts = ax.violinplot(v, positions=[y], vert=False, widths=0.8, showextrema=False)
+        for b in parts["bodies"]:
+            b.set_facecolor(col)
+            b.set_alpha(0.35)
+            b.set_edgecolor("none")
+        q1, med, q3 = np.percentile(v, [25, 50, 75])
+        ax.plot([q1, q3], [y, y], color=col, lw=3, solid_capstyle="butt")
+        ax.plot(med, y, marker="o", ms=4.5, mfc="white", mec=col, mew=1.3)
+    ax.axvline(np.median(series[0][1]), color="0.55", lw=0.6, ls="--")
+    ticks = [f"{lab}\nmedian {np.median(v):+.2f} m, middle half {np.subtract(*np.percentile(v, [75, 25])):.2f} m wide"
+             for lab, v, _ in series]
+    ax.set_yticks(range(len(series)), ticks[::-1], fontsize=6.5)
+    ax.set(xlabel="Crest change per 10 m cell, 1996-2009 (m)", xlim=(-1.0, 2.5))
+    ax.grid(axis="x", color=fs.GRID_C, lw=0.5)
+    fs.open_frame(ax)
+    save(fig, "stable_dune_fit_spread",
+         f"Why a range of growth rates rather than one: crest change per 10 m cell at the seven stable domains, "
+         f"1996 to 2009 ({len(series[0][1])} cells with a crest in every survey). Shape: distribution; bar: middle "
+         f"half; circle: median; dashed: the observed median. All three model rates match the observed median, but a "
+         f"fixed 0.02 grows every cell alike. 0.01-0.03 doubles the cell-to-cell spread at the same median; "
+         f"0.005-0.035 widens it further but lowers the median. Barrier3D draws each cell's r at random within the "
+         f"range, so the spread is not placed where the real fast and slow dunes are.")
+
+
 def main():
     fs.apply_style()
     OUT.mkdir(parents=True, exist_ok=True)
+    if len(sys.argv) > 1 and sys.argv[1] == "fit":            # only the why-this-rate figures
+        fig_fit_trajectory()
+        fig_fit_errors()
+        fig_fit_spread()
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "dems":           # only the same-dune figures (no model runs needed)
         for g in sorted(g for doms in STABLE.values() for g in doms):
             fig_dem_maps(g)
@@ -503,7 +627,9 @@ def main():
                  "shoreline retreated (-2.2 m/yr); the crest held while the dune lost width, which r cannot "
                  "represent.", EXCLUDED)
     fig_surveys()
-    fig_model()
+    fig_fit_trajectory()
+    fig_fit_errors()
+    fig_fit_spread()
 
 
 if __name__ == "__main__":
