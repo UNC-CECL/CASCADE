@@ -1,1 +1,0 @@
-patched in-process by conserving_groin.py: both sides of the face use r_face (BRIE's diffusion number of the lower cell); the runner's report does not show it

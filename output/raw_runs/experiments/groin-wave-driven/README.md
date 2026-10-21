@@ -6,9 +6,6 @@ The wave-driven groin (`cascade.groin.GroinCallback`, once "corrected"): the run
 
 | study | question | answer | status | write-up |
 |---|---|---|---|---|
-| `2026-10-09-corrected-groin` | The drift groin plus the leak correction at its own bends: does it fit and conserve sand? | Fits; refit on the calendar-year setup the next study. | superseded 10-12 | `2026-10-09-corrected-groin/` |
-| `2026-10-12-corrected-groin-calendar` | The same fit on the calendar-year setup. | 0.16 for 1996–2009, 0.10 for 2009–2025, off from the 2017 fill. | superseded 10-14 (same values on the runner) | `2026-10-09-corrected-groin/` |
-| `2026-10-12-same-setup` | The pinned blocking groin (b 0.6, f 0.6, instant 2004) and the 10-08 drift groin (b 0.1, f 0.4) rerun in both periods on the corrected groin's setup, for its comparison figures. | Read by `results_figures.py`. | record | `2026-10-09-corrected-groin/` |
 | `2026-10-13-pregroin-planform` | How strong is the groin when working, from the 1967 shoreline (before the groins)? | With the next two studies: 0.25 from installation to 2009, 0.20–0.25 to 2016, off from 2017. | **current**; the whole-life strength (0.25) for runs that start before the fillet exists | `2026-10-13-pregroin-planform/` |
 | `2026-10-13-pregroin-full-life` | The same strengths run over the groin's full life. | See the row above; also the runs `2026-10-14-face-6-7` and `-fillet-shape` read. | **current** | `2026-10-13-pregroin-planform/` |
 | `2026-10-13-continuous-1967-2025` (+ `-seed1`, `-seed2`) | One continuous run 1967–2025, no reset at 1996 or 2009; the seed variants resample the 1968–1983 storms instead of replaying them. | Follows the record to 17 m over 1967–2025. | **current** | `2026-10-13-pregroin-planform/` |
@@ -25,5 +22,7 @@ The wave-driven groin (`cascade.groin.GroinCallback`, once "corrected"): the run
 **Status**: **current** means its answer is in use now. **record** means a finished check, kept so the number can be traced. **superseded** means a later study replaced the answer.
 
 Every study before 10-20 ran on the old storms (`v3_split12_trim24`), beach slope 0.04 and Dmaxel 5.5 m. The strengths in use (0.16 / 0.10 / 0.25) still come from them and need refitting on the 10-20 settings.
+
+Studies here from before 2026-10-13 were moved on 2026-10-20 to `D:\archive\CASCADE_offload\output\raw_runs\experiments\groin-wave-driven\`, with this topic's table as it stood in the README there.
 
 Back to [the map](../README.md).
