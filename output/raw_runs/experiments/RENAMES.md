@@ -16,4 +16,14 @@ The split follows the write-up tree: `hard-structures/groin/4-hindcast/2-blockin
 
 The offloaded studies on `D:\archive\CASCADE_offload\output\raw_runs\experiments\` keep their old topics (`groin/`, `storms-overwash-and-dunes/`), and scripts for those studies still name them. `storms-overwash/` is a new name. The older `storms-and-overwash/` was renamed `storms-overwash-and-dunes/` on 2026-10-05.
 
+## 2026-10-20, later: the end solves split by window
+
+| old | new |
+|---|---|
+| `end-domain-boundaries/<study>_1996_2009` (5 studies) | `end-domain-boundaries-1996-2009/<same study>` |
+| `end-domain-boundaries/<study>_2009_2025` (5 studies) | `end-domain-boundaries-2009-2025/<same study>` |
+| `end-domain-boundaries/<study>_1996_2025` (3 studies) | `end-domain-boundaries-1996-2025/<same study>` |
+
+`HAT_end_solve_net_change.py` picks the topic from the solve's window. The topic names use hyphens because the run registry reads any `<4 digits>_<4 digits>` folder as a period folder. The offloaded solves on D: keep `end-domain-boundaries/`.
+
 Renames before 2026-10-07 are in `chains/RENAMES.md` on D:.

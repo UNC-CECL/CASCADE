@@ -473,16 +473,16 @@ HATTERAS_BE_EDGE_ONLY = {
 
     # 1996: 1996-2015, five Newton steps (candidate-windows experiment, 2026-10-02)
     # 1996-2009: solved 2026-10-05 on the DEM-to-DEM net change (raw GIS 1, LOWESS-7 GIS 90), five secant steps from zeroBE
-    # (experiments/end-domain-boundaries/2026-10-05-ends-solved-on-net-change-1996_2009). 1996-2015: (+3.39, +37.60)
+    # (experiments/end-domain-boundaries-1996-2009/2026-10-05-ends-solved-on-net-change-1996_2009). 1996-2015: (+3.39, +37.60)
     # Re-solved 2026-10-09 on the calendar 2008 +/-6-month end (2007-07-01..2009-06-30), four steps, residuals -0.10 / -0.14 m
-    # (experiments/end-domain-boundaries/2026-10-09-ends-solved-on-net-change-1996_2009). 2026-10-05: (+1.4981, +10.5659)
+    # (experiments/end-domain-boundaries-1996-2009/2026-10-09-ends-solved-on-net-change-1996_2009). 2026-10-05: (+1.4981, +10.5659)
     # Re-solved 2026-10-12 on the +/-6-month offset (v3) and start window, five steps, residuals +0.03 / +0.10 m
-    # (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-net-change-1996_2009). 2026-10-09: (+1.4041, +10.3439)
+    # (experiments/end-domain-boundaries-1996-2009/2026-10-12-ends-solved-on-net-change-1996_2009). 2026-10-09: (+1.4041, +10.3439)
     # Re-solved 2026-10-12 evening for the calendar-year setup (storms 1997-2009, calendar 1996 -> 2009, offset v4),
-    # five steps, residuals +0.005 / -0.035 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-1996_2009).
+    # five steps, residuals +0.005 / -0.035 m (experiments/end-domain-boundaries-1996-2009/2026-10-12-ends-solved-on-calendar-years-1996_2009).
     # 2026-10-12 morning (v3): (+1.6765, +10.8869)
     # Re-solved 2026-10-13 for the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88),
-    # seven steps, residuals 0.000 / -0.016 m (experiments/end-domain-boundaries/2026-10-13-ends-solved-on-dune-settings-1996_2009).
+    # seven steps, residuals 0.000 / -0.016 m (experiments/end-domain-boundaries-1996-2009/2026-10-13-ends-solved-on-dune-settings-1996_2009).
     # 2026-10-12 evening (calendar years): (+1.6727, +10.7761)
     1996: (+0.9769, +10.8017),
     # 1996-2010 before it: (+4.3888, +19.0935), split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
@@ -494,19 +494,19 @@ HATTERAS_BE_EDGE_ONLY = {
     # (probes 28.1 -0.655, 39.0 +0.088, 37.7 -0.065, 38.3 -0.051 m/yr; the response is noise-limited near here). 1996 kept at
     # +37.60 (-0.144): probes 32.0-40.7 all scored worse, no trend (experiments/end-domain-boundaries/2026-10-04-gis90-runlength-footprints)
     # 2009-2025: solved 2026-10-06 on its own net change (raw GIS 1, LOWESS-7 GIS 90), eight secant steps from zeroBE
-    # (experiments/end-domain-boundaries/2026-10-05-ends-solved-on-net-change-2009_2025); residuals +0.43 / +0.01 m, GIS 1
+    # (experiments/end-domain-boundaries-2009-2025/2026-10-05-ends-solved-on-net-change-2009_2025); residuals +0.43 / +0.01 m, GIS 1
     # responds noisily (+/-1-2 m). The test of the calibration field is domainBE, which carries its own copy of set 1.
     # Before: the calibration ends (+1.4981, +10.5659), 2026-10-05. 2010-2026: (+172.89, +38.3)
     # Re-solved 2026-10-09 for the 17-yr run (2009-2025, ending 1 Jan 2026), six steps, residuals +0.29 / +0.13 m
-    # (experiments/end-domain-boundaries/2026-10-09-ends-solved-on-net-change-2009_2025). 16-yr run, 2026-10-06: (+32.7049, +21.0679)
+    # (experiments/end-domain-boundaries-2009-2025/2026-10-09-ends-solved-on-net-change-2009_2025). 16-yr run, 2026-10-06: (+32.7049, +21.0679)
     # Re-solved 2026-10-12 on the +/-6-month offset (v3) and start window and the 2025 +/-6-month end (2024-07-01..2026-06-30),
-    # eight steps, residuals -0.06 / -0.01 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-net-change-2009_2025).
+    # eight steps, residuals -0.06 / -0.01 m (experiments/end-domain-boundaries-2009-2025/2026-10-12-ends-solved-on-net-change-2009_2025).
     # 2026-10-09: (+32.2422, +21.5341)
     # Re-solved 2026-10-12 evening for the calendar-year setup (storms 2010-2025, calendar 2009 -> 2025, offset v4),
-    # eight steps, residuals -0.05 / +0.00 m (experiments/end-domain-boundaries/2026-10-12-ends-solved-on-calendar-years-2009_2025).
+    # eight steps, residuals -0.05 / +0.00 m (experiments/end-domain-boundaries-2009-2025/2026-10-12-ends-solved-on-calendar-years-2009_2025).
     # 2026-10-12 morning (v3): (+29.1320, +21.7947)
     # Re-solved 2026-10-13 for the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88),
-    # seven steps, residuals -0.118 / +0.000 m (experiments/end-domain-boundaries/2026-10-13-ends-solved-on-dune-settings-2009_2025).
+    # seven steps, residuals -0.118 / +0.000 m (experiments/end-domain-boundaries-2009-2025/2026-10-13-ends-solved-on-dune-settings-2009_2025).
     # 2026-10-12 evening (calendar years): (+32.4325, +21.6164)
     2009: (+29.6576, +20.7639),
     # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)

@@ -44,7 +44,7 @@ SCENARIO = "full_management"
 # Solve probes are not production: they file as an experiment, only zero and final go to matrix/
 # 2026-10-05 solved on the v2 (+/-1 yr) offset; 2026-10-12 on v3 (+/-6 months);
 # 2026-10-13 on the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88)
-SOLVE_TAG = "end-domain-boundaries/2026-10-13-ends-solved-on-dune-settings-1996_2025"
+SOLVE_TAG = "end-domain-boundaries-1996-2025/2026-10-13-ends-solved-on-dune-settings-1996_2025"
 SOLVE_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / SOLVE_TAG
 LOG_DIR = PROJECT_ROOT / "output" / "logs" / "driver" / "full_window_1996_2025"
 MAX_STEPS = 6

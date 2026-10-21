@@ -8,7 +8,7 @@ Solve the GIS 1 and GIS 90 end rates of one period against its DEM-to-DEM net-ch
 The secant starts from the period's zeroBE matrix run (both ends at 0) and steps
 through be_edge_domain_solve --target net_change until both ends are within
 0.02 m/yr times the run length. Probes are experiment runs under
-end-domain-boundaries/<date>-ends-solved-on-net-change-<window>/; only the final
+end-domain-boundaries-<window>/<date>-ends-solved-on-net-change-<window>/; only the final
 edgeBE run goes to the matrix. Full management, no groin, relocations off.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -44,7 +44,7 @@ SOLVE_DATE = "2026-10-13"
 SOLVE_NAME = "ends-solved-on-dune-settings"
 MAX_STEPS = 8
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"
-EXP_ROOT = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "end-domain-boundaries"
+EXP_ROOT = PROJECT_ROOT / "output" / "raw_runs" / "experiments"
 # -----------------------------------------------------------------------------
 
 
@@ -53,7 +53,9 @@ def window(period):
 
 
 def solve_tag(period):
-    return f"end-domain-boundaries/{SOLVE_DATE}-{SOLVE_NAME}-{window(period)}"
+    # one topic per window since 2026-10-20 (experiments/RENAMES.md)
+    topic = "end-domain-boundaries-" + window(period).replace("_", "-")
+    return f"{topic}/{SOLVE_DATE}-{SOLVE_NAME}-{window(period)}"
 
 
 # The zeroBE base run every solve starts from, as the matrix files it
@@ -106,7 +108,7 @@ def solve_step(period, steps):
         nxt = solver.report(period, names, None, kinds, [""] + steps, target_source="net_change")
     text = buf.getvalue()
     print(text, flush=True)
-    out = EXP_ROOT / solve_tag(period).split("/", 1)[1]
+    out = EXP_ROOT / solve_tag(period)
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "solve.txt", "a", encoding="utf-8") as f:
         f.write(text)
@@ -116,7 +118,7 @@ def solve_step(period, steps):
 def cmd_solve(a):
     base = solve_tag(a.period)
     steps = []
-    while (EXP_ROOT / base.split("/", 1)[1] / "runs" / f"step{len(steps) + 1}").is_dir():
+    while (EXP_ROOT / base / "runs" / f"step{len(steps) + 1}").is_dir():
         steps.append(f"{base}/runs/step{len(steps) + 1}")
     while True:
         nxt = solve_step(a.period, steps)
