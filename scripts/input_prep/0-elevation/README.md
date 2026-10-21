@@ -47,8 +47,8 @@ Every script, by folder:
 
 | role | dataset |
 |---|---|
-| base DEM | `usace2009_nc_dem_Job1076020 / 2009_full.tif` - 1 m, EPSG:3725 + NAVD88 (m) |
-| fill source | `2014_NOAA_Post_Sandy_DEM_Job1076021 / 2014_full.tif` - 1 m, EPSG:6347 + NAVD88 (m), reprojected on read |
+| base DEM | `elevation\dem\2009\noaa_usace2009_nc_dem_Job1076020\2009_full.tif` - 1 m, EPSG:3725 + NAVD88 (m) |
+| fill source | `elevation\dem\2014\noaa_2014_NOAA_Post_Sandy_DEM_Job1076021\2014_full.tif` - 1 m, EPSG:6347 + NAVD88 (m), reprojected on read |
 | domains | `D:\Hatteras_GIS\domains.geojson` - 90 boxes, 2000 x 500 m |
 | NC-12 lines | `4-mgmt-forcing/road_offset/raw_offset/{1984,2004}/nc12_*.geojson` - EPSG:2264 (NC State Plane, US survey FEET), reprojected and clipped on load |
 
@@ -657,7 +657,7 @@ DOES NOT.  `shoreline_offset`. That comes from
 INPUTS
     D:/Hatteras_GIS/.../2009_full.tif                base, 1 m, EPSG:3725
     D:/Hatteras_GIS/.../2014_full.tif                gap fill, 1 m, EPSG:6347
-    D:/Hatteras_GIS/.../1996_FallEC_J1441002/*.tif   override, 3 m, EPSG:6347
+    D:/Hatteras_GIS/elevation/dem/1996/noaa_1996_FallEC_J1441002/*.tif   override, 3 m, EPSG:6347
     D:/Hatteras_GIS/domains.geojson                  90 boxes, 2000 x 500 m
     4-mgmt-forcing/.../1978/nc12_1978.geojson        EPSG:2264, US survey FEET
 

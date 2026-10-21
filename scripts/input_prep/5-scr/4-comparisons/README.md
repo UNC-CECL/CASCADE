@@ -652,8 +652,8 @@ dates, drawn in the dark blue the LRR had.
 Keyed by LINE VINTAGE (the year in the geojson name), not by period year: a
 period finds its vintage through hat_topo_version.DUNE_LINE_FOR_YEAR.
 1984, 1997: the Henderson USGS metadata on D: (Calendar_Date). 2004, 2009:
-Google Earth capture dates (Hannah, 2026-09-15); the raw_GE frames carry
-none. 2023: NOAA NGS imagery under D:\Hatteras_GIS\Aerial\2023 whose
+Google Earth capture dates (Hannah, 2026-09-15); the raw_ge frames carry
+none. 2023: NOAA NGS imagery under D:\Hatteras_GIS\aerial_imagery\2023 whose
 metadata gives only the 2015-2023 series extent, so None until Hannah
 supplies the flight date; a None is centred mid-year and flagged.
 ```

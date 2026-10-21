@@ -10,7 +10,7 @@ hatteras_outline/     HAT_island_outline.shp (+ sidecars). Hatteras Island
                       2026-09-18 against the source: 88.85 km2 either way,
                       zero difference.                          ISLAND_OUTLINE
 nc_coast_80k/         nc_80k_hatteras_window.geojson. NC 1:80k coastline
-                      (D:/Hatteras_GIS/Outlines/nc_80k/, EPSG:4326), every
+                      (D:/Hatteras_GIS/coastline/nc_80k/, EPSG:4326), every
                       polygon within 25 km of the domain boxes, clipped: the
                       sound shores, Ocracoke and Pea Island that a map window
                       reaches past the island. Rebuilt by

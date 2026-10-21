@@ -9,7 +9,7 @@ picked dune window (`1-extraction/picks/HAT_dune_search_windows_v1.json`), clipp
 The script first runs the 2009 arrays through the same code and stops unless it reproduces the 2009 dune
 files (it does, to 1e-15 m).
 
-| survey | mosaic (D:\Hatteras_GIS\Elevation\Polygons) | flown | compared with the model state of |
+| survey | mosaic (D:\Hatteras_GIS\elevation\dem, folder `noaa_<job>`) | flown | compared with the model state of |
 |---|---|---|---|
 | 2014 | 2014_NOAA_Post_Sandy_DEM_Job1076021 | 2013-11 to 2014-06 | 1 Jan 2014 |
 | 2016 | 2016_USACE_post_matthew_Job1076022 | 2016-10 to 2016-12 | 1 Jan 2017 |

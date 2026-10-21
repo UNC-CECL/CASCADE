@@ -28,7 +28,7 @@ seaward and landward. On the imagery each line is edged for contrast.
 Each zoom is a window **three model domains (1.5 km) alongshore by 950 m
 across**: 650 m landward and 300 m seaward of the 2023 line. Every panel has
 the same extent and scale, over the **2023 NOAA NGS orthomosaic**
-(`D:\Hatteras_GIS\Aerial\2023\2023_full_aerial.tif`, read through its
+(`D:\Hatteras_GIS\aerial_imagery\2023\2023_full_aerial.tif`, read through its
 overviews), so the 2023 line can be checked against the dune it traces. The
 1997 and 2009 lines were not traced from this image. NC-12 is drawn white,
 with the year shown by dash pattern: dotted for the 1978 alignment (1997),
