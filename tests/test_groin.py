@@ -131,7 +131,7 @@ def test_a_groin_that_makes_or_loses_sand_stops_the_run():
         g(cascade, np.zeros(NY))
 
 
-SET_E = (0.0, 2 / 3, 1 / 3)       # Buxton's fit: none of the loss on the updrift pad, 2/3 and 1/3 beyond it
+BUXTON_SPREAD = (0.0, 2 / 3, 1 / 3)   # Buxton's fit: none of the loss on the updrift pad, 2/3 and 1/3 beyond it
 
 
 def stepped_coast(updrift, step_m=200.0):
@@ -149,7 +149,7 @@ def test_the_spread_moves_the_updrift_loss_to_the_pads_beyond_and_conserves_it(u
     x = stepped_coast(updrift)
     plain = GroinCallback(updrift, downdrift, [(1969, 0.25)], start_year=2000, n_domains=NY)
     spread = GroinCallback(updrift, downdrift, [(1969, 0.25)], start_year=2000, n_domains=NY,
-                           spread_weights=SET_E)
+                           spread_weights=BUXTON_SPREAD)
     difference = spread(fake_cascade(x), np.zeros(NY)) - plain(fake_cascade(x), np.zeros(NY))
     loss_m = spread.record[-1]["spread_loss_m"]
     assert loss_m > 0.0 and plain.record[-1]["spread_loss_m"] == 0.0
@@ -164,7 +164,7 @@ def test_the_spread_moves_the_updrift_loss_to_the_pads_beyond_and_conserves_it(u
 
 def test_the_spread_is_off_while_the_groin_is():
     x = stepped_coast(UP)
-    g = GroinCallback(UP, DOWN, [(2010, 0.25)], start_year=2000, n_domains=NY, spread_weights=SET_E)
+    g = GroinCallback(UP, DOWN, [(2010, 0.25)], start_year=2000, n_domains=NY, spread_weights=BUXTON_SPREAD)
     assert np.array_equal(g(fake_cascade(x), np.zeros(NY)), np.zeros(NY))
     assert g.record[-1]["spread_loss_m"] == 0.0
 

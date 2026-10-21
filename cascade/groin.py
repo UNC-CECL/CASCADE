@@ -1,11 +1,10 @@
-
 """The wave-driven groin: holds back a share of BRIE's alongshore drift, without BRIE leaking it away.
 
-Optionally (``spread_weights``) the loss the updrift pad takes across the groin face each year is shared with
-the two pads beyond it, for a fillet wider than one domain. A CASCADE callback (``cascade._groin_callback``), called once per model year just before BRIE's
+A CASCADE callback (``cascade._groin_callback``), called once per model year just before BRIE's
 alongshore solve; it only adds to ``x_s_dt``. Units are metres, ``x_s`` is landward positive, and
-pads are padded array indices from the runner. How it works, its tested range and its Buxton fit:
-hard-structures/groin/README.md.
+pads are padded array indices from the runner. Optionally (``spread_weights``) the loss the updrift
+pad takes across the groin face each year is shared with the two pads beyond it, for a fillet wider
+than one domain. How it works, its tested range and its Buxton fit: hard-structures/groin/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -71,7 +70,7 @@ class GroinCallback:
         first and second pads beyond it (away from the face); non-negative, summing to 1. The default
         ``(1, 0, 0)`` leaves the loss on the updrift pad: no spread. Buxton's fit is ``(0, 2/3, 1/3)``.
     """
-    kind: str = "corrected"
+    kind: str = "wave-driven"
     # The tested range: outside it the run stops (README "The module's bounds")
     SAND_TOLERANCE_M: float = 10.0         # summed shoreline the groin may make or lose, m ...
     SAND_TOLERANCE_FRACTION: float = 0.05  # ... or this share of its footprint's gross, whichever is larger
@@ -161,7 +160,8 @@ class GroinCallback:
                            + dx_m)
         return spsolve(csr_matrix((diagonals, (brie._di, brie._dj))), right_hand_side)
 
-    def _check_zone(self, lo_pad, hi_pad, half_width, n_domains):
+    @staticmethod
+    def _check_zone(lo_pad, hi_pad, half_width, n_domains):
         """Raise unless the pads are adjacent and the correction zone fits inside the array (it does not wrap)."""
         if hi_pad - lo_pad != 1:
             raise ValueError(
@@ -245,13 +245,12 @@ class GroinCallback:
         if active:
             self._check_tested_range(brie, x_s_m)
 
-        # Spread: the updrift pad's coming loss across the face (BRIE's term), shared with the two pads beyond it
+        # Spread: the updrift pad's coming loss across the face (BRIE's term), shared with the two pads beyond it,
+        # only while the groin works and the updrift pad stands seaward of the downdrift one
         spread_loss_m = 0.0
-        if self.spread_weights != self.NO_SPREAD:
-            coming_loss_m = (2 * self._diffusion_number(brie, x_s_m)[self.updrift_pad]
-                             * (x_s_m[self.downdrift_pad] - x_s_m[self.updrift_pad]))
-            if strength > 0.0 and coming_loss_m > 0.0:   # only while the groin works and the updrift pad stands out
-                spread_loss_m = coming_loss_m
+        if strength > 0.0 and self.spread_weights != self.NO_SPREAD:
+            spread_loss_m = max(0.0, 2 * self._diffusion_number(brie, x_s_m)[self.updrift_pad]
+                                * (x_s_m[self.downdrift_pad] - x_s_m[self.updrift_pad]))
         self._apply_spread(x_s_dt, spread_loss_m)
 
         # Keep this year's state and the groin's own contribution for next year's footprint
@@ -328,5 +327,6 @@ class GroinCallback:
                      net_drift_m3_yr=row["net_drift_m3_yr"],
                      approach_angle_deg=row["approach_angle_deg"],
                      leak_correction_m=row["leak_correction_m"],
-                     footprint_max_m=row["footprint_max_m"])
+                     footprint_max_m=row["footprint_max_m"],
+                     spread_loss_m=row["spread_loss_m"])
                 for year_index, row in enumerate(self.record)]
