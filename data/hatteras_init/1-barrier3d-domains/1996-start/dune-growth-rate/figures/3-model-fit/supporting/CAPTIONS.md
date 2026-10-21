@@ -1,0 +1,7 @@
+# Captions — 3-model-fit
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`stable_dune_fig5_model.png`.** Model against the surveys at the stable stretches, 1996 start, Dmax 10.5 m above the berm, groin on. Median crest of the cells with a dune in every survey, for four growth rates; circles: the lidar on the same cells, at the model state each survey's flight dates point to. With no growth the model dunes stay flat while the real ones rose; 0.02 follows the surveys on the corrected 1996 start (ALACE -0.24 m); faster rates outgrow them. The first-year rise at every rate, including no growth, is the roadway manager bulldozing 3,400-5,100 m3 of sand above its road elevation onto the dunes once, in the road-managed domains (GIS 20 and 59-62; 21-22 are a community zone without it). Producer: HAT_stable_dune_figures.py.
+
+**`stable_dune_growth_rate_1996_2009.png`.** Growth rate from stable dunes, 1996 start, Dmax 10.5 m above the berm (Dmaxel 12.2 m NAVD88), groin on. Model median dune crest on 1 January 2010 minus the 2009 lidar median on the same 10 m cells, for two stretches with a stable shoreline (CoastSat 1996-2009 LRR within +/-0.5 m/yr), no observed overwash in 1996-2009 and dunes present and changing gently in all nine surveys: GIS 59-62 (Mid-island / Wimble Shoals) and GIS 20-22 (Buxton-Avon / Avon). Dotted: the seven domains together. Rates are rmin-rmax ranges plotted at their mean. Producer: HAT_stable_dune_growth_rate.py.

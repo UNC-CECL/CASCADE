@@ -4,7 +4,8 @@ Why the stable dunes at GIS 59-62 and 20-22 can calibrate the dune growth rate r
     python scripts/hatteras_ms/experiments/HAT_stable_dune_figures.py
 
 Figures for the stable-dune study (HAT_stable_dune_growth_rate.py, run it first),
-written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026-10-21) in reading order:
+written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026-10-21), one subfolder per
+topic: 1-selection (fig1, fig3), 2-observed-dunes (fig2, fig4, fig7-9), 3-model-fit (fig5, fig6). In reading order:
   stable_dune_fig1_where       shoreline change, dune change and overwash per domain, 1996-2009:
                                the two stretches meet all three conditions
   stable_dune_fig2_profiles    1996 and 2009 DEM profiles at the stable stretches: dune and beach in place
@@ -12,6 +13,11 @@ written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026
   stable_dune_fig4_surveys     crests through all nine 1996-2009 lidar surveys: no storm losses
   stable_dune_fig5_model       model crest for several r against the surveys
   stable_dune_fig6_rate        (drawn by HAT_stable_dune_growth_rate.py) model minus lidar against r
+  stable_dune_fig7_dem_gis<N>  one per stable domain: the 1996 and 2009 1 m DEMs and their difference, north up,
+                               with the dune window and each row's picked crest: the same dune in both
+  stable_dune_fig8_alongshore  crest along the shore in every survey: 1996 and 2009 rise and dip together
+  stable_dune_fig9_crest_shift how far the picked crest moved cross-shore, 1996 to 2009
+    (fig7-9 alone, no model runs needed: HAT_stable_dune_figures.py dems)
 Profiles: the 1 m gap-filled DEMs of the 1996 and 2009 starts (same clip grid),
 averaged to 10 m as the starts are and put in the 1996 start's cross-shore frame
 by the survey-crest code. A 10 m cell is drawn only where all its core 1 m
@@ -53,6 +59,9 @@ X, tv = S.X, S.tv
 
 # --- CONFIG ------------------------------------------------------------------
 OUT = R.OUT_DIR / "figures"
+# One subfolder per point the figures make, in reading order (2026-10-21)
+TOPICS = {"stable_dune_fig1_where": "1-selection", "stable_dune_fig3_excluded": "1-selection",
+          "stable_dune_fig5_model": "3-model-fit"}   # everything else: 2-observed-dunes
 C96, C09 = fs.C_1984, "#c8880f"            # house period colours: 1996 red, 2009 amber
 STABLE = R.GROUPS                           # {"GIS 59-62": (...), "GIS 20-22": (...)}
 STABLE_C = R.GROUP_COLOURS
@@ -70,7 +79,7 @@ SOURCES = {"1996-start": ("2009-2014-1996", 1996), "2009-start": ("2009-2014", 2
 
 
 def save(fig, name, caption):
-    path = OUT / f"{name}.png"
+    path = OUT / TOPICS.get(name, "2-observed-dunes") / f"{name}.png"
     fs.save(fig, path, close=True)
     fs.record_caption(path, caption + " Producer: HAT_stable_dune_figures.py.")
     print(path, flush=True)
@@ -291,9 +300,196 @@ def fig_model():
          "(GIS 20 and 59-62; 21-22 are a community zone without it).")
 
 
+# --- same dune in both DEMs ------------------------------------------------------------
+# One year's 1 m DEM (m NAVD88) on the clip grid, NaN where that year's own survey does not cover the pixel
+def dem_1m(start, gis):
+    prod, year = SOURCES[start]
+    root = product(prod).gapfill_1m
+    with rasterio.open(root / f"clip_domain_{gis}_filled.tif") as s:
+        z, t = S.clean(s.read(1), s.nodata), s.transform
+    with rasterio.open(root / f"clip_domain_{gis}_survey.tif") as s:
+        z[s.read(1) != year] = np.nan
+    return z, t
+
+
+# The crest the survey-crest code picks in each 10 m row (S.crests), with its position: the frame column, or -1
+def crest_picks(start, gis):
+    if not _WINDOWS:
+        profile_array(start, gis)
+    shear, c0, i0, i1 = S.frame("1996-start", gis, _WINDOWS)
+    z1, _ = dem_1m(start, gis)
+    z = S.profiles(S.downsample(z1), shear, c0)
+    height, _, status = S.crests(z, i0, i1)
+    above = z > X.BEACH_START_THR_M
+    sb = np.where(above.any(axis=1), above.argmax(axis=1), -1)
+    pos = np.full(z.shape[0], -1)
+    for i in np.flatnonzero(status == "ok"):
+        a = max(i0, int(sb[i])) if (X.CLIP_WINDOW_TO_BEACH and sb[i] >= 0) else i0
+        win = z[i, a:min(i1, z.shape[1])]
+        pos[i] = a + int(np.argmax(np.where(win > X.SENTINEL_WATER_M + 1e-9, win, -np.inf)))
+    return pos, height + X.MHW_M, (shear, c0, i0, i1)
+
+
+# A frame cell (row i, column j) back to UTM metres at its 10 m centre: undoes the flips, shear and water trim
+def frame_to_xy(i, j, shear, c0, t, n_rows=50, n_cols=200):
+    r, c = n_rows - 1 - i, n_cols - 1 - (j + c0 + shear[i])
+    return t.c + 10 * c + 5, t.f - (10 * r + 5)
+
+
+def fig_dem_maps(gis):
+    z96, t = dem_1m("1996-start", gis)
+    z09, _ = dem_1m("2009-start", gis)
+    p96, h96, (shear, c0, i0, i1) = crest_picks("1996-start", gis)
+    p09, h09, _ = crest_picks("2009-start", gis)
+    rows = np.arange(len(p96))
+    # Crop cross-shore to the beach and dune: 40 m seaward of the window to 80 m landward of it
+    xs_lo = [frame_to_xy(i, i1 - 1, shear, c0, t)[0] for i in rows]
+    xs_hi = [frame_to_xy(i, i0, shear, c0, t)[0] for i in rows]
+    x0, x1 = min(xs_lo) - 80, max(xs_hi) + 40
+    c_lo, c_hi = int(x0 - t.c), int(x1 - t.c)
+    ext = (t.c + c_lo, t.c + c_hi, t.f - z96.shape[0], t.f)
+    cmap, _, _ = fs.elevation_cmap()
+    norm = matplotlib.colors.Normalize(0.0, 8.0)
+    ls = matplotlib.colors.LightSource(azdeg=315, altdeg=45)
+    diff = z09 - z96
+    fig, axes = plt.subplots(1, 3, figsize=fs.figsize("double", height=5.2), layout="constrained",
+                             sharex=True, sharey=True)
+    for k, (ax, z, title) in enumerate(zip(axes, (z96, z09, diff),
+                                           ("Observed: 1996 lidar (ALACE)", "Observed: 2009 lidar (USACE)",
+                                            "2009 minus 1996"))):
+        ax.set_facecolor("0.85")
+        if k < 2:
+            zc = z[:, c_lo:c_hi] - X.MHW_M
+            ax.imshow(ls.hillshade(np.nan_to_num(zc, nan=np.nanmin(zc)), vert_exag=2), cmap="gray",
+                      extent=ext, interpolation="none")
+            im = ax.imshow(np.ma.masked_invalid(zc), cmap=cmap, norm=norm, alpha=0.75, extent=ext,
+                           interpolation="none")
+        else:
+            imd = ax.imshow(np.ma.masked_invalid(z[:, c_lo:c_hi]), cmap="RdBu", vmin=-2, vmax=2, extent=ext,
+                            interpolation="none")
+        # The model's dune window: the band of 10 m cells each row's crest is searched in
+        for j, side in ((i0, 1), (i1 - 1, -1)):
+            xy = np.array([frame_to_xy(i, j, shear, c0, t) for i in rows])
+            ax.step(xy[:, 0] + side * 5, xy[:, 1], where="mid", color=fs.INK, lw=0.7, ls="--")
+        for pos, col, year in ((p96, C96, 1996), (p09, C09, 2009)):
+            if (k == 0 and year == 2009) or (k == 1 and year == 1996):
+                continue
+            ok = pos >= 0
+            xy = np.array([frame_to_xy(i, pos[i], shear, c0, t) for i in rows[ok]])
+            ax.plot(xy[:, 0], xy[:, 1], ls="none", marker="o", ms=2.6, mfc=col, mec="white", mew=0.4,
+                    label=f"Crest picked from the {year} lidar")
+        ax.set_title(title, fontsize=7)
+        ax.set_aspect("equal")
+        ax.set(xlim=(ext[0], ext[1]), ylim=(ext[2], ext[3]), xticks=[], yticks=[])
+        fs._letter_inside(ax, k)
+    # Scale bar and north arrow on the first panel
+    a = axes[0]
+    a.plot([ext[0] + 10, ext[0] + 60], [ext[2] + 15] * 2, color=fs.INK, lw=2)
+    a.text(ext[0] + 35, ext[2] + 22, "50 m", ha="center", fontsize=6)
+    a.annotate("", (ext[0] + 20, ext[3] - 40), xytext=(ext[0] + 20, ext[3] - 80),
+               arrowprops=dict(arrowstyle="-|>", color=fs.INK, lw=0.8))
+    a.text(ext[0] + 20, ext[3] - 36, "N", ha="center", va="bottom", fontsize=7)
+    a.text(ext[1] - 4, ext[2] + 15, "ocean →", ha="right", fontsize=6.5, color=fs.INK,
+           bbox=dict(facecolor="white", edgecolor="none", pad=1, alpha=0.8))
+    fig.colorbar(im, ax=axes[:2], orientation="horizontal", shrink=0.6, label="Elevation (m MHW)")
+    fig.colorbar(imd, ax=axes[2], orientation="horizontal", shrink=0.9, label="Change (m)")
+    handles = [h for ax in axes[:2] for h in ax.get_legend_handles_labels()[0]]
+    labels = [lab for ax in axes[:2] for lab in ax.get_legend_handles_labels()[1]]
+    handles.append(matplotlib.lines.Line2D([], [], color=fs.INK, lw=0.7, ls="--"))
+    labels.append("Model dune window")
+    fig.legend(handles, labels, frameon=False, fontsize=6.5, loc="outside lower center", ncol=3)
+    both = (p96 >= 0) & (p09 >= 0)
+    shift = (p09[both] - p96[both]) * fs.CELL_M
+    label = next(lab for lab, doms in STABLE.items() if gis in doms)
+    fig.suptitle(f"GIS {gis} ({label})", fontsize=8, fontweight="bold", x=0.01, ha="left")
+    save(fig, f"stable_dune_fig7_dem_gis{gis}",
+         f"The same dune in both surveys, GIS {gis}. (a) The 1996 lidar (ALACE, lowered 0.24 m) and (b) the 2009 "
+         f"lidar (USACE) at 1 m, north up, true scale, over a hillshade; grey where that year's own survey has no "
+         f"data (the 1996 start is the 2009 DEM there, so it is not shown). (c) 2009 minus 1996: blue gain, red "
+         f"loss. Dashed: the model's dune window, the band of 10 m cells each row's crest is searched in. Dots: the "
+         f"crest picked in each 10 m alongshore row from that year's DEM, averaged to 10 m as the model sees it. "
+         f"The picks follow one ridge in both years: {np.mean(np.abs(shift) <= fs.CELL_M):.0%} of the "
+         f"{both.sum()} rows picked in both years are within one 10 m cell of each other."
+         + (" The white blocks landward of the dune in (a) are houses: the 1996 ALACE grid keeps buildings that "
+            "the 2009 bare-earth DEM removes, hence the red patches in (c); they sit outside the dune window."
+            if gis in STABLE["GIS 20-22"] else ""))
+
+
+def fig_alongshore():
+    t = survey_table()
+    fig, axes = plt.subplots(2, 1, figsize=fs.figsize("double", height=4.2), layout="constrained", sharey=True)
+    for i, (ax, (label, doms)) in enumerate(zip(axes, STABLE.items())):
+        s = t[t.gis.isin(doms)].copy()
+        s["x"] = (s.gis - min(doms)) * 500 + s.cell * fs.CELL_M + 5
+        w = s.pivot_table(index="x", columns="survey", values="crest_m_navd88")
+        for year in w.columns:
+            if year not in (1996, 2009):
+                ax.plot(w.index, w[year], color="0.8", lw=0.6, zorder=1)
+        # 1996 and 2009 from the 1 m DEMs the maps show (the table's 1996 is NOAA's coarse grid, a bias check)
+        for start, year, col in (("1996-start", 1996, C96), ("2009-start", 2009, C09)):
+            h = np.concatenate([crest_picks(start, g)[1] for g in doms])
+            w[year] = pd.Series(h, index=(np.arange(len(h)) * fs.CELL_M + 5)).reindex(w.index).to_numpy()
+            ax.plot(w.index, w[year], color=col, lw=1.4, label=f"Observed: {year} lidar DEM (1 m)", zorder=3)
+        both = w[[1996, 2009]].dropna()
+        r = np.corrcoef(both[1996], both[2009])[0, 1]
+        ax.plot([], [], color="0.8", lw=0.6, label="Observed: the 1997-2005 surveys (3-9 m grids)")
+        for g in doms[1:]:
+            ax.axvline((g - min(doms)) * 500, color=fs.INK_MUTED, lw=0.5, ls=":")
+        for g in doms:
+            ax.text((g - min(doms)) * 500 + 250, 9.3, f"GIS {g}", ha="center", fontsize=6.5, color=fs.INK_MUTED)
+        ax.text(0.99, 0.04, f"{label}: 1996 vs 2009 alongshore r = {r:.2f}, median rise "
+                f"{np.median(both[2009] - both[1996]):+.2f} m", transform=ax.transAxes, ha="right", fontsize=6.5,
+                color=STABLE_C[label], fontweight="bold")
+        ax.text(0.01, 0.04, label, transform=ax.transAxes, fontsize=7, fontweight="bold", color=STABLE_C[label])
+        ax.set(xlim=(0, len(doms) * 500), ylim=(3, 9.8), ylabel="Dune crest (m NAVD88)")
+        finish(ax, i)
+    axes[-1].set_xlabel("Alongshore distance, south to north (m)")
+    fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=3)
+    save(fig, "stable_dune_fig8_alongshore",
+         "Dune crest along the stable stretches, 1996-2009, one value per 10 m model row (the highest 10 m cell in "
+         "the model's dune window). Red and amber: the 1 m 1996 and 2009 DEMs the model's dunes and its 2009 target "
+         "come from; grey: the 1997-2005 surveys, coarser grids. The 1996 and 2009 crests rise and dip at the same places "
+         "alongshore, so the window picks the same dune in both surveys, and the 2009 line sits a little above the "
+         "1996 one almost everywhere: the dune grew in place. Gaps: rows a survey did not cover. The two single-row 1996 spikes in GIS 21 and 22 "
+         "(above 9 m) appear in no other survey.")
+
+
+def fig_crest_shift():
+    rows = []
+    for label, doms in STABLE.items():
+        for g in doms:
+            p96, _, _ = crest_picks("1996-start", g)
+            p09, _, _ = crest_picks("2009-start", g)
+            ok = (p96 >= 0) & (p09 >= 0)
+            rows += [dict(group=label, shift=s) for s in (p09[ok] - p96[ok]) * fs.CELL_M]
+    d = pd.DataFrame(rows)
+    fig, ax = plt.subplots(figsize=fs.figsize("single", height=2.7), layout="constrained")
+    bins = np.arange(-65, 70, 10)
+    ax.hist([d[d.group == lab]["shift"] for lab in STABLE], bins=bins, stacked=True,
+            color=[STABLE_C[lab] for lab in STABLE], label=[f"Observed: {lab}" for lab in STABLE], rwidth=0.85)
+    within = np.mean(np.abs(d["shift"]) <= fs.CELL_M)
+    ax.axvline(0, color=fs.INK, lw=0.6, ls="--")
+    ax.text(0.98, 0.95, f"{within:.0%} of {len(d)} rows within\none 10 m cell", transform=ax.transAxes,
+            ha="right", va="top", fontsize=6.5)
+    ax.set(xlabel="Crest position, 2009 minus 1996 (m, + landward)", ylabel="10 m rows")
+    ax.legend(frameon=False, fontsize=6.5, loc="upper left")
+    finish(ax)
+    save(fig, "stable_dune_fig9_crest_shift",
+         "How far the picked dune crest moved cross-shore between the 1996 and 2009 lidar, per 10 m row at the "
+         "seven stable domains (rows picked in both years). Positions are 10 m model cells, so 0 means the same "
+         f"cell. {within:.0%} of rows are within one cell: the crest picked in 2009 is the 1996 dune, not a "
+         "different ridge.")
+
+
 def main():
     fs.apply_style()
     OUT.mkdir(parents=True, exist_ok=True)
+    if len(sys.argv) > 1 and sys.argv[1] == "dems":           # only the same-dune figures (no model runs needed)
+        for g in sorted(g for doms in STABLE.values() for g in doms):
+            fig_dem_maps(g)
+        fig_alongshore()
+        fig_crest_shift()
+        return
     fig_where()
     fig_profiles(PROFILE_DOMAINS, "stable_dune_fig2_profiles",
                  "Cross-shore profiles at the two stable stretches from the 1996 and 2009 lidar DEMs, in the same "

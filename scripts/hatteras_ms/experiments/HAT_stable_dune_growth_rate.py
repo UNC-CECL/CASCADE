@@ -114,7 +114,7 @@ def figure(t):
     ax.legend(frameon=False, fontsize=6.5, loc="upper left")
     ax.grid(axis="y", color=fs.GRID_C, lw=0.5)
     fs.open_frame(ax)
-    path = OUT_DIR / "figures" / "stable_dune_growth_rate_1996_2009.png"
+    path = OUT_DIR / "figures" / ("3-model-fit" if OUT_DIR != EXP_DIR else "") / "stable_dune_growth_rate_1996_2009.png"
     fs.save(fig, path, close=True)
     fs.record_caption(path, "Growth rate from stable dunes, 1996 start, Dmax 10.5 m above the berm (Dmaxel 12.2 m "
                       "NAVD88), groin on. Model median dune crest on 1 January 2010 minus the 2009 lidar median on "

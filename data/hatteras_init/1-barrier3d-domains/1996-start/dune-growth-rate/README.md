@@ -19,7 +19,12 @@ retreating).
 | `tables/stable_dune_scores.csv` | model minus lidar median crest per survey, rate and domain group |
 | `tables/stable_dune_summary.csv` | per rate: 2010 error against the 2009 lidar, and RMSE over the surveys |
 | `tables/island_and_test_check.csv` | island-wide and 2009-2025 check of 0.01-0.02, 0.02 and 0.01-0.03 |
-| `figures/` | `stable_dune_growth_rate_1996_2009.png` (`HAT_stable_dune_growth_rate.py`) and `stable_dune_fig1-5` (`HAT_stable_dune_figures.py`); PDFs and captions in `supporting/` |
+| `figures/1-selection/` | why these domains: `stable_dune_fig1_where` (shoreline, dune change and overwash per domain) and `stable_dune_fig3_excluded` (two domains left out) |
+| `figures/2-observed-dunes/` | the same dune, grown in place: `stable_dune_fig2_profiles` (1996 and 2009 DEM profiles), `stable_dune_fig7_dem_gis<N>` (one per stable domain: the 1996 and 2009 1 m DEMs and their difference, north up, true scale, with the dune window and each row's picked crest), `stable_dune_fig8_alongshore` (crest along the shore in every survey; 1996 vs 2009 r 0.73-0.74), `stable_dune_fig9_crest_shift` (87% of 348 rows keep their crest cell within one 10 m cell), `stable_dune_fig4_surveys` (crests through all nine surveys: no storm loss) |
+| `figures/3-model-fit/` | `stable_dune_fig5_model` (model crests for several r against the surveys) and `stable_dune_growth_rate_1996_2009` (2010 error against r) |
+
+Each figure folder keeps its PDFs and `CAPTIONS.md` in `supporting/`. Producers: `HAT_stable_dune_figures.py`
+(fig1-5, fig7-9; `dems` draws fig7-9 alone) and `HAT_stable_dune_growth_rate.py` (the rate figure).
 
 Scripts: `scripts/hatteras_ms/experiments/HAT_stable_dune_growth_rate.py` (`run`, `score`, `check`) and
 `HAT_stable_dune_figures.py`. The model runs (`.npz` states, one per rate) and launch logs stay in
