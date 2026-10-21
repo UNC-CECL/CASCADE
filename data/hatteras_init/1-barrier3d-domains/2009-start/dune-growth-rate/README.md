@@ -25,6 +25,14 @@ Reading: 0.02-0.04 tracks the median crest within 0.16 m. The low dunes are slig
 window's own surveys, so 2009-2025 no longer tests dune growth**, only overwash and shoreline. The 2009 ends
 were solved on 0.01-0.03.
 
+Figures, in `figures/model-fit/` (PDFs and `CAPTIONS.md` in `supporting/`), by `HAT_test_period_growth_figures.py`:
+
+| figure | what it shows |
+|---|---|
+| `test_growth_fit_trajectory` | the adopted rate against every survey, island-wide: (a) median crest with the middle half of the cells, (b) the low dunes' 10th percentile; the calibration rate and 0.03-0.07 for context |
+| `test_growth_fit_error_by_rate` | every rate tested: 2019 error and RMSE over the surveys, median and low dunes; recomputed from the runs and checked against the table |
+| `test_growth_fit_spread` | crest change per cell, 2009-2019: observed against 0.01-0.03, 0.02-0.04 and 0.03-0.07 |
+
 Script: `scripts/hatteras_ms/experiments/HAT_test_period_growth_rate.py` (`run`, `score`). The model runs and
 launch logs stay in `output/raw_runs/experiments/dunes/2026-10-20-test-period-growth-rate/`, because the run
 registry files every run under `output/raw_runs/`; the 0.01-0.03 reference run is in
