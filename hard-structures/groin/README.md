@@ -34,7 +34,7 @@ from simplest to most complex.
 4-hindcast/                the module fitted to Buxton in real model runs
     1-dipole-1967-2017/        SUPERSEDED: the fixed-shift groin (the M, f dipole) fit on the 1967-2017 rig
     2-blocking-1996-2025/      SUPERSEDED: the blocking groin on the calibration and test periods, and the drift and conserving groins
-    3-wave-driven-1967-2025/   the runner's groin: its window strengths (0.16 / 0.10), its whole-life 0.25, where its face sits
+    3-wave-driven-1967-2025/   the runner's groin: its window strengths (0.10 spread groin; 0.16 / 0.10 before), its whole-life 0.25, where its face sits
 5-forecast/                not started
 ```
 
@@ -48,6 +48,15 @@ what sets how much sand they move:
 
 Dated study folders (`4-hindcast/1-dipole-1967-2017/`, `2026-10-09-corrected-groin/`) and `3-module-tests/archive/`
 keep the names they were run under.
+
+**Update (2026-10-21): the runner uses the spread groin (0, 2/3, 1/3) at 0.10 in both windows.** GIS 6's loss
+across the groin face is taken from GIS 7 (2/3) and GIS 8 (1/3) instead (`groin.spread_weights` in
+`scripts/hatteras_ms/hat_run.yaml`), the three-domain northward reach the advisor asked for. Fitted on the
+calibration window and carried unchanged to 2009, so the test window is now an independent test of the groin;
+this replaces the two-window decision below. On the runner of 1d36cf20 (`4-hindcast/3-wave-driven-1967-2025/
+2026-10-20-spread-relaxation/`): 1996-2009 GIS 4-9 RMSE 8.9 m against 18.6 m for the plain groin at 0.16, gap
+12.2 against 13.0 m; 2009-2025 ties the plain groin (gap 11.0 against 10.7 m, GIS 4-9 38.4 against 39.5 m). The
+matrix needs rerunning; the bullets below are the state before the switch.
 
 **Where we left off (2026-10-14; bounds added 2026-10-15).** Numbers on the calendar-year setup (commit `e9c5e663`).
 
@@ -97,7 +106,7 @@ next, and the first year is the install year (strength 0 before it; there is no 
 since 2026-10-20). A groin at 0.25 until the 2017 fill is `[(1969, 0.25), (2017, 0.0)]`. Each year's
 numbers are kept in `record` and written out by `diagnostics_frame()`. `half_width` defaults to 10
 cells: at 5 it leaks on a grid-aligned coast (`3-module-tests/5-long-term/`). `spread_weights` (three shares
-summing to 1) defaults to `(1, 0, 0)`; each year's spread is in `record` as `spread_loss_m`.
+summing to 1) defaults to `(1, 0, 0)`; each year's spread is in `record` and the diagnostics as `spread_loss_m`.
 
 **Conventions (checked against `brie_coupler`).** `x_s_dt` is passed to BRIE in metres (`brie_coupler`
 converts back to decametres). `x_s` increases landward, so a negative `x_s_dt` is a seaward advance. The
@@ -146,7 +155,7 @@ below it stops the run with `cascade.groin.GroinOutsideTestedRange` instead of r
 |---|---|---|
 | wave climate | one climate for the whole run; one parameter at a time from option A, these ran without breaking in the full model: Hs 0.75-3.0, Tp 6-12 s, high-angle fraction 0.45-0.55, asymmetry 0.5-0.65 (high-angle 0.4 not run with the guard) | option A, fixed |
 | groin face | at most 45° | 16-29° |
-| strength | up to 0.5 | 0.16 (1996), 0.10 (2009), 0.25 whole life |
+| strength | up to 0.5 | 0.10 (both windows, spread groin since 2026-10-21; 0.16 / 0.10 before), 0.25 whole life |
 | switching | one switch-off | off from 2017 |
 | placement | face at least `half_width - 1` (9) cells from either end of the domains | pads 19\|20 of 120 |
 

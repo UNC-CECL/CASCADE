@@ -508,10 +508,11 @@ def pre_run_report(*, run_name, run_dir, run_years, start_year, end_year,
              else "SUSPECT -- see the notebook markdown on BermEl units"))
 
     if groin_callback is not None:
-        print(f"\nGROIN                 attached, corrected, strength history "
+        print(f"\nGROIN                 attached, {groin_callback.kind}, strength history "
               f"{groin_callback.strength_history}, updrift pad "
               f"{groin_callback.updrift_pad} / downdrift pad "
-              f"{groin_callback.downdrift_pad}")
+              f"{groin_callback.downdrift_pad}, spread "
+              + ", ".join(f"{w:.3g}" for w in groin_callback.spread_weights))
         print(f"  r_ipl (t=0)         {r_ipl:.4f}  (at the groin cell's t=0 "
               f"angle, brie.py:1294)")
     else:

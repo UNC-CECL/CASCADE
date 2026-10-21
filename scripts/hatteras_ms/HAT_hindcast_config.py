@@ -16,6 +16,7 @@ Version: 2026-09-30
 from __future__ import annotations
 
 import os
+from fractions import Fraction
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -90,6 +91,15 @@ def _as_str(raw) -> str:
     return str(raw).strip()
 
 
+# Three shares from a yaml list or a comma-separated environment value; each may be a fraction ("2/3")
+def _as_float_triple(raw) -> Tuple[float, float, float]:
+    items = raw.split(",") if isinstance(raw, str) else list(raw)
+    shares = tuple(float(Fraction(str(item).strip())) for item in items)
+    if len(shares) != 3:
+        raise ValueError(f"expected 3 shares, got {raw!r}")
+    return shares
+
+
 # The fields
 
 # (attribute, yaml path, cast, default); env name = HAT_ + attribute, never from the yaml path
@@ -110,13 +120,15 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("run_tag",                      ("run_tag",),           _as_str,      ""),
 
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
-    # The corrected groin (2026-10-14): share of the arriving drift held back, per window, for a run
-    # started from that window's observed shoreline (fitted in hard-structures/groin/4-hindcast/
-    # 3-wave-driven-1967-2025/2026-10-14-window-refit); `strength`, when set, overrides both and is the
-    # only way to run another start year with the groin on (0.25 over the groin's whole life, 1967-2025)
-    ("groin_strength_1996",          ("groin", "strength_1996"),   _as_float, 0.16),
+    # The spread groin (2026-10-21): share of the arriving drift held back, per window, for a run
+    # started from that window's observed shoreline (fitted on the calibration window in hard-structures/
+    # groin/4-hindcast/3-wave-driven-1967-2025/2026-10-20-spread-relaxation, carried unchanged to 2009);
+    # `strength`, when set, overrides both and is the only way to run another start year with the groin on
+    ("groin_strength_1996",          ("groin", "strength_1996"),   _as_float, 0.10),
     ("groin_strength_2009",          ("groin", "strength_2009"),   _as_float, 0.10),
     ("groin_strength",               ("groin", "strength"),        _as_opt_float, None),
+    # Shares of GIS 6's loss across the groin face taken from GIS 6, 7, 8 (cascade.groin spread_weights)
+    ("groin_spread_weights",         ("groin", "spread_weights"),  _as_float_triple, (0.0, 2 / 3, 1 / 3)),
     # The first year the groin no longer works (the 2017 Buxton fill)
     ("groin_end_year",               ("groin", "end_year"),        _as_int,   2017),
 

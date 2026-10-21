@@ -122,19 +122,26 @@ offset_mode: metres
 # from its 1969 installation until the year it stops working. The dipole (M)
 # and blocking (b, f) groins this replaced were removed the same day.
 #
+# The spread groin (0, 2/3, 1/3), since 2026-10-21: the loss GIS 6 takes
+# across the groin face each year is taken from GIS 7 (2/3) and GIS 8 (1/3)
+# instead, the three-domain northward reach seen in the record. Fitted on the
+# calibration window in hard-structures/groin/4-hindcast/3-wave-driven-1967-
+# 2025/2026-10-20-spread-relaxation/ (GIS 4-9 RMSE 8.9 m against 18.6 m for
+# the plain groin at 0.16). Its strength, 0.10, is carried unchanged to the
+# 2009 start, so the test window is an independent test of the groin.
+#
 # The strength is per window. Each window starts from its observed shoreline,
 # which already holds the fillet the groins built, so it needs less than the
-# groin's whole-life strength (0.25, fitted on one continuous 1967-2025 run in
-# hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-13-pregroin-
-# planform/), which overshoots from either start. Fitted on annual CoastSat in
-# 2026-10-14-window-refit/; the drop from 1996 to 2009 is the groin
-# deteriorating. The 2009 value is fitted on the test window, so for the groin
-# that window is not an independent test.
+# groin's whole-life strength (0.25, fitted with the plain groin on one
+# continuous 1967-2025 run in 2026-10-13-pregroin-planform/).
 groin:
   enabled: false
   # Share of the arriving drift held back, 0 (no groin) to 1, by start year.
-  strength_1996: 0.16
+  strength_1996: 0.10
   strength_2009: 0.10
+  # Shares of GIS 6's loss across the face taken from GIS 6, 7, 8; summing
+  # to 1. [1, 0, 0] is the plain groin (all the loss on GIS 6).
+  spread_weights: [0, 2/3, 1/3]
   # strength: 0.25   # if set, overrides both; needed to run any other start
   #                  # year with the groin on (0.25 = the whole-life strength)
   # First year the groin no longer works: the 2017 Buxton fill was placed

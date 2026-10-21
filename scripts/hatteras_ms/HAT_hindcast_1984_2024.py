@@ -773,10 +773,11 @@ GROIN_UPDRIFT_GIS = 6       # source: accretes
 GROIN_DOWNDRIFT_GIS = 5     # sink:   erodes
 GROIN_INSTALL_YEAR = 1969   # confirmed construction date
 
-# The groin's two numbers (hat_run.yaml): the share of the arriving drift it holds back, which is
-# per window (fitted from each window's observed start shoreline in hard-structures/groin/4-hindcast/
-# 3-wave-driven-1967-2025/2026-10-14-window-refit/), and the first year it no longer works (the 2017
-# Buxton fill). Another start year needs groin.strength set; 0.25 is the whole-life strength
+# The groin's settings (hat_run.yaml): the share of the arriving drift it holds back, per window; the
+# first year it no longer works (the 2017 Buxton fill); and the spread, the shares of GIS 6's loss across
+# the face taken from GIS 6, 7, 8 (0, 2/3, 1/3: the spread groin, fitted with its strength on the
+# calibration window in hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-20-spread-
+# relaxation/). Another start year needs groin.strength set
 GROIN_STRENGTH = groin_strength_for(START_YEAR, RUN_CONFIG)
 if GROIN_STRENGTH is None:
     if GROIN_ENABLED:
@@ -785,6 +786,7 @@ if GROIN_STRENGTH is None:
             f"groin.strength_2009 only. Set groin.strength (or HAT_GROIN_STRENGTH) to run it with the groin on.")
     GROIN_STRENGTH = 0.0   # the groin is off; the callback is built for the 7.4 report only
 GROIN_END_YEAR = RUN_CONFIG.groin_end_year
+GROIN_SPREAD_WEIGHTS = RUN_CONFIG.groin_spread_weights
 
 
 # 7.2 Build the callback
@@ -797,6 +799,7 @@ GROIN_CB = GroinCallback(
     strength_history=[(GROIN_INSTALL_YEAR, GROIN_STRENGTH), (GROIN_END_YEAR, 0.0)],
     start_year=FIRST_MODEL_YEAR,
     n_domains=HATTERAS_DOMAINS.total_domains,
+    spread_weights=GROIN_SPREAD_WEIGHTS,
 )
 GROIN_CALLBACK = GROIN_CB if GROIN_ENABLED else None
 
@@ -1540,6 +1543,7 @@ if GROIN_CALLBACK is not None:
     _META["groin"].update({
         "kind": GROIN_CALLBACK.kind,
         "strength_history": GROIN_CALLBACK.strength_history,
+        "spread_weights": list(GROIN_CALLBACK.spread_weights),
         "mean_trapping_rate_m_yr": f"{GROIN_CALLBACK.mean_trapping_rate_m_yr:.2f}",
         "updrift / downdrift": f"GIS {GROIN_UPDRIFT_GIS} / {GROIN_DOWNDRIFT_GIS}",
         "install_year": GROIN_CALLBACK.install_year,

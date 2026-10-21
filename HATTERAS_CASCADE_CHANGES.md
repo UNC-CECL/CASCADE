@@ -24,7 +24,7 @@ The fresh-start commit already carried some local edits, made before this branch
 
 | # | change | files | kind | commit(s) | used by the hindcast |
 |---|---|---|---|---|---|
-| 1 | Groin representation: a share of the wave-driven drift held back at the face, without BRIE's leak of it, injected before BRIE's transport solve (a dipole and a blocking form before 2026-10-14) | `groin.py` (new), `cascade_groin.py` (new: `cascade.py` + a hook) | new capability | 058cc821, 5b26cb54 (+ pre-history), corrected groin 2026-10-14 | yes, `cascade_groin.Cascade` is the class the runner builds; the groin runs at strength 0.16 (1996-2009) and 0.10 (2009-2025), off from 2017 |
+| 1 | Groin representation: a share of the wave-driven drift held back at the face, without BRIE's leak of it, injected before BRIE's transport solve (a dipole and a blocking form before 2026-10-14) | `groin.py` (new), `cascade_groin.py` (new: `cascade.py` + a hook) | new capability | 058cc821, 5b26cb54 (+ pre-history), corrected groin 2026-10-14 | yes, `cascade_groin.Cascade` is the class the runner builds; the groin runs as the spread groin (GIS 6's loss across the face taken from GIS 7-8, 2/3 and 1/3) at strength 0.10 in both windows since 2026-10-21 (0.16 / 0.10 before), off from 2017 |
 | 2 | Where a relocated road is rebuilt is its own input (`road_relocation_setback`) | `cascade.py`, `cascade_groin.py` | interface fix | ead66e13 | yes |
 | 3 | `resize_interior_domain` aligns pre/post-storm grids by anchoring the edge that did not move | `beach_dune_manager.py` | crash fix | 9b89dfee | yes, every managed run |
 | 4 | The bulldozer dune cap limits only the sand added, not the whole dune cell | `beach_dune_manager.py` | bug fix | 4d9c3acd | yes, every managed run |

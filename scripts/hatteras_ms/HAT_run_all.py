@@ -58,9 +58,10 @@ ALL_PRESETS = tuple(PRESETS) + tuple(
     name for name in HATTERAS_BE_PRESETS if name not in PRESETS)
 END_YEAR = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
 LAST_MODEL_YEAR = {p: last_model_year(p) for p in HATTERAS_PERIODS}
-# The groin's strength (per window) and end year reach the runner as code defaults; they key its runs
+# The groin's strength (per window), end year and spread reach the runner as code defaults; they key its runs
 GROIN_STRENGTH = {p: groin_strength_for(p) for p in PERIODS}
 GROIN_END_YEAR = field_default("groin_end_year")
+GROIN_SPREAD_WEIGHTS = field_default("groin_spread_weights")
 
 HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
 
@@ -216,9 +217,12 @@ def be_digest_for(period, preset):
 def job_key(stage, period=None, preset=None, scenario=None, groin=None,
             reloc=None, hs=None):
     parts = [stage, period, preset, scenario, groin, reloc]
-    # A groin run is keyed on the groin's two numbers, so changing either reruns it
+    # A groin run is keyed on the groin's settings, so changing any reruns it
     if groin:
         parts += [f"s{GROIN_STRENGTH[period]:g}", f"off{GROIN_END_YEAR}"]
+        # The spread joined the key on 2026-10-21; the plain groin keeps its old key
+        if tuple(GROIN_SPREAD_WEIGHTS) != (1.0, 0.0, 0.0):
+            parts.append("spread" + "-".join(f"{w:.3g}" for w in GROIN_SPREAD_WEIGHTS))
     digest = be_digest_for(period, preset)
     if digest != "empty":
         parts.append(digest)
@@ -402,6 +406,7 @@ def matrix_stage(stage, groin, manifest, args):
                         scenario=scenario, groin=groin, reloc=reloc,
                         groin_strength=GROIN_STRENGTH[period] if groin else None,
                         groin_end_year=GROIN_END_YEAR if groin else None,
+                        groin_spread_weights=list(GROIN_SPREAD_WEIGHTS) if groin else None,
                         ok=ok, seconds=round(seconds, 1),
                         detail=detail,
                         # Read back from the runner's output, not derived -- see run_name_from_log
@@ -503,7 +508,7 @@ def main():
     print(f"  presets      {', '.join(args.presets)}")
     print(f"  scenarios    {', '.join(args.scenarios)}")
     print(f"  groin        strength " + ", ".join(f"{GROIN_STRENGTH[p]:g} ({p})" for p in PERIODS)
-          + f", off from {GROIN_END_YEAR}")
+          + f", off from {GROIN_END_YEAR}, spread " + ", ".join(f"{w:.3g}" for w in GROIN_SPREAD_WEIGHTS))
     print(f"  model state  {'NOT saved' if args.no_model_state else 'saved'}")
     print(f"  manifest     {MANIFEST}")
     print(f"  logs         {LOG_DIR}")
