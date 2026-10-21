@@ -94,8 +94,8 @@ class Recording(GroinCallback):
             self.guard_year, self.guard_reason = 0, str(e).split(";")[0]
 
     def _check_tested_range(self, brie, x_s):
-        self.trace.append((float(np.sum(self._a)), float(np.sum(np.abs(self._a))),
-                           float(abs(np.degrees(np.arctan2(x_s[self._hi] - x_s[self._lo], brie._dy))))))
+        self.trace.append((float(np.sum(self._footprint_m)), float(np.sum(np.abs(self._footprint_m))),
+                           float(abs(np.degrees(np.arctan2(x_s[self._hi_pad] - x_s[self._lo_pad], brie._dy))))))
         try:
             super()._check_tested_range(brie, x_s)
         except GroinOutsideTestedRange as e:
@@ -165,7 +165,7 @@ def run(theta0, years=YEARS, strength=0.25, history=None, climate=OPTION_A, clim
         zone = np.abs(np.arange(NY) - (lo + 0.5)) <= half_width
         if groin:
             if refresh_drift:
-                cb._q_net = None
+                cb._drift_table_m3_yr = None
             fake._brie_coupler._brie = b
             try:
                 x_s_dt = cb(fake, x_s_dt)

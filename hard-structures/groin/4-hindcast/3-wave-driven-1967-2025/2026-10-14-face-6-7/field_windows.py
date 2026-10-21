@@ -66,7 +66,7 @@ def patch_groin(variant, share=0.0):
                 updrift_pad, downdrift_pad = updrift_pad + 1, downdrift_pad + 1
             super().__init__(updrift_pad, downdrift_pad, *a, **kw)
             if variant == "field":                       # take from GIS 5, give to GIS 7; GIS 6 between
-                self.updrift_pad = self._hi = updrift_pad + 1
+                self.updrift_pad = self._hi_pad = updrift_pad + 1
                 self._mid = updrift_pad
 
         def __call__(self, cascade, x_s_dt):
@@ -75,9 +75,9 @@ def patch_groin(variant, share=0.0):
                 # Move a share of this year's updrift gain from GIS 7 into the field, in the step and in the
                 # groin's own contribution the tracked footprint is built from
                 dx = share * self.record[-1]["applied_dx_updrift_m"]
-                xp, dxp, g, ap = self._prev
-                for arr in (x_s_dt, dxp, g):
-                    arr[self._hi] -= dx
+                last = self._last_year
+                for arr in (x_s_dt, last.dx_m, last.groin_dx_m):
+                    arr[self._hi_pad] -= dx
                     arr[self._mid] += dx
             return x_s_dt
 

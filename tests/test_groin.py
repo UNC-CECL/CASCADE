@@ -124,8 +124,8 @@ def test_a_groin_that_makes_or_loses_sand_stops_the_run():
     g = groin()
     cascade = fake_cascade(x)
     g(cascade, np.zeros(NY))
-    g._a = np.zeros(NY)
-    g._a[DOWN] = 2 * g.SAND_TOLERANCE_M             # a footprint that is all loss: past the tolerance
-    g._prev = None                                  # keep this footprint rather than re-stepping it
+    g._footprint_m = np.zeros(NY)
+    g._footprint_m[DOWN] = 2 * g.SAND_TOLERANCE_M   # a footprint that is all loss: past the tolerance
+    g._last_year = None                             # keep this footprint rather than re-stepping it
     with pytest.raises(GroinOutsideTestedRange, match="lost"):
         g(cascade, np.zeros(NY))
