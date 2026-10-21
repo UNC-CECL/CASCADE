@@ -62,7 +62,7 @@ plt.rcParams.update({
 # Mode
 
 # v4 re-picks every window with the road on the picker, adjusting the saved v3 windows
-MODE = "pick_and_run"      # "pick" | "run" | "pick_and_run"
+MODE = "run"               # "pick" | "run" | "pick_and_run"; "run" for v3: v2's windows on the corrected DEM
 # Domains to process, in both passes: the 90 modelled domains by default (options in README)
 PICK_DOMAINS = list(range(1, 91))
 # True for the v4 re-pick (seeded from v3); set False afterwards so pick_and_run resumes
@@ -81,8 +81,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))   # scripts/ (1-ext
 from site_layer.hat_topo_version import (array_name, year_for_product,  # noqa: E402
                               ROAD_LINE_VINTAGES)
 
-VERSION = "v2"             # 2026-09-02 re-pick (was "v3" until the 2026-09-04
-                           # renumber); what this writes: dune-topo/CURRENT decides what is read
+VERSION = "v3"             # 2026-10-20: v2's picks on the 1996-start DEM with the ALACE offset (-0.24 m)
+                           # corrected (v2: 2026-09-02 re-pick); what this writes: dune-topo/CURRENT decides
+                           # what is read
 
 # A label only, on two figures: no year in any filename since 2026-08-26
 DEM_LABEL = TOPO_PRODUCT
@@ -111,7 +112,8 @@ PLAN_FIG_STEM = f"HAT_dune_topo_island_planview_{RUN_NAME}"  # + _{year}.png
 MANIFEST_PATH = RUN_DIR / "RUN_MANIFEST.txt"
 
 # Picks are frame-dependent and written back every domain, so v4 keeps its own file (seeded from v3)
-PICK_SET = RUN_NAME
+PICK_SET = RUN_NAME        # v3's picks are v2's, carried forward with the windows shifted where the water
+                           # trim moved a cell (see the JSON's _meta)
 PICKS_DIR = PRODUCT_DIR / "1-extraction" / "picks"
 WINDOW_JSON = PICKS_DIR / f"HAT_dune_search_windows_{PICK_SET}.json"
 

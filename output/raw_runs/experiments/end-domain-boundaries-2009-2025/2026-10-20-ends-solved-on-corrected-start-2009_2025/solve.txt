@@ -1,0 +1,272 @@
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  d(net)/d(BE) 1.7850   (nominal gain, no second run to take a secant through)
+  next         +125.1 m/yr   (step +125.1 to close -223.247)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  d(net)/d(BE) 1.7850   (nominal gain, no second run to take a secant through)
+  next         +66.0 m/yr   (step +66.0 to close -117.851)
+
+next probe:
+  HAT_BE_OVERRIDE="1=125.1,90=66.0"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  d(net)/d(BE) 2.4568   (local secant through the last two runs)
+  next         +90.9 m/yr   (step -34.2 to close +84.023)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  d(net)/d(BE) 3.1238   (local secant through the last two runs)
+  next         +37.7 m/yr   (step -28.3 to close +88.391)
+
+next probe:
+  HAT_BE_OVERRIDE="1=90.9,90=37.7"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  d(net)/d(BE) 1.0337   (local secant through the last two runs)
+  next         +43.8 m/yr   (step -47.1 to close +48.670)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  d(net)/d(BE) 2.4516   (local secant through the last two runs)
+  next         +30.0 m/yr   (step -7.8 to close +19.019)
+
+next probe:
+  HAT_BE_OVERRIDE="1=43.8,90=30.0"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +43.79  +137.935   -21.532
+  d(net)/d(BE) 1.4910   (local secant through the last two runs)
+  next         +58.2 m/yr   (step +14.4 to close -21.532)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.97   +39.189    +1.394
+  d(net)/d(BE) 2.2720   (local secant through the last two runs)
+  next         +29.4 m/yr   (step -0.6 to close +1.394)
+
+next probe:
+  HAT_BE_OVERRIDE="1=58.2,90=29.4"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +43.79  +137.935   -21.532
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.23  +158.973    -0.494
+  d(net)/d(BE) 1.4568   (local secant through the last two runs)
+  next         +58.6 m/yr   (step +0.3 to close -0.494)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.97   +39.189    +1.394
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.36   +37.611    -0.185
+  d(net)/d(BE) 2.5732   (local secant through the last two runs)
+  next         +29.4 m/yr   (step +0.1 to close -0.185)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=58.6,90=29.4"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +43.79  +137.935   -21.532
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.23  +158.973    -0.494
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.57  +163.057    +3.590
+  d(net)/d(BE) 12.0494   (local secant through the last two runs)
+  next         +58.3 m/yr   (step -0.3 to close +3.590)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.97   +39.189    +1.394
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.36   +37.611    -0.185
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.43   +37.870    +0.074
+  d(net)/d(BE) 3.6066   (local secant through the last two runs)
+  next         +29.4 m/yr   (step -0.0 to close +0.074)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=58.3,90=29.4"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +43.79  +137.935   -21.532
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.23  +158.973    -0.494
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.57  +163.057    +3.590
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.27  +158.629    -0.838
+  d(net)/d(BE) 14.8649   (local secant through the last two runs)
+  next         +58.3 m/yr   (step +0.1 to close -0.838)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.97   +39.189    +1.394
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.36   +37.611    -0.185
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.43   +37.870    +0.074
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.41   +37.796    +0.000
+  d(net)/d(BE) 3.6066   (local secant through the last two runs)
+  next         +29.4 m/yr   (step -0.0 to close +0.000)
+  CONVERGED at this tolerance; another step is noise
+
+next probe:
+  HAT_BE_OVERRIDE="1=58.3,90=29.4"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +43.79  +137.935   -21.532
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.23  +158.973    -0.494
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.57  +163.057    +3.590
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.27  +158.629    -0.838
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.32  +158.828    -0.640
+  d(net)/d(BE) 3.5267   (local secant through the last two runs)
+  next         +58.5 m/yr   (step +0.2 to close -0.640)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.97   +39.189    +1.394
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.36   +37.611    -0.185
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.43   +37.870    +0.074
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.41   +37.796    +0.000
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.41   +37.796    +0.000
+  the last two runs imposed the same rate; no secant to take
+
+next probe:
+  HAT_BE_OVERRIDE="1=58.5"
+
+
+==========================================================================
+END-DOMAIN SOLVE   2009-2025   geometry base (ends GIS 1 and 90)
+target   CoastSat net change, mean 2025-01-01 to 2025-12-31 minus mean 2009-01-01 to 2009-12-31: raw at GIS 1, LOWESS-7 at GIS 90
+model    net_change (end minus start shoreline, m)
+==========================================================================
+
+GIS 1   target +159.467 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -63.780  -223.247
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou   +125.07  +243.490   +84.023
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +90.87  +208.137   +48.670
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +43.79  +137.935   -21.532
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.23  +158.973    -0.494
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.57  +163.057    +3.590
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.27  +158.629    -0.838
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.32  +158.828    -0.640
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +58.51  +162.841    +3.374
+  d(net)/d(BE) 22.1389   (local secant through the last two runs)
+  next         +58.4 m/yr   (step -0.2 to close +3.374)
+
+GIS 90   target +37.796 m
+  run                                              imposed     model  residual
+  HAT_2009_2025_zeroBE_offsetmetres_road_bdm_nou     +0.00   -80.055  -117.851
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +66.02  +126.187   +88.391
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +37.73   +56.815   +19.019
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.97   +39.189    +1.394
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.36   +37.611    -0.185
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.43   +37.870    +0.074
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.41   +37.796    +0.000
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +29.41   +37.796    +0.000
+  HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nou    +20.76   +15.540   -22.255
+  d(net)/d(BE) 2.5750   (local secant through the last two runs)
+  next         +29.4 m/yr   (step +8.6 to close -22.255)
+
+next probe:
+  HAT_BE_OVERRIDE="1=58.4,90=29.4"
+

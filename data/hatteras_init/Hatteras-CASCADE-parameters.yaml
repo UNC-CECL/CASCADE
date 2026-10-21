@@ -6,12 +6,16 @@ DShoreface: 22.25
 # so Dmaxel = BermEl 1.7 + 10.5 = 12.2 m NAVD88, one island-wide value, both
 # periods (Barrier3D: Dmax = Dmaxel - BermEl). Near the tallest crest in the
 # 1996 DEM (12.1 m), so the ceiling is the measured dune height and the growth
-# rate (rmin/rmax 0-0.01, set in the runner) keeps dunes from growing too fast.
-# With it the 1996 run's 2010 median crest is 5.46 m vs the 2009 lidar's 5.39 m;
-# low dunes end ~1 m high; Isabel 43/48 domains. Do not pair this ceiling with
-# fast growth: at 0.55-0.95 every dune grows to ~12 m and overwash stops. The ends
-# were solved on the previous 5.5 m / 0.55-0.95 settings and need re-solving.
-# Record: output/raw_runs/experiments/dunes/2026-10-19-dune-growth-low-rates/NOTE.md
+# rate (rmin/rmax 0.01-0.03, set in the runner, from the stable dunes) keeps
+# dunes from growing too fast.
+# The rate's mean (0.02) reproduces the 2009 crest of the stable dunes (GIS 59-62,
+# 20-22: steady shoreline, no overwash) on the 1996 start with the ALACE survey
+# offset corrected (dune-topo v3). Do not pair this ceiling with fast growth: at 0.55-0.95 every dune grows to
+# ~12 m and overwash stops. The ends were re-solved on these settings on 2026-10-20
+# (hatteras_site_config.HATTERAS_BE_EDGE_ONLY).
+# Record: output/raw_runs/experiments/dunes/2026-10-20-stable-dune-growth-rate-topo-v3/NOTE.md
+# (the rate), 2026-10-20-stable-dune-growth-rate/NOTE.md (method, before the ALACE fix) and
+# 2026-10-19-dune-growth-low-rates/NOTE.md
 # Was 5.5 m NAVD88 (2026-10-13 to 10-20; 2026-10-13-dune-ceiling-range/), and
 # Barrier3D's 3.4 m default (Virginia) before that.
 Dmaxel: 12.2

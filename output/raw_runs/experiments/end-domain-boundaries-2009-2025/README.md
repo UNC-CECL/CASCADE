@@ -6,7 +6,8 @@ The source/sink rates locked at the two end domains (GIS 1 and 90) for the test 
 
 | study | question | answer | status |
 |---|---|---|---|
-| `2026-10-13-ends-solved-on-dune-settings-2009_2025` | The test ends re-solved on the 10-13 dune settings (one Dmaxel 5.5 m, design 3.94 m MHW). | +29.66 / +20.76 m/yr (converged; `solve.txt`). | in the site config (+29.6576 / +20.7639), but solved on the pre-10-20 storms and dunes; **re-solve needed** |
+| `2026-10-13-ends-solved-on-dune-settings-2009_2025` | The test ends re-solved on the 10-13 dune settings (one Dmaxel 5.5 m, design 3.94 m MHW). | +29.66 / +20.76 m/yr (converged; `solve.txt`). | in the site config (+29.6576 / +20.7639), superseded 2026-10-20 |
+| `2026-10-20-ends-solved-on-corrected-start-2009_2025` | The test ends re-solved on the v3_240 storms, beach slope 0.06, Dmaxel 12.2 m with growth 0.01-0.03 (the 2009 start is unchanged). | +58.3237 / +29.4069 m/yr, step 7 of eight (residuals -0.64 / 0.00 m). GIS 1 scatters about +/-0.7 m near the root, more than the 0.32 m tolerance; step 7 sits on the fitted root (+58.32). Step 8 is not used: the solver left the converged GIS 90 out of its override, so that run fell back to the preset's old +20.76 (fixed in `HAT_end_solve_net_change.py`). | **current**; in the site config |
 
 **Status** — **current**: its answer is in use now. **record**: a finished check, kept so the number can be traced.
 

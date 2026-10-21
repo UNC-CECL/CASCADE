@@ -46,6 +46,12 @@ OVERRIDE_GLOB = "*_FallEC_*t*.tif"     # the two data tiles, not the clippoly
 OVERRIDE_TAG = "1996_NASA_ALACE"
 OVERRIDE_YEAR = 1996
 
+# Vertical offset added to every ALACE return, m. ALACE reads NC-12 pavement 0.24 m above the 2009
+# USACE lidar (median of 51 domains, IQR 0.23-0.27, flat alongshore; GIS 9-13 left out, the road moved
+# there in 1999): a survey offset, not change. Measured by 1-source-selection/HAT_alace_vertical_offset.py.
+# Was 0 (no correction) until 2026-10-20, when it lifted the 1996 start's road and dunes 0.24 m.
+OVERRIDE_VERTICAL_OFFSET_M = -0.24
+
 # The road lines are diagnostic only since 2026-08-26: read and reported, gating nothing
 from site_layer.hat_topo_version import road_line_file, road_line_for_year  # noqa: E402
 ROAD_LINES = {y: road_line_file(road_line_for_year(y)) for y in (1984, 2004)}
@@ -212,8 +218,8 @@ def main():
     print(f"Floors   : 1996 into gap {OVERRIDE_FLOOR_INTO_GAP:+.2f} m NAVD88   "
           f"1996 over measured {OVERRIDE_FLOOR_TO_REPLACE:+.2f} m NAVD88")
     print(f"           2014 into gap {gf.FILL_MIN_ELEV_NAVD:+.2f} m NAVD88")
-    print(f"Vertical : bias correction OFF, feathering OFF - a written cell is "
-          f"its own survey's measurement\n")
+    print(f"Vertical : 1996 shifted {OVERRIDE_VERTICAL_OFFSET_M:+.2f} m (its offset from 2009 on NC-12), "
+          f"feathering OFF\n")
 
     audit = []
     for _, row in gdf.iterrows():
@@ -234,7 +240,7 @@ def main():
         by0 = by1 - big.height * res_y
         bounds = (bx0, by0, bx1, by1)
 
-        g96 = ov96.read_on_grid(bounds, base.shape)
+        g96 = ov96.read_on_grid(bounds, base.shape) + OVERRIDE_VERTICAL_OFFSET_M
         g14 = fill14.read_on_grid(bounds, base.shape)
 
         valid09 = np.isfinite(base)
@@ -252,7 +258,8 @@ def main():
         # NO ROAD BOUNDARY - the one substantive change of 2026-08-26
         cand96_cov = has96.copy()
         if APPLY_OVERRIDE_CEILING:
-            too_high = cand96_cov & (g96 > OVERRIDE_MAX_ELEV_NAVD)
+            # on the raw return, as before the offset: the ceiling screens the return tail
+            too_high = cand96_cov & (g96 - OVERRIDE_VERTICAL_OFFSET_M > OVERRIDE_MAX_ELEV_NAVD)
             n96_ceiling = int(too_high.sum())
             cand96_cov = cand96_cov & ~too_high
         else:
@@ -368,6 +375,7 @@ def main():
             "bias_2009_minus_1996_cells": int(ov.sum()),
             "bias_2009_minus_1996_ocean1984_m": round(bias96_o84, 4),
             "bias_2009_minus_1996_ocean1984_cells": int(ov84.sum()),
+            "alace_vertical_offset_m": OVERRIDE_VERTICAL_OFFSET_M,
 
             "n2014_written": n14_out,
             "cand2014_coverage": n14_cov,

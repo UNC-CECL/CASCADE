@@ -39,9 +39,11 @@ SCENARIO = "full_management"
 # The solve folder and log date; 2026-10-05 solved the first targets, 2026-10-09 the calendar-2008 end and 17-yr test,
 # 2026-10-12 the +/-6-month offset (v3) and start windows and the 2025 +/-6-month test end;
 # SOLVE_NAME keeps a second solve on one day apart (2026-10-12 evening: the calendar-year setup);
-# 2026-10-13 the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88)
-SOLVE_DATE = "2026-10-13"
-SOLVE_NAME = "ends-solved-on-dune-settings"
+# 2026-10-13 the dune settings (design height 3.94 m MHW, one island-wide Dmaxel 5.5 m NAVD88);
+# 2026-10-20 the v3_240 storms, beach slope 0.06, Dmaxel 12.2 m with growth 0.01-0.03, and the
+# 1996 start with the ALACE offset corrected (dune-topo v3)
+SOLVE_DATE = "2026-10-20"
+SOLVE_NAME = "ends-solved-on-corrected-start"
 MAX_STEPS = 8
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"
 EXP_ROOT = PROJECT_ROOT / "output" / "raw_runs" / "experiments"
@@ -120,12 +122,16 @@ def cmd_solve(a):
     steps = []
     while (EXP_ROOT / base / "runs" / f"step{len(steps) + 1}").is_dir():
         steps.append(f"{base}/runs/step{len(steps) + 1}")
+    rates = {}
     while True:
         nxt = solve_step(a.period, steps)
         if not nxt or len(steps) >= MAX_STEPS:
             print("solved" if not nxt else "stopped at MAX_STEPS", flush=True)
             break
-        override = ",".join(f"{g}={r:.4f}" for g, r in sorted(nxt.items()))
+        # An end the solver has no new step for keeps its last rate; left out of the
+        # override, it would fall back to the preset's value (2026-10-20, test step 8)
+        rates.update(nxt)
+        override = ",".join(f"{g}={r:.4f}" for g, r in sorted(rates.items()))
         tag = f"{base}/runs/step{len(steps) + 1}"
         run(a.period, "edgeBE", f"step{len(steps) + 1}", override, tag=tag)
         steps.append(tag)

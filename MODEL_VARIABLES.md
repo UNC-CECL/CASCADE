@@ -119,7 +119,7 @@ template's value.
 | `StormSeries` | Storms | [] | [] | no | | Storm series held in memory |
 | `StormStart` | Storms | 2 | 2 (built-in) | no | | Year storms start |
 | `BermEl` | Dunes | 1.9 | 1.7 | yes | ✓ | Berm elevation [m NAVD88] |
-| `Dmaxel` | Dunes | 3.4 | 5.5, one value island-wide, both periods (matches the surveyed crest height; top of the 1996-2009 overwash plateau 4.5-5.5, collapse above ~5.6) | yes | | Maximum dune elevation [m NAVD88]; the height every dune grows toward |
+| `Dmaxel` | Dunes | 3.4 | 12.2 since 2026-10-20: Dmax 10.5 m above the berm (1.7), near the tallest 1996 crest (12.1); one value island-wide, both periods; paired with growth 0.01-0.03 (was 5.5, 10-13 to 10-20) | yes | | Maximum dune elevation [m NAVD88]; the height every dune grows toward |
 | `DuneCeilingFromStart` | Dunes | not in base Barrier3D (local fork only; built-in false) | removed 2026-10-13 (was true 09-28 to 10-13) | no | | Per-cell ceiling = starting crest; dropped to stay on the base model |
 | `DuneCeilingFloor` | Dunes | not in base Barrier3D (local fork only; built-in 0.5) | removed 2026-10-13 | no | | Lowest per-cell ceiling, above the berm [m]; unused without per-cell ceilings |
 | `Dstart` | Dunes | 0.5 | 0.5 (built-in) | no | | Initial dune height above the berm [m] |
@@ -129,8 +129,8 @@ template's value.
 | `DuneParamMultipleRows` | Dunes | not in template (built-in false) | false (built-in) | no | | Multi-row dune file |
 | `GrowthParamStart` | Dunes | false | false | no | ✓ | Read growth rates from file |
 | `growth_param_file` | Dunes | barrier3d-default-growthparam.npy | built-in name | n/a | | Growth-rate file (unused) |
-| `rmin` | Dunes | 0.25 | 0.55 | yes | ✓ | Minimum dune growth rate |
-| `rmax` | Dunes | 0.65 | 0.95 | yes | ✓ | Maximum dune growth rate |
+| `rmin` | Dunes | 0.25 | 0.01 since 2026-10-20, from the stable dunes (was 0.55) | yes | ✓ | Minimum dune growth rate |
+| `rmax` | Dunes | 0.65 | 0.03 since 2026-10-20, from the stable dunes (was 0.95) | yes | ✓ | Maximum dune growth rate |
 | `C1` | Dunes | 8.8 | 8.8 (built-in) | no | | Empirical dune erosion parameter [m] |
 | `C2` | Dunes | 4.6 | 4.6 (built-in) | no | | Empirical dune erosion parameter [m] |
 | `HdDiffu` | Dunes | 0.75 | 0.75 (built-in) | no | | Largest height step between neighbouring dune cells [m] |

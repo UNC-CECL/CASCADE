@@ -6,7 +6,8 @@ The source/sink rates locked at the two end domains (GIS 1 and 90) for the calib
 
 | study | question | answer | status |
 |---|---|---|---|
-| `2026-10-13-ends-solved-on-dune-settings-1996_2009` | The calibration ends re-solved on the 10-13 dune settings (one Dmaxel 5.5 m, design 3.94 m MHW). | +0.98 / +10.80 m/yr (converged; `solve.txt`). | in the site config (+0.9769 / +10.8017), but solved on the pre-10-20 storms and dunes; **re-solve needed** |
+| `2026-10-13-ends-solved-on-dune-settings-1996_2009` | The calibration ends re-solved on the 10-13 dune settings (one Dmaxel 5.5 m, design 3.94 m MHW). | +0.98 / +10.80 m/yr (converged; `solve.txt`). | in the site config (+0.9769 / +10.8017), superseded 2026-10-20 |
+| `2026-10-20-ends-solved-on-corrected-start-1996_2009` | The calibration ends re-solved on the v3_240 storms, beach slope 0.06, Dmaxel 12.2 m with growth 0.01-0.03, and the 1996 start with the ALACE offset corrected (dune-topo v3). | +3.6848 / +12.7633 m/yr after seven steps (residuals +0.03 / 0.00 m; `solve.txt`). | **current**; in the site config |
 
 **Status** — **current**: its answer is in use now. **record**: a finished check, kept so the number can be traced.
 
