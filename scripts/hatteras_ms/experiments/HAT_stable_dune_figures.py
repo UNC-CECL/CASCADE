@@ -656,7 +656,7 @@ def island_data(run=None):
 # Median and 10th-percentile crest through the surveys, on the cells each survey covers (as
 # HAT_dune_growth_low_rates.trajectory scores it); the model lines on the cells of the 2009 lidar
 def fig_fit_island():
-    mod, surv, first = island_data()
+    mod, surv, first = island_data(MATRIX_RUN)
     yrs = first + np.arange(mod.shape[0])
     fig, ax = plt.subplots(figsize=fs.figsize("single", height=3.0), layout="constrained")
     rows = []
@@ -683,9 +683,10 @@ def fig_fit_island():
     save(fig, "stable_dune_fit_island",
          "The adopted growth rate island-wide, 1996-2009. Median (circles, solid) and 10th-percentile (squares, "
          "dashed) dune crest over all surveyed cells, model with r 0.01-0.03 against every lidar survey on the cells "
-         "it covers, at the model state its flight dates point to. 1996 start corrected for the ALACE offset, Dmax "
-         "10.5 m above the berm, groin on, managed. The model's 10th percentile sits high: low dunes eroded "
-         "1996-2004 and stayed low in the surveys, while the model regrows them.")
+         "it covers, at the model state its flight dates point to. Model: the current runner's 1996 full-management "
+         "run (matrix, 2026-10-21): 1996 start corrected for the ALACE offset, Dmax 10.5 m above the berm, spread "
+         "groin 0.10, edgeBE ends re-solved, storms v3_240, option A waves. The model's 10th percentile sits high: "
+         "low dunes eroded 1996-2004 and stayed low in the surveys, while the model regrows them.")
 
 
 # Domain-median crest along the island, 1 January 2010 model vs the 2009 lidar; villages, shoals, groin and piers
