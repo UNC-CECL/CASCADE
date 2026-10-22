@@ -41,6 +41,9 @@ KINDS = {
     # End-minus-start position change against the CoastSat net change (DEM-to-DEM windows)
     "figure_net_change":    (FIGURES, "shoreline_position_change_with_buffers.png",
                              "{run}_net_change.png"),
+    # Where the run overwashed against the washover in the imagery (8-overwash-analysis/4-vs-model)
+    "figure_overwash":      (FIGURES, "overwash_vs_observed.png",
+                             "{run}_overwash_vs_observed.png"),
 
     # Tables
     "rate_csv":      (TABLES, "shoreline_change_rate.csv",

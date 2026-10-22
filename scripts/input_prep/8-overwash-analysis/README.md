@@ -569,6 +569,13 @@ the images, the footprint, the flags.
 
 Does the model overwash where and when the imagery shows washover?
 
+Figures: the managed run in both windows by default; `--arm natural --window 1996` draws another
+(suffix `_natural`). Since 2026-10-22 every run also gets its own copy: the runner (notebook and .py,
+section 12.5) calls `run_figure` after the net-change figure and writes `figures/overwash_vs_observed.png`
+(run_layout kind `figure_overwash`), scored against the storm file that run used and with the buffer
+count taken from the run. Skipped with a message if the map cannot be drawn (GIS drive absent).
+Existing runs: `--run-dir <run folder> [...]`.
+
 From the script's original header:
 
 ```text

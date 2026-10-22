@@ -1696,6 +1696,14 @@ plot_net_change_comparison(
     wave_climate=dict((k, v) for k, v, _ in SCENARIO_SWITCHES)["wave climate"],
     flip_sign=FLIP_SIGN_MODEL, show=SHOW_FIGURES)
 
+# Where the run overwashed against the washover in the imagery; the map needs the GIS drive, so a failure only skips it
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "8-overwash-analysis" / "4-vs-model"))
+try:
+    from overwash_vs_model import qow, run_figure
+    run_figure(qow(cascade), RUN_DIR, RUN_NAME, START_YEAR, STORM_FILE)
+except (Exception, SystemExit) as _err:
+    print(f"  overwash vs observed  skipped: {_err}")
+
 # Section 9.4's target, now that the run has a year 0; buffers are NaN
 SHORELINE_TARGET_M, OBSERVED_CHANGE_M = build_shoreline_target(
     shoreline_m[0], START_YEAR, END_YEAR, HATTERAS_DOMAINS, RAW_OFFSET_DIR)
