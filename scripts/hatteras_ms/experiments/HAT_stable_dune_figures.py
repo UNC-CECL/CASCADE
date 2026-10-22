@@ -5,7 +5,8 @@ Why the stable dunes at GIS 59-62 and 20-22 can calibrate the dune growth rate r
 
 Figures for the stable-dune study (HAT_stable_dune_growth_rate.py, run it first),
 written to its figures/ folder (data/.../1996-start/dune-growth-rate/ since 2026-10-21), one subfolder per
-topic: 1-selection (fig1, fig3), 2-observed-dunes, 3-model-fit (the fit figures). 2-observed-dunes is split by
+topic: 1-selection (fig1, fig3), 2-observed-dunes, 3-model-fit (the fit figures: stable-stretches/ for why
+0.01-0.03, island-wide/ for how it does across the island, 2026-10-22). 2-observed-dunes is split by
 domain: all-stable-domains/ (fig2, fig4, fig8, fig9) and one folder per stable domain, gis<N>/, with every
 observed-dune figure for that domain alone (stable_dune_gis<N>_*). In reading order:
   stable_dune_fig1_where       shoreline change, dune change and overwash per domain, 1996-2009:
@@ -25,8 +26,9 @@ observed-dune figure for that domain alone (stable_dune_gis<N>_*). In reading or
   stable_dune_fit_spread       a range keeps the median and doubles the spread of a fixed rate
   stable_dune_fit_island       the adopted rate island-wide: survey medians and low dunes through 1996-2009
   stable_dune_fit_island_alongshore  domain-median crest along the island, 2010 model vs 2009 lidar
-                               (and _natural: the same from the natural run, groin on)
-    (the fit figures alone: HAT_stable_dune_figures.py fit)
+                               (and _natural: the same from the natural run, groin on; _mean, _natural_mean:
+                               the same with domain means, to check the median doesn't change the fit)
+    (the fit figures alone: HAT_stable_dune_figures.py fit; the _mean pair alone: HAT_stable_dune_figures.py mean)
 Profiles: the 1 m gap-filled DEMs of the 1996 and 2009 starts (same clip grid),
 averaged to 10 m as the starts are and put in the 1996 start's cross-shore frame
 by the survey-crest code. A 10 m cell is drawn only where all its core 1 m
@@ -68,13 +70,16 @@ X, tv = S.X, S.tv
 
 # --- CONFIG ------------------------------------------------------------------
 OUT = R.OUT_DIR / "figures"
-# One subfolder per point the figures make, in reading order (2026-10-21)
+# One subfolder per point the figures make, in reading order (2026-10-21); 3-model-fit split 2026-10-22
 TOPICS = {"stable_dune_fig1_where": "1-selection", "stable_dune_fig3_excluded": "1-selection",
-          "stable_dune_fit_trajectory": "3-model-fit",
-          "stable_dune_fit_error_by_rate": "3-model-fit", "stable_dune_fit_spread": "3-model-fit",
-          "stable_dune_fit_island": "3-model-fit",
-          "stable_dune_fit_island_alongshore": "3-model-fit",
-          "stable_dune_fit_island_alongshore_natural": "3-model-fit"}
+          "stable_dune_fit_trajectory": "3-model-fit/stable-stretches",
+          "stable_dune_fit_error_by_rate": "3-model-fit/stable-stretches",
+          "stable_dune_fit_spread": "3-model-fit/stable-stretches",
+          "stable_dune_fit_island": "3-model-fit/island-wide",
+          "stable_dune_fit_island_alongshore": "3-model-fit/island-wide",
+          "stable_dune_fit_island_alongshore_natural": "3-model-fit/island-wide",
+          "stable_dune_fit_island_alongshore_mean": "3-model-fit/island-wide",
+          "stable_dune_fit_island_alongshore_natural_mean": "3-model-fit/island-wide"}
 # Everything else is 2-observed-dunes, split by the domains a figure covers: one folder per stable domain
 # (stable_dune_gis<N>_*) and all-stable-domains for the figures that compare them (2026-10-21)
 OBSERVED = "2-observed-dunes"
@@ -690,15 +695,16 @@ def fig_fit_island():
 
 
 # Domain-median crest along the island, 1 January 2010 model vs the 2009 lidar; villages, shoals, groin and piers
-# from the site config, as the other alongshore figures draw them
-def fig_fit_island_alongshore(natural=False):
+# from the site config, as the other alongshore figures draw them. stat="mean" draws domain means instead
+# (2026-10-22: does the median choice change the fit?)
+def fig_fit_island_alongshore(natural=False, stat="median"):
     from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS as A
     from cascade_pipeline.annotations import AnnotationConfig
     mod, surv, first = island_data(MATRIX_RUN_NATURAL if natural else MATRIX_RUN)
     scenario = "natural, groin on" if natural else "full management"
     s09 = surv[surv.survey == 2009]
-    obs = s09.groupby("gis").crest.median()
-    m10 = s09.assign(m=mod[2010 - first][((s09.gis - 1) * R.CELLS + s09.cell).to_numpy()]).groupby("gis").m.median()
+    obs = s09.groupby("gis").crest.agg(stat)
+    m10 = s09.assign(m=mod[2010 - first][((s09.gis - 1) * R.CELLS + s09.cell).to_numpy()]).groupby("gis").m.agg(stat)
     d = (m10.reindex(obs.index) - obs).dropna()
     r = np.corrcoef(obs, m10.reindex(obs.index))[0, 1]
     shoal_c = AnnotationConfig.color_shoal
@@ -709,7 +715,7 @@ def fig_fit_island_alongshore(natural=False):
                 fontsize=6.5, color="#7A5800", style="italic", zorder=7, path_effects=fs._halo(2.0))
     ax.plot(m10.index, m10, color=fs.INK, lw=1.4, zorder=4, label=f"Model ({scenario}), 1 January 2010")
     ax.plot(obs.index, obs, color=C09, lw=0.9, marker="o", ms=2.8, zorder=5, label="Observed, 2009 lidar")
-    ax.set(xlabel="Domain (GIS ID)", ylabel="Domain-median dune crest (m NAVD88)", xlim=(0.4, 90.6), ylim=(0, 10.6))
+    ax.set(xlabel="Domain (GIS ID)", ylabel=f"Domain-{stat} dune crest (m NAVD88)", xlim=(0.4, 90.6), ylim=(0, 10.6))
     ax.set_xticks(range(0, 91, 10))
     for x, ha, text in ((0.0, "left", A.low_end_label), (1.0, "right", A.high_end_label)):
         ax.annotate(text, (x, 0), xycoords="axes fraction", xytext=(0, -24), textcoords="offset points",
@@ -721,8 +727,8 @@ def fig_fit_island_alongshore(natural=False):
     fs.town_bands(ax, where="top", strip=0.07)
     fig.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=6.5, loc="outside lower center", ncol=2)
     fs.structures(ax)
-    save(fig, "stable_dune_fit_island_alongshore" + ("_natural" if natural else ""),
-         f"Domain-median dune crest along Hatteras Island, the 1 January 2010 model with r 0.01-0.03 against the "
+    save(fig, "stable_dune_fit_island_alongshore" + ("_natural" if natural else "") + ("_mean" if stat == "mean" else ""),
+         f"Domain-{stat} dune crest along Hatteras Island, the 1 January 2010 model with r 0.01-0.03 against the "
          f"2009 lidar, over the 10 m dune cells the lidar covers (r = {r:.2f}, RMSE {np.sqrt((d ** 2).mean()):.2f} m, "
          f"bias {d.mean():+.2f} m across {len(d)} domains). Top strip: villages; hatched: Avon and Wimble Shoals; "
          f"solid line: Buxton groin; dotted: piers. Model: the current runner's 1996 {scenario} run (matrix, "
@@ -829,6 +835,10 @@ def main():
         fig_fit_island()
         fig_fit_island_alongshore()
         fig_fit_island_alongshore(natural=True)
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "mean":           # only the domain-mean alongshore pair
+        fig_fit_island_alongshore(stat="mean")
+        fig_fit_island_alongshore(natural=True, stat="mean")
         return
     if len(sys.argv) > 1 and sys.argv[1] == "dems":           # only the same-dune and per-domain figures (no model runs)
         for g in sorted(g for doms in STABLE.values() for g in doms):
