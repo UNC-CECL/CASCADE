@@ -744,6 +744,10 @@ class Cascade:
         h_b_dt = list(h_b_dt)
         self._barrier3d = list(b3d)
 
+        # optional groin: adjust x_s_dt (m/step) before BRIE's alongshore solve
+        if getattr(self, "_groin_callback", None) is not None:
+            x_s_dt = self._groin_callback(self, x_s_dt)
+
         # use brie to connect B3D models with AST; otherwise, just update
         # (erode/prograde) dune domain
         if self._alongshore_transport_module:
