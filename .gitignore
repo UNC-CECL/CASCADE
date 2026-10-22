@@ -142,7 +142,7 @@ output/*
 !output/raw_runs/
 
 # joint_fit.json is the ONLY thing under output/ that is an INPUT rather than a
-# product: HAT_run_all.py stage 6 reads it and passes its (M, f) to every groin
+# product: HAT_run_matrix.py stage 6 reads it and passes its (M, f) to every groin
 # run in the matrix. Untracked, the calibrated pair lived on one machine only --
 # a clone had no groin parameters at all, and the values existed solely in
 # commit messages. Tracked, the pin travels with the repository. It lived at

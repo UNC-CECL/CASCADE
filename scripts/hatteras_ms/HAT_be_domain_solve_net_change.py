@@ -39,7 +39,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_RATES_EDGE, HATTERAS_DOMAINS, HATTERAS_PERIODS, run_years)
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
+HINDCAST = _HERE.parent / "HAT_hindcast.py"
 SCENARIO = "full_management"
 SOLVE_DATE = "2026-10-05"
 MAX_STEPS = 10

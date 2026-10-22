@@ -561,7 +561,7 @@ def write_markdown(scen_rows, all_problems, path: Path):
       "road faster than NCDOT could move it. That is the real Pea Island "
       "story, and the absolute value erased it.")
     a("")
-    a("**The fix** (`HAT_hindcast_1984_2024.py`, "
+    a("**The fix** (`HAT_hindcast.py`, "
       "`HISTORICAL_ROAD_EVENTS`): the events now carry "
       "`relocation_displacement_m` — how far the road physically moved, and "
       "nothing else — applied to the setback the model is *currently* "

@@ -2,7 +2,7 @@
 
 Reference for every quantity that crosses into or out of CASCADE / Barrier3D /
 BRIE in the Hatteras hindcast. Audited 2026-09-27 against the option A matrix
-(`scripts/hatteras_ms/HAT_hindcast_1984_2024.py`, the headless mirror of the
+(`scripts/hatteras_ms/HAT_hindcast.py`, the headless mirror of the
 notebook) and the base-model source. **Result: consistent end to end.**
 
 Re-runnable check for the elevation rows:

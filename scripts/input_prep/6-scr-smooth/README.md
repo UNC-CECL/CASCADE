@@ -109,7 +109,7 @@ Treat it as a table to read, not as an input to a run.
 ## What the hindcast actually runs
 
 `scripts/cascade_pipeline/coastsat_lowess.py`, imported by
-`scripts/hatteras_ms/HAT_hindcast_1984_2024.py` (section 8) and by the groin
+`scripts/hatteras_ms/HAT_hindcast.py` (section 8) and by the groin
 sweep, the sensitivity plotter and `7-source-sink/2-calibrate/`. It reads the
 same raw `transect_lrr_full.csv` and applies the same transect-first method
 this stage chose, configured as:

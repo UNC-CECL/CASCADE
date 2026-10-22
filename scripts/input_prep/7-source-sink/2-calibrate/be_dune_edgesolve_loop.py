@@ -26,7 +26,7 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 # --- CONFIG ------------------------------------------------------------------
 SOLVER = Path(__file__).with_name("be_edge_domain_solve.py")
-RUNNER = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
 BRACKET_EXP = "end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline"
 

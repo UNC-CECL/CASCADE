@@ -46,7 +46,7 @@ Runs: `output/raw_runs/experiments/groin-wave-driven/2026-10-14-window-refit/<st
 
 ## What changed in the runner
 
-`hat_run.yaml` `groin.strength_1996` 0.16 and `groin.strength_2009` 0.10, with an optional `groin.strength` that overrides both (and is required for any other start year with the groin on; 0.25 for a run that starts before the fillet exists, such as a forecast of the rebuilt groin). `HAT_run_all.py` keys each period's groin runs on that period's strength. At its defaults the runner reproduces the 0.16 and 0.10 runs here to 0.0 m (`output/raw_runs/experiments/groin-wave-driven/2026-10-14-window-refit-check/`).
+`hat_run.yaml` `groin.strength_1996` 0.16 and `groin.strength_2009` 0.10, with an optional `groin.strength` that overrides both (and is required for any other start year with the groin on; 0.25 for a run that starts before the fillet exists, such as a forecast of the rebuilt groin). `HAT_run_matrix.py` keys each period's groin runs on that period's strength. At its defaults the runner reproduces the 0.16 and 0.10 runs here to 0.0 m (`output/raw_runs/experiments/groin-wave-driven/2026-10-14-window-refit-check/`).
 
 ## Figures
 

@@ -35,7 +35,7 @@ import HAT_metres_1_offset_units as common  # noqa: E402
 import HAT_metres_2_wave_sensitivity as step2  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 TAG = "wave-climate/2026-09-25-wave-grid-smoothed-score"
 STUDY_DIR = RAW_RUNS / "experiments" / TAG

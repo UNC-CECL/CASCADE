@@ -46,7 +46,7 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no "
         f"pyproject.toml. This file expects to live under scripts/.")
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
-# HAT_run_all lives in scripts/hatteras_ms/
+# HAT_run_matrix lives in scripts/hatteras_ms/
 for _path in (SCRIPTS_DIR, SCRIPTS_DIR / "hatteras_ms"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
@@ -63,7 +63,7 @@ from cascade_pipeline.hindcast import build_target_table      # noqa: E402
 from cascade_pipeline.run_layout import resolve             # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for      # noqa: E402
 # Which scenarios are distinct runs is the run driver's rule, asked, not copied
-from HAT_run_all import scenario_applies                      # noqa: E402
+from HAT_run_matrix import scenario_applies                      # noqa: E402
 from site_layer.hatteras_site_config import (                            # noqa: E402
     HATTERAS_ANNOTATIONS,
     HATTERAS_DOMAINS,

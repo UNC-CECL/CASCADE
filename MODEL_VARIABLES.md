@@ -4,7 +4,7 @@ Every input CASCADE takes, its default, and the value the Hatteras hindcast uses
 
 - **Default**: the upstream value (constructor default, BRIE coupler constant, or
   the CASCADE template `data/default_cascade_variables/barrier3d-default-parameters.yaml`).
-- **Hatteras**: what `scripts/hatteras_ms/HAT_hindcast_1984_2024.py` passes through
+- **Hatteras**: what `scripts/hatteras_ms/HAT_hindcast.py` passes through
   `build_cascade()` (`scripts/cascade_pipeline/hindcast.py`), with wave and run
   settings from `hat_run.yaml` / `HAT_*` variables, and Barrier3D settings from
   `data/hatteras_init/Hatteras-CASCADE-parameters.yaml`.

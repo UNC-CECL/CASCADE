@@ -115,11 +115,11 @@ input_prep/            builds the model's inputs. Stage folders 0-7 mirror
                        note the folder here is 4-mgmt-forcing*s*, plural,
                        against the singular one in data/.)
 
-hatteras_ms/           the manuscript runs. HAT_hindcast_1984_2024.ipynb is
+hatteras_ms/           the manuscript runs. HAT_hindcast.ipynb is
                        the source of truth; the .py beside it is a headless
                        mirror with no features of its own. Settings are typed
                        in hat_run.yaml and read by HAT_hindcast_config.py
-                       (env var > yaml > default); HAT_run_all.py drives the
+                       (env var > yaml > default); HAT_run_matrix.py drives the
                        matrix, without and with the groin, unattended.
 
 sensitivity_analysis/  standalone sweep driver and plotter, working off the

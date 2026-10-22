@@ -132,7 +132,7 @@ GIF_JOBS = [
 
 # Stop if the runner's figure conventions no longer match the constants here
 def check_conventions() -> None:
-    src = (REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py").read_text(
+    src = (REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py").read_text(
         encoding="utf-8", errors="replace")
     want = {
         'RATE_ESTIMATOR = "lrr"': RATE_ESTIMATOR == "lrr",
@@ -147,7 +147,7 @@ def check_conventions() -> None:
             "the hindcast's figure conventions no longer match this script:\n  "
             + "\n  ".join(missing)
             + "\nUpdate the constants at the top of this file to match "
-              "HAT_hindcast_1984_2024.py before re-rendering.")
+              "HAT_hindcast.py before re-rendering.")
 
 
 # Reading one run

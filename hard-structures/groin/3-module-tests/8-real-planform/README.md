@@ -313,7 +313,7 @@ is the adopted model by construction. Runs write their own parameters file,
 so they are safe alongside other sessions' runs (Hannah, 2026-09-29).
 
 WHAT IS SET. Only the groin and the filing; every other value is the code
-default (HAT_IGNORE_SETTINGS=1, stray HAT_* dropped, as HAT_run_all does):
+default (HAT_IGNORE_SETTINGS=1, stray HAT_* dropped, as HAT_run_matrix does):
 edgeBE, full_management without historical relocations, option A waves,
 v3_trim24 storms. M = 0 is not run: the paired baseline is the adopted matrix
 run with the same tokens, which the runner resolves by itself.

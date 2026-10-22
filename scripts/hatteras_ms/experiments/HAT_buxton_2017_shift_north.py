@@ -39,7 +39,7 @@ sys.path[:0] = [str(PROJECT_ROOT / "scripts"),
 # --- CONFIG ------------------------------------------------------------------
 TAG = "management/2026-10-08-buxton-2017-shift-north"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 MATRIX_RUN = (PROJECT_ROOT / "output" / "raw_runs" / "matrix" / "2009_2025" / "domainBE"
               / "HAT_2009_2025_domainBE_offsetmetres_road_bdm_nourish_groinblock")
 WINDOW = (2009, 2025)

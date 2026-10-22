@@ -35,7 +35,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
 START, END = 1996, 2025
 # The window label is inclusive: the run steps 1996..2025 and ends on 1 Jan 2026

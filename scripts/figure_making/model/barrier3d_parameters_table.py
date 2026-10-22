@@ -42,7 +42,7 @@ RUN_YAMLS = {   # period label -> that run's copy of the parameter yaml
                  / "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin-parameters.yaml",
 }
 LIVE_YAML = REPO / "data" / "hatteras_init" / "Hatteras-CASCADE-parameters.yaml"
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 OUT = figure_dir("mechanics", "barrier3d") / "barrier3d_parameters_table"
 # Grouped rows: (key, meaning, kind). kind picks the formatting:
 # elev = m NAVD88 converted to m MHW too; bay = depth below MHW; else a unit string
@@ -220,7 +220,7 @@ def main():
         f"vegetation constants; MODEL_VARIABLES.md). Runs read: {run_names}. Those runs predate the "
         f"2026-10-20 dune and beach-slope settings, so Dmaxel ({now['Dmaxel']} m NAVD88) is taken from the live yaml and "
         f"rmin/rmax ({now['rmin']}/{now['rmax']}) and beta ({now['beta']}, BEACH_SLOPE) from the runner, "
-        "HAT_hindcast_1984_2024.py."))
+        "HAT_hindcast.py."))
     save(fig, OUT, vector=True, close=True)
     print(OUT.with_suffix(".png"))
 

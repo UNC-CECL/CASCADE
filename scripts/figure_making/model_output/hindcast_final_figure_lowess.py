@@ -130,7 +130,7 @@ def run_rates(period, preset, scenario):
         run_dir = find_run_dir(RAW_RUNS, name, period, preset)
     except FileNotFoundError as exc:
         raise FileNotFoundError(
-            f"{exc}  Run HAT_run_all.py first.") from None
+            f"{exc}  Run HAT_run_matrix.py first.") from None
     path = resolve(run_dir, "rate_csv", name)
     return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"], name
 

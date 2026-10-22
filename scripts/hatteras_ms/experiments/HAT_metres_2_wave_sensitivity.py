@@ -37,7 +37,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "hatteras_ms" / "experiments")
 import HAT_metres_1_offset_units as common  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 STUDY_TAG = "wave-climate/2026-09-24-metres-2-wave-sensitivity"
 STUDY_DIR = RAW_RUNS / "experiments" / STUDY_TAG

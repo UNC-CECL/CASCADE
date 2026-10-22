@@ -38,7 +38,7 @@ from score_instant_grid import observed_series  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS, run_years  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 STUDY = "groin-blocking/2026-10-05-blocking-fit-dem-to-dem"
 RAW = REPO / "output" / "raw_runs"
 LOGS = HERE / "logs"

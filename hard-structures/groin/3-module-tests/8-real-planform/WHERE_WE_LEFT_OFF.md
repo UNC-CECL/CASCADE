@@ -38,7 +38,7 @@ short version: what's settled, what's waiting on a decision, and what's loose.
    - `hat_run.yaml` (`groin.kind`, `blocking_b`, `deterioration_f`, `trapping_M`);
    - the config defaults in `HAT_hindcast_config.py`;
    - `output/calibration/groin/joint_fit.json`, which still says M 60 / f 0.6, and which
-     `HAT_run_all.py` stage 6 passes to every groin matrix run. It has no blocking field, so it
+     `HAT_run_matrix.py` stage 6 passes to every groin matrix run. It has no blocking field, so it
      needs a new shape or the driver needs to read the config.
 2. **Commit.** Nothing from this work is committed. A few study files show as staged ("A"); I didn't stage them, so another
    session may have.
@@ -51,7 +51,7 @@ short version: what's settled, what's waiting on a decision, and what's loose.
 - **Groin-on matrix runs** once a kind and values are pinned.
 - **`HAT_groin_sweep_worker.py` is stale:** it hardcodes the old waves (2.5/8/0.7/0.1) and restores a
   parameter snapshot with no per-cell dune ceilings. Retire it or bring it up to date before anything
-  uses `HAT_run_all.py` stages 3–5 again.
+  uses `HAT_run_matrix.py` stages 3–5 again.
 - **`output/calibration/groin/README.md`** still presents M 60 as the answer (a pointer to this page
   has been added at its top).
 - **The old grids here are on superseded settings.** `2026-09-29-option-a-grid` (106 runs) and the

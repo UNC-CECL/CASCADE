@@ -54,8 +54,8 @@ WHY THIS REPLACED THE SCRIPTS THAT WERE HERE
     produced would have described a different model on legacy forcing.
 
     This drives the hindcast instead of reimplementing it. Each cell is one
-    ordinary run of `HAT_hindcast_1984_2024.py` with one setting moved through
-    the environment, exactly the way `HAT_run_all.py` drives the matrix. There
+    ordinary run of `HAT_hindcast.py` with one setting moved through
+    the environment, exactly the way `HAT_run_matrix.py` drives the matrix. There
     is no second copy of the model setup here, so the sweep inherits the period
     table, the measured setbacks, the groin and the LRR estimator
     automatically, and cannot drift from them.
@@ -427,14 +427,14 @@ OUT_ROOT/figures, where the pre-2026-09-24 sweeps' directories still are.
 ```
 
 ```text
-Where the runner reads them (COASTSAT_BASE_DIR in HAT_hindcast_1984_2024.py).
+Where the runner reads them (COASTSAT_BASE_DIR in HAT_hindcast.py).
 The scripts/input_prep/5-scr/CoastSat path this held until 2026-09-16 no
 longer exists; the loader only WARNED, so every observed layer was empty.
 Resolved through hat_observed_rates.py (2026-09-18), not typed.
 ```
 
 ```text
-Must match section 8.1 of HAT_hindcast_1984_2024.py. These are the LowessConfig
+Must match section 8.1 of HAT_hindcast.py. These are the LowessConfig
 defaults, so the two agree by construction rather than by copying -- but the
 run metadata records the target it actually used, and check_target_matches()
 below asserts against that rather than trusting this line.
@@ -517,7 +517,7 @@ checked. That is the only thing this skip is allowed to mean now.
 
 ```text
 The two windows the runner added 2026-09-11 (COASTSAT_DATASETS in
-HAT_hindcast_1984_2024.py). Without them a 1996 or 2010 sweep has no
+HAT_hindcast.py). Without them a 1996 or 2010 sweep has no
 active dataset and the plotter raises.
 ```
 

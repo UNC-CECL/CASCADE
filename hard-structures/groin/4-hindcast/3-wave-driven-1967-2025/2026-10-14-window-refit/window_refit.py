@@ -40,7 +40,7 @@ sys.path.insert(0, str(HERE.parent / "2026-10-09-corrected-groin"))
 import corrected_groin as cg  # noqa: E402  (scoring only; its run code needs commit 4d937b79)
 
 # --- CONFIG ------------------------------------------------------------------
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 STUDY = "groin-wave-driven/2026-10-14-window-refit"
 RAW = REPO / "output" / "raw_runs" / "experiments" / STUDY
 LOGS = HERE / "logs"

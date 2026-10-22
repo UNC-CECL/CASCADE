@@ -25,7 +25,7 @@ import pandas as pd
 _HERE = Path(__file__).resolve()
 REPO = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 # --- CONFIG ------------------------------------------------------------------
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 INDEX = REPO / "output" / "raw_runs" / "run_index.csv"
 
 # The switches a run name encodes, recovered from the index columns rather than parsed out of the name

@@ -86,7 +86,7 @@ def main():
             raise FileNotFoundError(
                 f"{key}: need both the groin-on and groin-off calibBE "
                 f"{meta['scenario']} runs; one is missing. Run "
-                f"HAT_run_all.py --stages 2,6 --presets calibBE first.")
+                f"HAT_run_matrix.py --stages 2,6 --presets calibBE first.")
         data[key] = dict(target=target, on=on, off=off, **meta)
 
     apply_style()

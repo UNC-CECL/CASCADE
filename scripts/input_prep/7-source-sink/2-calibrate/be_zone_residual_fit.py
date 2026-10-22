@@ -370,7 +370,7 @@ def base_run_dir(period_start, period_end):
             f"  Expected the {BASE_PRESET} full_management run (groin off, "
             f"relocations off) for {period_start}-{period_end}.\n"
             f"  Run it with:\n"
-            f"    python scripts/hatteras_ms/HAT_run_all.py --stages 2 "
+            f"    python scripts/hatteras_ms/HAT_run_matrix.py --stages 2 "
             f"--presets {BASE_PRESET} --scenarios full_management")
     raise RuntimeError(
         f"{len(hits)} candidate base runs in {period_dir}: "

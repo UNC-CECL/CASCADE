@@ -4,12 +4,12 @@ Four kinds of thing live here, and until 2026-09-13 they were one flat list of
 31 items sharing a `HAT_` prefix that sorted them without separating them.
 
 ```
-HAT_hindcast_1984_2024.ipynb   THE RUN. The notebook is authoritative;
-HAT_hindcast_1984_2024.py      the .py is its headless mirror, with no
+HAT_hindcast.ipynb   THE RUN. The notebook is authoritative;
+HAT_hindcast.py      the .py is its headless mirror, with no
                                features of its own. A change goes in BOTH.
 HAT_hindcast_config.py         which run happens, and where the value came
 hat_run.yaml                   from: env > yaml > the default in the module
-HAT_run_all.py                 the batch driver: the matrix, without and with the groin
+HAT_run_matrix.py                 the batch driver: the matrix, without and with the groin
 HAT_hindcast_methods.md        the written method
 DEM_TO_DEM_CALIBRATION.md      the calibration/test plan (1996-2009, 2009-2025):
                                what is done, the open decisions, where to resume
@@ -79,6 +79,16 @@ deleted, 2026-10-01) moved to
 `scripts/figure_making/model_output/` on 2026-09-18, so every figure script is
 in one tree.
 
+## Renamed 2026-10-22
+
+* `HAT_hindcast_1984_2024.ipynb` / `.py` -> `HAT_hindcast.ipynb` / `.py`: the 1984 start is retired
+  and the windows end in 2025; the years live in each run's name and metadata, not the file name
+* `HAT_run_all.py` -> `HAT_run_matrix.py`: since the 2026-10-14 deletions it runs only the matrix
+
+Live references were updated. Run metadata under `output/` still names the old files, as the
+producer at the time; this note is how to read them. Older names (`_groinTest`, `_old version`,
+`_versioncontrol`) are left as written where they describe history.
+
 ## Deleted 2026-10-14
 
 One groin model is kept, the wave-driven groin (`cascade.groin.GroinCallback`), set by
@@ -88,7 +98,7 @@ the dipole (the old `GroinCallback`, M) and blocking (`BlockingGroinCallback`, b
 deterioration floor f:
 
 * `groin-sweep/` -- the M and f sweeps, the joint fit and their figures
-* `HAT_run_all.py` stages 3-5 (seed runs, sweeps, joint fit); the groin matrix, stage 6, is now
+* `HAT_run_matrix.py` stages 3-5 (seed runs, sweeps, joint fit); the groin matrix, stage 6, is now
   stage 3 and reads the groin from the config, not `joint_fit.json`
 * `tests/test_groin_blocking.py` (now `tests/test_groin.py`, for the corrected groin)
 
@@ -102,7 +112,7 @@ Hannah chose to delete the retirement folders rather than keep them (git keeps
 them):
 
 * `superseded_20260819/` -- the old 1984-2024 runners
-  (`HAT_hindcast_1984_2024.py`, `_newdomains`, `_newplot`) and the inherited
+  (`HAT_hindcast.py`, `_newdomains`, `_newplot`) and the inherited
   driver `benton_script.py` (that lineage lives on `origin/benton-cascade`)
 * `superseded_20260911/` -- `HAT_hindcast_1984_2024_versioncontrol.py` and
   `HAT_hindcast_QC_skeleton.ipynb`
@@ -156,8 +166,8 @@ WHERE A SETTING IS TYPED
     and its own values are only the fallbacks.
 
 WHY THIS MODULE EXISTS
-    `HAT_hindcast_1984_2024.ipynb` and its headless mirror
-    `HAT_hindcast_1984_2024.py` used to carry these values as literals in
+    `HAT_hindcast.ipynb` and its headless mirror
+    `HAT_hindcast.py` used to carry these values as literals in
     sections 1, 3, 7, 9 and 11. Running the scenario matrix therefore meant
     hand-editing a source file between every run, which is how the two
     published edgeBE runs in the retired `run_index.csv` ended up disagreeing
@@ -170,7 +180,7 @@ WHY THIS MODULE EXISTS
 PRECEDENCE
     environment variable  >  hat_run.yaml  >  the default in this file
 
-    `HAT_IGNORE_SETTINGS=1` drops the middle term. `HAT_run_all.py` sets it on
+    `HAT_IGNORE_SETTINGS=1` drops the middle term. `HAT_run_matrix.py` sets it on
     every run it launches, so a batch run is described entirely by the driver
     plus this file's defaults, and a half-finished experiment left in
     hat_run.yaml can never reach the comparison matrix or the sweep.
@@ -221,7 +231,7 @@ The yaml path is a tuple so a nested block reads naturally in the file
 (`groin.enabled`) while staying a flat attribute in code (`groin_enabled`).
 The environment name is always ENV_PREFIX + the attribute upper-cased, and
 is NOT derived from the yaml path -- the ten names that existed before this
-file did are load-bearing in `HAT_run_all.py` and in shell history, and
+file did are load-bearing in `HAT_run_matrix.py` and in shell history, and
 renaming them to match a yaml layout would break both.
 ```
 
@@ -357,7 +367,7 @@ baseline has to be the same model as the groin run in every respect.
 
 ```text
 Aliases kept so an environment variable that predates the yaml still works.
-HAT_SOURCE_SINK_PRESET is the name HAT_run_all.py sets; the attribute is the
+HAT_SOURCE_SINK_PRESET is the name HAT_run_matrix.py sets; the attribute is the
 same, so this is only about the env spelling being longer than the yaml key.
 ```
 
@@ -567,7 +577,7 @@ Returns:
 
 </details>
 
-### HAT_run_all.py
+### HAT_run_matrix.py
 
 End-to-end unattended driver: the comparison matrix, without and with the groin.
 
@@ -686,7 +696,7 @@ CONCURRENCY
     single thread -- and it is where nearly all the wall clock goes.
 
 Usage:
-    python HAT_run_all.py [--workers N] [--dry-run] [--no-model-state]
+    python HAT_run_matrix.py [--workers N] [--dry-run] [--no-model-state]
                           [--stages 2,4,5] [--presets zeroBE]
 ```
 
@@ -787,7 +797,7 @@ is shared by every stage, not just the matrix.
 ```text
 Reads the runner's SCENARIOS table out of its source, without running it.
 
-`HAT_hindcast_1984_2024.py` is a script, not a module: importing it runs a
+`HAT_hindcast.py` is a script, not a module: importing it runs a
 whole hindcast, so the table cannot simply be imported. It is parsed
 instead, because the literal dict in the runner's section 3 is the one
 thing that decides which management switches a scenario name stands for,
@@ -1580,16 +1590,16 @@ here deletes anything.
 
 </details>
 
-### HAT_hindcast_1984_2024.py
+### HAT_hindcast.py
 
-Hatteras Island CASCADE hindcast runner: the headless twin of HAT_hindcast_1984_2024.ipynb.
+Hatteras Island CASCADE hindcast runner: the headless twin of HAT_hindcast.ipynb.
 
 From the script's original header:
 
 ```text
 HATTERAS ISLAND -- CASCADE hindcast runner (1984-2004 / 2004-2024).
 
-Headless twin of `HAT_hindcast_1984_2024.ipynb`. The notebook is the source of
+Headless twin of `HAT_hindcast.ipynb`. The notebook is the source of
 truth: this file mirrors it section for section, in the same order, calling the
 same `cascade_pipeline` / `hatteras_site_config` code with the same values, so
 the two produce the same run.
@@ -1635,7 +1645,7 @@ WHERE THE SWITCHES LIVE
     section 11  physics.wave_height_Hs, sandbags, output.overwrite,
                 output.save_model_state
 
-  An environment variable beats the file, so `HAT_run_all.py` can drive a
+  An environment variable beats the file, so `HAT_run_matrix.py` can drive a
   matrix without editing anything; it also sets HAT_IGNORE_SETTINGS=1, so a
   half-finished experiment left in the yaml cannot reach a batch run.
 

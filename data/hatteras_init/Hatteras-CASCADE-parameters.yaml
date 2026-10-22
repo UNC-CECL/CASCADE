@@ -33,7 +33,7 @@ Shrub_ON: 0
 TMAX: 21
 # BEACH SLOPE (2026-10-20). 0.06, the slope the storm series' run-up was built
 # with. CASCADE overwrites this key from Cascade(beta=...) every run, so the value
-# that counts is BEACH_SLOPE in HAT_hindcast_1984_2024 (notebook and .py). Was 0.04.
+# that counts is BEACH_SLOPE in HAT_hindcast (notebook and .py). Was 0.04.
 beta: 0.06
 dune_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\buffer\sample_1_dune.npy
 elevation_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\buffer\sample_1_topography.npy

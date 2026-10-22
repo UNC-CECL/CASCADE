@@ -1,7 +1,7 @@
 # Dune growth rate, 2009-2025 (test period)
 
 Where the runner's 2009 dune growth rate comes from: `DUNE_GROWTH_RATES[2009] = (0.02, 0.04)` in
-`HAT_hindcast_1984_2024.ipynb` / `.py` (per period since 2026-10-21, Hannah). The calibration rate,
+`HAT_hindcast.ipynb` / `.py` (per period since 2026-10-21, Hannah). The calibration rate,
 0.01-0.03, is in [`../../1996-start/dune-growth-rate/`](../../1996-start/dune-growth-rate/README.md).
 
 **Question (Hannah, 2026-10-20):** did the dunes build faster after 2009? The island-wide median crest rose

@@ -2539,7 +2539,7 @@ at the ends of the modelled reach. Nothing is imposed on the
 interior, so an interior misfit is the model's own.
 calibBE  the full per-domain fit against the CoastSat LRR target rates.
 
-Moved here from HAT_hindcast_1984_2024.py so the notebook and the
+Moved here from HAT_hindcast.py so the notebook and the
 run script read the same numbers. data/hatteras_init/7-source-sink/4-export/
 holds copies GENERATED from these by export_be_calibration.py; the older
 partial copies that disagreed (the 2004 one truncated mid-dict) are under
@@ -2793,7 +2793,7 @@ be repaired -- fitting period 2 is the wrong thing to attempt.
 
 BUT IT WAS STILL SITTING IN THE FILE THE PIPELINE READS. Found 2026-08-30:
 output/calibration/groin/joint_fit.json held the RANKING'S answer (edgeBE M = 160
-f = 0.8, zeroBE M = 140 f = 1.0), and HAT_run_all.py stage 6 passes whatever
+f = 0.8, zeroBE M = 140 f = 1.0), and HAT_run_matrix.py stage 6 passes whatever
 that file holds to every groin run in the matrix. A stage-6 run would have
 used M = 160. It prints "RAILED on M" while doing so, so the machinery knew.
 
@@ -3406,7 +3406,7 @@ the two ends; the run name gains `waveHs2p5`, so it can never overwrite an
 option A run:
 
 HAT_START_YEAR=2010 HAT_HS=2.5 HAT_SOURCE_SINK_PRESET=edgeBE \
-HAT_BE_OVERRIDE="1=8.0,90=40.399" python scripts/hatteras_ms/HAT_hindcast_1984_2024.py
+HAT_BE_OVERRIDE="1=8.0,90=40.399" python scripts/hatteras_ms/HAT_hindcast.py
 
 Record: output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/
 ("Same vs period-specific"); ends in ends.json under `history` (Hs 2.5).

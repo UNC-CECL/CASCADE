@@ -40,7 +40,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 
 # --- CONFIG ------------------------------------------------------------------
 TAG = "dunes/2026-10-21-cape-growth-rate"

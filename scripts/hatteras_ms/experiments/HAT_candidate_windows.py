@@ -37,7 +37,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 BUILDER = (PROJECT_ROOT / "scripts" / "input_prep" / "3-env-forcings" / "3-storms"
            / "historical_storm_creation_v3_HAT.py")
 SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"

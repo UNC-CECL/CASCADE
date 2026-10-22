@@ -38,7 +38,7 @@ sys.path[:0] = [str(PROJECT_ROOT / "scripts"),
 # --- CONFIG ------------------------------------------------------------------
 TAG = "management/2026-10-06-fill-footprint-coastsat"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 MATRIX_RUN = (PROJECT_ROOT / "output" / "raw_runs" / "matrix" / "2009_2025" / "domainBE"
               / "HAT_2009_2025_domainBE_offsetmetres_road_bdm_nourish_groinblock")
 OBSERVED_EXTENT = (PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing" / "nourishment"

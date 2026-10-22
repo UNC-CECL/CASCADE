@@ -88,7 +88,7 @@ FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
 # Display only: must match the extractor's OCEAN_LOC
 OCEAN_LOC = "right"
 
-# Style (HAT_hindcast_1984_2024.py palette)
+# Style (HAT_hindcast.py palette)
 C_MODEL, C_TOWN, C_WIMBLE, C_PIER, C_GROIN = ("#FF8C00", "#90AFC5", "#E0A800",
                                               "#1565C0", "#B71C1C")
 C_INK = "#1a1a2e"

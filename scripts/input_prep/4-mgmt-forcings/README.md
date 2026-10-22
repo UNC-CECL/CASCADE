@@ -341,7 +341,7 @@ wide, so touching-cell inclusion only adds edge pixels off the pavement.
 
 ```text
 Domains where the alignment sampled here postdates the 1984 run's road.
-Taken from HISTORICAL_ROAD_EVENTS in HAT_hindcast_1984_2024.py.
+Taken from HISTORICAL_ROAD_EVENTS in HAT_hindcast.py.
 Informational only -- the value written is the same for both periods.
 ```
 

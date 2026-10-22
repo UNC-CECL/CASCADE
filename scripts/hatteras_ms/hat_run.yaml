@@ -2,7 +2,7 @@
 # HATTERAS HINDCAST -- run settings
 # =============================================================================
 # Edit this file, save it, run the hindcast. Both
-# `HAT_hindcast_1984_2024.py` and `HAT_hindcast_1984_2024.ipynb` read it, so
+# `HAT_hindcast.py` and `HAT_hindcast.ipynb` read it, so
 # the two cannot disagree about what a setting means.
 #
 # In the notebook you do NOT need to restart the kernel: section 3 calls
@@ -12,7 +12,7 @@
 #     environment variable  >  this file  >  the default in HAT_hindcast_config
 #
 # WHAT DOES NOT READ THIS FILE
-#     `HAT_run_all.py` sets HAT_IGNORE_SETTINGS=1 on every run it launches, so
+#     `HAT_run_matrix.py` sets HAT_IGNORE_SETTINGS=1 on every run it launches, so
 #     a batch run is described entirely by the driver plus code defaults. A
 #     half-finished experiment left in this file can never reach the 344-cell
 #     sweep or the comparison matrix. The groin sweep does not read it either;

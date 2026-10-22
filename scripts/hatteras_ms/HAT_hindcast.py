@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Hatteras Island CASCADE hindcast runner: the headless twin of HAT_hindcast_1984_2024.ipynb.
+Hatteras Island CASCADE hindcast runner: the headless twin of HAT_hindcast.ipynb.
 
-    python scripts/hatteras_ms/HAT_hindcast_1984_2024.py   # settings from hat_run.yaml, or HAT_* variables
+    python scripts/hatteras_ms/HAT_hindcast.py   # settings from hat_run.yaml, or HAT_* variables
 
 Same sections, same order and same code as the notebook (the source of truth),
 minus its display-only QC plots; the run is chosen in hat_run.yaml. Details: scripts/hatteras_ms/README.md.
@@ -1438,7 +1438,7 @@ if _poor_fit:
 # One structure renders both the .txt and the .json
 _GIT = git_provenance(PROJECT_BASE_DIR)
 _TIMESTAMP = timestamp()
-GENERATED_BY = "HAT_hindcast_1984_2024.py"
+GENERATED_BY = "HAT_hindcast.py"
 
 # What the source/sink preset actually was
 

@@ -228,7 +228,7 @@ therefore reading the interior at rows the model does not bulldoze.
 
 Both are fixed by asking hatteras_site_config, which is what the runner
 reads, instead of mirroring it. The header above says this CONFIG "must
-mirror HAT_hindcast_1984_2024.py"; mirroring is how it drifted, so the
+mirror HAT_hindcast.py"; mirroring is how it drifted, so the
 period-dependent forcings are now imported and cannot.
 ```
 

@@ -50,7 +50,7 @@ sys.path[:0] = [str(HERE.parent / "2026-10-08-schedule-refit"),
                 str(REPO / "scripts" / "hatteras_ms"), str(REPO / "scripts")]
 
 # --- CONFIG ------------------------------------------------------------------
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 STUDY = "groin-blocking/2026-10-08-drift-groin"
 PIN_STUDY = "groin-blocking/2026-10-05-blocking-fit-dem-to-dem"
 RAW = REPO / "output" / "raw_runs"

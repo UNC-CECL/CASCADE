@@ -1,6 +1,6 @@
 # Hatteras hindcast -- methods
 
-The reasoning behind each section of `HAT_hindcast_1984_2024.ipynb`.
+The reasoning behind each section of `HAT_hindcast.ipynb`.
 It was written in the notebook itself, which pushed the code that
 actually runs a long way apart; it is the same text, moved, not
 rewritten. The notebook keeps a short statement of what each section

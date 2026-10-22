@@ -1,7 +1,7 @@
 # experiments
 
 One-off studies, each asking one question of the hindcast. A study drives the
-unchanged runner (`../HAT_hindcast_1984_2024.py`) as a subprocess with
+unchanged runner (`../HAT_hindcast.py`) as a subprocess with
 `HAT_IGNORE_SETTINGS=1`, or in-process with one input swapped, and files its
 runs under `output/raw_runs/experiments/<theme>/<date>-<name>/`. Each script's
 header says what it asks and how to run it; `run` / `score` / `plot` actions
@@ -751,7 +751,7 @@ THE TARGET AND THE ALONGSHORE SCORES
 
 The runner scores RMSE and bias; these add how much of the observed
 alongshore variation a run explains. The target is rebuilt exactly as the
-runner builds it (section 8 of HAT_hindcast_1984_2024.py), and every run's
+runner builds it (section 8 of HAT_hindcast.py), and every run's
 RMSE is recomputed from it and checked against the runner's, so the two
 sets of scores are provably on the same target.
 ```
@@ -766,7 +766,7 @@ sets of scores are provably on the same target.
 **`run_env()`**
 
 ```text
-The environment one run reads, built the way HAT_run_all builds it:
+The environment one run reads, built the way HAT_run_matrix builds it:
 every HAT_* variable named here, none inherited from the shell.
 ```
 
@@ -1673,7 +1673,7 @@ USAGE
     python HAT_peaisland_extension.py score                   # RESULTS.md + figures
 
 Each run is the ordinary hindcast runner driven through the environment,
-exactly as HAT_run_all.py drives the matrix; nothing here reimplements a
+exactly as HAT_run_matrix.py drives the matrix; nothing here reimplements a
 run. Runs are never overwritten (pass --overwrite to redo one).
 ```
 
@@ -1723,7 +1723,7 @@ to die silently under runaway progradation. Stop and say so instead.
 **`run_env()`**
 
 ```text
-The environment one run reads, built the way HAT_run_all builds it:
+The environment one run reads, built the way HAT_run_matrix builds it:
 every HAT_* variable named here, none inherited from the shell.
 ```
 

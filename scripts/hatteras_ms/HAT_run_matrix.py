@@ -2,7 +2,7 @@
 """
 End-to-end unattended driver: the comparison matrix, without and with the groin.
 
-    python scripts/hatteras_ms/HAT_run_all.py [--dry-run] [--no-model-state] [--stages 1,2,3]
+    python scripts/hatteras_ms/HAT_run_matrix.py [--dry-run] [--no-model-state] [--stages 1,2,3]
 
 Runs every stage in dependency order and resumes where it stopped; each
 job recorded in a manifest. Details: scripts/hatteras_ms/README.md.
@@ -63,7 +63,7 @@ GROIN_STRENGTH = {p: groin_strength_for(p) for p in PERIODS}
 GROIN_END_YEAR = field_default("groin_end_year")
 GROIN_SPREAD_WEIGHTS = field_default("groin_spread_weights")
 
-HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
+HINDCAST = _HERE.parent / "HAT_hindcast.py"
 
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"

@@ -91,7 +91,7 @@ EXCLUDED = {44: "beach building out", 65: "shoreline retreating"}
 SHORE_BAND = 0.5                            # m/yr: the stable-shoreline condition
 MIN_CELLS = 25                              # domains with fewer fully surveyed cells are left blank in fig1
 SOURCES = {"1996-start": ("2009-2014-1996", 1996), "2009-start": ("2009-2014", 2009)}
-# The current runner's 1996 full-management run (HAT_run_all matrix, 2026-10-21: spread groin 0.10, ends re-solved),
+# The current runner's 1996 full-management run (HAT_run_matrix matrix, 2026-10-21: spread groin 0.10, ends re-solved),
 # for the island-wide alongshore figure; the study's own runs carry the 2026-10-20 groin and ends
 MATRIX_RUN = R.U.PROJECT_ROOT / "output" / "raw_runs" / "matrix" / "1996_2009" / "edgeBE" \
     / "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin"

@@ -32,7 +32,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hat_extension_domains import GEOMETRIES, BASE_GEOMETRY  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 SOLVE = (PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
          / "be_edge_domain_solve.py")
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
@@ -56,7 +56,7 @@ MEMBERS = {
 # -----------------------------------------------------------------------------
 
 
-# The environment one run reads, built the way HAT_run_all builds it
+# The environment one run reads, built the way HAT_run_matrix builds it
 def run_env(member, preset, override="", overwrite=False):
     geometry, mode = MEMBERS[member]
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}

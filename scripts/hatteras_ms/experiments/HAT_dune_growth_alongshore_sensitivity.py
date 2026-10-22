@@ -49,7 +49,7 @@ import pandas as pd
 
 _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / "pyproject.toml").exists())
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 sys.path[:0] = [str(PROJECT_ROOT / "scripts"), str(_HERE.parent)]
 
 # --- CONFIG ------------------------------------------------------------------

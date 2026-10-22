@@ -35,7 +35,7 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 STUDY = "island-offset/2026-09-24-div10-vs-metres-wave-sweep"
 STUDY_DIR = RAW_RUNS / "experiments" / STUDY
@@ -95,7 +95,7 @@ def log_path(sweep, scale, source, hs, asym, ahf):
             / f"Hs{num(hs)}_asymmetry{num(asym)}_highangle{num(ahf)}.log")
 
 
-# The environment one run reads, built the way HAT_run_all builds it
+# The environment one run reads, built the way HAT_run_matrix builds it
 def run_env(sweep, scale, source, hs, asym, ahf, overwrite=False):
     env = {k: v for k, v in os.environ.items() if not k.startswith("HAT_")}
     env.update({

@@ -1,7 +1,7 @@
 # Dune growth rate, 1996-2009 (calibration period)
 
 Where the runner's 1996 dune growth rate comes from: `DUNE_GROWTH_RATES[1996] = (0.01, 0.03)` in
-`HAT_hindcast_1984_2024.ipynb` / `.py`, with Dmaxel 12.2 m (Dmax 10.5 m above the berm) in
+`HAT_hindcast.ipynb` / `.py`, with Dmaxel 12.2 m (Dmax 10.5 m above the berm) in
 `Hatteras-CASCADE-parameters.yaml`. Adopted 2026-10-20. The 2009-2025 rate is in
 [`../../2009-start/dune-growth-rate/`](../../2009-start/dune-growth-rate/README.md).
 

@@ -45,7 +45,7 @@ sys.path.insert(0, str(PREGROIN))
 sys.path.insert(0, str(HERE.parent / "2026-10-09-corrected-groin"))
 
 # --- CONFIG ------------------------------------------------------------------
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 STUDY = "groin-wave-driven/2026-10-14-face-6-7"
 RAW = REPO / "output" / "raw_runs" / "experiments" / STUDY
 OLD_FULL = REPO / "output" / "raw_runs" / "experiments" / "groin-wave-driven" / "2026-10-13-pregroin-full-life"

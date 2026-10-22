@@ -1160,7 +1160,7 @@ def main():
     print("  and passes self._road_ele[iB3D] to each RoadwayManager. So a list")
     print("  of length TOTAL_DOMAINS works wherever ROAD_ELEVATION is passed.")
     print()
-    print("  In HAT_hindcast_1984_2024.py, replace the scalar with a")
+    print("  In HAT_hindcast.py, replace the scalar with a")
     print("  padded array built the same way road_setbacks_full is -- the SAME")
     print("  file for both periods:")
     print()

@@ -36,7 +36,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "input_prep" / "8-overwash-ana
 # --- CONFIG ------------------------------------------------------------------
 TAG = "dunes/2026-10-13-dune-ceiling-uniform"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 MATRIX = PROJECT_ROOT / "output" / "raw_runs" / "matrix"
 
 PERIODS = {1996: (2009, (1997, 2009)), 2009: (2025, (2010, 2025))}   # start: (end, storm years)

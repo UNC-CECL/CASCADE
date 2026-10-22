@@ -33,7 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hatteras_site_config import HATTERAS_PERIODS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = _HERE.parent / "HAT_hindcast_1984_2024.py"
+HINDCAST = _HERE.parent / "HAT_hindcast.py"
 SOLVER_DIR = PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
 SCENARIO = "full_management"
 # The solve folder and log date; 2026-10-05 solved the first targets, 2026-10-09 the calendar-2008 end and 17-yr test,

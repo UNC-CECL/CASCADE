@@ -28,7 +28,7 @@ dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv
 ```
 
 `hatteras_site_config.py` resolves it as `PERIOD["road_setback_file"]` and
-`HAT_hindcast_1984_2024.py:531` loads it by path. Two rows: GIS ids, then
+`HAT_hindcast.py:531` loads it by path. Two rows: GIS ids, then
 setback in metres landward of interior row 0. Everything else in this tree is
 provenance, diagnostics, or figures.
 

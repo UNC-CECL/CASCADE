@@ -1,7 +1,7 @@
 # cascade_pipeline - the library the runner imports
 
 Not a stage and not a script: this is the shared code behind
-`scripts/hatteras_ms/HAT_hindcast_1984_2024.py` and everything that reads its
+`scripts/hatteras_ms/HAT_hindcast.py` and everything that reads its
 output.
 
 | Module | Holds |
@@ -469,8 +469,8 @@ From the script's original header:
 Shared machinery for the Hatteras hindcast: loaders, diagnostics, runner.
 
 WHY THIS MODULE EXISTS
-    `HAT_hindcast_1984_2024.ipynb`, its headless mirror
-    `HAT_hindcast_1984_2024.py`, and `HAT_groin_sweep_worker.py` each carried
+    `HAT_hindcast.ipynb`, its headless mirror
+    `HAT_hindcast.py`, and `HAT_groin_sweep_worker.py` each carried
     their own copy of these functions -- 667 lines duplicated character for
     character between the notebook and the .py, and a third copy of
     `build_cascade` in the sweep worker that the worker's own comment warned
@@ -3323,8 +3323,8 @@ WHY THIS MODULE EXISTS
     the module it names, what the sediment budget implies, and where the
     model disagrees with the survey. They are not debug output, so none of
     them were dropped -- but ~400 lines of f-strings sat duplicated between
-    `HAT_hindcast_1984_2024.ipynb` and its headless mirror
-    `HAT_hindcast_1984_2024.py`, and every wording change had to be made
+    `HAT_hindcast.ipynb` and its headless mirror
+    `HAT_hindcast.py`, and every wording change had to be made
     twice or the two runs stopped saying the same thing.
 
     Every function here prints exactly what the inline block printed. The
@@ -4001,8 +4001,8 @@ parse. Rendering both from the same `sections` mapping is what keeps them from
 disagreeing -- the previous inline version built only the prose, so anything
 downstream had to re-parse it.
 
-Used by both HAT_hindcast_1984_2024.ipynb and its headless mirror
-HAT_hindcast_1984_2024.py, so the two cannot drift apart.
+Used by both HAT_hindcast.ipynb and its headless mirror
+HAT_hindcast.py, so the two cannot drift apart.
 ```
 
 Notes that were in the code:

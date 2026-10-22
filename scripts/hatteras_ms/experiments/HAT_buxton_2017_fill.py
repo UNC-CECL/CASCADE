@@ -34,7 +34,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 # --- CONFIG ------------------------------------------------------------------
 TAG = "management/2026-10-03-buxton-2017-fill"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 MATRIX_RUN = (PROJECT_ROOT / "output" / "raw_runs" / "matrix" / "2010_2026" / "edgeBE"
               / "HAT_2010_2026_edgeBE_offsetmetres_road_bdm_nourish_nogroin")
 WINDOW = (2010, 2026)

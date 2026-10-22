@@ -30,7 +30,7 @@ from pathlib import Path
 # --- CONFIG ------------------------------------------------------------------
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 STUDY = "groin/2026-09-29-option-a-grid"   # the first grid; later studies pass --study
 KIND = "dipole"                            # 1996->2003 linear ramp then; later studies pass --kind
 RAW = REPO / "output" / "raw_runs" / "experiments"

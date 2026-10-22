@@ -536,7 +536,7 @@ subfolders of hatteras_ms. Six files here already did it this way.
 ```
 
 ```text
-Defined the same way HAT_hindcast_1984_2024.py:255 defines it. It is not
+Defined the same way HAT_hindcast.py:255 defines it. It is not
 exported by the site config, and the period table's paths are relative to it.
 ```
 
@@ -900,14 +900,14 @@ USAGE
 Notes that were in the code:
 
 ```text
-These four MUST match section 8/9 of HAT_hindcast_1984_2024.py. They are
+These four MUST match section 8/9 of HAT_hindcast.py. They are
 restated rather than imported because importing that module runs a hindcast.
 The assertion in `check_conventions` catches them drifting apart.
 ```
 
 ```text
 The two windows the runner added on 2026-09-11 (section 8 of
-HAT_hindcast_1984_2024.py). Missing here until 2026-09-27, so a 1996 or
+HAT_hindcast.py). Missing here until 2026-09-27, so a 1996 or
 2010 run was redrawn with NO CoastSat curve: build_coastsat_series found
 no active dataset and the overlay drew nothing. Keep in step with the
 runner's list.
@@ -1056,17 +1056,17 @@ subfolders of hatteras_ms. Six files here already did it this way.
 ```
 
 ```text
-HAT_run_all lives in scripts/hatteras_ms/, named outright since this file
+HAT_run_matrix lives in scripts/hatteras_ms/, named outright since this file
 moved to scripts/figure_making/model_output/ (2026-09-18); it used to be
 found as this file's grandparent.
 ```
 
 ```text
 THE RUN DRIVER'S OWN GUARD. Which (period, scenario) pairs are distinct
-runs is decided by HAT_run_all.scenario_applies -- full_no_fill only exists
+runs is decided by HAT_run_matrix.scenario_applies -- full_no_fill only exists
 where a fill is actually scheduled -- and this figure asks it rather than
 keeping a second copy of the rule that could disagree (2026-09-17).
-Importing is safe: HAT_run_all does its work under a __main__ guard.
+Importing is safe: HAT_run_matrix does its work under a __main__ guard.
 ```
 
 ```text

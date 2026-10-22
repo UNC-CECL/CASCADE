@@ -2125,7 +2125,7 @@ So the version now comes from the extractor that PRODUCED the arrays, and a
 version missing from disk is a loud error rather than a stale read. To audit
 an older run deliberately, pass override= (see hat_topo_version.py).
 
-The runner (HAT_hindcast_1984_2024.ipynb, HAT_hindcast_1984_2024.py,
+The runner (HAT_hindcast.ipynb, HAT_hindcast.py,
 HAT_groin_sweep_worker.py) still says 2009_v2, a path that does not exist, so
 the mismatch with the runner remains REAL and is printed below rather than
 hidden. Repointing the runner is a separate job.
@@ -2201,7 +2201,7 @@ topography to name.
 --- what to audit ------------------------------------------------------
 "initial"    a 2-row RoadSetback_<year>.csv, the whole GIS 9-90 window
 "relocation" a literal {gis: setback_m} lifted from HISTORICAL_ROAD_EVENTS in
-HAT_hindcast_1984_2024.py. Relocation scenarios also
+HAT_hindcast.py. Relocation scenarios also
 get the two model guards replicated.
 ```
 
@@ -2241,7 +2241,7 @@ is clean here it is clean for every retreat.
 ```text
 --- Barrier3D / roadway_manager constants ------------------------------
 Not tuning knobs. Every one read from model source:
-ROAD_WIDTH_M   HAT_hindcast_1984_2024.py:2206
+ROAD_WIDTH_M   HAT_hindcast.py:2206
 DX/DY/DZ       roadway_manager.bulldoze() defaults, dam
 DROWN_THR      roadway_manager.py:766   drown_threshold = 0
 PCT_WATER      roadway_manager.py:531   percent_water_cells_touching_road

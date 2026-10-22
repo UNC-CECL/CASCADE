@@ -49,7 +49,7 @@ Checked against `RoadSetback_2004.csv` — a same-year (2004 road vs 2004 dune) 
 
 Median overshoot **+35 m** in the 1999 block, **+96 m** at Pea Island — worst exactly where retreat was worst. At GIS 84 the measured 2004 setback (50 m) is *smaller* than the 1984 setback (93 m) even though the road was moved 70 m landward in 1989: the shoreline overtook the road faster than NCDOT could move it. That is the real Pea Island story, and the absolute value erased it.
 
-**The fix** (`HAT_hindcast_1984_2024.py`, `HISTORICAL_ROAD_EVENTS`): the events now carry `relocation_displacement_m` — how far the road physically moved, and nothing else — applied to the setback the model is *currently* carrying:
+**The fix** (`HAT_hindcast.py`, `HISTORICAL_ROAD_EVENTS`): the events now carry `relocation_displacement_m` — how far the road physically moved, and nothing else — applied to the setback the model is *currently* carrying:
 
 ```python
 new_sb = rm._road_setback + relocation_displacement_m[gis_id]

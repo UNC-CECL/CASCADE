@@ -5,7 +5,7 @@ Run the hindcast once per sweep cell, with one setting moved off its calibrated 
     python scripts/sensitivity_analysis/hindcast_sensitivity.py --start-year 1996 --param wave_height
     python scripts/sensitivity_analysis/hindcast_sensitivity.py --start-year 1996 --param all --dry-run
 
-Each cell is an ordinary run of HAT_hindcast_1984_2024.py with one HAT_ setting
+Each cell is an ordinary run of HAT_hindcast.py with one HAT_ setting
 changed through the environment, filed under output/raw_runs/sensitivity/ and
 logged to output/calibration/sensitivity/sensitivity_<start>.jsonl for
 plot_sensitivity.py. Details: scripts/sensitivity_analysis/README.md.
@@ -43,7 +43,7 @@ from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_BASE_DIR / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_BASE_DIR / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 OUT_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "sensitivity"
 
 # Spelled out: an empty string reads as unset and would run the default

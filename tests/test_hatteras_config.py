@@ -35,8 +35,8 @@ sys.path.insert(0, str(SCRIPTS))
 site_config = pytest.importorskip("site_layer.hatteras_site_config")
 topo_version = pytest.importorskip("site_layer.hat_topo_version")
 
-RUNNER_PY = SCRIPTS / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-RUNNER_NB = SCRIPTS / "hatteras_ms" / "HAT_hindcast_1984_2024.ipynb"
+RUNNER_PY = SCRIPTS / "hatteras_ms" / "HAT_hindcast.py"
+RUNNER_NB = SCRIPTS / "hatteras_ms" / "HAT_hindcast.ipynb"
 
 # Every period names these, as paths relative to data/hatteras_init/.
 FORCING_KEYS = ("storm_file", "island_offset_file", "road_setback_file")

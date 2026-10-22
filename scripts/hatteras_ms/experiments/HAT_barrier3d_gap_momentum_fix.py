@@ -32,7 +32,7 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / "pyproject.toml").exists
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 # --- CONFIG ------------------------------------------------------------------
-HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 WORKTREE = PROJECT_ROOT.parent / "Barrier3D-overwashfix"
 FIX_BRANCH = "fix/overwash-gaps-momentum"
 TAG = "code-checks/2026-09-28-barrier3d-overwash-gap-momentum-fix"

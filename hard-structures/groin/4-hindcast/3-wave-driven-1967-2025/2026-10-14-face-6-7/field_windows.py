@@ -42,7 +42,7 @@ for p in (REPO / "scripts", REPO / "scripts" / "hatteras_ms", REPO / "scripts" /
     sys.path.insert(0, str(p))
 
 # --- CONFIG ------------------------------------------------------------------
-RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
+RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py"
 STUDY = "groin-wave-driven/2026-10-14-field-windows"
 RAW = REPO / "output" / "raw_runs" / "experiments" / STUDY
 REFIT = REPO / "output" / "raw_runs" / "experiments" / "groin-wave-driven" / "2026-10-14-window-refit"
