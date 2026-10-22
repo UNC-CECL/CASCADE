@@ -81,7 +81,7 @@ from cascade_pipeline.coastsat_lowess import (
     LowessConfig,
     build_coastsat_series,
 )
-from cascade_pipeline.plotting.net_change_comparison import plot_net_change_comparison
+from cascade_pipeline.plotting.net_change_comparison import plot_net_change_comparison, smooth_model
 from cascade_pipeline.plotting.rate_comparison import (
     DEFAULT_RATE_COMPARISON,
     plot_annotated_rate_comparison,
@@ -978,11 +978,15 @@ reports.coastsat_report(
 
 # 9.1 Site config every figure needs
 
+from dataclasses import replace as _replace  # noqa: E402
+
 RATE_FIG_KWARGS = dict(
     domains=HATTERAS_DOMAINS,
     annotations=HATTERAS_ANNOTATIONS,
     lowess_config=LOWESS_CONFIG,        # section 8's, not DEFAULT_LOWESS
-    config=DEFAULT_RATE_COMPARISON,
+    # LOWESS only: no thin unsmoothed CoastSat domain-mean line (2026-10-20)
+    config=_replace(DEFAULT_RATE_COMPARISON, plot_domain_means=False,
+                    model_label="CASCADE (7-domain LOWESS)"),
 )
 
 gif_config = GifConfig(
@@ -1097,8 +1101,30 @@ NUM_CORES = 1        # >1 has crashed on this configuration; leave at 1
 # offset corrected (dune-topo v3) its mean, 0.02, reproduces the 2009 crest of the stable dunes
 # (GIS 59-62, 20-22), and the range doubles the cell-to-cell spread of a fixed rate
 # (data/.../1996-start/dune-growth-rate/README.md); was 0.55-0.95
-RMIN = [0.01] * HATTERAS_DOMAINS.total_domains
-RMAX = [0.03] * HATTERAS_DOMAINS.total_domains
+# Per period since 2026-10-21 (Hannah): 2009-2025 takes 0.02-0.04, the rate that tracks the 2014-2019
+# lidar's median crest within 0.16 m (0.01-0.03 falls 0.14-0.39 m behind); fitted to the test window's own
+# surveys, so that window tests overwash and shoreline, not dune growth
+# (data/.../2009-start/dune-growth-rate/README.md). 1984/2004 keep the calibration rate.
+DUNE_GROWTH_RATES = {1996: (0.01, 0.03), 2009: (0.02, 0.04)}
+_RLO, _RHI = DUNE_GROWTH_RATES.get(START_YEAR, DUNE_GROWTH_RATES[1996])
+RMIN = [_RLO] * HATTERAS_DOMAINS.total_domains
+RMAX = [_RHI] * HATTERAS_DOMAINS.total_domains
+# Cape Point no longer gets its own rate (Hannah, 2026-10-21): 0.10-0.20 at GIS 1-5 matched the 2014-2017
+# cape surveys but built the 1996-2009 cape dunes 3-4 m above the surveys and barely moved GIS 1-2's
+# shoreline (dunes/2026-10-21-cape-growth-rate); one rate per period island-wide, the cape's missing
+# sand handled by the source/sink instead.
+# HAT_GROWTH_OVERRIDE="gis=rmin:rmax,...": per-domain bounds for an experiment without editing this file
+# (2026-10-21, the alongshore growth sensitivity test); unset, every domain keeps the period's rate
+_GROWTH_OVERRIDE_RAW = os.environ.get("HAT_GROWTH_OVERRIDE", "").strip()
+for _pair in filter(None, _GROWTH_OVERRIDE_RAW.split(",")):
+    _g, _bounds = _pair.split("=")
+    _lo, _hi = (float(_v) for _v in _bounds.split(":"))
+    if not 0 <= _lo <= _hi:
+        raise SystemExit(f"\nHAT_GROWTH_OVERRIDE entry {_pair!r}: need 0 <= rmin <= rmax.\n")
+    RMIN[HATTERAS_DOMAINS.gis_to_pad(int(_g))] = _lo
+    RMAX[HATTERAS_DOMAINS.gis_to_pad(int(_g))] = _hi
+if _GROWTH_OVERRIDE_RAW:
+    print(f"\nHAT_GROWTH_OVERRIDE   {len(_GROWTH_OVERRIDE_RAW.split(','))} domain(s) given their own growth bounds")
 
 # Dune rebuild thresholds, m MHW
 
@@ -1491,6 +1517,7 @@ _META = {
     },
     "dunes and roadway": {
         "rmin / rmax": f"{RMIN[0]} / {RMAX[0]}",
+        "growth_override": _GROWTH_OVERRIDE_RAW or "none",
         "dune_design_ele_m_mhw": (DUNE_DESIGN_ELEVATION_M,
                                   "floored by roadway_manager"),
         "dune_min_ele_m_mhw": (DUNE_MINIMUM_ELEVATION_M,
@@ -1643,8 +1670,11 @@ print(f"                      {RUN_INDEX_FILENAME}  "
 
 # Section 9's bundles, or the figures lose their geography
 
+# The model drawn smoothed as CoastSat is: 7-domain LOWESS, GIS 1-10 and 90 raw (2026-10-20)
+PLOTTED_RATE_SMOOTHED = smooth_model(PLOTTED_RATE)
+
 plot_rate_comparison(
-    PLOTTED_RATE, cs_series, run,
+    PLOTTED_RATE_SMOOTHED, cs_series, run,
     real_domains_only=PLOT_REAL_DOMAINS_ONLY, estimator=RATE_ESTIMATOR,
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
     save_path=str(write_path(
@@ -1654,7 +1684,7 @@ plot_rate_comparison(
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
 
 plot_annotated_rate_comparison(
-    PLOTTED_RATE, cs_series, run,
+    PLOTTED_RATE_SMOOTHED, cs_series, run,
     estimator=RATE_ESTIMATOR,
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
     save_path=str(write_path(RUN_DIR, "figure_rate_buffers", RUN_NAME)),

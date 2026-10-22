@@ -129,8 +129,8 @@ template's value.
 | `DuneParamMultipleRows` | Dunes | not in template (built-in false) | false (built-in) | no | | Multi-row dune file |
 | `GrowthParamStart` | Dunes | false | false | no | ✓ | Read growth rates from file |
 | `growth_param_file` | Dunes | barrier3d-default-growthparam.npy | built-in name | n/a | | Growth-rate file (unused) |
-| `rmin` | Dunes | 0.25 | 0.01 since 2026-10-20, from the stable dunes (was 0.55) | yes | ✓ | Minimum dune growth rate |
-| `rmax` | Dunes | 0.65 | 0.03 since 2026-10-20, from the stable dunes (was 0.95) | yes | ✓ | Maximum dune growth rate |
+| `rmin` | Dunes | 0.25 | 0.01 for 1996-2009 (stable dunes, 2026-10-20); 0.02 for 2009-2025 (2014-2019 lidar, 2026-10-21); was 0.55; one rate island-wide (Cape Point's own 0.10-0.20 dropped 2026-10-21) | yes | ✓ | Minimum dune growth rate |
+| `rmax` | Dunes | 0.65 | 0.03 for 1996-2009; 0.04 for 2009-2025; was 0.95 | yes | ✓ | Maximum dune growth rate |
 | `C1` | Dunes | 8.8 | 8.8 (built-in) | no | | Empirical dune erosion parameter [m] |
 | `C2` | Dunes | 4.6 | 4.6 (built-in) | no | | Empirical dune erosion parameter [m] |
 | `HdDiffu` | Dunes | 0.75 | 0.75 (built-in) | no | | Largest height step between neighbouring dune cells [m] |
