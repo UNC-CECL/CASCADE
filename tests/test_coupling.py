@@ -81,12 +81,12 @@ def initialize_cascade_no_human_dynamics_ast(datadir):
     return cascade
 
 
-def run_cascade_nourishment_outwasher(datadir):
+def run_cascade_nourishment_outwasher(datadir, roadway_management=False):
     """
     n domains = 3
     outwasher: on
-    beach nourishment: on
-    time steps: 5 so we only have one outwash event
+    beach nourishment: handled by BeachDuneManager or RoadwayManager
+    time steps: NT
     """
 
     for data_file in datadir.iterdir():
@@ -111,14 +111,17 @@ def run_cascade_nourishment_outwasher(datadir):
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
         num_cores=1,
-        roadway_management_module=False,
+        roadway_management_module=roadway_management,
         alongshore_transport_module=False,
-        beach_nourishment_module=True,
+        beach_nourishment_module=not roadway_management,
         community_economics_module=False,  # no community dynamics
         outwash_module=True,
         outwash_storms_file="short_outwash_storm.npy",
         outwash_beach_file=None,
     )
+
+    if roadway_management:
+        cascade.nourish_now = [1, 0, 0]
 
     for _ in range(NT - 1):
         cascade.update()
@@ -245,4 +248,19 @@ def test_beach_widths(tmp_path, datadir, monkeypatch):
         nourish_beach = CASCADE_OUTPUT.nourishments[n]._beach_width
         outwash_beach = CASCADE_OUTPUT.outwash[n]._beach_width
         assert_array_almost_equal(casc_beach, nourish_beach)
+        assert_array_almost_equal(casc_beach, outwash_beach)
+
+
+def test_roadway_beach_widths(tmp_path, datadir, monkeypatch):
+    """Cascade, RoadwayManager, and Outwasher share beach width histories."""
+    monkeypatch.chdir(tmp_path)
+    CASCADE_OUTPUT = run_cascade_nourishment_outwasher(datadir, roadway_management=True)
+
+    # Exercise roadway nourishment in one domain while Outwasher runs in all three.
+    assert CASCADE_OUTPUT.roadways[0].nourishment_TS[1] == 1
+    for n in range(CASCADE_OUTPUT._ny):
+        casc_beach = CASCADE_OUTPUT._beach_width[n]
+        roadway_beach = CASCADE_OUTPUT.roadways[n].beach_width
+        outwash_beach = CASCADE_OUTPUT.outwash[n]._beach_width
+        assert_array_almost_equal(casc_beach, roadway_beach)
         assert_array_almost_equal(casc_beach, outwash_beach)
