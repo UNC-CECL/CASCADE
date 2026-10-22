@@ -54,7 +54,7 @@ from site_layer import hat_elevation_products as _el  # noqa: E402
 ELEVATION_DIR = _el.ELEVATION_ROOT
 IN_DIR = None   # set from SOURCE_TAG below
 FIG_DIR = None  # set from SOURCE_TAG below (was the pooled 0-elevation/figures/, gone since 08-25)
-# The repository copy of D:/Hatteras_GIS/domains.geojson (identical; 2026-09-18).
+# The repository copy of D:/hatteras_ch1/gis_sources/domains.geojson (identical; 2026-09-18).
 from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 
 # NC-12 alignments, reprojected from NC State Plane feet on load

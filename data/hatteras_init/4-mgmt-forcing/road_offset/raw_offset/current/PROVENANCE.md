@@ -4,7 +4,7 @@ Extracted 2026-09-18 for the dune-line position figures
 (`5-scr/4-comparisons/duneline_positions/`), which need a road line for the
 2023 dune line. The 1978 and 2008 exports stand in for 1996 and 2010.
 
-- **Source:** NCDOT route inventory, `D:\Hatteras_GIS\roads\NCRoutes.gdb`,
+- **Source:** NCDOT route inventory, `D:\hatteras_ch1\gis_sources\roads\NCRoutes.gdb`,
   layer `NCRoutes`, route `30000012028` (NC-12, Dare County, milepost 0 to
   84.22). The layer's native CRS is EPSG:2264 (NC State Plane, US feet); the
   Z and M values were dropped.

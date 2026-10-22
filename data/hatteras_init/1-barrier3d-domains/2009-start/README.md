@@ -37,5 +37,5 @@ because the runner had no per-period concept. Their provenance label reads
 
 `duneline-shift/` (dune line vs interior row 0, for the retired 2004 start) was
 offloaded 2026-10-19 to
-`D:\archive\CASCADE_offload\data\hatteras_init\1-barrier3d-domains\2004-start\`.
+`D:\hatteras_ch1\model_runs\data\hatteras_init\1-barrier3d-domains\2004-start\`.
 Lineage: `../LINEAGE.md`.

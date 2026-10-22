@@ -2,7 +2,7 @@
 
 Each study answers one question and lives in `<topic>/<date>-<what it tested>/`. Its README or NOTE is the record. Each topic's README has a table of its studies: the question, the answer, and whether it is still current. A study's folder path under `experiments/` is also its runs' tag in `run_index.csv`. Folders moved on 2026-10-20 are listed in `RENAMES.md`.
 
-Only studies from 2026-10-13 on are kept here, plus the revetment test. Everything older is on `D:\archive\CASCADE_offload\output\raw_runs\experiments\` (see `OFFLOADED.md`), including the whole of `groin-blocking/`, `management/`, `source-sink/` and `target-end-window/` since 2026-10-20.
+Only studies from 2026-10-13 on are kept here, plus the revetment test. Everything older is on `D:\hatteras_ch1\model_runs\output\raw_runs\experiments\` (see `OFFLOADED.md`), including the whole of `groin-blocking/`, `management/`, `source-sink/` and `target-end-window/` since 2026-10-20.
 
 **Model states deleted 2026-10-20.** Every `.npz` from runs on the old storms was deleted without a copy (`../README.md`). Only studies from 10-19 and 10-20 still have model states. The rest keep their tables, logs, figures and metadata, so their numbers can be traced but not reloaded.
 

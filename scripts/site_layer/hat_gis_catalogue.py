@@ -8,7 +8,7 @@ Reads catalogue.csv at the drive root (one row per dataset: the source facts, ty
 fills its measured columns (files, size, CRS, resolution, extent, domains covered). Writes
 coverage_by_domain.csv beside it: per dataset and domain, the share of the domain's land (2009 DEM
 above MHW, on a 100 m grid) where the dataset has data. Point clouds count their order footprint and
-shoreline layers count a domain they cross. Details: D:\\Hatteras_GIS\\README.md.
+shoreline layers count a domain they cross. Details: D:\\hatteras_ch1\\gis_sources\\README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill

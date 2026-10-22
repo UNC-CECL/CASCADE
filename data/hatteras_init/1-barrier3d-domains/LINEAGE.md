@@ -391,7 +391,7 @@ script still resolves, and the old `HAT_TOPO_VERSION_1984_START` /
 `_2004_START` variables are still read. Run metadata and RUN_MANIFESTs keep the
 old names; they record what happened.
 
-Offloaded to `D:\archive\CASCADE_offload\data\hatteras_init\1-barrier3d-domains\`
+Offloaded to `D:\hatteras_ch1\model_runs\data\hatteras_init\1-barrier3d-domains\`
 under the OLD paths, every file SHA-256 verified before the originals were removed:
 
 | path | files | MB | why |

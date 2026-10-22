@@ -11,8 +11,8 @@ The source/sink rates locked at the two end domains (GIS 1 and 90) for the calib
 
 **Status** — **current**: its answer is in use now. **record**: a finished check, kept so the number can be traced.
 
-Every solve here ran on the old storms and dune settings, and its model states were deleted on 2026-10-20. Solves from before 2026-10-05 are on `D:\archive\CASCADE_offload\output\raw_runs\experiments\end-domain-boundaries\`, with that topic's full table in the README there (the LRR, dune-line, candidate-window and run-length solves).
+Every solve here ran on the old storms and dune settings, and its model states were deleted on 2026-10-20. Solves from before 2026-10-05 are on `D:\hatteras_ch1\model_runs\output\raw_runs\experiments\end-domain-boundaries\`, with that topic's full table in the README there (the LRR, dune-line, candidate-window and run-length solves).
 
-Studies here from before 2026-10-13 were moved on 2026-10-20 to `D:\archive\CASCADE_offload\output\raw_runs\experiments\end-domain-boundaries-1996-2009\`, with this topic's table as it stood in the README there.
+Studies here from before 2026-10-13 were moved on 2026-10-20 to `D:\hatteras_ch1\model_runs\output\raw_runs\experiments\end-domain-boundaries-1996-2009\`, with this topic's table as it stood in the README there.
 
 Back to [the map](../README.md).

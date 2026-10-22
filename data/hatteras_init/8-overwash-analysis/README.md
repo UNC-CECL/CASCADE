@@ -67,7 +67,7 @@ ArcGIS project (1984-2004, year field only) was made and removed the same day:
 its years sit outside the model windows. Its script was never committed. Images to 1998 are the Hapke and Henderson (2007)
 delineations; from 2004 they are read from Google Earth imagery.
 The domain axis is the CASCADE domain, 1 at Cape Point to 90 at Pea
-Island; the map draws the boxes from `D:/Hatteras_GIS/domains.geojson`.
+Island; the map draws the boxes from `D:/hatteras_ch1/gis_sources/domains.geojson`.
 
 The footprint comparison (2026-09-10) takes the nine images strictly between
 the frames the two dune lines were digitised on (19 Sep 1984 out, 12 Oct 1997

@@ -31,7 +31,7 @@ dune-growth-rate/        where the runner's growth rate for this start (0.01-0.0
 
 ## Offloaded 2026-10-19
 
-To `D:\archive\CASCADE_offload\data\hatteras_init\1-barrier3d-domains\1984-start\`,
+To `D:\hatteras_ch1\model_runs\data\hatteras_init\1-barrier3d-domains\1984-start\`,
 SHA-256 verified, under the old folder name:
 
 - `dune-topo/v1/` - extraction on the original pick set (2026-08-27); the

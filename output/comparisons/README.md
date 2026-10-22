@@ -41,7 +41,7 @@ Every comparison on a superseded window: `hindcast_calibrated/`,
 `alternative_targets/` (1996-2015 / 2010-2026 and the 14-yr record),
 `relocation/` (1984-2004, 1996-2010), `scenario_grid/`, `offset_source/`,
 `adoption_2026-09-28/` and the empty `overwash/`. They are on
-`D:\archive\CASCADE_offload\output\comparisons\`, same paths; their tracked tables and
+`D:\hatteras_ch1\model_runs\output\comparisons\`, same paths; their tracked tables and
 READMEs are in git history before the commit that removed them. The scripts
 that wrote them are unchanged, so any of them can be redrawn on the current
 windows.

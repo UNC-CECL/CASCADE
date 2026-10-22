@@ -28,7 +28,7 @@ conversion happens here and nowhere downstream.
 Until 2026-10-19 a second half, `2-domain-reconstruction-1984/`, rebuilt the
 1984 domains from the 1996-based DEM (v2 -> v3, six steps). It went with the
 1984 start: its data are on
-`D:/archive/CASCADE_offload/data/hatteras_init/1-barrier3d-domains/1984-start/`,
+`D:/hatteras_ch1/model_runs/data/hatteras_init/1-barrier3d-domains/1984-start/`,
 and its scripts are in git at 2046d67b. The aerial-photo reader it held, which
 the mean-shoreline figures use, moved to `scripts/site_layer/hat_aerial_imagery.py`.
 

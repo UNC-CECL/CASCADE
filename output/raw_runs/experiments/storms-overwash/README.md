@@ -14,6 +14,6 @@ The storm series and how the modelled overwash is scored against the imagery. Sp
 
 **Status**: **current** means its answer is in use now. **record** means a finished check, kept so the number can be traced.
 
-The 10-13 and 10-19 studies ran on the old storms and dune settings. Their model states were deleted on 2026-10-20; the tables and logs are kept. Studies from before 2026-10-05 are on `D:\archive\CASCADE_offload\output\raw_runs\experiments\storms-overwash-and-dunes\`.
+The 10-13 and 10-19 studies ran on the old storms and dune settings. Their model states were deleted on 2026-10-20; the tables and logs are kept. Studies from before 2026-10-05 are on `D:\hatteras_ch1\model_runs\output\raw_runs\experiments\storms-overwash-and-dunes\`.
 
 Back to [the map](../README.md).

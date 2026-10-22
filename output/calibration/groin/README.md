@@ -13,7 +13,7 @@ Every path is built from `HAT_groin_sweep_config.GROIN_SWEEP_ROOT`.
 
 ## Moved off C: on 2026-10-07
 
-The dipole (M, f) sweep and everything from it are on `D:\archive\CASCADE_offload\output\calibration\groin\`,
+The dipole (M, f) sweep and everything from it are on `D:\hatteras_ch1\model_runs\output\calibration\groin\`,
 same paths: the period sweep cells, `fullperiod_1984_2024/`, `_validation_*`, `figures/`, `archive/`
 (including the dipole pin `joint_fit_dipole_M60_pin_20260830.json`), `joint_fit.csv`,
 `joint_fit_ranking.json`, `SELECTED_M60_f0.60/` and the previous version of this README.

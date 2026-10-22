@@ -623,7 +623,7 @@ year").
 
 WHAT IS ON EACH PANEL
     the photograph      the USGS Henderson release (doi 10.5066/P1CXBCDW),
-                        read frame by frame from D:\Hatteras_GIS\aerial_imagery
+                        read frame by frame from D:\hatteras_ch1\gis_sources\aerial_imagery
                         through the 1984 imagery review's Imagery class (the
                         seamline rule and the film-fringe handling live there,
                         not here); stated accuracy 1.2 m
@@ -726,7 +726,7 @@ from the source's own metadata.
 ```
 
 ```text
-D:\Hatteras_GIS\aerial_imagery\2008\noaa_2008_IOCM_NaturalColorImagery_J1129187, 2008_IOCM_NaturalColorImagery_J1129187_metadata.xml:
+D:\hatteras_ch1\gis_sources\aerial_imagery\2008\noaa_2008_IOCM_NaturalColorImagery_J1129187, 2008_IOCM_NaturalColorImagery_J1129187_metadata.xml:
 "2008 NOAA NGS Ortho-rectified Color Mosaic from Ocracoke, NC to Virginia
 Beach, VA", beginPosition 2008-03-26, endPosition 2008-03-27
 ```

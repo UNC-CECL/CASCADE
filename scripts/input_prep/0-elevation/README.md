@@ -49,7 +49,7 @@ Every script, by folder:
 |---|---|
 | base DEM | `elevation\dem\2009\noaa_usace2009_nc_dem_Job1076020\2009_full.tif` - 1 m, EPSG:3725 + NAVD88 (m) |
 | fill source | `elevation\dem\2014\noaa_2014_NOAA_Post_Sandy_DEM_Job1076021\2014_full.tif` - 1 m, EPSG:6347 + NAVD88 (m), reprojected on read |
-| domains | `D:\Hatteras_GIS\domains.geojson` - 90 boxes, 2000 x 500 m |
+| domains | `D:\hatteras_ch1\gis_sources\domains.geojson` - 90 boxes, 2000 x 500 m |
 | NC-12 lines | `4-mgmt-forcing/road_offset/raw_offset/{1984,2004}/nc12_*.geojson` - EPSG:2264 (NC State Plane, US survey FEET), reprojected and clipped on load |
 
 ## The chain, in order
@@ -655,10 +655,10 @@ DOES NOT.  `shoreline_offset`. That comes from
         from the other.
 
 INPUTS
-    D:/Hatteras_GIS/.../2009_full.tif                base, 1 m, EPSG:3725
-    D:/Hatteras_GIS/.../2014_full.tif                gap fill, 1 m, EPSG:6347
-    D:/Hatteras_GIS/elevation/dem/1996/noaa_1996_FallEC_J1441002/*.tif   override, 3 m, EPSG:6347
-    D:/Hatteras_GIS/domains.geojson                  90 boxes, 2000 x 500 m
+    D:/hatteras_ch1/gis_sources/.../2009_full.tif                base, 1 m, EPSG:3725
+    D:/hatteras_ch1/gis_sources/.../2014_full.tif                gap fill, 1 m, EPSG:6347
+    D:/hatteras_ch1/gis_sources/elevation/dem/1996/noaa_1996_FallEC_J1441002/*.tif   override, 3 m, EPSG:6347
+    D:/hatteras_ch1/gis_sources/domains.geojson                  90 boxes, 2000 x 500 m
     4-mgmt-forcing/.../1978/nc12_1978.geojson        EPSG:2264, US survey FEET
 
 OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996/1-gapfill-1m/)
@@ -913,7 +913,7 @@ floor-filtered; this only drops what the island cannot reach.
 
 ### 2-produce/HAT_dem_duneline_coverage.py - deleted 2026-10-19
 
-Retired with the 1984 start: it measured the 1984 dune line against the 1996-start DEM. Its outputs (`0-elevation/2009-2014-1996-duneline/`) are on `D:\archive\CASCADE_offload\data\hatteras_init\0-elevation\`. Recover the script with `git show 2046d67b:scripts/input_prep/0-elevation/2-produce/HAT_dem_duneline_coverage.py`.
+Retired with the 1984 start: it measured the 1984 dune line against the 1996-start DEM. Its outputs (`0-elevation/2009-2014-1996-duneline/`) are on `D:\hatteras_ch1\model_runs\data\hatteras_init\0-elevation\`. Recover the script with `git show 2046d67b:scripts/input_prep/0-elevation/2-produce/HAT_dem_duneline_coverage.py`.
 
 ### 2-produce/HAT_dem_gap_fill.py
 
@@ -1004,10 +1004,10 @@ back-barrier relief, but it is fabricated and worth knowing about when reading
 overwash behaviour near a fill margin.
 
 INPUTS
-    D:/Hatteras_GIS/.../2009_full.tif   base, 1 m, EPSG:3725 + NAVD88
-    D:/Hatteras_GIS/.../2014_full.tif   fill, 1 m, EPSG:6347 + NAVD88
+    D:/hatteras_ch1/gis_sources/.../2009_full.tif   base, 1 m, EPSG:3725 + NAVD88
+    D:/hatteras_ch1/gis_sources/.../2014_full.tif   fill, 1 m, EPSG:6347 + NAVD88
                                         (reprojected on read by WarpedVRT)
-    D:/Hatteras_GIS/domains.geojson     90 boxes, 2000 x 500 m
+    D:/hatteras_ch1/gis_sources/domains.geojson     90 boxes, 2000 x 500 m
 
 OUTPUTS (data/hatteras_init/0-elevation/1-gapfill-1m/)
     clip_domain_<N>_filled.tif      gap-filled clip, m NAVD88
@@ -1993,7 +1993,7 @@ is ALONGSHORE_FLIP, so profile 0 is the southern edge of the domain.
 
 ### 3-figures/HAT_plot_duneline_offset.py - deleted 2026-10-19
 
-Retired with the 1984 start: it measured the 1984 dune line against the 1996-start DEM. Its outputs (`0-elevation/2009-2014-1996-duneline/`) are on `D:\archive\CASCADE_offload\data\hatteras_init\0-elevation\`. Recover the script with `git show 2046d67b:scripts/input_prep/0-elevation/3-figures/HAT_plot_duneline_offset.py`.
+Retired with the 1984 start: it measured the 1984 dune line against the 1996-start DEM. Its outputs (`0-elevation/2009-2014-1996-duneline/`) are on `D:\hatteras_ch1\model_runs\data\hatteras_init\0-elevation\`. Recover the script with `git show 2046d67b:scripts/input_prep/0-elevation/3-figures/HAT_plot_duneline_offset.py`.
 
 ### 3-figures/HAT_plot_gapfill.py
 

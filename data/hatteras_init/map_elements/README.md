@@ -10,7 +10,7 @@ hatteras_outline/     HAT_island_outline.shp (+ sidecars). Hatteras Island
                       2026-09-18 against the source: 88.85 km2 either way,
                       zero difference.                          ISLAND_OUTLINE
 nc_coast_80k/         nc_80k_hatteras_window.geojson. NC 1:80k coastline
-                      (D:/Hatteras_GIS/coastline/nc_80k/, EPSG:4326), every
+                      (D:/hatteras_ch1/gis_sources/coastline/nc_80k/, EPSG:4326), every
                       polygon within 25 km of the domain boxes, clipped: the
                       sound shores, Ocracoke and Pea Island that a map window
                       reaches past the island. Rebuilt by
@@ -27,7 +27,7 @@ The model's domains are
 `5-scr/2-transect-frame/transect_domains/HAT_domains.json` (90 boxes,
 2000 x 500 m, EPSG:3725). `hat_map_layers.DOMAIN_BOXES` points there, so a
 figure script needs one import and there is still only one copy.
-`D:/Hatteras_GIS/domains.geojson` is the same file (geometry and every
+`D:/hatteras_ch1/gis_sources/domains.geojson` is the same file (geometry and every
 attribute identical, checked 2026-09-18); the figure and analysis scripts
 that read it off the drive read the repository copy now. The 0-elevation
 producers still name the drive, because they need it for the DEMs anyway.

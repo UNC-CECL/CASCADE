@@ -5,7 +5,7 @@ the NOAA NGS colour orthomosaic flown 2008-03-26/27 (InPort 48695), because
 no georeferenced photographs from 2009, 2010 or 2011 are on the imagery
 drive (checked 2026-09-28):
 
-- **2009**: `D:\Hatteras_GIS\aerial_imagery\2009\google_earth_captures\raw_ge\HAT_2009_*.jpg` are
+- **2009**: `D:\hatteras_ch1\gis_sources\aerial_imagery\2009\google_earth_captures\raw_ge\HAT_2009_*.jpg` are
   27 Google Earth screenshots (2009-05-30). They *are* georeferenced, in ArcGIS on 2026-09-14/15
   (control points + `.jgwx` world files, whole island), but rasterio/GDAL reads the georeferencing
   of only 5 of them, so this script's reader could not place the line (corrected 2026-10-21). To use
@@ -26,7 +26,7 @@ through the day's water level and waves. The captions say so.
    NOAA NGS post-Irene imagery (late August 2011).
 
 The imagery reader only finds a non-USGS year as
-`D:\Hatteras_GIS\aerial_imagery\<year>*\<year>_full_aerial.tif`, so save each
+`D:\hatteras_ch1\gis_sources\aerial_imagery\<year>*\<year>_full_aerial.tif`, so save each
 mosaic under that name. Then add an entry to `PHOTO_SOURCES` in
 `scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_on_imagery.py`
 (flight date, label, source reference), then:

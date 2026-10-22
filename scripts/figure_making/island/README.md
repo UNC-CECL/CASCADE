@@ -489,7 +489,7 @@ WHICH DOMAIN POLYGONS
     5-scr/2-transect-frame/transect_domains/HAT_domains.json: the 90 boxes, 2000 m cross-shore
     by 500 m alongshore, axis-aligned in UTM 18N, that every per-domain DEM
     clip and elevation array was cut from (the repository copy of
-    D:/Hatteras_GIS/domains.geojson). NOT the retired map_elements/archive/
+    D:/hatteras_ch1/gis_sources/domains.geojson). NOT the retired map_elements/archive/
     domains_1000m_20251014/HAT_domains.shp: an older 1000 x 500 m set whose ID runs about
     nine domains south of the model's, found 2026-09-17 when its box for
     "45" did not contain the array for domain 45.

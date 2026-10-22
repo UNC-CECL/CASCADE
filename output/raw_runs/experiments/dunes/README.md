@@ -24,6 +24,6 @@ The dune ceiling (Dmaxel), the growth rate (rmin, rmax) and the design height, a
 
 **Status**: **current** means its answer is in use now. **record** means a finished check, kept so the number can be traced. **superseded** means a later study replaced the answer.
 
-Every 10-13 and 10-19 study ran on the old storms (`v3_split12_trim24`), beach slope 0.04, and dune settings that changed on 10-20. Their `.npz` model states were deleted on 2026-10-20 (`../../README.md`); the tables, logs and metadata are kept. Studies from before 2026-10-05 are on `D:\archive\CASCADE_offload\output\raw_runs\experiments\storms-overwash-and-dunes\`.
+Every 10-13 and 10-19 study ran on the old storms (`v3_split12_trim24`), beach slope 0.04, and dune settings that changed on 10-20. Their `.npz` model states were deleted on 2026-10-20 (`../../README.md`); the tables, logs and metadata are kept. Studies from before 2026-10-05 are on `D:\hatteras_ch1\model_runs\output\raw_runs\experiments\storms-overwash-and-dunes\`.
 
 Back to [the map](../README.md).

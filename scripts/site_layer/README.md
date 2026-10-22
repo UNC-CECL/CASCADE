@@ -315,21 +315,23 @@ v3_split12_trim24 (the default since 2026-09-29): grouped events split at
 
 ### hat_gis_catalogue.py
 
-Run, not imported: fills the measured columns of `D:\Hatteras_GIS\catalogue.csv` (files, size, CRS,
+Run, not imported: fills the measured columns of `D:\hatteras_ch1\gis_sources\catalogue.csv` (files, size, CRS,
 resolution, extent, domains covered) and writes `coverage_by_domain.csv`, the share of each domain's
 land that each dataset covers. Land is the 2009 DEM above MHW, sampled on a 100 m grid (about 33
 points a domain); imagery and elevation count real pixels (ArcGIS `.jgwx`/`.pgwx` world files are read
 directly), point clouds their order footprint, shorelines whether a line crosses the domain.
 `--ids A1996 L2008` measures just those rows. Citations for the catalogue's keys:
-`D:\Hatteras_GIS\DATA_CITATIONS.md`.
+`D:\hatteras_ch1\gis_sources\DATA_CITATIONS.md`.
 
 ### hat_gis_root.py
 
-Where the Hatteras GIS drive is: `GIS_ROOT`, `D:\Hatteras_GIS` unless the environment variable
+Where the Hatteras GIS drive is: `GIS_ROOT`, `D:\hatteras_ch1\gis_sources` unless the environment variable
 `HATTERAS_GIS_ROOT` names another folder. Every script that reads the drive builds its paths from it
 (DEM build, survey crests, hole audit, imagery reader, map basemap, dune-line positions, overwash
-heatmap), so a second drive under another letter needs only `set HATTERAS_GIS_ROOT=E:\Hatteras_GIS`.
-What is on the drive: `D:\Hatteras_GIS\README.md`.
+heatmap), so a second drive under another letter needs only
+`set HATTERAS_GIS_ROOT=E:\hatteras_ch1\gis_sources`. `GIS_PROJECT` is the ArcGIS Pro project folder
+beside it (`D:\hatteras_ch1\gis_project`; the overwash heatmap reads its `Default.gdb`). What is on the
+drive: `D:\hatteras_ch1\README.md`.
 
 ### hat_extension_domains.py
 
@@ -905,9 +907,9 @@ output/figures/style/                the rendered style sheet
 
 Two of the layers were read straight off the D: GIS drive, so the figures
 that drew them could not be made without it: the domain boxes
-(D:/Hatteras_GIS/domains.geojson, identical in geometry and every
+(D:/hatteras_ch1/gis_sources/domains.geojson, identical in geometry and every
 attribute to 5-scr's HAT_domains.json, which is what DOMAIN_BOXES points at)
-and the NC 1:80k coastline (D:/Hatteras_GIS/coastline/nc_80k/, 6 MB for the
+and the NC 1:80k coastline (D:/hatteras_ch1/gis_sources/coastline/nc_80k/, 6 MB for the
 whole state; NC_COAST is the 25 km window around the domains, rebuilt by
 scripts/figure_making/tools/clip_nc_coast.py).
 

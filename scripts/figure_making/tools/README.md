@@ -38,7 +38,7 @@ coastline on the D: GIS drive.
 
 WHY
     The overwash maps drew the coast straight off
-    D:/Hatteras_GIS/coastline/nc_80k/nc_80k.shp -- 6 MB for the whole state --
+    D:/hatteras_ch1/gis_sources/coastline/nc_80k/nc_80k.shp -- 6 MB for the whole state --
     so they could not be made without the drive. They only ever use the land
     in a window a few km around the domain boxes, so the repository keeps that
     window: every polygon within NC_COAST_PAD_M (25 km) of the boxes, clipped,

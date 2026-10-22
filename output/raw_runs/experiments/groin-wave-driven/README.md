@@ -23,6 +23,6 @@ The wave-driven groin (`cascade.groin.GroinCallback`, once "corrected"): the run
 
 Every study before 10-20 ran on the old storms (`v3_split12_trim24`), beach slope 0.04 and Dmaxel 5.5 m. The strengths in use (0.16 / 0.10 / 0.25) still come from them and need refitting on the 10-20 settings.
 
-Studies here from before 2026-10-13 were moved on 2026-10-20 to `D:\archive\CASCADE_offload\output\raw_runs\experiments\groin-wave-driven\`, with this topic's table as it stood in the README there.
+Studies here from before 2026-10-13 were moved on 2026-10-20 to `D:\hatteras_ch1\model_runs\output\raw_runs\experiments\groin-wave-driven\`, with this topic's table as it stood in the README there.
 
 Back to [the map](../README.md).

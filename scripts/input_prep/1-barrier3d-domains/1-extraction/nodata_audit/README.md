@@ -534,7 +534,7 @@ margin is not a guide. See pick_frame.
 
 INPUT   dune-topo/<version>/hole_verdicts.csv          which holes conflict
         dune-topo/<version>/bracketed_hole_cells.csv   the cells to outline
-        D:\Hatteras_GIS\aerial_imagery\1996\usgs_henderson\frames\*.tif
+        D:\hatteras_ch1\gis_sources\aerial_imagery\1996\usgs_henderson\frames\*.tif
 
 OUTPUT  dune-topo/<version>/figures/aerial_1996_conflicts/
             sheet_D<a>-<b>.png        contact sheets, 12 chips each
@@ -1166,7 +1166,7 @@ the test cannot resolve a hole - a known, stated, one-directional bias.
 
 INPUT   dune-topo/<version>/bracketed_hole_cells.csv   from HAT_plot_island_nodata
         <product>/npy-arrays/domain_<N>.npy            raw nodata, for shape
-        D:\Hatteras_GIS\elevation\dem\2014\noaa_2014_NCFMP_*\*.tif
+        D:\hatteras_ch1\gis_sources\elevation\dem\2014\noaa_2014_NCFMP_*\*.tif
 
 OUTPUT  dune-topo/<version>/hole_verdicts.csv          per hole, both votes
         dune-topo/<version>/dropout_mask/domain_<N>.npy  bool, cleared cells only

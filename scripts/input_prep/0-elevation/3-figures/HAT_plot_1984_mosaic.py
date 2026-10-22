@@ -59,7 +59,7 @@ IN_DIR = _P.resampled_10m
 AUDIT_1M = _P.audit_1m
 FIG_DIR = _P.figures
 
-# The repository copy of D:/Hatteras_GIS/domains.geojson (identical; 2026-09-18).
+# The repository copy of D:/hatteras_ch1/gis_sources/domains.geojson (identical; 2026-09-18).
 from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 # NC-12 alignments, reprojected from NC State Plane feet; both drawn, 1984 dashed over 2004
 from site_layer.hat_topo_version import ROAD_LINE_ROOT as ROAD_DIR  # noqa: E402

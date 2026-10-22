@@ -525,7 +525,7 @@ the path, anchored on REPO (rule 5), never counted from this file.
 ```
 
 ```text
-The repository copy (identical to D:/Hatteras_GIS/domains.geojson in
+The repository copy (identical to D:/hatteras_ch1/gis_sources/domains.geojson in
 geometry and every attribute, hotspot and armor included; 2026-09-18).
 ```
 

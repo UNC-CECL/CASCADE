@@ -193,7 +193,7 @@ diffusivity at the groin is non-zero and moderate: a fixed wave climate near the
 under 45° and a strength up to 0.5. Within this range it conserves sand and reaches a steady fillet; outside it
 the model stops the run."*
 
-**Model output is not here.** Runs are under `output/raw_runs/experiments/groin-blocking/<study>/` and `groin-wave-driven/<study>/` (`groin/` on D:); the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The fixed-shift groin (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\archive\CASCADE_offload\output\calibration\` on 2026-10-07.
+**Model output is not here.** Runs are under `output/raw_runs/experiments/groin-blocking/<study>/` and `groin-wave-driven/<study>/` (`groin/` on D:); the old blocking pin's `joint_fit.json` is in `output/calibration/groin/` (no longer read by anything). The fixed-shift groin (M, f) sweeps, `SELECTED_M60_f0.60/` and the 1967-2018 rig runs moved to `D:\hatteras_ch1\model_runs\output\calibration\` on 2026-10-07.
 
 ## Conventions
 

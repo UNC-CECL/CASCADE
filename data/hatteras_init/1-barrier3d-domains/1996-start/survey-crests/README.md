@@ -5,7 +5,7 @@ Same method as `../../2009-start/survey-crests/README.md`, on the 1996 start's c
 windows (`1-extraction/picks/HAT_dune_search_windows_v2.json`). The script first reproduces the 1996-start
 dune files from its own arrays (to 1e-15 m).
 
-The 1996-2005 surveys are the NOAA Data Access Viewer grids as downloaded (`D:\Hatteras_GIS\elevation\lidar`),
+The 1996-2005 surveys are the NOAA Data Access Viewer grids as downloaded (`D:\hatteras_ch1\gis_sources\elevation\lidar`),
 3-9 m or ft, reprojected bilinearly onto the 1 m clips; the vertical unit is read from the CRS or from the
 land-elevation ratio to the 1996 arrays (`survey_sources.csv`) and converted to metres. Coarse grids blur
 individual crests: the 1996 grid against the 1 m 1996 survey matches in median (+0.01 m), 10th percentile

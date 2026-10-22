@@ -366,7 +366,7 @@ DUNE_LINE_FOR_YEAR = {
     1996: 1997,   # no 1996 imagery; the nearest island-wide survey
     2004: 2004,
     2009: 2009,   # the 2009 line; key was 2010 until 2026-10-05 (no 2010 aerial imagery)
-    2024: 2023,   # the 2023 NOAA imagery (D:\Hatteras_GIS\Aerial\2023); end year of 2004-2024 and 2010-2024
+    2024: 2023,   # the 2023 NOAA imagery (D:\hatteras_ch1\gis_sources\Aerial\2023); end year of 2004-2024 and 2010-2024
 }
 
 

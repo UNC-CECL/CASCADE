@@ -70,7 +70,7 @@ version stay in that version's `dune-topo/<version>/figures/`.
 ## Offloaded 2026-10-19
 
 Used only by the retired 1984 and 2004 starts, moved (SHA-256 verified) to
-`D:\archive\CASCADE_offload\data\hatteras_init\1-barrier3d-domains\`
+`D:\hatteras_ch1\model_runs\data\hatteras_init\1-barrier3d-domains\`
 under their OLD paths:
 
 ```
