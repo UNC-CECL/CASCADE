@@ -90,3 +90,27 @@ not where the real fast and slow dunes are.
 Reading: 0.01-0.03 matches the island-wide 2009 median (5.37 vs 5.39) and is level with or best on every other
 score; Isabel 45/48 (43 on the uncorrected start). Shoreline RMSE is still well above the old model's (1.23 /
 1.66): the ends were solved on 5.5 m / 0.55-0.95, beach slope 0.04 and the uncorrected start; re-solve next.
+
+## One rate island-wide, or one per domain? (2026-10-21; island-wide kept, Hannah)
+
+Rates fitted per domain straight from the surveys, no model runs (`HAT_dune_growth_alongshore_survey_fit.py`
+`--widened --intervals`: per cell, the log-odds gain over storm-free survey intervals divided by their years).
+The method reproduces the adopted rates (stable domains 0.023, 1996-2009) and finds an alongshore pattern that
+repeats between the windows once smoothed (7-domain running medians r 0.74, domain by domain 0.38). Nothing
+explains it: beach width runs the wrong way (Spearman -0.38 / -0.32), CoastSat net change shows nothing, and low
+dunes regrow faster than the logistic allows (-0.41 / -0.33), a property of the growth law, not of place
+(`HAT_dune_growth_beach_width_check.py`). Rodanthe / the S-curves (GIS 76-88) read as rebuilding, not growth.
+
+Sensitivity test (`HAT_dune_growth_alongshore_sensitivity.py`; full management, edgeBE, groin; the smoothed
+pattern divided by its mean, times the adopted bounds, through the runner's `HAT_GROWTH_OVERRIDE`):
+
+| | shoreline RMSE 1996 / 2009 | crest median RMSE 1996 / 2009 | overwash skill 1996 / 2009 |
+|---|---|---|---|
+| island-wide (adopted) | 1.267 / 2.056 | 0.20 / 0.16 | 0.535 / 0.123 |
+| each window's own pattern | 1.250 / 2.057 | 0.21 / 0.20 | 0.519 / 0.105 |
+| both windows' mean pattern | 1.258 / 2.051 | 0.20 / 0.20 | 0.536 / 0.108 |
+
+Reading: the shoreline moves by under 0.02 m/yr, the dunes and overwash are level or worse, and the modelled
+crests follow the surveyed ones alongshore no better. One rate per period, island-wide, is kept. Runs, tables and
+figures: `output/raw_runs/experiments/dunes/2026-10-21-alongshore-dune-growth-survey-fit/` and
+`.../2026-10-21-alongshore-growth-sensitivity/`.
