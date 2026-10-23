@@ -218,7 +218,7 @@ run a duplicate of the baseline under a name that hides which one it is.
 ```text
 The environment one sweep cell runs under.
 
-Mirrors `HAT_run_all.run_once`, including HAT_IGNORE_SETTINGS: without it
+Mirrors `HAT_run_matrix.run_hindcast`, including HAT_IGNORE_SETTINGS: without it
 the settings this does not set would come from whatever experiment was last
 left in `hat_run.yaml`, and every cell would silently inherit it. Stray
 HAT_* variables in the calling shell are dropped for the same reason.

@@ -111,7 +111,7 @@ def as_environment_value(value):
     return MEASURED if normalise(value) is None else repr(normalise(value))
 
 
-# The environment one sweep cell runs under, as HAT_run_all.run_once builds it
+# The environment one sweep cell runs under, as HAT_run_matrix.run_hindcast builds it
 def build_environment(start_year, sweep, value, args):
     environment = {key: val for key, val in os.environ.items()
                    if not key.startswith("HAT_")}

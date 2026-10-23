@@ -141,11 +141,11 @@ brie_venv
 output/*
 !output/raw_runs/
 
-# joint_fit.json is the ONLY thing under output/ that is an INPUT rather than a
-# product: HAT_run_matrix.py stage 6 reads it and passes its (M, f) to every groin
-# run in the matrix. Untracked, the calibrated pair lived on one machine only --
-# a clone had no groin parameters at all, and the values existed solely in
-# commit messages. Tracked, the pin travels with the repository. It lived at
+# joint_fit.json holds the (M, f) fit of the retired dipole groin. Until
+# 2026-10-14 the matrix's groin runs read it; the groin is now set in
+# hat_run.yaml, and only input_prep/7-source-sink/2-calibrate/
+# be_zone_residual_fit.py still reads it. Tracked so the fitted pair survives a
+# clone instead of living on one machine and in commit messages. It lived at
 # output/groin_sweep/ until 2026-09-18; it is now output/calibration/groin/ and
 # is re-included by the output/calibration/ block below.
 
@@ -178,7 +178,7 @@ output/archive/**
 
 # output/calibration/ (2026-09-18): the decision records -- hs/DECISION.md
 # (Hs = 2.5), sensitivity/figures/README.md, groin/SELECTED_M60_f0.60/README.md
-# (M, f) -- every folder's README, and groin/joint_fit.json (an INPUT), so
+# (M, f) -- every folder's README, and groin/joint_fit.json, so
 # the reasons behind the calibrated values survive a clone. Runs, manifests,
 # logs and figures stay ignored.
 !output/calibration/
