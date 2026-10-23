@@ -184,7 +184,7 @@ HATTERAS_PERIODS = {
         "topo_product": YEAR_PRODUCT[1996],
         # No fill falls in 1996-2008; Rodanthe 2014 is the first
         "enable_nourishment": False,
-        "nourishment_volume": 100,  # m^3/m passed to Cascade init
+        "nourishment_volume": 0,  # m^3/m
     },
     2009: {
         # Key was 2010 until 2026-10-05: the period starts in its DEM's year (USACE 2009, flown 2009-08-10 to 08-24)
