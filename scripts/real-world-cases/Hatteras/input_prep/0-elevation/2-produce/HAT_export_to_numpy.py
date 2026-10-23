@@ -1,0 +1,166 @@
+"""
+Step 3 of 3: convert each 10 m domain raster to the .npy array HAT_dune_topo_extractor.py reads.
+
+    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py --product 2009-2014-1996   # -> 1996-start
+    python scripts/input_prep/0-elevation/2-produce/HAT_export_to_numpy.py                            # -> 2009-start
+
+Writes data/hatteras_init/1-barrier3d-domains/<period>/npy-arrays/ (m NAVD88,
+-10 nodata) and npy-arrays_survey/ (provenance). Details: scripts/input_prep/0-elevation/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
+
+# Non-code files beside this script live in the workspace on D: (hatteras_paths.workspace_twin)
+import sys as _hat_sys  # noqa: E402
+from pathlib import Path as _HatPath  # noqa: E402
+_HAT_DIR = next(_p for _p in _HatPath(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import workspace_twin  # noqa: E402
+import csv
+import re
+import sys
+from pathlib import Path
+
+import numpy as np
+import rasterio
+
+
+# Walk up until a directory holds data/hatteras_init
+def _find_project_root(start: Path) -> Path:
+    for p in [start, *start.parents]:
+        if (p / "data" / "hatteras_init").is_dir():
+            return p
+    raise SystemExit(f"cannot find data/hatteras_init above {start}")
+
+
+PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
+INIT_ROOT = workspace_twin(PROJECT_ROOT) / "data" / "hatteras_init"
+import sys as _elsys
+from pathlib import Path as _ELP
+_elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
+                               if (_q / "hatteras_paths.py").exists())))
+from site_layer import hat_elevation_products as _el  # noqa: E402
+ELEVATION_DIR = _el.ELEVATION_ROOT
+
+# --- CONFIG ------------------------------------------------------------------
+# Which elevation product to export
+SOURCE_TAG = "2009-2014"
+if "--product" in sys.argv:
+    SOURCE_TAG = sys.argv[sys.argv.index("--product") + 1]
+
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from site_layer.hat_elevation_products import product as _product  # noqa: E402
+
+INPUT_DIR = _product(SOURCE_TAG).resampled_10m
+INPUT_GLOB = "resampled_domain_*_filled.tif"
+ID_PATTERN = re.compile(r"resampled_domain_(\w+)_filled\.tif$")
+
+DEM_YEAR = "2009"
+# WHICH PERIOD PRODUCT these arrays are for
+TOPO_TARGET = "1996-start" if SOURCE_TAG == "2009-2014-1996" else "2009-start"
+if "--target" in sys.argv:
+    TOPO_TARGET = sys.argv[sys.argv.index("--target") + 1]
+
+DEM_NAME = SOURCE_TAG   # recorded in the audit; no longer a path segment
+
+# Period-first (2026-08-25). Was {DEM_YEAR}-raw/{DEM_YEAR}-npy-arrays/{DEM_NAME}.
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+NPY_ROOT = _b3d.product_dir(TOPO_TARGET)
+OUTPUT_DIR, SURVEY_DIR = _b3d.npy_dirs(TOPO_TARGET)          # the extraction half (2026-09-09)
+
+NODATA_FILL = -10.0   # the extractor detects nodata as raw <= -9.0
+EXPECTED_SHAPE = (50, 200)
+
+AUDIT_CSV = "export_audit.csv"
+
+SURVEY_2009, SURVEY_NONE = 2009, 0
+# Every non-base code this product's survey rasters may carry
+from site_layer.hat_elevation_products import fill_codes as _fill_codes  # noqa: E402
+SURVEY_FILL_CODES = list(_fill_codes(SOURCE_TAG)) or [2014]
+# -----------------------------------------------------------------------------
+
+
+# Run: per domain, write the elevation and provenance arrays, then the audit
+def main():
+    if not INPUT_DIR.exists():
+        raise FileNotFoundError(
+            f"{INPUT_DIR} not found - run HAT_dem_resample_clip.py first.")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    SURVEY_DIR.mkdir(parents=True, exist_ok=True)
+
+    paths = sorted(INPUT_DIR.glob(INPUT_GLOB))
+    if not paths:
+        raise FileNotFoundError(f"no {INPUT_GLOB} in {INPUT_DIR}")
+    print(f"{len(paths)} domain raster(s) in {INPUT_DIR}")
+    print(f"-> {OUTPUT_DIR}")
+
+    audit, n_bad = [], 0
+    for p in paths:
+        m = ID_PATTERN.search(p.name)
+        if not m:
+            print(f"  WARNING: cannot parse domain id from {p.name} - skipping")
+            continue
+        dom = m.group(1)
+
+        with rasterio.open(p) as src:
+            arr = src.read(1).astype(np.float32)
+            nd = src.nodata
+        if nd is not None and not np.isnan(nd):
+            arr = np.where(arr == nd, np.nan, arr)
+        out = np.where(np.isnan(arr), NODATA_FILL, arr).astype(np.float32)
+
+        if EXPECTED_SHAPE is not None and out.shape != tuple(EXPECTED_SHAPE):
+            n_bad += 1
+            print(f"  domain {dom}: ERROR shape {out.shape}, expected "
+                  f"{tuple(EXPECTED_SHAPE)}")
+
+        np.save(OUTPUT_DIR / f"domain_{dom}.npy", out)
+
+        n_filled = -1
+        survey_tif = INPUT_DIR / f"resampled_domain_{dom}_survey.tif"
+        if survey_tif.exists():
+            with rasterio.open(survey_tif) as src:
+                survey = src.read(1).astype(np.uint16)
+            np.save(SURVEY_DIR / f"domain_{dom}.npy", survey)
+            n_filled = int(np.isin(survey, SURVEY_FILL_CODES).sum())
+
+        n_nodata = int((out == NODATA_FILL).sum())
+        valid = out[out != NODATA_FILL]
+        if len(valid):
+            print(f"  domain {dom:>3}: {out.shape}  min={valid.min():6.2f} "
+                  f"mean={valid.mean():6.2f} max={valid.max():6.2f}  "
+                  f"nodata {n_nodata:5d}  filled {n_filled}")
+        else:
+            print(f"  domain {dom:>3}: {out.shape}  ALL NODATA")
+
+        audit.append({
+            "domain": dom, "rows": out.shape[0], "cols": out.shape[1],
+            "nodata_cells": n_nodata, "filled_cells": n_filled,
+            "min_m_navd88": float(valid.min()) if len(valid) else None,
+            "mean_m_navd88": float(valid.mean()) if len(valid) else None,
+            "max_m_navd88": float(valid.max()) if len(valid) else None,
+        })
+
+    path = OUTPUT_DIR / AUDIT_CSV
+    with open(path, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(audit[0].keys()))
+        w.writeheader(); w.writerows(audit)
+
+    print(f"\n{len(audit)} array(s) written")
+    if n_bad:
+        print(f"*** {n_bad} domain(s) have the wrong shape ***")
+    print(f"""
+TO USE THIS SET, in HAT_dune_topo_extractor.py:
+    TOPO_PRODUCT = "{TOPO_TARGET}"
+    VERSION      = <a new version, e.g. "v1">   # picks are PER VERSION
+Picks live at 1-barrier3d-domains/{TOPO_TARGET}/picks/ and save_windows() writes
+back after every domain, so a VERSION whose pick file does not exist starts from
+defaults - it does not inherit another version's windows.""")
+
+
+if __name__ == "__main__":
+    main()

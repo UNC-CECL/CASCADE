@@ -1,0 +1,326 @@
+"""
+One window's LRR at transect resolution over a short reach, transects on the x axis.
+
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --window 1996_2024 --gis 28 36
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --slide
+
+Writes the zoom figure under the window's transects/ folder. Details: scripts/input_prep/5-scr/3-rates/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in Path(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as _REPO  # noqa: E402
+sys.path.insert(0, str(_HAT_DIR))
+sys.path.insert(0, str(_HAT_DIR / "input_prep" / "5-scr" / "lib"))
+import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
+
+import matplotlib  # noqa: E402
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.legend_handler import HandlerTuple  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.ticker import MultipleLocator  # noqa: E402
+
+import coastsat_lrr_windows as cw  # noqa: E402
+import rates_figures as rf  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
+    GRID_C, INK_MUTED, SMOOTH_RAMP, apply_style, caption, figsize, save,
+)
+from cascade_pipeline.coastsat_lowess import (  # noqa: E402
+    DEFAULT_LOWESS, lowess_transect_values,
+)
+from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
+
+# --- CONFIG ------------------------------------------------------------------
+DEFAULT_WINDOW = "1996_2024"
+DEFAULT_GIS = (64, 72)
+BAND_C = GRID_C          # the alternating domain bands
+MEAN_LW = 1.6
+TARGET_LW = 1.6
+Y_PAD = 0.4              # m/yr of headroom over the whiskers
+# --slide: the same figure sized for a slide (house type is absolute, so it reads larger)
+SLIDE_W_IN = 3.4
+SLIDE_ASPECT = 0.80
+# A slide panel is a third the width of the page figure
+SLIDE_GIS = (66, 69)
+DOT_S = 11.0
+DOT_S_SLIDE = 9.0
+XTICK = 10
+XTICK_SLIDE = 10
+LOWESS_LW = 1.6
+LOWESS_WINDOW = max(DEFAULT_LOWESS.window_domains)
+MAX_LABELLED_BANDS = 20  # past this, no domain shading and no numbers
+# The along-coast axis covers anything from a 4 km reach to the whole 45 km island
+MAX_XTICKS = 9
+NICE_STEPS_M = (100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0)
+KM_ABOVE_M = 10000.0     # span past which the axis is drawn in km, not m
+# -----------------------------------------------------------------------------
+
+
+# Transect rows inside GIS lo..hi, south to north, with an x position
+def load(stem, lo, hi, lowess_window=None):
+    t = pd.read_csv(COASTSAT_LRR_ROOT / stem / "transect_lrr_full.csv")
+    t["domain_number"] = t["domain_number"].astype(int)
+    t = t[t["domain_number"].between(DOM.first_gis_id, DOM.last_gis_id)].copy()
+    t = t.sort_values(["domain_number", "transect_id"]).reset_index(drop=True)
+    sp = DOM.domain_spacing_m
+    rank = t.groupby("domain_number").cumcount()
+    n = t.groupby("domain_number")["domain_number"].transform("count")
+    t["along_m"] = ((t["domain_number"] - DOM.first_gis_id) * sp
+                    + (rank + 0.5) * (sp / n))
+    frac = None
+    if lowess_window:
+        sm, frac = lowess_transect_values(t["along_m"].to_numpy(float),
+                                         t["lrr_m_yr"].to_numpy(float),
+                                         lowess_window)
+        t["lowess"] = sm if sm is not None else np.nan
+    t = t[t["domain_number"].between(lo, hi)].reset_index(drop=True)
+    t["x"] = np.arange(len(t), dtype=float)
+    return t, frac
+
+
+# (scale, unit, tick step) for an along-coast axis spanning `span_m`
+def along_axis(span_m):
+    scale, unit = ((1000.0, "km") if span_m >= KM_ABOVE_M else (1.0, "m"))
+    step = next((v for v in NICE_STEPS_M if span_m / v <= MAX_XTICKS),
+                NICE_STEPS_M[-1])
+    return scale, unit, step / scale
+
+
+# [(domain, left, right)] per domain, in the coordinate on the x axis
+def bands(t, metres=False):
+    out = []
+    sp = DOM.domain_spacing_m
+    for d in sorted(t["domain_number"].unique()):
+        g = t.loc[t["domain_number"] == d]
+        if metres:
+            left = (d - DOM.first_gis_id) * sp
+            right = left + sp
+        else:
+            left, right = float(g["x"].min()) - 0.5, float(g["x"].max()) + 0.5
+        out.append((int(d), float(left), float(right)))
+    return out
+
+
+# The reach at transect resolution, domain means and target over it
+def figure(stem, lo, hi, with_target=False, slide=False, with_lowess=False,
+           x="transect", domains_shown=True):
+    start, end = (int(v) for v in stem.split("_"))
+    metres = (x == "metres")
+    t, frac = load(stem, lo, hi, LOWESS_WINDOW if with_lowess else None)
+    if t.empty:
+        raise SystemExit(f"no transects in GIS {lo}-{hi} for {stem}")
+    xv = t["along_m" if metres else "x"].to_numpy(float)
+    xscale, xunit, xstep = along_axis(float(xv.max() - xv.min())) if metres else (1.0, "", 0)
+    xv = xv / xscale
+    y = t["lrr_m_yr"].to_numpy(float)
+    unc = t["unc_m_yr"].to_numpy(float)
+    # Off by default (Hannah, 2026-09-22)
+    target = (rf._target(pd.read_csv(COASTSAT_LRR_ROOT / stem / "transect_lrr_full.csv"))
+              if with_target else None)
+
+    size = (figsize(SLIDE_W_IN, aspect=SLIDE_ASPECT) if slide
+            else figsize("double", aspect=0.40))
+    fig, ax = plt.subplots(figsize=size, constrained_layout=True)
+
+    # Every other domain shaded, so a band is a domain without a legend entry
+    bs = [(d, a / xscale, b / xscale) for d, a, b in bands(t, metres)]
+    if domains_shown and len(bs) <= MAX_LABELLED_BANDS:
+        for i, (d, x0, x1) in enumerate(bs):
+            if i % 2:
+                ax.axvspan(x0, x1, color=BAND_C, alpha=0.45, lw=0, zorder=0)
+            ax.text((x0 + x1) / 2, 1.0, str(d),
+                    transform=ax.get_xaxis_transform(), ha="center", va="bottom",
+                    fontsize=6.5, color=INK_MUTED, clip_on=False)
+
+    ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
+
+    col = np.where(y < 0, cw.C_ERODE, cw.C_ACCRETE)
+    ax.errorbar(xv, y, yerr=unc, fmt="none", ecolor=INK_MUTED, elinewidth=0.6,
+                alpha=0.55, capsize=0, zorder=3)
+    ax.scatter(xv, y, s=(DOT_S_SLIDE if slide else DOT_S), c=col,
+               linewidths=0, zorder=4)
+
+    # The per-domain values, each flat across the domain it belongs to
+    target_c = SMOOTH_RAMP[1] if (with_lowess and target is not None) else SMOOTH_RAMP[-1]
+    for d, x0, x1 in (bs if domains_shown else []):
+        m = float(t.loc[t["domain_number"] == d, "lrr_m_yr"].mean())
+        ax.plot([x0, x1], [m, m], color=INK_MUTED, lw=MEAN_LW,
+                solid_capstyle="butt", zorder=5)
+        if target is not None and d in target.index and np.isfinite(target.loc[d]):
+            ax.plot([x0, x1], [target.loc[d]] * 2, color=target_c, lw=TARGET_LW,
+                    solid_capstyle="butt", zorder=6)
+
+    if with_lowess and "lowess" in t:
+        ax.plot(xv, t["lowess"].to_numpy(float), color=SMOOTH_RAMP[-1],
+                lw=LOWESS_LW, solid_capstyle="round", zorder=7)
+
+    if not domains_shown:
+        # No bands to align to, so the panel holds the markers and a little air
+        pad = (float(np.median(np.diff(np.sort(xv)))) if len(xv) > 1 else 1.0)
+        ax.set_xlim(float(xv.min()) - pad, float(xv.max()) + pad)
+    else:
+        ax.set_xlim(*((bs[0][1], bs[-1][2]) if metres else (-1.0, len(t))))
+    # Bounds over EVERY series drawn, not just the markers
+    drawn = [y - unc, y + unc]
+    if domains_shown:
+        drawn.append(np.array([float(t.loc[t["domain_number"] == d, "lrr_m_yr"].mean())
+                               for d, _, _ in bs]))
+    if with_lowess and "lowess" in t:
+        drawn.append(t["lowess"].to_numpy(float))
+    if target is not None and domains_shown:
+        drawn.append(target.reindex([d for d, _, _ in bs]).to_numpy(float))
+    ylo = float(np.nanmin(np.concatenate(drawn))) - Y_PAD
+    yhi = float(np.nanmax(np.concatenate(drawn))) + Y_PAD
+    # The page figure always holds zero -- the line sign is read against is worth the white space in a document
+    if not slide:
+        ylo, yhi = min(0.0, ylo), max(0.0, yhi)
+    ax.set_ylim(ylo, yhi)
+    zero_shown = ylo <= 0.0 <= yhi
+    if metres:
+        ax.xaxis.set_major_locator(MultipleLocator(xstep))
+        if len(bs) <= MAX_LABELLED_BANDS:
+            ax.xaxis.set_minor_locator(
+                MultipleLocator(DOM.domain_spacing_m / xscale))
+    else:
+        ax.xaxis.set_major_locator(MultipleLocator(XTICK_SLIDE if slide else XTICK))
+    ax.yaxis.grid(True, zorder=0)
+    ax.set_axisbelow(True)
+    banded = domains_shown and len(bs) <= MAX_LABELLED_BANDS
+    # The page label does not fit a 3.4 in panel -- it ran off both edges
+    if not domains_shown:
+        # No domain vocabulary on the panel at all, not even the reach
+        ax.set_xlabel(f"Along-coast distance ({xunit})" if metres
+                      else ("CoastSat transect, S → N" if slide
+                            else "CoastSat transect, south → north"))
+    elif slide:
+        ax.set_xlabel((f"Along-coast distance ({xunit})" if metres
+                       else "CoastSat transect, S → N")
+                      + f", GIS {lo}–{hi}")
+    else:
+        ax.set_xlabel(
+            (f"Along-coast distance from GIS {DOM.first_gis_id} ({xunit}), "
+             "south → north" if metres else "CoastSat transect, south → north")
+            + f" (GIS {lo}–{hi})"
+            + (", domain shaded and numbered" if banded else ""))
+    ax.set_ylabel(cw.Y_LABEL)
+    cw.open_frame(ax)
+
+    h = [(Line2D([], [], color=cw.C_ACCRETE, marker="o", ms=3.4, lw=0),
+          Line2D([], [], color=cw.C_ERODE, marker="o", ms=3.4, lw=0)),
+         Line2D([], [], color=INK_MUTED, lw=0.6)]
+    labels = ["Individual transects", "95 % confidence interval"]
+    if domains_shown:
+        h.append(Line2D([], [], color=INK_MUTED, lw=MEAN_LW))
+        labels.append("Domain mean")
+    if target is not None:
+        h.append(Line2D([], [], color=target_c, lw=TARGET_LW))
+        labels.append("Graded target")
+    if with_lowess:
+        h.append(Line2D([], [], color=SMOOTH_RAMP[-1], lw=LOWESS_LW))
+        labels.append(f"LOWESS, {LOWESS_WINDOW * 0.5:g} km")
+    fig.legend(h, labels, loc="outside lower center",
+               ncol=(2 if slide else len(h)), frameon=False,
+               handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
+
+    n_dom = len(bs)
+    per = t.groupby("domain_number").size()
+    caption(fig, (
+        f"Observed shoreline change rate at transect resolution, GIS {lo}–{hi} "
+        f"({n_dom} domains, {len(t)} CoastSat transects, {per.min()}–{per.max()} "
+        f"per domain), {start}–{end}. Each marker is one transect's ordinary-"
+        "least-squares slope of shoreline position against date over the calendar "
+        f"window (1 January {start} to 31 December {end}), seaward positive, blue "
+        "where the shoreline moved seaward and red where it moved landward; the "
+        "whisker is that fit's 95 % confidence interval."
+        + (" Shaded bands are the 500 m GIS domains, numbered along the top: "
+           "the grey segment across each is the plain mean of the markers above "
+           "it, the value domain_lrr_summary.csv holds." if domains_shown else
+           " Nothing on the panel is aggregated: no domain bands, no domain "
+           "means, only the transects as fitted.")
+        + (" The dark blue segment is the target a model run is scored against, a "
+           "5 km alongshore LOWESS of these same transect rates; it is not an "
+           "average of the band it sits in — it reads 5 km in both directions, so "
+           "it can fall outside the markers beneath it." if target is not None else "")
+        + (f" The dark blue curve is the LOWESS itself, at the resolution it is "
+           f"fitted at: one value per transect, window {LOWESS_WINDOW * 0.5:g} km "
+           f"(frac {frac:.3f} of the island's transects). It is fitted over the "
+           "whole island and sliced to this reach, not fitted to the reach, so "
+           "near either edge it is reading transects outside the panel."
+           if with_lowess else "")
+        + (" The x axis is along-coast distance, the coordinate the LOWESS "
+           f"actually uses, measured from the south end of the modelled reach "
+           f"(GIS {DOM.first_gis_id}); transects sit about 50 m apart, so the "
+           "spacing on the page is the spacing on the beach."
+           if metres else "")
+        + " The y axis is set by this reach, not by the island-wide bound of "
+        "the window figures"
+        + ("" if zero_shown else
+           ("; zero is off the panel, so every rate shown is "
+            + ("seaward" if ylo > 0 else "landward")))
+        + ". "
+        + rf._marks_clause(start, end)))
+    folder = COASTSAT_LRR_ROOT / stem / "transects" / ("slides" if slide else "")
+    name = (f"lrr_transects_{stem}_gis{lo}-{hi}"
+            + ("" if domains_shown else "_no_domains")
+            + ("_metres" if metres else "")
+            + ("_with_lowess" if with_lowess else "")
+            + ("_with_target" if target is not None else "")
+            + ("_slide" if slide else ""))
+    out = save(fig, folder / name)
+    plt.close(fig)
+    return out
+
+
+# Run: the zoom (or its slide version)
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--window", default=DEFAULT_WINDOW, help="e.g. 1996_2024")
+    ap.add_argument("--gis", nargs=2, type=int, default=None,
+                    metavar=("LO", "HI"),
+                    help=f"inclusive GIS domain span (default "
+                         f"{DEFAULT_GIS[0]}-{DEFAULT_GIS[1]}, or "
+                         f"{SLIDE_GIS[0]}-{SLIDE_GIS[1]} with --slide)")
+    ap.add_argument("--target", action="store_true",
+                    help="also draw the scoring curve, to <stem>_with_target.png")
+    ap.add_argument("--slide", action="store_true",
+                    help=f"{SLIDE_W_IN:g} in canvas for a slide, "
+                         "to <stem>_slide.png")
+    ap.add_argument("--lowess", action="store_true",
+                    help="draw the LOWESS curve through the transects")
+    ap.add_argument("--x", choices=("transect", "metres"), default="transect",
+                    help="x axis: transect order (default) or along-coast metres")
+    ap.add_argument("--no-domains", action="store_true",
+                    help="transects only: no domain bands, numbers or means")
+    a = ap.parse_args(argv)
+    if a.gis is None:
+        a.gis = list(SLIDE_GIS if a.slide else DEFAULT_GIS)
+    apply_style()
+    for p in figure(a.window, a.gis[0], a.gis[1], with_target=a.target,
+                   slide=a.slide, with_lowess=a.lowess, x=a.x,
+                   domains_shown=not a.no_domains):
+        print(f"wrote    {p.relative_to(_REPO)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

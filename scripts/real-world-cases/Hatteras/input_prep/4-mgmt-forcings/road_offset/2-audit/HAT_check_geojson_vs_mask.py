@@ -1,0 +1,232 @@
+"""
+Does the rasterized road mask sit where the source geojson says the road is?
+
+    python scripts/input_prep/4-mgmt-forcings/road_offset/2-audit/HAT_check_geojson_vs_mask.py
+
+Read-only QC on the rasterization alone, in the original raster frame;
+prints the checks and fails loudly if it compared nothing. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import geopandas as gpd
+import rasterio
+
+# Repo root, found by searching upward
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in Path(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as _PATH_REPO  # noqa: E402
+
+PROJECT_ROOT = Path(str(_PATH_REPO))
+INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "hatteras_paths.py").exists())))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
+ROADS_ROOT = _tv.ROADS_ROOT
+
+MASK_FMT = ROADS_ROOT / "raster" / "{year}" / "masks" / "domain_{d}_road_{year}.npy"
+GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
+# Clip rasters, repointed after the 2026-08-25 move so nothing moves
+TIF_FMT = _tv.DOMAIN_CLIPS_DIR / "domain_{d}" / "resampled_domain_{d}.tif"
+
+YEARS = [1978, 2008]   # LINE vintages (hat_topo_version.ROAD_LINE_FOR_YEAR), not period starts
+DOMAINS = list(range(1, 91))
+CELL_SIZE_M = 10.0
+
+# Documented relocation blocks (1999, 1989), used only to read check 4
+RELOCATION_BLOCKS = [(9, 16), (84, 88)]
+# -----------------------------------------------------------------------------
+
+
+# Centerline position per raster row, in ORIGINAL (row, col) cell units
+def geojson_cols_by_row(line_gdf, tif_path: Path):
+    with rasterio.open(tif_path) as src:
+        crs, inv, bounds, shape = src.crs, ~src.transform, src.bounds, src.shape
+
+    line = line_gdf.to_crs(crs)
+    rows, cols = [], []
+    for geom in line.geometry:
+        parts = geom.geoms if geom.geom_type.startswith("Multi") else [geom]
+        for part in parts:
+            xy = np.asarray(part.coords)
+            # Densify so a long segment crossing the domain still lands in every row it passes through
+            for (x0, y0), (x1, y1) in zip(xy[:-1], xy[1:]):
+                n = max(2, int(max(abs(x1 - x0), abs(y1 - y0)) / 2.0))
+                for x, y in zip(np.linspace(x0, x1, n), np.linspace(y0, y1, n)):
+                    if not (bounds.left <= x <= bounds.right
+                            and bounds.bottom <= y <= bounds.top):
+                        continue
+                    c, r = inv * (x, y)
+                    if 0 <= r < shape[0] and 0 <= c < shape[1]:
+                        rows.append(r)
+                        cols.append(c)
+    if not rows:
+        return {}
+    rows = np.floor(np.asarray(rows)).astype(int)
+    cols = np.asarray(cols)
+    return {int(r): float(cols[rows == r].mean()) for r in np.unique(rows)}
+
+
+# One vintage: mask cells against the geojson, profile by profile
+def check_year(year: int) -> dict:
+    geo = gpd.read_file(str(GEOJSON_FMT).format(year=year))
+    contained = miss = 0
+    offsets = []
+    geo_no_mask, mask_no_geo = [], []
+    missing_tif = []
+    per_domain = {}
+
+    for d in DOMAINS:
+        tif = Path(str(TIF_FMT).format(d=d))
+        mask_path = Path(str(MASK_FMT).format(year=year, d=d))
+        # A MISSING TIF USED TO BE INDISTINGUISHABLE FROM "no road here"
+        if not tif.is_file():
+            missing_tif.append(d)
+            continue
+        if not mask_path.is_file():
+            continue
+        mask = np.load(mask_path)
+        mask = np.isfinite(mask) & (mask > 0)
+        line_cols = geojson_cols_by_row(geo, tif)
+
+        d_contained = d_miss = 0
+        d_off = []
+        for r in range(mask.shape[0]):
+            cells = np.flatnonzero(mask[r])
+            has_line = r in line_cols
+            if not cells.size and not has_line:
+                continue
+            if has_line and not cells.size:
+                geo_no_mask.append((d, r))
+                continue
+            if cells.size and not has_line:
+                mask_no_geo.append((d, r))
+                continue
+            c = line_cols[r]
+            # Cell k spans [k, k+1), so the mask centre is cells.mean() + 0.5
+            inside = cells.min() <= c <= cells.max() + 1.0
+            d_contained += inside
+            d_miss += (not inside)
+            d_off.append((c - (cells.mean() + 0.5)) * CELL_SIZE_M)
+
+        contained += d_contained
+        miss += d_miss
+        offsets.extend(d_off)
+        if d_off:
+            per_domain[d] = (d_miss, float(np.mean(np.abs(d_off))))
+
+    off = np.asarray(offsets) if offsets else np.array([np.nan])
+    return {
+        "year": year, "contained": contained, "miss": miss,
+        "offset": off, "geo_no_mask": geo_no_mask, "mask_no_geo": mask_no_geo,
+        "per_domain": per_domain, "missing_tif": missing_tif,
+    }
+
+
+# Do the two years' masks differ, and only where the road was relocated?
+def check_year_identity() -> None:
+    print("\n" + "=" * 78)
+    print("CHECK 4  do the 1978 and 2008 masks actually differ, and where?")
+    print("=" * 78)
+    differ, same = [], []
+    for d in DOMAINS:
+        p84 = Path(str(MASK_FMT).format(year=1978, d=d))
+        p04 = Path(str(MASK_FMT).format(year=2008, d=d))
+        if not (p84.is_file() and p04.is_file()):
+            continue
+        a = np.load(p84) > 0
+        b = np.load(p04) > 0
+        if a.shape != b.shape:
+            print(f"  [shape mismatch] domain {d}: {a.shape} vs {b.shape}")
+            continue
+        n_diff = int((a ^ b).sum())
+        (differ if n_diff else same).append((d, n_diff))
+
+    print(f"  domains whose masks DIFFER between years : {len(differ)}")
+    print(f"  domains whose masks are IDENTICAL        : {len(same)}")
+    if not differ:
+        print("  *** ALL MASKS IDENTICAL -- the 2008 run almost certainly "
+              "re-burned the 1978 geojson. Check ROAD_GEOJSON in the driver.")
+        return
+
+    in_block = [(d, n) for d, n in differ
+                if any(lo <= d <= hi for lo, hi in RELOCATION_BLOCKS)]
+    out_block = [(d, n) for d, n in differ
+                 if not any(lo <= d <= hi for lo, hi in RELOCATION_BLOCKS)]
+    print(f"  differing INSIDE  known relocation blocks {RELOCATION_BLOCKS}: "
+          f"{len(in_block)} -> {[d for d, _ in in_block]}")
+    print(f"  differing OUTSIDE them                   : {len(out_block)}"
+          + (f" -> {[d for d, _ in out_block]}" if len(out_block) <= 24 else ""))
+
+    # Magnitude is what separates a real relocation from digitizing noise
+    for label, group in (("inside blocks", in_block), ("outside blocks", out_block)):
+        if not group:
+            continue
+        n = np.array([c for _, c in group])
+        print(f"    {label:14s}: cells changed median {np.median(n):6.0f}, "
+              f"min {n.min():4d}, max {n.max():4d}")
+    top = sorted(differ, key=lambda t: -t[1])[:8]
+    print("  largest differences (domain, cells changed): "
+          + ", ".join(f"D{d}:{n}" for d, n in top))
+
+
+# Run: both vintages
+def main() -> None:
+    print("=" * 78)
+    print("geojson vs rasterized mask -- ORIGINAL raster frame, no transforms")
+    print("=" * 78)
+
+    for year in YEARS:
+        r = check_year(year)
+        total = r["contained"] + r["miss"]
+        off = r["offset"]
+        print(f"\n--- {year}")
+        # A vacuous pass is not a pass: comparing nothing fails loudly
+        if r["missing_tif"]:
+            print(f"  [STOP] no resampled tif for {len(r['missing_tif'])} of "
+                  f"{len(DOMAINS)} domains -- this check cannot run.")
+            print(f"         first missing: "
+                  f"{Path(str(TIF_FMT).format(d=r['missing_tif'][0]))}")
+            print(f"         fix TIF_FMT; do not read the numbers below.")
+            raise SystemExit(1)
+        print(f"  profiles with both line and mask   : {total}")
+        if not total:
+            print("  [STOP] nothing was compared, so nothing was checked.")
+            raise SystemExit(1)
+        if total:
+            print(f"  centerline INSIDE mask footprint   : {r['contained']} "
+                  f"({r['contained'] / total:.2%})")
+            print(f"  centerline OUTSIDE mask footprint  : {r['miss']} "
+                  f"({r['miss'] / total:.2%})")
+        print(f"  centerline-to-mask-centre offset   : "
+              f"median {np.nanmedian(off):+.2f} m, "
+              f"p90 |{np.nanpercentile(np.abs(off), 90):.2f}| m, "
+              f"max |{np.nanmax(np.abs(off)):.2f}| m")
+        print(f"  line present but mask empty        : {len(r['geo_no_mask'])} "
+              f"profile(s)")
+        print(f"  mask present but line absent       : {len(r['mask_no_geo'])} "
+              f"profile(s)")
+        worst = sorted(r["per_domain"].items(), key=lambda kv: -kv[1][1])[:5]
+        if worst:
+            print("  largest mean |offset| by domain    : "
+                  + ", ".join(f"D{d}:{m:.1f}m" for d, (_, m) in worst))
+
+    check_year_identity()
+    print()
+
+
+if __name__ == "__main__":
+    main()

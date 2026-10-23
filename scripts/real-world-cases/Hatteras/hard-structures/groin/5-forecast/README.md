@@ -1,0 +1,7 @@
+# 5-forecast — the groin in forward runs
+
+Not started (2026-10-08).
+
+What goes here: forward runs from 2025 with the groin module in the state it has at the time, and what the groin changes in them. It should wait until a module version passes the straight-coast test (`../3-module-tests/2-straight-coast/`) and its hindcast fit is decided (`../4-hindcast/3-wave-driven-1967-2025/`).
+
+The pinned groin has failed by 2009 in every schedule, so in any forward run it acts at its post-failure strength, b × f = 0.36.

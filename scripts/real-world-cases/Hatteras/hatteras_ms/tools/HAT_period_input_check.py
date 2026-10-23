@@ -1,0 +1,249 @@
+"""
+Does every hindcast period resolve everything it needs, and does each file exist on disk?
+
+    python scripts/hatteras_ms/tools/HAT_period_input_check.py
+    python scripts/hatteras_ms/tools/HAT_period_input_check.py --period 1996
+
+Checks the forcing inputs HATTERAS_PERIODS names, and the topography and
+rate files, per period; prints a table and exits nonzero on a blocker. Details: scripts/hatteras_ms/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+import numpy as np
+
+_HERE = Path(__file__).resolve()
+# Anchored by SEARCHING UPWARD for the project root rather than by counting parent directories (2026-09-13)
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in _HERE.parents  if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
+sys.path.insert(0, str(_HAT_DIR))
+
+from site_layer.hatteras_site_config import (                      # noqa: E402
+    HATTERAS_PERIODS, HATTERAS_BE_PRESETS, HATTERAS_DOMAINS,
+    HATTERAS_ROAD_EVENTS, HATTERAS_NOURISHMENT_PROJECTS,
+    HATTERAS_ROAD_ELEVATION_FILE, HATTERAS_FIRST_ROAD_DOMAIN,
+    HATTERAS_LAST_ROAD_DOMAIN)
+from site_layer.hat_topo_version import domain_arrays, topo_dirs   # noqa: E402
+from site_layer.hat_observed_rates import (                        # noqa: E402
+    COASTSAT_LRR_ROOT, TRANSECT_FILE)
+
+# --- CONFIG ------------------------------------------------------------------
+INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
+
+# Resolved, not built: hat_observed_rates owns where the rate fits live
+
+OK = "ok"
+MISSING = "MISSING"
+# -----------------------------------------------------------------------------
+
+
+# One checked input
+class Finding:
+
+    def __init__(self, label, status, detail="", blocking=True):
+        self.label = label
+        self.status = status
+        self.detail = detail
+        self.blocking = blocking
+
+    @property
+    def failed(self):
+        return self.status != OK
+
+    def line(self):
+        mark = "  " if not self.failed else ("!!" if self.blocking else " ~")
+        return "{0} {1:<22} {2:<9} {3}".format(
+            mark, self.label, self.status, self.detail)
+
+
+# A finding for one file: present or missing
+def check_file(label, path, blocking=True):
+    if not path.is_file():
+        return Finding(label, MISSING, str(path), blocking)
+    return Finding(label, OK, path.name, blocking)
+
+
+# Exists, loads, and covers every model step the run will spend
+def check_storms(path, run_years):
+    found = check_file("storm series", path)
+    if found.failed:
+        return found
+    storms = np.load(path)
+    steps = storms[:, 0].astype(int)
+    found.detail = "{0} storms, steps {1}-{2}".format(
+        len(storms), steps.min(), steps.max())
+    if steps.max() < run_years:
+        found.status = "SHORT"
+        found.detail += " but the run spends {0} steps".format(run_years)
+    return found
+
+
+# Exists, and is the padded length CASCADE expects
+def check_offsets(path, geometry):
+    found = check_file("island offsets", path)
+    if found.failed:
+        return found
+    values = np.loadtxt(path, delimiter=",", skiprows=1).reshape(-1)
+    found.detail = "{0} domains".format(values.size)
+    if values.size != geometry.total_domains:
+        found.status = "SHAPE"
+        found.detail += ", expected {0}".format(geometry.total_domains)
+    return found
+
+
+# Exists, is the 2-row format, and covers the road span
+def check_setbacks(path):
+    found = check_file("road setback", path)
+    if found.failed:
+        return found
+    raw = np.loadtxt(path, delimiter=",")
+    expected = HATTERAS_LAST_ROAD_DOMAIN - HATTERAS_FIRST_ROAD_DOMAIN + 1
+    found.detail = "{0} x {1}".format(*raw.shape)
+    if raw.ndim != 2 or raw.shape[0] != 2 or raw.shape[1] != expected:
+        found.status = "SHAPE"
+        found.detail += ", expected 2 x {0}".format(expected)
+        return found
+    # Not a failure, but worth seeing
+    found.detail += ", {0} at zero".format(int((raw[1] == 0).sum()))
+    return found
+
+
+# The product resolves to a version, and its domain arrays are on disk
+def check_topography(product, geometry):
+    try:
+        _, _, version = topo_dirs(product)
+    except Exception as exc:                 # the resolver raises loudly
+        return Finding("topography", "UNRESOLVED",
+                       "{0}: {1}".format(product, exc))
+
+    elev, dunes = domain_arrays(
+        product, first_gis=geometry.first_gis_id, last_gis=geometry.last_gis_id)
+    absent = [p for p in elev + dunes if not Path(p).is_file()]
+    found = Finding("topography", OK, "{0} / {1}, {2} arrays".format(
+        product, version, len(elev) + len(dunes)))
+    if absent:
+        found.status = MISSING
+        found.detail = "{0} / {1}, {2} of {3} arrays absent".format(
+            product, version, len(absent), len(elev) + len(dunes))
+    return found
+
+
+# Which source/sink presets are solved for this period
+def check_presets(start_year):
+    solved = sorted(name for name, rates in HATTERAS_BE_PRESETS.items()
+                    if start_year in rates)
+    missing = sorted(set(HATTERAS_BE_PRESETS) - set(solved))
+    found = Finding("source/sink", OK, ", ".join(solved), blocking=False)
+    if missing:
+        found.status = "PARTIAL"
+        found.detail = "{0}  (unsolved: {1})".format(
+            ", ".join(solved), ", ".join(missing))
+    return found
+
+
+# What the record fires inside this window
+def events_in_window(start_year, end_year):
+    lines = []
+    for event in HATTERAS_ROAD_EVENTS:
+        year = getattr(event, "year", None)
+        if year is None or not (start_year <= year < end_year):
+            continue
+        moved = getattr(event, "displacement_m", None)
+        if moved:
+            lines.append("{0}  road relocation, GIS {1}".format(
+                year, sorted(moved)))
+        else:
+            lines.append("{0}  {1}".format(
+                year, getattr(event, "note", "road event")))
+    for project in HATTERAS_NOURISHMENT_PROJECTS:
+        if start_year <= project.year < end_year:
+            lines.append("{0}  {1}".format(project.year, project.name))
+    return sorted(lines)
+
+
+# Every input of one period
+def check_period(start_year):
+    period = HATTERAS_PERIODS[start_year]
+    end_year = period["end_year"]
+    run_years = end_year - start_year
+
+    print("\n" + "=" * 78)
+    print("{0}-{1}   {2} model years, simulating {0}-{3}".format(
+        start_year, end_year, run_years, end_year - 1))
+    print("=" * 78)
+
+    findings = [
+        check_topography(period["topo_product"], HATTERAS_DOMAINS),
+        check_storms(INIT_ROOT / period["storm_file"], run_years),
+        check_offsets(INIT_ROOT / period["island_offset_file"],
+                      HATTERAS_DOMAINS),
+        check_setbacks(INIT_ROOT / period["road_setback_file"]),
+        check_file("road elevation", INIT_ROOT / HATTERAS_ROAD_ELEVATION_FILE),
+        check_file("observed rates",
+                   COASTSAT_LRR_ROOT / "{0}_{1}".format(start_year, end_year)
+                   / TRANSECT_FILE),
+        check_presets(start_year),
+    ]
+    for found in findings:
+        print(found.line())
+
+    fills = "on, {0} m3/m".format(period["nourishment_volume"]) \
+        if period["enable_nourishment"] else "off"
+    print("   {0:<22} {1}".format("nourishment", fills))
+    print("   {0:<22} {1} m/yr".format("sea level",
+                                       period["sea_level_rise_rate"]))
+
+    events = events_in_window(start_year, end_year)
+    print("   {0:<22} {1}".format(
+        "events in window", events[0] if events else "none"))
+    for line in events[1:]:
+        print("   {0:<22} {1}".format("", line))
+
+    blocked = [f for f in findings if f.failed and f.blocking]
+    if blocked:
+        print("\n   BLOCKED: " + ", ".join(f.label for f in blocked))
+    else:
+        print("\n   runnable")
+    return not blocked
+
+
+# Run: every period (or one), the table and the exit code
+def main():
+    parser = argparse.ArgumentParser(
+        description="resolve and check the inputs of every hindcast period")
+    parser.add_argument("--period", type=int, action="append",
+                        help="start year; repeatable. Default: all of them.")
+    args = parser.parse_args()
+
+    periods = args.period or sorted(HATTERAS_PERIODS)
+    unknown = [p for p in periods if p not in HATTERAS_PERIODS]
+    if unknown:
+        parser.error("no such period {0}; have {1}".format(
+            unknown, sorted(HATTERAS_PERIODS)))
+
+    results = {p: check_period(p) for p in periods}
+
+    print("\n" + "=" * 78)
+    ready = [p for p, good in results.items() if good]
+    blocked = [p for p, good in results.items() if not good]
+    print("runnable: {0}".format(ready if ready else "none"))
+    if blocked:
+        print("blocked : {0}".format(blocked))
+    print("=" * 78)
+    return 1 if blocked else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
