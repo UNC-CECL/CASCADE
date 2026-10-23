@@ -486,7 +486,8 @@ def plot_avg_increase_marsh_elev(
         cascade,
         save_dir,
         comparison_year=None,
-        figsize=[15,6],
+        figsize=(15,6),
+        target_elev_change=None
 ):
     """
     calculates the average change in elevation between "marsh" cells and
@@ -497,6 +498,9 @@ def plot_avg_increase_marsh_elev(
     :param comparison_year: specific model year for comparison to initial
         if None, use the last time step
     :param figsize: size of the output figure
+    :param target_elev_change: float [m]
+        anticipated avg change in marsh elevation over the time period
+        gets plotted as horizontal line on the output figure
     :return: fig
     """
     plt.rcParams["font.size"] = 16
@@ -541,7 +545,8 @@ def plot_avg_increase_marsh_elev(
     domains = np.arange(0,ib3ds,1)
     fig1, ax1 = plt.subplots(figsize=figsize)
     plt.plot(avg_elev_change_ib3d, marker="o")
-    # plt.axhline(y=0, color="grey", linewidth=0.5)
+    if target_elev_change is not None:
+        plt.axhline(y=target_elev_change, color="grey", linewidth=0.5)
     plt.xticks(domains, domains)
     plt.ylim(0,0.2)
     ax1.text(x=0.02,y=0.92,s="overall avg = {0} m".format(overall_avg), transform=ax1.transAxes)
