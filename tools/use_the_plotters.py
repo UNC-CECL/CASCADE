@@ -8,35 +8,39 @@ import pandas as pd
 from cascade.tools.plotters import (
     plot_ElevAnimation_CASCADE,
     plot_dune_domain,
-    plot_start_end_domains,
+)
+from tools.lexi_plotters import (
     plot_overwash_flux,
     compare_modeled_observed_domains,
     plot_linear_dune_dif,
     plot_shoreline_all_domains,
-    plot_shoreline_change_all_domains
+    plot_shoreline_change_all_domains,
+    plot_avg_increase_marsh_elev
     )
 
 # choose whether to plot and save the cascade animations since it is automatic
 # the other plots just produce and output on screen
-# plot_and_save_elev_anim = True
-# plot_dunes = True
-# plot_overwash = True
-# plot_domain_comparison = True
-# plot_linear_dune = True
-# plot_shoreline = True
+plot_and_save_elev_anim = True
+plot_dunes = True
+plot_overwash = True
+plot_domain_comparison = True
+plot_linear_dune = True
+plot_shoreline = True
 plot_shoreline_change = True
+plot_marsh_elev_change = True
 
-plot_and_save_elev_anim = False
-plot_dunes = False
-plot_overwash = False
-plot_domain_comparison = False
-plot_linear_dune = False
-plot_shoreline = False
+# plot_and_save_elev_anim = False
+# plot_dunes = False
+# plot_overwash = False
+# plot_domain_comparison = False
+# plot_linear_dune = False
+# plot_shoreline = False
 # plot_shoreline_change = False
+# plot_marsh_elev_change = False
 
 # model results
 datadir = r"C:\Users\agfig\model\calibration"
-run_name = "calib_8"
+run_name = "calib_12"
 file = os.path.join(datadir, "results", "{0}.npz".format(run_name))
 calib = np.load(file, allow_pickle=True)["cascade"][0]
 calib_b3d = calib.barrier3d  # all domains
@@ -150,3 +154,9 @@ if plot_shoreline_change:
         title="{0} to {1}".format(startyear, endyear),
         figsize=[16,8],
         seaward_pos=True)
+
+if plot_marsh_elev_change:
+    plot_avg_increase_marsh_elev(
+        cascade=calib,
+        save_dir=r"C:\Users\agfig\model\calibration\results\{0}".format(run_name)
+    )

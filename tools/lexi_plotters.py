@@ -484,14 +484,16 @@ def plot_shoreline_change_all_domains(cascade, years, coastsat, save_dir, title,
 
 def plot_avg_increase_marsh_elev(
         cascade,
+        save_dir,
         comparison_year=None,
-        figsize=[15,6]
+        figsize=[15,6],
 ):
     """
-    calculates the average change in elevation between "marsh" cells
-    for comparison with an expected change over the time frame
-    plots the average for each ib3d domain
+    calculates the average change in elevation between "marsh" cells and
+    plots the average for each ib3d domain, along with the overall average
+    of all domains
     :param cascade: cascade class loaded from the output npz file
+    :param save_dir: directory to save the figure
     :param comparison_year: specific model year for comparison to initial
         if None, use the last time step
     :param figsize: size of the output figure
@@ -514,30 +516,40 @@ def plot_avg_increase_marsh_elev(
             final_elev = b3d[i].DomainTS[comparison_year]
 
         # initial cells that were identified as marsh cells
-        min_marsh_elev = marsh[i]._m_min  # dam MHW
-        max_marsh_elev = marsh[i]._m_max  # dam MHW
-        marsh_cells = np.where((initial_elev > min_marsh_elev) & (initial_elev < max_marsh_elev))
-        # if there were no marsh cells to begin with, just keep the array value
-        if len(marsh_cells[0])>0:
-            # compare the elevations of the initial marsh cells to their final and take average
-            initial_marsh_elev = initial_elev[marsh_cells]
-            final_marsh_elev = final_elev[marsh_cells]
-            avg_elev_change = np.mean(final_marsh_elev - initial_marsh_elev)  # positive means they grew
-            # convert to m and add to array
+        # min_marsh_elev = marsh[i]._m_min  # dam MHW
+        # max_marsh_elev = marsh[i]._m_max  # dam MHW
+        min_marsh_elev = -0.2
+        max_marsh_elev = 0.05 # dam MHW
+        initial_marsh_cells = np.where((initial_elev > min_marsh_elev) & (initial_elev < max_marsh_elev))
+        # since barrier changes width over time, cells that existed to start with
+        # may no longer exist, or the indices could be different, so find new marsh cells
+        final_marsh_cells = np.where((final_elev > min_marsh_elev) & (final_elev < max_marsh_elev))
+        # if there were no marsh cells to begin with, just keep the array value np.nan
+        # otherwise, compare average of initial elev with average of final
+        if len(initial_marsh_cells[0])>0:
+            initial_marsh_elev = initial_elev[initial_marsh_cells]
+            avg_initial_elev = np.mean(initial_marsh_elev)
+            final_marsh_elev = final_elev[final_marsh_cells]
+            avg_final_elev = np.mean(final_marsh_elev)
+            avg_elev_change = avg_final_elev - avg_initial_elev  # positive means they grew
+            # convert to m and update array value
             avg_elev_change_m = avg_elev_change * 10
             avg_elev_change_ib3d[i] = avg_elev_change_m
 
     # plot the avg per domain and the avg of all domains
     overall_avg = round(np.nanmean(avg_elev_change_ib3d),3)
     domains = np.arange(0,ib3ds,1)
-    fig1 = plt.figure(figsize=figsize)
+    fig1, ax1 = plt.subplots(figsize=figsize)
     plt.plot(avg_elev_change_ib3d, marker="o")
-    plt.axhline(y=overall_avg, label="overall avg = {0}".format(overall_avg), color="grey", linewidth=0.5)
+    # plt.axhline(y=0, color="grey", linewidth=0.5)
     plt.xticks(domains, domains)
-    plt.ylim(-0.2,0.2)
+    plt.ylim(0,0.2)
+    ax1.text(x=0.02,y=0.92,s="overall avg = {0} m".format(overall_avg), transform=ax1.transAxes)
     plt.xlabel("iB3D Domain")
     plt.ylabel("avg change in elevation (m)")
     plt.title("avg change in elevation of cells initially defined as 'marsh'")
-    plt.legend(loc="lower right")
     plt.tight_layout()
+    fig1.savefig(os.path.join(save_dir, "avg_change_marsh_elev.png"))
+    plt.close()
+
 
