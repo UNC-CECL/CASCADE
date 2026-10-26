@@ -25,14 +25,15 @@ from matplotlib import pyplot as plt
 from matplotlib import colormaps
 
 from cascade.tools.plotters import plot_ElevAnimation_CASCADE, plot_dune_domain, plot_ModelTransects
-from tools.outwash_plotters import plot_Elev_CASCADE_subplots
+from tools.outwash_plotters import plot_Elev_CASCADE_subplots, plot_Elev_CASCADE_subplots_all_scenarios
 
 plot_transects = False
-plot_subplots = True
+plot_subplots = False
+plot_subplots_all = True
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 # rname_array = ["r025", "r035"]
-rname_array = ["r035"]
+rname_array = ["r025"]
 for rname in rname_array:
 
     # naming parameters
@@ -255,14 +256,20 @@ for rname in rname_array:
 
         # subplots
         if plot_subplots:
+            version = "altered_cmap"
+            cols = 6
+            years = [0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100]
+            skip=False
+            plot_overwash_text=False
+            overwash_text_years=[5, 10, 15, 20]
             # barrier3d
             plot_Elev_CASCADE_subplots(
                 cascade=b3d_obj,
                 directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
                 TMAX_MGMT=0,
-                name="{0}_storm{1}_b3d_new_elev".format(rname, storm_num),
+                name="{0}_storm{1}_b3d_{2}".format(rname, storm_num, version),
                 TMAX_SIM=tmax_b3d,
-                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100],  # array with the timesteps you want to plot
+                plot_timesteps=years,  # array with the timesteps you want to plot
                 main_plot_title="baseline",  # title of the main plot (string)
                 ny=1,
                 beach_management_ny=None,  # list of bool the length of ny, or None for all False
@@ -275,16 +282,19 @@ for rname in rname_array:
                 km_on=False,
                 meters_on=True,
                 outwash_scenario=False,
-                n_cols=6,
+                n_cols=cols,
+                skip_7=skip,
+                overwash_text=plot_overwash_text,
+                overwash_text_years=overwash_text_years
             )
             # 100%
             plot_Elev_CASCADE_subplots(
                 cascade=outwash100_obj,
                 directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
-                TMAX_MGMT=tmax_b3d,
-                name="{0}_storm{1}_100_new_elev".format(rname, storm_num),
-                TMAX_SIM=tmax_b3d,
-                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100],  # array with the timesteps you want to plot
+                TMAX_MGMT=tmax_100,
+                name="{0}_storm{1}_100_{2}".format(rname, storm_num, version),
+                TMAX_SIM=tmax_100,
+                plot_timesteps=years, # array with the timesteps you want to plot
                 main_plot_title="100% washout to shoreface",  # title of the main plot (string)
                 ny=1,
                 beach_management_ny=None,  # list of bool the length of ny, or None for all False
@@ -297,16 +307,19 @@ for rname in rname_array:
                 km_on=False,
                 meters_on=True,
                 outwash_scenario=True,
-                n_cols=6
+                n_cols=cols,
+                skip_7=skip,
+                overwash_text=plot_overwash_text,
+                overwash_text_years=overwash_text_years
             )
             # 50%
             plot_Elev_CASCADE_subplots(
                 cascade=outwash50_obj,
                 directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
-                TMAX_MGMT=tmax_b3d,
-                name="{0}_storm{1}_50_new_elev".format(rname, storm_num),
-                TMAX_SIM=tmax_b3d,
-                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100],  # array with the timesteps you want to plot
+                TMAX_MGMT=tmax_50,
+                name="{0}_storm{1}_50_{2}".format(rname, storm_num, version),
+                TMAX_SIM=tmax_50,
+                plot_timesteps=years,  # array with the timesteps you want to plot
                 main_plot_title="50% washout to shoreface",  # title of the main plot (string)
                 ny=1,
                 beach_management_ny=None,  # list of bool the length of ny, or None for all False
@@ -319,16 +332,19 @@ for rname in rname_array:
                 km_on=False,
                 meters_on=True,
                 outwash_scenario=True,
-                n_cols=6
+                n_cols=cols,
+                skip_7=skip,
+                overwash_text=plot_overwash_text,
+                overwash_text_years=overwash_text_years
             )
             # 0%
             plot_Elev_CASCADE_subplots(
                 cascade=outwash0_obj,
                 directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
-                TMAX_MGMT=tmax_b3d,
-                name="{0}_storm{1}_0_new_elev".format(rname, storm_num),
-                TMAX_SIM=tmax_b3d,
-                plot_timesteps=[0, 1, 5, 10, 15, 20, 21, 41],  # array with the timesteps you want to plot
+                TMAX_MGMT=tmax_0,
+                name="{0}_storm{1}_0_{2}".format(rname, storm_num, version),
+                TMAX_SIM=tmax_0,
+                plot_timesteps=years,  # array with the timesteps you want to plot
                 main_plot_title="0% washout to shoreface",  # title of the main plot (string)
                 ny=1,
                 beach_management_ny=None,  # list of bool the length of ny, or None for all False
@@ -341,150 +357,39 @@ for rname in rname_array:
                 km_on=False,
                 meters_on=True,
                 outwash_scenario=True,
-                n_cols=6
+                n_cols=cols,
+                skip_7=skip,
+                overwash_text=plot_overwash_text,
+                overwash_text_years=overwash_text_years
             )
 
-        # # SHOREFACE PLOT
-        # fig1, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, figsize=(12, 12), sharex="all")  # create 4 subplots, one per scenario
-        # for y in np.arange(0, max_year, interval):
-        #     # x values are the shoreline and toe positions
-        #     # y values are the SL (0) and shoreface depth?
-        #     ax1.plot([m_xsTS_b3d[y], m_xtTS_b3d[y]], [0, -d_shore_b3d], label="year {0}".format(y), marker="o", color=blues[y])
-        #     ax2.plot([m_xsTS_100[y], m_xtTS_100[y]], [0, -d_shore_100], label="year {0}".format(y), marker="o", color=blues[y])
-        #     ax3.plot([m_xsTS_50[y], m_xtTS_50[y]], [0, -d_shore_50], label="year {0}".format(y), marker="o", color=blues[y])
-        #     ax4.plot([m_xsTS_0[y], m_xtTS_0[y]], [0, -d_shore_0], label="year {0}".format(y), marker="o", color=blues[y])
-        #     # plot features
-        #     ax1.legend(ncols=legend_cols)
-        #     ax1.set_title("overwash only")
-        #     ax2.set_title("100% washout to shoreface")
-        #     ax3.set_title("50% washout to shoreface")
-        #     ax4.set_title("0% washout to shoreface")
-        #
-        #     ax4.set_xlabel("shoreface toe ---> shoreline (m)")
-        #     ax1.set_ylabel("Elevation (m MHW)")
-        #     ax2.set_ylabel("Elevation (m MHW)")
-        #     ax3.set_ylabel("Elevation (m MHW)")
-        #     ax4.set_ylabel("Elevation (m MHW)")
-        #
-        #
-        #
-        # fig1.tight_layout()
-        # plt.show()
-        #
-        # # TRANSECT FOR ALL 4 SCENARIOS
-        # fig2, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, figsize=(12, 12), sharex="all")  # create 4 subplots, one per scenario
-        # for y in np.arange(0, max_year, interval):
-        #     # current ts domains converted to averages along the rows
-        #     ts_domain_b3d = np.mean(domain_b3d[y], axis=1) * 10
-        #     ts_domain_100 = np.mean(domain_100[y], axis=1) * 10
-        #     ts_domain_50 = np.mean(domain_50[y], axis=1) * 10
-        #     ts_domain_0 = np.mean(domain_0[y], axis=1) * 10
-        #
-        #     # only use elevations > 0
-        #     pos_ts_domain_b3d = ts_domain_b3d[ts_domain_b3d>0]
-        #     pos_ts_domain_100 = ts_domain_100[ts_domain_100>0]
-        #     pos_ts_domain_50 = ts_domain_50[ts_domain_50>0]
-        #     pos_ts_domain_0 = ts_domain_0[ts_domain_0>0]
-        #
-        #
-        #     # x-values - shift with movement of the dunes
-        #     # b3d
-        #     x_start_b3d = abs(sum(sc_TS_b3d[0:y+1]))
-        #     x_end_b3d = len(ts_domain_b3d) + x_start_b3d
-        #     x_values_b3d = np.arange(x_start_b3d, x_end_b3d, 1)
-        #     # 100%
-        #     x_start_100 = abs(sum(sc_TS_100[0:y+1]))
-        #     x_end_100 = len(ts_domain_100) + x_start_100
-        #     x_values_100 = np.arange(x_start_100, x_end_100, 1)
-        #     # 50%
-        #     x_start_50 = abs(sum(sc_TS_50[0:y+1]))
-        #     x_end_50 = len(ts_domain_50) + x_start_50
-        #     x_values_50 = np.arange(x_start_50, x_end_50, 1)
-        #     # 0%
-        #     x_start_0 = abs(sum(sc_TS_0[0:y+1]))
-        #     x_end_0 = len(ts_domain_0) + x_start_0
-        #     x_values_0 = np.arange(x_start_0, x_end_0, 1)
-        #
-        #     # plot
-        #     if y == 0:
-        #         ls = "solid"
-        #     else:
-        #         ls = "solid"
-        #     ax1.plot(x_values_b3d, ts_domain_b3d, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     ax2.plot(x_values_100, ts_domain_100, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     ax3.plot(x_values_50, ts_domain_50, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     ax4.plot(x_values_0, ts_domain_0, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     # plot features
-        #     ax1.legend(ncols=legend_cols)
-        #     ax1.set_title("overwash only")
-        #     ax2.set_title("100% washout to shoreface")
-        #     ax3.set_title("50% washout to shoreface")
-        #     ax4.set_title("0% washout to shoreface")
-        #
-        #     ax4.set_xlabel("cross-shore distance of the barrier interior (ocean ---> bay) (m)")
-        #     ax1.set_ylabel("Elevation (m MHW)")
-        #     ax2.set_ylabel("Elevation (m MHW)")
-        #     ax3.set_ylabel("Elevation (m MHW)")
-        #     ax4.set_ylabel("Elevation (m MHW)")
-        #
-        # fig2.tight_layout()
-        # plt.show()
-        #
-        # # TRANSECT FOR ALL 4 SCENARIOS - ONLY POS ELEVATIONS
-        # fig3, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, figsize=(12, 12), sharex="all")  # create 4 subplots, one per scenario
-        # for y in np.arange(0, max_year, interval):
-        #     # current ts domains converted to averages along the rows
-        #     ts_domain_b3d = np.mean(domain_b3d[y], axis=1) * 10
-        #     ts_domain_100 = np.mean(domain_100[y], axis=1) * 10
-        #     ts_domain_50 = np.mean(domain_50[y], axis=1) * 10
-        #     ts_domain_0 = np.mean(domain_0[y], axis=1) * 10
-        #
-        #     # only use elevations > 0
-        #     pos_ts_domain_b3d = ts_domain_b3d[ts_domain_b3d>0]
-        #     pos_ts_domain_100 = ts_domain_100[ts_domain_100>0]
-        #     pos_ts_domain_50 = ts_domain_50[ts_domain_50>0]
-        #     pos_ts_domain_0 = ts_domain_0[ts_domain_0>0]
-        #
-        #
-        #     # x-values - shift with movement of the dunes
-        #     # b3d
-        #     x_start_b3d = abs(sum(sc_TS_b3d[0:y+1]))
-        #     x_end_b3d = len(pos_ts_domain_b3d) + x_start_b3d
-        #     x_values_b3d = np.arange(x_start_b3d, x_end_b3d, 1)
-        #     # 100%
-        #     x_start_100 = abs(sum(sc_TS_100[0:y+1]))
-        #     x_end_100 = len(pos_ts_domain_100) + x_start_100
-        #     x_values_100 = np.arange(x_start_100, x_end_100, 1)
-        #     # 50%
-        #     x_start_50 = abs(sum(sc_TS_50[0:y+1]))
-        #     x_end_50 = len(pos_ts_domain_50) + x_start_50
-        #     x_values_50 = np.arange(x_start_50, x_end_50, 1)
-        #     # 0%
-        #     x_start_0 = abs(sum(sc_TS_0[0:y+1]))
-        #     x_end_0 = len(pos_ts_domain_0) + x_start_0
-        #     x_values_0 = np.arange(x_start_0, x_end_0, 1)
-        #
-        #     # plot
-        #     if y == 0:
-        #         ls = "solid"
-        #     else:
-        #         ls = "solid"
-        #     ax1.plot(x_values_b3d, pos_ts_domain_b3d, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     ax2.plot(x_values_100, pos_ts_domain_100, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     ax3.plot(x_values_50, pos_ts_domain_50, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     ax4.plot(x_values_0, pos_ts_domain_0, label="year {0}".format(y), ls=ls, color=blues[y])
-        #     # plot features
-        #     ax1.legend(ncols=legend_cols)
-        #     ax1.set_title("overwash only")
-        #     ax2.set_title("100% washout to shoreface")
-        #     ax3.set_title("50% washout to shoreface")
-        #     ax4.set_title("0% washout to shoreface")
-        #
-        #     ax4.set_xlabel("cross-shore distance of the barrier interior (ocean ---> bay) (m)")
-        #     ax1.set_ylabel("Elevation (m MHW)")
-        #     ax2.set_ylabel("Elevation (m MHW)")
-        #     ax3.set_ylabel("Elevation (m MHW)")
-        #     ax4.set_ylabel("Elevation (m MHW)")
-        #
-        # fig3.tight_layout()
-        # plt.show()
+        if plot_subplots_all:
+            version = "all_scenarios"
+            cols = 6
+            years = [0, 1, 5, 10, 15, 20, 21, 41, 61, 81, 100]
+            plot_overwash_text=False
+            overwash_text_years=[5, 10, 15, 20]
+            plot_Elev_CASCADE_subplots_all_scenarios(
+                cascade_list=[b3d_obj, outwash100_obj, outwash50_obj, outwash0_obj],
+                directory=r"C:\Users\agfig\Downloads\paper_results\paper_results\new_planview_subplots",
+                TMAX_MGMT_list=[tmax_b3d,tmax_100,tmax_50,tmax_0],
+                name="{0}_storm{1}_{2}".format(rname, storm_num, version),
+                TMAX_SIM_list=[tmax_b3d,tmax_100,tmax_50,tmax_0],
+                plot_timesteps=years,  # array with the timesteps you want to plot
+                main_plot_title=["baseline","100% washout to shoreface","50% washout to shoreface", "0% washout to shoreface"],  # title of the main plot (string)
+                ny=1,
+                beach_management_ny=None,  # list of bool the length of ny, or None for all False
+                roadway_management_ny=None,
+                y_lim=(150, 210),
+                z_lim=6,
+                z_bot=-3,
+                fig_size=(13, 20),
+                fig_eps=False,
+                km_on=False,
+                meters_on=True,
+                outwash_scenario=True,
+                n_cols=cols,
+                overwash_text=plot_overwash_text,
+                overwash_text_years=overwash_text_years
+            )
+
