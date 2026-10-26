@@ -1,0 +1,551 @@
+"""
+Does the grading smoothing window matter? Model net change against the CoastSat projection at several LOWESS widths.
+
+    python scripts/analyze_output/compare_runs/hindcast_vs_observed/smoothing_scale.py
+    python ... --windows 0 3 5 10 --n-null 1000
+
+Scores every width against a phase-randomised null; model sets from
+target_comparison.py. Writes output/comparisons/target_comparison/smoothing_scale/.
+Details: README.md beside this script.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-03
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+_HERE = Path(__file__).resolve()
+sys.path.insert(0, str(_HERE.parent))
+import rate_windows as rw  # noqa: E402
+import target_comparison as tc  # noqa: E402
+tc.select_windows("14yr")   # built on the 1996 -> 2010 -> 2024 chain and its dune line
+
+_REPO = rw._REPO
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.ticker import MultipleLocator  # noqa: E402
+from statsmodels.nonparametric.smoothers_lowess import lowess  # noqa: E402
+
+from cascade_pipeline.coastsat_lowess import spliced_lowess_series  # noqa: E402
+from site_layer.hat_observed_rates import dune_endpoint_csv, lrr_csv  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
+    INK, SMOOTH_RAMP, apply_style, caption, figsize, save,
+)
+
+
+# --- CONFIG ------------------------------------------------------------------
+OUT_DIR = tc.ROOT_DIR / "smoothing_scale"
+# LOWESS widths in domains; 7 is the grading window (10 until 2026-09-28)
+SMOOTH_WINDOWS = (0, 3, 5, 7, 10)
+N_NULL = 1000
+SEED = 20260921
+FORMS = ("as_graded", "scale_matched")
+# Every LRR window on disk, for the structure diagnostic
+LRR_WINDOWS = ((1984, 2004), (2004, 2024), (1996, 2024), (1996, 2010), (2010, 2024))
+# -----------------------------------------------------------------------------
+
+
+# The targets, at an arbitrary window
+
+# Per-transect along-coast distance (m): each domain's transects spread evenly over its 500 m
+def _along(df, domain_col, order_col):
+    df = df.sort_values([domain_col, order_col]).reset_index(drop=True)
+    rank = df.groupby(domain_col).cumcount()
+    n = df.groupby(domain_col)[domain_col].transform("count")
+    sp = DOM.domain_spacing_m
+    along = ((df[domain_col] - DOM.first_gis_id) * sp
+             + (rank + 0.5) * (sp / n)).to_numpy(float)
+    return df, along
+
+
+# (domain ids, along-coast m, rate m/yr) for a CoastSat LRR window
+def coastsat_transects(window):
+    t = pd.read_csv(lrr_csv(*window))
+    t = t[t["domain_number"].between(DOM.first_gis_id, DOM.last_gis_id)].copy()
+    t, along = _along(t, "domain_number", "transect_id")
+    return t["domain_number"].to_numpy(int), along, t["lrr_m_yr"].to_numpy(float)
+
+
+# (domain ids, along-coast m, rate m/yr) for the two-survey dune rate
+def duneline_transects(window):
+    t = pd.read_csv(dune_endpoint_csv(*window, "transect"))
+    t, along = _along(t, "domain_number", "line_id")
+    return t["domain_number"].to_numpy(int), along, t["rate_m_yr"].to_numpy(float)
+
+
+# The model's LOWESS: over its 90 domain values at the same width, same GIS 1-10 splice
+def smooth_domain_series(series, window, skip=rw.SKIP):
+    if not window:
+        return series.copy()
+    y = series.to_numpy(float)
+    x = series.index.to_numpy(float)
+    ok = np.isfinite(y)
+    if ok.sum() < 5:
+        return series.copy()
+    frac = float(np.clip(window / ok.sum(), 0.02, 1.0))
+    res = lowess(y[ok], x[ok], frac=frac, return_sorted=True)
+    out = series.copy()
+    out.loc[series.index[ok]] = np.interp(x[ok], res[:, 0], res[:, 1])
+    keep = series.index[series.index <= skip]
+    out.loc[keep] = series.loc[keep]      # splice, as the target has
+    return out
+
+
+# A surrogate with the same mean, variance and autocorrelation but random phases
+def phase_randomise(y, rng):
+    n = len(y)
+    mu = y.mean()
+    f = np.fft.rfft(y - mu)
+    ph = rng.uniform(0.0, 2.0 * np.pi, f.shape)
+    ph[0] = 0.0
+    if n % 2 == 0:
+        ph[-1] = 0.0
+    return np.fft.irfft(np.abs(f) * np.exp(1j * ph), n=n) + mu
+
+
+# Targets at every width, and skill of every model set in both forms with its null
+def build(observations, models, windows, n_null):
+    rng = np.random.default_rng(SEED)
+    lo, hi = rw.INTERIOR
+    idx = pd.RangeIndex(DOM.first_gis_id, DOM.last_gis_id + 1, name="domain_number")
+    interior = (idx >= lo) & (idx <= hi)
+
+    # The CoastSat target is the full-period LRR, the same in both windows: built once
+    cs_parts = coastsat_transects(tc.FULL_WINDOW)
+    targets = {}    # (model window, target name, smoothing window) -> Series in m
+    for o in observations:
+        years = o.window[1] - o.window[0]
+        du_parts = duneline_transects(o.window)
+        for w in windows:
+            cs, _ = spliced_lowess_series(*(cs_parts[0], cs_parts[1], cs_parts[2]),
+                                         window=w, skip=rw.SKIP, domains=DOM)
+            du, _ = spliced_lowess_series(*(du_parts[0], du_parts[1], du_parts[2]),
+                                         window=w, skip=rw.SKIP, domains=DOM)
+            targets[(o.window, "coastsat", w)] = cs.reindex(idx) * years
+            targets[(o.window, "duneline", w)] = du.reindex(idx) * years
+
+    rows, values = [], {o.window: pd.DataFrame(index=idx) for o in observations}
+    for o in observations:
+        years = o.window[1] - o.window[0]
+        for w in windows:
+            for name in ("coastsat", "duneline"):
+                values[o.window][f"target_{name}_w{w:02d}_m"] = targets[(o.window, name, w)]
+        for key, folder in tc.MODEL_SETS.items():
+            mdf = models[key][0][o.window]
+            if mdf is None:
+                continue
+            raw = pd.Series(mdf["change_rate_m_yr"].to_numpy(float) * years, index=idx)
+            for w in windows:
+                sm = smooth_domain_series(raw, w)
+                values[o.window][f"model_{folder}_w{w:02d}_m"] = sm
+                for form in FORMS:
+                    m = raw if form == "as_graded" else sm
+                    # as_graded: the null is redrawn per window because the target changed
+                    for name in ("coastsat", "duneline"):
+                        t = targets[(o.window, name, w)]
+                        ok = (m.notna() & t.notna() & interior).to_numpy()
+                        a, b = m.to_numpy()[ok], t.to_numpy()[ok]
+                        d = a - b
+                        null = np.empty(n_null)
+                        for i in range(n_null):
+                            sur = pd.Series(phase_randomise(raw.to_numpy(float), rng),
+                                            index=idx)
+                            if form == "scale_matched":
+                                sur = smooth_domain_series(sur, w)
+                            null[i] = np.corrcoef(sur.to_numpy()[ok], b)[0, 1]
+                        rows.append(dict(
+                            window="{}_{}".format(*o.window), model_ends=folder,
+                            target=name, form=form, smoothing_domains=w,
+                            smoothing_km=w * DOM.domain_spacing_m / 1000.0,
+                            n=int(ok.sum()), bias_m=round(float(d.mean()), 3),
+                            rmse_m=round(float(np.sqrt((d ** 2).mean())), 3),
+                            r=round(float(np.corrcoef(a, b)[0, 1]), 3),
+                            r_null_p95=round(float(np.percentile(null, 95)), 3),
+                            r_null_sd=round(float(null.std(ddof=1)), 3)))
+    skill = pd.DataFrame(rows)
+    skill["r_clears_null"] = skill["r"] > skill["r_null_p95"]
+    return skill, values
+
+
+# One smoothing width in words, for a legend or column name
+def win_label(w):
+    return ("unsmoothed rate" if not w else
+            f"rate smoothed {w * DOM.domain_spacing_m / 1000.0:g} km"
+            + (" (as graded)" if w == rw.TARGET_WINDOW else ""))
+
+
+# One panel per period: every smoothing width over the untouched model line
+def figure(values, skill, window, windows, model_key=tc.UNSOLVED):
+    folder = tc.MODEL_SETS[model_key]
+    df = values[window].reset_index()
+    x = df["domain_number"].to_numpy(float)
+    model = df[f"model_{folder}_w00_m"].to_numpy(float)     # raw: the run as it is
+    half = tc.Y_HALF_M
+    sk = skill[(skill.window == "{}_{}".format(*window)) & (skill.model_ends == folder)
+               & (skill.target == "coastsat") & (skill.form == "as_graded")
+               ].set_index("smoothing_domains")
+
+    fig, ax = plt.subplots(constrained_layout=True,
+                           figsize=figsize("double", aspect=0.46))
+    # Title names quantity, window and method; projected, not total
+    ax.set_title(f"Projected shoreline change vs CASCADE, {window[0]}–{window[1]} "
+                 f"(CoastSat LRR 1996–2024 × {window[1] - window[0]} yr, "
+                 "every LOWESS width)")
+    # All-NaN mean_lrr draws the frame and village bands without the sign fill
+    rw.obs.draw_panel(ax, df.assign(mean_lrr=np.nan, std_lrr=0.0), half,
+                      label=True, std=False)
+    rw.obs.draw_shoals(ax, label=True)
+    fills = rw.obs.fills_in(*window)
+    if fills:
+        rw.obs.draw_fills(ax, fills, half)
+    for i, w in enumerate(windows):
+        ax.plot(x, df[f"target_coastsat_w{w:02d}_m"].to_numpy(float),
+                color=SMOOTH_RAMP[i % len(SMOOTH_RAMP)], lw=1.2, zorder=10 + i,
+                solid_capstyle="round")
+    ax.plot(x, model, color=INK, lw=tc.LW_MODEL, zorder=20, solid_capstyle="round")
+    ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
+    ax.set_xlabel(rw.DOMAIN_AXIS_LABEL)
+    ax.set_ylabel(tc.Y_LABEL)
+    h = [Line2D([], [], color=SMOOTH_RAMP[i % len(SMOOTH_RAMP)], lw=1.2)
+         for i, _ in enumerate(windows)] + [Line2D([], [], color=INK, lw=tc.LW_MODEL)]
+    labels = ([f"Projection, {win_label(w)}" for w in windows]
+              + [f"CASCADE net change, {tc.MODEL_LABEL[model_key]}"])
+    fig.legend(handles=h, labels=labels, loc="outside lower center", ncol=3,
+               frameon=False)
+    scores = "; ".join(
+        "{} {:+.1f} m bias, {:.1f} m RMSE".format(
+            "unsmoothed" if not w else f"{w * DOM.domain_spacing_m / 1000.0:g} km",
+            sk.loc[w, "bias_m"], sk.loc[w, "rmse_m"]) for w in windows)
+    caption(fig, (
+        "{}–{}: the CASCADE run's own net change in shoreline position (black) against "
+        "the change projected from the CoastSat linear regression rate, by GIS domain "
+        "(1 at Cape Point, 90 at Pea Island), in metres over the {}-yr model window, "
+        "seaward positive. The RATE is smoothed alongshore BEFORE it is projected, and "
+        "the four blue curves are the four widths on a light-to-dark ramp: palest is "
+        "the unsmoothed domain means, then {}, darkest is the {}-domain "
+        "({:g} km) window the runs are actually graded at. Every curve keeps the raw "
+        "domain means over GIS 1–{} — the boundary treatment at Oregon Inlet — so the "
+        "four are identical there by construction, and the projection is that rate × "
+        "{} yr. THE BLACK LINE IS THE SAME RUN THROUGHOUT: nothing about the model "
+        "responds to the smoothing, so the spread of the blue family around a fixed "
+        "black line is the whole result. {} carries no source/sink term in any domain, "
+        "the two ends included, so all 90 domains are the model's own response and the "
+        "target was not fitted anywhere in it. Interior GIS {}–{}, model minus the "
+        "projection: {}. The bias barely moves because a symmetric smoother preserves "
+        "the mean; the RMSE falls because the smoother removes the transect-scale "
+        "scatter the model was never going to reproduce, not because the model "
+        "improved. The y axis (±{:g} m) is the same on every figure in "
+        "target_comparison.{} The other two model sets, the dune-line target and the "
+        "correlations with their null bands are in tables/skill_by_window.csv."
+    ).format(
+        window[0], window[1], window[1] - window[0],
+        ", ".join(f"{w * DOM.domain_spacing_m / 1000.0:g} km" for w in windows[1:-1]),
+        windows[-1], windows[-1] * DOM.domain_spacing_m / 1000.0,
+        rw.SKIP, window[1] - window[0],
+        tc.MODEL_CLAUSE[model_key][0].upper() + tc.MODEL_CLAUSE[model_key][1:],
+        rw.INTERIOR[0], rw.INTERIOR[1], scores, half,
+        tc.over_note([(df, [f"target_coastsat_w{w:02d}_m" for w in windows]
+                       + [f"model_{folder}_w00_m"], "")], half)))
+    out = save(fig, OUT_DIR / "projected_vs_model_{}_{}".format(*window))
+    plt.close(fig)
+    return out
+
+
+# How much alongshore structure each LOWESS width removes from one LRR field (m/yr)
+def field_structure(window, windows):
+    path = lrr_csv(*window)
+    if not path.exists():
+        return None
+    t = pd.read_csv(path)
+    t = t[t["domain_number"].between(DOM.first_gis_id, DOM.last_gis_id)]
+    dom_ids, along, rate = coastsat_transects(window)
+    dmean = t.groupby("domain_number")["lrr_m_yr"].mean()
+    within = float((t["lrr_m_yr"] - t["domain_number"].map(dmean)).std(ddof=1))
+
+    idx = pd.RangeIndex(DOM.first_gis_id, DOM.last_gis_id + 1)
+    y = dmean.reindex(idx).to_numpy(float)
+    y = y - np.nanmean(y)
+    ac = np.correlate(y, y, "full")[len(y) - 1:]
+    ac = ac / ac[0]
+    decorr = next((k for k in range(1, len(ac)) if ac[k] < 0.5), len(ac))
+
+    out = dict(window="{}_{}".format(*window), years=window[1] - window[0],
+               n_transects=int(len(t)),
+               sd_domain_mean_m_yr=round(float(dmean.std(ddof=1)), 4),
+               sd_within_domain_m_yr=round(within, 4),
+               median_transect_unc_m_yr=round(float(t["unc_m_yr"].median()), 4),
+               decorrelation_domains=int(decorr),
+               decorrelation_km=round(float(decorr * DOM.domain_spacing_m / 1000.0), 2))
+    for w in windows:
+        if not w:
+            continue
+        sm, _ = spliced_lowess_series(dom_ids, along, rate, w, skip=rw.SKIP, domains=DOM)
+        resid = dmean.reindex(sm.index) - sm
+        out[f"sd_removed_w{w:02d}_m_yr"] = round(float(resid.std(ddof=1)), 4)
+    for k in (1, 2, 3, 5, 10):
+        out[f"autocorr_lag{k:02d}"] = round(float(ac[k]), 3)
+    return out
+
+
+# field_structure over every LRR window on disk
+def target_structure(windows, lrr_windows=None):
+    lrr_windows = lrr_windows or LRR_WINDOWS
+    rows = [r for r in (field_structure(w, windows) for w in lrr_windows) if r]
+    return pd.DataFrame(rows)
+
+
+# The PROVENANCE.md section on what the grading window is for
+def structure_section(struct, windows):
+    tgt = struct[struct.window == "{}_{}".format(*tc.FULL_WINDOW)].iloc[0]
+    cols = [w for w in windows if w]
+    head = ("| LRR window | yr | domain-mean SD | within-domain SD | "
+            + " | ".join(f"SD removed, {w} dom" for w in cols) + " | decorrelates |")
+    tab = [head, "|" + "---|" * (5 + len(cols))]
+    for _, r in struct.iterrows():
+        mark = " **(the target)**" if r.window == tgt.window else ""
+        tab.append(
+            f"| {r.window.replace('_', '–')}{mark} | {int(r.years)} "
+            f"| {r.sd_domain_mean_m_yr:.3f} | {r.sd_within_domain_m_yr:.3f} | "
+            + " | ".join(f"{r[f'sd_removed_w{w:02d}_m_yr']:.3f}" for w in cols)
+            + f" | {r.decorrelation_km:.1f} km |")
+    w10 = tgt[f"sd_removed_w{rw.TARGET_WINDOW:02d}_m_yr"]
+    return [
+        f"## What the {rw.TARGET_WINDOW}-domain window is actually doing",
+        "",
+        "Decided 2026-09-21 (Hannah): the window stays at 10 domains, but it is not "
+        "noise removal and should not be described as such. Moved to "
+        f"{rw.TARGET_WINDOW} domains on 2026-09-28 (Hannah), following the runner. "
+        "The CoastSat-solved end rates drawn here were re-solved against the LOWESS-7 "
+        "value at GIS 90 the same day; nothing is re-solved for this table.",
+        "",
+        "All figures in m/yr of alongshore structure removed, NOT as a share of "
+        "variance: the domain-mean variance is dominated by the long-wavelength swings, "
+        "so a wiggle that is plainly visible on a figure reads as a few per cent of it "
+        "and the percentage badly undersells the effect.",
+        "",
+        *tab,
+        "",
+        "### Why the target moves so little under smoothing",
+        "",
+        "**The 1996-2024 LRR is the smoothest of the five fields**, because it is the "
+        "longest fit: each transect's OLS slope is the best constrained and there is "
+        f"least scatter to take out. At 5 domains the LOWESS removes "
+        f"{tgt['sd_removed_w05_m_yr']:.3f} m/yr from it against "
+        f"{struct[struct.window == '1984_2004'].iloc[0]['sd_removed_w05_m_yr']:.3f} "
+        "m/yr from 1984-2004 -- less than half. `projected_vs_model_<window>.png` then "
+        "projects over 14 yr rather than 20, which halves the apparent difference "
+        "again. So the near-overlapping curves there and the obvious smoothing in "
+        "`input_prep/6-scr-smooth/lowess_method_comparison.py` are the SAME LOWESS on "
+        "different fields, not a difference in method.",
+        "",
+        "### It is still not denoising, for this target",
+        "",
+        f"- The domain-mean rate decorrelates alongshore at {tgt.decorrelation_km:.1f} km "
+        "in every window (r below 0.5 at lag "
+        f"{int(tgt.decorrelation_domains)} domains: "
+        + ", ".join(f"{k * DOM.domain_spacing_m / 1000:g} km r={tgt[f'autocorr_lag{k:02d}']:+.2f}"
+                    for k in (1, 2, 3, 5, 10)) + "). A "
+        f"{rw.TARGET_WINDOW}-domain window is "
+        f"{rw.TARGET_WINDOW * DOM.domain_spacing_m / 1000.0 / tgt.decorrelation_km:.0f}x "
+        "that, so it is well past averaging noise and is cutting into coherent "
+        "structure.",
+        f"- Scatter between transects inside one domain is only "
+        f"{tgt.sd_within_domain_m_yr:.3f} m/yr for this target, and it is LARGER than "
+        f"the median per-transect LRR uncertainty ({tgt.median_transect_unc_m_yr:.3f} "
+        "m/yr), so even that is not clean estimation noise: it is real sub-500 m "
+        "structure, optimistic OLS uncertainties (satellite series violate the "
+        "independent-residual assumption), or both.",
+        f"- `projected_vs_model_<window>.png` shows where the {w10:.3f} m/yr goes: the "
+        "Avon peak (GIS 29-35) and the Wimble peak (GIS 65-72), both shoal-fronted, "
+        "both physically anchored features rather than scatter.",
+        "",
+        "**So the honest statement is: the target is graded at a scale deliberately "
+        "coarser than the model resolves, and grading at that scale removes the two "
+        "shoal-fronted peaks from the target.** Those are also two of the places the "
+        "model misses worst, which is why RMSE improves with the window.",
+        "",
+        "**This claim is about the FULL-PERIOD target only.** A sub-period LRR carries "
+        "roughly twice the estimation noise (within-domain SD "
+        f"{struct[struct.window == '1996_2010'].iloc[0]['sd_within_domain_m_yr']:.3f} "
+        f"m/yr for 1996-2010 against {tgt.sd_within_domain_m_yr:.3f} here), so for "
+        "those targets the LOWESS is doing real denoising. Do not carry the statement "
+        "across to them. The numbers are in `tables/target_structure.csv`.",
+        "",
+    ]
+
+
+# Write PROVENANCE.md: the figure, the question, the tables, the runs
+def provenance(skill, windows, n_null, runs_used, structure=None):
+    def table(form, target):
+        s = skill[(skill.form == form) & (skill.target == target)]
+        head = ("| window | model set | LOWESS | bias (m) | RMSE (m) | r | null r (p95) "
+                "| clears null |")
+        out = [head, "|" + "---|" * 7]
+        for _, x in s.sort_values(["window", "model_ends", "smoothing_domains"]).iterrows():
+            out.append(
+                f"| {x.window.replace('_', '–')} | {x.model_ends} "
+                f"| {'raw' if not x.smoothing_domains else f'{x.smoothing_km:g} km'} "
+                f"| {x.bias_m:+.1f} | {x.rmse_m:.1f} | {x.r:.3f} | {x.r_null_p95:.3f} "
+                f"| {'yes' if x.r_clears_null else 'no'} |")
+        return out
+
+    (OUT_DIR / "PROVENANCE.md").write_text("\n".join([
+        "# target_comparison/smoothing_scale - provenance",
+        "",
+        f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
+        "scripts/analyze_output/compare_runs/hindcast_vs_observed/smoothing_scale.py "
+        "(2026-09-21, Hannah, by interview).",
+        "",
+        "## The figure",
+        "",
+        "`projected_vs_model_<window>.png` is the point: the model's own net change in "
+        "shoreline position against the change projected from the CoastSat LRR, ONE "
+        "alongshore panel per model period with every smoothing width laid over it on "
+        "a light-to-dark blue ramp (" + ", ".join(
+            "palest = raw" if not w
+            else (f"darkest = {w} domains / {w * DOM.domain_spacing_m / 1000:g} km"
+                  if w == windows[-1]
+                  else f"{w} domains / {w * DOM.domain_spacing_m / 1000:g} km")
+            for w in windows) + "). The rate is smoothed BEFORE it is projected; the "
+        f"darkest curve is the {rw.TARGET_WINDOW}-domain window the runs are actually "
+        f"graded at. Over GIS 1-{rw.SKIP} all four coincide, because the splice keeps "
+        "the raw domain means there whatever the window.",
+        "",
+        "**The black line is the run untouched, the same in every figure.** Nothing "
+        "about the model responds to the smoothing, so the spread of the blue family "
+        "around a fixed black line is the whole result. Read it that way: the question "
+        "is not whether the model got better, it is how much of the target the model "
+        "is being asked to match is real structure and how much is transect-scale "
+        "scatter that smoothing removes.",
+        "",
+        *(structure or []),
+        "## The question behind it",
+        "",
+        f"The runs are graded against a {rw.TARGET_WINDOW}-domain LOWESS of the transect rates (raw "
+        f"domain means over GIS 1-{rw.SKIP}). That window has never been examined, and "
+        "`../projected/tables/skill.csv` shows it is load-bearing. The "
+        "table here sweeps it against the full-period CoastSat target (the 1996-2024 "
+        "LRR x 14 yr, the same rate in both windows) and the dune line.",
+        "",
+        "Model sets and runs are `../projected/runs_used.csv`; the "
+        "loaders are `target_comparison.load_model_sets`, so these are the same "
+        "runs that folder draws. Interior GIS "
+        f"{rw.INTERIOR[0]}-{rw.INTERIOR[1]}, as the run index scores.",
+        "",
+        "## Read the bias, and r only against its own null",
+        "",
+        f"Interior r here is small. A symmetric smoother strips high-frequency "
+        "variance the two sides do not share, so r rises and RMSE falls at EVERY "
+        "window whether or not the model is any good. Every r therefore carries "
+        f"`r_null_p95`: the 95th percentile of r over {n_null} phase-randomised "
+        "surrogates of that same model series -- same mean, variance and alongshore "
+        "autocorrelation, no relation to the target -- each put through the identical "
+        "smoothing and splice. Only `r_clears_null` is evidence. The bias is close to "
+        "smoothing-invariant and needs no null.",
+        "",
+        "RMSE has no null column. It falls with the window for the same mechanical "
+        "reason and is only comparable BETWEEN model sets at one window, never across "
+        "windows as a measure of improvement.",
+        "",
+        "## Two forms in the table",
+        "",
+        "- **as_graded** -- target smoothed, model raw: what the runner does, and what "
+        "the figures draw.",
+        "- **scale_matched** -- both smoothed at the same width, kept for the record "
+        "and not drawn. The target's LOWESS is "
+        "fitted at transect resolution (~906 points) and averaged to domains; the "
+        "model exists only at 90 domains, so its pass is lowess over those 90 values "
+        "at the same physical width. Same width, coarser grid -- which is why "
+        "as_graded, which smooths no model at all, is reported beside it.",
+        "",
+        "## CoastSat target, as graded",
+        "",
+        *table("as_graded", "coastsat"),
+        "",
+        "## CoastSat target, scale matched",
+        "",
+        *table("scale_matched", "coastsat"),
+        "",
+        "The dune-line rows are in `tables/skill_by_window.csv`; the figures draw the "
+        "CoastSat target only, since the window is a property of that target's build.",
+        "",
+        "## Runs",
+        "",
+        "Full provenance, with the topography version and git commit of each, is in "
+        "`runs_used.csv`.",
+        "",
+        "| window | model set | run | arm |",
+        "|---|---|---|---|",
+        *[f"| {r['window'].replace('_', '–')} | {tc.MODEL_SETS[r['model_ends']]} "
+          f"| `{r['run_name']}` | `{r['arm']}` |" for r in runs_used],
+        "",
+    ]), encoding="utf-8")
+
+
+# Run: load the model sets, sweep the widths, draw, write tables and provenance
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="Does the grading smoothing window matter?")
+    ap.add_argument("--windows", nargs="+", type=int, default=list(SMOOTH_WINDOWS),
+                    metavar="N", help="LOWESS widths in domain units; 0 = raw.")
+    ap.add_argument("--n-null", type=int, default=N_NULL)
+    a = ap.parse_args(argv)
+    windows = sorted(set(a.windows))
+
+    # Canonical mode name, not an alias: tc compares CS_MODE by equality
+    tc.CS_MODE = "projected"
+    tc.OUT_DIR = tc.ROOT_DIR / tc.CS_MODES[tc.CS_MODE]
+    apply_style()
+    observations = [rw.Observation(w) for w in tc.WINDOWS]
+    models = tc.load_model_sets()
+
+    # Words for this script's columns, so tc.over_note can name off-axis values
+    tc._COL_NAME.update(
+        {f"target_coastsat_w{w:02d}_m": f"projection, {win_label(w)}" for w in windows}
+        | {f"model_{f}_w00_m": f"model, {tc.MODEL_LABEL[k]}"
+           for k, f in tc.MODEL_SETS.items()})
+
+    # Sweep, then tables, figures, runs used and provenance
+    skill, values = build(observations, models, windows, a.n_null)
+    (OUT_DIR / "tables").mkdir(parents=True, exist_ok=True)
+    skill.to_csv(OUT_DIR / "tables" / "skill_by_window.csv", index=False)
+    for w, df in values.items():
+        df.round(3).to_csv(OUT_DIR / "tables" / "domain_values_{}_{}.csv".format(*w))
+
+    written = []
+    for o in observations:
+        written += figure(values, skill, o.window, windows)
+    runs = [dict(r, model_ends=k) for k, (_, rows) in models.items() for r in rows]
+    runs.sort(key=lambda r: (r["window"], r["model_ends"]))
+    pd.DataFrame([dict(r, model_ends=tc.MODEL_SETS[r["model_ends"]]) for r in runs]
+                 ).to_csv(OUT_DIR / "runs_used.csv", index=False)
+    struct = target_structure(windows)
+    struct.to_csv(OUT_DIR / "tables" / "target_structure.csv", index=False)
+    provenance(skill, windows, a.n_null, runs,
+               structure=structure_section(struct, windows))
+    cols = ["window", "years", "sd_domain_mean_m_yr", "sd_within_domain_m_yr"] + \
+           [f"sd_removed_w{w:02d}_m_yr" for w in windows if w] + ["decorrelation_km"]
+    print("\nalongshore structure of each LRR field (m/yr); the target is "
+          "{}_{}".format(*tc.FULL_WINDOW))
+    print(struct[cols].to_string(index=False))
+
+    show = skill[(skill.target == "coastsat")
+                 & (skill.model_ends == tc.MODEL_SETS[tc.UNSOLVED])]
+    print(show[["window", "form", "smoothing_km", "bias_m", "rmse_m", "r",
+                "r_null_p95", "r_clears_null"]].to_string(index=False))
+    for p in written:
+        print("wrote   ", Path(p).relative_to(_REPO))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,525 @@
+"""
+Review the aerial chips one hole at a time: a keystroke per hole records pond, dropout or unclear.
+
+    python scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/HAT_hole_aerial_picker.py
+
+Interactive (needs a windowing backend and the D: drive). Cycles through 1996
+and later imagery, with an NDWI view where a source has a verified NIR band;
+writes the aerial_verdict column of aerial_review.csv, backing up before it
+would lose a verdict. Details: scripts/input_prep/1-barrier3d-domains/1-extraction/nodata_audit/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
+
+import csv
+import json
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import rasterio
+from matplotlib.patches import Polygon
+from pyproj import Transformer
+from rasterio.windows import from_bounds
+
+HERE = Path(__file__).resolve().parent
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in HERE.parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as REPO  # noqa: E402  # 1-extraction/nodata_audit/ since 2026-09-09
+sys.path.insert(0, str(_HAT_DIR))
+sys.path.insert(0, str(HERE))
+from site_layer import hat_topo_version as htv  # noqa: E402
+import HAT_hole_aerial_chips as chips  # noqa: E402
+from site_layer.hat_gis_root import GIS_ROOT  # noqa: E402
+
+# --- CONFIG ------------------------------------------------------------------
+# Chip half-widths are PER HOLE, not fixed
+ZOOM_MIN_M = 90.0                 # floor, so a single-cell hole is not a pinhole
+ZOOM_CLOSE = 0.85                 # close half-width = this x the hole span
+ZOOM_WIDE = 2.6                   # wide view = this x the close one
+
+# Imagery sources
+
+# Imagery: 1996 is primary, the rest corroborate; the NIR band is verified, not assumed (README)
+AERIAL_ROOT = GIS_ROOT / "aerial_imagery"
+SOURCES = [
+    dict(key="1996", label="1996 scanned",  res=1.00, zooms=2, nir=None,
+         glob="1996/usgs_henderson/frames/*.tif"),
+    dict(key="2019", label="2019 NGS",      res=0.30, zooms=1, nir=None,
+         glob="2019/**/*.tif"),
+    dict(key="2008", label="2008 IOCM",     res=0.50, zooms=1, nir=None,
+         glob="2008/**/*.tif"),
+    dict(key="2014", label="2014 4-band",   res=0.35, zooms=1, nir=4,
+         glob="2014/noaa_2014_4BandImagery_J1472573/*.tif"),
+    dict(key="2018", label="2018 NAIP",     res=0.60, zooms=1, nir=4,
+         glob="2018/noaa_2018_4BandImagery_NAIP_NC_J1406390/*.tif"),
+    dict(key="2004", label="2004 colour",   res=1.46, zooms=1, nir=None,
+         glob="2004/**/*.tif"),
+]
+POND, DROPOUT, UNCLEAR = "POND", "DROPOUT", "UNCLEAR"
+KEYMAP = {"w": POND, "g": DROPOUT, "u": UNCLEAR}
+COLOR = {POND: "#1f6fb4", DROPOUT: "#d7191c", UNCLEAR: "#7a7a7a", "": "#c9c9c9"}
+
+REVIEW_COL = "aerial_verdict"
+
+
+# All outputs in one nodata-audit/ folder beside the extraction; audit_dir() names it
+AUDIT_SUBDIR = "nodata-audit"
+# -----------------------------------------------------------------------------
+
+
+# <product>/dune-topo/<version>/nodata-audit/, created on demand
+def audit_dir(topo_dir):
+    d = topo_dir.parent / AUDIT_SUBDIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+# The window has to BE a real window
+
+# Backends that deliver key_press_event to a live window
+INTERACTIVE = {"tkagg", "qtagg", "qt5agg", "qt6agg", "wxagg", "macosx",
+               "gtk3agg", "gtk4agg", "nbagg", "webagg"}
+
+
+# Switch to a real windowing backend, or stop with instructions
+def ensure_interactive_backend():
+    be = matplotlib.get_backend().lower()
+    if be in INTERACTIVE:
+        return be
+    for cand in ("TkAgg", "QtAgg", "Qt5Agg"):
+        try:
+            plt.switch_backend(cand)
+            print(f"[backend] {be} cannot deliver keystrokes; "
+                  f"switched to {cand}")
+            return cand.lower()
+        except Exception:
+            continue
+    raise SystemExit(
+        f"\nmatplotlib is on '{be}', which draws to a file or a static pane "
+        f"and never sees a keypress,\nand no interactive backend could be "
+        f"loaded in its place.\n\n"
+        f"Run this from a terminal rather than inside an IDE console:\n"
+        f"    python {Path(__file__).name}\n\n"
+        f"In PyCharm, also turn OFF  Settings > Tools > Python Scientific >\n"
+        f"'Show plots in tool window' - SciView renders the figure as an image "
+        f"and swallows every key.\n")
+
+
+# Drop matplotlib's own bindings for the keys this picker uses
+def free_the_keys():
+    for rc in ("keymap.grid", "keymap.grid_minor", "keymap.home",
+               "keymap.back", "keymap.forward", "keymap.save",
+               "keymap.yscale", "keymap.xscale", "keymap.zoom",
+               "keymap.pan", "keymap.fullscreen"):
+        matplotlib.rcParams[rc] = []
+    # 'q' left alone: matplotlib's quit closes the window, which is what the picker wants
+    matplotlib.rcParams["keymap.quit"] = ["q", "ctrl+w", "cmd+w"]
+
+
+# Cache
+
+NIR_MIN_RATIO = 2.5        # veg/water brightness ratio a NIR band must beat
+NIR_MIN_MARGIN = 1.4       # and by this factor over the best visible band
+
+
+# Is band `cand` really near-infrared? (ok, ratio, best_visible_ratio)
+def verify_nir(path, cand):
+    with rasterio.open(path) as d:
+        a = d.read(out_shape=(d.count, 900, 900)).astype(float)
+    if a.shape[0] < cand:
+        return False, 0.0, 0.0
+    vis = a[:3]
+    tot = vis.sum(0)
+    ok = tot > 0
+    if ok.sum() < 1000:
+        return False, 0.0, 0.0
+    veg = ok & (vis[1] > vis[0]) & (vis[1] > vis[2]) & (tot > np.percentile(tot[ok], 50))
+    wat = ok & (tot < np.percentile(tot[ok], 10))
+    if veg.sum() < 200 or wat.sum() < 200:
+        return False, 0.0, 0.0
+    ratio = [a[i][veg].mean() / max(a[i][wat].mean(), 1.0)
+             for i in range(a.shape[0])]
+    r_cand = ratio[cand - 1]
+    r_vis = max(ratio[:3])
+    ok = (r_cand >= NIR_MIN_RATIO and r_cand >= NIR_MIN_MARGIN * r_vis
+          and r_cand == max(ratio))
+    return ok, r_cand, r_vis
+
+
+# One aerial dataset, sampled in the domain CRS regardless of its own
+class ImagerySource:
+
+    def __init__(self, cfg):
+        import glob as _g
+        self.__dict__.update(cfg)
+        # ** reaches the tiles under <year>/noaa_<job>/ beside the year's mosaic
+        self.files = sorted(_g.glob(str(AERIAL_ROOT / cfg["glob"]), recursive=True))
+        self.boxes = []
+        self.crs = None
+        for p in self.files:
+            with rasterio.open(p) as d:
+                self.boxes.append((p, d.bounds))
+                self.crs = d.crs
+        self.ok = bool(self.files)
+        self.nir_note = ""
+        if self.ok:
+            self.tf = Transformer.from_crs(chips.DOMAIN_EPSG, self.crs,
+                                           always_xy=True)
+            self.unit_m = self.crs.linear_units_factor[1]
+            if self.nir:
+                good, rc, rv = verify_nir(self.files[0], self.nir)
+                if good:
+                    self.nir_note = f"  NIR band {self.nir} (veg/water {rc:.2f})"
+                else:
+                    self.nir_note = (f"  band {self.nir} FAILS the NIR test "
+                                     f"(veg/water {rc:.2f} vs {rv:.2f} visible)"
+                                     f" - no NDWI")
+                    self.nir = None
+
+    # (rgb, ndwi|None, fx, fy, half, tile) or None if nothing covers it
+    def chip(self, x_utm, y_utm, half_m):
+        if not self.ok:
+            return None
+        fx, fy = self.tf.transform(x_utm, y_utm)
+        half = half_m / self.unit_m
+        best = None
+        for p, b in self.boxes:
+            if not (b.left <= fx <= b.right and b.bottom <= fy <= b.top):
+                continue
+            with rasterio.open(p) as d:
+                win = from_bounds(fx - half, fy - half, fx + half, fy + half,
+                                  d.transform)
+                a = d.read(window=win, boundless=True, fill_value=0,
+                           out_shape=(d.count, chips.CHIP_PX, chips.CHIP_PX))
+            rgb = np.moveaxis(a[:3], 0, -1)
+            black = float((rgb.max(axis=-1) < 12).mean())
+            if best is None or black < best[0]:
+                ndwi = None
+                if self.nir and a.shape[0] >= self.nir:
+                    g = a[1].astype(float)
+                    nir = a[self.nir - 1].astype(float)
+                    ndwi = (g - nir) / np.maximum(g + nir, 1e-6)
+                best = (black, rgb, ndwi, Path(p).name)
+            if black < 0.001:
+                break
+        if best is None:
+            return None
+        return best[1], best[2], fx, fy, half, best[3]
+
+
+# Render every conflict hole in every source that covers it
+def build_cache(vdir, cache):
+    cache.mkdir(parents=True, exist_ok=True)
+    verdicts = list(csv.DictReader((vdir / "hole_verdicts.csv").open()))
+    conflicts = [r for r in verdicts
+                 if "UNKNOWN" not in (r["ncfmp_verdict"], r["shape_verdict"])
+                 and r["ncfmp_verdict"] != r["shape_verdict"]]
+
+    cells = defaultdict(list)
+    with (vdir / "bracketed_hole_cells.csv").open() as f:
+        for r in csv.DictReader(f):
+            cells[(int(r["domain"]), int(r["profile"]))].append(
+                (int(r["npy_row"]), int(r["npy_col"])))
+
+    origins = {}
+    from site_layer.hat_elevation_products import product as _elprod
+    with _elprod("2009-2014-1996").audit_10m.open() as f:
+        for r in csv.DictReader(f):
+            origins[int(r["domain"])] = (float(r["origin_x"]),
+                                         float(r["origin_y"]))
+
+    srcs = []
+    for cfg in SOURCES:
+        src = ImagerySource(cfg)
+        miss = "" if src.ok else "   MISSING - skipped"
+        print(f"[src] {cfg['key']:6s} {cfg['label']:14s} "
+              f"{len(src.files):>3} tiles{src.nir_note}{miss}")
+        if src.ok:
+            srcs.append(src)
+
+    index = []
+    total = len(conflicts)
+    for i, r in enumerate(sorted(conflicts,
+                                 key=lambda r: (int(r["domain"]),
+                                                int(r["profile"]))), 1):
+        dom, prof = int(r["domain"]), int(r["profile"])
+        cs = cells[(dom, prof)]
+        polys_utm = [chips.cell_corners_utm(rr, cc, origins[dom])
+                     for rr, cc in cs]
+        cx = np.mean([p[0] for poly in polys_utm for p in poly])
+        cy = np.mean([p[1] for poly in polys_utm for p in poly])
+        span = max(
+            max(p[0] for poly in polys_utm for p in poly)
+            - min(p[0] for poly in polys_utm for p in poly),
+            max(p[1] for poly in polys_utm for p in poly)
+            - min(p[1] for poly in polys_utm for p in poly))
+        close = max(ZOOM_MIN_M, span * ZOOM_CLOSE)
+
+        entry = dict(domain=dom, profile=prof, n_cells=len(cs),
+                     span_m=round(span), ncfmp=r["ncfmp_verdict"],
+                     shape=r["shape_verdict"], views=[])
+        for src in srcs:
+            for zi in range(src.zooms):
+                zm = close * (ZOOM_WIDE ** zi)
+                got = src.chip(cx, cy, zm)
+                if got is None:
+                    continue
+                rgb, ndwi, fx, fy, half, tile = got
+                px = []
+                for poly in polys_utm:
+                    pts = []
+                    for x, y in poly:
+                        ax, ay = src.tf.transform(x, y)
+                        pts.append([(ax - (fx - half)) / (2 * half)
+                                    * chips.CHIP_PX,
+                                    (1 - (ay - (fy - half)) / (2 * half))
+                                    * chips.CHIP_PX])
+                    px.append(pts)
+                name = f"D{dom}_p{prof}_{src.key}_z{zi}.png"
+                plt.imsave(cache / name, rgb)
+                entry["views"].append(dict(
+                    file=name, source=src.key, label=src.label, kind="photo",
+                    half_m=zm, polys=px, frame=tile, black=0.0))
+                if ndwi is not None and zi == 0:
+                    nm = f"D{dom}_p{prof}_{src.key}_ndwi.png"
+                    plt.imsave(cache / nm, np.clip(ndwi, -0.6, 0.6),
+                               cmap="RdBu", vmin=-0.6, vmax=0.6)
+                    entry["views"].append(dict(
+                        file=nm, source=src.key, label=f"{src.label} NDWI",
+                        kind="ndwi", half_m=zm, polys=px, frame=tile,
+                        black=0.0))
+        if entry["views"]:
+            index.append(entry)
+        print(f"\r  cached {i}/{total}  ({len(entry['views'])} views)   ",
+              end="", flush=True)
+    print()
+    (cache / "index.json").write_text(json.dumps(index), encoding="utf-8")
+    return index
+
+
+# Review file
+
+# Existing verdicts, keyed (domain, profile)
+def load_review(path, index):
+    got = {}
+    if path.is_file():
+        for r in csv.DictReader(path.open()):
+            col = next((c for c in r if c.startswith(REVIEW_COL)), None)
+            if col:
+                got[(int(r["domain"]), int(r["profile"]))] = (r[col] or "").strip()
+    return {(e["domain"], e["profile"]): got.get((e["domain"], e["profile"]), "")
+            for e in index}
+
+
+# How many verdicts the file on disk currently holds
+def count_verdicts(path):
+    if not path.is_file():
+        return 0
+    try:
+        return sum(1 for r in csv.DictReader(path.open())
+                   if any((r[c] or "").strip() for c in r
+                          if c.startswith(REVIEW_COL)))
+    except Exception:
+        return 0
+
+
+# Write the review file, backing it up first if this would LOSE verdicts
+def save_review(path, index, verdicts):
+    have = count_verdicts(path)
+    want = sum(1 for v in verdicts.values() if v)
+    if have > want:
+        import shutil
+        from datetime import datetime
+        bak = path.with_suffix(
+            f".{datetime.now():%Y%m%d_%H%M%S}.bak.csv")
+        shutil.copy2(path, bak)
+        print(f"[backup] this write drops {have} verdicts to {want}; "
+              f"previous file copied to {bak.name}")
+    with path.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["domain", "profile", "n_cells", "ncfmp_verdict",
+                    "shape_verdict", "frame", "black_frac", REVIEW_COL])
+        for e in index:
+            v = e["views"][0]
+            w.writerow([e["domain"], e["profile"], e["n_cells"], e["ncfmp"],
+                        e["shape"], v["frame"], v["black"],
+                        verdicts[(e["domain"], e["profile"])]])
+
+
+# Picker
+
+# Run: build the image cache, then one keystroke per hole, saving as it goes
+def main():
+    backend = ensure_interactive_backend()
+    free_the_keys()
+    topo_dir, _, version = htv.topo_dirs(chips.TOPO_PRODUCT)
+    vdir = audit_dir(topo_dir)
+    outdir = vdir / "aerial_1996_conflicts"
+    cache = outdir / "chip_cache"
+    review = outdir / "aerial_review.csv"
+
+    idx_file = cache / "index.json"
+    if idx_file.is_file():
+        index = json.loads(idx_file.read_text(encoding="utf-8"))
+        print(f"[cache] {len(index)} chips from {cache}")
+    else:
+        print(f"[cache] building into {cache} - this reads the 1996 frames once")
+        index = build_cache(vdir, cache)
+
+    verdicts = load_review(review, index)
+    state = {"i": 0, "zoom": 0}
+    n = len(index)
+    imgs = {}
+
+    fig = plt.figure(figsize=(10.5, 10.8))
+    ax = fig.add_axes([0.03, 0.10, 0.94, 0.80])
+    ax.set_xticks([]); ax.set_yticks([])
+    footer = fig.text(0.5, 0.045, "", ha="center", fontsize=10.5,
+                      family="monospace")
+    tally = fig.text(0.5, 0.015, "", ha="center", fontsize=10, color="0.35",
+                     family="monospace")
+    try:
+        fig.canvas.manager.set_window_title("1996 aerial - pond or dropout")
+    except Exception:
+        pass
+
+    def draw():
+        e = index[state["i"]]
+        z = min(state["zoom"], len(e["views"]) - 1)
+        v = e["views"][z]
+        state["zoom"] = z
+        f = cache / v["file"]
+        if f not in imgs:
+            imgs[f] = plt.imread(f)
+        ax.clear()
+        ax.imshow(imgs[f], origin="upper",
+                  extent=[0, chips.CHIP_PX, chips.CHIP_PX, 0])
+        for px in v["polys"]:
+            ax.add_patch(Polygon(px, closed=True, fill=False,
+                                 edgecolor="#ffe100", lw=2.0))
+        # Clip to the image, so a long polygon cannot shrink the imagery
+        ax.set_xlim(0, chips.CHIP_PX)
+        ax.set_ylim(chips.CHIP_PX, 0)
+        ax.set_aspect("equal")
+
+        # A round-length scale bar near a quarter of the view
+        target = v["half_m"] / 2.0
+        step = min([1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000],
+                   key=lambda s: abs(s - target))
+        bar = step / (2 * v["half_m"]) * chips.CHIP_PX
+        ax.plot([14, 14 + bar], [chips.CHIP_PX - 16] * 2, color="w", lw=4)
+        ax.plot([14, 14 + bar], [chips.CHIP_PX - 16] * 2, color="k", lw=1.8)
+        ax.text(14, chips.CHIP_PX - 26, f"{step} m", color="w", fontsize=9,
+                va="bottom")
+        ax.set_xticks([]); ax.set_yticks([])
+
+        key = (e["domain"], e["profile"])
+        cur = verdicts[key]
+        era = "contemporaneous" if v["source"] == "1996" else "later - context"
+        extra = ("   blue = water, red = land"
+                 if v["kind"] == "ndwi" else "")
+        ax.set_title(
+            f"D{e['domain']}  profile {e['profile']}   "
+            f"{e['n_cells']} cell{'s' if e['n_cells'] > 1 else ''}, "
+            f"{e.get('span_m', 0)} m   [{state['i'] + 1}/{n}]   "
+            f"{2 * v['half_m']:.0f} m across\n"
+            f"{v['label']}  ({era})   "
+            f"[{z + 1}/{len(e['views'])} views]{extra}\n"
+            f"NCFMP says {e['ncfmp']}     blob shape says {e['shape']}",
+            fontsize=11.5)
+        for s in ax.spines.values():
+            s.set_color(COLOR[cur]); s.set_linewidth(4 if cur else 1)
+        footer.set_text(f"[ {cur or 'no verdict'} ]      "
+                        f"w water/POND   g ground/DROPOUT   u unclear   "
+                        f"z next view   x prev view   n next undecided   "
+                        f"r clear   q quit")
+        footer.set_color(COLOR[cur] if cur else "0.2")
+        done = sum(1 for x in verdicts.values() if x)
+        c = {k: sum(1 for x in verdicts.values() if x == k)
+             for k in (POND, DROPOUT, UNCLEAR)}
+        tally.set_text(f"{done}/{n} reviewed    "
+                       f"POND {c[POND]}   DROPOUT {c[DROPOUT]}   "
+                       f"UNCLEAR {c[UNCLEAR]}")
+        fig.canvas.draw_idle()
+
+    def advance():
+        nxt = next((j for j in range(state["i"] + 1, n)
+                    if not verdicts[(index[j]["domain"], index[j]["profile"])]),
+                   None)
+        state["i"] = nxt if nxt is not None else min(state["i"] + 1, n - 1)
+
+    def on_key(ev):
+        e = index[state["i"]]
+        key = (e["domain"], e["profile"])
+        if ev.key in KEYMAP:
+            verdicts[key] = KEYMAP[ev.key]
+            save_review(review, index, verdicts)
+            advance()
+            state["zoom"] = 0
+        elif ev.key == "r":
+            verdicts[key] = ""
+            save_review(review, index, verdicts)
+        elif ev.key == "right":
+            state["i"] = min(state["i"] + 1, n - 1)
+            state["zoom"] = 0
+        elif ev.key == "left":
+            state["i"] = max(state["i"] - 1, 0)
+            state["zoom"] = 0
+        elif ev.key == "n":
+            advance()
+        elif ev.key == "z":
+            state["zoom"] = (state["zoom"] + 1) % len(e["views"])
+        elif ev.key == "x":
+            state["zoom"] = (state["zoom"] - 1) % len(e["views"])
+        elif ev.key == "q":
+            plt.close(fig)
+            return
+        else:
+            return
+        draw()
+
+    fig.canvas.mpl_connect("key_press_event", on_key)
+    draw()
+    nv = sum(len(e["views"]) for e in index) / max(len(index), 1)
+    print(f"\n{n} holes on {backend}, {nv:.0f} views each. "
+          f"w=POND  g=DROPOUT  u=UNCLEAR")
+    print("z / x cycle imagery: 1996 close, 1996 wide, 2019 colour, 2008, "
+          "2014, 2018 NAIP + NDWI, 2004")
+    print(f"writing to {review}")
+    print("a window should be open now - click it once so it has keyboard "
+          "focus, then press w / g / u")
+    plt.show(block=True)
+
+    save_review(review, index, verdicts)
+    done = sum(1 for x in verdicts.values() if x)
+    if done == 0:
+        print("\n[!] the window closed with nothing reviewed.")
+        print("    If no window ever appeared, plt.show() returned without "
+              "blocking, which means")
+        print("    this is running inside an IDE console rather than a "
+              "terminal. Run it as:")
+        print(f"      python {Path(__file__).resolve()}")
+        print("    and in PyCharm turn off Settings > Tools > Python "
+              "Scientific > 'Show plots in tool window'.")
+    c = {k: sum(1 for x in verdicts.values() if x == k)
+         for k in (POND, DROPOUT, UNCLEAR)}
+    print(f"\n{done}/{n} reviewed   POND {c[POND]}   DROPOUT {c[DROPOUT]}   "
+          f"UNCLEAR {c[UNCLEAR]}")
+    if done < n:
+        print("re-run to resume where you stopped")
+    else:
+        print("complete - re-run HAT_test_hole_pond_or_dropout.py to fold B in")
+
+
+if __name__ == "__main__":
+    main()

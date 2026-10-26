@@ -1,0 +1,60 @@
+"""
+Where does the observed overwash record live, and its figures and tables?
+
+    from site_layer.hat_overwash import OVERWASH_ROOT
+
+Resolves data/hatteras_init/8-overwash-analysis/ once: the record, what it shows,
+and the comparisons against the footprint and the model. Details: scripts/site_layer/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-19
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+_HERE = Path(__file__).resolve()
+# data/ and output/ live in the workspace on D:, not in the repo (hatteras_paths)
+from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
+INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
+
+OVERWASH_ROOT = INIT_ROOT / "8-overwash-analysis"
+CAPTIONS = OVERWASH_ROOT / "CAPTIONS.md"
+
+OBSERVATIONS = OVERWASH_ROOT / "1-observations"
+# The hand-digitised record. Edit it here; everything else is drawn from it.
+WORKBOOK = OBSERVATIONS / "Hatteras_Overwash_Data.xlsx"
+
+RECORD = OVERWASH_ROOT / "2-record"
+# Where overwash recurs, all images together (island maps)
+WHERE = RECORD / "1-where"
+# Which images showed it, per domain (image x domain grids, island + image columns)
+WHEN = RECORD / "2-when"
+
+VS_FOOTPRINT = OVERWASH_ROOT / "3-vs-footprint"
+VS_FOOTPRINT_TABLES = VS_FOOTPRINT / "tables"
+
+VS_MODEL = OVERWASH_ROOT / "4-vs-model"
+VS_MODEL_TABLES = VS_MODEL / "tables"
+
+ARCHIVE = OVERWASH_ROOT / "archive"
+
+# The label each figure's CAPTIONS.md entry carries, in the order entries are sorted
+CAPTION_FOLDERS = {
+    "where": "2-record/1-where",
+    "when": "2-record/2-when",
+    "vs-footprint": "3-vs-footprint",
+    "vs-model": "4-vs-model",
+}
+
+
+if __name__ == "__main__":
+    for name in ("OVERWASH_ROOT", "CAPTIONS", "OBSERVATIONS", "WORKBOOK",
+                 "RECORD", "WHERE", "WHEN", "VS_FOOTPRINT",
+                 "VS_FOOTPRINT_TABLES", "VS_MODEL", "VS_MODEL_TABLES", "ARCHIVE"):
+        path = globals()[name]
+        print(f"{'ok' if path.exists() else 'MISSING':8} {name:20} "
+              f"{path.relative_to(PROJECT_ROOT).as_posix()}")

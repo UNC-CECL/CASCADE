@@ -1,0 +1,249 @@
+# =============================================================================
+# HATTERAS HINDCAST -- run settings
+# =============================================================================
+# Edit this file, save it, run the hindcast. Both
+# `HAT_hindcast.py` and `HAT_hindcast.ipynb` read it, so
+# the two cannot disagree about what a setting means.
+#
+# In the notebook you do NOT need to restart the kernel: section 3 calls
+# load_run_config(), which re-reads this file every time the cell is run.
+#
+# PRECEDENCE
+#     environment variable  >  this file  >  the default in HAT_hindcast_config
+#
+# WHAT DOES NOT READ THIS FILE
+#     `HAT_run_matrix.py` sets HAT_IGNORE_SETTINGS=1 on every run it launches, so
+#     a batch run is described entirely by the driver plus code defaults. A
+#     half-finished experiment left in this file can never reach the 344-cell
+#     sweep or the comparison matrix. The groin sweep does not read it either;
+#     its workers carry their own copy of the model code.
+#
+# UNKNOWN KEYS ARE FATAL
+#     A misspelled key raises rather than being ignored, because the silent
+#     failure is a run that quietly used the default under the name of the
+#     setting you thought you changed.
+#
+# VALID VALUES
+#     Listed in the comments below, but NOT enforced here -- the scenario
+#     table, the period table and the offset modes each have exactly one home
+#     in the code, and a second copy in this file is a second thing to drift.
+#     A bad value raises in section 3 with the valid list attached.
+# =============================================================================
+
+
+# --- which run --------------------------------------------------------------
+
+# 1984 (-> 1984-2004) or 2004 (-> 2004-2024). Selects run length, RSLR rate,
+# storm series, road-setback file and nourishment settings.
+start_year: 1984
+
+# Where the alongshore sediment budget is treated as unresolved:
+#   zeroBE    nothing imposed anywhere
+#   edgeBE    only the two end domains, absorbing the open-boundary artifact
+#   calibBE   the full per-domain fit against the CoastSat LRR
+source_sink: zeroBE
+
+# The management combination. Each name expands to four switches; see the
+# SCENARIOS table in section 3.
+#   natural           nothing human acts on the island: the counterfactual
+#   roadway_only      NC-12 defended, villages left to behave naturally
+#   beachdune_only    villages managed and nourished, the road passive
+#   full_management   everything: the status-quo hindcast
+#   full_no_fill      everything except the sand (2004-2024 only)
+scenario: full_management
+
+# Historical NC-12 relocation events (1989, 1999). THREE states, not two:
+#
+#   null    inherit from the scenario above. Every named scenario currently
+#           sets this False, so today null and false simulate the same run --
+#           but null follows the scenario if that ever changes, and false
+#           pins the answer regardless. This is the default because the
+#           scenario, not this line, is meant to decide.
+#   true    force the events ON, whatever the scenario says. Reported as a
+#           DEPARTURE from the named scenario and adds a `reloc` token to the
+#           run name, so an overridden run cannot be filed under the scenario
+#           it departed from. Read section 5.1 before using it.
+#   false   force them OFF. Same simulation as null today; the difference is
+#           only that the run log records it as your explicit choice rather
+#           than as inherited from the scenario.
+#
+# Relocations need roadway management to have a setback to move, so they are
+# inert under `natural` and `beachdune_only`, and no event falls in 2004-2024.
+relocations: null
+
+# Where a RELOCATED roadway is rebuilt, in metres behind the dune line.
+#
+# This is the relocation TARGET only. The road's position at t = 0 always comes
+# from the period's measured RoadSetback_<year>_dunestart.csv and is untouched.
+#
+# CASCADE has no separate parameter for the two -- it re-assigns the relocation
+# target from the initial setback every year -- so without this, each domain
+# relocates to wherever its road happened to sit in 1984/2004: 30 different
+# values from 0 to 430 m, only one of which is 30 m. At GIS 85 and 86 it is 0 m,
+# so a relocation puts the road back on the dune line with no clearance and the
+# next 10 m of retreat re-fires it. 13 of the 18 relocation events in the
+# 1984-2004 calibBE groin run were that ratchet.
+#
+# 20, decided 2026-09-01. CASCADE's own default is 30 and the matrix was first
+# run at that, but 30 drowned NC-12 at GIS 11 in all eight 1984-2004 reloc arms:
+# a prescribed historical relocation is a DISPLACEMENT added to the model's
+# current setback, so a bigger emergent target also pushed the 1999 event back,
+# from 77 m to 97 m, past the depth where bulldoze gives the road up. 20 puts it
+# at 87 m and all eight drownings go away. Note 87 m clears the threshold by one
+# cell, so this is not robust to different forcing.
+#
+# Setbacks quantise to whole 10 m cells, so use multiples of 10.
+# A value other than 20 earns an `rset` token in the run name, for the same
+# reason the wave block below does.
+# Set to `measured` for the pre-2026-08-31 behaviour (each domain relocates to
+# its own measured offset).
+relocation_setback_m: 20
+
+# obx-cascade's road dune rule (dune_mgmt_road_setback_trigger): where the road
+# sits farther than this many metres behind the dune, the road manager stops
+# rebuilding dunes and leaves them to Barrier3D. 20 is obx-cascade's default,
+# kept 2026-10-23; at the 2009 start 81 of the 82 road domains are beyond it.
+# On Hatteras it changes nothing: obx-cascade's road manager also rebuilds the
+# dune line only within 10 m of the road and builds interior dunes only within
+# 20 m (Ocracoke NCDOT practice, hard-coded), so with NC-12 mostly ~200 m back
+# no road dunes are rebuilt at any trigger. Accepted 2026-10-23; checked with a
+# 1000 m run (obx-port-check-trigger1000), identical to 20 m.
+road_dune_rebuild_trigger_m: 20
+
+# Which shoreline_offset variant is built:
+#   metres      the offset file as it is -- BRIE's x_s is metres. The default
+#               since 2026-09-24.
+#   asrun       offset / 10, the units error every run before 2026-09-24
+#               carries; kept so those runs stay reproducible (with
+#               HAT_OFFSET_VERSION_<year>=superseded_20260924_pre-metres/v1, the build they
+#               were made from)
+#   detrended   metres with the island-scale tilt removed; tested and
+#               rejected 2026-09-24
+# Anything but "asrun" adds an `offset<mode>` token to the run name.
+offset_mode: metres
+
+
+# --- the groin --------------------------------------------------------------
+# Not part of the scenario: it is a structure, not a management module. Every
+# scenario is run twice, groin off first, so section 12.3 has a paired
+# baseline identical in every other token.
+#
+# The wave-driven groin (cascade.groin.GroinCallback, since 2026-10-14):
+# it holds back a share of the wave-driven drift arriving at the GIS 5|6 face,
+# from its 1969 installation until the year it stops working. The dipole (M)
+# and blocking (b, f) groins this replaced were removed the same day.
+#
+# The spread groin (0, 2/3, 1/3), since 2026-10-21: the loss GIS 6 takes
+# across the groin face each year is taken from GIS 7 (2/3) and GIS 8 (1/3)
+# instead, the three-domain northward reach seen in the record. Fitted on the
+# calibration window in hard-structures/groin/4-hindcast/3-wave-driven-1967-
+# 2025/2026-10-20-spread-relaxation/ (GIS 4-9 RMSE 8.9 m against 18.6 m for
+# the plain groin at 0.16). Its strength, 0.10, is carried unchanged to the
+# 2009 start, so the test window is an independent test of the groin.
+#
+# The strength is per window. Each window starts from its observed shoreline,
+# which already holds the fillet the groins built, so it needs less than the
+# groin's whole-life strength (0.25, fitted with the plain groin on one
+# continuous 1967-2025 run in 2026-10-13-pregroin-planform/).
+groin:
+  enabled: false
+  # Share of the arriving drift held back, 0 (no groin) to 1, by start year.
+  strength_1996: 0.10
+  strength_2009: 0.10
+  # Shares of GIS 6's loss across the face taken from GIS 6, 7, 8; summing
+  # to 1. [1, 0, 0] is the plain groin (all the loss on GIS 6).
+  spread_weights: [0, 2/3, 1/3]
+  # strength: 0.25   # if set, overrides both; needed to run any other start
+  #                  # year with the groin on (0.25 = the whole-life strength)
+  # First year the groin no longer works: the 2017 Buxton fill was placed
+  # across the groin field and its sand passed straight through.
+  end_year: 2017
+
+
+# --- physics ----------------------------------------------------------------
+# Forcing, as opposed to anything anyone decides. Changes what is SIMULATED,
+# not just what is emitted, so it reaches run_index.csv (column Hs_m) and a
+# changed value is recoverable from the index rather than only from this file.
+
+# A run that moves ANY of these off the value below earns a `wave...` token in
+# its run name (waveHs1p2, waveHs1p2Tp10) and lands in its own directory. That
+# is what lets scripts/sensitivity_analysis sweep them without overwriting the
+# matrix run it is comparing against. At the values below there is no token, so
+# every run made before 2026-09-01 keeps the name it already has.
+
+physics:
+  # Significant wave height, m. One value per run, no sweep here -- a sweep is
+  # a separate script that drives this file once per cell.
+  #
+  # OPTION A, adopted 2026-09-27: Hs 2.0 / Tp 7.5 / asymmetry 0.6 / high-angle
+  # 0.5 in both windows, tuned on the metres offset (Hs is a tuning parameter
+  # here, judged by skill). The edge ends in hatteras_site_config were solved
+  # at exactly these four values; change one and the ends need re-solving.
+  # Record: output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/.
+  # Option B (2010-2024 at Hs 2.5) is recorded as HATTERAS_WAVE_OPTION_B in
+  # hatteras_site_config, with the command that runs it.
+  # Was 2.5 / 8.0 / 0.7 / 0.1 (the /10-offset calibration) until 2026-09-27.
+  wave_height_Hs: 2.0
+  # Peak period, s.
+  wave_period_s: 7.5
+  # Fraction of waves approaching from the left of shore-normal.
+  wave_asymmetry: 0.6
+  # Fraction approaching at more than 45 deg, i.e. the unstable, cuspate-
+  # forming end of the wave climate.
+  wave_angle_high_fraction: 0.5
+
+
+# --- management -------------------------------------------------------------
+# Sandbag placement: a defence someone decides to build, not a property of the
+# coast, so it sits on its own rather than under physics. It is not part of
+# the `scenario` table above because no historical sandbag campaign is
+# reconstructed for either period -- this is an off switch for the hindcast
+# and a knob for a forward run, not a management arm of the run matrix.
+# Reaches run_index.csv as sandbags_on.
+sandbags: false
+
+
+# --- what the run emits -----------------------------------------------------
+# None of these change the simulation.
+
+output:
+  # True renders figures inline (the notebook default). A headless .py run
+  # cannot, and forces the Agg backend. The files written to disk are
+  # identical either way. Left null, the .py uses False and the notebook True.
+  show_figures: null
+  # The shoreline animations in section 9.2. Slow, and not needed to score a
+  # run -- turn off when iterating on rates.
+  make_gifs: true
+  # The model .npz is ~160 MB and is the only large artifact a run produces.
+  # It is what lets a figure be re-derived without re-running, so it defaults
+  # on; turn it off for a long batch that only needs the rate curves.
+  save_model_state: true
+  # False stops if the run directory already holds a result. True EMPTIES that
+  # directory and reuses it -- the previous trial is gone, and its row in
+  # run_index.csv is replaced. Section 12.3 resolves the groin baseline by
+  # directory name, so overwriting one run silently redefines the paired run's
+  # answer. Set back to false before running a matrix.
+  overwrite: false
+
+
+# --- not settable here ------------------------------------------------------
+# use_sandbox_cascade is deliberately NOT a line in this file. On obx-cascade
+# (since 2026-10-23) every run uses cascade.cascade, which carries the groin
+# hook itself; cascade_groin does not exist there, and the section 7 guard
+# checks the hook is present. The reasoning below dates from the old branch,
+# when every run used cascade.cascade_groin, always. Two reasons:
+#
+#   It is not a choice. That module is cascade.cascade plus one `if` that
+#   calls a callback when one is attached, and does nothing when none is.
+#   With the groin off the two are the same model; with it on, only this one
+#   has the hook -- attaching the callback to the other is a SILENT no-op
+#   that produces a valid-looking groin run in which the groin did nothing.
+#
+#   Deriving it from `groin.enabled` would be worse than fixing it. Section
+#   12.3 measures the groin against a no-groin baseline that must be
+#   identical in every other respect; letting the flag follow the groin would
+#   run the two halves of that pair through different module objects, which
+#   is the one asymmetry the pairing cannot tolerate.
+#
+# `HAT_USE_SANDBOX_CASCADE=0` still forces the installed package for a
+# one-off A/B, and the section 7 guard refuses to pair it with the groin.

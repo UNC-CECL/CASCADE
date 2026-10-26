@@ -1,0 +1,235 @@
+"""
+Two builds of one start year: where did the island offset move?
+
+    python scripts/input_prep/2-brie-offset/2-figures/HAT_compare_offset_versions.py --year 1996 --a v1 --b v2
+
+Compares two versions' unpadded offsets and, given both raw files, the
+absolute transect lengths; writes the figure beside the newer build. Details: scripts/input_prep/2-brie-offset/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in Path(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
+sys.path.insert(0, str(_HAT_DIR))
+from site_layer.hat_figure_style import (  # noqa: E402
+    C_1984, C_1997, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style,
+    caption, figsize, save, town_bands)
+
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "hatteras_paths.py").exists())))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
+BRIE_ROOT = _tv.BRIE_ROOT
+RAW_DIR = _tv.RAW_OFFSET_DIR
+# -----------------------------------------------------------------------------
+
+
+# A version's unpadded offset per domain
+def _unpadded(year, version, source=None):
+    p = _tv.offset_file(year, "unpadded", version=version,
+                        source=source or _tv.DEFAULT_OFFSET_SOURCE)
+    df = pd.read_csv(p)
+    return df.set_index("Domain_ID")[str(year)]
+
+
+# Mean raw transect length per domain
+def _raw_domain_means(path):
+    raw = pd.read_csv(path)
+    per_transect = raw.drop_duplicates(["domain_id", "LineID"])
+    return per_transect.groupby("domain_id")["ORIG_LEN"].mean()
+
+
+# (method, line file, built date) behind one raw file, read from the file
+def _raw_provenance(path, line_override=None):
+    cols = pd.read_csv(path, nrows=50)
+    method = "shapely" if "built_by" in cols else "ArcGIS export"
+
+    def one(col):
+        if col not in cols:
+            return None
+        v = cols[col].dropna().unique()
+        return str(v[0]) if len(v) == 1 else None
+
+    return method, line_override or one("duneline_file"), one("built")
+
+
+# Run: the two builds' offsets and their difference
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--year", type=int, required=True)
+    ap.add_argument("--source", default=_tv.DEFAULT_OFFSET_SOURCE,
+                    choices=_tv.OFFSET_SOURCES,
+                    help="which source's versions to compare "
+                         f"(default {_tv.DEFAULT_OFFSET_SOURCE})")
+    ap.add_argument("--a", required=True, help="the earlier version, e.g. v1")
+    ap.add_argument("--b", required=True, help="the later version, e.g. v2")
+    ap.add_argument("--label-a", default=None,
+                    help="what the outputs call --a (default: --a itself)")
+    ap.add_argument("--label-b", default=None,
+                    help="what the outputs call --b (default: --b itself)")
+    ap.add_argument("--raw-a", default=None, help="raw per-transect CSV behind --a")
+    ap.add_argument("--raw-b", default=None, help="raw per-transect CSV behind --b")
+    ap.add_argument("--line-a", default=None,
+                    help="the dune-line file behind --raw-a, when the raw file does "
+                         "not record it (an ArcGIS export)")
+    ap.add_argument("--line-b", default=None, help="the same for --raw-b")
+    args = ap.parse_args(argv)
+    la = args.label_a or args.a
+    lb = args.label_b or args.b
+    for lab in (la, lb):
+        if "/" in lab or "\\" in lab:
+            ap.error(f"{lab!r} would put a folder in the file name; pass --label-a/--label-b")
+
+    ua = _unpadded(args.year, args.a, args.source)
+    ub = _unpadded(args.year, args.b, args.source)
+    out = pd.DataFrame({f"model_{la}_m": ua, f"model_{lb}_m": ub})
+    out["model_diff_m"] = ub - ua
+
+    have_raw = bool(args.raw_a and args.raw_b)
+    if have_raw:
+        pa = Path(args.raw_a) if Path(args.raw_a).exists() else RAW_DIR / args.raw_a
+        pb = Path(args.raw_b) if Path(args.raw_b).exists() else RAW_DIR / args.raw_b
+        ra, rb = _raw_domain_means(pa), _raw_domain_means(pb)
+        meth_a, line_a, built_a = _raw_provenance(pa, args.line_a)
+        meth_b, line_b, built_b = _raw_provenance(pb, args.line_b)
+        out[f"abs_{la}_m"] = ra.reindex(out.index)
+        out[f"abs_{lb}_m"] = rb.reindex(out.index)
+        # + = the line moved LANDWARD (a larger station from the offshore datum)
+        out["abs_diff_m"] = out[f"abs_{lb}_m"] - out[f"abs_{la}_m"]
+    out.index.name = "gis_domain"
+
+    # Under the source's folder since 2026-09-22
+    out_dir = _tv.offset_build_dir(args.year, args.b, args.source)
+    stem = f"offset_{args.year}_{la}_vs_{lb}"
+    out.to_csv(out_dir / f"{stem}.csv", float_format="%.2f")
+
+    d = out["abs_diff_m"] if have_raw else out["model_diff_m"]
+    moved = d[d.abs() >= 0.5]
+    print(f"{args.year} {la} -> {lb}")
+    if have_raw:
+        print(f"  raw files: {la} = {meth_a} of {line_a or 'an unrecorded line'}, "
+              f"{lb} = {meth_b} of {line_b or 'an unrecorded line'}")
+        print(f"  absolute (datum frame): {len(moved)} of {len(d)} domains moved >= 0.5 m; "
+              f"mean {d.mean():+.2f} m, min {d.min():+.2f} (GIS {d.idxmin()}), "
+              f"max {d.max():+.2f} (GIS {d.idxmax()})")
+        print(f"  moved domains: {moved.round(1).to_dict()}")
+        print(f"  baseline shift ({lb} - {la} of the per-year minimum): "
+              f"{(out['model_diff_m'] - out['abs_diff_m']).mean():+.2f} m")
+    m = out["model_diff_m"]
+    print(f"  model frame (each zeroed on its own minimum): mean {m.mean():+.2f} m, "
+          f"range {m.min():+.2f} .. {m.max():+.2f}")
+
+    # Figure
+    apply_style()
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", aspect=0.62),
+                             sharex=True, constrained_layout=True)
+    x = out.index.to_numpy()
+
+    ax = axes[0]
+    ax.plot(x, out[f"model_{la}_m"], color=C_1984, lw=1.2, label=la)
+    ax.plot(x, out[f"model_{lb}_m"], color=C_1997, lw=1.2, label=lb)
+    ax.set_ylabel("Island offset (m)")
+    _title(ax, 0, f"Island offset read by the model, {args.year} start")
+    ax.legend(loc="lower left")   # the profile is high on the left, and the village labels sit at the top
+
+    # What panel (b) is a picture OF depends on what changed between the raw files
+    if have_raw:
+        same_line = bool(line_a and line_b and line_a == line_b)
+        if meth_a == meth_b == "shapely" and args.source == "shoreline":
+            # Two CoastSat window means: the averaging window changed, nothing was digitised
+            b_title, b_ylabel = ("Where the two mean shorelines differ",
+                                 "Shoreline moved (m, + landward)")
+            b_what = (f"(b) The change in the mean shoreline itself ({line_a or 'an unrecorded line'} "
+                      f"to {line_b or 'an unrecorded line'}), {lb} minus {la}")
+            b_why = (" Both are CoastSat means strung into a line, differing only in the "
+                     "averaging window, and both raw files come from the same shapely "
+                     "intersection against the same transects, which is deterministic, so "
+                     "the difference is the change of window.")
+        elif meth_a == meth_b == "shapely":
+            b_title, b_ylabel = "Where the re-digitised line differs", "Dune line moved (m, + landward)"
+            if line_a and line_a == line_b:
+                src = (f"{line_a}, re-digitised in place between "
+                       + (f"builds on {built_a} and {built_b}" if built_a and built_b
+                          else "the two builds"))
+            else:
+                src = f"{line_a or 'an unrecorded line'} to {line_b or 'an unrecorded line'}"
+            b_what = f"(b) The change in the dune line itself ({src}), {lb} minus {la}"
+            b_why = (" Both raw files were produced by the same shapely intersection against "
+                     "the same transects, which is deterministic, so the difference is the "
+                     "line; the metre-scale station convention of the earlier ArcGIS export "
+                     "is not part of it.")
+        elif same_line and meth_a != meth_b:
+            b_title, b_ylabel = ("Where the two intersection methods differ",
+                                 "Measured position changed (m, + landward)")
+            b_what = f"(b) The change in the measured dune-line position, {lb} minus {la}"
+            b_why = (f" Both builds measure the same line, {line_a}: {la} through the "
+                     f"{meth_a}, {lb} through the {meth_b} intersection. None of this is the "
+                     f"line moving; it is the difference between the two ways of measuring it, "
+                     f"the metre-scale station convention of the ArcGIS export among it.")
+        else:
+            b_title, b_ylabel = ("Where the measured position differs",
+                                 "Measured position changed (m, + landward)")
+            b_what = f"(b) The change in the measured dune-line position, {lb} minus {la}"
+            b_why = (f" {la} is the {meth_a} of {line_a or 'a line its raw file does not record'}, "
+                     f"{lb} the {meth_b} of {line_b or 'a line its raw file does not record'}, "
+                     f"so how much of this is the line and how much the method is not known.")
+
+    ax = axes[1]
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    if have_raw:
+        ax.bar(x, out["abs_diff_m"], color=C_1997, width=0.8,
+               label=f"{lb} − {la}, fixed datum")
+        ax.set_ylabel(b_ylabel)
+        _title(ax, 1, b_title)
+    else:
+        ax.bar(x, m, color=C_1997, width=0.8)
+        ax.set_ylabel(f"{lb} − {la} (m)")
+        _title(ax, 1, "Difference in the model frame")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_xlim(x.min() - 0.5, x.max() + 0.5)
+    for a_ in axes:
+        town_bands(a_, where="top", strip=0.08, label=(a_ is axes[0]))
+
+    cap = (f"Two builds of the {args.year} island offset. (a) The unpadded offset each "
+           f"build hands the model, {la} in red and {lb} in blue, each zeroed on "
+           f"its own most seaward domain. ")
+    if have_raw:
+        cap += (f"{b_what}, measured "
+                f"from the shared offshore datum along the 100 m transects and averaged per "
+                f"500 m domain; positive is landward. {len(moved)} of {len(d)} domains "
+                f"differ by 0.5 m or more (mean over all domains {d.mean():+.1f} m; the "
+                f"largest, {d[d.abs().idxmax()]:+.1f} m, at GIS {d.abs().idxmax()})."
+                f"{b_why}")
+    else:
+        cap += f"(b) {lb} minus {la} in that model frame."
+    caption(fig, cap)
+    paths = save(fig, out_dir / stem, close=True)
+    print(f"  wrote {out_dir / (stem + '.csv')}")
+    for p in paths:
+        print(f"  wrote {p}")
+
+
+if __name__ == "__main__":
+    main()

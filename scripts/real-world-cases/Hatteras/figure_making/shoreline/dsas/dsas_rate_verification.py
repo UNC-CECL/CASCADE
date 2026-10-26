@@ -1,0 +1,275 @@
+"""
+Check the calculated DSAS shoreline change rates against known values.
+
+    python scripts/figure_making/shoreline/dsas/dsas_rate_verification.py
+
+Reads the DSAS tables; writes dsas_verification.png under supporting/. Details: scripts/figure_making/shoreline/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
+"""
+
+# The DSAS tables moved into the data tree 2026-09-13 (rule 1)
+from pathlib import Path as _Path
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in _Path(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as _REPO  # noqa: E402
+import sys as _dsys
+_dsys.path.insert(0, str(_HAT_DIR))
+from site_layer.hat_observed_rates import DSAS_ROOT as _DSAS  # noqa: E402
+import pandas as pd
+
+# House style (site_layer/hat_figure_style.py), applied at import
+import sys as _sys
+_sys.path.insert(0, str(_HAT_DIR))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              support_dir)
+apply_style()
+import numpy as np
+from pathlib import Path
+import matplotlib.pyplot as plt
+
+# Load your calculated rates
+domain_rates = pd.read_csv(str(_DSAS / "domain_shoreline_change_rates.csv"))
+
+print("="*70)
+print("VERIFICATION ANALYSIS")
+print("="*70)
+
+
+# Check 1: Compare to your CASCADE background erosion rate
+print("\nCHECK 1: Comparison to CASCADE Background Erosion Rate")
+print("-"*70)
+
+# --- CONFIG ------------------------------------------------------------------
+# Your CASCADE background erosion rate (from your 1978-1997 calibration)
+CASCADE_BG_EROSION = -1.091  # dam/yr
+CASCADE_BG_EROSION_M = CASCADE_BG_EROSION * 10  # Convert to m/yr
+# -----------------------------------------------------------------------------
+
+print(f"CASCADE background erosion rate: {CASCADE_BG_EROSION_M:.2f} m/yr")
+
+# Compare to your calculated 1978-1997 average
+if 'EPR_1978_1997' in domain_rates.columns:
+    mean_1978_1997 = domain_rates['EPR_1978_1997'].mean()
+    print(f"Your calculated 1978-1997 average: {mean_1978_1997:.2f} m/yr")
+    print(f"Difference: {abs(mean_1978_1997 - CASCADE_BG_EROSION_M):.2f} m/yr")
+    
+    if abs(mean_1978_1997 - CASCADE_BG_EROSION_M) < 3:
+        print("OK CLOSE MATCH - Good agreement!")
+    else:
+        print("! DISCREPANCY - May need investigation")
+
+
+# Check 2: Sign convention validation
+print("\n" + "="*70)
+print("CHECK 2: Sign Convention Verification")
+print("-"*70)
+
+# Rodanthe should be erosional (negative)
+rodanthe = domain_rates[(domain_rates['Domain'] >= 77) & (domain_rates['Domain'] <= 83)]
+
+print("\nRodanthe Area (Domains 77-83):")
+for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
+    if col in rodanthe.columns:
+        mean_rate = rodanthe[col].mean()
+        pct_erosional = (rodanthe[col] < 0).sum() / len(rodanthe) * 100
+        
+        if mean_rate < 0:
+            status = "OK EROSIONAL (correct)"
+        else:
+            status = "X ACCRETIONAL (WRONG!)"
+        
+        print(f"{col}: {mean_rate:+.2f} m/yr  |  {pct_erosional:.0f}% domains eroding  |  {status}")
+
+
+# Check 3: Magnitude sanity check
+print("\n" + "="*70)
+print("CHECK 3: Magnitude Sanity Check")
+print("-"*70)
+
+print("\nTypical barrier island change rates:")
+print("  Extreme erosion:  < -5 m/yr")
+print("  Moderate erosion: -5 to -1 m/yr")
+print("  Stable:           -1 to +1 m/yr")
+print("  Moderate accretion: +1 to +5 m/yr")
+print("  Extreme accretion:  > +5 m/yr")
+
+print("\nYour data ranges:")
+for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
+    if col in domain_rates.columns:
+        min_val = domain_rates[col].min()
+        max_val = domain_rates[col].max()
+        mean_val = domain_rates[col].mean()
+        
+        # Check for unrealistic values
+        if abs(min_val) > 15 or abs(max_val) > 15:
+            flag = "! EXTREME VALUES - Check data"
+        else:
+            flag = "OK Reasonable range"
+        
+        print(f"{col}: {min_val:+.2f} to {max_val:+.2f} m/yr (mean: {mean_val:+.2f})  |  {flag}")
+
+
+# Check 4: Spatial pattern validation
+print("\n" + "="*70)
+print("CHECK 4: Known Spatial Patterns")
+print("-"*70)
+
+# Oregon Inlet area (domains 1-15) - should be erosional
+oregon_inlet = domain_rates[domain_rates['Domain'] <= 15]
+if len(oregon_inlet) > 0 and 'EPR_1978_1997' in oregon_inlet.columns:
+    oregon_mean = oregon_inlet['EPR_1978_1997'].mean()
+    print(f"\nOregon Inlet area (domains 1-15):")
+    print(f"  Mean rate 1978-1997: {oregon_mean:+.2f} m/yr")
+    if oregon_mean < -2:
+        print("  OK Strong erosion as expected")
+    elif oregon_mean < 0:
+        print("  OK Erosional as expected")
+    else:
+        print("  ! Unexpected accretion - check data")
+
+# Buxton area (domains 50-65) - historically accretional
+buxton = domain_rates[(domain_rates['Domain'] >= 50) & (domain_rates['Domain'] <= 65)]
+if len(buxton) > 0 and 'EPR_1978_1997' in buxton.columns:
+    buxton_mean = buxton['EPR_1978_1997'].mean()
+    print(f"\nBuxton area (domains 50-65):")
+    print(f"  Mean rate 1978-1997: {buxton_mean:+.2f} m/yr")
+    if buxton_mean > 0:
+        print("  OK Accretional as expected")
+    else:
+        print("  ! Erosional - unexpected but possible")
+
+# Rodanthe validation
+if len(rodanthe) > 0 and 'EPR_1978_1997' in rodanthe.columns:
+    rodanthe_mean = rodanthe['EPR_1978_1997'].mean()
+    print(f"\nRodanthe area (domains 77-83):")
+    print(f"  Mean rate 1978-1997: {rodanthe_mean:+.2f} m/yr")
+    if rodanthe_mean < -2:
+        print("  OK Strong erosion as expected")
+    elif rodanthe_mean < 0:
+        print("  OK Erosional as expected")
+    else:
+        print("  X WRONG - Should be erosional!")
+
+
+# Check 5: Temporal trends
+print("\n" + "="*70)
+print("CHECK 5: Temporal Trends")
+print("-"*70)
+
+print("\nIs erosion getting worse over time at Rodanthe?")
+rodanthe_trends = []
+for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
+    if col in rodanthe.columns:
+        mean_rate = rodanthe[col].mean()
+        rodanthe_trends.append((col, mean_rate))
+        print(f"  {col}: {mean_rate:+.2f} m/yr")
+
+if len(rodanthe_trends) >= 2:
+    first_period = rodanthe_trends[0][1]
+    last_period = rodanthe_trends[-1][1]
+    if last_period < first_period:
+        print("  -> Erosion accelerating (more negative over time)")
+    else:
+        print("  -> Erosion slowing (less negative over time)")
+
+
+# Create verification plot
+print("\n" + "="*70)
+print("Creating validation plot...")
+print("-"*70)
+
+# 190 mm, the printed width, not the 16 in it was drawn at (2026-09-17).
+fig, axes = plt.subplots(2, 2, figsize=figsize("double", height=5.0))
+fig.subplots_adjust(left=0.085, right=0.98, bottom=0.085, top=0.94,
+                    wspace=0.26, hspace=0.42)
+
+# Plot 1: Histogram of rates (1978-1997)
+if 'EPR_1978_1997' in domain_rates.columns:
+    axes[0, 0].hist(domain_rates['EPR_1978_1997'], bins=30, edgecolor='black', alpha=0.7)
+    axes[0, 0].axvline(x=0, color='red', linestyle='--', linewidth=2, label='Zero (stable)')
+    axes[0, 0].axvline(x=CASCADE_BG_EROSION_M, color='green', linestyle='--', 
+                       linewidth=2, label=f'CASCADE BG ({CASCADE_BG_EROSION_M:.1f} m/yr)')
+    axes[0, 0].set_xlabel('Rate (m/yr)', )
+    axes[0, 0].set_ylabel('Number of Domains', )
+    axes[0, 0].set_title('Distribution of Rates (1978-1997)', )
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+
+# Plot 2: Rodanthe temporal evolution
+rodanthe_means = []
+rodanthe_labels = []
+for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
+    if col in rodanthe.columns:
+        rodanthe_means.append(rodanthe[col].mean())
+        rodanthe_labels.append(col.replace('EPR_', ''))
+
+axes[0, 1].plot(range(len(rodanthe_means)), rodanthe_means, 'o-', linewidth=3, markersize=10)
+axes[0, 1].axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
+axes[0, 1].set_xticks(range(len(rodanthe_labels)))
+axes[0, 1].set_xticklabels(rodanthe_labels, rotation=45, ha='right')
+axes[0, 1].set_ylabel('Mean Rate (m/yr)', )
+axes[0, 1].set_title('Rodanthe Erosion Trend Over Time', )
+axes[0, 1].grid(True, alpha=0.3)
+
+# Plot 3: Comparison to CASCADE background rate
+if 'EPR_1978_1997' in domain_rates.columns:
+    axes[1, 0].scatter(domain_rates['Domain'], domain_rates['EPR_1978_1997'], 
+                       alpha=0.6, s=50, label='Calculated rates')
+    axes[1, 0].axhline(y=CASCADE_BG_EROSION_M, color='red', linestyle='--', 
+                       linewidth=2, label=f'CASCADE BG ({CASCADE_BG_EROSION_M:.1f} m/yr)')
+    axes[1, 0].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.3)
+    axes[1, 0].axvspan(77, 83, alpha=0.1, color='orange', label='Rodanthe')
+    axes[1, 0].set_xlabel('Domain Number', )
+    axes[1, 0].set_ylabel('Rate (m/yr)', )
+    axes[1, 0].set_title('Rates vs CASCADE Background (1978-1997)', )
+    axes[1, 0].legend()
+    axes[1, 0].grid(True, alpha=0.3)
+
+# Plot 4: Erosion vs Accretion breakdown
+periods = ['1978-1987', '1987-1997', '1997-2009_v1', '2009_v1-2019']
+erosional_pct = []
+for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
+    if col in domain_rates.columns:
+        pct = (domain_rates[col] < 0).sum() / len(domain_rates) * 100
+        erosional_pct.append(pct)
+
+axes[1, 1].bar(range(len(erosional_pct)), erosional_pct, edgecolor='black', alpha=0.7)
+axes[1, 1].axhline(y=50, color='red', linestyle='--', linewidth=2, label='50% threshold')
+axes[1, 1].set_xticks(range(len(periods)))
+axes[1, 1].set_xticklabels(periods, rotation=45, ha='right')
+axes[1, 1].set_ylabel('% Domains Eroding', )
+axes[1, 1].set_title('Percentage of Island Experiencing Erosion', )
+axes[1, 1].set_ylim(0, 100)
+axes[1, 1].legend()
+axes[1, 1].grid(True, alpha=0.3, axis='y')
+
+plt.tight_layout()
+from site_layer.hat_figure_style import figure_dir as _figure_dir  # noqa: E402
+_FIGDIR = _figure_dir("observations", "shoreline")
+_OUT = support_dir(_FIGDIR) / "dsas_verification.png"
+_OUT.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(str(_OUT), dpi=300)   # products go under output/ (rule 1)
+print(f"Saved: {_OUT}")   # ASCII: a cp1252 console cannot encode a tick
+plt.close()
+
+print("\n" + "="*70)
+print("VERIFICATION COMPLETE")
+print("="*70)
+print("\nReview the diagnostics above and the verification_diagnostics.png plot")
+print("to confirm your results make sense!")
+# the caption lives beside the figure, not on it (figure_making/STYLE.md)
+import sys as _csys
+from pathlib import Path as _CP
+_csys.path.insert(0, str(next(_q for _q in _CP(__file__).resolve().parents
+                              if (_q / "hatteras_paths.py").exists())))
+from site_layer.hat_figure_style import record_caption as _record_caption
+_record_caption(
+    _figure_dir("observations", "shoreline") / "dsas_verification.png",
+    "Diagnostics on the DSAS shoreline-rate calculation: the checks that the per-domain rates aggregate the transect rates as intended, and where the record is thin enough for a domain rate to rest on few transects. A working figure kept because it is the evidence behind the rates in dsas_calibration_periods.png, not a result in itself.")

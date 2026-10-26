@@ -1,0 +1,37 @@
+diff --git a/barrier3d/barrier3d.py b/barrier3d/barrier3d.py
+index 5878e08..9b57485 100644
+--- a/barrier3d/barrier3d.py
++++ b/barrier3d/barrier3d.py
+@@ -409,6 +409,8 @@ class Barrier3d:
+ 
+                 start = stop + 1
+                 i = start
++        # HAH: possible fix: `if len(Dow) > 0:` and `stop = i`. As written, the last
++        # gap loses its last cell and a lone overtopped cell gives no gap.
+         if i > 0:
+             stop = i - 1
+ 
+@@ -1089,7 +1091,10 @@ class Barrier3d:
+                     Qs3 = np.nan_to_num(Qs3)
+ 
+                     # ### Calculate Net Erosion/Accretion
+-                    if Elevation[TS, d, i] > SL or np.sum(np.greater(Elevation[TS, i, d + 1: d + 10], SL)) > 0:
++                    # HAH: was Elevation[TS, i, d + 1: d + 10] (axes swapped). It read
++                    # the wrong cells, and past the array when i >= rows, which
++                    # crashed long storms; the nine cells landward are [d + 1: d + 10, i].
++                    if Elevation[TS, d, i] > SL or np.sum(np.greater(Elevation[TS, d + 1: d + 10, i], SL)) > 0:
+                         # If cell is subaerial, elevation change is
+                         # determined by difference between
+                         # flux in vs. flux out
+@@ -1555,8 +1560,11 @@ class Barrier3d:
+                         Qdune = Vdune * Rexcess * 3600  # (dam^3/hr)
+ 
+                         # Set discharge at dune gap
++                        # HAH: possible fix: start:stop + 1 (stop is inclusive; this skips each gap's last cell)
+                         Discharge[:, 0, start:stop] = Qdune
+ 
++                        # HAH: possible fix: delete this line. It overwrites C = Cx * AvgSlope set
++                        # above, so inundation transport has no momentum term (added in b11b880, 2024).
+                         C = 0  # Initialize
+                         if inundation == 1:  # Inundation regime
+                             Rin = self._Rin_i

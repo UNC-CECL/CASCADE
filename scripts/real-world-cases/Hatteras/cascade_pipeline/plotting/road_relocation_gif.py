@@ -1,0 +1,970 @@
+"""
+Side-by-side animation of NC-12 against a migrating dune line.
+
+    from cascade_pipeline.plotting.road_relocation_gif import make_road_relocation_gif
+
+Relocations off against relocations on, one frame per model year; a line version and
+a raster version. Details: scripts/cascade_pipeline/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
+
+import io
+import os
+
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch, Rectangle
+from matplotlib.ticker import MaxNLocator
+
+from cascade_pipeline.annotations import DEFAULT_ANNOTATIONS
+from cascade_pipeline.domains import DEFAULT_DOMAINS
+from cascade_pipeline.plotting.shoreline_gif import (
+    DEFAULT_GIF_CONFIG,
+    _open_file,
+    _slug,
+)
+
+# `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
+from site_layer.hat_figure_style import (
+    C, C_1997, DOMAIN_AXIS_LABEL, GRID_C, apply_style,
+)
+from site_layer.hat_figure_style import INK as _HOUSE_INK
+from site_layer.hat_figure_style import INK_MUTED as _HOUSE_INK_MUTED
+from site_layer.hat_figure_style import figsize as _figsize
+
+apply_style()
+
+# Every colour from the house palette, shared with the road plan view and shoreline_gif
+COLOR_DUNE = C_1997                     # ocean shoreline
+COLOR_ROAD = C["ROAD"]                  # NC-12, as everywhere else
+COLOR_RELOC = C["ADDED"]                # a relocation the module triggered
+COLOR_BAY = C["WATER"]                  # the sound edge
+# A prescribed move gets its own colour: it is a different claim from a module-triggered one
+COLOR_PRESCRIBED = C["ACCENT"]
+# The barrier interior: the house 0.5-1.0 m elevation class
+COLOR_LAND = "#f0e6bf"     # a flat land fill, not topography: the sand of the retired elevation classes
+
+
+# Figure style
+
+# Typographic and axis conventions every frame shares, applied per artist
+
+FONT_TITLE = 10.0
+FONT_PANEL = 9.0
+FONT_AXIS = 9.0
+FONT_TICK = 8.0
+FONT_LEGEND = 8.0
+FONT_NOTE = 7.5
+FONT_TRACKER = 7.0      # it sits inside a half-width panel, so below the notes
+
+INK = _HOUSE_INK
+INK_LIGHT = _HOUSE_INK_MUTED
+INK_AXIS = _HOUSE_INK
+RULE = "0.85"
+GRID = GRID_C
+
+# Drawn at the printed double-column width; the dpi carries the pixels
+FRAME_TARGET_PX = 1500.0
+FRAME_DPI_RANGE = (110.0, 230.0)
+
+
+def _frame_dpi(width_in):
+    """Dots per inch that puts a figure of `width_in` near FRAME_TARGET_PX."""
+    lo, hi = FRAME_DPI_RANGE
+    return float(np.clip(FRAME_TARGET_PX / max(width_in, 1e-6), lo, hi))
+
+
+def _style_axes(ax, grid_axis="y", box=False):
+    """Applies the shared axis conventions in place.
+
+    Args:
+        ax: The axes to style.
+        grid_axis: "y", "x", "both", or None. Defaults to a HORIZONTAL-only
+            grid: the vertical reference lines these panels draw mark real
+            domains, and a vertical grid of the same weight competes with them.
+        box: True keeps all four spines, for a raster panel where the frame is
+            the edge of the data. False drops the top and right, which is the
+            convention for the line panels.
+    """
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(box)
+    for side in ax.spines:
+        ax.spines[side].set_linewidth(0.8)
+        ax.spines[side].set_color(INK_AXIS)
+    ax.tick_params(direction="out", length=3.5, width=0.8, color=INK_AXIS,
+                   labelsize=FONT_TICK, labelcolor=INK)
+    if grid_axis:
+        ax.grid(axis=grid_axis, color=GRID, lw=0.5, ls=(0, (3, 3)), alpha=0.6)
+    ax.set_axisbelow(True)
+
+
+def _figure_header(fig, left, right, title, year, note=None, note_pos="below"):
+    """Draws the title block: name on the left, year clock on the right.
+
+    Replaces a centred suptitle carrying both. A centred title moves as the
+    year text changes width and, in a GIF, that jitter is the first thing the
+    eye tracks; anchoring the two ends to the axes margins holds them still.
+
+    Args:
+        fig: The figure.
+        left: Left axes margin in figure coordinates.
+        right: Right axes margin in figure coordinates.
+        title: Figure title.
+        year: Calendar year of the frame.
+    """
+    y = 1.0 - 0.30 / fig.get_figheight()
+    fig.text(left, y, title, ha="left", va="center", fontsize=FONT_TITLE,
+             fontweight="bold", color=INK)
+    fig.text(right, y, str(year), ha="right", va="center", fontsize=FONT_TITLE,
+             fontweight="bold", color=INK)
+    gap = 0.20 / fig.get_figheight()
+    fig.add_artist(Line2D([left, right], [y - gap, y - gap], color=RULE,
+                          lw=0.8, transform=fig.transFigure))
+    if note and note_pos == "centre":
+        # The note goes in the header row, right-aligned against the clock
+        fig.text(right - 0.75 / fig.get_figwidth(), y, note, ha="right", va="center",
+                 fontsize=FONT_NOTE, color=INK_LIGHT)
+    elif note:
+        fig.text(right, y - gap - 0.10 / fig.get_figheight(), note, ha="right",
+                 va="top", fontsize=FONT_NOTE, color=INK_LIGHT)
+
+
+def _panel_series(shoreline_m, run, pad_lo, pad_hi):
+    """Year-0-referenced dune-line displacement for one arm, LANDWARD-POSITIVE.
+
+    shoreline_gif keeps a seaward-positive axis and then inverts the y-limits
+    to put the ocean at the bottom. That works for a single shoreline but reads
+    badly here, where the road sits tens of metres landward of the dune line
+    and would be drawn at large NEGATIVE numbers. This negates once more, so
+    landward is positive and up, the dune line starts at 0 and climbs as it
+    retreats, and the road is simply `dune + setback`.
+
+    Args:
+        shoreline_m: 2-D [n_years, total_domains] raw x_s_TS matrix, metres.
+        run: RunInfo carrying flip_sign_model.
+        pad_lo: First padded index to keep.
+        pad_hi: One past the last padded index to keep.
+
+    Returns:
+        A 2-D array [n_years, pad_hi - pad_lo]; row 0 is identically zero and
+        positive means landward of the year-0 dune line.
+    """
+    raw = np.asarray(shoreline_m, dtype=float)
+    flip = -1.0 if run.flip_sign_model else 1.0
+    pos = -(flip * raw)[:, pad_lo:pad_hi]
+    return pos - pos[0][None, :]
+
+
+def _referenced(other_m, shoreline_m, run, pad_lo, pad_hi):
+    """Puts a second cross-shore series on the dune line's own axis.
+
+    The back-barrier shoreline has to be referenced to the SAME year-0 dune
+    line as `_panel_series`, not to its own year-0 position; otherwise both
+    curves start at zero and the island is drawn with no width at all.
+
+    Args:
+        other_m: 2-D raw x_b_TS matrix in metres, same shape as shoreline_m.
+        shoreline_m: The x_s_TS matrix supplying the reference.
+        run: RunInfo carrying flip_sign_model.
+        pad_lo: First padded index to keep.
+        pad_hi: One past the last padded index to keep.
+
+    Returns:
+        A 2-D landward-positive array on the dune line's axis.
+    """
+    flip = -1.0 if run.flip_sign_model else 1.0
+    other = -(flip * np.asarray(other_m, dtype=float))[:, pad_lo:pad_hi]
+    ref = -(flip * np.asarray(shoreline_m, dtype=float))[0, pad_lo:pad_hi]
+    return other - ref[None, :]
+
+
+def _last_managed(entry):
+    """Index of the last year the manager ran, dated from road ELEVATION.
+
+    Not from the setback series: a setback of exactly 0.0 m is legitimate --
+    it means the road sits on the dune line, which is where six of the ten
+    historical domains start -- so a nonzero test on the setback would draw no
+    road at all in precisely the domains this animation exists to show. Road
+    elevation has no such ambiguity; the module stops the moment it drops
+    below 0 m MHW.
+
+    Args:
+        entry: One road_series() value, carrying "elevation".
+
+    Returns:
+        The index, or -1 if the manager never ran.
+    """
+    written = np.flatnonzero(np.asarray(entry["elevation"], dtype=float) != 0)
+    return int(written[-1]) if written.size else -1
+
+
+# The relocation tracker: historical domains relocated by this frame, and relocations elsewhere
+
+def _tracker(road_series, event_years, is_prescribed_arm, t, gis_lo, gis_hi):
+    """Counts for one panel at year index `t`.
+
+    A historical domain counts once it has relocated AT ALL by `t`, early or
+    late (cumulative; the timing error stays visible in the stars and rings).
+    In a panel that carried the prescribed moves, the applied move is read
+    OFF THE SETBACK SERIES - a jump of a cell or more at the event year - not
+    assumed from the event table, so a run that failed to apply an event
+    shows as a miss rather than a hit by construction. 'Elsewhere' is the
+    module's own relocations in domains the record does not list, i.e. the
+    false positives, cumulative.
+
+    Returns:
+        dict(hist_hit, hist_total, hist_hit_win, hist_total_win, elsewhere,
+             observed, observed_by_year)
+    """
+    hit = set()
+    elsewhere = set()
+    for gis, entry in road_series.items():
+        reloc = np.asarray(entry["relocated"], dtype=float)
+        fired = bool(np.any(reloc[:t + 1] > 0)) if reloc.size else False
+        if gis in event_years:
+            applied = False
+            if is_prescribed_arm:
+                k = event_years[gis] - _tracker.start_year
+                sb = np.asarray(entry["setback"], dtype=float)
+                if 0 < k <= t and k < sb.size:
+                    applied = (sb[k] - sb[k - 1]) >= 10.0
+            if fired or applied:
+                hit.add(gis)
+        elif fired:
+            elsewhere.add(gis)
+    in_win = [g for g in event_years if gis_lo <= g <= gis_hi]
+    year = _tracker.start_year + t
+    by_year = {}
+    for g, y in event_years.items():
+        by_year.setdefault(y, [0, 0])
+        by_year[y][1] += 1
+        if y <= year:
+            by_year[y][0] += 1
+    return dict(hist_hit=len(hit), hist_total=len(event_years),
+                hist_hit_win=len([g for g in hit if g in in_win]), hist_total_win=len(in_win),
+                elsewhere=len(elsewhere),
+                observed=sum(v[0] for v in by_year.values()), observed_by_year=by_year)
+
+
+_tracker.start_year = 1984      # set by the makers from the run before drawing
+
+
+def _tracker_label(c):
+    """The per-panel line: 'historical 3 of 10 (window 2 of 4) - elsewhere 2'.
+
+    Short, as the line above says. The long form ("historical domains ... this
+    window ...") was 3.6 in of 7.5 pt type, so at the printed width it overran
+    its half-width panel and ran across the gutter into the other one.
+    """
+    win = (f" (window {c['hist_hit_win']} of {c['hist_total_win']})"
+           if c["hist_total_win"] and c["hist_total_win"] < c["hist_total"] else "")
+    return (f"relocated: historical {c['hist_hit']} of {c['hist_total']}{win}"
+            f"  \u00b7  elsewhere {c['elsewhere']}")
+
+
+def _observed_label(c):
+    """The header line: 'observed to date: 4 of 10 (1989: 4 of 4, 1999: 0 of 6)'."""
+    parts = ", ".join(f"{y}: {v[0]} of {v[1]}" for y, v in sorted(c["observed_by_year"].items()))
+    return f"observed to date: {c['observed']} of {c['hist_total']} ({parts})"
+
+
+def _draw_tracker(ax, text):
+    ax.text(0.995, 0.975, text, transform=ax.transAxes, ha="right", va="top",
+            fontsize=FONT_TRACKER, color=INK, zorder=20,
+            bbox=dict(facecolor="white", alpha=0.88, edgecolor="none",
+                      boxstyle="square,pad=0.3"))
+
+
+def _road_matrix(series, road_series, gis_lo, gis_hi, domains, n_years):
+    """Builds road position and relocation-flag grids aligned to `series`.
+
+    Args:
+        series: Dune-line displacement [n_years, n_domains] for this arm.
+        road_series: {gis: {"setback", "relocated", ...}} for this arm.
+        gis_lo: First GIS domain in the window.
+        gis_hi: Last GIS domain in the window.
+        domains: DomainGeometry.
+        n_years: Number of animation years.
+
+    Returns:
+        A (road, relocated) tuple of [n_years, n_domains] arrays. Domains the
+        run did not manage are NaN in `road` and False in `relocated`, so an
+        unmanaged domain draws no road rather than a road at the dune line.
+    """
+    n_dom = gis_hi - gis_lo + 1
+    road = np.full((n_years, n_dom), np.nan)
+    relocated = np.zeros((n_years, n_dom), dtype=bool)
+
+    for col, gis in enumerate(range(gis_lo, gis_hi + 1)):
+        entry = road_series.get(gis)
+        if entry is None:
+            continue
+        setback = np.asarray(entry["setback"], dtype=float)
+        reloc = np.asarray(entry["relocated"], dtype=float)
+        # The road stops where the record stops, so a drowned road leaves a gap
+        stop = min(n_years, len(setback), _last_managed(entry) + 1)
+        road[:stop, col] = series[:stop, col] + setback[:stop]
+        m = min(n_years, len(reloc))
+        relocated[:m, col] = reloc[:m] > 0
+    return road, relocated
+
+
+def make_road_relocation_gif(
+    arm_a, arm_b, road_series_a, road_series_b,
+    gis_lo, gis_hi, out_path, back_a=None, back_b=None,
+    # A star is always the module; a prescribed move is a ring, so a year with both reads as both
+    label_a="relocations off — the roadway module decides",
+    label_b="relocations on — measured moves applied",
+    event_years=None,
+    domains=DEFAULT_DOMAINS,
+    annotations=DEFAULT_ANNOTATIONS,
+    gif_config=DEFAULT_GIF_CONFIG,
+    fps=None, stride=None, title=None,
+    prescribed_panels=(False, True),
+):
+    """Writes the two-panel road/dune animation for one alongshore window.
+
+    `prescribed_panels` says, per panel, whether that run CARRIED the
+    prescribed 1989/1999 moves and so earns a ring at the event year. The
+    default is the relocation comparison's pairing (a free, b prescribed).
+    A pairing of two versions under ONE scenario passes (False, False) for
+    an emergent scenario and (True, True) for a prescribed one; before this
+    flag (2026-09-09) panel b was ringed unconditionally, which drew
+    "measured move applied" on a v3 run that applied nothing.
+
+    Args:
+        arm_a: (shoreline_m, RunInfo) for the relocations-OFF run.
+        arm_b: (shoreline_m, RunInfo) for the relocations-ON run.
+        road_series_a: {gis: series dict} for arm A, from the comparison
+            script's road_series().
+        road_series_b: The same for arm B.
+        gis_lo: First GIS domain to draw.
+        gis_hi: Last GIS domain to draw.
+        out_path: Destination .gif path.
+        back_a: Optional raw x_b_TS matrix for arm A, metres. Supplying it
+            draws the barrier body between the two shorelines instead of a
+            single dune line, which is what makes the plot read as an
+            island rather than as a chart.
+        back_b: The same for arm B.
+        label_a: Panel title for arm A.
+        label_b: Panel title for arm B.
+        event_years: {gis: year} marking the historical relocation year, drawn
+            as a reference tick on the right panel.
+        domains: DomainGeometry.
+        annotations: Geographic annotation layer (town spans, groins).
+        gif_config: Shared GifConfig.
+        fps: Frames per second; defaults to gif_config.
+        stride: Year stride; defaults to gif_config.
+        title: Figure suptitle prefix.
+
+    Returns:
+        The written path, or None if the animation was skipped.
+    """
+    try:
+        from PIL import Image
+    except Exception as exc:
+        print(f"  [GIF] Pillow unavailable ({exc}); skipping animation.")
+        return None
+
+    fps = gif_config.fps if fps is None else fps
+    stride = gif_config.year_stride if stride is None else stride
+    event_years = event_years or {}
+
+    shore_a, run_a = arm_a
+    shore_b, run_b = arm_b
+    pad_lo = domains.gis_to_pad(gis_lo)
+    pad_hi = domains.gis_to_pad(gis_hi) + 1
+
+    series_a = _panel_series(shore_a, run_a, pad_lo, pad_hi)
+    series_b = _panel_series(shore_b, run_b, pad_lo, pad_hi)
+    bay_a = (None if back_a is None
+             else _referenced(back_a, shore_a, run_a, pad_lo, pad_hi))
+    bay_b = (None if back_b is None
+             else _referenced(back_b, shore_b, run_b, pad_lo, pad_hi))
+    n_years = min(series_a.shape[0], series_b.shape[0])
+    if n_years < 2:
+        print("  [GIF] fewer than 2 model years; skipping animation.")
+        return None
+    series_a, series_b = series_a[:n_years], series_b[:n_years]
+    if bay_a is not None:
+        bay_a, bay_b = bay_a[:n_years], bay_b[:n_years]
+
+    road_a, reloc_a = _road_matrix(series_a, road_series_a, gis_lo, gis_hi,
+                                   domains, n_years)
+    road_b, reloc_b = _road_matrix(series_b, road_series_b, gis_lo, gis_hi,
+                                   domains, n_years)
+
+    x = np.arange(gis_lo, gis_hi + 1)
+
+    # One y-axis for both panels, fixed across frames
+    parts = [series_a.ravel(), series_b.ravel(), road_a.ravel(), road_b.ravel()]
+    if bay_a is not None:
+        # Include the back-barrier, or the island body is drawn clipped
+        parts += [bay_a.ravel(), bay_b.ravel()]
+    stack = np.concatenate(parts)
+    finite = stack[np.isfinite(stack)]
+    ymin, ymax = float(np.min(finite)), float(np.max(finite))
+    ypad = (ymax - ymin) * 0.10 or 1.0
+    # Landward-positive, so ocean-at-bottom is the plain ascending axis
+    ylim = ((ymin - ypad, ymax + ypad) if gif_config.ocean_at_bottom
+            else (ymax + ypad, ymin - ypad))
+
+    n_dom = len(x)
+    width = _figsize("double")[0]
+    year_idx = list(range(0, n_years, max(int(stride), 1)))
+    if year_idx[-1] != n_years - 1:
+        year_idx.append(n_years - 1)
+
+    frames = []
+    for t in year_idx:
+        year = run_a.start_year + t
+        fig, axes = plt.subplots(1, 2, figsize=(width, 4.3),
+                                 dpi=_frame_dpi(width), sharey=True)
+        # Fixed margins (not bbox_inches="tight"): every frame the same size, or the GIF will not assemble
+        fig.subplots_adjust(left=0.105, right=0.985, top=0.825, bottom=0.255,
+                            wspace=0.05)
+        fig.patch.set_facecolor("white")
+
+        # The last flag marks the arm that CARRIES the prescribed moves.
+        panels = ((axes[0], "a", series_a, road_a, reloc_a, label_a,
+                   bay_a, bool(prescribed_panels[0])),
+                  (axes[1], "b", series_b, road_b, reloc_b, label_b,
+                   bay_b, bool(prescribed_panels[1])))
+        for (ax, letter, series, road, reloc, label,
+             bay, is_prescribed_arm) in panels:
+            ax.set_facecolor("white")
+            ax.set_ylim(*ylim)
+            ax.set_xlim(gis_lo - 0.5, gis_hi + 0.5)
+            _style_axes(ax)
+            # Domains are integers: no half ticks
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=8))
+
+            for span_label, (d_lo, d_hi) in annotations.town_spans.items():
+                if d_hi < gis_lo or d_lo > gis_hi:
+                    continue
+                ax.axvspan(max(d_lo, gis_lo) - 0.5, min(d_hi, gis_hi) + 0.5,
+                           color=annotations.color_town_span, alpha=0.13,
+                           zorder=0)
+
+            if bay is not None:
+                # The island: everything between the ocean dune line and the back-barrier shoreline
+                ax.fill_between(x, series[t], bay[t], color=COLOR_LAND,
+                                alpha=0.55, zorder=1, lw=0)
+                ax.plot(x, bay[t], color=COLOR_BAY, lw=1.3, zorder=3,
+                        label="back-barrier")
+            ax.plot(x, series[t], color=COLOR_DUNE, lw=1.9,
+                    label="dune line", zorder=3)
+            ax.plot(x, road[t], color=COLOR_ROAD, lw=1.7, zorder=4,
+                    label="NC-12")
+            # The shaded gap between the two lines is the setback
+            ax.fill_between(x, series[t], road[t], where=np.isfinite(road[t]),
+                            color=COLOR_ROAD, alpha=0.10, zorder=1)
+
+            fired = np.flatnonzero(reloc[t])
+            if fired.size:
+                ax.plot(x[fired], road[t][fired], marker="*", ls="none",
+                        ms=10, mfc=COLOR_RELOC, mec="k", mew=0.5, zorder=6,
+                        label="relocated this year")
+
+            # The prescribed move, marked only in its arm and only in its event year
+            if is_prescribed_arm:
+                for gis, ev_year in event_years.items():
+                    if gis_lo <= gis <= gis_hi and year == ev_year:
+                        col = gis - gis_lo
+                        if np.isfinite(road[t][col]):
+                            ax.plot([x[col]], [road[t][col]], marker="o",
+                                    ls="none", ms=11, mfc="none",
+                                    mec=COLOR_PRESCRIBED, mew=1.4, zorder=7)
+
+            for gis, ev_year in event_years.items():
+                if gis_lo <= gis <= gis_hi:
+                    ax.axvline(gis, color=INK_LIGHT, ls=(0, (1, 2.5)), lw=0.9,
+                               zorder=2,
+                               alpha=0.85 if year >= ev_year else 0.30)
+
+            # Lettered and left-aligned, so a caption can cite (a) and (b)
+            ax.set_title(f"({letter})  {label}", loc="left",
+                         fontsize=FONT_PANEL, color=INK, pad=6)
+            ax.set_xlabel(DOMAIN_AXIS_LABEL, fontsize=FONT_AXIS,
+                          color=INK, labelpad=5)
+
+        # No arrow glyph: it rotates with the label
+        axes[0].set_ylabel("cross-shore displacement since "
+                           f"{run_a.start_year} (m)\nlandward positive",
+                           fontsize=FONT_AXIS, color=INK, labelpad=6)
+        # Every mark on the frame, the shaded bands included; two rows of four fit the narrowest window
+        handles = [
+            Line2D([], [], color=COLOR_DUNE, lw=1.9, label="ocean shoreline"),
+            Line2D([], [], color=COLOR_BAY, lw=1.3,
+                   label="back-barrier shoreline"),
+            Patch(facecolor=COLOR_LAND, edgecolor="none",
+                  label="barrier interior"),
+            Line2D([], [], color=COLOR_ROAD, lw=1.7, label="NC-12"),
+            Patch(facecolor=COLOR_ROAD, alpha=0.18, edgecolor="none",
+                  label="shoreline-to-road setback"),
+            Line2D([], [], color="none", marker="*", ms=9,
+                   mfc=COLOR_RELOC, mec="k", mew=0.5,
+                   label="module-triggered relocation"),
+            Line2D([], [], color=INK_LIGHT, ls=(0, (1, 2.5)), lw=0.9,
+                   label="relocated historically"),
+        ]
+        _ring = [Line2D([], [], color="none", marker="o", ms=7, mfc="none",
+                        mec=COLOR_PRESCRIBED, mew=1.4,
+                        label="measured move applied ("
+                              + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")")]
+        handles = handles[:-1] + (_ring if any(prescribed_panels) else []) + handles[-1:]
+        # Figure-level legend below the axes, so it never covers the road
+        fig.legend(handles=handles, loc="lower center", ncol=4,
+                   fontsize=FONT_LEGEND, frameon=False, labelcolor=INK,
+                   handlelength=1.7, handletextpad=0.6, columnspacing=1.4,
+                   borderaxespad=0.0, bbox_to_anchor=(0.5, 0.012))
+
+        head = title or f"NC-12 and the dune line, GIS {gis_lo}-{gis_hi}"
+        _tracker.start_year = run_a.start_year
+        _ca = _tracker(road_series_a, event_years, bool(prescribed_panels[0]), t, gis_lo, gis_hi)
+        _cb = _tracker(road_series_b, event_years, bool(prescribed_panels[1]), t, gis_lo, gis_hi)
+        _draw_tracker(axes[0], _tracker_label(_ca))
+        _draw_tracker(axes[1], _tracker_label(_cb))
+        _figure_header(fig, 0.105, 0.985, head, year,
+                       note=_observed_label(_ca) if event_years else None, note_pos="centre")
+
+        # dpi explicit: the house savefig.dpi (300) would double every frame's pixels
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=fig.dpi,
+                    facecolor=fig.get_facecolor())
+        plt.close(fig)
+        buf.seek(0)
+        frames.append(Image.open(buf).convert("P", palette=Image.ADAPTIVE))
+
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    frames[0].save(out_path, save_all=True, append_images=frames[1:],
+                   duration=int(1000 / max(fps, 1)), loop=0)
+    print(f"  [GIF] saved ({len(frames)} frames, GIS {gis_lo}-{gis_hi}): "
+          f"{out_path}")
+    if gif_config.auto_open:
+        _open_file(out_path)
+    return out_path
+
+
+def make_all_road_gifs(arm_a, arm_b, road_series_a, road_series_b,
+                       windows, out_dir, event_years=None,
+                       back_a=None, back_b=None,
+                       gif_config=DEFAULT_GIF_CONFIG, **kwargs):
+    """Writes one animation per alongshore window.
+
+    Args:
+        arm_a: (shoreline_m, RunInfo) for the relocations-OFF run.
+        arm_b: (shoreline_m, RunInfo) for the relocations-ON run.
+        road_series_a: {gis: series dict} for arm A.
+        road_series_b: {gis: series dict} for arm B.
+        windows: Sequence of (name, gis_lo, gis_hi) tuples.
+        out_dir: Directory for the .gif files.
+        event_years: {gis: year} for the historical relocation reference ticks.
+        gif_config: Shared GifConfig.
+        **kwargs: Forwarded to make_road_relocation_gif.
+
+    Returns:
+        A list of written paths, skipped windows omitted.
+    """
+    written = []
+    for name, gis_lo, gis_hi in windows:
+        path = os.path.join(out_dir, f"road_relocation_{_slug(name)}.gif")
+        result = make_road_relocation_gif(
+            arm_a, arm_b, road_series_a, road_series_b, gis_lo, gis_hi, path,
+            back_a=back_a, back_b=back_b,
+            event_years=event_years, gif_config=gif_config,
+            title=f"NC-12 and the dune line — {name}", **kwargs)
+        if result:
+            written.append(result)
+    return written
+
+
+# Topographic plan view
+
+# The raster version: Barrier3D's interior grids, dam MHW, row 0 seaward; <= 0 m MHW drawn as water
+
+WATER_COLOR = C["WATER"]
+ROAD_ROWS = 2                  # road_width 20 m / dy 10 m: the two rows bulldoze() writes
+
+# Cross-shore window (dam) around the reference shoreline; the landward end set per window
+CROSS_SHORE_SEAWARD_DAM = -4
+CROSS_SHORE_MIN_ROWS = 40
+CROSS_SHORE_HEADROOM_ROWS = 8
+CROSS_SHORE_REACH_PERCENTILE = 75
+
+
+def _window_reference(cascades, gis_lo, gis_hi, domains, years):
+    """Cross-shore origin shared by every panel, domain and year.
+
+    Taken as the most SEAWARD shoreline anywhere in the window, over both arms
+    and every drawn year, minus a few cells of open ocean. An earlier version
+    used the window's mean year-0 shoreline, which put domains seaward of that
+    mean at a negative row: `_island_raster` clipped their land to row 0 while
+    `_road_track` drew the road at its true negative position, so NC-12
+    appeared to float in the sea off Pea Island. A minimum cannot do that.
+
+    Args:
+        cascades: Iterable of finished Cascade instances sharing the window.
+        gis_lo: First GIS domain in the window.
+        gis_hi: Last GIS domain in the window.
+        domains: DomainGeometry.
+        years: Iterable of year indices that will be drawn.
+
+    Returns:
+        The cross-shore dam coordinate of raster row 0.
+    """
+    pads = [domains.gis_to_pad(g) for g in range(gis_lo, gis_hi + 1)]
+    seaward = min(
+        float(cas.barrier3d[pad].x_s_TS[min(t, len(cas.barrier3d[pad].x_s_TS) - 1)])
+        for cas in cascades for pad in pads for t in years)
+    return seaward + CROSS_SHORE_SEAWARD_DAM
+
+
+def _cross_shore_rows(cascade, gis_lo, gis_hi, domains, years, x_ref):
+    """Chooses a landward extent that fits the land in this window.
+
+    Scans every drawn year and takes the furthest landward row that is still
+    above 0 m MHW anywhere in the window, then adds headroom. Fixed once for
+    the whole animation so the frame does not breathe year to year.
+
+    Args:
+        cascade: A finished Cascade instance.
+        gis_lo: First GIS domain in the window.
+        gis_hi: Last GIS domain in the window.
+        domains: DomainGeometry.
+        years: Iterable of year indices that will be drawn.
+        x_ref: Cross-shore origin from _window_reference.
+
+    Returns:
+        The number of cross-shore rows to draw.
+    """
+    b3d = cascade.barrier3d
+    pads = [domains.gis_to_pad(g) for g in range(gis_lo, gis_hi + 1)]
+    reach = []
+    for pad in pads:
+        bb = b3d[pad]
+        widest = 0
+        for t in years:
+            t = min(t, len(bb.DomainTS) - 1)
+            interior = np.asarray(bb.DomainTS[t], dtype=float)
+            land = np.flatnonzero((interior > 0).any(axis=1))
+            if land.size:
+                r0 = int(round(float(bb.x_s_TS[t]) - x_ref))
+                widest = max(widest, r0 + int(land[-1]))
+        reach.append(widest)
+
+    # A percentile, not the maximum, so one wide domain does not dwarf the rest
+    tall = float(np.percentile(reach, CROSS_SHORE_REACH_PERCENTILE)) if reach else 0.0
+    return int(max(tall, CROSS_SHORE_MIN_ROWS) + CROSS_SHORE_HEADROOM_ROWS)
+
+
+def _island_raster(cascade, year, gis_lo, gis_hi, domains, n_cross, x_ref):
+    """Assembles one year's elevation raster for an alongshore window.
+
+    Args:
+        cascade: A finished Cascade instance.
+        year: Index into the per-domain time series (0 = first model year).
+        gis_lo: First GIS domain in the window.
+        gis_hi: Last GIS domain in the window.
+        domains: DomainGeometry.
+        n_cross: Number of cross-shore rows to draw, from
+            _cross_shore_rows.
+        x_ref: Cross-shore origin from _window_reference.
+
+    Returns:
+        A [n_cross, n_domains * 50] array in metres MHW, NaN where the model
+        has no cell.
+    """
+    b3d = cascade.barrier3d
+    pads = [domains.gis_to_pad(g) for g in range(gis_lo, gis_hi + 1)]
+
+    # One reference shoreline for the whole window, so the panel does not shift as it retreats
+    cell = int(np.shape(b3d[pads[0]].DomainTS[0])[1])
+    grid = np.full((n_cross, len(pads) * cell), np.nan)
+
+    for col, pad in enumerate(pads):
+        bb = b3d[pad]
+        t = min(year, len(bb.DomainTS) - 1)
+        interior = np.asarray(bb.DomainTS[t], dtype=float)     # (rows, cell) dam
+        r0 = int(round(float(bb.x_s_TS[t]) - x_ref))
+
+        lo = max(r0, 0)
+        hi = min(r0 + interior.shape[0], n_cross)
+        if hi > lo:
+            grid[lo:hi, col * cell:(col + 1) * cell] = (
+                interior[lo - r0:hi - r0, :] * 10.0)
+
+        # Dune rows sit seaward of interior row 0, height above the berm.
+        dune = np.asarray(bb.DuneDomain[t], dtype=float)        # (cell, width)
+        berm = float(bb.BermEl)
+        for w in range(dune.shape[1]):
+            r = r0 - dune.shape[1] + w
+            if 0 <= r < n_cross:
+                grid[r, col * cell:(col + 1) * cell] = (dune[:, w] + berm) * 10.0
+    return grid
+
+
+def _road_track(cascade, road_series, year, gis_lo, gis_hi, domains, x_ref):
+    """Road cross-shore position for one year, in raster row units.
+
+    Args:
+        cascade: A finished Cascade instance.
+        road_series: {gis: series dict} for this arm.
+        year: Index into the time series.
+        gis_lo: First GIS domain in the window.
+        gis_hi: Last GIS domain in the window.
+        domains: DomainGeometry.
+        x_ref: Cross-shore dam coordinate of raster row 0.
+
+    Returns:
+        An (x_cells, rows, relocated_mask) tuple. `rows` is NaN wherever the
+        domain is unmanaged or its record has stopped, so the road line breaks
+        rather than being drawn across a drowned stretch.
+    """
+    b3d = cascade.barrier3d
+    cell = int(np.shape(b3d[domains.gis_to_pad(gis_lo)].DomainTS[0])[1])
+    n = (gis_hi - gis_lo + 1)
+    xs, rows, flags = [], [], []
+    for col, gis in enumerate(range(gis_lo, gis_hi + 1)):
+        centre = col * cell + cell / 2.0
+        xs.append(centre)
+        entry = road_series.get(gis)
+        pad = domains.gis_to_pad(gis)
+        if entry is None or year > _last_managed(entry):
+            rows.append(np.nan)
+            flags.append(False)
+            continue
+        setback = np.asarray(entry["setback"], dtype=float)
+        t = min(year, len(setback) - 1)
+        # Setback in metres from the interior's seaward edge; /10 puts it in 10 m rows
+        rows.append(float(b3d[pad].x_s_TS[t]) - x_ref + setback[t] / 10.0)
+        reloc = np.asarray(entry["relocated"], dtype=float)
+        flags.append(bool(t < len(reloc) and reloc[t] > 0))
+    return np.array(xs), np.array(rows), np.array(flags)
+
+
+def _land_colormap():
+    """matplotlib's `terrain`, restricted to its LAND range.
+
+    Full `terrain` spends its first quarter on blues and cyans for bathymetry.
+    Everything drawn here is at or above 0 m MHW -- water is masked out and
+    painted separately -- so those blues would render low-lying land in the
+    same colour as the sound beside it, which is exactly the distinction the
+    animation exists to show. Starting at 0.25 gives the familiar green-to-
+    brown-to-white land ramp with nothing wasted below sea level.
+
+    Returns:
+        A Colormap whose "bad" colour is the water fill.
+    """
+    base = plt.get_cmap("terrain")
+    cmap = mcolors.LinearSegmentedColormap.from_list(
+        "terrain_land", base(np.linspace(0.25, 1.0, 256)))
+    cmap.set_bad(WATER_COLOR)
+    return cmap
+
+
+def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
+                        gis_lo, gis_hi, out_path, start_year,
+                        label_a="relocations off — the roadway module "
+                                "decides",
+                        label_b="relocations on — measured moves applied",
+                        event_years=None, vmax_m=3.0,
+                        domains=DEFAULT_DOMAINS,
+                        gif_config=DEFAULT_GIF_CONFIG,
+                        fps=None, stride=None, title=None,
+                        planform_note=None, prescribed_panels=(False, True)):
+    """Animated elevation map of the island with NC-12 drawn on it.
+
+    `prescribed_panels`: per panel, whether that run carried the prescribed
+    moves (ring at the event year); see make_road_relocation_gif.
+
+    Two panels sharing a colour scale and a year clock. Cells at or below
+    0 m MHW are drawn as water, so the barrier's real outline, its overwash
+    fans and its narrowing are all visible rather than implied.
+
+    VERTICAL EXAGGERATION. The window is ~640 m across-shore and 500 m per
+    domain alongshore, so the aspect is set from the data and stated on the
+    figure. Nothing here is to scale in the way a map is; it is a raster of
+    model cells.
+
+    Args:
+        cascade_a: Finished Cascade for the relocations-OFF run.
+        cascade_b: Finished Cascade for the relocations-ON run.
+        road_series_a: {gis: series dict} for arm A.
+        road_series_b: {gis: series dict} for arm B.
+        gis_lo: First GIS domain to draw.
+        gis_hi: Last GIS domain to draw.
+        out_path: Destination .gif path.
+        start_year: Calendar year of model year 0.
+        label_a: Panel title for arm A.
+        label_b: Panel title for arm B.
+        event_years: {gis: year} for the historical relocation reference ticks.
+        vmax_m: Top of the elevation colour scale, metres MHW. 3 m rather
+            than the barrier's true maximum: almost every cell is under 2 m,
+            so a scale topped by the few dune crests washes the island out.
+        domains: DomainGeometry.
+        gif_config: Shared GifConfig.
+        fps: Frames per second; defaults to gif_config.
+        stride: Year stride; defaults to gif_config.
+        title: Figure suptitle prefix.
+        planform_note: Optional caption, e.g. recording that the run's
+            shoreline offset does not carry the island's true curvature.
+
+    Returns:
+        The written path, or None if the animation was skipped.
+    """
+    try:
+        from PIL import Image
+    except Exception as exc:
+        print(f"  [GIF] Pillow unavailable ({exc}); skipping animation.")
+        return None
+
+    fps = gif_config.fps if fps is None else fps
+    stride = gif_config.year_stride if stride is None else stride
+    event_years = event_years or {}
+
+    n_years = min(len(cascade_a.barrier3d[0].DomainTS),
+                  len(cascade_b.barrier3d[0].DomainTS))
+    year_idx = list(range(0, n_years, max(int(stride), 1)))
+    if year_idx[-1] != n_years - 1:
+        year_idx.append(n_years - 1)
+
+    terrain = _land_colormap()
+    # Fixed for the whole animation and shared by both panels
+    x_ref = _window_reference((cascade_a, cascade_b), gis_lo, gis_hi, domains,
+                              year_idx)
+    n_cross = max(
+        _cross_shore_rows(cascade_a, gis_lo, gis_hi, domains, year_idx, x_ref),
+        _cross_shore_rows(cascade_b, gis_lo, gis_hi, domains, year_idx, x_ref))
+
+    n_dom = gis_hi - gis_lo + 1
+    width = _figsize("double")[0]
+
+    frames = []
+    for t in year_idx:
+        year = start_year + t
+        fig, axes = plt.subplots(2, 1, figsize=(width, 6.0),
+                                 dpi=_frame_dpi(width), sharex=True)
+        # bottom clears the legend strip and the planform note beneath it
+        fig.subplots_adjust(left=0.085, right=0.90, top=0.860, bottom=0.155,
+                            hspace=0.20)
+        fig.patch.set_facecolor("white")
+
+        # The last flag marks the arm carrying the prescribed moves
+        for ax, letter, cas, series, label, is_prescribed_arm in (
+                (axes[0], "a", cascade_a, road_series_a, label_a, bool(prescribed_panels[0])),
+                (axes[1], "b", cascade_b, road_series_b, label_b, bool(prescribed_panels[1]))):
+            grid = _island_raster(cas, t, gis_lo, gis_hi, domains,
+                                  n_cross, x_ref)
+            masked = np.ma.masked_invalid(np.ma.masked_less_equal(grid, 0.0))
+            im = ax.imshow(masked, origin="lower", aspect="auto",
+                           cmap=terrain, vmin=0.0, vmax=vmax_m,
+                           interpolation="nearest")
+            ax.set_facecolor(WATER_COLOR)
+
+            x, rows, fired = _road_track(cas, series, t, gis_lo, gis_hi,
+                                         domains, x_ref)
+            # NC-12 as CASCADE holds it: two straight 20 m rows per domain
+            _cell = grid.shape[1] / (gis_hi - gis_lo + 1)
+            for _col, _r in enumerate(rows):
+                if np.isfinite(_r):
+                    ax.add_patch(Rectangle((_col * _cell - 0.5, _r - 0.5), _cell, ROAD_ROWS,
+                                           facecolor=COLOR_ROAD, edgecolor="none",
+                                           alpha=0.9, zorder=5))
+            if fired.any():
+                ax.plot(x[fired], rows[fired], marker="*", ls="none", ms=10,
+                        mfc=COLOR_RELOC, mec="k", mew=0.5, zorder=6)
+            if is_prescribed_arm:
+                for gis, ev_year in event_years.items():
+                    if gis_lo <= gis <= gis_hi and year == ev_year:
+                        col = gis - gis_lo
+                        if col < len(rows) and np.isfinite(rows[col]):
+                            ax.plot([x[col]], [rows[col]], marker="o",
+                                    ls="none", ms=11, mfc="none",
+                                    mec=COLOR_PRESCRIBED, mew=1.4, zorder=7)
+
+            cell = grid.shape[1] / n_dom
+            ticks = np.arange(n_dom) * cell + cell / 2.0
+            ax.set_xticks(ticks[::max(1, n_dom // 12)])
+            ax.set_xticklabels(range(gis_lo, gis_hi + 1)[::max(1, n_dom // 12)])
+            for gis in event_years:
+                if gis_lo <= gis <= gis_hi:
+                    ax.axvline((gis - gis_lo) * cell + cell / 2.0,
+                               color=INK, ls=(0, (1, 2.5)), lw=0.9,
+                               zorder=4, alpha=0.7)
+            # Cells are 10 m, so the axis is labelled in metres
+            step = max(10, int(round(n_cross / 5.0 / 10.0)) * 10)
+            rows_at = np.arange(0, n_cross, step)
+            ax.set_yticks(rows_at)
+            ax.set_yticklabels((rows_at * 10).astype(int))
+            # The raster keeps all four spines: the frame is the edge of the data
+            _style_axes(ax, grid_axis=None, box=True)
+            ax.set_ylabel("cross-shore (m)\nlandward positive",
+                          fontsize=FONT_AXIS, color=INK, labelpad=6)
+            ax.text(0.006, 0.045, "ocean", transform=ax.transAxes,
+                    fontsize=FONT_NOTE, color=INK_LIGHT, style="italic")
+            ax.text(0.006, 0.93, "sound", transform=ax.transAxes,
+                    fontsize=FONT_NOTE, color=INK_LIGHT, style="italic")
+            ax.set_title(f"({letter})  {label}", loc="left",
+                         fontsize=FONT_PANEL, color=INK, pad=5)
+
+        axes[1].set_xlabel(DOMAIN_AXIS_LABEL, fontsize=FONT_AXIS,
+                           color=INK, labelpad=5)
+        cax = fig.add_axes([0.915, 0.155, 0.014, 0.705])
+        cbar = fig.colorbar(im, cax=cax)
+        cbar.set_label("elevation (m MHW)", fontsize=FONT_AXIS, color=INK)
+        cbar.ax.tick_params(labelsize=FONT_TICK, width=0.8, length=3.0,
+                            color=INK_AXIS, labelcolor=INK)
+        cbar.outline.set_linewidth(0.8)
+        cbar.outline.set_edgecolor(INK_AXIS)
+
+        # Legend entries name the glyphs; the panel titles carry each panel's meaning
+        _topo_handles = [
+            Line2D([], [], color=COLOR_ROAD, lw=2.0, label="NC-12"),
+            Line2D([], [], color="none", marker="*", ms=9,
+                   mfc=COLOR_RELOC, mec="k", mew=0.5,
+                   label="module-triggered relocation (either panel)")]
+        if any(prescribed_panels):
+            _topo_handles.append(Line2D([], [], color="none", marker="o", ms=7, mfc="none",
+                                        mec=COLOR_PRESCRIBED, mew=1.4,
+                                        label="measured move applied ("
+                                              + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")"))
+        _topo_handles.append(Line2D([], [], color=INK, ls=(0, (1, 2.5)), lw=0.9,
+                                    label="relocated historically"))
+        fig.legend(handles=_topo_handles, loc="lower center", ncol=4, fontsize=FONT_LEGEND, frameon=False,
+            labelcolor=INK, handlelength=1.7, handletextpad=0.6,
+            columnspacing=1.4, borderaxespad=0.0,
+            bbox_to_anchor=(0.5, 0.042))
+
+        head = title or f"Hatteras topography and NC-12, GIS {gis_lo}-{gis_hi}"
+        _tracker.start_year = start_year
+        _ca = _tracker(road_series_a, event_years, bool(prescribed_panels[0]), t, gis_lo, gis_hi)
+        _cb = _tracker(road_series_b, event_years, bool(prescribed_panels[1]), t, gis_lo, gis_hi)
+        _draw_tracker(axes[0], _tracker_label(_ca))
+        _draw_tracker(axes[1], _tracker_label(_cb))
+        _figure_header(fig, 0.085, 0.93, head, year,
+                       note=_observed_label(_ca) if event_years else None)
+        if planform_note:
+            fig.text(0.085, 0.008, planform_note, fontsize=FONT_NOTE,
+                     color=INK_LIGHT, style="italic")
+
+        # dpi EXPLICIT -- see the note in make_road_relocation_gif.
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=fig.dpi,
+                    facecolor=fig.get_facecolor())
+        plt.close(fig)
+        buf.seek(0)
+        frames.append(Image.open(buf).convert("P", palette=Image.ADAPTIVE))
+
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    frames[0].save(out_path, save_all=True, append_images=frames[1:],
+                   duration=int(1000 / max(fps, 1)), loop=0)
+    print(f"  [GIF] saved topography ({len(frames)} frames, "
+          f"GIS {gis_lo}-{gis_hi}): {out_path}")
+    return out_path

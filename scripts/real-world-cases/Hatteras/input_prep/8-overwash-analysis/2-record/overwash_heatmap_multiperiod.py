@@ -1,0 +1,513 @@
+"""
+Observed overwash per image and per domain, with the storm record beside it, over the full model window.
+
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py             # 1996_2025
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py 2010_2025   # one window, on request
+    python scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py 1996_2025 --uniform-years
+
+Writes the heatmaps, the long-form observation and storm tables, and the
+CAPTIONS.md entries. Details: scripts/input_prep/8-overwash-analysis/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-10-19
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+HERE = Path(__file__).resolve().parent
+# Hatteras/ holds the scripts; data/ and output/ live in the workspace on D: (hatteras_paths)
+import sys as _hat_sys  # noqa: E402
+_HAT_DIR = next(_p for _p in HERE.parents if (_p / "hatteras_paths.py").exists())
+if str(_HAT_DIR) not in _hat_sys.path:
+    _hat_sys.path.insert(0, str(_HAT_DIR))
+from hatteras_paths import WORKSPACE as REPO  # noqa: E402
+sys.path.insert(0, str(_HAT_DIR))
+# The stage's shared module and its siblings are found from the repo root
+sys.path.insert(0, str(_HAT_DIR / "input_prep" / "8-overwash-analysis"
+                       / "1-observations"))
+
+from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, FIG_H_MAX, INK,   # noqa: E402
+                              INK_MUTED, _title, apply_style, figsize,
+                              open_frame, save, spines_for_image,
+                              town_bands)
+from overwash_data import (FULL, OUT_DIR, PERIODS, SECTIONS, assign_capture,   # noqa: E402
+                           load_observations, load_storms,
+                           observations_long, period_images, period_label,
+                           sources_text, storms_table, upsert_caption)
+
+from site_layer import hat_overwash as ow  # noqa: E402
+FIG_DIR = ow.WHEN
+# The long-form tables are the record reshaped, so they sit beside it.
+TAB_DIR = ow.OBSERVATIONS
+
+# --- CONFIG ------------------------------------------------------------------
+# Colours
+CLR_OW = C["ACCENT"]          # overwash present
+CLR_NONE = "#ffffff"          # assessed, absent
+CLR_GAP_FACE = "#f2f2f2"      # no image that year
+CLR_GAP_EDGE = "#b8b8b8"
+CLR_PART_FACE = "#f7f7f7"     # image does not cover the domain
+CLR_PART_EDGE = "#9a9a9a"
+CLR_ASSESSED = C["BASE_FILL"]
+CLR_INK = INK
+CLR_MUTED = INK_MUTED
+CLR_PERIOD = (C["EARLY"], C["LATE"])   # calibration red, test blue (project rule, 2026-10-12)
+# Storm intensity: hurricanes red, nor'easters blue, tropical/extratropical grey; (size, colour)
+CAT_STYLE = {
+    "H5": (8.0, "#67000d"), "H4": (7.2, "#a50f15"), "H3": (6.4, "#cb181d"),
+    "H2": (5.6, "#ef3b2c"), "H1": (4.8, "#fb6a4a"),
+    "NE 5": (8.0, "#08306b"), "NE 4": (7.2, "#2166ac"), "NE 3": (6.4, "#4292c6"),
+    "TS": (4.5, "#737373"), "ET": (5.6, "#737373"),
+}
+
+ROW_IN = 0.30          # height of one image row, inches, at most
+STORM_LINE_IN = 0.115  # one line of storm type, inches
+TICK_EVERY = 10        # domain tick spacing
+# -----------------------------------------------------------------------------
+
+
+# Row building
+
+# Display rows, top to bottom: one per image, gap rows for years without one
+def build_rows(obs, period, collapse):
+    lo, hi = period
+    have = obs[obs["Year"].between(lo, hi)]
+    rows = []
+    for yr in range(lo, hi + 1):
+        sub = have[have["Year"] == yr]
+        if len(sub):
+            for i, r in sub.iterrows():
+                rows.append(dict(kind="obs", years=[yr], obs=int(i),
+                                 label=f"{yr}  {r['Imagery_Date']:%d %b}"
+                                       + ("*" if r["poor"] else "")))
+        elif collapse and rows and rows[-1]["kind"] == "gap":
+            rows[-1]["years"].append(yr)
+        else:
+            rows.append(dict(kind="gap", years=[yr], obs=None, label=""))
+    for r in rows:
+        if r["kind"] == "gap":
+            y = r["years"]
+            r["label"] = str(y[0]) if len(y) == 1 else f"{y[0]}–{y[-1]}"
+    return rows
+
+
+# Attach each storm in the period to a display row and decide whether that row's image shows it
+def place_storms(rows, storms, obs, period):
+    lo, hi = period
+    obs_to_row = {r["obs"]: k for k, r in enumerate(rows) if r["kind"] == "obs"}
+    year_rows = {}
+    for k, r in enumerate(rows):
+        for y in r["years"]:
+            year_rows.setdefault(y, []).append(k)
+
+    placed = {}
+    for s in storms:
+        if not (lo <= s["year"] <= hi):
+            continue
+        cap = s["capture"]
+        cap_row = obs_to_row.get(cap) if cap is not None else None
+        cands = year_rows[s["year"]]
+        own = cands[0]
+        if rows[own]["kind"] == "obs":
+            # Several images that year: the first after the storm, else the year's last
+            after = [k for k in cands
+                     if obs.loc[rows[k]["obs"], "Imagery_Date"] >= s["end"]]
+            own = after[0] if after else cands[-1]
+        s["row"] = own
+        s["matched"] = (cap_row is not None and cap_row == own)
+        s["capture_row"] = cap_row
+        # the first image after the storm exists but is outside this period
+        s["capture_date"] = (obs.loc[cap, "Imagery_Date"]
+                             if cap is not None and cap_row is None else None)
+        placed.setdefault(own, []).append(s)
+    return placed
+
+
+# Row heights: an image row is 1, a gap row grows with the storms named on it
+def set_heights(rows, placed, slot=0.34):
+    for k, r in enumerate(rows):
+        if r["kind"] == "obs":
+            r["height"] = 1.0
+        else:
+            n = len(placed.get(k, []))
+            r["height"] = max(0.55, slot * n + 0.22)
+    edges = np.concatenate([[0.0], np.cumsum([r["height"] for r in rows])])
+    for k, r in enumerate(rows):
+        r["y0"], r["y1"] = edges[k], edges[k + 1]
+        r["yc"] = 0.5 * (edges[k] + edges[k + 1])
+    return edges
+
+
+# Drawing
+
+# Panel (a): the observation matrix, with gap and part-covered rows shaded
+def draw_matrix(ax, rows, domains, matrix):
+    n_d = len(domains)
+    x0, x1 = domains[0] - 0.5, domains[-1] + 0.5
+    ax.set_facecolor(CLR_NONE)
+    for r in rows:
+        h = r["y1"] - r["y0"]
+        if r["kind"] == "gap":
+            ax.add_patch(mpatches.Rectangle(
+                (x0, r["y0"]), n_d, h, facecolor=CLR_GAP_FACE,
+                edgecolor=CLR_GAP_EDGE, hatch="////", linewidth=0, zorder=1))
+            continue
+        v = matrix[r["obs"]]
+        for j, d in enumerate(domains):
+            if np.isnan(v[j]):
+                ax.add_patch(mpatches.Rectangle(
+                    (d - 0.5, r["y0"]), 1, h, facecolor=CLR_PART_FACE,
+                    edgecolor=CLR_PART_EDGE, hatch="....", linewidth=0,
+                    zorder=2))
+            elif v[j] >= 0.5:
+                ax.add_patch(mpatches.Rectangle(
+                    (d - 0.5, r["y0"]), 1, h, facecolor=CLR_OW,
+                    edgecolor="none", linewidth=0, zorder=2))
+    for r in rows:
+        ax.axhline(r["y1"], color="white", lw=0.5, zorder=3)
+    # Reach edges as lines only: a village fill here would be a third grey (no image,
+    # not assessed) or clash with the shoal amber, so villages are shaded in (d) alone
+    for _, lo, _, _ in SECTIONS[1:]:
+        ax.axvline(lo - 0.5, color="#bfbfbf", lw=0.8, zorder=4)
+
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(rows[-1]["y1"], 0)
+    ticks = [d for d in domains if d == 1 or d % TICK_EVERY == 0]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([str(t) for t in ticks])
+    ax.tick_params(axis="x", length=2.5, pad=2)
+    ax.set_yticks([r["yc"] for r in rows])
+    ax.set_yticklabels([r["label"] for r in rows], fontsize=7.5)
+    for lab, r in zip(ax.get_yticklabels(), rows):
+        if r["kind"] == "gap":
+            lab.set_color(CLR_MUTED)
+            lab.set_fontstyle("italic")
+            lab.set_fontsize(7.0)
+    ax.tick_params(axis="y", length=0, pad=4)
+    spines_for_image(ax)
+    _title(ax, 0, "overwash observed, per image and domain")
+
+
+# One column marking the calibration (1997-2009, red) and test (2010-2025, blue) windows
+def draw_period_bars(ax, rows):
+    ax.set_xlim(0, 1)
+    ax.set_ylim(rows[-1]["y1"], 0)
+    ax.axis("off")
+    spans = [(*PERIODS["1997_2009"], "Calibration  1997–2009", CLR_PERIOD[0]),
+             (*PERIODS["2010_2025"], "Test  2010–2025", CLR_PERIOD[1])]
+    for lo, hi, text, colour in spans:
+        ys = [r for r in rows if any(lo <= y <= hi for y in r["years"])]
+        if not ys:
+            continue
+        # a small gap where the two windows meet
+        y0, y1 = ys[0]["y0"] + 0.06, ys[-1]["y1"] - 0.06
+        ax.add_patch(mpatches.Rectangle((0.15, y0), 0.7, y1 - y0,
+                                        facecolor=colour, edgecolor="none"))
+        ax.text(0.5, 0.5 * (y0 + y1), text, rotation=90,
+                ha="center", va="center", fontsize=7, color="white")
+
+
+# Panel (b): domains overwashed per image, against domains assessed
+def draw_counts_per_image(ax, rows, matrix, n_d):
+    ax.set_ylim(rows[-1]["y1"], 0)
+    ax.set_xlim(0, n_d)
+    for r in rows:
+        if r["kind"] != "obs":
+            continue
+        v = matrix[r["obs"]]
+        n_ass = int(np.sum(~np.isnan(v)))
+        n_ow = int(np.nansum(v))
+        h = 0.62 * (r["y1"] - r["y0"])
+        ax.barh(r["yc"], n_ass, height=h, color=CLR_ASSESSED, zorder=1)
+        ax.barh(r["yc"], n_ow, height=h, color=CLR_OW, zorder=2)
+        if n_ow:
+            ax.text(n_ow + 2.5, r["yc"], str(n_ow), va="center", ha="left",
+                    fontsize=7, color=CLR_INK, zorder=3)
+    ax.set_xticks([0, n_d // 2, n_d])
+    ax.tick_params(axis="x", labelsize=7, length=2.5, pad=2)
+    ax.set_yticks([])
+    ax.spines["left"].set_visible(False)
+    ax.set_xlabel("domains" + chr(10) + "overwashed", fontsize=7.5, labelpad=2)
+    open_frame(ax)
+    _title(ax, 1, "")          # the panel is one bar wide: letter only
+
+
+# Panel (c): the named storms at their year, linked to the image that first shows them
+def draw_storms(ax, rows, placed, obs, slot=0.34):
+    ax.set_xlim(0, 1)
+    ax.set_ylim(rows[-1]["y1"], 0)
+    ax.axis("off")
+    AXIS_X, LABEL_X = 0.17, 0.215
+    for r in rows:
+        ax.axhline(r["y1"], color="#ececec", lw=0.5, zorder=0)
+    ax.axvline(AXIS_X, color="#cfcfcf", lw=1.0, zorder=1)
+
+    # Label position, and a small offset per connector so lines to one image stay apart
+    conn_k = {}
+    labels = []
+    for k, storms in placed.items():
+        r = rows[k]
+        n = len(storms)
+        if r["kind"] == "gap":
+            ys = [r["y0"] + (r["y1"] - r["y0"]) * (i + 0.5) / n for i in range(n)]
+        else:
+            ys = [r["yc"] + (i - (n - 1) / 2) * slot for i in range(n)]
+        for s, y in zip(storms, ys):
+            labels.append((s, r, y))
+
+    for s, r, y in labels:
+        size, col = CAT_STYLE.get(s["cat"], (5.0, "#555555"))
+        matched = s["matched"]
+        name = s["name"].upper() if s["cat"].startswith("H") else s["name"]
+        when = s["month"] if r["kind"] == "obs" else f"{s['month']} {s['year']}"
+        # The marker carries the category, so the label is name and month only
+        text = f"{name}  ({when})"
+        ax.plot(AXIS_X, y, "o", ms=size, color=col, zorder=5,
+                mec="white", mew=0.6, alpha=1.0 if matched else 0.45)
+        ax.text(LABEL_X, y, text, va="center", ha="left", fontsize=7,
+                color=col if matched else "#7a7a7a",
+                fontweight="bold" if matched else "normal",
+                fontstyle="normal" if matched else "italic", zorder=6)
+        cap = s["capture_row"]
+        if not matched and cap is not None:
+            k = conn_k.get(cap, 0)
+            conn_k[cap] = k + 1
+            x = AXIS_X - 0.035 - 0.013 * k
+            yc = rows[cap]["yc"]
+            ax.plot([AXIS_X, x], [y, y], color=col, lw=0.6, alpha=0.5, zorder=2)
+            ax.plot([x, x], [y, yc], color=col, lw=0.6, alpha=0.5, zorder=2)
+            ax.plot([x, AXIS_X - 0.012], [yc, yc], color=col, lw=0.6,
+                    alpha=0.5, zorder=2)
+            ax.plot(AXIS_X - 0.012, yc, marker=">", ms=3.2, color=col,
+                    alpha=0.6, zorder=3, mec="none")
+        elif not matched:
+            note = ("no image since" if s["capture_date"] is None else
+                    f"next image {s['capture_date']:%b %Y}")
+            ax.text(0.985, y, note, va="center", ha="right",
+                    fontsize=7, color=CLR_MUTED, fontstyle="italic")
+
+    targets = {s["capture_row"] for s, _, _ in labels
+               if not s["matched"] and s["capture_row"] is not None}
+    for k, r in enumerate(rows):
+        if k in placed:
+            continue
+        if r["kind"] == "obs":
+            ax.plot(AXIS_X, r["yc"], "o", ms=3.4, color="#c8c8c8", zorder=4,
+                    mec="white", mew=0.5)
+            note = ("first image after them" if k in targets
+                    else "no named storm")
+            ax.text(LABEL_X, r["yc"], note, va="center", ha="left",
+                    fontsize=7, color="#a8a8a8", fontstyle="italic")
+        else:
+            ax.plot(AXIS_X, r["yc"], "o", ms=3.0, color="none", zorder=4,
+                    mec="#c8c8c8", mew=0.6)
+    _title(ax, 2, "named storms")
+
+
+# The storm-category key
+def draw_storm_legend(ax):
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    items = [("H5", "hurricane 5"), ("H3", "hurricane 3"), ("H1", "hurricane 1"),
+             ("NE 5", "nor'easter 5"), ("NE 3", "nor'easter 3"),
+             ("TS", "TS / extratropical")]
+    y = 0.94
+    for cat, lab in items:
+        size, col = CAT_STYLE[cat]
+        ax.plot(0.06, y, "o", ms=size, color=col, mec="white", mew=0.6)
+        ax.text(0.17, y, lab, va="center", ha="left", fontsize=7, color=CLR_INK)
+        y -= 0.105
+    y -= 0.05
+    for line, colour in (("bold, filled dot: the image on", CLR_INK),
+                         ("that row postdates the storm", CLR_INK),
+                         ("faint italic: the image predates", CLR_MUTED),
+                         ("it, and the line leads to the", CLR_MUTED),
+                         ("first image that postdates it", CLR_MUTED)):
+        ax.text(0.0, y, line, fontsize=7, color=colour, va="center")
+        y -= 0.085
+
+
+# Panel (d): how many images show each domain overwashed
+def draw_counts_per_domain(ax, rows, domains, matrix):
+    idx = [r["obs"] for r in rows if r["kind"] == "obs"]
+    sub = matrix[idx]
+    n_ow = np.nansum(sub, axis=0)
+    ax.bar(domains, n_ow, width=1.0, color=CLR_OW, zorder=2)
+    for _, lo, _, _ in SECTIONS[1:]:
+        ax.axvline(lo - 0.5, color="#bfbfbf", lw=0.8, zorder=1)
+    ax.set_xlim(domains[0] - 0.5, domains[-1] + 0.5)
+    top = int(np.nanmax(n_ow)) if n_ow.size else 1
+    ax.set_ylim(0, max(top, 1) + 1.4)   # headroom for the village names
+    ax.set_yticks(range(0, max(top, 1) + 1, 1 if top <= 6 else 2))
+    ticks = [d for d in domains if d == 1 or d % TICK_EVERY == 0]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([str(t) for t in ticks])
+    ax.tick_params(axis="both", length=2.5, pad=2)
+    town_bands(ax)
+    open_frame(ax)
+    ax.set_xlabel(DOMAIN_AXIS_LABEL, labelpad=3)
+    ax.set_ylabel("images with\noverwash")
+    _title(ax, 3, "images with overwash, per domain")
+
+
+# The matrix key: present, absent, not covered, no image
+def matrix_legend(fig, x, y):
+    handles = [
+        mpatches.Patch(fc=CLR_OW, ec="none", label="overwash present"),
+        mpatches.Patch(fc=CLR_NONE, ec="#999999", lw=0.6,
+                       label="assessed, no overwash"),
+        mpatches.Patch(fc=CLR_PART_FACE, ec=CLR_PART_EDGE, hatch="....",
+                       lw=0.0, label="not assessed (outside the image," + chr(10)
+                                     + "cloud or missing data)"),
+        mpatches.Patch(fc=CLR_GAP_FACE, ec=CLR_GAP_EDGE, hatch="////",
+                       lw=0.0, label="no image that year"),
+        mpatches.Patch(fc=CLR_ASSESSED, ec="none", label="domains assessed (b)"),    ]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(x, y),
+               ncol=2, frameon=False, handlelength=1.5, handleheight=1.0,
+               columnspacing=1.4, borderaxespad=0, labelspacing=0.45)
+
+
+# Figure
+
+# One period's figure: rows, storms and the four panels, sized to fit a page
+def make_figure(tag, period, obs, domains, matrix, storms, collapse, out):
+    rows = build_rows(obs, period, collapse)
+    placed = place_storms(rows, storms, obs, period)
+    combined = tag == FULL
+    n_d = len(domains)
+
+    # Layout in inches at the printed width, then fractions
+    fig_w = figsize("double")[0]
+    PB = 0.34 if combined else 0.0          # period bars
+    LM, G1, CW, G2, TW, RM = 1.00 + PB, 0.10, 0.55, 0.12, 1.95, 0.08
+    HW = fig_w - LM - G1 - CW - G2 - TW - RM
+    TM = 0.42
+    XT, SB, G3, BH, BX, LG, BM = 0.22, 0.10, 0.34, 0.85, 0.34, 0.50, 0.10
+    # Row height and storm-line height solved together so the period fits a page
+    avail = FIG_H_MAX - (TM + XT + SB + G3 + BH + BX + LG + BM)
+    row_in, slot = ROW_IN, 0.34
+    for _ in range(12):
+        units = set_heights(rows, placed, slot)[-1]
+        row_in = min(ROW_IN, avail / units)
+        slot = max(0.34, STORM_LINE_IN / row_in)
+    units = set_heights(rows, placed, slot)[-1]
+    row_in = min(ROW_IN, avail / units)
+    HH = units * row_in
+    fig_h = TM + HH + XT + SB + G3 + BH + BX + LG + BM
+
+    def ax_at(x, y_from_bottom, w, h):
+        return fig.add_axes([x / fig_w, y_from_bottom / fig_h, w / fig_w, h / fig_h])
+
+    fig = plt.figure(figsize=figsize("double", height=fig_h))
+    y_hm = fig_h - TM - HH
+    ax_hm = ax_at(LM, y_hm, HW, HH)
+    ax_cnt = ax_at(LM + HW + G1, y_hm, CW, HH)
+    ax_st = ax_at(LM + HW + G1 + CW + G2, y_hm, TW, HH)
+    y_bh = y_hm - XT - SB - G3 - BH
+    ax_bh = ax_at(LM, y_bh, HW, BH)
+    ax_sl = ax_at(LM + HW + G1 + CW + G2, y_bh - BX, TW, BH + BX + G3 + SB)
+    if combined:
+        ax_pb = ax_at(0.08, y_hm, PB - 0.06, HH)
+        draw_period_bars(ax_pb, rows)
+
+    draw_matrix(ax_hm, rows, domains, matrix)
+    draw_counts_per_image(ax_cnt, rows, matrix, n_d)
+    draw_storms(ax_st, rows, placed, obs, slot)
+    draw_counts_per_domain(ax_bh, rows, domains, matrix)
+    draw_storm_legend(ax_sl)
+    matrix_legend(fig, LM / fig_w, (y_bh - BX + 0.02) / fig_h)
+
+    save(fig, out, close=True)
+    print(f"  wrote {out.relative_to(REPO)} (+ .pdf)")
+    return rows, placed
+
+
+# Captions
+
+# The CAPTIONS.md entry for one period's figure
+def caption_text(tag, period, rows, placed, obs, storms):
+    lo, hi = period
+    n_img = sum(1 for r in rows if r["kind"] == "obs")
+    gaps = [r["label"] for r in rows if r["kind"] == "gap"]
+    src = "Rows are " + sources_text(obs, period_images(obs, tag))
+    if tag == FULL:
+        src += ("; the bars on the left mark the calibration (red, storms 1997–2009) "
+                "and test (blue, storms 2010–2025) windows")
+    unmatched = [s for s in storms if lo <= s["year"] <= hi and not s["matched"]]
+    ex = "; ".join(
+        f"{s['name']} ({s['month']} {s['year']}) → "
+        + (obs.loc[s['capture'], 'Imagery_Date'].strftime('%d %b %Y')
+           if s['capture'] is not None else "no image yet")
+        for s in unmatched[:6])
+    return (
+        f"Observed overwash on Hatteras Island, {period_label(tag)} "
+        f"(images taken in the model window's storm years, {lo}–{hi}). "
+        f"(a) One row per image assessed ({n_img} images, labelled by year and "
+        f"date; * poor or partial image), one column per CASCADE domain, 1 at "
+        f"Cape Point to 90 at Pea Island; the vertical lines are the reach "
+        f"boundaries, with the villages shaded and named in (d). Purple "
+        f"where overwash was present, white where the image was assessed and "
+        f"showed none, dotted where the domain was not assessed (outside the image, under cloud or missing from the source data), "
+        f"hatched rows where no image exists; runs of such years are drawn as "
+        f"one thin row ({', '.join(gaps)}). {src}. "
+        f"(b) Domains overwashed in each image, over the number assessed (grey). "
+        f"(c) The named storms of the reference sheet at their year, the marker "
+        f"giving the peak category, bold with "
+        f"a filled dot where the image on that row was taken after the storm "
+        f"(so the row can show its effects), faint italic where the image "
+        f"predates it or there is none that year, with a line to the first "
+        f"image taken after the storm; e.g. {ex}. The rule is the first image "
+        f"on or after the storm's last listed day, with a 7-day grace; the "
+        f"May 2022 nor'easter is routed to the Oct 2023 image by hand. "
+        f"(d) Number of images showing each domain overwashed.")
+
+
+# Write each figure's entry into CAPTIONS.md
+def write_captions(entries):
+    for name, text in entries:
+        p = upsert_caption(name, "when", text)
+    print(f"  wrote {p.relative_to(REPO)}")
+
+
+# Main
+
+# Run: every window asked for (the full record by default), the tables and the captions
+def main(argv):
+    apply_style()
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    uniform = "--uniform-years" in argv
+    tags = [a for a in argv if a in PERIODS] or [FULL]
+
+    obs, domains, matrix = load_observations()
+    storms = assign_capture(load_storms(), obs)
+    TAB_DIR.mkdir(parents=True, exist_ok=True)
+    observations_long(obs, domains, matrix).to_csv(
+        TAB_DIR / "overwash_observations.csv", index=False)
+    storms_table(storms, obs).to_csv(TAB_DIR / "storms_by_image.csv", index=False)
+    print(f"  wrote {TAB_DIR.relative_to(REPO)}/overwash_observations.csv, storms_by_image.csv")
+
+    entries = []
+    for tag in tags:
+        period = PERIODS[tag]
+        suffix = "_uniform" if uniform else ""
+        out = FIG_DIR / f"overwash_image_grid_{tag}{suffix}.png"
+        rows, placed = make_figure(tag, period, obs, domains, matrix, storms,
+                                   collapse=not uniform, out=out)
+        entries.append((out.name, caption_text(tag, period, rows, placed, obs, storms)))
+    if not uniform:
+        write_captions(entries)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
