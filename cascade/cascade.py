@@ -136,7 +136,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_economics_module=False,
-        outwash_module=True,
+        outwash_module=False,
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -157,7 +157,7 @@ class Cascade:
         road_width=30,
         road_setback=30,
         road_relocation_setback=30,
-        dune_mgmt_road_setback_trigger=20,
+        dune_mgmt_road_setback_trigger=None,
         dune_design_elevation=3.7,
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
@@ -187,8 +187,8 @@ class Cascade:
         use_defined_beach_width=False,
         user_inputed_beach_width=30,
         # --------- outwasher (in development) ------------ #
-        outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
-        outwash_beach_file="NCB-default_beach.npy",
+        outwash_storms_file="outwash-default-storms.npy",
+        outwash_beach_file=None,
         percent_washout_to_shoreface=100,
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
@@ -264,11 +264,11 @@ class Cascade:
             Width of roadway [m]
         road_setback: int or list of int, optional
             Setback of roadway from the inital dune line and after road relocations [m]
-        dune_mgmt_road_setback_trigger: float or list of floats, optional
-            Maximum road setback at which the existing roadway dune-rebuilding
-            process is permitted [m]. When the current setback is greater than
-            this trigger, artificial rebuilding is skipped and existing dunes
-            continue to evolve naturally. The default is 20 m.
+        dune_mgmt_road_setback_trigger: float, None, or list, optional
+            Optional roadway dune-rebuilding proximity threshold [m]. None
+            (default) permits rebuilding regardless of road setback. A numeric
+            threshold requires setback strictly below it. A list may mix numbers
+            and None to configure domains independently. Road clearing is unaffected.
         road_relocation_setback: int or list of int, optional
             Setback length for roadway for road relocations [m]
         dune_design_elevation: float or list of floats, optional
