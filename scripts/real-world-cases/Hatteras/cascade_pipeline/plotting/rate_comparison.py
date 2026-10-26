@@ -93,6 +93,8 @@ class RateComparisonConfig:
             line through D1-10 ... but ensure it isnt LOWESS").
         show_features: Draw the shoal zones, piers and groin on the
             real-domains figure (the annotated figure always has them).
+        smoothing_marker: Draw the dashed line at skip_southern_domains + 0.5
+            where the dots give way to the LOWESS (annotated figure only).
         model_label_plain: Legend the model as just run.model_name
             ("CASCADE"); the wave settings go in the subtitle instead.
         show_wave_climate: Add run.wave_climate as a subtitle line.
@@ -152,6 +154,7 @@ class RateComparisonConfig:
     overlay_raw_southern_only: bool = False
     south_mean_line: bool = False
     show_features: bool = False
+    smoothing_marker: bool = True
     model_label_plain: bool = False
     show_wave_climate: bool = False
     publication_text: bool = False
@@ -508,9 +511,10 @@ def _caption_tail(parts, run, config, annotated, skip, widest):
     """The legend key, wave climate and run identity every caption ends with."""
     what = "change" if config.quantity == "position" else "rate"
     if annotated:
+        marker = (f" Grey dashed line at domain {skip}.5: where the LOWESS begins."
+                  if config.smoothing_marker else "")
         parts.append(f"Blue shading: the {widest}-domain LOWESS {what} against "
-                     f"zero. Grey dashed line at domain {skip}.5: where the "
-                     f"LOWESS begins. Shaded bands: communities; grey dashed "
+                     f"zero.{marker} Shaded bands: communities; grey dashed "
                      f"lines: village centres. Hatched: shoal zones. "
                      f"Dash-dot: piers. Dotted: Buxton groin.")
     elif config.show_features:
@@ -841,7 +845,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                zorder=3)
 
     # Scatter/LOWESS transition marker, only when the southern domains show raw scatter
-    if config.plot_raw_lrr and config.raw_lrr_southern_only and lowess_config.skip_southern_domains > 0:
+    if (config.smoothing_marker and config.plot_raw_lrr and config.raw_lrr_southern_only
+            and lowess_config.skip_southern_domains > 0):
         ax.axvline(lowess_config.skip_southern_domains + 0.5, color=INK_MUTED,
                    lw=0.8, ls=(0, (4, 4)), zorder=2)
 

@@ -23,6 +23,7 @@ import numpy as np
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
+from cascade_pipeline.plotting.comparison_style import restyle, run_subtitle, setup_text
 from cascade_pipeline.plotting.rate_comparison import (
     DEFAULT_RATE_COMPARISON, coastsat_domain_mean, plot_annotated_rate_comparison)
 from cascade_pipeline.shoreline import compute_change_rate
@@ -36,12 +37,6 @@ LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 COASTSAT_END = "2026-01-13"
 # One symmetric y axis for every run, so figures compare (the project's position-change range)
 Y_HALF = 100.0
-PRESET_TEXT = {"zeroBE": "no source/sink",
-               "edgeBE": "source/sink at the end domains only (GIS 1 and 90)",
-               "calibBE": "zone source/sink (calibBE)",
-               "domainBE": "per-domain source/sink (set 1)"}
-MANAGEMENT_TOKENS = (("road", "road maintenance"), ("bdm", "beach and dune management"),
-                     ("nourish", "nourishment"), ("reloc", "road relocation"))
 # -----------------------------------------------------------------------------
 
 
@@ -61,16 +56,6 @@ def smooth_model(position_m, domains=HATTERAS_DOMAINS, lowess_config=LOWESS_CONF
     out = np.array(position_m, dtype=float)
     out[domains.start_real_index:domains.end_real_index] = sm
     return out
-
-
-# Source/sink, groin and management in plain words, from the run name's tokens
-def setup_text(run_name):
-    tokens = run_name.split("_")
-    preset = tokens[3] if len(tokens) > 3 else ""
-    groin = ("blocking groin" if "groinblock" in tokens
-             else "groin" if "groin" in tokens else "no groin")
-    management = [text for token, text in MANAGEMENT_TOKENS if token in tokens]
-    return PRESET_TEXT.get(preset, preset), groin, management
 
 
 # Triangles at the edge for everything beyond +/-Y_HALF; returns the caption clause naming it
@@ -132,10 +117,11 @@ def plot_net_change_comparison(shoreline_m, run, save_path, wave_climate=None,
     config = dataclasses.replace(
         DEFAULT_RATE_COMPARISON, quantity="position", publication_text=True,
         show_features=True, plot_domain_means=False, raw_lrr_southern_only=True,   # no thin unsmoothed lines (2026-10-20)
+        smoothing_marker=False,   # read as a village line; the caption says where the LOWESS starts
         observed_label="CoastSat (7-domain LOWESS)", model_label="CASCADE (7-domain LOWESS)",
         title=f"Modelled and observed shoreline position change, {window[0]}–{window[1]}",
         ylim=(-Y_HALF, Y_HALF),
-        subtitle=" · ".join(p for p in (role, source_sink, groin) if p))
+        subtitle=run_subtitle(window, run.run_name))
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
     smoothed = smooth_model(position_m)
@@ -144,6 +130,7 @@ def plot_net_change_comparison(shoreline_m, run, save_path, wave_climate=None,
         annotations=HATTERAS_ANNOTATIONS, lowess_config=LOWESS_CONFIG, config=config,
         save_path=str(save_path), show=show, change_rate_raw=None)
     offaxis = _mark_offaxis(ax, smoothed, position_m, cs_series)
+    restyle(fig, ax, config.subtitle)
     fig.savefig(save_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close("all")
 
