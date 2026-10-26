@@ -684,10 +684,9 @@ class RoadwayManager:
             Beach width [m] at which dune migration turns back on. Beach-width
             management stays inactive until the first nourishment event.
         dune_mgmt_road_setback_trigger: float, optional
-            Maximum road setback at which the existing dune-rebuilding process is
-            permitted [m]. When the current setback is greater than this trigger,
-            artificial rebuilding is skipped and the dunes continue to evolve
-            through Barrier3D's natural dune-growth logic. The default is 20 m.
+            Road setback must be strictly below this threshold to rebuild the
+            existing dune field [m]. At or above the threshold, rebuilding is
+            skipped. The default is 20 m; no interior dunes are constructed.
         road_relocation_setback: optional
             Distance from the duneline where the relocated road will be placed [m]
         allow_causway: optional
@@ -976,7 +975,7 @@ class RoadwayManager:
         )
 
         road_dune_rebuild_disabled = bool(
-            self._road_setback > self._dune_mgmt_road_setback_trigger
+            self._road_setback >= self._dune_mgmt_road_setback_trigger
         )
         self._road_dune_rebuild_disabled_TS[self._time_index - 1] = (
             road_dune_rebuild_disabled
@@ -1061,7 +1060,7 @@ class RoadwayManager:
         # Dune min elevation should likely be altered
         if self._dune_design_elevation is None or self._dune_minimum_elevation is None:
             pass
-        elif self._road_setback > self._dune_mgmt_road_setback_trigger:
+        elif road_dune_rebuild_disabled:
             pass
         else:
             # in B3D, dune height is the height above the berm crest
@@ -1071,10 +1070,7 @@ class RoadwayManager:
             # if any dune cell in the front row of dunes is less than a minimum
             # threshold -- as measured above the berm crest -- then rebuild the
             # dune (all rows up to dune_design_elevation)
-            if (
-                np.min(new_dune_domain[:, 0]) < (min_dune_height / 10)
-                and self._road_setback <= 10
-            ):  # in m
+            if np.min(new_dune_domain[:, 0]) < (min_dune_height / 10):  # in dam
                 # first document what percentage of the dune field is below this minimum
                 dune_cells_below_threshold = np.sum(
                     new_dune_domain < (min_dune_height / 10)
@@ -1092,24 +1088,6 @@ class RoadwayManager:
                 )
                 self._dunes_rebuilt_TS[self._time_index - 1] = 1
                 self._rebuild_dune_volume_TS[self._time_index - 1] = (
-                    rebuild_dune_volume * dm3_to_m3
-                )
-            elif (
-                np.min(new_dune_domain[:, 0]) < (min_dune_height / 10)
-                and self._road_setback <= 20
-            ):
-                Interior_Dune_Front = (self._road_setback / 10) - 2
-                new_dune_domain, rebuild_dune_volume = build_interior_dunes(
-                    b3d=barrier3d,
-                    dune_construction_distance=Interior_Dune_Front,
-                    max_dune_height=dune_design_height,
-                    min_dune_height=dune_design_height,
-                    dz=10,
-                    rng=True,
-                )
-
-                self._interior_dunes_built_TS[self._time_index - 1] = 1
-                self._interior_dunes_volume_TS[self._time_index - 1] = (
                     rebuild_dune_volume * dm3_to_m3
                 )
 
