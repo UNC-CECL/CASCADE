@@ -648,7 +648,7 @@ class RoadwayManager:
         nourishment_interval=None,
         nourishment_volume=100,
         beach_width_threshold=0,
-        dune_mgmt_road_setback_trigger=20.0,
+        dune_mgmt_road_setback_trigger=None,
     ):
         """The RoadwayManager module
 
@@ -683,10 +683,11 @@ class RoadwayManager:
         beach_width_threshold: float, optional
             Beach width [m] at which dune migration turns back on. Beach-width
             management stays inactive until the first nourishment event.
-        dune_mgmt_road_setback_trigger: float, optional
-            Road setback must be strictly below this threshold to rebuild the
-            existing dune field [m]. At or above the threshold, rebuilding is
-            skipped. The default is 20 m; no interior dunes are constructed.
+        dune_mgmt_road_setback_trigger: float or None, optional
+            Optional proximity threshold for rebuilding the existing dune field
+            [m]. None (default) permits rebuilding regardless of road setback.
+            If specified, road setback must be strictly below the threshold.
+            Road clearing is independent of this rule. No interior dunes are built.
         road_relocation_setback: optional
             Distance from the duneline where the relocated road will be placed [m]
         allow_causway: optional
@@ -975,7 +976,8 @@ class RoadwayManager:
         )
 
         road_dune_rebuild_disabled = bool(
-            self._road_setback >= self._dune_mgmt_road_setback_trigger
+            self._dune_mgmt_road_setback_trigger is not None
+            and self._road_setback >= self._dune_mgmt_road_setback_trigger
         )
         self._road_dune_rebuild_disabled_TS[self._time_index - 1] = (
             road_dune_rebuild_disabled
@@ -1281,7 +1283,7 @@ class RoadwayManager:
         return self._dune_mgmt_road_setback_trigger
 
     @dune_mgmt_road_setback_trigger.setter
-    def road_setback_trigger(self, value):
+    def dune_mgmt_road_setback_trigger(self, value):
         self._dune_mgmt_road_setback_trigger = value
 
     @property
