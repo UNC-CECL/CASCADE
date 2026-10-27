@@ -16,6 +16,7 @@ Copyright (C) 2022 Lexi Van Blunk
 ----------------------------------------------------"""
 import math
 import os
+import string
 
 import imageio
 import matplotlib.pyplot as plt
@@ -24,6 +25,7 @@ from matplotlib.ticker import AutoMinorLocator
 import matplotlib.colors as colors
 import matplotlib.gridspec as gridspec
 from openpyxl.styles.alignment import vertical_aligments
+import string
 
 
 # --- elevation gif ---
@@ -1136,7 +1138,10 @@ def plot_Elev_CASCADE_subplots_all_scenarios(
                         ] = Domain
 
             # Plot to subplot and save final figure
-            ax = axs[row_pos, col_pos]
+            if len(np.shape(axs))>1:
+                ax = axs[row_pos, col_pos]
+            else:
+                ax=axs[col_pos]
             cax = ax.pcolormesh(
                 AnimateDomain,
                 norm=divnorm,
@@ -1189,11 +1194,367 @@ def plot_Elev_CASCADE_subplots_all_scenarios(
             #     subfigs[c].colorbar(cax, ax=axs, pad=0.01, label="elevation (m MHW)")
 
         subfigs[c].colorbar(cax, ax=axs, pad=0.01, label="elevation (m MHW)")
-        axs[1,5].remove()
+        # axs[1,5].remove()
 
 
     # plt.subplots_adjust(top=0.9, bottom=0.12, left=0.06, right=0.95, hspace=0.3)  # for plot size (15,8)
     # plt.tight_layout()
+
+    # once we make the entire plot, save it
+    if fig_eps:
+        figname = "elev_" + name + ".eps"
+        elevFig2.savefig(figname, format="eps")
+    else:
+        figname = "elev_" + str(name) + ".png"
+        elevFig2.savefig(figname)  # dpi=200
+    plt.close(elevFig2)
+
+    print()
+    print("[ * figure successfully generated * ]")
+
+
+def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
+    cascade_list,
+    directory,
+    TMAX_MGMT_list,
+    name,
+    TMAX_SIM_list,
+    plot_timesteps,  # array with the timesteps you want to plot
+    main_plot_title,  # title of the main plot (string)
+    ny=1,
+    beach_management_ny=None,  # list of bool the length of ny, or None for all False
+    roadway_management_ny=None,
+    y_lim=(150, 250),
+    z_lim=6,
+    z_bot=-3,
+    fig_size=None,
+    fig_eps=False,
+    km_on=False,
+    meters_on=True,
+    outwash_scenario=True,
+    n_cols=6,
+    overwash_text=False,
+    overwash_text_years = [],
+    r_value = 0.25
+):
+    """
+    :param cascade: a list of cascade model objects
+    :param directory: for saving (string)
+    :param TMAX_MGMT: last time index that the b3d subgrid was managed (list)
+    :param name: for saving (string)
+    :param TMAX_SIM: last time index that the b3d subgrid was managed (list)
+    :param ny: the number of barrier3d subgrids that you want to plot
+    :param beach_management_ny: booleans for b3d subgrids that used
+        BeachDuneManager (list)
+    :param roadway_management_ny: booleans for b3d subgrids that used
+        RoadwayManager (list)
+    :param y_lim: y limits [low, high] of plot [dam]
+    :param z_lim: z limit of plot [m MHW]
+    :param fig_size: size of plot, e.g., (6, 2.5)
+    :param fig_eps: output files in eps format -- default is png [best for gif]
+    :return: gif
+
+    Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions,
+    modified here for CASCADE)
+
+    NOTE THAT THE BEACH REPRESENTATION IS BASED ON A MODEL SPECIFIED BEACH WIDTH.
+    We set the beach width for the remaining time steps after the community has
+    been abandoned to the last managed beach width in order to not have a huge
+    jump in the back-barrier position in Barrier3D. OTHERWISE, it is meaningless
+    to the dynamics Barrier3D.
+
+    Updated so that beach width represented here is the outwasher beach width
+    (as in the one created from washout to shroeface distribution)
+    """
+
+    # https: // matplotlib.org / stable / users / explain / colors / colormapnorms.html
+    # make a colormap that has land and ocean clearly delineated and of the
+    # same length (256 + 256)
+    colors_undersea = plt.colormaps["terrain"](np.linspace(0, 0.17, 256))
+    colors_land = plt.colormaps["terrain"](np.linspace(0.25, 1, 256))
+    all_colors = np.vstack((colors_undersea, colors_land))
+    terrain_map = colors.LinearSegmentedColormap.from_list(
+        'terrain_map', all_colors)
+    # make the norm:  Note the center is offset so that the land has more
+    # dynamic range:
+    divnorm = colors.TwoSlopeNorm(vmin=z_bot, vcenter=0, vmax=z_lim)  # vcenter is sea level
+
+    if beach_management_ny is None:
+        beach_management_ny = [False] * ny
+    if roadway_management_ny is None:
+        roadway_management_ny = [False] * ny
+
+    plt.rcParams.update({"font.size": 12})
+
+    # establish the whole figure (not subplots yet)
+    if fig_size is not None:
+        elevFig2 = plt.figure(layout='constrained', figsize=fig_size)
+    else:
+        elevFig2 = plt.figure(layout='constrained', figsize=(25, 3))
+
+    if km_on:
+        x_text = "alongshore distance (km)"
+        y_text = "cross-shore distance (km)"
+    elif meters_on:
+        x_text = "alongshore distance (m)"
+        y_text = "cross-shore distance (m)"
+    else:
+        x_text = "alongshore distance (dam)"
+        y_text = "cross-shore distance (dam)"
+
+
+    elevFig2.supxlabel(x_text, fontsize=12, fontweight='bold')
+    elevFig2.supylabel(y_text, y=0.4, fontsize=12, fontweight='bold')
+
+    # for plot numbering
+    lowercase_letters = list(string.ascii_lowercase)
+
+
+    # whole figure is 5 rows with 1 column
+    subfigs = elevFig2.subfigures(len(cascade_list)+1, 1)  # 1 column with rows=scenarios plus one for the shoreline
+
+    # the overwash subfigure will always be 1 row and 1 col and at the first position
+    shoreline_ax = subfigs[0].subplots(1, 1)
+    shoreline_ax.set_xlabel("Simulation Years")
+    shoreline_ax.set_ylabel("Overwash Flux (m$^3$/m)")
+
+    subfigs[0].suptitle("r = {0}".format(r_value), fontsize='x-large', fontweight="bold")
+    # add text for subfigure "numbering"
+    subfigs[0].text(x=-0.02, y=1.08, s="a",
+                      fontsize=30,
+                      fontweight="bold",
+                      transform=shoreline_ax.transAxes,
+                      )
+
+    # make each subplot for the classes
+    for c in range(len(cascade_list)):
+        cascade = cascade_list[c]
+        barrier3d = cascade.barrier3d
+        outwash = cascade.outwash
+        TMAX_SIM = TMAX_SIM_list[c]
+        TMAX_MGMT = TMAX_MGMT_list[c]
+        subplot_numbering = lowercase_letters[c+1]  # already got a, so move onto b...
+
+        # for each scenario, make a subfigure of nrows and ncols
+        if len(plot_timesteps) > n_cols:  # we need multiple rows per scenario
+            n_rows = math.ceil(len(plot_timesteps) / n_cols)
+        else:
+            n_rows = 1
+        axs = subfigs[c+1].subplots(n_rows, n_cols, sharey=True, sharex=True)
+        subfigs[c+1].suptitle(main_plot_title[c], fontsize='x-large',fontweight="bold")
+        row_pos = 0
+        col_pos = 0
+        # just to add the labels
+        if len(np.shape(axs)) > 1:
+            ax = axs[row_pos, col_pos]
+        else:
+            ax = axs[col_pos]
+        # add text for subfigure "numbering"
+        subfigs[c+1].text(x=-0.02*11, y=1.08, s=subplot_numbering,
+                        fontsize=30,
+                        fontweight="bold",
+                        transform=ax.transAxes,
+                        )
+
+        # plot the overwash flux
+        QowTS = barrier3d[0].QowTS  # m^3/m, all model years for this storm sequence
+        shoreline_ax.plot(QowTS, label="{0}".format(main_plot_title[c]))
+
+        # set up the domain; here we just use the first grid, but that could break in
+        # future runs
+        BarrierLength = barrier3d[0].BarrierLength
+        if np.any(beach_management_ny):
+            indices = [i for i in range(ny) if beach_management_ny[i] == 1]
+            iB3D = indices[0]
+            MaxBeachWidth = (
+                np.max(cascade.nourishments[iB3D].beach_width[0 : TMAX_MGMT[iB3D]]) / 10
+            )  # dam
+        else:
+            MaxBeachWidth = cascade._initial_beach_width[0]
+        OriginY = int(barrier3d[0].x_s_TS[0])
+        AniDomainWidth = int(
+            np.amax(barrier3d[0].InteriorWidth_AvgTS)
+            + MaxBeachWidth
+            + np.abs(barrier3d[0]._ShorelineChange)
+            + OriginY
+            + 35
+        )
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        os.chdir(directory)
+
+        maxMGMT = np.max(TMAX_MGMT)
+
+        for t in plot_timesteps:
+            # ok, now the annual time step, which incorporates human modifications to
+            # the shoreface, beach, dune, & interior
+            AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -3
+
+            if t <= TMAX_SIM:
+
+                for iB3D in range(ny):
+                    actual_shoreline_post_humans = barrier3d[iB3D].x_s_TS[0 : TMAX_SIM + 1]
+
+                    if beach_management_ny[iB3D]:
+                        beach_width = cascade.nourishments[iB3D].beach_width[t] / 10
+                    else:
+                        # both roadways and natural scenario
+                        # beach_width = cascade._initial_beach_width[iB3D] / 10
+
+                        # CHANGED FOR THE OUTWASHER BEACH RATHER THAN THE CASCADE BEACH
+                        beach_width = outwash[iB3D]._beach_width[t] / 10
+                        if np.isnan(beach_width):
+                            beach_width = 0
+
+                    if beach_management_ny[iB3D] and np.isnan(beach_width):
+                        beach_width = (
+                            cascade.nourishments[iB3D].beach_width[t - 1] / 10
+                        )  # this can happen if the barrier height drowns
+
+                    cellular_dune_toe_post_humans = np.floor(
+                        actual_shoreline_post_humans[t] + beach_width
+                    )
+
+                    cellular_shoreline_post_humans = np.floor(
+                        actual_shoreline_post_humans[t]
+                    )
+                    cellular_beach_width = int(
+                        cellular_dune_toe_post_humans - cellular_shoreline_post_humans
+                    )  # not actual bw
+
+                    if t == maxMGMT + 1:
+                        cellular_beach_width_final = (
+                            cellular_beach_width  # save this for plotting moving forward
+                        )
+                    if t > maxMGMT + 1:
+                        cellular_beach_width = cellular_beach_width_final
+
+                    BeachDomain = np.zeros(
+                        [
+                            cellular_beach_width,
+                            BarrierLength,
+                        ]
+                    )
+
+                    if cellular_beach_width == 0:
+                        pass
+                    else:
+                        add = (barrier3d[iB3D].BermEl - barrier3d[iB3D].SL) / (
+                            cellular_beach_width + 1
+                        )
+                        for i in range(0, cellular_beach_width):
+                            BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
+
+                    outwash_years = [1, 21, 41, 61, 81]
+                    if t not in outwash_years or outwash_scenario is False:
+                        # Make animation frame domain
+                        # so this is now in meters
+                        Domain = barrier3d[iB3D].DomainTS[t] * 10
+                        Dunes = (
+                            barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
+                        ) * 10
+                        Dunes = np.rot90(Dunes)
+                        Dunes = np.flipud(Dunes)
+                        Beach = BeachDomain * 10
+                        Domain = np.flip(np.vstack([Beach, Dunes, Domain]), 1)
+                        # Domain[Domain < 0] = -3
+                        widthTS = len(Domain)
+                        OriginTstart = int(cellular_shoreline_post_humans)
+                        OriginTstop = OriginTstart + widthTS
+                        xOrigin = iB3D * BarrierLength
+                        AnimateDomain[
+                            OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+                        ] = Domain
+                    else:
+                        # use the outwash domains instead (these contain the beach
+                        # and dunes already, need to flip?)
+                        # Domain = np.flip(outwash[iB3D]._post_outwash_full_domain_TS[t] * 10)
+                        Domain = barrier3d[iB3D].DomainTS[t] * 10
+                        Dunes = (
+                            barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
+                        ) * 10
+                        Dunes = np.rot90(Dunes)
+                        Dunes = np.flipud(Dunes)
+                        Beach = BeachDomain * 10
+                        Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
+                        # Domain[Domain < 0] = -3
+                        widthTS = len(Domain)
+                        OriginTstart = int(cellular_shoreline_post_humans)
+                        OriginTstop = OriginTstart + widthTS
+                        xOrigin = iB3D * BarrierLength
+                        AnimateDomain[
+                            OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+                        ] = Domain
+
+            # Plot to subplot and save final figure
+            if len(np.shape(axs))>1:
+                ax = axs[row_pos, col_pos]
+            else:
+                ax=axs[col_pos]
+            cax = ax.pcolormesh(
+                AnimateDomain,
+                norm=divnorm,
+                cmap=terrain_map,
+            )
+            # sharey and sharex are set to True
+            if km_on:
+                locs, _ = plt.yticks()
+                plt.yticks(locs, locs / 100)
+                locs, _ = plt.xticks()
+                plt.xticks(locs[0:-1], locs[0:-1] / 100)
+                ax.yaxis.set_minor_locator(AutoMinorLocator())
+            if meters_on:
+                xtick_max = np.shape(AnimateDomain)[1]  # n_cols = x
+                x_ticks = np.array(range(0, xtick_max, 25))
+                x_tick_labels = x_ticks * 10
+                ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
+                y_ticks = np.array(range(0, ytick_max, 25))
+                y_tick_labels = (y_ticks - y_lim[0]) * 10
+                plt.xticks(x_ticks, x_tick_labels)
+                plt.yticks(y_ticks, y_tick_labels)
+
+            timestr = "Year " + str(t)
+            ax.set_title(timestr, fontsize=10)
+            outwash_flux = int(np.round(outwash[0]._outwash_flux_TS[t], decimals=0))  # m^3/m
+            outwash_str = "Outwash = " + str(outwash_flux) + " $m^3/m$"
+            if y_lim is not None:
+                plt.ylim(y_lim)
+                if overwash_text and t in overwash_text_years:
+                    overwash_flux = int(np.round(barrier3d[0].QowTS[t], decimals=0))  # m^3/m
+                    overwash_str = "Overwash = " + str(overwash_flux) + " $m^3/m$"
+                    if overwash_flux > 0:
+                        ax.text(1.5, y_lim[1]-2, overwash_str, color="w", fontsize=10, va="top")
+                if outwash_flux > 0 and t <= TMAX_SIM:
+                    # for outwash only years
+                    ax.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)
+            else:
+                plt.ylim(bottom=OriginY - 35)
+                if outwash_flux > 0:
+                    ax.text(1, OriginY - 33, outwash_str, fontsize=8)
+
+            # next axs position
+            col_pos += 1
+            if col_pos == n_cols and row_pos == 0:
+                col_pos = 0
+                row_pos += 1
+
+            # # plot shared colorbar
+            # if col_pos == 5 and row_pos == 1:
+            #     subfigs[c].colorbar(cax, ax=axs, pad=0.01, label="elevation (m MHW)")
+
+        subfigs[c+1].colorbar(
+            cax,
+            ax=axs,
+            location="right",
+            pad=0.01,
+            label="elevation (m MHW)",
+            ticks=np.arange(-2,z_lim+1, 2),
+            spacing="proportional",
+        )
+        shoreline_ax.legend(loc="upper left")
+        shoreline_ax.set_ylim(0,150)
+        # axs[1,5].remove()
 
     # once we make the entire plot, save it
     if fig_eps:
