@@ -2,12 +2,12 @@
 """
 What is under output/raw_runs, grouped by whatever makes runs comparable.
 
-    python scripts/hatteras_ms/tools/HAT_list_runs.py
-    python scripts/hatteras_ms/tools/HAT_list_runs.py --by erosion
-    python scripts/hatteras_ms/tools/HAT_list_runs.py --only-stale
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_list_runs.py
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_list_runs.py --by erosion
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_list_runs.py --only-stale
 
 Grouped by topography (default), erosion preset or others; --stamp writes
-BUILT_ON.txt into each run. Details: scripts/hatteras_ms/README.md.
+BUILT_ON.txt into each run. Details: scripts/real-world-cases/Hatteras/hatteras_ms/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -22,23 +22,13 @@ from pathlib import Path as _HatPath  # noqa: E402
 _HAT_DIR = next(_p for _p in _HatPath(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
-from hatteras_paths import workspace_twin  # noqa: E402
+from hatteras_paths import WORKSPACE as REPO, workspace_twin  # noqa: E402  (REPO: data/, output/)
 import argparse
 import json
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-
-# Walk up until a directory holds data/hatteras_init
-def _find_root(start: Path) -> Path:
-    for p in [start, *start.parents]:
-        if (p / "data" / "hatteras_init").is_dir():
-            return p
-    raise SystemExit("could not locate the project root")
-
-
-REPO = _find_root(Path(__file__).resolve())
 # --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = workspace_twin(REPO) / "output" / "raw_runs"
 import sys as _b3dsys

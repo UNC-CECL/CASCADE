@@ -4,7 +4,7 @@ The pinned and drift groins rerun under the 2026-10-12 setup, so the figures com
 
     python same_setup_runs.py [--streams 4]     # 4 runs, about 3 min each
 
-The pinned groin (the runner's BlockingGroinCallback, b 0.6, f 0.6, instant failure at the 2004 step) and the
+The pinned groin (the runner's BlockingGroinManager, b 0.6, f 0.6, instant failure at the 2004 step) and the
 10-08 drift groin (b 0.1, f 0.4) in both periods, filed under groin-wave-driven/2026-10-12-same-setup/ so their 10-08 runs
 are untouched. Each is launched exactly as its own study launches it (schedule_refit.py, drift_groin.py); only
 the filing location differs. results_figures.py reads them through pinned_file() and drift_file().

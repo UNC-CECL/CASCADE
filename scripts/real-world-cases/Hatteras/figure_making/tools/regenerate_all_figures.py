@@ -62,7 +62,6 @@ STEPS = [
     ("5-results", "hindcast edgeBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "edgeBE"]),
     ("5-results", "hindcast zeroBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "zeroBE"]),
     ("5-results", "scenario grid", [S + "figure_making/model_output/scenario_grid.py"]),
-    ("5-results", "GIS 11 relocation", [S + "figure_making/model_output/gis11_relocation_drown_figure.py"]),
     ("talk", "site maps, projector set", [S + "figure_making/island/study_area_figures.py", "--talk"]),
     ("style", "style sheet", [S + "site_layer/hat_figure_style.py"]),
 ]

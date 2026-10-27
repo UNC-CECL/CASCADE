@@ -91,7 +91,6 @@ def layout(stages: list[str]) -> list[tuple[str, str]]:
         ("output/figures", "Finished figures: PNGs at the top, PDFs and "
                            "CAPTIONS.md under supporting/."),
         ("output/logs", "Run logs."),
-        ("output/archive", "Retired products, as YYYY-MM-DD_<what>/."),
     ]
     for n in numbered:
         rows.append((f"scripts/{n}", f"Code for stage {n}; its data is data/{n}/."))

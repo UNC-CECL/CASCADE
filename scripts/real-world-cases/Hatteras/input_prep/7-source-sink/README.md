@@ -19,6 +19,8 @@ copies under `data/hatteras_init/7-source-sink/` are exported FROM it by stage
 | | `be_zone_residual_fit.py` | The calibration. LOWESS-smooths the observed rate, differences it against the base-run LRR, identifies spatially coherent zones with a named mechanism, and writes `DOMAIN_BE_RATES*.txt` plus the metrics tables. |
 | | `be_apply_fit_to_config.py` | Writes those rates into `hatteras_site_config.py`, preserving the two locked ends and the zone labels that a bare paste would destroy. `--add` accumulates instead of replacing. |
 | | `be_edge_domain_solve.py` | The two locked end domains (GIS 1, 90), which are solved separately by Newton steps on a secant rather than fitted from a residual. Reads finished runs and prints the next probe; it does not run the model. |
+| | `be_end_solve_net_change.py` | Runs that secant to convergence for one DEM-to-DEM period against its net-change target: `base` (the zeroBE matrix run), `solve` (probes as experiments), `final` (the edgeBE matrix run). Moved here from `hatteras_ms/calibration/` 2026-10-23 (was `HAT_end_solve_net_change.py`). |
+| | `be_domain_solve_net_change.py` | BE set 1: a rate in every domain, relaxed until the 1996-2009 run's net change matches CoastSat; `smooth` LOWESS-smooths a solved field and re-scores it. Moved here from `hatteras_ms/calibration/` 2026-10-23 (was `HAT_be_domain_solve_net_change.py`). |
 | `3-figures/` | `plot_be_convergence.py` | Did the fixed-point solve converge, and was the zone set fixed before it ran. |
 | | `plot_be_zones.py` | Which domains were eligible at all, and how much of each rate came from the one-shot solve versus the iteration. |
 | | `plot_groin_reserved_residual.py` | Why the largest residual in the hindcast (D6) is deliberately left uncorrected. |
@@ -48,7 +50,7 @@ path that no longer exists, and the failure arrives at `exec_module`.
 
 ## The zone rework (2026-10-12, in progress)
 
-The source/sink is being rebuilt step by step for the DEM-to-DEM periods, around zones on the net-change target rather than a rate in every domain (BE set 1, `HAT_be_domain_solve_net_change.py`, which fit calibration almost exactly and did not carry into test).
+The source/sink is being rebuilt step by step for the DEM-to-DEM periods, around zones on the net-change target rather than a rate in every domain (BE set 1, `2-calibrate/be_domain_solve_net_change.py`, which fit calibration almost exactly and did not carry into test).
 
 | step | script | status |
 |---|---|---|

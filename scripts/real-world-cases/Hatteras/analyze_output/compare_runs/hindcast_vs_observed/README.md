@@ -11,6 +11,7 @@ model.
 | `target_comparison.py` | which observation should the model be graded against? | `target_comparison/` |
 | `smoothing_scale.py` | does the LOWESS width used for grading matter? | `target_comparison/smoothing_scale/` |
 | `smoothed_lowess7_with_cascade.py` | the smoothed halves-overlay sheets with the model drawn over | `target_comparison/smoothed_lowess7_with_cascade/` |
+| `alternative_targets.py` | how should the test run be scored against CoastSat? | `target_comparison/alternative_targets/` |
 
 `rate_windows.py` holds the shared loaders; the other three import it (and
 `target_comparison.py`), which is why the four live together. Run
@@ -59,8 +60,7 @@ when the module is executed.
 runs"). 1984-2004 and 2004-2024 have no metres run, so their panels say "model
 not yet run for this window". The ÷10-offset runs drawn until then
 (`HAT_<w>_edgeBE_road_bdm[_nourish]_nogroin`, 1984 on version-pair/v2) are in
-`raw_runs/archive/2026-09-24-pre-metres/`, and their figures in
-`output/archive/2026-09-27_model-vs-observed-div10/`. For the record, the
+`raw_runs/archive/2026-09-24-pre-metres/`. For the record, the
 2026-09-15 set was: 1984-2004 the version-pair/v2 arm (topography v2),
 1996-2010 calibration arm (offsets v1, the re-digitized 1997 line), 2004-2024
 calibration arm with nourishment, and 2010-2024 calibration arm (run

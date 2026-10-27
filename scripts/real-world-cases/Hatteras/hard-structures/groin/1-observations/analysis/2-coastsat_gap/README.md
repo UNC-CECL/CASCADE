@@ -97,7 +97,7 @@ An earlier figure 8, the failure schedules, is a model setting, not an observati
 
 CSE 2013 (Coastal Science & Engineering, *Shoreline Erosion Assessment & Plan for Beach Restoration, Rodanthe & Buxton (NC)*, report 2403-PHASE1-FR, Nov 2013, p. 20) gives the last repair as **1995**: 184 ft of steel sheet piling on the south groin, after Hurricane Gordon in 1994. This comes from the page-cited event list in the deleted `HAT_groin_zone_investigation.py` (in git at a229c8ff). The report PDF itself is not on this machine, so it wasn't re-read. No source in the repository gives 1996. "1996" appears to be the old ramp's onset (1969 + 27 years delay), read as a repair date.
 
-Fixed in `hard-structures/groin/GROIN_PLAN.md` (now `../../data/structure_history.md`), `scripts/hatteras_ms/HAT_hindcast_methods.md` and `scripts/site_layer/README.md`.
+Fixed in `hard-structures/groin/GROIN_PLAN.md` (now `../../data/structure_history.md`), `scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast_methods.md` and `scripts/site_layer/README.md`.
 
 Left at 1996 on purpose, because these are the old ramp's onset and the pinned groin's failure is the 2004 step:
 - `GROIN_LAST_REPAIR_YEAR` in `scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_config.py`;

@@ -40,13 +40,12 @@ from cascade_pipeline.coastsat_lowess import (            # noqa: E402
     CoastSatDataset, LowessConfig, build_coastsat_series)
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (              # noqa: E402
-    MATRIX_KIND, find_run_dir, load_run_index)
+    MATRIX_KIND, find_run_dir, scan_runs)
 from site_layer.hat_observed_rates import (                         # noqa: E402
     NET_CHANGE_WINDOWS, lrr_csv, lrr_csv_ext, net_change_domain_csv)
 
 # --- CONFIG ------------------------------------------------------------------
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
-RUN_INDEX = RUN_ROOT / "run_index.csv"
 # Resolved through hat_observed_rates, which owns the location.
 
 # Section 8 of the runner builds the target this way
@@ -131,7 +130,7 @@ def load_net_change_target(start_year, end_year):
 # A run's end-minus-start shoreline per GIS domain, seaward + (x_s grows landward)
 def read_model_net_change(run_dir):
     m = np.load(next(Path(run_dir).glob("*_shoreline_matrix.npy")))
-    D = HATTERAS_DOMAINS
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
     change = -(m[-1] - m[0])[D.start_real_index:D.end_real_index]
     return dict(zip(range(D.first_gis_id, D.last_gis_id + 1), map(float, change)))
 
@@ -143,13 +142,13 @@ def find_run(run_name, start_year, end_year, preset, kind, tag):
     return Path(resolve_run_file(run_dir, "rate_csv", run_name))
 
 
-# The run's row in run_index.csv, by its full identity
+# The run's row, read from its metadata, by its full identity
 def index_row(run_name, kind, tag):
-    index = load_run_index(RUN_INDEX)
+    index = scan_runs(RUN_ROOT)
     rows = index[(index["run_name"] == run_name) & (index["kind"] == kind)
                  & (index["tag"] == tag)]
     if rows.empty:
-        raise ValueError("{0!r} (kind {1}, tag {2!r}) is not in run_index.csv"
+        raise ValueError("{0!r} (kind {1}, tag {2!r}) is not under output/raw_runs"
                          .format(run_name, kind, tag))
     return rows.iloc[-1]
 

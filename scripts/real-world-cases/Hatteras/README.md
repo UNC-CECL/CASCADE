@@ -45,7 +45,7 @@ The folders keep the names they had in the old repository's `scripts/`:
 
 | folder | what |
 |---|---|
-| `hatteras_ms/` | the hindcast runner (`HAT_hindcast.ipynb`, with `HAT_hindcast.py` its headless mirror), its settings (`hat_run.yaml`), the matrix driver, experiments and tools |
+| `hatteras_ms/` | the hindcast runner (`HAT_hindcast.py`, with its setup steps in `hindcast/HAT_hindcast_setup.py`; `HAT_hindcast.ipynb` walks through one run), its settings (`hat_run.yaml`), the matrix driver, calibration solves, experiments (by theme) and tools |
 | `cascade_pipeline/` | the runner's library: domains, nourishment, roadway, shoreline, run registry, plotting |
 | `site_layer/` | Hatteras site facts and resolvers: topography versions, forcings, observed rates, figure style |
 | `input_prep/` | the scripts that built the model inputs, by stage (0-elevation ... 8-overwash-analysis) |
@@ -161,10 +161,13 @@ input_prep/            builds the model's inputs. Stage folders 0-7 mirror
                        note the folder here is 4-mgmt-forcing*s*, plural,
                        against the singular one in data/.)
 
-hatteras_ms/           the manuscript runs. HAT_hindcast.ipynb is
-                       the source of truth; the .py beside it is a headless
-                       mirror with no features of its own. Settings are typed
-                       in hat_run.yaml and read by HAT_hindcast_config.py
+hatteras_ms/           the manuscript runs. HAT_hindcast.py runs one; its
+                       setup steps are in hindcast/HAT_hindcast_setup.py and its figures
+                       are drawn after, from the run folder
+                       (figure_making/model_output/run_figures.py).
+                       HAT_hindcast.ipynb walks through one run step by step,
+                       with its QC plots. Settings are typed
+                       in hat_run.yaml and read by hindcast/HAT_hindcast_config.py
                        (env var > yaml > default); HAT_run_matrix.py drives the
                        matrix, without and with the groin, unattended.
 

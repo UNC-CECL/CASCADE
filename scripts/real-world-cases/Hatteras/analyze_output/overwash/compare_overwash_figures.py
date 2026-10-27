@@ -64,8 +64,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 # Model run
 START_YEAR          = 1984
 END_YEAR            = 2004    # model has END_YEAR - START_YEAR timesteps
-NUM_REAL_DOMAINS    = 90
-NUM_BUFFER_DOMAINS  = 15
+NUM_REAL_DOMAINS    = 90    # buffers come from the run itself: 15 a side before 2026-10-21, 30 since
 FIRST_GIS_DOMAIN_ID = 1
 # Which figures to produce
 PLOT_STACKED     = True
@@ -134,8 +133,6 @@ class _FU(pickle.Unpickler):
 # (years, Qow per year x domain, GIS ids) from a CASCADE .npz
 def load_qow_matrix(npz_path):
     n_yrs  = END_YEAR - START_YEAR
-    s_idx  = NUM_BUFFER_DOMAINS
-    e_idx  = s_idx + NUM_REAL_DOMAINS
     gis_ids = np.arange(FIRST_GIS_DOMAIN_ID,
                          FIRST_GIS_DOMAIN_ID + NUM_REAL_DOMAINS, dtype=int)
     with zipfile.ZipFile(npz_path) as zf:
@@ -143,6 +140,8 @@ def load_qow_matrix(npz_path):
         raw   = zf.read(npy_m)
     casc = _FU(io.BytesIO(raw[128:])).load()
     casc = casc.flat[0] if isinstance(casc, np.ndarray) else casc
+    s_idx  = (len(casc._barrier3d) - NUM_REAL_DOMAINS) // 2
+    e_idx  = s_idx + NUM_REAL_DOMAINS
     Q_rows = []
     for b in casc._barrier3d[s_idx:e_idx]:
         for attr in ["_QowTS","QowTS","_Qow_TS","Qow_TS","_Qow","Qow"]:

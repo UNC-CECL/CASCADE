@@ -4,9 +4,9 @@ Mirror check: does the runner's groin handle drift from either direction the sam
 
     python mirror_check.py   ->  tables/mirror_one_year.csv, tables/mirror_runs.csv, tables/brie_table_symmetry.csv
 
-Three parts, on the straight-coast rig of ../6-stress/ (61 domains, the runner's GroinCallback):
+Three parts, on the straight-coast rig of ../6-stress/ (61 domains, the runner's GroinManager):
 
-    A  one call of the callback on a shoreline and on its exact reversal (domain order flipped, so theta0 becomes
+    A  one call of the GroinManager on a shoreline and on its exact reversal (domain order flipped, so theta0 becomes
        -theta0, the groin face LO|LO+1 becomes NY-2-LO, and the waves come from the other side, with BRIE's tables
        reflected exactly). Its x_s_dt must come back exactly reversed: the groin's side, sign and approach angle.
     B  whole 100-year runs and their mirrors, with the groin and without it. BRIE's own step is not mirror-
@@ -39,7 +39,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "6-stress"))
 import stress_test as st  # noqa: E402
-from cascade.groin import GroinCallback  # noqa: E402
+from cascade.groin import GroinManager  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 NY, LO = st.NY, st.LO
@@ -50,10 +50,10 @@ TOLERANCE_M = 1e-9                            # what "mirrors exactly" means for
 TABLES = workspace_twin(HERE) / "tables"
 # -----------------------------------------------------------------------------
 
-_drift_table = GroinCallback._drift_table
+_drift_table = GroinManager._drift_table
 
 
-# The drift table the callback reads: a stand-in's own reflected table if it carries one, else BRIE's
+# The drift table the GroinManager reads: a stand-in's own reflected table if it carries one, else BRIE's
 def drift_table(brie):
     return brie._q_table if hasattr(brie, "_q_table") else _drift_table(brie)
 
@@ -75,7 +75,7 @@ def register(name, b):
     return climate
 
 
-# Part A: one callback call on the shoreline and on its reversal; how far the reversed x_s_dt is from the first
+# Part A: one GroinManager update on the shoreline and on its reversal; how far the reversed x_s_dt is from the first
 def one_year(theta0, strength, notch_m, b, b_mirror):
     slope = np.tan(np.deg2rad(theta0))
     origin = (LO + 1 + NY // 2) % NY
@@ -85,10 +85,9 @@ def one_year(theta0, strength, notch_m, b, b_mirror):
     out = []
     for brie, shore, lo, th in ((b, x, LO, theta0), (b_mirror, x[::-1].copy(), MIRROR_LO, -theta0)):
         up, down = (lo, lo + 1) if st.drift0(brie, th) > 0 else (lo + 1, lo)
-        cb = GroinCallback(up, down, [(1, strength)], start_year=1, n_domains=NY)
+        cb = GroinManager(up, down, [(1, strength)], start_year=1, n_domains=NY)
         brie.x_s = shore
-        out.append(np.asarray(cb(SimpleNamespace(_brie_coupler=SimpleNamespace(_brie=brie)), list(np.zeros(NY))),
-                              dtype=float))
+        out.append(np.asarray(cb.update(brie, list(np.zeros(NY))), dtype=float))
     return dict(theta0=theta0, strength=strength, notch_m=notch_m, held_m=float(np.abs(out[0]).max()),
                 max_diff_m=float(np.abs(out[0] - out[1][::-1]).max()))
 
@@ -102,7 +101,7 @@ def pair(theta0, strength, notch_m, mirror_climate, groin=True):
 
 # Run: parts C, A and B
 def main():
-    GroinCallback._drift_table = staticmethod(drift_table)   # in-process only: reads the stand-in's table
+    GroinManager._drift_table = staticmethod(drift_table)   # in-process only: reads the stand-in's table
     TABLES.mkdir(parents=True, exist_ok=True)
     pd.set_option("display.width", 200)
 

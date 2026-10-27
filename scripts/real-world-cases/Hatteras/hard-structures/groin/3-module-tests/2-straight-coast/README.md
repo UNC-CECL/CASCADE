@@ -15,7 +15,7 @@ versions; the retired ones write to `../archive/2-straight-coast/`.
 
 | version | what it does each year |
 |---|---|
-| 1, `GroinCallback` (files `*_fixed_shift_*`) | moves a fixed M (12 m) of shoreline from the downdrift cell to the updrift cell, whatever the waves do |
+| 1, the old dipole groin (files `*_fixed_shift_*`) | moves a fixed M (12 m) of shoreline from the downdrift cell to the updrift cell, whatever the waves do |
 | 6 (files `*_wave_driven_*`) | holds back f_block (0.6) of the wave climate's net drift arriving at the groin, and gives back what BRIE's row-scaled solve creates or destroys within 5 cells of it (10 in the Buxton hindcast); BRIE untouched |
 
 ## Layout

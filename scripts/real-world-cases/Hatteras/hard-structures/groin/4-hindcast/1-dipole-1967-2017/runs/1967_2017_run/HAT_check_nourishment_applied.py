@@ -28,6 +28,7 @@ _HAT_DIR = next(_p for _p in Path(__file__).resolve().parents if (_p / "hatteras
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as _PATH_REPO  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 
 RUN_DIR = str(_PATH_REPO / "output" / "raw_runs" / "HAT_1967_2018_edge_calibrated_no_groin")
 RUN_NAME = "HAT_1967_2018_edge_calibrated_no_groin"
@@ -59,8 +60,7 @@ def main():
     if not os.path.isfile(npz_path):
         raise FileNotFoundError(f"Saved cascade object not found:\n  {npz_path}")
 
-    data = np.load(npz_path, allow_pickle=True)
-    cascade = data["cascade"][0]
+    cascade = load_saved_cascade(npz_path)
 
     print("=" * 78)
     print("NOURISHMENT APPLICATION CHECK")

@@ -4,7 +4,7 @@ Does an instant groin failure at the 2003 storm let one groin fit both windows?
 
     python failure_schedule_test.py
 
-Blocking (blocking_groin_emulator.py, callback) and dipole groins at full
+Blocking (blocking_groin_emulator.py, pre_solve) and dipole groins at full
 strength until the failure year and x f after it, scored as the adjusted OLS
 D5-D6 gap change against observed_fillet_m. Writes failure_schedule_scores.csv.
 Details: README.md beside this script.
@@ -32,7 +32,7 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent / "4-blocking-emulator"), str(HERE.parent / "1-dipole-stability"),
-                 str(workspace_twin(HERE.parents[1]) / "1-solver-audit")]
+                 str(HERE.parents[1] / "1-solver-audit")]
 import blocking_groin_emulator as bg  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
@@ -55,7 +55,7 @@ def run_all():
         for start, x0 in planforms.items():
             for f in F_VALUES:
                 for b0 in B_VALUES:
-                    ch = bg.gap_change(bg.solve(x0, start, b0, f, "callback"))
+                    ch = bg.gap_change(bg.solve(x0, start, b0, f, "pre_solve"))
                     rows.append(dict(kind="blocking", fail=fail, start=start,
                                      strength=b0, f=f, adjusted_m=ch + offsets[start]))
                 for M in M_VALUES:
@@ -68,7 +68,7 @@ def run_all():
     return t
 
 
-# GroinCallback's +/-M dipole on the same solve (x_s_dt only), instant failure at `fail`
+# The fixed-shift groin's +/-M dipole on the same solve (x_s_dt only), instant failure at `fail`
 def dipole(x0, start, M, f, fail):
     ny = x0.size
     cd, _, _ = bg.brie_diffusivity(2.0, 7.5, 0.6, 0.5, ny)

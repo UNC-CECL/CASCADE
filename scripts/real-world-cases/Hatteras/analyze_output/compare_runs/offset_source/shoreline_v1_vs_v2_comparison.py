@@ -36,7 +36,7 @@ from site_layer.hat_figure_style import C  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 STUDY = (_REPO / "output" / "raw_runs" / "experiments" / "island-offset"
          / "2026-09-29-shoreline-offset-v1-vs-v2-adopted-setup")
-OUT = osc.OUT / "shoreline_v1_vs_v2"
+OUT = osc.OUT.parent / "shoreline_v1_vs_v2"
 ARMS = ("v1", "v2")
 COL = {"v1": C["EARLY"], "v2": C["LATE"]}   # house vintage pair: earlier window red, later blue
 DIFF_LABEL = "±1 year of DEM collection − 3-year window"   # v2 - v1, named by method

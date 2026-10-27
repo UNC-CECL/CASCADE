@@ -7,7 +7,7 @@ Redraw a finished run's figures without re-running the model, from its saved sho
     python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_... [--ylim=-10,10]
 
 Overwrites only image files it can rebuild exactly; never touches the .npz,
-the matrix, the tables or run_index.csv. GIFs with relocation markers need
+the matrix or the tables. GIFs with relocation markers need
 --open-npz. Details: scripts/figure_making/model_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -23,7 +23,6 @@ from pathlib import Path as _HatPath  # noqa: E402
 _HAT_DIR = next(_p for _p in _HatPath(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
-from hatteras_paths import workspace_twin  # noqa: E402
 import argparse
 import dataclasses
 import csv
@@ -38,24 +37,16 @@ from pathlib import Path
 import numpy as np
 
 
-# The project root: the first parent holding data/hatteras_init
-def _find_root(start: Path) -> Path:
-    for p in [start, *start.parents]:
-        if (p / "data" / "hatteras_init").is_dir():
-            return p
-    raise SystemExit("could not locate the project root")
-
-
-REPO = _find_root(Path(__file__).resolve())
-sys.path.insert(0, str(REPO / "scripts"))
+# data/ and output/ live in the workspace on D:
+from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 
 import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from cascade_pipeline.coastsat_lowess import (  # noqa: E402
-    CoastSatDataset, LowessConfig, build_coastsat_series, scale_coastsat_series)
-from cascade_pipeline.hindcast import build_shoreline_target  # noqa: E402
+    CoastSatDataset, build_coastsat_series, scale_coastsat_series)
+from cascade_pipeline.hindcast import build_coastsat_target  # noqa: E402
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.run_layout import ANIMATIONS, resolve  # noqa: E402
 from cascade_pipeline.shoreline import compute_change_rate, compute_lrr  # noqa: E402
@@ -65,20 +56,19 @@ from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
     plot_rate_comparison)
 from cascade_pipeline.plotting.shoreline_gif import (  # noqa: E402
     GifConfig, make_all_shoreline_gifs)
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS, HATTERAS_PERIODS)
 
 # --- CONFIG ------------------------------------------------------------------
-RAW_RUNS = workspace_twin(REPO) / "output" / "raw_runs"
+RAW_RUNS = REPO / "output" / "raw_runs"
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
-from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 
-# Must match section 8/9 of the hindcast runner; check_conventions asserts it
-LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
-RATE_ESTIMATOR = "lrr"
-FLIP_SIGN_MODEL = True
-PLOT_REAL_DOMAINS_ONLY = True
+# The conventions a run's own figures are drawn with, from the one module that draws them
+from run_figures import (  # noqa: E402  (beside this file)
+    FLIP_SIGN_MODEL, GIF_JOBS, LOWESS_CONFIG, PLOT_REAL_DOMAINS_ONLY, RATE_ESTIMATOR,
+    GIF_FPS, TARGET_WINDOW, target_label)
 
 COASTSAT_DATASETS = [
     CoastSatDataset(
@@ -127,33 +117,7 @@ def position_change_jobs(run, cs_cache):
     ]
 
 
-GIF_JOBS = [
-    dict(range="real", mode="displacement"),
-    dict(range="real", mode="position"),
-    dict(range="groin", mode="position", pad=9),
-    dict(range="groin", mode="difference", pad=9),
-]
 # -----------------------------------------------------------------------------
-
-
-# Stop if the runner's figure conventions no longer match the constants here
-def check_conventions() -> None:
-    src = (REPO / "scripts" / "hatteras_ms" / "HAT_hindcast.py").read_text(
-        encoding="utf-8", errors="replace")
-    want = {
-        'RATE_ESTIMATOR = "lrr"': RATE_ESTIMATOR == "lrr",
-        "window_domains=(7,)": LOWESS_CONFIG.window_domains == (7,),
-        "skip_southern_domains=10": LOWESS_CONFIG.skip_southern_domains == 10,
-        "PLOT_REAL_DOMAINS_ONLY = True": PLOT_REAL_DOMAINS_ONLY is True,
-        "FLIP_SIGN_MODEL = True": FLIP_SIGN_MODEL is True,
-    }
-    missing = [k for k, ok in want.items() if not (ok and k in src)]
-    if missing:
-        raise SystemExit(
-            "the hindcast's figure conventions no longer match this script:\n  "
-            + "\n  ".join(missing)
-            + "\nUpdate the constants at the top of this file to match "
-              "HAT_hindcast.py before re-rendering.")
 
 
 # Reading one run
@@ -189,6 +153,11 @@ def load_run(run_dir: Path):
     shoreline_m = np.load(npy)
     if shoreline_m.ndim != 2 or shoreline_m.shape[0] < 2:
         return run_name, meta, None, f"matrix shape {shoreline_m.shape}"
+    # The figures draw the site config's buffers; a run made with others (15 a side before 2026-10-21)
+    # would be drawn domains off
+    if shoreline_m.shape[1] != HATTERAS_DOMAINS.total_domains:
+        return run_name, meta, None, (f"{shoreline_m.shape[1]} domains, the site config draws "
+                                      f"{HATTERAS_DOMAINS.total_domains}")
     return run_name, meta, shoreline_m, None
 
 
@@ -227,7 +196,7 @@ def relocations_from_npz(run_dir: Path, run_name: str, n_states: int):
     npz = resolve(run_dir, "archive", run_name)
     if not npz.is_file():
         return None
-    cascade = np.load(npz, allow_pickle=True)["cascade"][0]
+    cascade = load_saved_cascade(npz)
     roadways = getattr(cascade, "_roadways", None)
     if not roadways:
         return None
@@ -361,18 +330,19 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
                 plt.close("all")
                 return result
 
-        target_m, _ = build_shoreline_target(
-            shoreline_m[0], run.start_year, run.end_year, HATTERAS_DOMAINS,
-            RAW_OFFSET_DIR)
+        # The CoastSat end-year shoreline, as run_figures draws it (the dune line until 2026-10-26)
+        target_m, _ = build_coastsat_target(
+            shoreline_m[0], cs_series, LOWESS_CONFIG, HATTERAS_DOMAINS,
+            TARGET_WINDOW, run.end_year - run.start_year)
         baseline = run_dir.parent / f"{run_name.replace('_groin', '_nogroin')}"
         baseline_npy = resolve(baseline, "matrix", baseline.name)
         gif_config = GifConfig(
-            fps=3, year_stride=1, annotate=True, auto_open=False,
+            fps=GIF_FPS, year_stride=1, annotate=True, auto_open=False,
             keep_frames=False,
             save_matrix=False,          # the matrix on disk is the run's own
             ocean_at_bottom=True,
             baseline_label="no-groin baseline",
-            target_label=f"observed {run.end_year} dune line")
+            target_label=target_label(run.start_year, run.end_year))
         paths = make_all_shoreline_gifs(
             shoreline_m, run, GIF_JOBS,
             baseline_npy=str(baseline_npy) if baseline_npy.is_file() else None,
@@ -430,7 +400,6 @@ def main() -> None:
                     help="print a full traceback for a failed run")
     args = ap.parse_args()
 
-    check_conventions()
     runs = find_runs(args)
     if args.limit:
         runs = runs[: args.limit]
@@ -467,8 +436,7 @@ def main() -> None:
     print(f"\n{done} redrawn, {skipped} skipped, {failed} failed "
           f"in {mins:.1f} min")
     if not args.dry_run:
-        print("the .npz, .npy, CSV and TXT files and run_index.csv were not "
-              "touched")
+        print("the .npz, .npy, CSV and TXT files were not touched")
 
 
 if __name__ == "__main__":

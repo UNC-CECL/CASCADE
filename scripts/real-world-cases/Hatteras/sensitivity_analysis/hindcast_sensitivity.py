@@ -37,7 +37,7 @@ if not (PROJECT_BASE_DIR / "data" / "hatteras_init").is_dir():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no pyproject.toml.")
 for _path in (_HAT_DIR,
-              _HAT_DIR / "hatteras_ms"):
+              _HAT_DIR / "hatteras_ms" / "hindcast"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 

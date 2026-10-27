@@ -18,7 +18,7 @@ was designed to do, on a coastline with nothing else going on.
 
 ## 1. What is being tested
 
-`GroinCallback` adds `-M` to one domain and `+M·f` to its neighbour each year,
+The dipole groin adds `-M` to one domain and `+M·f` to its neighbour each year,
 before BRIE's alongshore solve. Everything else about a groin in CASCADE is
 emergent: the fillet's size, its alongshore extent, its taper, how long it
 persists after the structure fails. "Emergent" is a claim that needs testing, and
@@ -423,7 +423,7 @@ passes `[False] * ny` and touches no library code.
 | **A1 sign** | the updrift domain does not move seaward and the downdrift domain landward |
 | **A2 schedule** | the applied rate is nonzero before `install_year`, or does not hold at `M·f` after the ramp |
 | **A3 ledger** | `diagnostics_frame` cumulative totals disagree with the year-by-year sum of what reached `x_s_dt` |
-| **A4 inert hook** | a run with no callback differs from `cascade.cascade.Cascade` in any digit |
+| **A4 inert groin** | a run with the groin off differs from `cascade.cascade.Cascade` in any digit |
 | **A5 determinism** | two identical runs differ. BRIE's wave-angle generator is **unseeded**, and its output feeds only the inlet model, which is off -- so runs should be reproducible. This test is what makes that claim safe to rely on |
 | **A6 position invariance** | moving the groin to a different domain pair changes the fillet by more than the closure error |
 | **A7 mirror** | swapping updrift and downdrift gives something other than a mirrored fillet. Expect a ~14% asymmetry from the forward-difference angle, per 2.7. Quantify it, do not fix it |

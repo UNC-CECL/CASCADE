@@ -248,7 +248,7 @@ This script:
    (cascade_pipeline.hindcast.pad_offset_ring): BRIE's domain is periodic,
    so the buffers carry the shoreline from GIS 90 back round to GIS 1 along
    a cubic Hermite matched to the island's end slopes. The padded file is
-   therefore exactly what offset_mode "metres" hands Cascade.
+   therefore exactly what build_island_offset hands Cascade.
 4. Saves a diagnostic figure: the padded profile, and the shoreline angle
    BRIE reads between neighbouring domains against its ~42 degree limit.
 

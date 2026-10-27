@@ -42,18 +42,16 @@ scripts were brought in line with `scripts/STYLE.md`, 2026-09-30).
 | hindcasts, scenarios, worked examples | `output/figures/5-results/` |
 | the same figures for a projector | `output/figures/talk/<same path>` |
 | the house style, drawn | `output/figures/style/` |
-| the observed record itself | `output/observations/` |
+| the observed record itself | `data/hatteras_init/5-scr/1-observations/raw_shoreline_change/` |
 | a comparison across runs | `output/comparisons/` |
 
-The numbered layout is Hannah's of 2026-09-29 (the paper's order); the old
-subject folders are in `output/archive/2026-09-29_figures-pre-reorg/`.
+The numbered layout is Hannah's of 2026-09-29 (the paper's order).
 
 A cross-run figure that is finished for the manuscript is ALSO written to
 `5-results/`, in the house style, by the same run of the same script, so the
 two copies cannot drift: `scenario_grid.py` writes
 `output/figures/5-results/scenario_grid.png` beside its `comparisons/` copy;
-`hindcast_final_figure_lowess.py` writes `5-results/hindcast_<preset>.png`, and
-`gis11_relocation_drown_figure.py` writes `5-results/gis11_relocation_drown.png`.
+and `hindcast_final_figure_lowess.py` writes `5-results/hindcast_<preset>.png`.
 Each has a `PUBLISH` switch to hold a figure back while its layout is broken.
 
 Resolve these through `scripts/site_layer/hat_figure_style.py`:

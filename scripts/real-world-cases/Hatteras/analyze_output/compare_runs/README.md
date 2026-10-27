@@ -13,14 +13,13 @@ hindcast_vs_observed/        the hindcast against the shoreline and dune line
     target_comparison.py         which target to grade -> comparisons/target_comparison/
     smoothing_scale.py           does the LOWESS width matter
     smoothed_lowess7_with_cascade.py   model over the smoothed sheets
+    alternative_targets.py       five ways to score the test run -> comparisons/target_comparison/alternative_targets/
 matrix_vs_observed/          every run-matrix scenario against the observations
     matrix_vs_observed.py        per-run figures + scores -> comparisons/matrix_vs_observed/
     matrix_management_ladder.py  management added rung by rung -> raw_runs/matrix/figures/
-adoption_2026-09-28/         the matrix before vs after the 09-28 adoption (one-off)
-    adoption_before_after.py     score, then report
-    adoption_before_after_figures.py
 offset_source/               dune-line vs shoreline island offset
-    offset_source_comparison.py  -> comparisons/offset_source/
+    offset_source_comparison.py  -> comparisons/offset_source/duneline_vs_shoreline/
+    shoreline_v1_vs_v2_comparison.py -> comparisons/offset_source/shoreline_v1_vs_v2/
 ```
 
 Where to start: `hindcast_vs_observed/` is the live model-vs-observation work;
@@ -81,8 +80,7 @@ near-black), so reordering or adding runs never means re-picking hex codes.
 `HAT_1984_2004_FinalSS`, `HAT_2004_2024_SStest` and `HAT_2004_2024_FinalSS`
 were addressed by absolute paths into `output/raw_runs/source&sink_tests/`
 and the flat `raw_runs/<name>` level; neither exists any more, and none of the
-four names appears in `run_index.csv` or in `superseded_20260828/` (now
-`output/archive/2026-08-28_full-tree/`). Their four figures sat at
+four names appears in `run_index.csv` or in `superseded_20260828/`. Their four figures sat at
 `output/comparisons/source_sink_zones/` (2026-06-19) until 2026-09-17, when
 they were deleted as unregenerable; nothing cited them (checked 2026-09-02 and
 2026-09-17).

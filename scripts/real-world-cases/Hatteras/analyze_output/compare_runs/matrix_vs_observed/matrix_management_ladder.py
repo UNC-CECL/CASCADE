@@ -42,10 +42,10 @@ sys.path.insert(0, str(_HAT_DIR))
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms"))
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "experiments"))
 
-import HAT_metres_1_offset_units as common  # noqa: E402
+import site_layer.hat_scoring as common  # noqa: E402
 from matrix_vs_observed import (RAW_RUNS, end_year, matrix_runs, model_end_change,  # noqa: E402
                                 rates, score)
-from cascade_pipeline.run_registry import find_run_dir, load_run_index  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir, scan_runs  # noqa: E402
 from site_layer.hat_observed_rates import NET_CHANGE_WINDOWS, net_change_domain_csv  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style, figsize, mark_offaxis,
@@ -93,7 +93,7 @@ def window(key):
 
 # The full-window matrix runs (1996 start, 2025 end), shaped like matrix_runs()
 def full_window_runs():
-    idx = load_run_index(RAW_RUNS / "run_index.csv")
+    idx = scan_runs(RAW_RUNS)
     m = idx[(idx["kind"] == "matrix") & idx["run_name"].str.startswith(f"HAT_{window(FULL)}_")].copy()
     m = m.drop_duplicates("run_name", keep="last")
     m["relocations_enabled"] = m["relocations_enabled"].astype(str).str.lower().eq("true")

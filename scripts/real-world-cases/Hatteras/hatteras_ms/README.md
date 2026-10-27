@@ -1,26 +1,48 @@
 # hatteras_ms — the hindcast, and everything that reads its output
 
-Four kinds of thing live here, and until 2026-09-13 they were one flat list of
-31 items sharing a `HAT_` prefix that sorted them without separating them.
+The runner and its settings sit at the top level; everything else is filed by
+what it does (2026-09-13).
 
 ```
-HAT_hindcast.ipynb   THE RUN. The notebook is authoritative;
-HAT_hindcast.py      the .py is its headless mirror, with no
-                               features of its own. A change goes in BOTH.
-HAT_hindcast_config.py         which run happens, and where the value came
-hat_run.yaml                   from: env > yaml > the default in the module
-HAT_run_matrix.py                 the batch driver: the matrix, without and with the groin
-HAT_hindcast_methods.md        the written method
+HAT_hindcast.py                THE RUN: settings in, model built and run,
+                               outputs written, figures drawn from the folder
+HAT_hindcast.ipynb             one run walked through step by step, with its
+                               QC plots; need not match the .py line for line
+hat_run.yaml                   which run happens (env > yaml > the default in
+                               hindcast/HAT_hindcast_config.py)
+HAT_run_matrix.py              the batch driver: the matrix, without and with the groin
 DEM_TO_DEM_CALIBRATION.md      the calibration/test plan (1996-2009, 2009-2025):
                                what is done, the open decisions, where to resume
-HINDCAST_PLAN.md               planning notes: the order the notebook builds
-                               the run in. Was `HAT_hindcast_plan`, a file
-                               with no extension that this line described as
-                               a folder (2026-09-22)
 
+HAT_run_simple.py              the shortest run: load, build, run, save the shoreline
+
+hindcast/     the runner's code, not edited day to day: HAT_hindcast_config.py (reads
+              hat_run.yaml), HAT_hindcast_setup.py (sections 2-11.1),
+              HAT_hindcast_outputs.py (11.3, 12.2-12.4)
+docs/         HAT_hindcast_methods.md (the written method), MODEL_YEARS.md (how a
+              period's end_year and last_model_year differ)
 tools/        read or repair the run record; none of them run the model
-experiments/  one-off studies, each a run-it then plot-it pair
+experiments/  one-off studies, filed by theme, each a run-it then plot-it pair
 ```
+
+## The order the notebook builds the run in
+
+Each step plots what it built, so it can be checked before the next. (Was
+`HINDCAST_PLAN.md`, merged here 2026-10-23.)
+
+1. Imports
+2. Fixed dune/topo (period-independent) — plot to QC
+3. Domain orientation: set START_YEAR, resolve period config, shoreline_offset init — plot initialization
+4. roadway_manager: load setbacks + historical events, apply road-exists-AND-not-community rule — plot
+5. beach_dune_manager: nourishment schedule + overwash filter — plot
+6. hard-structures/groin: Buxton groin config — plot deterioration curve
+7. Forcings: storms + RSLR — plot trend + storm catalog
+8. Source/sink (BE rates) — plot base vs. calibrated
+9. CoastSat target rates — plot LOWESS windows
+10. Plotting functions (imported from hat_pipeline.plotting, not redefined inline)
+11. Define run_cascade_simulation()
+12. Initialize Cascade (single config, no sweep)
+13. Run the loop, then generate the position-over-time GIF from the saved shoreline_m
 
 ## Which Barrier3D the run uses
 
@@ -30,7 +52,7 @@ Barrier3D is a separate repository, installed editable, so the branch checked ou
 
 | branch / tag | what it has | in use? |
 |---|---|---|
-| **`hatteras/adopted`** (2b8f167 code; 8a588ea records it) | everything below merged: the route_overwash fix, the three overwash fixes, and per-cell dune ceilings (`DuneCeilingFromStart`; switched on in `data/hatteras_init/Hatteras-CASCADE-parameters.yaml` 2026-09-28 to 10-13, **off since 2026-10-13**: one island-wide `Dmaxel` of 5.5 m NAVD88, to stay on the base model; see `experiments/README.md`, HAT_dune_ceiling_range.py) | **yes, since 2026-09-28**: `../Barrier3D` is on it. The runner refused a Barrier3D without per-cell ceilings until 2026-10-13; it no longer does. The matrix before this is in `output/raw_runs/archive/2026-09-28-pre-ceiling/`. |
+| **`hatteras/adopted`** (2b8f167 code; 8a588ea records it) | everything below merged: the route_overwash fix, the three overwash fixes, and per-cell dune ceilings (`DuneCeilingFromStart`; switched on in `data/hatteras_init/Hatteras-CASCADE-parameters.yaml` 2026-09-28 to 10-13, **off since 2026-10-13**: one island-wide `Dmaxel` of 5.5 m NAVD88, to stay on the base model; see `experiments/dunes/README.md`, HAT_dune_ceiling_range.py) | **yes, since 2026-09-28**: `../Barrier3D` is on it. The runner refused a Barrier3D without per-cell ceilings until 2026-10-13; it no longer does. The matrix before this is in `output/raw_runs/archive/2026-09-28-pre-ceiling/`. |
 | `feature/per-cell-dune-ceiling` (d343461) | per-cell dune ceilings alone, on 49fd069; worktree `../Barrier3D-dune-ceiling` | merged into `hatteras/adopted` |
 | `fix/overwash-gaps-momentum` (db0ba30, tag `hat-fix-overwash-gaps-momentum`; worktree `../Barrier3D-overwashfix`) | `DuneGaps` dropping cells; the gap discharge slice; the inundation momentum constant reset to 0 | merged into `hatteras/adopted` |
 | `fix/route-overwash-axis-swap` (49fd069, tag `hat-fix-route-overwash`) | the `route_overwash` index swap: wrong cells read, and a silent crash on long storms | merged; every run from 2026-09-24 to 09-28 used it alone |
@@ -41,31 +63,18 @@ The storm series moved to `v3_trim24` on the same day (`hat_env_forcings.DEFAULT
 
 ## tools/
 
-| Script | What it answers |
-|---|---|
-| `HAT_period_input_check.py` | is this period runnable, and what is missing |
-| `HAT_index_runs.py` | rebuild `run_index.csv` from the runs on disk |
-| `HAT_list_runs.py` | what is on disk, grouped |
-| `HAT_run_supersession_report.py` | which runs a later one has superseded |
-| `HAT_migrate_run_layout.py` | move runs to the current directory layout |
-
-Start with the period check before a run and `HAT_list_runs.py` after one.
+Read or repair the run record. The table, and each tool's original header and
+notes, are in `tools/README.md`. Start with `HAT_period_input_check.py` before
+a run and `HAT_list_runs.py` after one.
 
 ## experiments/
 
-Two live studies, plus one retired.
-
-* **the crest experiment** -- `HAT_run_crest_experiment.py` and its plotter.
-* **the relocation set** -- `HAT_relocation_comparison.py` (takes `--period`
-  since 2026-09-15: 1984 or 1996, one output root per window),
-  `HAT_relocation_period_compare.py` (the 1999 event read across both
-  windows, from the per-period tables),
-  `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`
-  and `HAT_score_road_position.py`. `RELOCATION_COMPARISON_RESULTS.md` is
-  what it concluded.
-* `superseded_20260907/` -- the 1984 seaward row-insert set, which could not
-  be re-run (its topography layers, outputs and arms were gone). Deleted
-  2026-10-01 with the other retirement folders below; git has the scripts.
+85 one-off studies in ten theme folders (`waves/`, `offset/`, `ends/`,
+`windows/`, `storms/`, `overwash/`, `dunes/`, `code_checks/`, `relocation/`,
+`management/`). `experiments/README.md` is the index; each theme folder's
+README lists its scripts and keeps their original headers and notes.
+`experiments/relocation/RELOCATION_COMPARISON_RESULTS.md` is what the
+relocation set concluded.
 
 A driver spawns the runner as a subprocess with `HAT_IGNORE_SETTINGS=1`, so
 whatever is sitting in `hat_run.yaml` cannot reach an experiment.
@@ -74,7 +83,7 @@ whatever is sitting in `hat_run.yaml` cannot reach an experiment.
 
 The five figure scripts that were here (`hindcast_final_figure_lowess`,
 `scenario_grid`, `rerender_run_figures`, `planview_evolution_gif`,
-`gis11_relocation_drown_figure`) and their `superseded_20260914/` (since
+`gis11_relocation_drown_figure`, deleted 2026-10-23) and their `superseded_20260914/` (since
 deleted, 2026-10-01) moved to
 `scripts/figure_making/model_output/` on 2026-09-18, so every figure script is
 in one tree.
@@ -89,6 +98,25 @@ Live references were updated. Run metadata under `output/` still names the old f
 producer at the time; this note is how to read them. Older names (`_groinTest`, `_old version`,
 `_versioncontrol`) are left as written where they describe history.
 
+## Reorganized 2026-10-23
+
+* `experiments/` split into theme folders. Studies import each other across
+  themes through `experiments/experiment_paths.py`; the scripts outside this
+  folder that import an experiment module (`analyze_output/compare_runs/`,
+  `figure_making/model_output/`, three groin studies) do the same.
+* `HAT_end_solve_net_change.py`, `HAT_be_domain_solve_net_change.py` and
+  `HAT_full_window_1996_2025.py` moved to `calibration/`; the same day
+  `calibration/` was dissolved. The two solves solve a model input, the
+  source/sink field, so they moved to `input_prep/7-source-sink/2-calibrate/`
+  as `be_end_solve_net_change.py` and `be_domain_solve_net_change.py`; the
+  full-window run moved to `experiments/windows/`.
+* `experiments/README.md` (3,800 lines) split into one README per theme;
+  the tools' sections of this README moved to `tools/README.md`.
+* Run commands and "Details:" lines updated from `scripts/hatteras_ms/` to
+  `scripts/real-world-cases/Hatteras/hatteras_ms/`. Run metadata under
+  `output/` still names the old paths, as the producer at the time.
+
+
 ## Deleted 2026-10-23
 
 * `tools/HAT_rename_experiments_20260925.py` -- the one-off rename of the experiment folders, run
@@ -99,12 +127,25 @@ producer at the time; this note is how to read them. Older names (`_groinTest`, 
 git show origin/hannahaline/hatteras-cascade:scripts/hatteras_ms/tools/HAT_rename_experiments_20260925.py
 ```
 
+* `tools/HAT_archive_fixed_ends_2010_20260927.py` -- the one-off archive of the 2010-2024 half of
+  the fixed-ends wave grid, run 2026-09-27. Last committed in `a7c4358c`:
+
+```
+git show a7c4358c:scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_archive_fixed_ends_2010_20260927.py
+```
+
+* `HINDCAST_PLAN.md` -- merged into this README ("The order the notebook builds the run in").
+* The sections for `HAT_run_crest_experiment.py`, `HAT_plot_crest_experiment.py`,
+  `HAT_score_relocation_timing.py` and `HAT_score_road_position.py` in `experiments/README.md`.
+  The scripts were retired with the 1984 and 2004 starts in `fe452b83` (2026-10-19); their
+  sections are in `a7c4358c:scripts/real-world-cases/Hatteras/hatteras_ms/experiments/README.md`.
+
 ## Deleted 2026-10-14
 
-One groin model is kept, the wave-driven groin (`cascade.groin.GroinCallback`), set by
+One groin model is kept, the wave-driven groin (`cascade.groin.GroinManager`), set by
 its strength per window and its end year in `hat_run.yaml` (`groin.strength_1996` 0.16,
 `groin.strength_2009` 0.10, `groin.end_year` 2017; `groin.strength` overrides both). Removed with
-the dipole (the old `GroinCallback`, M) and blocking (`BlockingGroinCallback`, b) groins and their
+the dipole (M) and blocking (`BlockingGroinManager`, b) groins and their
 deterioration floor f:
 
 * `groin-sweep/` -- the M and f sweeps, the joint fit and their figures
@@ -213,9 +254,9 @@ RE-READING, FOR THE NOTEBOOK
     and the edit would silently not apply.
 
 WHAT IS *NOT* VALIDATED HERE
-    Value legality: scenario names, periods and offset modes each have exactly
-    one home in the code (`SCENARIOS` in section 3, `HATTERAS_PERIODS`,
-    `ISLAND_OFFSET_MODES`), and a second copy here is a second thing to drift.
+    Value legality: scenario names and periods each have exactly one home in
+    the code (`SCENARIOS` in section 3, `HATTERAS_PERIODS`), and a second copy
+    here is a second thing to drift.
     A bad value raises in section 3 with the valid list attached. What IS
     validated here is what this module owns: that every key in the yaml is a
     key it knows, and that each value casts to the right type.
@@ -255,8 +296,10 @@ renaming them to match a yaml layout would break both.
 ```text
 1996 SINCE 2026-09-17 (Hannah: "moving forward the main time period,
 for figures and future runs, is 1996-2010-2024"). 1984 was the pair
-the project ran first. Every other start is still reachable by naming
-it; this is only what a run gets when nothing does.
+the project ran first. The periods are now 1996-2009 (calibration) and
+2009-2025 (test), DEM to DEM since 2026-10-05. Every other start is
+still reachable by naming it; this is only what a run gets when nothing
+does.
 ```
 
 ```text
@@ -335,7 +378,7 @@ by this.
 
 CASCADE has no separate parameter for the two: cascade_groin.py:689
 re-assigns `road_relocation_setback = road_setback` every year, so the
-target is whatever the road's MEASURED 1984/2004 offset happened to be.
+target is whatever the road's MEASURED start-of-period offset happened to be.
 That is observed geometry, not a design standard, and it ranges 0-430 m
 across the 55 road domains. At GIS 85 and 86 it is 0 m, so a relocation
 puts the road back on the dune line with no clearance and the next 10 m
@@ -353,8 +396,7 @@ the emergent target raised where the 1999 event landed too: 0 + 77 = 77 m
 became 20 + 77 = 97 m, two cells further back, past the point where 24%
 of the bordering row is at or below MHW and `bulldoze` gives the road up.
 At 20 m the same event lands at 87 m and all eight drownings go away,
-with relocation counts across the twelve arms moving only 26 -> 28. See
-output/comparisons/relocation/standard_setback/.
+with relocation counts across the twelve arms moving only 26 -> 28.
 
 That coupling is a real weakness and 87 m clears the threshold by ONE
 CELL, so this value is not robust to different forcing. Anchoring
@@ -489,16 +531,14 @@ Raises:
 The values that select which run the hindcast performs.
 
 Attributes:
-    start_year: A key of HATTERAS_PERIODS -- 1984, 1996, 2004 or 2010.
+    start_year: A key of HATTERAS_PERIODS -- 1996 (1996-2009) or 2009
+        (2009-2025). The retired 1984 and 2004 keys are still in the table.
         Selects the period, and every forcing that follows from it.
     source_sink_preset: "zeroBE", "edgeBE" or "calibBE".
     scenario: A key of the SCENARIOS table in section 3.
     relocations: Overrides the scenario's historical-relocation switch.
         None leaves the scenario preset in charge.
-    offset_mode: Which shoreline_offset variant to build: "metres"
-        (the default since 2026-09-24), "asrun" (offset / 10, the old
-        units error) or "detrended".
-    groin_enabled: Whether the groin callback is attached.
+    groin_enabled: Whether Cascade builds its GroinManager (groin_module).
     groin_strength_1996, groin_strength_2009: The share of the arriving
         drift the groin holds back, for a run starting in that year.
     groin_strength: Overrides both when set (None by default); needed
@@ -519,8 +559,9 @@ Attributes:
     make_gifs: Whether section 9's shoreline animations are built.
     save_model_state: Whether the ~160 MB model .npz is written.
     overwrite: True empties an existing run directory and reuses it.
-    use_sandbox_cascade: True imports cascade.cascade_groin, which carries
-        the hook the groin callback needs.
+    use_sandbox_cascade: True imports the old cascade.cascade_groin
+        sandbox (hannahaline/hatteras-cascade only). False, the default,
+        uses the package's Cascade, which has the GroinManager.
     origins: attribute -> "default" | "file" | "env", for describe().
     settings_path: The yaml actually read, or None.
 ```
@@ -554,15 +595,15 @@ Returns:
 **`_runtime_estimate()`**
 
 ```text
-Median wall-clock of prior runs of this period, from run_index.csv.
+Median wall-clock of prior matrix runs of this period, from their metadata.
 
-Measured rather than assumed: the index records `runtime_min` for every
-run that has completed, so the estimate is this machine's own history for
+Measured rather than assumed: every completed run records `runtime_min` in
+its metadata, so the estimate is this machine's own history for
 this period and no constant has to be maintained here.
 
 Returns:
     (median minutes, number of runs it was taken over), or (None, 0) when
-    the index is absent or holds no run of this period.
+    there is no matrix run of this period.
 ```
 
 **`preflight()`**
@@ -585,8 +626,8 @@ Args:
     run_name: RUN_NAME_PREVIEW from section 3.
     run_dir: Directory the run will write to.
     config: Settings to report. Defaults to the module-level RUN_CONFIG.
-    index_path: run_index.csv, for the runtime estimate. Defaults to the
-        repo's own.
+    raw_runs: output/raw_runs, for the runtime estimate. Defaults to the
+        workspace's own.
 
 Returns:
     A multi-line string, no trailing newline.
@@ -612,11 +653,8 @@ Runs the whole thing in one command, in the order the dependencies require,
 and can be re-invoked at any point to pick up where it stopped.
 
 THE ORDER, AND WHY IT IS THIS ORDER
-    1  archive        The retired run_index.csv is moved aside. Its rows
-                      describe runs whose directories no longer exist, and two
-                      of them disagree with each other about the background
-                      erosion they were fit under, so merging new runs into it
-                      would produce an index of mixed provenance.
+    (1  archive       Moved the retired run_index.csv aside. Removed
+                      2026-10-23 with run_index.csv itself.)
 
     2  matrix nogroin The scenarios that are DISTINCT in each period x
                       preset x 2 periods x the relocations arm, groin off.
@@ -631,7 +669,7 @@ THE ORDER, AND WHY IT IS THIS ORDER
                       rather than force a name onto what would be a duplicate
                       run:
 
-                      `scenario_applies` drops `full_no_fill` in 1984-2004.
+                      `scenario_applies` drops `full_no_fill` in 1996-2009.
                       All three nourishment projects are 2014 or later, so
                       there it differs from `full_management` in a switch with
                       nothing to act on: the two build the same modules,
@@ -642,16 +680,17 @@ THE ORDER, AND WHY IT IS THIS ORDER
                       `relocation_applies` drops the reloc arm wherever it
                       would be inert. Relocations need roadway management to
                       have a setback to move, so `natural` and
-                      `beachdune_only` carry no arm; and both historical
-                      events are 1989 and 1999, so 2004-2024 carries none
-                      either -- the 2022 bridge event fires whatever the
+                      `beachdune_only` carry no arm; and the historical
+                      events are 1989 and 1999, so only 1999 falls in a
+                      period (1996-2009; 1989 is already in the 1996
+                      setback) and 2009-2025 carries none either -- the 2022 bridge event fires whatever the
                       switch says, which is exactly why turning the switch on
                       there would produce an identical run under a name
                       claiming a contrast.
 
                       Both presets, both periods, groin off: 22 runs.
-                      Per preset, 1984-2004 contributes 4 scenarios + 2 reloc
-                      arms and 2004-2024 contributes 5 scenarios + 0 arms, so
+                      Per preset, 1996-2009 contributes 4 scenarios + 2 reloc
+                      arms and 2009-2025 contributes 5 scenarios + 0 arms, so
                       11 each. `--presets zeroBE` covers half of it.
 
     3  seed           2 runs: edgeBE / full_management / groin on, one per
@@ -877,7 +916,8 @@ ROADWAY MANAGEMENT OFF
     name in 7.5 and the collision guard refuses it as a duplicate.
 
 NO RELOCATION EVENT IN THE PERIOD
-    Both historical relocations are 1989 and 1999, so 2004-2024 has none.
+    The historical relocations are 1989 and 1999, so 2009-2025 has none.
+    (1999 falls in 1996-2009; 1989 is already in the 1996 setback.)
     The 2022 Jug Handle bridge event is not gated by the switch, so a
     period-2 reloc run simulates exactly what its non-reloc twin does.
 
@@ -900,7 +940,7 @@ switch that has nothing to act on: they build the same modules, produce
 the same result, and -- correctly -- derive the same RUN_NAME, so the
 runner's collision guard refuses the second one.
 
-1984-2004 has no fill (all three projects are 2014 or later), so the
+1996-2009 has no fill (all three projects are 2014 or later), so the
 fills axis simply does not exist there. Skipping is the honest handling:
 running it under a forced name would file two identical runs as if they
 were a contrast.
@@ -1025,8 +1065,8 @@ THE SETTINGS FILE IS SHUT OUT, TWICE OVER
     HAT_IGNORE_SETTINGS=1 stops the runner reading `hat_run.yaml`, so a
     batch run is described entirely by the values set here plus
     HAT_hindcast_config's defaults. The driver sets only nine of the
-    fifteen settings; without this, the other six -- offset_mode,
-    make_gifs, Hs, sandbags, use_sandbox_cascade, show_figures -- would be
+    fifteen settings; without this, the others -- make_gifs, Hs,
+    sandbags, use_sandbox_cascade, show_figures -- would be
     taken from whatever experiment was last left in the file, and every
     cell of the matrix would silently inherit it.
 
@@ -1052,7 +1092,7 @@ never scheduled".
 
 Args:
     stage: "matrix_nogroin" or "matrix_groin".
-    groin: Whether the groin is attached.
+    groin: Whether the groin is on (Cascade's GroinManager).
     manifest: Loaded manifest, for resume.
     args: Parsed CLI arguments. `args.presets` and `args.scenarios`
         select which slice of the matrix this invocation covers.
@@ -1063,497 +1103,23 @@ Returns:
 
 </details>
 
-### tools/HAT_compare_rerun.py
-
-What changed between a stored run and the same run made under today's code?
-
-Notes that were in the code:
-
-```text
-HAT_compare_rerun.py
-
-What changed between a stored run and the same run made under today's code?
-
-Pairs each run in an ARM against the stored run of the same name, and reports
-the differences that matter: the skill metrics, whether a road drowned, how
-many relocations fired, and the largest per-domain rate change.
-
-WHY IT IS NOT ENOUGH TO COMPARE SKILL. An island-wide RMSE can sit still
-while a road drowns: drowning stops roadway management for that domain from
-that year on, which changes what happens to the interior without necessarily
-moving the shoreline much. So the road table is differenced too.
-
-python HAT_compare_rerun.py --tag code-checks/2026-09-14-relocation-arm-rerun-new-code
-
-Since 2026-09-16 a re-run is an EXPERIMENT (raw_runs/experiments/<tag>/) and
-the stored run a MATRIX row; the index is keyed on (run_name, kind, tag).
-
-Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-University of North Carolina at Chapel Hill
-Contact: hahenry@unc.edu
-Version: 2026-09-27
-```
-
-### tools/HAT_index_runs.py
-
-Rebuild output/raw_runs/run_index.csv from the runs themselves, with one ledger of retired runs.
-
-From the script's original header:
-
-```text
-Rebuild output/raw_runs/run_index.csv from the runs themselves, and keep a
-single ledger of runs that have been retired.
-
-WHY THE INDEX IS DERIVED (Hannah, 2026-09-11; runs stopped appending 09-16)
-    Every run writes its own metadata JSON, and that is the source of truth:
-    it is produced by the run, beside the run, from the values the run used.
-    The index restates those facts in one table so that a question across
-    runs -- which topography, which preset, what skill -- is one read instead
-    of two hundred.
-
-    A restatement can drift from what it restates. Until 2026-09-16 every run
-    also APPENDED its row to the file, which is how a smoke test on 09-10
-    truncated floats in five columns of an unrelated row, and why two runs
-    could never be in flight at once. Since 09-16 a run writes its row INTO
-    its metadata (the "index row" section) and calls the same rebuild this
-    tool runs, so the file is regenerated from disk every time and never
-    edited in place. `--check` turns "is it right" into a question with an
-    answer.
-
-WHAT THE REBUILD DOES (run_registry.rebuild_run_index)
-    One row per *_run_metadata.json under raw_runs. A run made since 09-16
-    supplies its own row; an older run keeps the row the existing file holds
-    for it, found by the old (run_name, Hs_m, arm) key. Every row gets `kind`
-    and `tag` from where the run sits (the purpose layout, or the two older
-    layouts translated) and a `status`: current, superseded (a matrix or
-    sensitivity run on a topography that is no longer its product's CURRENT),
-    or archived. The old `arm` column is dropped.
-
-WHAT IS NOT DERIVED
-    A run deleted from disk leaves no metadata to rebuild from, so a rebuild
-    would drop its row silently. `retired_runs.csv` is the append-only record
-    of those: a row that was in the index, whose run is gone. It is written
-    here and never rewritten, so the history of what was removed survives a
-    rebuild. `--adopt-archives` seeds it from the pre-2026-09-11 archived
-    copies of the index.
-
-USAGE
-    python HAT_index_runs.py --check          # compare, change nothing
-    python HAT_index_runs.py --dry-run
-    python HAT_index_runs.py                  # rebuild, retiring vanished rows
-    python HAT_index_runs.py --adopt-archives # seed the ledger from the copies
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`append_ledger()`**
-
-```text
-Append retired rows. Never rewrites a row: the ledger is the one
-record of what was removed, and a rebuild must not be able to erase it.
-The header gained kind/tag on 2026-09-16; an older ledger is widened
-once, keeping every row.
-```
-
-**`rebuild()`**
-
-```text
-Compare the index with disk and, unless asked not to, rewrite it.
-
-Returns the exit code: 1 under --check when they differ, else 0.
-```
-
-</details>
-
-### tools/HAT_list_runs.py
-
-What is under output/raw_runs, grouped by whatever makes runs comparable.
-
-From the script's original header:
-
-```text
-What is under output/raw_runs, grouped by whatever makes runs comparable.
-
-WHY A LISTING RATHER THAN A FOLDER
-    98 of 164 runs sit on a topography that is no longer CURRENT, and opening
-    a preset folder does not say which. The obvious fix is to nest by
-    topography version, and it is the wrong one: 2004-start has only one
-    version, so 63 runs would gain a level that says nothing; a sweep run is
-    already five levels down; and topography is not the only axis that decides
-    whether two runs are comparable, so nesting one of them just moves the
-    question.
-
-    Every run records all of it -- topo_product, topo_dune_version,
-    be_values_digest -- in its metadata and in run_index.csv. So the question
-    "which runs are on v1" is a query, and this is the query.
-
-    `--stamp` writes the same facts as a one-line BUILT_ON.txt inside each run
-    folder, so a folder opened on its own also answers it.
-
-USAGE
-    python HAT_list_runs.py                    # by topography (the default)
-    python HAT_list_runs.py --by erosion
-    python HAT_list_runs.py --by preset --detail
-    python HAT_list_runs.py --only-stale       # just what is not CURRENT
-    python HAT_list_runs.py --stamp            # write BUILT_ON.txt per run
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`newest_digest_per_preset()`**
-
-```text
-The digest the most recent run of each (preset, period) carries.
-
-PER PERIOD, not per preset: the background-erosion field is calibrated for
-one period at a time, so one preset legitimately has a different digest in
-1984-2004 than in 2004-2024. Keying on the preset alone called that
-by-design difference "superseded".
-```
-
-**`parent_bucket()`**
-
-```text
-The folder a run sits in, collapsed to what says its purpose.
-
-Purpose layout (2026-09-16): matrix/<period>/<preset>, sensitivity/<axis>,
-experiments/<tag>, versions/<tag>. The 09-10 layout's sweeps/<family>
-collapses to 'sweeps' as before.
-```
-
-</details>
-
-### tools/HAT_migrate_run_layout.py
-
-Move output/raw_runs into the purpose layout of 2026-09-16 (moves only), then rebuild the index.
-
-From the script's original header:
-
-```text
-Move output/raw_runs into the PURPOSE layout of 2026-09-16. Moves only;
-nothing is deleted, rewritten or renamed in content, and run_index.csv is
-rebuilt from the runs afterwards rather than edited.
-
-THE MOVES
-    <period>/<preset>/<run>                       -> matrix/<period>/<preset>/<run>
-    <period>/<preset>/sweeps/<axis>/<run>_<tok>   -> sensitivity/<axis>/<period>/<preset>/<run>_<tok>
-    arms/<arm>/<period>/<preset>/<run>            -> versions/<tag>/... or experiments/<tag>/...
-                                                     as run_registry.LEGACY_ARMS says
-    arms/waveHs<x>/1996_2010/<preset>/<run>       LEFT IN PLACE, and listed. Those are
-                                                     the twelve 1996 wave cells filed by
-                                                     the 09-01 rule; they are re-run as
-                                                     sensitivity cells (the token back in
-                                                     the name) and then deleted, because
-                                                     renaming a run's files and metadata
-                                                     is exactly the in-content edit this
-                                                     tool refuses to make.
-
-    Why (Hannah, 2026-09-16): a wave sweep had fanned out into twelve
-    top-level arms; nineteen of thirty arms were finished one-off experiments
-    nothing marked as finished; and the layout could not tell those from the
-    version comparisons that are kept on purpose. A run's folder now says what
-    it is FOR. The whole design is in output/raw_runs/README.md.
-
-WHAT ELSE IT WRITES
-    experiments/<tag>/NOTE.md   one per experiment set, seeded from the index
-                                and the write-ups that already name these
-                                runs. Says what was asked, where the answer
-                                is, and whether the runs may be deleted. Not
-                                overwritten if present.
-    run_index.csv               rebuilt (HAT_index_runs), every row with
-                                kind, tag and status.
-
-WHY IT IS SAFE TO RUN, AND TO INTERRUPT
-    Every destination is checked to be free before anything moves, so a name
-    collision is reported and nothing happens. All three layouts are readable:
-    run_registry.find_run_dir tries the purpose path, then the 09-10 one, then
-    the flat one, so a tree that is half moved -- or interrupted here -- still
-    reads. Running it twice is a no-op.
-
-    The 2026-09-10 pass (files inside each run into figures/, animations/,
-    tables/) is retained as --files, and is a no-op on a migrated run.
-
-USAGE
-    python HAT_migrate_run_layout.py --dry-run       # show every move
-    python HAT_migrate_run_layout.py
-    python HAT_migrate_run_layout.py --files         # the 09-10 in-run file pass
-```
-
-Notes that were in the code:
-
-```text
-What each experiment set was for, from the run index and the write-ups
-that cite it. Seeded here so the NOTE.md a folder gets on migration is not
-blank; edit the file, not this table, once the folder exists.
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`tree_moves()`**
-
-```text
-(source, destination) for each run folder that changes place, and the
-folders that stay with why.
-```
-
-</details>
-
-### tools/HAT_period_input_check.py
-
-Does every hindcast period resolve everything it needs, and does each file exist on disk?
-
-Notes that were in the code:
-
-```text
-HAT_period_input_check.py
-
-Does every hindcast period resolve everything it needs, and does each of
-those things exist on disk?
-
-WHY THIS EXISTS
-HATTERAS_PERIODS names six forcing inputs per period as RELATIVE PATHS.
-Nothing checks them until a run is most of the way through section 5, and
-two of the six are read later still -- so a period wired against a file
-that was never built fails partway into a run that has already spent
-minutes building an island. Four periods since 2026-09-11, two of them
-wired ahead of inputs still being digitised, made that a certainty rather
-than a risk.
-
-It is also the answer to "is this period runnable yet", which is otherwise
-answered by starting a run and waiting.
-
-WHAT IT DOES NOT DO
-It does not validate VALUES. A setback of the right shape measured against
-the wrong topography is a real failure this cannot see; that is what
-HAT_road_setback_audit.py and the extractor audits are for. This checks
-resolution and existence, the class of failure that costs a run rather
-than a result.
-
-EXIT CODE
-0 when every period is runnable, 1 when any is blocked, so a batch driver
-can gate on it.
-
-python HAT_period_input_check.py
-python HAT_period_input_check.py --period 2010
-
-Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-University of North Carolina at Chapel Hill
-Contact: hahenry@unc.edu
-Version: 2026-09-18
-```
-
-```text
-Anchored by SEARCHING UPWARD for the project root rather than by
-counting parent directories (2026-09-13). A counted depth is correct
-only while the file stays where it was written, and these moved into
-subfolders of hatteras_ms. Six files here already did it this way.
-```
-
-```text
-Resolved, not built: hat_observed_rates owns where the rate fits live, so
-this check cannot look somewhere the runner does not.
-```
-
-```text
-Not a failure, but worth seeing: a zero setback puts the road on the dune
-line, where one cell of retreat re-fires a relocation.
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`check_presets()`**
-
-```text
-Which source/sink presets are solved for this period.
-
-Not blocking: zeroBE alone is enough to run. A period missing edgeBE simply
-cannot be run under it, which is a fact about the calibration rather than
-about the inputs.
-```
-
-**`events_in_window()`**
-
-```text
-What the record fires inside this window.
-
-The window is start..end-1, matching run_cascade_simulation: an event dated
-exactly on the end year belongs to the next period and never fires here.
-```
-
-</details>
-
-### tools/HAT_rerun_arm.py
-
-Re-run a set of existing runs under today's code, into an arm, so the two can be compared.
-
-Notes that were in the code:
-
-```text
-HAT_rerun_arm.py
-
-Re-run a set of existing runs under TODAY'S code, into an arm, so the old
-results survive and the two can be compared.
-
-WHY
-A run records the git commit it was made at, and the index shows those
-commits drifting apart. The relocation arm of the 1984-2004 matrix was made
-on 2026-09-01 from a dirty tree; spot-checking one of its cells on current
-code drowned NC-12 at GIS 11, where the stored run reports none. That is
-either a real change in the model or a change in the inputs, and the only
-way to tell which runs is to re-run and difference.
-
-PINNING THE TOPOGRAPHY IS HALF THE JOB, and the half that is easy to miss.
-A road setback is metres landward of interior row 0, so it belongs to the
-extraction it was measured on. `--topo-version v1` pins the ARRAYS but the
-run still reads whatever setback file the period table names, which is the
-v2-era measurement. Those two differ at 27 of 82 domains, up to 205 m, and
-the mismatch moves every domain's rate by up to 0.005 m/yr.
-
-That is exactly what happened on the first use of this script: a twelve-cell
-comparison that looked like code drift was mostly a mismatched pair. Pinning
-a version means pinning BOTH halves; the archived setbacks are under
-road_offset/superseded_<date>/.
-
-IT WRITES INTO AN ARM, NEVER OVER THE ORIGINAL. An arm scopes the output
-directory, so the stored runs and their index rows are untouched and the
-comparison is reversible. Promoting a re-run to the production path is a
-separate, deliberate act.
-
-python HAT_rerun_arm.py --list
-python HAT_rerun_arm.py --arm recode-20260914 --topo-version v1
-python HAT_rerun_arm.py --arm recode-20260914 --topo-version v1 --limit 2
-
-Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-University of North Carolina at Chapel Hill
-Contact: hahenry@unc.edu
-Version: 2026-09-27
-```
-
-```text
-The switches a run name encodes, recovered from the index columns rather than
-parsed out of the name: the name is DERIVED from the switches, so reading it
-back would be inverting a lossy function.
-```
-
-### tools/HAT_run_supersession_report.py
-
-Which runs under output/raw_runs are candidates for retirement, and why (read-only).
-
-From the script's original header:
-
-```text
-Which runs under output/raw_runs are candidates for retirement, and why.
-
-READ-ONLY. It moves nothing and deletes nothing. Hannah's instruction on
-2026-09-10 was "flag candidates, retire nothing yet", and a script that can
-only report cannot be misread as one that acts.
-
-WHAT "SUPERSEDED" MEANS HERE, AND WHAT IT DOES NOT
-    A run is flagged when something it was built on has since moved, which
-    makes it incomparable with a run made today. That is not the same as
-    wrong: a run is a faithful record of the inputs it had, and the two
-    1984-2004 archives were kept for exactly that reason. The judgement about
-    whether an incomparable run is still worth keeping is the reader's.
-
-THE CHECKS
-    topography   the run's dune-topo version against the product's CURRENT.
-                 The 2026-09-03 re-pick moved 1984-start from v1 to v2, so a
-                 v1 run measures a different island from a run made today.
-    calibration  the source/sink `values_digest` within one preset AND ONE
-                 PERIOD. The field is calibrated per period, so a preset having
-                 a different digest in each period is by design; two digests
-                 inside one period would mean it was recalibrated and only some
-                 runs remade. (Grouping on the preset alone reported the
-                 by-design difference as 55 superseded runs on 2026-09-10.)
-    duplicates   one run name in more than one place. Usually legitimate --
-                 an arm is a different forcing of the same scenario -- so
-                 these are listed for orientation, not flagged.
-
-WHERE   output/raw_runs/SUPERSEDED_CANDIDATES.md
-
-USAGE
-    python HAT_run_supersession_report.py
-    python HAT_run_supersession_report.py --print
-```
-
-Notes that were in the code:
-
-```text
-An arm component that names a dune-topo version, e.g. the v3 of
-arms/version-pair/v3.
-```
-
-```text
-ARMS THAT NAME A VERSION are judged against that version, not CURRENT: they
-exist to compare two islands, so their state is kept whatever CURRENT says.
-```
-
-```text
---- calibration ------------------------------------------------------
-WITHIN A PERIOD. The background-erosion field is calibrated per period,
-so one preset legitimately carries a different digest for 1984-2004 than
-for 2004-2024. Grouping on the preset alone reported that by-design
-difference as 55 superseded runs on 2026-09-10, which was wrong; the
-split that would matter is two digests for one preset in ONE period.
-```
-
-```text
-4
----- model state ----------------------------------------------------
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`expected_version()`**
-
-```text
-The version this run SHOULD be on, which is not always CURRENT.
-
-An arm can name a version -- `version-pair/v3` holds v3 against v2, and
-`behindroad-copy` was built on the v3 footprint layer. Those runs are on
-that version deliberately, so measuring them against CURRENT reports a
-deliberate choice as drift, and acting on it would destroy the comparison
-the arm exists for (flagged 2026-09-11).
-```
-
-**`_state_bytes()`**
-
-```text
-Size of this run's model state, or 0 if it was not saved.
-
-The .npz is the ONLY artifact that lets a deep-dive figure be re-derived
-without re-running. Everything else -- the rate table, the shoreline
-matrix, the metadata -- is written regardless and is small.
-```
-
-**`state_verdict()`**
-
-```text
-Does the keep rule keep this run's model state?
-
-THE RULE (Hannah, 2026-09-14): keep the state of runs on the CURRENT
-topography, and of arms that name a version deliberately. Drop the rest.
-
-Why it is defensible: a run on an island a re-pick behind cannot be
-compared against a run made today, so re-plotting it deeply is answering a
-question nobody can ask. Its tables and metadata survive either way.
-
-Why it is not automatic: a run is one to three minutes of compute, but
-re-running reproduces it at TODAY'S code, not the code it was made with.
-That is what the state is really insuring against, and it is why nothing
-here deletes anything.
-```
-
-</details>
-
 ### HAT_hindcast.py
 
-Hatteras Island CASCADE hindcast runner: the headless twin of HAT_hindcast.ipynb.
+Hatteras Island CASCADE hindcast runner: one run, chosen in hat_run.yaml.
+
+Since 2026-10-23 the runner only runs the model: sections 2 to 11.1 are the
+setup_* steps in `HAT_hindcast_setup.py` (`r = prepare_run(RUN_CONFIG)`), 11.3
+and 12.2-12.4 are `pre_run_diagnostics`, `verify_run` and `write_run_outputs` in
+`HAT_hindcast_outputs.py`, and
+the figures are drawn from the run folder by
+`figure_making/model_output/run_figures.py`. The notes below are the runner's
+earlier header and code comments, kept as they were; section numbers still
+name the same steps.
 
 From the script's original header:
 
 ```text
-HATTERAS ISLAND -- CASCADE hindcast runner (1984-2004 / 2004-2024).
+HATTERAS ISLAND -- CASCADE hindcast runner (1996-2009 / 2009-2025).
 
 Headless twin of `HAT_hindcast.ipynb`. The notebook is the source of
 truth: this file mirrors it section for section, in the same order, calling the
@@ -1591,7 +1157,7 @@ WHERE THE SWITCHES LIVE
 
     section 1   output.show_figures -- read at import, because it selects a
                 matplotlib backend
-    section 3   start_year, source_sink, scenario, relocations, offset_mode
+    section 3   start_year, source_sink, scenario, relocations
                 (scenario expands to ENABLE_ROADWAY_MANAGEMENT,
                 ENABLE_BEACH_DUNE_MANAGEMENT, ENABLE_NOURISHMENT_FILLS and
                 ENABLE_HISTORICAL_ROAD_RELOCATIONS; commented override lines
@@ -1664,14 +1230,12 @@ NO LONGER period-independent (changed 2026-08-25). Until then both periods
 read one topography and this section said so. They now start from different
 DEMs, so the product is selected from HATTERAS_PERIODS:
 
-1984  ->  1984-start   from DEM 2009-2014-1996
-1996  ->  1984-start   from DEM 2009-2014-1996
-2004  ->  2004-start   from DEM 2009-2014
-2010  ->  2004-start   from DEM 2009-2014
+1996  ->  1996-start   (was 1984-start until 2026-10-19)
+2009  ->  2009-start   (was 2004-start until 2026-10-19)
 
-Two products, four periods (2026-09-11): each new period reads the surface
-whose survey is nearest its own start, which is a product that already
-exists. The mapping is YEAR_PRODUCT's, not this comment's -- ask it.
+Two products, two periods. The retired 1984 and 2004 keys still map to
+1996-start and 2009-start, and the old product names resolve to the new
+ones (LEGACY_PRODUCTS in hat_topo_version.py). The mapping is YEAR_PRODUCT's, not this comment's -- ask it.
 
 The VERSION within a product is still resolved, never pinned.
 ```
@@ -1696,7 +1260,7 @@ measured from interior row 0, so that combination places the road against a
 row that does not exist on the grid being run.
 
 To reproduce an older run deliberately:
-topo_dirs("2004-start", override="v3").
+topo_dirs("2009-start", override="v3").
 ```
 
 ```text
@@ -1720,8 +1284,8 @@ without anyone noticing - the same failure mode as HAT_road_elevation.py.
 ```text
 Runs are filed per period: section 3 builds OUTPUT_BASE_DIR =
 OUTPUT_ROOT / "<start>_<end>" once START_YEAR is expanded, so a
-1984-2004 run and a 2004-2024 run of one scenario cannot land beside
-each other. run_index.csv stays at the root, covering both periods.
+1996-2009 run and a 2009-2025 run of one scenario cannot land beside
+each other.
 ```
 
 ```text
@@ -1863,7 +1427,7 @@ this after construction so that measured geometry is untouched.
 
 CASCADE itself has no separate parameter -- cascade_groin.py:689 re-assigns the
 relocation target from the initial setback every year -- so without this every
-domain relocates to wherever its road happened to sit in 1984/2004. That is
+domain relocates to wherever its road happened to sit at the period start. That is
 observed geometry, not a design standard, and at GIS 85 and 86 it is 0 m, which
 returns a relocated road to the dune line with no clearance and re-fires on the
 next 10 m of retreat. `measured` in hat_run.yaml restores that behaviour.
@@ -2035,17 +1599,10 @@ position. Becomes `shoreline_offset` on the Cascade() call.
 ```
 
 ```text
-OFFSET_MODE selects which shoreline_offset variant is built; see
-cascade_pipeline.hindcast.build_island_offset. The default since
-2026-09-24 is "metres": the file is metres and Cascade wants metres, so it
-goes in as it is. "asrun" reproduces the old units error (offset / 10) for
-the runs made before that date.
-```
-
-```text
-island_offset is what Cascade is handed: metres, except in asrun, where
-it is the file / 10. Multiplying by DAM_TO_M unconditionally printed the
-asrun span right and every metres span ten times too large ("0-62186 m").
+The file is metres and Cascade wants metres, so it goes in as it is
+(always since 2026-10-23; see cascade_pipeline.hindcast.build_island_offset).
+The "asrun" mode (offset / 10, the units error in every run before
+2026-09-24) and "detrended" were removed.
 ```
 
 ```text
@@ -2172,8 +1729,9 @@ managers run on the same domain -- reported here, verified in section 12.
 
 ```text
 --- schedule: one project list, period-filtered ------------------------------
-Every Hatteras project falls in 2004-2024, so a 1984 run builds an empty
-schedule from this same list rather than needing a period-keyed one.
+Every Hatteras project falls in 2009-2025 (the first is Rodanthe 2014), so
+a 1996 run builds an empty schedule from this same list rather than needing
+a period-keyed one.
 ```
 
 ```text
@@ -2202,9 +1760,9 @@ year should nourish nothing rather than quietly nourish the default.
 ```
 
 ```text
-cascade/groin.py attaches through cascade._groin_callback and is called once
-per model year from inside Cascade.update(), immediately before the alongshore
-transport solve. Each active year it adds -M to the updrift domain and +M to
+cascade/groin.py's GroinManager is built by Cascade (groin_module=True) and
+stepped once per model year from inside Cascade.update(), immediately before
+the alongshore transport solve. Each active year it adds -M to the updrift domain and +M to
 the downdrift domain of x_s_dt. BRIE's implicit diffusion solve spreads that
 dipole in the same step, so the fillet's taper and extent are EMERGENT -- only
 its amplitude is imposed.
@@ -2226,9 +1784,9 @@ configured groin would silently do nothing.
 ```
 
 ```text
-The pre-AST hook exists ONLY in cascade/cascade_groin.py. Attaching a callback
-to a Cascade built from the real package is a silent no-op: the run succeeds,
-the groin does nothing, and the output looks like a valid groin-on run.
+obx-cascade's Cascade has the GroinManager module (Cascade(groin_module=True,
+...)). A Cascade without a groin_module argument has no groin, so a groin-on
+run against it stops here rather than silently running without the groin.
 ```
 
 ```text
@@ -2239,14 +1797,16 @@ domains must be adjacent -- they share the blocked boundary at GIS 5.5.
 ```text
 --- the groin's two numbers ------------------------------------------------
 The share of the drift arriving at the face it holds back, and the first year
-it no longer works, both from hat_run.yaml; the callback is built with them as
-a strength history, [(1969, strength), (end_year, 0)].
+it no longer works, both from hat_run.yaml; the GroinManager gets them as a
+strength history, [(1969, strength), (end_year, 0)].
 ```
 
 ```text
---- 7.2 build the callback ---------------------------------------------------
-GROIN_CB is built unconditionally so 7.4's report renders either way.
-GROIN_CALLBACK is the one attached to the model in section 11.
+--- 7.2 The GroinManager's settings ------------------------------------------
+Cascade builds its GroinManager from GROIN_UPDRIFT_PAD, GROIN_DOWNDRIFT_PAD and
+GROIN_STRENGTH_HISTORY when GROIN_ENABLED (section 11.2:
+groin_module=GROIN_ENABLED); the strength history is drawn up either way for
+7.4's report.
 ```
 
 ```text
@@ -2270,7 +1830,7 @@ the same thing twice without saying which zero it was.
 ```text
 "nonourish" only when there was fill to withhold and a module to
 withhold it in: with beach_dune_manager off, "nobdm" already says no
-fill, and 1984 has no project to suppress. The project count is
+fill, and 1996 has no project to suppress. The project count is
 deliberately not in the name -- it is a property of the period, not of
 the scenario, and run_index.csv carries it as nourishment_projects.
 ```
@@ -2624,7 +2184,7 @@ and which commit produced both.
 ```text
 BOTH are recorded, and the product is not optional. Version numbers
 restart at v1 per product (2026-08-26), so "v1" alone no longer
-identifies a topography - 1984-start/v1 and 2004-start/v1 are
+identifies a topography - 1996-start/v1 and 2009-start/v1 are
 different surfaces. A run that logs only the version cannot be traced
 back to the arrays it read.
 ```
@@ -2673,11 +2233,9 @@ path, so a row and a directory match without reconstructing either.
 ```
 
 ```text
-The row goes INTO the metadata, under "index row", and run_index.csv is
-REBUILT from every run's metadata rather than appended to (2026-09-16).
-Appending was the one shared write that forced runs to be serial, and a
-rebuild after a move produced skeleton rows; a derived file has neither
-problem, and two runs finishing together both write the same table.
+The row goes INTO the metadata, under "index row". There is no
+run_index.csv since 2026-10-23: run_registry.scan_runs builds the
+cross-run table from every run's metadata on demand.
 ```
 
 ```text

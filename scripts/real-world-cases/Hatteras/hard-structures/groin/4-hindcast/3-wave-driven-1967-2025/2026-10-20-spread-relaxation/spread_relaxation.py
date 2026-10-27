@@ -80,17 +80,17 @@ CURRENT = False                               # set by --current
 # -----------------------------------------------------------------------------
 
 
-# The spread, patched into cascade.groin before the runner imports it
+# The spread, patched into the GroinManager Cascade builds before the runner runs
 def patch_groin(weights=SPREAD, both_sides=False):
+    import cascade.cascade as cc
     import cascade.groin as cg
-    base = cg.GroinCallback
+    base = cg.GroinManager
 
     class SpreadGroin(base):
-        def __call__(self, cascade, x_s_dt):
-            brie = cascade._brie_coupler._brie
+        def update(self, brie, x_s_dt):
             x = np.asarray(brie.x_s, dtype=float).copy()
             year = self.start_year + self._call_count
-            x_s_dt = super().__call__(cascade, x_s_dt)
+            x_s_dt = super().update(brie, x_s_dt)
             lo, hi = self._lo_pad, self._hi_pad
             # GIS 6's coming loss across the face, landward +; only while the groin works and GIS 6 is seaward
             f = 2 * self._diffusion_number(brie, x)[hi] * (x[lo] - x[hi])
@@ -110,7 +110,7 @@ def patch_groin(weights=SPREAD, both_sides=False):
             self.record[-1]["spread_gain_m"] = h
             return x_s_dt
 
-    cg.GroinCallback = SpreadGroin
+    cc.GroinManager = cg.GroinManager = SpreadGroin
 
 
 def run_dir(s, variant="spread", period=PERIOD):
@@ -228,7 +228,7 @@ def run_inputs(rd):
 def cmd_score(a):
     period = a.period
     import corrected_groin as cgm
-    import HAT_metres_1_offset_units as common
+    import site_layer.hat_scoring as common
     from matrix_vs_observed import model_end_change
     from site_layer.hat_observed_rates import net_change_domain_csv
     gap_obs = cgm.observed_change(period)

@@ -13,8 +13,8 @@ the drift held back across the groin, and the leak correction that cancels the s
 or lose at the groin's bends. The yearly loop repeats straight_coast_test.run() for the wave-driven groin so
 the two parts can be drawn apart; it is checked against run()'s own profile. Reruns one coast (seconds).
 
-The wave-driven groin is cascade/groin.py GroinCallback, the runner's groin since 2026-10-13. Like
-the fixed-shift groin it sits on the sandbox Cascade's `_groin_callback` (cascade/cascade_groin.py) and edits x_s_dt,
+The wave-driven groin is cascade/groin.py GroinManager, the runner's groin since 2026-10-13. Like
+the fixed-shift groin it acts just before BRIE's alongshore step (the groin step in Cascade.update()) and edits x_s_dt,
 the shoreline change each domain hands to BRIE. On a straight coast the groin-free shoreline has no bends,
 so the runner's footprint-based correction equals the rig's leak_correction().
 
@@ -162,11 +162,11 @@ def main():
     save(fig, OUT, dpi=250, close=True)
     record_caption(OUT, (
         "**Tests:** nothing new; this figure explains where the wave-driven groin ("
-        "`GroinCallback`, the runner's groin since 2026-10-13) acts in a CASCADE model year. The "
+        "`GroinManager`, the runner's groin since 2026-10-13) acts in a CASCADE model year. The "
         "companion of `../1-fixed-shift/figures/fixed_shift_1_in_the_model_year.png`. **How to read:** (a) the order "
         "within one year: every Barrier3D domain runs first, including its background erosion (BE), and hands "
         "BRIE its shoreline change for the year; the groin then edits that change, in the same place the fixed-shift groin "
-        "did (`_groin_callback` on the sandbox Cascade); BRIE then moves the shoreline alongshore, unchanged. "
+        "did (the groin step in `Cascade.update()`); BRIE then moves the shoreline alongshore, unchanged. "
         f"(b) the edit in year {a.year} of the straight-coast run with the coast at {a.theta:+d}° (BRIE's "
         f"alongshore step alone, option A waves, strength {sc.BLOCKING_FRACTION:g}), drawn on GIS labels as if "
         f"it were Buxton: grey, a uniform {EXAMPLE_BE:g} m of retreat from Barrier3D in every domain (made up "

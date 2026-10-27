@@ -20,6 +20,7 @@ WHAT THEY COVER
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -39,15 +40,15 @@ sys.path.insert(0, str(SCRIPTS))
 site_config = pytest.importorskip("site_layer.hatteras_site_config")
 topo_version = pytest.importorskip("site_layer.hat_topo_version")
 
-RUNNER_PY = SCRIPTS / "hatteras_ms" / "HAT_hindcast.py"
+# The runner's run-selecting sections live in its setup module since 2026-10-23
+RUNNER_SETUP = SCRIPTS / "hatteras_ms" / "hindcast" / "HAT_hindcast_setup.py"
 RUNNER_NB = SCRIPTS / "hatteras_ms" / "HAT_hindcast.ipynb"
 
 # Every period names these, as paths relative to data/hatteras_init/.
 FORCING_KEYS = ("storm_file", "island_offset_file", "road_setback_file")
 
-# The assignments that SELECT A RUN. If these two files disagree on one of
-# them, the notebook and the script are simulating different things under one
-# name -- the failure the sync rule in both docstrings exists to prevent.
+# The assignments that SELECT A RUN. They are made in the setup steps only; the
+# notebook typing one itself would let it simulate a run the script does not.
 SYNCED_ASSIGNMENTS = (
     "START_YEAR = ",
     "SOURCE_SINK_PRESET = ",
@@ -169,33 +170,42 @@ def test_preset_rates_are_finite(preset):
 # THE NOTEBOOK AND ITS HEADLESS MIRROR
 # ---------------------------------------------------------------------------
 
-def _assignments(text, prefix):
-    return [line.strip() for line in text.splitlines()
-            if line.startswith(prefix)]
+def _notebook_code():
+    nb = json.loads(RUNNER_NB.read_text(encoding="utf-8"))
+    return "\n".join("".join(cell["source"]) for cell in nb["cells"]
+                     if cell["cell_type"] == "code")
+
+
+# Every step HAT_hindcast.py takes, which the notebook must take too
+RUNNER_STEPS = ("prepare_run", "pre_run_diagnostics", "verify_run", "write_run_outputs", "make_run_figures")
+
+
+def test_notebook_takes_every_step():
+    """The notebook builds the run with the same functions as the script.
+
+    Since 2026-10-23 both call the setup_* steps, the outputs and the figures;
+    a section the notebook computed itself again could drift from the script,
+    the failure the old line-by-line comparison caught (2026-09-12: LOWESS_CONFIG
+    was one smoothing window in the script and two in the notebook).
+    """
+    if not (RUNNER_SETUP.exists() and RUNNER_NB.exists()):
+        pytest.skip("runner setup or notebook absent")
+    setup_text = RUNNER_SETUP.read_text(encoding="utf-8")
+    steps = re.search(r"^STEPS = \((.*?)\)", setup_text, re.M | re.S).group(1)
+    wanted = [n.strip() for n in steps.split(",") if n.strip()]
+    nb_text = _notebook_code()
+    missing = [n for n in wanted + list(RUNNER_STEPS[1:]) if f"{n}(r" not in nb_text]
+    assert not missing, f"the notebook does not call {missing}"
 
 
 @pytest.mark.parametrize("prefix", SYNCED_ASSIGNMENTS)
-def test_runner_and_notebook_agree(prefix):
-    """The .py is a mirror of the notebook; a run-selecting value must match.
-
-    Caught a real drift on 2026-09-12: LOWESS_CONFIG was one smoothing window
-    in the script and two in the notebook.
-    """
-    if not (RUNNER_PY.exists() and RUNNER_NB.exists()):
-        pytest.skip("runner or notebook absent")
-    py_text = RUNNER_PY.read_text(encoding="utf-8")
-    nb = json.loads(RUNNER_NB.read_text(encoding="utf-8"))
-    nb_text = "\n".join("".join(cell["source"]) for cell in nb["cells"]
-                        if cell["cell_type"] == "code")
-
-    in_py = _assignments(py_text, prefix)
-    in_nb = _assignments(nb_text, prefix)
-    if not in_py and not in_nb:
-        pytest.skip(f"neither file assigns {prefix!r}")
-    assert in_py == in_nb, (
-        f"{prefix!r} differs between the runner and the notebook:\n"
-        f"  .py:  {in_py}\n  .ipynb: {in_nb}")
-
+def test_notebook_sets_no_run_value_itself(prefix):
+    """A run-selecting value comes from the setup steps, never typed in the notebook."""
+    if not RUNNER_NB.exists():
+        pytest.skip("notebook absent")
+    typed = [line.strip() for line in _notebook_code().splitlines()
+             if line.lstrip().startswith(prefix)]
+    assert not typed, f"the notebook sets {prefix!r} itself: {typed}"
 
 # ---------------------------------------------------------------------------
 # THE FORCING FILES, WHEN THE DATA TREE IS PRESENT

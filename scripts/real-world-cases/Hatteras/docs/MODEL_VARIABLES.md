@@ -4,7 +4,7 @@ Every input CASCADE takes, its default, and the value the Hatteras hindcast uses
 
 - **Default**: the upstream value (constructor default, BRIE coupler constant, or
   the CASCADE template `data/default_cascade_variables/barrier3d-default-parameters.yaml`).
-- **Hatteras**: what `scripts/hatteras_ms/HAT_hindcast.py` passes through
+- **Hatteras**: what `scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast.py` passes through
   `build_cascade()` (`scripts/cascade_pipeline/hindcast.py`), with wave and run
   settings from `hat_run.yaml` / `HAT_*` variables, and Barrier3D settings from
   `data/hatteras_init/Hatteras-CASCADE-parameters.yaml`.
@@ -171,7 +171,7 @@ template's value.
 
 ## 4. Hatteras additions (not CASCADE inputs)
 
-Run settings from `scripts/hatteras_ms/hat_run.yaml`, overridable by `HAT_*` variables
+Run settings from `scripts/real-world-cases/Hatteras/hatteras_ms/hat_run.yaml`, overridable by `HAT_*` variables
 (`HAT_hindcast_config.py`).
 
 | Variable | Code default | Meaning |
@@ -180,9 +180,8 @@ Run settings from `scripts/hatteras_ms/hat_run.yaml`, overridable by `HAT_*` var
 | `source_sink_preset` | zeroBE | Background erosion preset |
 | `scenario` | full_management | Management scenario |
 | `relocations` | None | Historical road relocations on/off |
-| `offset_mode` | metres | How the island offset is built |
 | `geometry` | base | Reach (90 real domains) |
-| `groin_enabled` | False | GroinCallback on/off |
+| `groin_enabled` | False | GroinManager on/off (`Cascade(groin_module=...)`) |
 | `groin_strength_1996` | 0.16 | Share of the arriving drift the groin holds back, 1996 start |
 | `groin_strength_2009` | 0.10 | Share of the arriving drift the groin holds back, 2009 start |
 | `groin_strength` | None | Overrides both when set; needed for any other start year (0.25 = whole-life strength) |

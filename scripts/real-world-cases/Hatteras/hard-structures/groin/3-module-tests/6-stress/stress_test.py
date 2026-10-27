@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Try to break the runner's groin: GroinCallback under forcing it was never fitted to.
+Try to break the runner's groin: GroinManager under forcing it was never fitted to.
 
     python stress_test.py   ->  tables/stress_runs.csv, tables/stress_by_year.csv.gz
 
-The runner's own callback (cascade.groin.GroinCallback, imported unchanged) on the
+The runner's own groin module (cascade.groin.GroinManager, imported unchanged) on the
 straight-coast rig of ../2-straight-coast/1-run/: 61 domains of 500 m, one groin at the middle
-face, BRIE's implicit alongshore step alone on an infinitely long tilted coast. The callback reads a
+face, BRIE's implicit alongshore step alone on an infinitely long tilted coast. The GroinManager reads a
 stand-in for BRIE that carries a real Brie instance's tables and the rig's shoreline, as
 CASCADE hands it x_s_dt before BRIE's solve. Every run is paired with the same run with the groin
 off, and scored on the difference. Families, each set before the runs (README.md):
@@ -17,7 +17,7 @@ off, and scored on the difference. Families, each set before the runs (README.md
     3 notch           a sharp step already at the groin when it starts (Buxton's is 256 m)
     4 switch-off      on for 50 years, then off for 100
     5 cycling         on and off every 5 years
-    6 variable waves  a new wave climate each year, drift reversing in some; the callback as written
+    6 variable waves  a new wave climate each year, drift reversing in some; the GroinManager as written
                       (drift table read once) and with its drift table refreshed each year
     7 background      cross-shore change in x_s_dt, as Barrier3D passes it: steady retreat,
                       storm-like noise per domain, a storm pulse every 10 years
@@ -58,9 +58,9 @@ from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 sys.path[:0] = [str(HERE.parent / "2-straight-coast" / "1-run"), str(REPO)]
 import straight_coast_test as sc  # noqa: E402
 from brie import Brie  # noqa: E402
-from cascade.groin import GroinCallback, GroinOutsideTestedRange  # noqa: E402
+from cascade.groin import GroinManager, GroinOutsideTestedRange  # noqa: E402
 
-DIFFUSION_NUMBER = GroinCallback._diffusion_number   # BRIE's r at each face, as the callback reads it
+DIFFUSION_NUMBER = GroinManager._diffusion_number   # BRIE's r at each face, as the GroinManager reads it
 
 # --- CONFIG ------------------------------------------------------------------
 NY, DY_M, DT_YR = sc.NY, sc.DY_M, sc.DT_YR      # 61 domains of 500 m, 1-year step
@@ -93,8 +93,8 @@ TABLES = workspace_twin(HERE) / "tables"
 _BRIE = {}
 
 
-# The runner's callback, its tested-range guard recording when it would stop the run instead of stopping it
-class Recording(GroinCallback):
+# The runner's GroinManager, its tested-range guard recording when it would stop the run instead of stopping it
+class Recording(GroinManager):
     def __init__(self, *args, **kw):
         self.guard_year, self.guard_reason, self.trace = None, None, []
         super().__init__(*args, **kw)
@@ -142,12 +142,12 @@ def brie_step(b, slope, eta, dx):
     return spsolve(csr_matrix((dv, (b._di, b._dj))), rhs), theta
 
 
-# Net drift toward higher index on the undisturbed coast, m3/yr, as the callback reads it
+# Net drift toward higher index on the undisturbed coast, m3/yr, as the GroinManager reads it
 def drift0(b, theta0):
-    return float(GroinCallback._drift_table(b)[int(np.clip(round(90 - theta0), 1, b._wave_climl - 1))])
+    return float(GroinManager._drift_table(b)[int(np.clip(round(90 - theta0), 1, b._wave_climl - 1))])
 
 
-# One run: the callback in front of BRIE's step every year; returns one row per year
+# One run: the GroinManager in front of BRIE's step every year; returns one row per year
 def run(theta0, years=YEARS, strength=0.25, history=None, climate=OPTION_A, climate_of_year=None,
         refresh_drift=False, half_width=HALF_WIDTH, lo=LO, notch_m=0.0, background=None, seed=0,
         groin=True):
@@ -165,7 +165,6 @@ def run(theta0, years=YEARS, strength=0.25, history=None, climate=OPTION_A, clim
     history = history if history is not None else [(1, strength)]
     cb = Recording(updrift_pad=up, downdrift_pad=down, strength_history=history,
                                 start_year=1, n_domains=NY, half_width=half_width)
-    fake = SimpleNamespace(_brie_coupler=SimpleNamespace(_brie=None))
     bg_cum = np.zeros(NY)
     rows, crashed = [], None
     for year in range(1, years + 1):
@@ -178,10 +177,9 @@ def run(theta0, years=YEARS, strength=0.25, history=None, climate=OPTION_A, clim
         if groin:
             if refresh_drift:
                 cb._drift_table_m3_yr = None
-            fake._brie_coupler._brie = b
             try:
-                x_s_dt = cb(fake, x_s_dt)
-            except IndexError:                    # an angle past BRIE's table: the callback stops the run
+                x_s_dt = cb.update(b, x_s_dt)
+            except IndexError:                    # an angle past BRIE's table: the GroinManager stops the run
                 crashed = year
                 break
         dx = np.asarray(x_s_dt, dtype=float)
@@ -256,7 +254,7 @@ def case(family, label, steady=True, **kw):
     return row, by_year
 
 
-# Family 0: the callback on a straight coast at f 0.6 and a 5-cell zone is the wave-driven groin of 1-run/
+# Family 0: the GroinManager on a straight coast at f 0.6 and a 5-cell zone is the wave-driven groin of 1-run/
 def rig_check():
     t = sc.brie_tables()
     rows = []
@@ -264,11 +262,11 @@ def rig_check():
         ref, _ = sc.run(t, th, "corrected", 50)
         g = run(th, years=50, strength=sc.BLOCKING_FRACTION, half_width=sc.CORRECTION_HALF_WIDTH)
         rows.append(dict(theta0=th, updrift_1run_m=ref.updrift_seaward_m.iloc[-1],
-                         updrift_callback_m=g.updrift_seaward_m.iloc[-1],
-                         reach_1run_m=ref.reach_change_m.iloc[-1], reach_callback_m=g.net_m.iloc[-1]))
+                         updrift_groin_m=g.updrift_seaward_m.iloc[-1],
+                         reach_1run_m=ref.reach_change_m.iloc[-1], reach_groin_m=g.net_m.iloc[-1]))
     frame = pd.DataFrame(rows)
-    frame["max_diff_m"] = np.maximum((frame.updrift_1run_m - frame.updrift_callback_m).abs(),
-                                     (frame.reach_1run_m - frame.reach_callback_m).abs())
+    frame["max_diff_m"] = np.maximum((frame.updrift_1run_m - frame.updrift_groin_m).abs(),
+                                     (frame.reach_1run_m - frame.reach_groin_m).abs())
     return frame
 
 

@@ -17,7 +17,7 @@ it from the downdrift cell to the updrift cell through x_s_dt:
     x_s_dt[GIS 5] += q,  x_s_dt[GIS 6] -= q                            (x_s landward +)
 
 so the module's own books balance every year. BRIE and Barrier3D are not changed: the class
-replaces BlockingGroinCallback in a child process and the unchanged runner is driven as the
+replaces BlockingGroinManager in a child process and the unchanged runner is driven as the
 10-05 setup (full management, the solved edgeBE ends, relocations off, instant failure at the
 2004 step, f the deteriorated share of b). Scores as the conserving-groin study.
 
@@ -108,20 +108,19 @@ def drift_table(brie):
     return -conv[first:first + len(pdf)]
 
 
-# Child process: the drift-blocking groin in BlockingGroinCallback's place, then the unchanged runner
+# Child process: the drift-blocking groin in BlockingGroinManager's place, then the unchanged runner
 def _launch():
     import runpy
     import cascade.groin as cg
 
-    class DriftGroin(cg.BlockingGroinCallback):
+    class DriftGroin(cg.BlockingGroinManager):
         kind = "blocking"
 
-        def __call__(self, cascade, x_s_dt):
+        def update(self, brie, x_s_dt):
             year = self.start_year + self._call_count
             self._call_count += 1
             active = year >= self.install_year
             b = self._effective_trapping_rate(year) if active else 0.0
-            brie = cascade._brie_coupler._brie
             if not hasattr(self, "_q_net"):
                 self._q_net = drift_table(brie)
                 self.drift_m3_yr_TS, self.approach_deg_TS = [], []
@@ -163,7 +162,7 @@ def _launch():
                 row.update(net_drift_m3_yr=qv, approach_angle_deg=th)
             return rows
 
-    cg.BlockingGroinCallback = DriftGroin
+    cg.BlockingGroinManager = DriftGroin
     sys.path.insert(0, str(RUNNER.parent))
     sys.argv = [str(RUNNER)]
     runpy.run_path(str(RUNNER), run_name="__main__")
@@ -190,7 +189,7 @@ def run(period, b, f):
     if code == 0 and d is not None:
         (d / "drift_groin.txt").write_text(
             "patched in-process by drift_groin.py: the groin moves b of BRIE's wave-climate net drift at the "
-            "updrift approach face across GIS 5|6 each year (not BlockingGroinCallback's exchange); the "
+            "updrift approach face across GIS 5|6 each year (not BlockingGroinManager's exchange); the "
             "runner's report and groin labels do not show it\n")
     print(f"{time.strftime('%H:%M:%S')}  {window(period)} {member(b, f)}: exit {code} "
           f"({(time.time() - t0) / 60:.1f} min)", flush=True)

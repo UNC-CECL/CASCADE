@@ -2,10 +2,10 @@
 """
 End-to-end unattended driver: the comparison matrix, without and with the groin.
 
-    python scripts/hatteras_ms/HAT_run_matrix.py [--dry-run] [--no-model-state] [--stages 1,2,3]
+    python scripts/real-world-cases/Hatteras/hatteras_ms/HAT_run_matrix.py [--dry-run] [--no-model-state] [--stages 2,3]
 
 Runs every stage in dependency order and resumes where it stopped; each
-job recorded in a manifest. Details: scripts/hatteras_ms/README.md.
+job recorded in a manifest. Details: scripts/real-world-cases/Hatteras/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -21,7 +21,6 @@ import json
 import os
 import pathlib
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -32,7 +31,7 @@ _HERE = Path(__file__).resolve()
 # The scripts are in Hatteras/ (the folder holding hatteras_paths.py); data and output in the workspace on D:
 SCRIPTS_DIR = next(_p for _p in _HERE.parents
                    if (_p / "hatteras_paths.py").exists())
-for _path in (SCRIPTS_DIR, _HERE.parent):
+for _path in (SCRIPTS_DIR, _HERE.parent / "hindcast"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 from hatteras_paths import WORKSPACE as PROJECT_BASE_DIR  # noqa: E402
@@ -65,9 +64,10 @@ GROIN_END_YEAR = field_default("groin_end_year")
 GROIN_SPREAD_WEIGHTS = field_default("groin_spread_weights")
 
 HINDCAST = _HERE.parent / "HAT_hindcast.py"
+# The runner's SCENARIOS table lives in its setup module (since 2026-10-23)
+HINDCAST_SETUP = _HERE.parent / "hindcast" / "HAT_hindcast_setup.py"
 
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-RUN_INDEX = RAW_RUNS / "run_index.csv"
 
 PARAMETER_FILE = (PROJECT_BASE_DIR / "data" / "hatteras_init"
                   / "Hatteras-CASCADE-parameters.yaml")
@@ -79,14 +79,14 @@ LOCK = DRIVER_DIR / "driver.lock"
 
 _TABLE_HINT = (
     "expected a module-level `SCENARIOS = {{...}}` of literal dict(...) calls "
-    "in section 3 of {name}; if that changed, this parser changes with it")
+    "in {name}; if that changed, this parser changes with it")
 # -----------------------------------------------------------------------------
 
 
 # Reads the runner's SCENARIOS table out of its source, without running it
 def _scenario_table():
-    tree = ast.parse(HINDCAST.read_text(encoding="utf-8"),
-                     filename=str(HINDCAST))
+    tree = ast.parse(HINDCAST_SETUP.read_text(encoding="utf-8"),
+                     filename=str(HINDCAST_SETUP))
     assign = next(
         (node for node in tree.body
          if isinstance(node, ast.Assign)
@@ -94,26 +94,26 @@ def _scenario_table():
                  for target in node.targets)),
         None)
     if assign is None or not isinstance(assign.value, ast.Dict):
-        raise RuntimeError(_TABLE_HINT.format(name=HINDCAST.name))
+        raise RuntimeError(_TABLE_HINT.format(name=HINDCAST_SETUP.name))
 
     table = {}
     for key, value in zip(assign.value.keys, assign.value.values):
         if not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
-            raise RuntimeError(_TABLE_HINT.format(name=HINDCAST.name))
+            raise RuntimeError(_TABLE_HINT.format(name=HINDCAST_SETUP.name))
         if not (isinstance(value, ast.Call)
                 and isinstance(value.func, ast.Name)
                 and value.func.id == "dict"):
-            raise RuntimeError(_TABLE_HINT.format(name=HINDCAST.name))
+            raise RuntimeError(_TABLE_HINT.format(name=HINDCAST_SETUP.name))
         switches = {}
         for keyword in value.keywords:
             if keyword.arg is None or not isinstance(keyword.value,
                                                      ast.Constant):
-                raise RuntimeError(_TABLE_HINT.format(name=HINDCAST.name))
+                raise RuntimeError(_TABLE_HINT.format(name=HINDCAST_SETUP.name))
             switches[keyword.arg] = keyword.value.value
         table[key.value] = switches
 
     if not table:
-        raise RuntimeError(_TABLE_HINT.format(name=HINDCAST.name))
+        raise RuntimeError(_TABLE_HINT.format(name=HINDCAST_SETUP.name))
     return table
 
 
@@ -425,28 +425,6 @@ def matrix_stage(stage, groin, manifest, args):
 
 # Stages
 
-# Moves the retired run_index.csv aside, once
-def stage_archive(manifest, args):
-    key = job_key("archive")
-    if already_done(manifest, key):
-        print("\nSTAGE archive: SKIP (done)")
-        return
-    print(f"\n{'=' * 72}\nSTAGE archive\n{'=' * 72}")
-    if not RUN_INDEX.exists():
-        print("  no run_index.csv to archive")
-    elif args.dry_run:
-        print(f"  would archive {RUN_INDEX}")
-        return
-    else:
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        target = RAW_RUNS / f"run_index_archive_{stamp}.csv"
-        shutil.move(str(RUN_INDEX), str(target))
-        print(f"  archived -> {target.name}")
-    if not args.dry_run:
-        record(dict(key=key, stage="archive", ok=True,
-                    at=datetime.now().isoformat(timespec="seconds")))
-
-
 # Run: every stage asked for, in order
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
@@ -463,9 +441,10 @@ def main():
     parser.add_argument("--no-model-state", action="store_true",
                         help="skip the ~160 MB .npz per matrix run "
                              "(saves ~6 GB; figures then need a re-run)")
-    parser.add_argument("--stages", default="1,2,3",
-                        help="comma-separated stage numbers to run: 1 archive the run index, "
-                             "2 the no-groin matrix, 3 the groin matrix (default all)")
+    parser.add_argument("--stages", default="2,3",
+                        help="comma-separated stage numbers to run: 2 the no-groin matrix, "
+                             "3 the groin matrix (default both; stage 1, archiving "
+                             "run_index.csv, was removed 2026-10-23)")
     parser.add_argument("--scenarios", default=",".join(SCENARIOS),
                         help="comma-separated scenarios to cover "
                              "(default all; the reloc arm of each is still "
@@ -517,8 +496,6 @@ def main():
     manifest = load_manifest()
     totals = {}
 
-    if 1 in stages:
-        stage_archive(manifest, args)
     if 2 in stages:
         totals["matrix nogroin"] = matrix_stage(
             "matrix_nogroin", False, manifest, args)

@@ -47,6 +47,8 @@ def has_target(start_year, end_year):
 # The model smoothed as every score smooths it: 7-domain LOWESS, GIS 1-10 raw; the last domain raw too,
 # because the end solve matches that domain's own value (Hannah, 2026-10-06)
 def smooth_model(position_m, domains=HATTERAS_DOMAINS, lowess_config=LOWESS_CONFIG):
+    # position_m is a whole padded row: its length gives the run's buffers (15 a side before 2026-10-21, 30 since)
+    domains = domains.for_total(np.size(position_m))
     real = np.asarray(position_m, dtype=float)[domains.start_real_index:domains.end_real_index]
     gis = np.arange(domains.first_gis_id, domains.last_gis_id + 1, dtype=float)
     sm = lowess(real, gis, frac=max(lowess_config.window_domains) / len(gis),

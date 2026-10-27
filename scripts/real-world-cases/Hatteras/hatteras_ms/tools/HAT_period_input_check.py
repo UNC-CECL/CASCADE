@@ -1,11 +1,11 @@
 """
 Does every hindcast period resolve everything it needs, and does each file exist on disk?
 
-    python scripts/hatteras_ms/tools/HAT_period_input_check.py
-    python scripts/hatteras_ms/tools/HAT_period_input_check.py --period 1996
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_period_input_check.py
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_period_input_check.py --period 1996
 
 Checks the forcing inputs HATTERAS_PERIODS names, and the topography and
-rate files, per period; prints a table and exits nonzero on a blocker. Details: scripts/hatteras_ms/README.md.
+rate files, per period; prints a table and exits nonzero on a blocker. Details: scripts/real-world-cases/Hatteras/hatteras_ms/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -30,7 +30,8 @@ if str(_HAT_DIR) not in _hat_sys.path:
 from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
 sys.path.insert(0, str(_HAT_DIR))
 
-from site_layer.hatteras_site_config import (                      # noqa: E402
+from site_layer.hatteras_site_config import (
+    first_model_year, last_model_year,                      # noqa: E402
     HATTERAS_PERIODS, HATTERAS_BE_PRESETS, HATTERAS_DOMAINS,
     HATTERAS_ROAD_EVENTS, HATTERAS_NOURISHMENT_PROJECTS,
     HATTERAS_ROAD_ELEVATION_FILE, HATTERAS_FIRST_ROAD_DOMAIN,
@@ -97,9 +98,13 @@ def check_offsets(path, geometry):
         return found
     values = np.loadtxt(path, delimiter=",", skiprows=1).reshape(-1)
     found.detail = "{0} domains".format(values.size)
-    if values.size != geometry.total_domains:
+    # The run re-closes the buffers for its own geometry (build_island_offset, since 2026-10-21), so the
+    # file need only hold the real domains between equal buffers: 120 values serve the 150-domain grid
+    extra = values.size - geometry.num_real_domains
+    if extra < 0 or extra % 2:
         found.status = "SHAPE"
-        found.detail += ", expected {0}".format(geometry.total_domains)
+        found.detail += ", cannot hold {0} real domains between equal buffers".format(
+            geometry.num_real_domains)
     return found
 
 
@@ -180,8 +185,8 @@ def check_period(start_year):
     run_years = end_year - start_year
 
     print("\n" + "=" * 78)
-    print("{0}-{1}   {2} model years, simulating {0}-{3}".format(
-        start_year, end_year, run_years, end_year - 1))
+    print("{0}-{1}   {2} model years, storms {3}-{4}".format(
+        start_year, end_year, run_years, first_model_year(start_year), last_model_year(start_year)))
     print("=" * 78)
 
     findings = [

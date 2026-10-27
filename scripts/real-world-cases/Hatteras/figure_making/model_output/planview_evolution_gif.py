@@ -61,6 +61,7 @@ from cascade_pipeline.hindcast import load_island_offset_dam  # noqa: E402
 from cascade_pipeline.plotting.init_planview import (  # noqa: E402
     DEFAULT_PLAN_VIEW, build_canvas, pad_cross_shore, plot_canvas)
 from cascade_pipeline.plotting.road_planview import overlay_roadway  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 HOLD_FRAMES = 8      # frames held on the final year, so the totals can be read
@@ -106,17 +107,22 @@ def load_history(run_dir):
             "The run was made with --no-model-state, and the per-year grids "
             "this needs were never written. Re-run that cell without it.")
 
-    cascade = np.load(matches[0], allow_pickle=True)["cascade"].item()
+    cascade = load_saved_cascade(matches[0])
     barrier3d = cascade._barrier3d
     inner = [getattr(model, "_model", model) for model in barrier3d]
 
     n_years = len(inner[0].DomainTS)
     config = DEFAULT_PLAN_VIEW
+    # The run's own buffers (15 a side before 2026-10-21, 30 since), not the site config's
+    geometry = GEOMETRY.for_total(len(inner))
 
     # The canvas frame is the island offset; x_s supplies only its change (README)
     offset_file = HATTERAS_DATA_BASE / HATTERAS_PERIODS[
         _period_start(run_dir, cascade)]["island_offset_file"]
-    base_offset = load_island_offset_dam(offset_file, GEOMETRY)
+    # The offset the run was made with, kept in its state (dam); the period's file only for a run without one
+    own = getattr(cascade, "_shoreline_offset", None)
+    own = np.asarray([] if own is None else own, dtype=float)
+    base_offset = own if own.size == len(inner) else load_island_offset_dam(offset_file, geometry)
     x_s_initial = np.array([float(model.x_s_TS[0]) for model in inner])
 
     # The road moves too: its setback is measured from a retreating dune line
@@ -129,7 +135,7 @@ def load_history(run_dir):
         road_domains = np.zeros(len(inner), dtype=bool)
         for gis in range(HATTERAS_FIRST_ROAD_DOMAIN,
                          HATTERAS_LAST_ROAD_DOMAIN + 1):
-            pad = GEOMETRY.gis_to_pad(gis)
+            pad = geometry.gis_to_pad(gis)
             if 0 <= pad < road_domains.size:
                 road_domains[pad] = True
 
@@ -178,7 +184,7 @@ def load_history(run_dir):
         setbacks=setbacks_by_year, managed=managed_by_year,
         relocations=relocations_by_year, rebuilds=rebuilds_by_year,
         prescribed_setback_m=prescribed, road_domains=road_domains,
-        start_year=start_year)
+        start_year=start_year, geometry=geometry)
 
 
 # A zero setback inside the road reach is the road on the dune line, not no road (README)
@@ -299,6 +305,7 @@ def main():
 
     run_dir = Path(args.run_dir).resolve()
     history = load_history(run_dir)
+    geometry = history.geometry
     n_years = len(history.grids)
 
     # The calendar year comes from the run name's period
@@ -326,7 +333,7 @@ def main():
         ever_moved = ever_moved | flags
         ever_by_year.append(ever_moved.copy())
 
-    canvases = [build_canvas(grids, offsets, GEOMETRY)
+    canvases = [build_canvas(grids, offsets, geometry)
                 for grids, offsets in zip(history.grids, history.offsets)]
     # ONE y limit for every frame: what moves should be the island.
     frame_rows = max(canvas[0].shape[0] for canvas in canvases)
@@ -357,7 +364,7 @@ def main():
                 fontsize=15, fontweight="bold", color=HUD_COLOR,
                 ha="left", va="center")
     figure.text(0.062, 0.929,
-                f"{run_dir.name}   {DOT}   {GEOMETRY.num_real_domains} domains "
+                f"{run_dir.name}   {DOT}   {geometry.num_real_domains} domains "
                 f"{DOT}   10 m cells   {DOT}   elevation relative to MHW   "
                 f"{DOT}   cross-shore axis stretched {exaggeration:.1f}{TIMES}",
                 fontsize=9.5, color="#5C6874", ha="left", va="center")
@@ -374,7 +381,7 @@ def main():
         year_index = min(index, n_years - 1)
         axis.clear()
         canvas, starts, per_domain, first_real = canvases[year_index]
-        plot_canvas(canvas, starts, per_domain, first_real, GEOMETRY,
+        plot_canvas(canvas, starts, per_domain, first_real, geometry,
                     title="", ax=axis, colorbar=False,
                     xlabel=f"Alongshore domain   (south {ARROW} north,  "
                            f"Cape Point {ARROW} Rodanthe)")
@@ -385,9 +392,9 @@ def main():
 
         # The road
         overlay_roadway(axis, np.where(alive, setbacks, 0.0), offsets,
-                        GEOMETRY, starts, per_domain, first_real)
+                        geometry, starts, per_domain, first_real)
         for pad in np.flatnonzero(history.road_domains & ~alive):
-            plotted = int(pad) - GEOMETRY.start_real_index
+            plotted = int(pad) - geometry.start_real_index
             if not 0 <= plotted < len(starts):
                 continue
             axis.hlines(_road_row(offsets[pad], setbacks[pad]),
@@ -397,7 +404,7 @@ def main():
 
         # Relocations: marked in their year, then kept as a faint tick
         for pad in np.flatnonzero(ever_by_year[year_index]):
-            plotted = int(pad) - GEOMETRY.start_real_index
+            plotted = int(pad) - geometry.start_real_index
             if not 0 <= plotted < len(starts):
                 continue
             centre = starts[plotted] + per_domain[plotted] / 2
@@ -476,7 +483,7 @@ def main():
 
     # One legend for the road, at figure level
     road_handles = list(overlay_roadway(
-        axis, history.setbacks[0], history.offsets[0], GEOMETRY,
+        axis, history.setbacks[0], history.offsets[0], geometry,
         *canvases[0][1:]))
     if total_moves:
         road_handles.append(Line2D(
@@ -507,7 +514,7 @@ def main():
     plt.close(figure)
     print(f"wrote {out}")
     print(f"  {n_years} model years + {HOLD_FRAMES} held, "
-          f"{GEOMETRY.num_real_domains} real domains, frame {frame_rows} rows")
+          f"{geometry.num_real_domains} real domains, frame {frame_rows} rows")
     print(f"  {total_events} relocation events on {n_road_domains} road "
           f"domains ({n_moved_domains} ever affected): {total_moves} move the "
           f"road landward, {total_pinned} re-pin it at the dune line")

@@ -184,7 +184,7 @@ def main() -> Path:
         "**Bring everything up to date:** `python scripts/figure_making/tools/regenerate_all_figures.py`",
         "(one folder: `--only 5-results`). Each figure's PDF and caption sit in the",
         "`supporting/` folder beside it; `talk/` holds projector versions at the same paths.",
-        "Retired figures go to `output/archive/<date>_<what>/`, never back in here.",
+        "Retired figures are deleted, never kept in here.",
         "",
     ]
     lines += tree_lines() + [""]

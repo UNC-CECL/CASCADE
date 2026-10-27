@@ -125,10 +125,6 @@ build — a date alone cannot tell the next one from the last, so demanding a
 bare date asked for information to be thrown away. The **date still comes
 first**, so folders sort chronologically and the rule's point survives.
 
-`output/archive/` has its own documented idiom, `YYYY-MM-DD_<what>/`
-(`output/README.md`). What sits inside one of those is filed, not stray, and
-is not asked to be a `superseded_` folder as well.
-
 `scripts/repo_tools/hat_layout_check.py` enforces this: under `scripts/` a
 retirement folder of any name is flagged (delete it); elsewhere, date first,
 optional reason after it, and a `WHY.md`.

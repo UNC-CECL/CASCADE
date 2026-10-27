@@ -37,7 +37,7 @@ from site_layer.hat_figure_style import (INK_MUTED, SMOOTH_RAMP, _title, apply_s
 # --- CONFIG ------------------------------------------------------------------
 OUT = figure_dir("mechanics", "barrier3d") / "barrier3d_dune_growth_examples.png"
 PARAMS = PROJECT_ROOT / "data" / "hatteras_init" / "Hatteras-CASCADE-parameters.yaml"
-# DUNE_GROWTH_RATES in scripts/hatteras_ms/HAT_hindcast.py
+# DUNE_GROWTH_RATES in scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast.py
 RATES = {"1996 start (1996–2009)": (0.01, 0.03), "2009 start (2009–2025)": (0.02, 0.04)}
 START_HEIGHTS_M = (1.0, 5.0, 10.0)      # dune height above the berm
 YEARS = 30

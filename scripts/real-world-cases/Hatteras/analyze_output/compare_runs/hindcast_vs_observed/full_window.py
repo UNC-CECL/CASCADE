@@ -96,7 +96,7 @@ def _gis(values):
 # Every annual model shoreline as change from the start, seaward +; row k is 1 Jan of START + k
 def model_changes(rd):
     m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
-    D = HATTERAS_DOMAINS
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
     return [_gis(-(m[k] - m[0])[D.start_real_index:D.end_real_index]) for k in range(len(m))]
 
 
@@ -249,7 +249,7 @@ def gif(preset, rd, models, change):
 # Start, observed end and modelled end in the model frame, landward up as in the runner's position GIFs
 def positions_figure(preset, rd, obs_net_raw):
     m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
-    D = HATTERAS_DOMAINS
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
     # Landward positive, so a plain axis puts landward up and the ocean at the bottom
     start = _gis(m[0][D.start_real_index:D.end_real_index])
     model_end = _gis(m[-1][D.start_real_index:D.end_real_index])
@@ -302,7 +302,7 @@ def positions_figure(preset, rd, obs_net_raw):
 # One GIF-style frame per 15-domain section: the start, the modelled end with its change shaded, CoastSat 2025 on top
 def position_section_figures(preset, rd, obs_net_raw):
     m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
-    D = HATTERAS_DOMAINS
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
     # Landward positive, as the runner's position GIFs draw it (ocean at the bottom)
     start = _gis(m[0][D.start_real_index:D.end_real_index])
     model_end = _gis(m[-1][D.start_real_index:D.end_real_index])
@@ -376,8 +376,8 @@ def _relabel_as_position(fig, ax):
 
 # The model line smoothed as the observation is (7-domain LOWESS, GIS 1-10 raw), buffers left as they are
 def _smooth_model(values):
-    D = HATTERAS_DOMAINS
     out = np.asarray(values, float).copy()
+    D = HATTERAS_DOMAINS.for_total(out.size)
     out[D.start_real_index:D.end_real_index] = mvo.smoothed(
         _gis(out[D.start_real_index:D.end_real_index])).to_numpy(float)
     return out
@@ -385,7 +385,7 @@ def _smooth_model(values):
 
 # Draw one runner figure with the smoothed model, put the raw model faint behind it, rename, save
 def _draw_smoothed_model(draw, raw, png, position):
-    D = HATTERAS_DOMAINS
+    D = HATTERAS_DOMAINS.for_total(len(raw))
     fig, ax = draw(_smooth_model(raw))[:2]
     gis = np.arange(D.first_gis_id, D.last_gis_id + 1)
     ax.plot(gis, np.asarray(raw, float)[D.start_real_index:D.end_real_index],
@@ -421,15 +421,16 @@ def runner_style_figures(preset, rd, change):
                   wave_climate=meta.get("scenario", {}).get("wave climate"))
     m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
     years = m.shape[0] - 1
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
     # As the runner: 7-domain LOWESS, GIS 1-10 raw
     lowess = LowessConfig(window_domains=(7,), skip_southern_domains=10)
-    kw = dict(domains=HATTERAS_DOMAINS, annotations=HATTERAS_ANNOTATIONS, lowess_config=lowess)
+    kw = dict(domains=D, annotations=HATTERAS_ANNOTATIONS, lowess_config=lowess)
 
     rate, _ = compute_lrr(m, span_years=years, flip_sign=True)
     cs_rate = build_coastsat_series(
         [CoastSatDataset(label=f"CoastSat LRR ({START}-{END})", period_start=START,
                          csv_path=str(COASTSAT_LRR_ROOT / WINDOW / "transect_lrr_full.csv"))],
-        active_period_start=START, lowess_config=lowess, domains=HATTERAS_DOMAINS)
+        active_period_start=START, lowess_config=lowess, domains=D)
     cfg = dataclasses.replace(DEFAULT_RATE_COMPARISON, ylim=RATE_YLIM, ylim_real=RATE_YLIM)
     pngs = [resolve(rd, "figure_rate", run_name), resolve(rd, "figure_rate_buffers", run_name)]
     _draw_smoothed_model(lambda v: plot_rate_comparison(
@@ -446,7 +447,7 @@ def runner_style_figures(preset, rd, change):
     cs_pos = build_coastsat_series(
         [CoastSatDataset(label="CoastSat observed change",
                          period_start=START, csv_path=str(obs_csv), rate_col="change_m")],
-        active_period_start=START, lowess_config=lowess, domains=HATTERAS_DOMAINS)
+        active_period_start=START, lowess_config=lowess, domains=D)
     position = compute_change_rate(m, span_years=1, flip_sign=True)
     pcfg = dataclasses.replace(
         DEFAULT_RATE_COMPARISON, quantity="position",

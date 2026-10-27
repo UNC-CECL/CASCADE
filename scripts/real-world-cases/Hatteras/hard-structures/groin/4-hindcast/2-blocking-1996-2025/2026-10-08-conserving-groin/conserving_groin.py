@@ -6,7 +6,7 @@ Refit the blocking groin (b, f) on 1996-2009 with a conserving face exchange, an
     python conserving_groin.py score                      # -> grid_scores.csv, budget.csv
     python conserving_groin.py test --b 0.6 --f 0.6       # one cell on 2009-2025
 
-The pinned BlockingGroinCallback cancels b of each cell's own coupling to the face, with
+The pinned BlockingGroinManager cancels b of each cell's own coupling to the face, with
 each cell's own diffusion number, so GIS 5 loses about four times what GIS 6 gains. Here
 both sides use one coefficient, r_face: BRIE's diffusion number for the shoreline angle
 across the GIS 5|6 face (the forward difference brie.py assigns to the lower cell), so
@@ -93,15 +93,15 @@ def shoreline_file(study, period, b, f):
 def _launch():
     import runpy
     import cascade.groin as cg
-    pinned_r = cg.BlockingGroinCallback._r_ipl
+    pinned_r = cg.BlockingGroinManager._r_ipl
 
-    class Conserving(cg.BlockingGroinCallback):
+    class Conserving(cg.BlockingGroinManager):
         kind = "blocking"
 
         def _r_ipl(self, brie, x_s, i):
             return pinned_r(brie, x_s, self._lo)
 
-    cg.BlockingGroinCallback = Conserving
+    cg.BlockingGroinManager = Conserving
     sys.path.insert(0, str(RUNNER.parent))
     sys.argv = [str(RUNNER)]
     runpy.run_path(str(RUNNER), run_name="__main__")

@@ -47,7 +47,7 @@ from site_layer.hat_topo_version import offset_file  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 STUDY = (workspace_twin(_REPO) / "output" / "raw_runs" / "experiments" / "island-offset"
          / "2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a")
-OUT = COMPARISONS_ROOT / "offset_source"
+OUT = COMPARISONS_ROOT / "offset_source" / "duneline_vs_shoreline"
 PERIODS = ((1996, 2010), (2010, 2024))
 SOURCES = ("duneline", "shoreline")
 COL = {"duneline": "#1b7f6b", "shoreline": "#6a3d9a"}   # as in the study's figures

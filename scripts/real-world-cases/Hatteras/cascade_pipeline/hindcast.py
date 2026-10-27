@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-# Which Cascade class: the package (obx-cascade has the pre-AST groin hook) unless CASCADE_USE_SANDBOX
+# Which Cascade class: the package (obx-cascade has the GroinManager module) unless CASCADE_USE_SANDBOX
 # asks for the old cascade_groin sandbox, which only the hannahaline/hatteras-cascade branch has
 USE_SANDBOX_CASCADE = os.environ.get(
     "CASCADE_USE_SANDBOX", "0").strip().lower() not in (
@@ -34,6 +34,7 @@ else:
 
 # scripts/ is this package's parent, so the topography resolver imports without a path hack
 from site_layer.hat_topo_version import domain_arrays, dune_line_for_year
+from cascade.groin import strength_in_year
 
 from cascade_pipeline import nourishment as nourishment_module
 from cascade_pipeline import roadway as roadway_module
@@ -47,10 +48,10 @@ __all__ = [
     "build_domain_file_paths", "load_barrier3d_contract", "check_domain_units",
     "load_island_offset_dam", "build_island_offset",
     "close_offset_ring", "pad_offset_ring",
-    "island_offset_tilts", "ISLAND_OFFSET_MODES", "load_storm_series", "build_background_erosion",
+    "island_offset_tilts", "load_storm_series", "build_background_erosion",
     "groin_trapping_schedule",
     "build_target_table", "groin_differential", "scenario_run_name",
-    "load_absolute_dune_distance", "build_shoreline_target",
+    "load_absolute_dune_distance", "build_shoreline_target", "build_coastsat_target",
     "build_cascade", "run_cascade_simulation", "brie_r_ipl",
     "measure_groin_extent",
 ]
@@ -178,9 +179,6 @@ def load_island_offset_dam(offset_path, geometry):
     return offset_m / DAM_TO_M
 
 
-ISLAND_OFFSET_MODES = ("asrun", "metres", "detrended")
-
-
 def close_offset_ring(real_m, buffers, slope_steps=3):
     """Buffer values carrying the shoreline from real_m[-1] back to real_m[0].
 
@@ -234,8 +232,8 @@ def pad_offset_ring(real_m, buffers):
 
     The one definition of the padding. step2_raw_offsets_to_island_offset.py writes the
     offset files with it (every v1 since 2026-09-24), and build_island_offset
-    re-closes with it, so a file built by it is exactly what metres mode hands
-    Cascade.
+    re-closes with it, so a file built by it is exactly what build_island_offset
+    hands Cascade.
 
     Args:
         real_m: The real-domain offsets, in metres, south to north.
@@ -249,7 +247,7 @@ def pad_offset_ring(real_m, buffers):
     return np.concatenate([left, real_m, right])
 
 
-def build_island_offset(offset_path, geometry, mode="metres"):
+def build_island_offset(offset_path, geometry):
     """Builds the `shoreline_offset` array Cascade is handed.
 
     UNITS. `Cascade(shoreline_offset=...)` must be in METRES.
@@ -259,43 +257,24 @@ def build_island_offset(offset_path, geometry, mode="metres"):
     meters") and update_ast (`barrier3d.x_s = brie.x_s / 10`). The measurement file is already metres,
     so it needs no conversion at all.
 
+    The measurement goes in as-is, with the ring re-closed, carrying the
+    island's full planform including its ~7 degree lean. A file built since
+    2026-09-24 (the current v1) holds this closure, so it comes back unchanged;
+    an older file's slope-and-bridge buffers are replaced. Always metres since
+    2026-10-23: the "asrun" (offset / 10, the pre-2026-09-24 units error) and
+    "detrended" modes were removed.
+
     Args:
         offset_path: Padded offset CSV, one value per padded domain, meters.
         geometry: DomainGeometry the file must match in length.
-        mode: Which variant to build.
-            "asrun"     - meters / 10, reproducing the historical unit error
-                          exactly, buffers included -- so only with the
-                          build a run was made from (v1 for every run before
-                          2026-09-24, now superseded_20260924_pre-metres/v1; the
-                          current v1 closes the buffer differently).
-            "metres"    - the measurement as-is, with the ring re-closed.
-                          Carries the island's full planform including its
-                          ~7 degree lean. The default since 2026-09-24. A
-                          file built since then (the current v1) holds this
-                          closure, so it comes back unchanged; an older
-                          file's slope-and-bridge buffers are replaced.
-            "detrended" - the measurement with its linear trend removed, ring
-                          re-closed. Keeps all 2052 m of real curvature and
-                          drops the lean, which is what lets the periodic
-                          domain close without a steep buffer.
 
     Returns:
         A 1-D array, one value per padded domain, ready to pass to Cascade.
 
     Raises:
-        ValueError: If the file length does not match the geometry, or the
-            mode is unknown.
+        ValueError: If the file cannot hold the geometry's real domains.
     """
-    if mode not in ISLAND_OFFSET_MODES:
-        raise ValueError(f"offset mode {mode!r} must be one of "
-                         f"{list(ISLAND_OFFSET_MODES)}")
     offset_m = np.loadtxt(offset_path, skiprows=1, delimiter=",")
-    if mode == "asrun":
-        if offset_m.ndim != 1 or offset_m.size != geometry.total_domains:
-            raise ValueError(f"{offset_path.name}: expected "
-                             f"{geometry.total_domains} values, got shape "
-                             f"{offset_m.shape}")
-        return offset_m / DAM_TO_M
 
     # The file's own buffers are dropped and the ring re-closed, so a file padded for another buffer count
     # (the 120-value files, 15 a side, under the 30-buffer geometry of 2026-10-21) serves as long as its real
@@ -305,9 +284,6 @@ def build_island_offset(offset_path, geometry, mode="metres"):
         raise ValueError(f"{offset_path.name}: {offset_m.shape} values cannot hold "
                          f"{geometry.num_real_domains} real domains between equal buffers")
     real_m = offset_m[extra // 2:extra // 2 + geometry.num_real_domains]
-    if mode == "detrended":
-        x = np.arange(real_m.size) * geometry.domain_spacing_m
-        real_m = real_m - np.polyval(np.polyfit(x, real_m, 1), x)
 
     return pad_offset_ring(real_m, geometry.num_buffer_domains)
 
@@ -386,16 +362,15 @@ def build_background_erosion(be_rates, geometry):
 
 # Groin diagnostics
 
-def groin_trapping_schedule(callback, start_year, end_year):
+def groin_trapping_schedule(strength_history, start_year, end_year):
     """The groin's strength for every model year of a period.
 
-    Reads the callback's strength history without running it.
-    `strength` is a pure function of the year -- it does not
-    touch `_call_count` -- so querying it here leaves the callback's year
-    counter at zero for the actual run.
+    Reads the strength history the GroinManager is built with, so it can be
+    reported before the Cascade (and its GroinManager) exists.
 
     Args:
-        callback: A GroinCallback.
+        strength_history: (from_year, strength) pairs, as passed to
+            Cascade(groin_strength_history=...).
         start_year: First model year.
         end_year: Last model year, exclusive.
 
@@ -403,7 +378,8 @@ def groin_trapping_schedule(callback, start_year, end_year):
         A (years, strength) tuple of 1-D arrays.
     """
     years = np.arange(start_year, end_year)
-    m_eff = np.array([callback.strength(int(y)) for y in years])
+    history = sorted((int(year), float(strength)) for year, strength in strength_history)
+    m_eff = np.array([strength_in_year(history, int(y)) for y in years])
     return years, m_eff
 
 
@@ -624,6 +600,44 @@ def build_shoreline_target(model_year0_m, start_year, end_year, geometry,
     return target_m, observed_change_m
 
 
+def build_coastsat_target(model_year0_m, cs_series, lowess_config, geometry,
+                          window, span_years):
+    """CoastSat end-year shoreline position, in the model's own x_s frame.
+
+    The run's scoring target (build_target_table: LOWESS, GIS 1..skip raw)
+    times the run's span, added to the model's year-0 position, so the gap
+    between it and the run is the misfit the skill numbers grade. Same
+    return shape as build_shoreline_target.
+
+    Args:
+        model_year0_m: shoreline_m[0], the run's year-0 position (raw x_s_TS
+            convention, meters, increasing landward), one value per PADDED
+            domain.
+        cs_series: build_coastsat_series output; its active entry is used.
+        lowess_config: LowessConfig the series was built with.
+        geometry: DomainGeometry.
+        window: Reference LOWESS window, in domains.
+        span_years: Years the LRR is projected over (end - start).
+
+    Returns:
+        (target_m, observed_change_m):
+            target_m: padded array of target positions, NaN in the buffers.
+            observed_change_m: real-domain change, + = landward.
+        Both None if no CoastSat window is active for the run.
+    """
+    cs = next((c for c in cs_series if c["active"]), None)
+    if cs is None:
+        return None, None
+    table = build_target_table(cs, lowess_config, geometry, window)
+    # CoastSat LRR is + seaward; x_s_TS is + landward
+    observed_change_m = -table["target_lrr_m_yr"].to_numpy(dtype=float) * span_years
+
+    target_m = np.full(geometry.total_domains, np.nan)
+    real = slice(geometry.start_real_index, geometry.end_real_index)
+    target_m[real] = np.asarray(model_year0_m)[real] + observed_change_m
+    return target_m, observed_change_m
+
+
 # Run identity
 
 def scenario_run_name(switches, stem, **overrides):
@@ -733,10 +747,13 @@ def build_cascade(
     sandbag_management_on, sandbag_elevation,
     enable_shoreline_offset, shoreline_offset,
     wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction,
-    berm_elevation, MHW, data_base, parameter_file, groin_callback=None,
+    berm_elevation, MHW, data_base, parameter_file,
     relocation_setback_m=None, beta=0.04, road_dune_rebuild_trigger_m=20.0,
+    groin_module=False, groin_updrift_pad=None, groin_downdrift_pad=None,
+    groin_strength_history=None, groin_start_year=1,
+    groin_spread_weights=(1.0, 0.0, 0.0),
 ):
-    """Constructs a Cascade and attaches the groin, without stepping it.
+    """Constructs a Cascade, with its GroinManager if groin_module, without stepping it.
 
     Separate from run_cascade_simulation so section 11 can inspect the model
     before any time step runs: BRIE's diffusivity and the shoreface depth are
@@ -778,7 +795,14 @@ def build_cascade(
             against.
         parameter_file: Barrier3D parameter yaml name, resolved by
             CASCADE inside data_base.
-        groin_callback: A GroinCallback to attach, or None.
+        groin_module: Whether Cascade builds its GroinManager.
+        groin_updrift_pad, groin_downdrift_pad: Padded indices of the two
+            domains sharing the groin face.
+        groin_strength_history: (from_year, strength) pairs, calendar years.
+        groin_start_year: Calendar year of the first update, so the
+            GroinManager counts in the same years as the history.
+        groin_spread_weights: Shares of the updrift pad's loss across the
+            face kept on it and moved to the two pads beyond it.
         road_dune_rebuild_trigger_m: obx-cascade's
             dune_mgmt_road_setback_trigger: where the road sits farther than
             this behind the dune, RoadwayManager leaves the dunes to
@@ -850,10 +874,14 @@ def build_cascade(
 
         nourishment_volume=nourishment_volume,
         nourishment_interval=None,
-    )
 
-    if groin_callback is not None:
-        cascade._groin_callback = groin_callback
+        groin_module=groin_module,
+        groin_updrift_pad=groin_updrift_pad,
+        groin_downdrift_pad=groin_downdrift_pad,
+        groin_strength_history=groin_strength_history,
+        groin_start_year=groin_start_year,
+        groin_spread_weights=groin_spread_weights,
+    )
 
     # The relocation target is an argument (road_relocation_setback); None relocates to the measured offset
 
@@ -864,7 +892,7 @@ def run_cascade_simulation(
     cascade, run_years, name, run_dir, start_year, geometry,
     alongshore_section_count,
     historical_road_events=(), relocations_enabled=True, setback_check=None,
-    nourishment_schedule=None, groin_callback=None, progress=None,
+    nourishment_schedule=None, progress=None,
     save_model_state=True,
 ):
     """Steps a built Cascade through its period and writes the run artifacts.
@@ -882,7 +910,6 @@ def run_cascade_simulation(
         relocations_enabled: Global toggle for relocation events.
         setback_check: {gis: measured_setback_m} reported beside relocations.
         nourishment_schedule: A NourishmentSchedule, or None for no fills.
-        groin_callback: The attached GroinCallback, for diagnostics output.
         progress: Optional tqdm-like object with update() and write().
             When given, the year counter advances the bar and every event
             message is written through it, so the messages scroll above a
@@ -968,11 +995,10 @@ def run_cascade_simulation(
     if _states != run_years + 1:
         print(f"\n  NOTE: {_states} annual states for {run_years} run_years "
               f"(expected {run_years + 1}) -- the run ended early")
-    if groin_callback is not None and len(groin_callback.record) == 0:
+    if cascade.groin is not None and len(cascade.groin.record) == 0:
         print("\n" + "!" * 74)
-        print("WARNING: the groin callback was never called. The pre-AST hook")
-        print("in cascade_groin.py is missing, so this run is identical to a")
-        print("no-groin run despite GROIN_ENABLED being True.")
+        print("WARNING: the GroinManager was never updated, so this run is")
+        print("identical to a no-groin run despite GROIN_ENABLED being True.")
         print("!" * 74)
 
     # Artifacts
@@ -989,11 +1015,11 @@ def run_cascade_simulation(
         pd.DataFrame(nourishment_log).to_csv(_bn_csv, index=False)
         print(f"  nourishment log ({len(nourishment_log)} events): {_bn_csv}")
 
-    if groin_callback is not None and groin_callback.record:
+    if cascade.groin is not None and cascade.groin.record:
         _groin_csv = str(write_path(run_dir, "groin_csv", name))
-        pd.DataFrame(groin_callback.diagnostics_frame()).to_csv(
+        pd.DataFrame(cascade.groin.diagnostics_frame()).to_csv(
             _groin_csv, index=False)
-        print(f"  groin diagnostics ({len(groin_callback.record)} yrs): "
+        print(f"  groin diagnostics ({len(cascade.groin.record)} yrs): "
               f"{_groin_csv}")
 
     return cascade

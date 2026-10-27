@@ -120,5 +120,3 @@ git log --diff-filter=D --oneline -- scripts/analyze_output/overwash/<path>
 git show <commit>^:scripts/analyze_output/overwash/<path>
 ```
 
-The `compare_stacked.png` already in `output/comparisons/overwash/` may have
-been drawn by either script; re-run `compare_overwash_figures.py` to be sure.

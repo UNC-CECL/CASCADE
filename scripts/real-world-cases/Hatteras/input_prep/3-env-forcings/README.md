@@ -24,7 +24,7 @@ them with `git log --diff-filter=D --oneline -- scripts/input_prep/3-env-forcing
 and `git show <commit>^:<path>`.
 
 `historical_storm_creation_v3_HAT.py` is also read by
-`hatteras_ms/experiments/HAT_storm_max_duration.py`, which compiles four of its
+`hatteras_ms/experiments/storms/HAT_storm_max_duration.py`, which compiles four of its
 top-level functions by name: keep them top-level and keep their names.
 
 ## The scripts in detail

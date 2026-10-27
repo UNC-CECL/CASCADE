@@ -5,7 +5,7 @@ side error that only shows when the drift comes from the other direction would g
 run the mirror image of a coast and see whether the groin gives the mirror image of the result. Asked for on
 2026-10-15, with the split-sample validation (`../../4-hindcast/3-wave-driven-1967-2025/2026-10-15-split-sample/`).
 
-**Setup.** The straight-coast rig of `../6-stress/` with the runner's `GroinCallback`. Mirroring
+**Setup.** The straight-coast rig of `../6-stress/` with the runner's `GroinManager`. Mirroring
 reverses the domain order: the coast at θ0 becomes −θ0, the groin face LO|LO+1 becomes NY−2−LO, and the waves
 come from the other side. To keep BRIE's table discretization out of it, the mirror gets BRIE's tables
 reflected exactly (part C says why).
@@ -19,7 +19,7 @@ tables/           mirror_one_year.csv (A), mirror_runs.csv (B), brie_table_symme
 
 ## Findings
 
-1. **The groin's own direction handling is exact (A).** One call of the callback on a shoreline and on its
+1. **The groin's own direction handling is exact (A).** One call of the groin on a shoreline and on its
    reversal returns exactly reversed changes: 42 of 42 cases (seven orientations, strengths 0.25 and 1,
    no step or a ±150 m step) agree to 0.0 m, while the groin moves up to 110 m. Its choice of side, its sign
    and the face it reads the arriving drift on all reflect correctly.

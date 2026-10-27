@@ -71,7 +71,9 @@ def main():
     default = ps.normalise(ps.sweep_base_value(ps.SWEEPS[args.sweep]["setting"]))
     fig, axes = plt.subplots(2, 1, figsize=(9.6, 6.6), sharex=True,
                              sharey=True, constrained_layout=True)
-    colors = (ps.CURRENT_COLOR, ps.MODEL_RAMP(ps.RAMP_HI))
+    # Ramp colours by value, as plot_alongshore: the current setting is not singled out
+    low, high = ps.ramp_colors(2)
+    colors = (low, high) if args.top <= args.bottom else (high, low)
     for ax, value, color, letter in zip(axes, (args.top, args.bottom), colors,
                                         "ab"):
         run_dir, run_name, row = run_for(value, cells, index, args.sweep,
@@ -85,7 +87,7 @@ def main():
                 lw=1.8, zorder=5,
                 label=f"CoastSat LRR, {ps.TARGET_WINDOW}-domain LOWESS "
                       f"(domain means D1–{skip})")
-        ax.plot(rates.gis_domain, rates.lrr_m_yr, color=color, lw=2.0,
+        ax.plot(rates.gis_domain, rates.lrr_m_yr, color=color, lw=1.4,
                 zorder=6, label=f"Model, {label.lower()} {value:g}")
         ax.axhline(0.0, color=ps.INK_MUTED, lw=0.7, ls="--", zorder=1)
         tag = " (current)" if abs(value - default) < 1e-9 else ""
@@ -98,6 +100,8 @@ def main():
         ps.panel_label(ax, letter)
     axes[-1].set_xlim(ps.HATTERAS_DOMAINS.first_gis_id - 0.5,
                       ps.HATTERAS_DOMAINS.last_gis_id + 0.5)
+    for ax in axes:
+        ps.site_zones(ax)
     axes[-1].set_xlabel("Alongshore position (GIS domain, south → north)")
     handles, labels = axes[0].get_legend_handles_labels()
     bottom_h, bottom_l = axes[1].get_legend_handles_labels()

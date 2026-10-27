@@ -36,7 +36,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.colors import ListedColormap, BoundaryNorm  # noqa: E402
-from matplotlib.patches import Patch  # noqa: E402
+from matplotlib.legend_handler import HandlerBase  # noqa: E402
+from matplotlib.patches import Patch, Rectangle  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 # The scripts are in Hatteras/ (the folder holding hatteras_paths.py); data and output in the workspace
 HATTERAS = next(p for p in Path(__file__).resolve().parents if (p / "hatteras_paths.py").exists())
@@ -46,6 +48,7 @@ from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 from site_layer import hat_overwash as ow  # noqa: E402
 from site_layer import hat_env_forcings as env  # noqa: E402
 from cascade_pipeline.run_layout import write_path  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, INK_MUTED, figsize, save, record_caption,
     _title, open_frame, spines_for_image, _scalebar, _north_arrow,
@@ -64,6 +67,8 @@ WINDOWS = {
                    "natural": "HAT_2009_2025_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
 }
 THRESHOLDS = (0.0, 1.0, 5.0)        # m3/m
+QOW_FULL = 400.0                    # m3/m: a cell's volume bar fills the column here (sqrt scale, capped)
+QOW_KEY = (10, 100, 400)            # m3/m: the volume bars shown in the legend
 # How each run is named in the captions
 ARM_TEXT = {"managed": "managed run (groin on", "natural": "natural run (no road, no management, no groin"}
 # -----------------------------------------------------------------------------
@@ -80,6 +85,24 @@ CLASS_COLOURS = ["#01665e", "#e6ab02", "#80cdc1", "#ececec", "white"]
 CLASS_LABELS = ["Observed and modelled", "Observed, not modelled", "Modelled, not observed",
                 "Neither", "Not assessed"]
 C_OBS, C_MOD = "0.15", "#01665e"       # observed and modelled lines and bars
+C_QOW = "0.1"                          # the modelled-volume bars over the cells
+
+
+# A volume's bar length as a fraction of the column (sqrt, so small and large washover both read)
+def qow_frac(v):
+    return np.sqrt(np.clip(np.asarray(v, float) / QOW_FULL, 0, 1))
+
+
+# A legend handle drawn as a volume bar of the length its value gets in (d)
+class _QowBar(HandlerBase):
+    def __init__(self, v):
+        super().__init__()
+        self.v = v
+
+    def create_artists(self, legend, orig, x0, y0, width, height, fontsize, trans):
+        h = height * 0.6
+        return [Rectangle((x0, y0 + (height - h) / 2), width * float(qow_frac(self.v)), h,
+                          fc=C_QOW, ec="white", lw=0.3, transform=trans)]
 
 
 # The calendar years a window's run steps through (its storm file's window)
@@ -102,7 +125,7 @@ def qow(cascade):
 def load_qow(window, arm):
     name = WINDOWS[window][arm]
     path = MATRIX / f"{window[0]}_{window[1]}" / "edgeBE" / name / f"{name}.npz"
-    return qow(np.load(path, allow_pickle=True)["cascade"][0]), name
+    return qow(load_saved_cascade(path)), name
 
 
 # Per model year: the end date of its largest storm, and of every storm
@@ -218,15 +241,17 @@ def draw(d, window, geom, out_path, run_desc):
     imgs = d[["obs_id", "image", "since", "partial"]].drop_duplicates().reset_index(drop=True)
     n = len(imgs)
     grid = np.full((90, n), UNASSESSED)
+    vol = np.zeros((90, n))
     for i, im in imgs.iterrows():
         sub = d[d.obs_id == im.obs_id].set_index("gis")
         for g in range(1, 91):
             grid[g - 1, i] = cell_class(sub.observed[g], sub.model[g])
+            vol[g - 1, i] = sub.qow_in_window[g]
     cmap = ListedColormap(CLASS_COLOURS[:4])
     norm = BoundaryNorm(np.arange(-0.5, 4.5), cmap.N)
 
-    fig = plt.figure(figsize=figsize("double", height=8.6), constrained_layout=True)
-    gs = fig.add_gridspec(2, 2, width_ratios=[1.0, 1.9], height_ratios=[1, 6.2])
+    fig = plt.figure(figsize=figsize("double", height=9.2), constrained_layout=True)
+    gs = fig.add_gridspec(3, 2, width_ratios=[1.0, 1.9], height_ratios=[1, 0.8, 6.2])
 
     # (a) the island, each domain by how it scored over the window
     dom, land, road, bounds = geom
@@ -238,13 +263,18 @@ def draw(d, window, geom, out_path, run_desc):
     _north_arrow(ax_m, x=0.85, y=0.06)
     cnt = {c: sum(v == c for v in per.values()) for c in range(5)}
 
-    # (c) every image against the model since the previous image; GIS runs up the page like the map
-    ax = fig.add_subplot(gs[1, 1])
+    # (d) every image against the model since the previous image; GIS runs up the page like the map
+    ax = fig.add_subplot(gs[2, 1])
     ax.add_patch(plt.Rectangle((-0.5, 0.5), n, 90, fc="white", ec="0.75", hatch="////", lw=0, zorder=0))
     ax.imshow(np.ma.masked_equal(grid, UNASSESSED), cmap=cmap, norm=norm, aspect="auto",
               interpolation="nearest", origin="lower", extent=(-0.5, n - 0.5, 0.5, 90.5), zorder=1)
     for x in np.arange(n - 1) + 0.5:
         ax.axvline(x, color="white", lw=1.2, zorder=2)
+    # how much the model overwashed: a bar from each cell's left edge, length by volume
+    for i in range(n):
+        g = np.flatnonzero(vol[:, i] > 0)
+        ax.barh(g + 1, 0.92 * qow_frac(vol[g, i]), left=i - 0.46, height=0.6, color=C_QOW,
+                ec="white", lw=0.3, zorder=3)
     town_rows(ax)
     ax.set_xticks(range(n))
     ax.set_xticklabels([f"{im.image:%b %Y}" + (" *" if im.partial else "") for _, im in imgs.iterrows()],
@@ -255,7 +285,7 @@ def draw(d, window, geom, out_path, run_desc):
     ax.set_ylabel("GIS domain (south → north)")
     ax.set_xlabel("Image date")
     spines_for_image(ax)
-    _title(ax, 2, "Each image, domain by domain")
+    _title(ax, 3, "Each image, domain by domain")
 
     # (b) how many domains each image shows overwashed, and the model
     ax_n = fig.add_subplot(gs[0, 1], sharex=ax)
@@ -273,11 +303,25 @@ def draw(d, window, geom, out_path, run_desc):
     ax_n.legend(loc="upper right", frameon=False, fontsize=6.8, ncol=2)
     _title(ax_n, 1, "Domains with overwash")
 
+    # (c) and how much: the model's volume over each interval, every domain, the cell bars of (d) summed
+    ax_v = fig.add_subplot(gs[1, 1], sharex=ax)
+    ax_v.bar(x, vol.sum(axis=0) * DOM.domain_spacing_m / 1e3, width=0.36, color=C_QOW)
+    ax_v.set_ylim(bottom=0)
+    ax_v.yaxis.set_major_locator(MaxNLocator(3))
+    ax_v.set_ylabel("10³ m³")
+    ax_v.tick_params(labelbottom=False)
+    ax_v.grid(axis="y", color="0.9", lw=0.5)
+    open_frame(ax_v)
+    _title(ax_v, 2, "Modelled overwash volume")
+
+    key = [Patch(label=f"{v} m³/m" + (" modelled" if j == 0 else "")) for j, v in enumerate(QOW_KEY)]
     fig.legend(handles=[Patch(fc=c_, ec="0.6", lw=0.4, label=l_)
                         for c_, l_ in zip(CLASS_COLOURS[:4], CLASS_LABELS[:4])]
                + [Patch(fc="white", ec="0.6", hatch="////", lw=0.4, label=CLASS_LABELS[4]),
-                  plt.Line2D([], [], color=C["ROAD"], lw=0.8, label="NC-12")],
-               loc="outside lower center", ncol=6, frameon=False, fontsize=7, handlelength=1.4,
+                  plt.Line2D([], [], color=C["ROAD"], lw=0.8, label="NC-12")]
+               + key,
+               handler_map=dict(zip(key, (_QowBar(v) for v in QOW_KEY))),
+               loc="outside lower center", ncol=6, frameon=False, fontsize=7, handlelength=2.4,
                columnspacing=1.2)
 
     out = save(fig, out_path)
@@ -291,11 +335,14 @@ def draw(d, window, geom, out_path, run_desc):
         "(a) Each domain over the whole window: dark teal if model and image agreed in at least one image, "
         "else amber if washover was ever seen, else light teal if only the model overwashed "
         f"({cnt[BOTH]}, {cnt[OBS_ONLY]} and {cnt[MOD_ONLY]} domains; {cnt[NEITHER]} neither). A domain "
-        "agreeing in one image can still be missed in others: (c) shows each image. NC-12 in black. (b) Domains with overwash in each image, observed and modelled. "
-        "(c) One column per image, one row per domain; each image is scored against the model's overwash "
+        "agreeing in one image can still be missed in others: (d) shows each image. NC-12 in black. (b) Domains with overwash in each image, observed and modelled (assessed domains only). "
+        "(c) The model's total overwash volume over each image's interval: every domain's volume per metre "
+        f"times its {DOM.domain_spacing_m:.0f} m length, summed over GIS 1-90, assessed or not. "
+        "(d) One column per image, one row per domain; each image is scored against the model's overwash "
         "since the previous image (* = that interval starts before the run, so the model covers only part "
         "of it). A model year's overwash is dated by its largest storm, with the 7-day grace of the observed "
-        "storm table. Brackets on the right mark Buxton, Avon and the Tri-Village. "
+        "storm table. A dark bar in a cell is the model's overwash volume over that interval, its length "
+        f"the square root of the volume up to {QOW_FULL:.0f} m3/m, which fills the column. Brackets on the right mark Buxton, Avon and the Tri-Village. "
         f"Of {s['cells']} assessed image-domain cells: {s['both']} both, "
         f"{s['observed_only']} observed only, {s['model_only']} modelled only; the model catches "
         f"{s['hit_rate']:.0%} of observed washover. Washover fades and images are months to years apart, so "
@@ -325,14 +372,16 @@ def run_figure(q, run_dir, run_name, start_year, storm_file):
     return out
 
 
-# A finished run's figure from its folder: the archive, plus the period and storm file its metadata records
+# A finished run's figure from its folder: the archive (or, for runs saved without one, its
+# _overwash.npy, the same QowTS), plus the period and storm file its metadata records
 def run_figure_from_dir(run_dir):
     run_dir = Path(run_dir)
     name = run_dir.name
     meta = json.loads((run_dir / f"{name}_run_metadata.json").read_text(encoding="utf-8"))
-    c = np.load(run_dir / f"{name}.npz", allow_pickle=True)["cascade"][0]
+    archive = run_dir / f"{name}.npz"
+    q = qow(load_saved_cascade(archive)) if archive.exists() else np.load(run_dir / f"{name}_overwash.npy")
     storm_file = env.INIT_ROOT / Path(meta["identity"]["storm_file"].replace("\\", "/"))
-    return run_figure(qow(c), run_dir, name, meta["period"]["start_year"], storm_file)
+    return run_figure(q, run_dir, name, meta["period"]["start_year"], storm_file)
 
 
 # Run: every window, arm and threshold, the tables and the figures

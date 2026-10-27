@@ -11,6 +11,7 @@ from .brie_coupler import batchB3D
 from .brie_coupler import initialize_equal
 from .brie_coupler import set_specified_variable_RSLR
 from .chom_coupler import ChomCoupler
+from .groin import GroinManager
 from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
 from .roadway_manager import check_sandbag_need
@@ -137,6 +138,7 @@ class Cascade:
         beach_nourishment_module=True,
         community_economics_module=False,
         outwash_module=True,
+        groin_module=False,
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -190,6 +192,13 @@ class Cascade:
         outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
+        # --------- groin ------------ #
+        groin_updrift_pad=None,
+        groin_downdrift_pad=None,
+        groin_strength_history=None,
+        groin_start_year=1,
+        groin_half_width=10,
+        groin_spread_weights=(1.0, 0.0, 0.0),
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -331,6 +340,30 @@ class Cascade:
             Whether the nourishment module will use a user defined initial beach width
         user_inputed_beach_width: int, optional
             User inputed initial beach width for nourishment module [m]
+        groin_module: bool, optional
+            If True, use the GroinManager module (a groin between two adjacent domains
+            that holds back a share of BRIE's alongshore drift); requires
+            alongshore_transport_module=True
+        groin_updrift_pad: int, optional
+            Index of the domain updrift of the groin face (required if groin_module)
+        groin_downdrift_pad: int, optional
+            Index of the domain downdrift of the groin face; adjacent to
+            groin_updrift_pad (required if groin_module)
+        groin_strength_history: list of (int, float), optional
+            (from_year, strength) pairs; each strength [0-1], the share of the arriving
+            drift the groin holds back, holds until the next pair. The first year is
+            the install year. Years are counted from groin_start_year (required if
+            groin_module)
+        groin_start_year: int, optional
+            Year of the first time step, in the same years as groin_strength_history
+            [default is 1, i.e., years are model years]
+        groin_half_width: int, optional
+            Domains either side of the groin face on which BRIE's leak of the trapped
+            sand is cancelled
+        groin_spread_weights: tuple of 3 floats, optional
+            Shares of the updrift domain's yearly loss across the groin face taken from
+            the updrift domain and the two domains beyond it; summing to 1 [default is
+            (1, 0, 0), no spread]
 
         Examples
         --------
@@ -386,6 +419,7 @@ class Cascade:
         self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
         self._use_defined_beach_width = use_defined_beach_width
         self._user_inputed_beach_width = user_inputed_beach_width
+        self._groin_module = groin_module
 
         # initialization errors
         if (
@@ -399,6 +433,20 @@ class Cascade:
             raise CascadeError(
                 "The sigmoidal accelerated SLR formulation used in this model"
                 " by Rohling et al., (2013) should not be extended beyond 200 years"
+            )
+        if groin_module and not alongshore_transport_module:
+            raise CascadeError(
+                "The GroinManager acts on BRIE's alongshore transport step; set"
+                " alongshore_transport_module=True to use the groin_module"
+            )
+        if groin_module and None in (
+            groin_updrift_pad,
+            groin_downdrift_pad,
+            groin_strength_history,
+        ):
+            raise CascadeError(
+                "The groin_module needs groin_updrift_pad, groin_downdrift_pad and"
+                " groin_strength_history"
             )
 
         ###############################################################################
@@ -624,6 +672,21 @@ class Cascade:
                     )
                 )
 
+        ###############################################################################
+        # initialize groin
+        ###############################################################################
+        self._groin = None
+        if self._groin_module:
+            self._groin = GroinManager(
+                updrift_pad=groin_updrift_pad,
+                downdrift_pad=groin_downdrift_pad,
+                strength_history=groin_strength_history,
+                start_year=groin_start_year,
+                n_domains=self._ny,
+                half_width=groin_half_width,
+                spread_weights=groin_spread_weights,
+            )
+
     @property
     def road_break(self):
         return self._road_break
@@ -643,6 +706,14 @@ class Cascade:
     @barrier3d.setter
     def barrier3d(self, value):
         self._barrier3d = value
+
+    @property
+    def groin(self):
+        return self._groin
+
+    @property
+    def groin_module(self):
+        return self._groin_module
 
     @property
     def roadways(self):
@@ -743,9 +814,11 @@ class Cascade:
         h_b_dt = list(h_b_dt)
         self._barrier3d = list(b3d)
 
-        # optional groin: adjust x_s_dt (m/step) before BRIE's alongshore solve
-        if getattr(self, "_groin_callback", None) is not None:
-            x_s_dt = self._groin_callback(self, x_s_dt)
+        # ~~~~~~~~~~~~~~ GroinManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Hold back a share of the drift arriving at the groin: adds to the shoreline
+        # change (m/step) passed to BRIE, before its alongshore solve
+        if self._groin_module:
+            x_s_dt = self._groin.update(self._brie_coupler._brie, x_s_dt)
 
         # use brie to connect B3D models with AST; otherwise, just update
         # (erode/prograde) dune domain

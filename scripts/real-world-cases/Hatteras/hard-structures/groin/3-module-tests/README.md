@@ -1,6 +1,6 @@
 # 3-module-tests — what the groin module does on its own
 
-**Code these studies ran against.** The fixed-shift (the old `GroinCallback`, the fixed-shift groin) and blocking (`BlockingGroinCallback`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
+**Code these studies ran against.** The fixed-shift and blocking (`BlockingGroinManager`) groins that the scripts here use or patch were removed from `cascade/groin.py` on 2026-10-14, when the wave-driven groin became the runner's only groin. The scripts ran against the code at commit `4d937b79`; check that commit out to rerun one.
 
 Tests of the code, not of Buxton: does each version of the module behave like a groin before it is fitted to anything? Numbered from simplest to most complex (since 2026-10-15): tests 1 to 7 run BRIE's alongshore step alone on idealized coasts, and test 8 runs the full model on the real Hatteras planform. The figures that explain how the fixed-shift groin and the wave-driven groin work are in `../2-module-explained/`.
 
@@ -19,7 +19,7 @@ TEST_PLAN.md            the 2026-09-11 design: tier 0 offline (built), tiers 1-2
                         one-line model with GENESIS-style bypassing, as the yardstick for the modules
 5-long-term/            2026-10-09. The modules and the reference over 200 years: stability,
                         sand conservation, and whether the gap levels off
-6-stress/               2026-10-15. The runner's own groin (GroinCallback, unchanged) pushed
+6-stress/               2026-10-15. The runner's own groin (GroinManager, unchanged) pushed
                         past where Buxton uses it: wave climates, strength, a sharp start, switch-off,
                         cycling, year-to-year waves, Barrier3D-like input, placement, 500 years
 7-mirror/               2026-10-15. Drift from either direction: the groin's response mirrors exactly;

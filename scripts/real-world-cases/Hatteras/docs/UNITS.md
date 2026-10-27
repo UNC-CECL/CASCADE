@@ -2,7 +2,7 @@
 
 Reference for every quantity that crosses into or out of CASCADE / Barrier3D /
 BRIE in the Hatteras hindcast. Audited 2026-09-27 against the option A matrix
-(`scripts/hatteras_ms/HAT_hindcast.py`, the headless mirror of the
+(`scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast.py`, the headless mirror of the
 notebook) and the base-model source. **Result: consistent end to end.**
 
 Re-runnable check for the elevation rows:
@@ -64,11 +64,11 @@ from Duck water levels (m NAVD88, metric) + WIS Hs (m) / Tp (s). The storm thres
 
 | Quantity | Hindcast supplies | Model expects | Converted where | Status |
 |---|---|---|---|---|
-| `shoreline_offset` | m (`offset_mode: metres`) | m, added to BRIE `x_t`, `x_s` | `brie_coupler.offset_shoreline`, no conversion | ✅ (`asrun` mode is the old ÷10 error) |
+| `shoreline_offset` | m | m, added to BRIE `x_t`, `x_s` | `brie_coupler.offset_shoreline`, no conversion | ✅ (always metres since 2026-10-23; the old ÷10 `asrun` mode was removed) |
 | `background_erosion` (BE) | m/yr, **+ = accretion/source** | m/yr, (−) erosion | `load_input.py:311` `Rat / -10` → `Qat`; `x_s_dt` is + landward, so + input = seaward | ✅ |
 | `sea_level_rise_rate` | m/yr (0.004 / 0.006 / 0.007) | m/yr | `load_input.py:319` `/10` | ✅ |
 | `road_setback`, `road_width` = 20, relocation setback | m | m | `bulldoze`: `/dy`, `/dx` | ✅ |
-| Groin trapping rate M | m/yr | m per step on `x_s_dt` | `x_s_dt` is in m at the callback (`brie_coupler.batchB3D` ×10) | ✅ |
+| Groin trapping rate M | m/yr | m per step on `x_s_dt` | `x_s_dt` is in m at `GroinManager.update` (`brie_coupler.batchB3D` ×10) | ✅ |
 | Domain length | 500 m (BRIE `dy`, fixed) | m | `BarrierLength` `/10` | ✅ real spacing ~502.6 m; model uses 500 throughout |
 
 ### Waves (BRIE)

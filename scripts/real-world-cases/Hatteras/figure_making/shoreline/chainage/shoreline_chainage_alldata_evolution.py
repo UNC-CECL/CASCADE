@@ -50,7 +50,7 @@ from site_layer import hat_observed_rates as _obs  # noqa: E402
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 # "input_preperation" is the pre-2026 folder name
 LOOKUP_CSV    = str(_obs.transect_lookup())
-# Products go to output/, not beside the script (2026-09-13)
+# Products go beside the CoastSat record in 5-scr, not beside the script (2026-10-23)
 from site_layer import hat_figure_style as _hs  # noqa: E402
 OUTPUT_DIR    = str(_hs.OBSERVATIONS_OUT / "raw_shoreline_change" / "alldata_output")
 SITE_FILTER   = "usa_NC"

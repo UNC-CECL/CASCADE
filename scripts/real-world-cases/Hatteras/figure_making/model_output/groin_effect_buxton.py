@@ -132,7 +132,8 @@ def main() -> None:
             coll.set_offsets(coll.get_offsets() - [0.5, 0.0])
 
     gis = np.arange(HATTERAS_DOMAINS.first_gis_id, HATTERAS_DOMAINS.last_gis_id + 1)
-    real = slice(HATTERAS_DOMAINS.start_real_index, HATTERAS_DOMAINS.end_real_index)
+    run_geometry = HATTERAS_DOMAINS.for_total(len(without))   # the run's own buffers, not the config's
+    real = slice(run_geometry.start_real_index, run_geometry.end_real_index)
     ax.plot(gis, without[real], color=C_NOGROIN, lw=2.0, ls="--", zorder=5.8)
     # Triangles at the edge for model values past +/-Y_HALF; named in the caption
     in_view = (gis >= GIS_RANGE[0]) & (gis <= GIS_RANGE[1])

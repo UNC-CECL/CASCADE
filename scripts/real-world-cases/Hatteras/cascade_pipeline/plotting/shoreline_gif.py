@@ -403,6 +403,9 @@ def make_shoreline_gif(shoreline_m, run,
 
     frames = []
     pad_town_spans = None
+    any_relocation_in_view = relocations is not None and any(
+        np.asarray(relocations[t], dtype=bool)[pad_lo:pad_hi].any()
+        for t in year_idx if t < len(relocations))
     for t in year_idx:
         cur = series[t]
 
@@ -462,8 +465,12 @@ def make_shoreline_gif(shoreline_m, run,
                 my = [cur[p - pad_lo] for p in in_view]
                 ax.plot(mx, my, linestyle="none", marker="v", markersize=9,
                         color=RELOCATION_COLOR, markeredgecolor="white",
-                        markeredgewidth=0.7, zorder=6,
-                        label=f"relocated ({len(in_view)})")
+                        markeredgewidth=0.7, zorder=6)
+        # One fixed legend entry in every frame when any relocation is in view, so the legend never reflows
+        if any_relocation_in_view:
+            ax.plot([], [], linestyle="none", marker="v", markersize=9,
+                    color=RELOCATION_COLOR, markeredgecolor="white",
+                    markeredgewidth=0.7, label="road relocated")
 
         # Axes
         ax.set_xlim(x_lo - 0.5, x_hi + 0.5)

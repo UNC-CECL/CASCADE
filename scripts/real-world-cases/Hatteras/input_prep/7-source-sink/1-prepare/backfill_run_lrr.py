@@ -62,6 +62,7 @@ def find_pairs(root=RAW_RUNS):
 def backfill_one(csv_path, npy_path, geometry=HATTERAS_DOMAINS, check=False):
     frame = pd.read_csv(csv_path)
     matrix = np.load(npy_path)
+    geometry = geometry.for_total(matrix.shape[1])   # the run's own buffers, not the config's
     span = matrix.shape[0] - 1
     real = slice(geometry.start_real_index, geometry.end_real_index)
 

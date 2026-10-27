@@ -9,8 +9,8 @@ indices, clip at zero) on an infinitely long straight coast at angle theta0: the
 the tilted line plus a periodic perturbation eta, so the tilt never meets the periodic wrap.
 One groin sits at the face between the middle two domains. The modules:
 
-    1 fixed-shift groin    (the source/sink dipole) GroinCallback: -M updrift, +M downdrift, whatever the coast does
-    2 trapping, pinned     BlockingGroinCallback: cancels blocking_fraction of each cell's own diffusive coupling
+    1 fixed-shift groin    (the source/sink dipole): -M updrift, +M downdrift, whatever the coast does
+    2 trapping, pinned     BlockingGroinManager: cancels blocking_fraction of each cell's own diffusive coupling
     3 trapping, conserving the same, one face coefficient on both sides
     4 trapping, drift      cancels blocking_fraction of the wave-climate net drift Q_net across the face
     5 trapping, hybrid     module 4 plus module 2's row correction: blocking_fraction of BRIE's r[HI] - r[LO] mismatch at the face
@@ -72,7 +72,7 @@ ORIENTATIONS = tuple(range(-40, 45, 5))  # shoreline angle theta0, degrees
 SHOWN = (-30, -10, 0, 10, 20, 30)        # orientations drawn as profiles
 PROFILE_YEARS = (1, 5, 10, 25, 50)
 BLOCKING_FRACTION = 0.6                  # share of the transport the groin holds; the 10-05 pin
-                                         # (cascade.groin.BlockingGroinCallback's blocking_fraction)
+                                         # (cascade.groin.BlockingGroinManager's blocking_fraction)
 M = 12.0                                 # fixed-shift groin, the best option-A dipole (2026-09-29)
 # Versions 2-5 and 7 were retired on 2026-10-12; their results live in ../../archive/2-straight-coast/
 MODULES = {

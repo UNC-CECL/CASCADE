@@ -1,5 +1,15 @@
 # Changelog for CASCADE
 
+## Unreleased
+
+
+- Added the groin as the ``GroinManager`` module (``cascade/groin.py``), configured
+  through ``Cascade``'s ``groin_module`` and ``groin_*`` arguments and stepped in
+  ``Cascade.update()`` before BRIE's alongshore transport solve. It replaces the
+  groin object previously built by the Hatteras runner and attached to a Cascade
+  from outside.
+
+
 ## 2.0.0 (2026-06-09)
 
 

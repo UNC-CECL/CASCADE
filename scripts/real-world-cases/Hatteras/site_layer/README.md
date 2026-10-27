@@ -527,8 +527,7 @@ THE NUMBERED LAYOUT (2026-09-29, Hannah): top folders follow the paper's
 order -- where, what was observed, what the model is fed, how it works, what
 it gives. The old subjects (site, forcing, management, shoreline, model,
 pipeline, initialization) were retired the same day and now raise, so a
-script still using one fails loudly instead of rebuilding the old tree. The
-pre-reorganisation tree is output/archive/2026-09-29_figures-pre-reorg/.
+script still using one fails loudly instead of rebuilding the old tree.
 ```
 
 ```text
@@ -2242,7 +2241,7 @@ directory for the other instead of failing.
 ```text
 {product: the dune-topo version it reads TODAY}, for every product.
 
-What run_registry.rebuild_run_index needs to mark a run superseded: the
+What run_registry.scan_runs needs to mark a run superseded: the
 version each product resolves to now (CURRENT outranks the extractor
 literal, see the rules above). A product with no dune-topo tree, or none
 resolvable, is left out rather than guessed.
@@ -2771,7 +2770,7 @@ the narrow window too. D4-D8 DEMEANED is the window that works, because
 demeaning removes the level offset the source/sink term owns and D1 is
 excluded (the cape's 81-104 m change is ~5x the groin's signal).
 
-PERIOD 2 IS NOT FITTED, BUT THE GROIN IS STILL ON FOR IT. GroinCallback
+PERIOD 2 IS NOT FITTED, BUT THE GROIN IS STILL ON FOR IT. The dipole groin
 carries an ABSOLUTE CALENDAR timeline -- install 1969, deterioration onset
 1996, linear ramp to 2003, then hold at M*f -- so no period-specific
 configuration exists or is wanted. Running it in period 2 is right for
@@ -2798,12 +2797,11 @@ that file holds to every groin run in the matrix. A stage-6 run would have
 used M = 160. It prints "RAILED on M" while doing so, so the machinery knew.
 
 The file is now PINNED by hand to M = 60, f = 0.6 for both presets, each
-entry carrying its own superseded_ranking block, and the ranking is archived
-at output/archive/2026-08-30_groin-railed-ranking/joint_fit_RAILED_ranking_20260830.json.
+entry carrying its own superseded_ranking block.
 RE-RUNNING STAGE 5 OVERWRITES IT -- re-pin afterwards.
 
 Two more places the pair is written, both corrected the same day:
-scripts/hatteras_ms/hat_run.yaml carried M = 50 / f = 0.9 placeholders (a
+scripts/real-world-cases/Hatteras/hatteras_ms/hat_run.yaml carried M = 50 / f = 0.9 placeholders (a
 2026-08-26 note left them stale on purpose pending the re-fit, which has now
 happened and did not move the answer), and HAT_hindcast_config.py carried the
 same values as fallback defaults. A MATRIX run reads joint_fit.json; a SINGLE
@@ -3092,7 +3090,7 @@ length of sqrt(D*t) ~ 3.2 km over a 20 year period.
 
 ```text
 Every value below was re-solved on 2026-08-28. The previous solution is in
-git history and in output/archive/2026-08-28_full-tree/.
+git history.
 
 WHY. The 2026-08-23 values were derived on a base run against the
 pre-restructure shared topography. `1984-start` is now a different surface
@@ -3406,7 +3404,7 @@ the two ends; the run name gains `waveHs2p5`, so it can never overwrite an
 option A run:
 
 HAT_START_YEAR=2010 HAT_HS=2.5 HAT_SOURCE_SINK_PRESET=edgeBE \
-HAT_BE_OVERRIDE="1=8.0,90=40.399" python scripts/hatteras_ms/HAT_hindcast.py
+HAT_BE_OVERRIDE="1=8.0,90=40.399" python scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast.py
 
 Record: output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/
 ("Same vs period-specific"); ends in ends.json under `history` (Hs 2.5).
