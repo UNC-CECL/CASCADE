@@ -130,11 +130,6 @@ def make_run_figures(run_dir, gifs=True, show=False, cs_series=None):
     run_name = run_dir.name
     meta = json.loads((run_dir / f"{run_name}_run_metadata.json").read_text(encoding="utf-8"))
     shoreline_m = np.load(resolve(run_dir, "matrix", run_name))
-    # Every figure below draws the site config's buffers; a run made with others (15 a side before 2026-10-21)
-    # would be drawn domains off
-    if shoreline_m.shape[1] != HATTERAS_DOMAINS.total_domains:
-        raise SystemExit(f"{run_name}: {shoreline_m.shape[1]} domains, the site config draws "
-                         f"{HATTERAS_DOMAINS.total_domains}")
     period = meta["period"]
     start_year, end_year = int(period["start_year"]), int(period["end_year"])
     run_years = int(period["run_years"])

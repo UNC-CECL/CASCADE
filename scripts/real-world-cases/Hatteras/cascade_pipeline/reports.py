@@ -607,6 +607,7 @@ def target_misfit_report(*, target_m, observed_change_m, shoreline_m,
     if target_m is None:
         print(f"target                none -- no {label}; GIFs draw the model alone")
         return
+    geometry = geometry.for_total(np.shape(shoreline_m)[1])     # the run's own buffers
     real = slice(geometry.start_real_index, geometry.end_real_index)
     modeled = (shoreline_m[-1] - shoreline_m[0])[real]
     misfit = modeled - observed_change_m

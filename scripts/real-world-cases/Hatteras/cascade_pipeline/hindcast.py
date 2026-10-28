@@ -628,6 +628,7 @@ def build_coastsat_target(model_year0_m, cs_series, lowess_config, geometry,
     cs = next((c for c in cs_series if c["active"]), None)
     if cs is None:
         return None, None
+    geometry = geometry.for_total(len(model_year0_m))     # the run's own buffers
     table = build_target_table(cs, lowess_config, geometry, window)
     # CoastSat LRR is + seaward; x_s_TS is + landward
     observed_change_m = -table["target_lrr_m_yr"].to_numpy(dtype=float) * span_years

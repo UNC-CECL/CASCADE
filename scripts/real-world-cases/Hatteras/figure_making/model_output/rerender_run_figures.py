@@ -153,11 +153,6 @@ def load_run(run_dir: Path):
     shoreline_m = np.load(npy)
     if shoreline_m.ndim != 2 or shoreline_m.shape[0] < 2:
         return run_name, meta, None, f"matrix shape {shoreline_m.shape}"
-    # The figures draw the site config's buffers; a run made with others (15 a side before 2026-10-21)
-    # would be drawn domains off
-    if shoreline_m.shape[1] != HATTERAS_DOMAINS.total_domains:
-        return run_name, meta, None, (f"{shoreline_m.shape[1]} domains, the site config draws "
-                                      f"{HATTERAS_DOMAINS.total_domains}")
     return run_name, meta, shoreline_m, None
 
 
@@ -200,7 +195,7 @@ def relocations_from_npz(run_dir: Path, run_name: str, n_states: int):
     roadways = getattr(cascade, "_roadways", None)
     if not roadways:
         return None
-    events = np.zeros((n_states, HATTERAS_DOMAINS.total_domains), dtype=bool)
+    events = np.zeros((n_states, len(cascade.barrier3d)), dtype=bool)      # the run's own buffers
     for pad, roadway in enumerate(roadways):
         raw = getattr(roadway, "_road_relocated_TS", None)
         series = (np.asarray([], dtype=float) if raw is None

@@ -294,6 +294,8 @@ def make_shoreline_gif(shoreline_m, run,
     keep_frames = gif_config.keep_frames if keep_frames is None else keep_frames
     baseline_label = gif_config.baseline_label if baseline_label is None else baseline_label
     target_label = gif_config.target_label if target_label is None else target_label
+    # A saved run keeps the buffers it was made with (15 a side before 2026-10-21, 30 since): take them from the matrix
+    domains = domains.for_total(np.shape(shoreline_m)[1])
 
     mode = str(mode).strip().lower()
     if mode not in ("position", "displacement", "difference"):
