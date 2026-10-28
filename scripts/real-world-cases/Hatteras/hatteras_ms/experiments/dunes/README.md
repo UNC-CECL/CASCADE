@@ -28,6 +28,7 @@ the experiments are run and filed, and how they import each other across folders
 | `HAT_dune_recovery_slow_growth.py` | Does a recovery term for flattened dunes remove the chronic overwash that slow dune growth leaves at Cape Point? |
 | `HAT_dune_crest_dem_vs_model.py` | Does the model build the dunes up in its first years? |
 | `HAT_dune_crest_vs_surveys.py` | How well do the modelled dunes follow the surveyed ones through the calibration and test windows? |
+| `HAT_forced_dune_crests.py` | Moved 2026-10-27 to `../../../dune-storm-response/`, with `HAT_road_dune_rebuild.py` and `HAT_dune_collision.py` |
 | `HAT_dune_findings_figures.py` | Three summary figures of the dune ceiling (Dmaxel) and growth-rate studies. |
 | `HAT_dune_findings_simple_figures.py` | Publication versions of the dune ceiling and growth-rate findings, one point per figure. |
 | `HAT_stable_dune_growth_rate.py` | Which dune growth rate reproduces the stable dunes of 1996-2009 under Dmax 10.5 m above the berm? |
@@ -454,3 +455,9 @@ NOTHING IN THE MAIN CODE CHANGES.
 
 WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-dune-recovery-rate/
 ```
+
+### HAT_forced_dune_crests.py
+
+Moved 2026-10-27 to `scripts/real-world-cases/Hatteras/dune-storm-response/`, with
+`HAT_road_dune_rebuild.py` and `HAT_dune_collision.py`; its notes and results are in that
+folder's README. Output stays under `output/raw_runs/experiments/dunes/`.
