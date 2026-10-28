@@ -9,6 +9,7 @@ writes to `output/figures/3-model-inputs/<step>/`. All are redrawn by
 0-elevation/dem_composition_figures.py            which survey supplies each part of the DEM
 1-barrier3d-domains/domain_extraction_figures.py  how one domain's arrays are cut from the DEM
 2-brie-offset/offset_build_figures.py             how the BRIE offset is built from the dune line
+2-brie-offset/brie_domains_vs_imagery.py          imagery, 1 m clips and Barrier3D grids, the run's BRIE shoreline on all three
 3-storms/storm_construction_figures.py            how the storm series is built (reproduced, checked)
 4-mgmt-forcings/road_setback_figures.py           how the NC-12 setback is measured
 5-scr/observed_target_figures.py                  how the observed shoreline target is built
@@ -89,6 +90,22 @@ WHAT IT CALLS
 
 Every cross-shore panel has the ocean at the RIGHT.
 ```
+
+### 2-brie-offset/brie_domains_vs_imagery.py
+
+Does the domain setup match the island? For the 1996 and 2009 starts, six
+figures each (15 domains per figure), plus one of the whole island (GIS 1-90,
+cross-shore exaggerated so it reads; `--sections 0`): (a) the imagery inside the start's CoastSat
+window (the 14 Oct 1996 USGS frames; the 30 May 2009 Google Earth captures, read
+through their `.jgwx` world files) with the mean CoastSat shoreline and the BRIE
+step on it; (b) each domain's 1 m clip, before the resample, where it was cut
+(nothing moved), with the BRIE step on top; (c) the Barrier3D grids the run reads,
+built on the BRIE step as the model builds them (fixed beach, two dune rows,
+extracted interior). The
+offset is the one runs read (`RUN_OFFSET_SOURCE`, the shoreline build), not the
+dune-line default. Writes `output/figures/3-model-inputs/2-brie-offset/domains_vs_imagery/<year>/`.
+
+    python scripts/figure_making/pipeline/2-brie-offset/brie_domains_vs_imagery.py [--year 1996] [--sections 0 1 2]
 
 ### 2-brie-offset/offset_build_figures.py
 
