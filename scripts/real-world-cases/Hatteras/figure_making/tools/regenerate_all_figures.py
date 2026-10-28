@@ -37,6 +37,7 @@ STEPS = [
     ("2-observations", "CoastSat periods, LOWESS 7", [S + "figure_making/shoreline/plot_coastsat_poster.py"]),
     ("2-observations", "shoreline vs dune line", [S + "input_prep/5-scr/4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py"]),
     ("2-observations", "dune-line positions", [S + "input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py"]),
+    ("2-observations", "lidar transect profiles", [S + "figure_making/shoreline/transect_profiles.py"]),
     ("2-observations", "mean shoreline 1996 (DEM-centred)",
      [S + "input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_on_imagery.py",
       "--centred-on", "alace_1996"]),
