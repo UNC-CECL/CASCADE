@@ -840,8 +840,11 @@ Every swept axis stacked on one alongshore axis, a panel per wave parameter.
 
 06_alongshore_all_parameters.png, in both the position and rate sets and
 with --no-groin. Each panel is drawn by draw_alongshore(), the same code as
-the single-axis figures, with its own value legend and its own y range (the
-wave-angle response is several times the wave-period one). Community names
+the single-axis figures, with its own value legend; the panels share one
+y scale so the size of each parameter's response compares directly. The
+groin-on position figure caps that scale at PANEL_YLIM_M (-100 to +60 m),
+since angle 0.45 swings from about +120 to -255 m at the Buxton groin; a
+line cut off is labelled with its extreme and GIS domain. Community names
 sit on the top panel only; the observed-layer legend once, under the last.
 ```
 

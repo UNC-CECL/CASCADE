@@ -116,6 +116,11 @@ INK, INK_MUTED = "#222222", "#666666"
 # an axis not named here draws every cell
 ALONGSHORE_VALUES = {"wave_height": (2.0, 3.0, 4.0, 5.0)}
 
+# The four-panel position figure's y limits (m), by groin state: with the groin on, angle 0.45 swings
+# from about +120 to -255 m at the Buxton groin and flattens the other panels; a line cut off is
+# labelled with its extreme (2026-10-28). The groin-off set is drawn in full.
+PANEL_YLIM_M = {True: (-100.0, 60.0)}
+
 
 # Reading the sweep
 
@@ -692,13 +697,16 @@ def plot_alongshore_panels(cells, start_year, preset, cs_series, target, out_dir
     if len(sweeps) < 2:
         return None
     groin = bool(cells.iloc[0].groin)
+    # One y scale on every panel, so the size of each response reads across panels
     fig, axes = plt.subplots(len(sweeps), 1, figsize=(9.6, 2.9 * len(sweeps)),
-                             sharex=True, constrained_layout=True)
+                             sharex=True, sharey=True, constrained_layout=True)
     towns = set(HATTERAS_ANNOTATIONS.town_spans)
+    drawn_lines = []
     for i, (ax, sweep) in enumerate(zip(axes, sweeps)):
         entries, drawn = draw_alongshore(ax, cells, sweep, start_year, preset, cs_series,
                                          target, position=position,
                                          shown=ALONGSHORE_VALUES.get(sweep))
+        drawn_lines.append((ax, entries[:drawn]))
         value_legend(ax, sweep, entries, drawn)
         panel_label(ax, PANEL_LETTERS[i])
         # Community names on the top panel only; the grey bands stay on every panel
@@ -707,6 +715,29 @@ def plot_alongshore_panels(cells, start_year, preset, cs_series, target, out_dir
                 if text.get_text() in towns:
                     text.set_visible(False)
     axes[-1].set_xlabel("Alongshore position (GIS domain, south → north)")
+
+    # Cap the shared y axis; each line cut off is named with its extreme where it leaves
+    limits = PANEL_YLIM_M.get(groin) if position is not None else None
+    if limits is not None:
+        lo, hi = limits
+        axes[0].set_ylim(lo, hi)
+        for ax, lines in drawn_lines:
+            for line, text in lines:
+                x_all = np.asarray(line.get_xdata(), dtype=float)
+                y = np.asarray(line.get_ydata(), dtype=float)
+                # (index of the extreme, the limit it crosses, text offset toward the panel)
+                for k, edge, dy, va in ((int(np.nanargmin(y)), lo, 20, "bottom"),
+                                        (int(np.nanargmax(y)), hi, -20, "top")):
+                    if lo <= y[k] <= hi:
+                        continue
+                    # Ink text, since the light end of the ramp does not read on white
+                    ax.annotate(f"{text}: {y[k]:+.0f} m at GIS {x_all[k]:g} (off scale)"
+                                .replace("-", "−"),
+                                xy=(x_all[k], edge), xytext=(16, dy), textcoords="offset points",
+                                ha="left", va=va, fontsize=7.5, color=INK,
+                                arrowprops=dict(arrowstyle="-|>", color=line.get_color(), lw=0.8),
+                                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none",
+                                          alpha=0.85), zorder=10)
 
     # The observed layer once, below the last panel
     handles, labels = axes[-1].get_legend_handles_labels()
