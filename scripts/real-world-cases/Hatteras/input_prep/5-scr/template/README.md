@@ -7,7 +7,7 @@ site. Nothing in them imports from the rest of the repo.
 
 The folders are numbered in the order you run them. Run step 1 first. The two
 step-2 scripts both read the lookup that step 1 writes, and they can be run in
-either order.
+either order. Step 3 doesn't need the lookup, so it can be run on its own.
 
 ```
 1-zone-join/
@@ -17,6 +17,9 @@ either order.
     shoreline_rates_template.py       time series -> OLS rate (LRR) per zone
     shoreline_endpoint_template.py    time series -> net change (end - start)
     example/                          the same 35 transects' time series, expected output
+3-mean-shoreline/
+    mean_shoreline_template.py        transect lines + time series -> mean shoreline as a line
+    example/                          the same 35 transects, 1995-1997, expected output
 ```
 
 Each `example/` folder is a small piece of Hatteras Island (three of my model
@@ -27,14 +30,14 @@ example uses the lookup produced by the step-1 example, so you can run them
 in order.
 
 The step-2 scripts need `pandas`, `numpy`, `scipy` and `matplotlib`. The join
-also needs `geopandas`.
+and the mean shoreline also need `geopandas`.
 
 The scripts themselves only have short comments. I explain the reasoning
 behind the choices here instead.
 
 ## How the scripts fit together
 
-All three scripts follow the same conventions:
+All the scripts follow the same conventions:
 
 | | convention | reason |
 |---|---|---|
@@ -102,6 +105,53 @@ adjust anything.
 `--start-date/--end-date` uses ±6-month windows centred on specific survey
 dates instead. I use that when comparing against a dune line or an aerial
 photo from a known date.
+
+### 3. Mean shoreline (`mean_shoreline_template.py`)
+
+Steps 2a and 2b only ever subtract one chainage from another on the same
+transect, so it doesn't matter where the transect starts. This step needs the
+shoreline's actual position on the map, for example to measure it from an
+offshore line the same way as a digitised dune line, so it has to use the
+transect geometry as well.
+
+| | step | why |
+|---|---|---|
+| 1 | transects | read the layer, reproject to `TARGET_CRS` (metres), and keep each transect's origin (first vertex) and the unit vector toward its seaward end |
+| 2 | window | as the rates script: whole calendar years, or `--from/--to` |
+| 3 | mean | mean chainage of the images inside the window, per transect; fewer than `MIN_OBS` and the transect is left out and named |
+| 4 | place | origin + mean chainage × unit vector puts the mean on the map |
+| 5 | join | sort the points by transect id and join them into one LineString |
+| 6 | write | the line (geojson), a per-transect table and a check map |
+
+**Why reproject first.** CoastSat layers are in degrees and chainage is in
+metres, so the vector arithmetic in step 4 only works in a projected CRS. Set
+`TARGET_CRS` to the CRS of whatever you will compare the line against, so the
+two are measured on the same grid.
+
+**Why the geometry matters.** The transect origins don't sit on a straight
+baseline. On Hatteras, mean chainage over the 90 model domains varies by
+124 m, but the positions on the map span 6,222 m, and the origins alone span
+6,169 m. Plotting chainage along the coast as if it were the shoreline would
+mostly be showing where CoastSat put the origins.
+
+**Why sort by id.** CoastSat ids are `site_number`, zero-padded, and numbered
+along the coast within a site, so sorting the ids as text puts the points in
+alongshore order. Where two sites meet, check the map. If a site is numbered
+the other way, the line will zig-zag.
+
+**What it is.** A mean over a window, not a survey on a date. A single
+satellite pass can be off by metres because of tide, wave setup and cloud
+edges, and the mean over many passes is what you can compare against
+something else. If the line you compare it with (a dune line, say) is from a
+date that isn't the middle of the window, part of the difference between them
+is shoreline change over that gap. `--from/--to` lets you centre the window on
+that date instead.
+
+There is no smoothing and no gap filling. Where a transect is left out, the
+line runs straight across to the next one, and the per-transect table says
+why it was left out. Some CoastSat layers spell ids with a hyphen before the
+number (`usa_NC_0032-0001`), so the script treats `-` and `_` as the same
+when matching the layer to the CSV filenames.
 
 ### Rate vs endpoint
 
