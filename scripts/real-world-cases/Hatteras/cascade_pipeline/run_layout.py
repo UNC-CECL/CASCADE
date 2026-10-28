@@ -44,6 +44,9 @@ KINDS = {
     # Where the run overwashed against the washover in the imagery (8-overwash-analysis/4-vs-model)
     "figure_overwash":      (FIGURES, "overwash_vs_observed.png",
                              "{run}_overwash_vs_observed.png"),
+    # How much the run overwashed over its whole period, where and when (8-overwash-analysis/4-vs-model)
+    "figure_overwash_total": (FIGURES, "overwash_total.png",
+                              "{run}_overwash_total.png"),
 
     # Tables
     "rate_csv":      (TABLES, "shoreline_change_rate.csv",
@@ -54,6 +57,8 @@ KINDS = {
                       "road_management_summary.csv"),
     "nourishment_csv": (TABLES, "nourishment_log.csv",
                         "{run}_nourishment_log.csv"),
+    "overwash_total_csv": (TABLES, "overwash_total.csv",
+                           "{run}_overwash_total.csv"),
 }
 
 # Animation names are built from mode and window: plotting's range tag -> the new form

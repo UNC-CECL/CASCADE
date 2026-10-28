@@ -578,6 +578,24 @@ section 12.5) calls `run_figure` after the net-change figure and writes `figures
 count taken from the run. Skipped with a message if the map cannot be drawn (GIS drive absent).
 Existing runs: `--run-dir <run folder> [...]`.
 
+Since 2026-10-26 the cells carry the model's volume (`qow_in_window`, m3/m) as a bar from each
+cell's left edge, square-root length, 400 m3/m filling the column (`QOW_FULL`); panel (c) is the
+island total per image interval (all 90 domains, assessed or not) and the matrix is (d).
+`--run-dir` reads `<run>_overwash.npy` when a run saved no `.npz`.
+
+### 4-vs-model/overwash_total.py (2026-10-27)
+
+How much one run overwashed over its whole period, asked for by the advisor: (a) the map shaded by
+each domain's total (m3/m, square-root, YlOrBr), (b) the island total per model year (10^3 m3),
+(c) the per-domain totals as bars, with a black square on every domain the imagery ever shows
+washover in during the run's storm years. The overwash is the run's QowTS, which in a BDM run is
+**net**: the beach-dune manager subtracts what it cleared off the road and filtered
+(`cascade/beach_dune_manager.py`), so it is what stayed on the island. Scales are fixed per
+window (`SCALES`: 1996 1000 m3/m and 3500 x 10^3 m3; 2009 2500 and 5000) so a window's runs compare
+by eye. The runner draws it after `overwash_vs_observed` (`run_figures.py`), writing
+`figures/overwash_total.png` and `tables/overwash_total.csv` (run_layout kinds
+`figure_overwash_total`, `overwash_total_csv`). Existing runs: `--run-dir <run folder> [...]`.
+
 From the script's original header:
 
 ```text

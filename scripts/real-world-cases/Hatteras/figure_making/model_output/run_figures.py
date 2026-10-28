@@ -183,6 +183,12 @@ def make_run_figures(run_dir, gifs=True, show=False, cs_series=None):
                        HATTERAS_DATA_BASE / meta["identity"]["storm_file"])
         except (Exception, SystemExit) as _err:
             print(f"  overwash vs observed  skipped: {_err}")
+        # And how much it overwashed over the whole run, where and when
+        try:
+            from overwash_total import run_figure as overwash_total_figure
+            overwash_total_figure(qow, run_dir, run_name, start_year)
+        except (Exception, SystemExit) as _err:
+            print(f"  overwash total        skipped: {_err}")
 
     # The CoastSat end-year shoreline, the run's scoring target x the span (was the surveyed dune line
     # until 2026-10-26; the run starts from shorelines and is graded on CoastSat); buffers are NaN
