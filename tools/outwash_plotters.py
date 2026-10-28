@@ -1303,12 +1303,12 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
         y_text = "cross-shore distance (dam)"
 
 
-    elevFig2.supxlabel(x_text, fontsize=12, fontweight='bold')
-    elevFig2.supylabel(y_text, y=0.4, fontsize=12, fontweight='bold')
+    elevFig2.supxlabel(x_text, fontsize=12)
+    # elevFig2.supxlabel(x_text, fontsize=12, fontweight='bold')
+    # elevFig2.supylabel(y_text, y=0.4, fontsize=12, fontweight='bold')
 
     # for plot numbering
     lowercase_letters = list(string.ascii_lowercase)
-
 
     # whole figure is 5 rows with 1 column
     subfigs = elevFig2.subfigures(len(cascade_list)+1, 1)  # 1 column with rows=scenarios plus one for the shoreline
@@ -1320,7 +1320,7 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
 
     subfigs[0].suptitle("r = {0}".format(r_value), fontsize='x-large', fontweight="bold")
     # add text for subfigure "numbering"
-    subfigs[0].text(x=-0.02, y=1.08, s="a",
+    subfigs[0].text(x=-0.032, y=1.08, s="a",
                       fontsize=30,
                       fontweight="bold",
                       transform=shoreline_ax.transAxes,
@@ -1350,7 +1350,7 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
         else:
             ax = axs[col_pos]
         # add text for subfigure "numbering"
-        subfigs[c+1].text(x=-0.02*11, y=1.08, s=subplot_numbering,
+        subfigs[c+1].text(x=-0.38, y=1.08, s=subplot_numbering,
                         fontsize=30,
                         fontweight="bold",
                         transform=ax.transAxes,
@@ -1497,25 +1497,50 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
                 norm=divnorm,
                 cmap=terrain_map,
             )
-            # sharey and sharex are set to True
-            if km_on:
-                locs, _ = plt.yticks()
-                plt.yticks(locs, locs / 100)
-                locs, _ = plt.xticks()
-                plt.xticks(locs[0:-1], locs[0:-1] / 100)
-                ax.yaxis.set_minor_locator(AutoMinorLocator())
-            if meters_on:
-                xtick_max = np.shape(AnimateDomain)[1]  # n_cols = x
-                x_ticks = np.array(range(0, xtick_max, 25))
-                x_tick_labels = x_ticks * 10
-                ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
-                y_ticks = np.array(range(0, ytick_max, 25))
-                y_tick_labels = (y_ticks - y_lim[0]) * 10
-                plt.xticks(x_ticks, x_tick_labels)
-                plt.yticks(y_ticks, y_tick_labels)
 
-            timestr = "Year " + str(t)
-            ax.set_title(timestr, fontsize=10)
+            # set y-labels for each subplot if its the first column
+            if col_pos == 0:
+                ax.set_ylabel(y_text)
+            # sharey and sharex are set to True
+            # only plot if its the last row
+            if c == len(cascade_list)-1:
+                if km_on:
+                    locs, _ = plt.yticks()
+                    plt.yticks(locs, locs / 100)
+                    locs, _ = plt.xticks()
+                    plt.xticks(locs[0:-1], locs[0:-1] / 100)
+                    ax.yaxis.set_minor_locator(AutoMinorLocator())
+                if meters_on:
+                    xtick_max = np.shape(AnimateDomain)[1]  # n_cols = x
+                    x_ticks = np.array(range(0, xtick_max, 25))
+                    x_tick_labels = x_ticks * 10
+                    ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
+                    y_ticks = np.array(range(0, ytick_max, 25))
+                    y_tick_labels = (y_ticks - y_lim[0]) * 10
+                    plt.xticks(x_ticks, x_tick_labels)
+                    plt.yticks(y_ticks, y_tick_labels)
+            else:  # no xtick labels
+                # ax.tick_params(labelbottom=False, labelleft=True)
+                if km_on:
+                    locs, _ = plt.yticks()
+                    plt.yticks(locs, locs / 100)
+                    locs, _ = plt.xticks()
+                    # plt.xticks(locs[0:-1], locs[0:-1] / 100)
+                    ax.yaxis.set_minor_locator(AutoMinorLocator())
+                if meters_on:
+                    xtick_max = np.shape(AnimateDomain)[1]  # n_cols = x
+                    x_ticks = np.array(range(0, xtick_max, 25))
+                    x_tick_labels = []
+                    ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
+                    y_ticks = np.array(range(0, ytick_max, 25))
+                    y_tick_labels = (y_ticks - y_lim[0]) * 10
+                    plt.xticks(x_ticks, x_tick_labels)
+                    plt.yticks(y_ticks, y_tick_labels)
+
+            # only set time at first row
+            if c == 0:
+                timestr = "Year " + str(t)
+                ax.set_title(timestr, fontsize=10)
             outwash_flux = int(np.round(outwash[0]._outwash_flux_TS[t], decimals=0))  # m^3/m
             outwash_str = "Outwash = " + str(outwash_flux) + " $m^3/m$"
             if y_lim is not None:
