@@ -14,14 +14,23 @@ and `git show <commit>^:<path>`.
 hindcast_final_figure_lowess.py  THE hindcast result: both periods against the LOWESS curve
 scenario_grid.py                 every scenario x preset x period on one page
 groin_effect_buxton.py           GIS 1-10 position change, full management with vs without the groin
-gis11_relocation_drown_figure.py why GIS 11 drowns at a 30 m relocation setback
 planview_evolution_gif.py        animated plan view of one run: elevation and the road
-rerender_run_figures.py          redraw a finished run's figures without re-running it
+run_figures.py                   one run's own figures and animations, from its run folder
+                                 (HAT_hindcast.py calls it at the end of every run)
+rerender_run_figures.py          redraw many finished runs' figures without re-running them
 ```
 
 What not to trust: each figure reads the runs named in its CONFIG; a figure is
-only as current as those runs. `rerender_run_figures.py` refuses to redraw if
-the runner's figure conventions have moved (`check_conventions`).
+only as current as those runs. A run's own figure conventions (LOWESS window,
+estimator, animation jobs) live once, in `run_figures.py`; `rerender_run_figures.py`
+imports them.
+
+`run_figures.py` reads only the run folder: the metadata, the shoreline matrix,
+and two small arrays the runner saves for it, `<run>_overwash.npy` (the overwash
+map) and `<run>_road_relocations.npy` (the relocation markers). A run made before
+2026-10-23 has neither, so its overwash figure is skipped and its animations
+carry no relocation markers. A groin run's difference animation is drawn against
+the no-groin run its metadata names (`groin.baseline_run`).
 
 ## The scripts in detail
 
@@ -29,185 +38,6 @@ Each script's header says what it does and how to run it. Below, for each,
 is its original header and any notes that were in its code, kept word for
 word when the scripts were brought in line with `scripts/STYLE.md`
 (2026-09-30).
-
-### gis11_relocation_drown_figure.py
-
-Why GIS 11 drowns at a 30 m standard relocation setback and not at 77 m: the wet-cell criterion is a cliff.
-
-From the script's original header:
-
-```text
-Why GIS 11 drowns at a 30 m standard relocation setback, and not at 77 m.
-
-THE QUESTION THIS ANSWERED, AND WHAT WAS DECIDED
-    Introducing a flat 30 m relocation target (`relocation_setback_m`) drowned
-    NC-12 at GIS 11 in all eight 1984-2004 reloc-arm runs. Nothing drowned
-    under the previous per-domain measured targets. The figure exists to settle
-    whether 97 m is a physically implausible place to put a road, or whether it
-    is merely one cell past a threshold.
-
-    It is the latter, and that is the point of the third panel: the criterion
-    takes whole-cell values only, and cells 7 and 8 are 0% wet against cell 9
-    at 24%. There is no gradual approach to failure to read a margin off.
-
-    DECIDED 2026-09-01: the standard is 20 m, and the whole matrix runs at it.
-    A 20 m target lands the 1999 event at 87 m, which is cell 8, and all eight
-    drownings go away -- confirmed by re-running the twelve reloc arms, where
-    relocation counts moved only 26 -> 28 and no new drowning appeared
-    anywhere. But 87 m clears the threshold by ONE CELL, so 20 m is not robust
-    to different forcing; it is the dry side of a cliff, not a margin.
-
-    THE UNDERLYING COUPLING WAS NOT FIXED. `_apply_relocation` still adds a
-    surveyed displacement to a modelled position, so any future change to the
-    emergent rule will move where the historical events land. Anchoring it to
-    an absolute setback (initial measured setback + cumulative displacement)
-    would decouple the two and let the standard be chosen on its own merits.
-    That remains open.
-
-THE CHAIN, WHICH IS NOT WHAT IT LOOKS LIKE
-    The standard did NOT push the road into the bay directly. It raised GIS
-    11's emergent relocation from 10 m to 30 m in 1993, so the setback stood at
-    20 m rather than 0 m when the historical 1999 event fired. That event is
-    stored as a DISPLACEMENT, and `_apply_relocation` adds it to whatever the
-    model's current setback is:
-
-        measured target:   0 m + 77 m  =  77 m
-        30 m standard:    20 m + 77 m  =  97 m
-
-    So a change to the emergent rule moved where a PRESCRIBED historical
-    relocation lands. The measured displacements were surveyed against the real
-    road; adding them to a modelled road inherits the model's drift.
-
-WHAT DROWNS IT
-    `bulldoze` drowns a road when more than 20% of the cells in the row
-    BORDERING the road are at or below 0 m MHW. At GIS 11 that criterion has a
-    cliff between 80 m and 90 m of setback -- 0% wet against 24% wet, one cell
-    apart. 77 m clears it; 97 m does not.
-
-    The road occupies `int(setback / 10)` and the cell behind it, and the
-    bordering row is the one after that, so the axis is drawn in the same whole
-    cells the model indexes in rather than in smooth metres.
-
-Usage:
-    python gis11_relocation_drown_figure.py [--out PATH]
-
-Reads output/comparisons/relocation/standard_setback/GIS11_profiles.npz, the
-per-domain extract taken before the superseded runs were deleted.
-```
-
-Notes that were in the code:
-
-```text
-HOUSE STYLE: one typeface and one palette across every figure in this
-project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-found by searching upward (ORGANIZATION.md rule 5). This file drew in
-matplotlib's defaults until 2026-09-17 -- it never called apply_style().
-```
-
-```text
-Anchored by SEARCHING UPWARD for the project root rather than by
-counting parent directories (2026-09-13). A counted depth is correct
-only while the file stays where it was written, and these moved into
-subfolders of hatteras_ms. Six files here already did it this way.
-```
-
-```text
-The manuscript copy, with the other figures by subject (2026-09-18): the
-same panels, the headline and its two lines moved to supporting/CAPTIONS.md.
-Written only when --out is not given.
-```
-
-```text
-ON since the layout was redrawn for the house-style column (2026-09-18).
-Before that the labels, title and legend overlapped, and it was held off so
-a broken figure could not land in output/figures/.
-```
-
-```text
-The two candidate positions are 20 m apart on a 200 m axis, so a
-label above each band overlaps its neighbour. Rotated inside the band
-each label sits on the thing it names and cannot collide; at the
-190 mm column only the distance fits, and the legend says which
-target each colour is (2026-09-18).
-```
-
-```text
-A 0% bar draws nothing, which reads as "not evaluated" rather than
-"evaluated and dry". Every setback gets a visible stub.
-```
-
-```text
-Three callouts within 20 m of each other on a 130 m axis. Stacked
-horizontally they ran off the axis into panel (b) at the 190 mm column
-(2026-09-18); rotated, each sits in its own bar's column above the limit
-line, where the three dry cells leave the panel empty.
-```
-
-```text
-SNAP TO THE CELL, not to the metre. bulldoze indexes the road at
-int(setback / 10), so 77 m and 70 m are the SAME road position and
-the same bar. Pointing the callout at its raw metre value drops it
-between two bars and invites the reader to interpolate a criterion
-that only ever takes whole-cell values.
-```
-
-```text
-HOUSE STYLE (2026-09-18): apply_style() only, no local rcParams; the
-headline and its two lines are the caption, not the canvas.
-```
-
-```text
-300 dpi, the house savefig resolution. It was 170, which is a screen
-export: the geometry was already right at 190 mm, the pixels were not.
-```
-
-<details><summary>Function notes (the original docstrings)</summary>
-
-**`wet_fraction()`**
-
-```text
-Fraction of the bordering row at or below the drown threshold.
-
-Mirrors `bulldoze`: the road starts at `int(setback / 10)`, runs
-`ROAD_CELLS` cells, and the row checked is the one after it.
-
-Args:
-    grid: (cross_shore, alongshore) interior elevations in m MHW.
-    setback_m: Road setback in metres.
-
-Returns:
-    (fraction_wet, bordering_row_index, bordering_row) or (nan, idx, None)
-    when the bordering row is past the end of the interior.
-```
-
-**`draw_profile()`**
-
-```text
-One cross-shore profile with the candidate road positions on it.
-
-Args:
-    axis: Axes to draw on.
-    grid: (cross_shore, alongshore) interior elevations in m MHW.
-    setbacks: (setback_m, label, colour) tuples to mark.
-    year_label: Calendar year for the panel title.
-```
-
-**`draw_cliff()`**
-
-```text
-Wet fraction of the bordering row against setback, with the 20% limit.
-
-This is the panel that answers the question: the criterion is not a slope,
-it is a step between two adjacent cells, so 77 m and 97 m sit either side
-of it and 87 m -- where a 20 m standard would land -- sits on the safe side
-by one cell.
-
-Args:
-    axis: Axes to draw on.
-    grid: (cross_shore, alongshore) interior elevations in m MHW.
-```
-
-</details>
 
 ### hindcast_final_figure_lowess.py
 

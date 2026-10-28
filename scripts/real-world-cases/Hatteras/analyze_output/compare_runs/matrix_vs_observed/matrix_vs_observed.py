@@ -36,9 +36,9 @@ sys.path.insert(0, str(_HAT_DIR))
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms"))
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "experiments"))
 
-import HAT_metres_1_offset_units as common  # noqa: E402
+import site_layer.hat_scoring as common  # noqa: E402
 from cascade_pipeline.hindcast import build_shoreline_target  # noqa: E402
-from cascade_pipeline.run_registry import find_run_dir, load_run_index  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir, scan_runs  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     COMPARISONS_ROOT, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
     figsize, mark_offaxis, open_frame, record_caption, save, structures, town_bands)
@@ -123,7 +123,7 @@ def observed_change(period, window_domains=SMOOTH):
 
 # The option A matrix runs from the run index, with their folders
 def matrix_runs():
-    idx = load_run_index(RAW_RUNS / "run_index.csv")
+    idx = scan_runs(RAW_RUNS)
     m = idx[(idx["kind"] == "matrix") & idx["run_name"].str.contains("offsetmetres")].copy()
     m["period"] = m["start_year"].astype(int)
     # The configured windows only; the index also holds the retired 14-yr ones
@@ -148,7 +148,7 @@ def smoothed(series):
 # Last annual shoreline minus the first, seaward + (x_s grows landward, so the sign flips)
 def model_end_change(run_dir):
     m = np.load(next(run_dir.glob("*_shoreline_matrix.npy")))
-    D = HATTERAS_DOMAINS
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
     return pd.Series(-(m[-1] - m[0])[D.start_real_index:D.end_real_index],
                      index=np.arange(D.first_gis_id, D.last_gis_id + 1))
 
@@ -156,11 +156,10 @@ def model_end_change(run_dir):
 # The runner's end-year dune-line target as a change, seaward +
 def dune_end_change(run_dir, period):
     m = np.load(next(run_dir.glob("*_shoreline_matrix.npy")))
-    _, change = build_shoreline_target(m[0], period, end_year(period), HATTERAS_DOMAINS,
-                                       RAW_OFFSET_DIR)
+    D = HATTERAS_DOMAINS.for_total(m.shape[1])   # the run's own buffers, not the config's
+    _, change = build_shoreline_target(m[0], period, end_year(period), D, RAW_OFFSET_DIR)
     if change is None:     # no dune line for the end year
         return None
-    D = HATTERAS_DOMAINS
     return pd.Series(-np.asarray(change, float),
                      index=np.arange(D.first_gis_id, D.last_gis_id + 1))
 

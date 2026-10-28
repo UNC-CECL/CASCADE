@@ -39,7 +39,7 @@ from site_layer.hat_map_layers import STYLE_DOC, STYLE_SHEET_DIR  # noqa: E402,F
 OUTPUT_ROOT = PROJECT_ROOT / "output"
 FIGURES_ROOT = OUTPUT_ROOT / "figures"
 COMPARISONS_ROOT = OUTPUT_ROOT / "comparisons"       # cross-run figures
-OBSERVATIONS_OUT = OUTPUT_ROOT / "observations"      # the observed record itself
+OBSERVATIONS_OUT = PROJECT_ROOT / "data" / "hatteras_init" / "5-scr" / "1-observations"  # beside the record it draws
 # The numbered layout, in the paper's order; the retired subjects raise
 FIGURE_SUBJECTS = {
     "site": "1-site",                  # the reach, the 90 domains, one domain

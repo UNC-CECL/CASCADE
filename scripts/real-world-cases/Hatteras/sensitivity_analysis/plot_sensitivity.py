@@ -4,11 +4,15 @@ Figures for the hindcast sensitivity sweep: skill per axis, alongshore rates per
 
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --preset edgeBE
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --quantity position --reference total
+    python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --quantity position --reference net_change
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --circularity
 
 Reads the sweep manifest, run_index.csv and each cell's rates; scores against
-the production target (interior GIS 2-89). Writes to
-output/raw_runs/sensitivity/figures/<start>_<end>_<preset>/. Details: scripts/sensitivity_analysis/README.md.
+the production target (interior GIS 2-89). Since 2026-10-26 the folder
+output/raw_runs/sensitivity/figures/<start>_<end>_<preset>/ holds the position-change
+set (--quantity position --reference net_change: the run figure's CoastSat net change
+and LOWESS-smoothed model, skill in metres); the rate set goes to its rate/ subfolder.
+Details: scripts/sensitivity_analysis/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -25,11 +29,10 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib as mpl
-import matplotlib.colors as mcolors
 import matplotlib.ticker as mticker
-import matplotlib.patheffects as mpatheffects
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.transforms import blended_transform_factory
 
 # House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
@@ -37,7 +40,7 @@ from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
                              if (_q / "hatteras_paths.py").exists())))
 from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
-                              FIG_W_DOUBLE)
+                              FIG_W_DOUBLE, town_bands)
 apply_style()
 import numpy as np
 import pandas as pd
@@ -53,21 +56,24 @@ if not (PROJECT_BASE_DIR / "data" / "hatteras_init").is_dir():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no pyproject.toml.")
 for _path in (_HAT_DIR,
-              _HAT_DIR / "hatteras_ms",
+              _HAT_DIR / "hatteras_ms" / "hindcast",
               _HAT_DIR / "sensitivity_analysis"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS  # noqa: E402
+from site_layer.hatteras_site_config import (  # noqa: E402
+    HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS, HATTERAS_PERIODS)
 from cascade_pipeline.coastsat_lowess import (  # noqa: E402
     CoastSatDataset, LowessConfig, build_coastsat_series, scale_coastsat_series)
 from cascade_pipeline.shoreline import compute_change_rate  # noqa: E402
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
-    MATRIX_KIND, find_run_dir, load_run_index, sweep_family)
+    MATRIX_KIND, find_run_dir, scan_runs, sweep_family)
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
     DEFAULT_RATE_COMPARISON)
+from cascade_pipeline.plotting.net_change_comparison import smooth_model  # noqa: E402
+from site_layer.hat_observed_rates import net_change_dir  # noqa: E402
 from hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
@@ -82,7 +88,6 @@ AXIS_ORDER = ("wave_height", "wave_period", "wave_asymmetry",
 # --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "sensitivity"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-RUN_INDEX = RAW_RUNS / "run_index.csv"
 # Figures beside the cells they describe (since 2026-09-28)
 FIGURES_ROOT = RAW_RUNS / "sensitivity" / "figures"
 # -----------------------------------------------------------------------------
@@ -104,9 +109,11 @@ def period_component(start_year):
 MODEL_RAMP = plt.get_cmap("YlOrRd")
 RAMP_LO, RAMP_HI = 0.30, 0.92          # skip the near-white and near-black ends
 BASELINE_COLOR = "#111111"
-# The current setting: a hue in neither family, the curve a reader looks for
-CURRENT_COLOR = "#D01C8B"
 INK, INK_MUTED = "#222222", "#666666"
+
+# The values the alongshore figure draws per axis, the current setting included (advisor, 2026-10-27);
+# an axis not named here draws every cell
+ALONGSHORE_VALUES = {"wave_height": (2.0, 3.0, 4.0, 5.0)}
 
 
 # Reading the sweep
@@ -160,6 +167,19 @@ def load_cells(start_year, preset):
     return frame.sort_values(["sweep", "sort_key"]).reset_index(drop=True)
 
 
+# The values of one axis whose cells failed, for one period and preset
+def failed_values(start_year, preset, sweep):
+    manifest = OUT_ROOT / f"sensitivity_{start_year}.jsonl"
+    failed = set()
+    for line in manifest.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row.get("preset") == preset and row.get("sweep") == sweep and not row.get("ok"):
+            failed.add(normalise(row["value"]))
+    return failed
+
+
 # The matrix run a cell is a departure from
 def baseline_name(run_name):
     stem, _, token = run_name.rpartition("_")
@@ -168,9 +188,9 @@ def baseline_name(run_name):
     return run_name
 
 
-# run_index.csv, indexed by (run_name, kind, tag)
+# Every run's row, indexed by (run_name, kind, tag)
 def load_index():
-    frame = load_run_index(RUN_INDEX)
+    frame = scan_runs(RAW_RUNS)
     text_columns = {"run_name", "kind", "tag", "status", "timestamp",
                     "source_sink_preset", "scenario", "arm", "git_commit",
                     "topo_product", "topo_dune_version",
@@ -200,12 +220,14 @@ def model_rates(run_dir, run_name):
     return frame[["gis_domain", "lrr_m_yr"]]
 
 
-# Per-domain modelled shoreline position change, end minus start (m)
-def model_position_change(run_dir, run_name):
+# Per-domain modelled shoreline position change, end minus start (m); `smooth` as the run figure draws it
+def model_position_change(run_dir, run_name, smooth=False):
     matrix = np.load(resolve_run_file(run_dir, "matrix", run_name))
     change = compute_change_rate(matrix, span_years=1, flip_sign=True)
-    real = change[HATTERAS_DOMAINS.start_real_index:
-                  HATTERAS_DOMAINS.end_real_index]
+    if smooth:
+        change = smooth_model(change)
+    geometry = HATTERAS_DOMAINS.for_total(len(change))   # the run's own buffers, not the config's
+    real = change[geometry.start_real_index:geometry.end_real_index]
     gis = np.arange(HATTERAS_DOMAINS.first_gis_id,
                     HATTERAS_DOMAINS.last_gis_id + 1)
     return pd.DataFrame({"gis_domain": gis, "lrr_m_yr": real})
@@ -219,6 +241,23 @@ LONG_TERM_WINDOW = (1996, 2024)
 def position_layers(start_year, reference):
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     span = end_year - start_year
+    if reference == "net_change":
+        # The DEM-to-DEM target the run's shoreline_position_change figure draws (net_change_comparison)
+        tag = f"{start_year}_{end_year}"
+        series = build_coastsat_series(
+            [CoastSatDataset(
+                label=f"CoastSat net change ({start_year}-{end_year})", period_start=start_year,
+                csv_path=str(net_change_dir(start_year, end_year)
+                             / f"transect_net_change_{tag}.csv"),
+                rate_col="net_change_m")],
+            active_period_start=start_year, lowess_config=LOWESS_CONFIG,
+            domains=HATTERAS_DOMAINS)
+        active = next(cs for cs in series if cs["active"])
+        target = build_target_table(active, LOWESS_CONFIG, HATTERAS_DOMAINS,
+                                    TARGET_WINDOW)
+        label = (f"CoastSat net change {start_year}–{end_year}, {TARGET_WINDOW}-domain "
+                 f"LOWESS (domain means D1–{LOWESS_CONFIG.skip_southern_domains})")
+        return series, target, label
     if reference == "total":
         series, _ = coastsat_layers(start_year)
         fit = f"{start_year}–{end_year}"
@@ -364,6 +403,20 @@ def tidy(ax, minor=True):
     ax.tick_params(which="major", length=3.5)
 
 
+# The community zones (grey, named at the top) and shoal zones (hatched gold, named at the
+# foot), from the site config, under the data; call after the x limits are set
+def site_zones(ax):
+    town_bands(ax, where="top", fontsize=7.5)
+    trans = blended_transform_factory(ax.transData, ax.transAxes)
+    for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
+        ax.axvspan(lo - 0.5, hi + 0.5, facecolor=HATTERAS_ANNOTATIONS.color_shoal, alpha=0.10,
+                   zorder=0, hatch="///", edgecolor=HATTERAS_ANNOTATIONS.color_shoal,
+                   linewidth=0)
+        ax.text((lo + hi) / 2.0, 0.03, name, transform=trans, ha="center", va="bottom",
+                fontsize=7.5, color="#7A5800", style="italic", zorder=9,
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8))
+
+
 # Figures
 
 # A swept value as it appears in a legend or colourbar tick
@@ -388,10 +441,16 @@ def axis_xlabel(sweep):
 
 
 # Interior RMSE and bias against the swept value, one column per axis
-def plot_skill_overview(cells, index, start_year, preset, out_dir):
+# `scores` maps a run key to (rmse, bias) in `unit`; None reads the index's rate skill
+def plot_skill_overview(cells, index, start_year, preset, out_dir, scores=None,
+                        unit="m/yr", note=""):
     sweeps = [s for s in AXIS_ORDER if s in set(cells["sweep"])]
     if not sweeps:
         return None
+    if scores is None:
+        def scores(key):
+            return index.loc[key].rmse_interior_m_yr, index.loc[key].mean_bias_interior_m_yr
+    unit_tex = {"m/yr": "m yr$^{-1}$"}.get(unit, unit)
     fig, axes = plt.subplots(
         2, len(sweeps),
         figsize=figsize("double",
@@ -402,27 +461,26 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
     footnotes = []
     for col, sweep in enumerate(sweeps):
         block = cells[cells.sweep == sweep]
-        base_row = index.loc[block.iloc[0].base_key]
+        base_rmse, base_bias = scores(block.iloc[0].base_key)
 
         numeric = block[np.isfinite(block.sort_key)]
         # The calibration value is a point on the curve, not just a reference line
         default = normalise(sweep_base_value(SWEEPS[sweep]["setting"]))
         x = list(numeric.sort_key.to_numpy(dtype=float))
-        rmse = [index.loc[k].rmse_interior_m_yr for k in numeric.key]
-        bias = [index.loc[k].mean_bias_interior_m_yr for k in numeric.key]
+        rmse = [scores(k)[0] for k in numeric.key]
+        bias = [scores(k)[1] for k in numeric.key]
         if default is not None:
             x.append(default)
-            rmse.append(base_row.rmse_interior_m_yr)
-            bias.append(base_row.mean_bias_interior_m_yr)
+            rmse.append(base_rmse)
+            bias.append(base_bias)
         order = np.argsort(x)
         x = np.asarray(x)[order]
         rmse = np.asarray(rmse)[order]
         bias = np.asarray(bias)[order]
 
         for row, (values, base_value, label) in enumerate((
-                (rmse, base_row.rmse_interior_m_yr, "Interior RMSE (m/yr)"),
-                (bias, base_row.mean_bias_interior_m_yr,
-                 "Interior mean bias (m/yr)"))):
+                (rmse, base_rmse, f"Interior RMSE ({unit})"),
+                (bias, base_bias, f"Interior mean bias ({unit})"))):
             ax = axes[row][col]
             ax.plot(x, values, color=MODEL_RAMP(RAMP_HI), lw=1.5,
                     marker="o", ms=3.8, mec="white", mew=0.6, zorder=3,
@@ -437,7 +495,7 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
                 ax.axhline(0.0, color=INK_MUTED, lw=0.7, ls=":", zorder=1)
 
             # Floor the y span on the run's RMSE so a flat response looks flat
-            floor_span = 0.12 * abs(base_row.rmse_interior_m_yr)
+            floor_span = 0.12 * abs(base_rmse)
             lo, hi = ax.get_ylim()
             if hi - lo < floor_span:
                 mid = 0.5 * (lo + hi)
@@ -460,8 +518,7 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
         for key in block[~np.isfinite(block.sort_key)].key:
             footnotes.append(
                 f"{SWEEPS[sweep]['label']}, measured: "
-                f"RMSE {index.loc[key].rmse_interior_m_yr:.3f} "
-                f"m yr$^{{-1}}$")
+                f"RMSE {scores(key)[0]:.3f} {unit_tex}")
 
     handles, labels = axes[0][0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=3,
@@ -469,7 +526,7 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     caption = (f"Parameter sensitivity, {start_year}–{end_year}, {preset}. "
-               f"Interior domains (GIS 2–89).")
+               f"Interior domains (GIS 2–89).{note}")
     if footnotes:
         caption += "  " + "; ".join(footnotes) + "."
     fig.suptitle(caption, y=1.035, fontsize=10)
@@ -482,21 +539,33 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
 
 # Modelled LRR per domain for every cell of one axis, over the observed layer
 def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
-                    out_dir, position=None):
+                    out_dir, position=None, shown=None):
     block = cells[cells.sweep == sweep]
     if block.empty:
         return None
     base = block.iloc[0].base_name
-    colors = ramp_colors(len(block))
+    # `shown`: the values to draw; one with no completed cell is reported, not drawn
+    absent = []
+    if shown is not None:
+        wanted = {normalise(v) for v in shown}
+        absent = sorted(wanted - set(block.norm)
+                        - {normalise(sweep_base_value(SWEEPS[sweep]["setting"]))})
+        if absent:
+            print(f"  {sweep}: no completed cell at {', '.join(f'{v:g}' for v in absent)}; "
+                  f"not drawn")
+        block = block[block.norm.isin(wanted)]
 
-    fig = plt.figure(figsize=(9.6, 4.5), constrained_layout=True)
-    grid = fig.add_gridspec(1, 2, width_ratios=[60, 1], wspace=0.02)
-    ax = fig.add_subplot(grid[0, 0])
-    cax = fig.add_subplot(grid[0, 1])
+    fig, ax = plt.subplots(figsize=(9.6, 4.5), constrained_layout=True)
 
     # The observed layer is one curve: the scoring target
     skip = LOWESS_CONFIG.skip_southern_domains
-    load = model_rates if position is None else model_position_change
+    if position is None:
+        load = model_rates
+    else:
+        smooth = position[0] == "net_change"
+
+        def load(run_dir, run_name):
+            return model_position_change(run_dir, run_name, smooth=smooth)
     active = next(cs for cs in cs_series if cs["active"])
     south = np.asarray(active["transect_domains"]) <= skip
     ax.scatter(
@@ -520,57 +589,57 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     # The current setting, named with its value
     current = normalise(sweep_base_value(SWEEPS[sweep]["setting"]))
     units = SWEEPS[sweep]["units"]
-    current_text = "measured" if current is None else f"{current:g}"
-    if units:
-        current_text += f" {units.split()[0]}"
-    # Solid, not dashed: weight and a thin halo carry its identity
-    ax.plot(base_rates.gis_domain, base_rates.lrr_m_yr, color=CURRENT_COLOR,
-            lw=2.2, solid_capstyle="round", solid_joinstyle="round", zorder=8,
-            path_effects=[mpatheffects.withStroke(linewidth=3.6,
-                                                  foreground="white")],
-            label=f"Model at the CURRENT setting ({current_text})")
+    unit = f" {units.split()[0]}" if units else ""
+    # (sort key, curve, legend text); the current setting is one value among the rest
+    curves = [(np.inf if current is None else current, base_rates,
+               f"{value_label(current)}{unit} (current)")]
+    for _, cell in block.iterrows():
+        curves.append((cell.sort_key, load(cell.run_dir, cell.run_name),
+                       f"{value_label(cell.value)}{unit}"))
+    curves.sort(key=lambda c: c[0])
 
-    for color, (_, cell) in zip(colors, block.iterrows()):
-        rates = load(cell.run_dir, cell.run_name)
-        ax.plot(rates.gis_domain, rates.lrr_m_yr, color=color, lw=1.0,
-                alpha=0.95, zorder=6)
+    # One ramp colour per value, in value order, every line the same weight (2026-10-27)
+    entries = []
+    for color, (_, rates, text) in zip(ramp_colors(len(curves)), curves):
+        line, = ax.plot(rates.gis_domain, rates.lrr_m_yr, color=color, lw=1.4,
+                        alpha=0.95, zorder=6)
+        entries.append((line, text))
+    # A value whose run failed is named in the legend, greyed, with no line
+    failed = failed_values(start_year, preset, sweep) & set(absent)
+    for value in sorted(failed):
+        entries.append((Line2D([], [], color="none"), f"{value:g}{unit}: run failed"))
 
     ax.axhline(0.0, color=INK_MUTED, lw=0.7, ls="--", zorder=1)
     ax.set_xlim(HATTERAS_DOMAINS.first_gis_id - 0.5,
                 HATTERAS_DOMAINS.last_gis_id + 0.5)
+    site_zones(ax)
     ax.set_xlabel("Alongshore position (GIS domain, south → north)")
     ax.set_ylabel("Shoreline change rate, LRR (m/yr)" if position is None
                   else "Shoreline position change (m)")
     tidy(ax)
 
-    # Legend below the axes: reference curves only
+    # Legend below the axes: the observed curve, then the transect dots
     handles, labels = ax.get_legend_handles_labels()
-    # Observed curve, then the model, then the transect dots.
-    rank = lambda lbl: (0 if "LOWESS" in lbl else
-                        2 if lbl.startswith("CoastSat transects") else 1)
-    order = sorted(range(len(labels)), key=lambda i: rank(labels[i]))
-    ax.legend([handles[i] for i in order], [labels[i] for i in order],
-              loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2,
-              frameon=False, handlelength=2.4, columnspacing=2.0)
+    order = sorted(range(len(labels)), key=lambda i: "LOWESS" not in labels[i])
+    reference = ax.legend([handles[i] for i in order], [labels[i] for i in order],
+                          loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2,
+                          frameon=False, handlelength=2.4, columnspacing=2.0)
+    ax.add_artist(reference)
 
-    # Discrete colourbar: one swatch per cell, colours by rank
-    cmap = mcolors.ListedColormap(colors)
-    bounds = np.arange(len(colors) + 1) - 0.5
-    bar = mpl.colorbar.ColorbarBase(
-        cax, cmap=cmap, norm=mcolors.BoundaryNorm(bounds, cmap.N),
-        ticks=np.arange(len(colors)), spacing="uniform")
-    bar.set_ticklabels([value_label(v) for v in block.value])
-    bar.ax.tick_params(length=0, labelsize=7.5)
-    bar.outline.set_linewidth(0.6)
-    bar.outline.set_edgecolor("#333333")
-    units = SWEEPS[sweep]["units"]
-    bar.set_label(f"{SWEEPS[sweep]['label']}" + (f" ({units})" if units else ""),
-                  fontsize=8.5, labelpad=8)
+    # Value legend on the right: one coloured line per value, in value order
+    values = ax.legend([e[0] for e in entries], [e[1] for e in entries],
+                       title=SWEEPS[sweep]["label"], loc="upper left",
+                       bbox_to_anchor=(1.01, 1.0), frameon=False, handlelength=2.4,
+                       alignment="left")
+    for text in values.get_texts()[len(curves):]:
+        text.set_color(INK_MUTED)
+        text.set_style("italic")
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     ax.set_title(f"{SWEEPS[sweep]['label']} sensitivity, "
                  f"{start_year}–{end_year}, {preset}"
                  + ("" if position is None else
+                    ": position change vs CoastSat net change" if position[0] == "net_change" else
                     f": position change vs {position[0]} change"), pad=8)
 
     path = out_dir / f"{AXIS_ORDER.index(sweep) + 2:02d}_alongshore_{sweep}.png"
@@ -747,6 +816,37 @@ def write_summary(cells, index, start_year, preset, out_dir):
     return path, frame
 
 
+# Interior RMSE and mean bias (m) of the smoothed position change against the net-change target
+def position_scores(cells, start_year, preset, target):
+    obs = target.set_index("gis_domain")["target_lrr_m_yr"].loc[2:89]
+    keys = {cell.key: (cell.run_dir, cell.run_name) for _, cell in cells.iterrows()}
+    for base in set(cells.base_name):
+        keys[(base, MATRIX_KIND, "")] = (find_run_dir(
+            RAW_RUNS, base, period_component(start_year), preset, kind=MATRIX_KIND), base)
+    out = {}
+    for key, (run_dir, run_name) in keys.items():
+        model = model_position_change(run_dir, run_name, smooth=True).set_index("gis_domain")
+        err = model["lrr_m_yr"].loc[2:89] - obs
+        out[key] = (float(np.sqrt((err ** 2).mean())), float(err.mean()))
+    return out
+
+
+# The position-change summary: one row per cell, skill in metres
+def write_position_summary(cells, scores, start_year, preset, out_dir):
+    rows = []
+    for _, cell in cells.iterrows():
+        rmse, bias = scores[cell.key]
+        base_rmse, _ = scores[cell.base_key]
+        rows.append(dict(
+            start_year=start_year, preset=preset, axis=cell.sweep,
+            setting=cell.setting, value=value_label(cell.value),
+            run_name=cell.run_name, rmse_interior_m=rmse, mean_bias_interior_m=bias,
+            baseline_rmse_interior_m=base_rmse, delta_rmse_m=rmse - base_rmse))
+    path = out_dir / "summary.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    return path
+
+
 # Run: the figures for one period and preset, and the summary CSV
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
@@ -761,19 +861,25 @@ def main():
                         help="position: model end-minus-start change (m) "
                              "against CoastSat LRR x span; alongshore figures "
                              "only, under figures/position_change/<reference>/")
-    parser.add_argument("--reference", choices=("total", "projected"),
+    parser.add_argument("--reference", choices=("total", "projected", "net_change"),
                         default="total",
                         help="with --quantity position: the window's own LRR "
-                             "(total) or the 1996-2024 LRR (projected)")
+                             "(total), the 1996-2024 LRR (projected), or the "
+                             "CoastSat net change the run figure draws (net_change: "
+                             "the main folder, with skill and summary in metres)")
     args = parser.parse_args()
 
     # One directory per (period, preset)
     end_year = HATTERAS_PERIODS[args.start_year].get(
         "end_year", args.start_year + 20)
     root = Path(args.out_dir) if args.out_dir else FIGURES_ROOT
-    if args.quantity == "position":
+    net_change = args.quantity == "position" and args.reference == "net_change"
+    if args.quantity == "position" and not net_change:
         root = root / "position_change" / args.reference
     out_dir = root / f"{args.start_year}_{end_year}_{args.preset}"
+    # The main folder holds the net-change position set; the rate set sits under rate/ (2026-10-26)
+    if args.quantity == "rate":
+        out_dir = out_dir / "rate"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     index = load_index()
@@ -800,8 +906,18 @@ def main():
                                                        args.reference)
         written = [plot_alongshore(cells, sweep, args.start_year, args.preset,
                                    cs_series, target, out_dir,
-                                   position=(args.reference, obs_label))
+                                   position=(args.reference, obs_label),
+                                   shown=ALONGSHORE_VALUES.get(sweep))
                    for sweep in AXIS_ORDER if sweep in set(cells.sweep)]
+        if net_change:
+            scores = position_scores(cells, args.start_year, args.preset, target)
+            written.insert(0, plot_skill_overview(
+                cells, index, args.start_year, args.preset, out_dir,
+                scores=scores.__getitem__, unit="m",
+                note=" Shoreline position change against the CoastSat net change, "
+                     "both 7-domain LOWESS."))
+            written.append(write_position_summary(cells, scores, args.start_year,
+                                                  args.preset, out_dir))
         print(f"{len(cells)} cells  |  {args.start_year}  |  {args.preset}  |  "
               f"position change vs {args.reference}")
         for path in [p for p in written if p is not None]:
@@ -815,7 +931,8 @@ def main():
                                        args.preset, out_dir))
     for sweep in [s for s in AXIS_ORDER if s in set(cells.sweep)]:
         written.append(plot_alongshore(cells, sweep, args.start_year,
-                                       args.preset, cs_series, target, out_dir))
+                                       args.preset, cs_series, target, out_dir,
+                                       shown=ALONGSHORE_VALUES.get(sweep)))
     written.append(plot_relocation_outcomes(cells, index, args.start_year,
                                             args.preset, out_dir))
     if args.circularity:

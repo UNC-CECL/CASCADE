@@ -215,15 +215,15 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
         "zeroBE; within a pair only the offset differs.",
         [
             ("Start here: both starts against the target",
-             f"{OUT}/offset_source/"
+             f"{OUT}/offset_source/duneline_vs_shoreline/"
              "offset_source_model_change_vs_projected_full_management.png",
              "both periods, against projected change (1996–2024 LRR x 14 yr, "
              "LOWESS 7). **Barely**: bias and RMS differ by under 0.5 m."),
             ("How far apart the two runs are",
-             f"{OUT}/offset_source/offset_source_difference_full_management.png",
+             f"{OUT}/offset_source/duneline_vs_shoreline/offset_source_difference_full_management.png",
              "both periods, no observation; about 3 m on average, up to 15–18 m."),
             ("What drives the difference",
-             f"{OUT}/offset_source/"
+             f"{OUT}/offset_source/duneline_vs_shoreline/"
              "offset_source_orientation_vs_model_full_management.png",
              "the offset's turning (embayments, bulges), not its orientation."),
         ],

@@ -32,6 +32,7 @@ _HAT_DIR = next(p for p in Path(__file__).resolve().parents  if (p / "hatteras_p
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 sys.path.insert(0, str(_HAT_DIR))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(_HAT_DIR / "input_prep" / "3-env-forcings" / "3-storms"))
@@ -81,11 +82,11 @@ def load_storms(forcing):
 # Each model year's lowest dune crest per domain (m MHW), GIS 1-90, from the matrix run
 def crest_by_year(window):
     name = ovm.WINDOWS[window][ARM]
-    c = np.load(ovm.MATRIX / f"{window[0]}_{window[1]}" / "edgeBE" / name / f"{name}.npz",
-                allow_pickle=True)["cascade"][0]
+    c = load_saved_cascade(ovm.MATRIX / f"{window[0]}_{window[1]}" / "edgeBE" / name / f"{name}.npz")
     rows = []
+    dom = DOM.for_total(len(c.barrier3d))   # the run's own buffers, not the config's
     for gis in range(1, 91):
-        b = c.barrier3d[DOM.gis_to_pad(gis)]
+        b = c.barrier3d[dom.gis_to_pad(gis)]
         dd = np.asarray(b.DuneDomain, dtype=float)                 # (years, cells, width) dam above berm
         crest = dd.max(axis=2) if dd.ndim == 3 else dd
         low = (crest.min(axis=1) + b._BermEl) * 10                  # the lowest point a storm must clear

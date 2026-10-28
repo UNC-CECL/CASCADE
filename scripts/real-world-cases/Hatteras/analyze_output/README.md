@@ -14,7 +14,6 @@ compare_runs/            comparisons of finished runs, one subfolder per
                              (rate_windows.py, target_comparison.py, ...)
                              -> comparisons/model_vs_observed/, target_comparison/
     matrix_vs_observed/      every run-matrix scenario vs the observations
-    adoption_2026-09-28/     the matrix before/after the 09-28 adoption
     offset_source/           dune-line vs shoreline island offset
 overwash/
     compare_overwash_figures.py   a run's overwash (Qow) against the imagery

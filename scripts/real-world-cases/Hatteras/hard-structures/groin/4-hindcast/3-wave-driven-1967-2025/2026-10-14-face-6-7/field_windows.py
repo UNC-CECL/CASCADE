@@ -50,7 +50,7 @@ if str(_HAT_DIR) not in _hat_sys.path:
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 for p in (_HAT_DIR, _HAT_DIR / "hatteras_ms", _HAT_DIR / "hatteras_ms" / "experiments",
           _HAT_DIR / "analyze_output" / "compare_runs" / "matrix_vs_observed",
-          workspace_twin(HERE.parent) / "2026-10-09-corrected-groin"):
+          HERE.parent / "2026-10-09-corrected-groin"):
     sys.path.insert(0, str(p))
 
 # --- CONFIG ------------------------------------------------------------------
@@ -66,11 +66,12 @@ NET_KEY = {1996: (1996, 2009), 2009: (2009, 2025)}
 # -----------------------------------------------------------------------------
 
 
-# The groin's face moved, patched into cascade.groin before the runner imports it. variant: "face67" (one
+# The groin's face moved, patched into the GroinManager Cascade builds before the runner runs. variant: "face67" (one
 # domain north), or "field" (GIS 5 to GIS 7 across GIS 6) with `share` of the gain kept in GIS 6
 def patch_groin(variant, share=0.0):
+    import cascade.cascade as cc
     import cascade.groin as cg
-    base = cg.GroinCallback
+    base = cg.GroinManager
 
     class MovedGroin(base):
         def __init__(self, updrift_pad, downdrift_pad, *a, **kw):
@@ -78,11 +79,11 @@ def patch_groin(variant, share=0.0):
                 updrift_pad, downdrift_pad = updrift_pad + 1, downdrift_pad + 1
             super().__init__(updrift_pad, downdrift_pad, *a, **kw)
             if variant == "field":                       # take from GIS 5, give to GIS 7; GIS 6 between
-                self.updrift_pad = self._hi_pad = updrift_pad + 1
+                self._updrift_pad = self._hi_pad = updrift_pad + 1
                 self._mid = updrift_pad
 
-        def __call__(self, cascade, x_s_dt):
-            x_s_dt = super().__call__(cascade, x_s_dt)
+        def update(self, brie, x_s_dt):
+            x_s_dt = super().update(brie, x_s_dt)
             if variant == "field" and share:
                 # Move a share of this year's updrift gain from GIS 7 into the field, in the step and in the
                 # groin's own contribution the tracked footprint is built from
@@ -93,7 +94,7 @@ def patch_groin(variant, share=0.0):
                     arr[self._mid] += dx
             return x_s_dt
 
-    cg.GroinCallback = MovedGroin
+    cc.GroinManager = cg.GroinManager = MovedGroin
 
 
 def member(share, s):
@@ -171,7 +172,7 @@ def cmd_run(a):
 
 def cmd_score(a):
     import corrected_groin as cgm
-    import HAT_metres_1_offset_units as common
+    import site_layer.hat_scoring as common
     from matrix_vs_observed import model_end_change
     from site_layer.hat_observed_rates import net_change_domain_csv
     rows = []

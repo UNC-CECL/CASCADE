@@ -3,7 +3,7 @@
 What BRIE's alongshore solve does with the groin dipole, measured without
 running CASCADE. The emulator reproduces BRIE's implicit shoreline-diffusion
 step (its own `coast_diff` table and sparse indices) plus the +/-M dipole that
-`cascade.groin.GroinCallback` injects into `x_s_dt`, and nothing else, so a
+the old dipole groin in `cascade.groin` injected into `x_s_dt`, and nothing else, so a
 1,000-year sweep costs seconds and anything the full model does differently is
 Barrier3D's cross-shore feedback.
 
@@ -74,7 +74,7 @@ Stage 0 of the groin module test: audit BRIE's solve without running CASCADE.
 WHY THIS EXISTS
     Every claim about what a groin "does" in CASCADE is a claim about what
     BRIE's implicit alongshore-diffusion solve does with the +/-M dipole that
-    `cascade.groin.GroinCallback` injects into `x_s_dt`. That solve is cheap:
+    the dipole groin in `cascade.groin` injects into `x_s_dt`. That solve is cheap:
     one sparse tridiagonal-plus-corners system per year. Reproducing it here
     WITHOUT Barrier3D means a 1,000-year, many-axis experiment costs seconds
     instead of days, and -- more importantly -- it separates the groin's
@@ -170,7 +170,7 @@ ny : int
     Domain count. The reach is PERIODIC, so this is a circumference.
 groins : list of (updrift, downdrift, M, f)
     One tuple per structure. `updrift` and `downdrift` are domain indices
-    and must be adjacent, matching `GroinCallback`'s own check. Sign
+    and must be adjacent, matching the groin module's own check. Sign
     follows `cascade.groin`: the updrift cell gets -M (seaward advance),
     the downdrift cell gets +M*f (landward retreat).
 years : int

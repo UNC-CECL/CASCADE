@@ -47,6 +47,8 @@ def has_target(start_year, end_year):
 # The model smoothed as every score smooths it: 7-domain LOWESS, GIS 1-10 raw; the last domain raw too,
 # because the end solve matches that domain's own value (Hannah, 2026-10-06)
 def smooth_model(position_m, domains=HATTERAS_DOMAINS, lowess_config=LOWESS_CONFIG):
+    # position_m is a whole padded row: its length gives the run's buffers (15 a side before 2026-10-21, 30 since)
+    domains = domains.for_total(np.size(position_m))
     real = np.asarray(position_m, dtype=float)[domains.start_real_index:domains.end_real_index]
     gis = np.arange(domains.first_gis_id, domains.last_gis_id + 1, dtype=float)
     sm = lowess(real, gis, frac=max(lowess_config.window_domains) / len(gis),
@@ -111,6 +113,7 @@ def plot_net_change_comparison(shoreline_m, run, save_path, wave_climate=None,
     cs_series = build_coastsat_series([dataset], active_period_start=window[0],
                                       lowess_config=LOWESS_CONFIG, domains=HATTERAS_DOMAINS)
     position_m = compute_change_rate(shoreline_m, span_years=1, flip_sign=flip_sign)
+    domains = HATTERAS_DOMAINS.for_total(np.size(position_m))     # the run's own buffers
 
     source_sink, groin, management = setup_text(run.run_name)
     role = WINDOW_ROLE.get(window, "").replace(" (held out)", "")
@@ -126,10 +129,10 @@ def plot_net_change_comparison(shoreline_m, run, save_path, wave_climate=None,
     save_path.parent.mkdir(parents=True, exist_ok=True)
     smoothed = smooth_model(position_m)
     fig, ax = plot_annotated_rate_comparison(
-        smoothed, cs_series, run, estimator=None, domains=HATTERAS_DOMAINS,
+        smoothed, cs_series, run, estimator=None, domains=domains,
         annotations=HATTERAS_ANNOTATIONS, lowess_config=LOWESS_CONFIG, config=config,
         save_path=str(save_path), show=show, change_rate_raw=None)
-    offaxis = _mark_offaxis(ax, smoothed, position_m, cs_series)
+    offaxis = _mark_offaxis(ax, smoothed, position_m, cs_series, domains)
     restyle(fig, ax, config.subtitle)
     fig.savefig(save_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close("all")

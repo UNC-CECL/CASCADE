@@ -568,6 +568,8 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         (fig, ax, fig_suffix): fig_suffix is "REAL_DOMAINS_ONLY" or
         "ALL_DOMAINS_WITH_BUFFERS", handy for building the output filename.
     """
+    # A saved run keeps the buffers it was made with (15 a side before 2026-10-21, 30 since): take them from the array
+    domains = domains.for_total(len(change_rate))
     subject = (f"Modelled against {annotations.obs_source_name} shoreline "
                f"change rate, {run.start_year}–{run.end_year}")
     model_label = _model_label(run, config)
@@ -726,6 +728,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     Returns:
         (fig, ax)
     """
+    # A saved run keeps the buffers it was made with (15 a side before 2026-10-21, 30 since): take them from the array
+    domains = domains.for_total(len(change_rate))
     gis_ids = np.arange(domains.first_gis_id, domains.last_gis_id + 1)
     real_rate = change_rate[domains.start_real_index:domains.end_real_index]
     real_raw = (None if change_rate_raw is None

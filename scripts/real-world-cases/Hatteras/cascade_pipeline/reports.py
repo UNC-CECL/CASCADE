@@ -310,7 +310,7 @@ def beach_dune_report(*, start_year, end_year, beach_dune_enabled,
 
 # Section 7 -- groin
 
-def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
+def groin_report(*, enabled, strength_history, updrift_gis, downdrift_gis,
                  install_year, start_year, end_year, geometry, strength,
                  off_year, source_sink_preset, domain_be_rates):
     """Prints the groin's configuration, its strength over the run, and the source/sink overlap.
@@ -324,10 +324,10 @@ def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
     """
     up_pad = geometry.gis_to_pad(updrift_gis)
     down_pad = geometry.gis_to_pad(downdrift_gis)
-    years, s_eff = groin_trapping_schedule(callback, start_year, end_year)
+    years, s_eff = groin_trapping_schedule(strength_history, start_year, end_year)
 
     print(f"\ngroin                 {'ENABLED' if enabled else 'disabled'}"
-          f"   (cascade.groin.GroinCallback, pre-AST hook)")
+          f"   (cascade.groin.GroinManager, Cascade(groin_module=...))")
     print(f"structure             updrift GIS {updrift_gis} (pad {up_pad}) "
           f"/ downdrift GIS {downdrift_gis} (pad {down_pad}), "
           f"installed {install_year}")
@@ -482,8 +482,8 @@ def pre_run_report(*, run_name, run_dir, run_years, start_year, end_year,
                    geometry, roadway_on, beach_dune_on, wave_height,
                    d_sf_m, h_b_m, profile_height_m, berm_floor_m,
                    dune_design_elevation_m, dune_minimum_elevation_m,
-                   groin_callback, groin_enabled, r_ipl):
-    """Prints what was built, the resolved profile, and the groin attached."""
+                   groin, groin_enabled, r_ipl):
+    """Prints what was built, the resolved profile, and the Cascade's GroinManager."""
     print(f"\nbuilt                 {run_name}")
     print(f"  run_dir             {run_dir}")
     print(f"  {run_years} transitions -> {run_years + 1} annual states "
@@ -507,16 +507,16 @@ def pre_run_report(*, run_name, run_dir, run_years, start_year, end_year,
           + ("(consistent with the metre reading)" if berm_floor_m < 5
              else "SUSPECT -- see the notebook markdown on BermEl units"))
 
-    if groin_callback is not None:
-        print(f"\nGROIN                 attached, {groin_callback.kind}, strength history "
-              f"{groin_callback.strength_history}, updrift pad "
-              f"{groin_callback.updrift_pad} / downdrift pad "
-              f"{groin_callback.downdrift_pad}, spread "
-              + ", ".join(f"{w:.3g}" for w in groin_callback.spread_weights))
+    if groin is not None:
+        print(f"\nGROIN                 GroinManager on, {groin.kind}, strength history "
+              f"{groin.strength_history}, updrift pad "
+              f"{groin.updrift_pad} / downdrift pad "
+              f"{groin.downdrift_pad}, spread "
+              + ", ".join(f"{w:.3g}" for w in groin.spread_weights))
         print(f"  r_ipl (t=0)         {r_ipl:.4f}  (at the groin cell's t=0 "
               f"angle, brie.py:1294)")
     else:
-        print(f"\nGROIN                 not attached (GROIN_ENABLED = "
+        print(f"\nGROIN                 GroinManager off (GROIN_ENABLED = "
               f"{groin_enabled})")
         print(f"  r_ipl (t=0)         {r_ipl:.4f}")
 
@@ -601,17 +601,17 @@ def groin_extent_report(*, extent, threshold_frac, baseline_name):
 
 
 def target_misfit_report(*, target_m, observed_change_m, shoreline_m,
-                         end_year, geometry, raw_offset_dir):
-    """Prints the model's misfit against the surveyed end-year dune line."""
+                         label, geometry):
+    """Prints the model's end-year misfit against the observed target (`label` names it)."""
     print()
     if target_m is None:
-        print(f"target                none -- no {end_year} dune-line survey "
-              f"in {raw_offset_dir.name}/; GIFs draw the model alone")
+        print(f"target                none -- no {label}; GIFs draw the model alone")
         return
+    geometry = geometry.for_total(np.shape(shoreline_m)[1])     # the run's own buffers
     real = slice(geometry.start_real_index, geometry.end_real_index)
     modeled = (shoreline_m[-1] - shoreline_m[0])[real]
     misfit = modeled - observed_change_m
-    print(f"target                observed {end_year} dune line "
+    print(f"target                {label} "
           f"({np.count_nonzero(~np.isnan(observed_change_m))} real domains)")
     print(f"  observed change     mean {np.nanmean(observed_change_m):+7.1f} m   "
           f"({np.nanmin(observed_change_m):+.1f} to "

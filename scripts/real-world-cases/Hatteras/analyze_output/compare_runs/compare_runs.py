@@ -47,12 +47,8 @@ from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 # Domain layout; must match the hindcast runner
 NUM_REAL_DOMAINS   = 90
-NUM_BUFFER_DOMAINS = 15
 FIRST_FILE_NUMBER = 1     # GIS domain IDs: 1–90
 LAST_FILE_NUMBER  = FIRST_FILE_NUMBER + NUM_REAL_DOMAINS - 1   # = 90
-TOTAL_DOMAINS    = NUM_BUFFER_DOMAINS + NUM_REAL_DOMAINS + NUM_BUFFER_DOMAINS  # 120
-START_REAL_INDEX = NUM_BUFFER_DOMAINS             # = 15
-END_REAL_INDEX   = START_REAL_INDEX + NUM_REAL_DOMAINS  # = 105
 DOMAIN_TICK_STEP    = 5
 DOMAIN_SPACING_M    = 500   # metres per CASCADE domain (used to convert window_domains → km)
 
@@ -216,13 +212,6 @@ ANN_C_GROIN        = "#B71C1C"
 # Domains 1..N show raw scatter instead of LOWESS (Oregon Inlet)
 LOWESS_SKIP_SOUTHERN_DOMAINS = 10
 # -----------------------------------------------------------------------------
-
-
-# Helper functions — domain utilities
-
-# GIS domain ID (1-based) -> CASCADE padded array index
-def _gis_to_pad(gis_id):
-    return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
 
 
 # Light -> dark colours by sort_key (or list order); an explicit 'color' is kept

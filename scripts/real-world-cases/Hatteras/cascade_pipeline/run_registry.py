@@ -1,10 +1,10 @@
 """
-Run provenance, output-directory guarding, and the cross-run index.
+Run provenance, output-directory guarding, and the cross-run table.
 
-    from cascade_pipeline.run_registry import find_run_dir, guard_run_dir, rebuild_run_index
+    from cascade_pipeline.run_registry import find_run_dir, guard_run_dir, scan_runs
 
-Where a run is filed, what code made it, and run_index.csv rebuilt from every run's
-metadata. Details: scripts/cascade_pipeline/README.md.
+Where a run is filed, what code made it, and one row per run read from every run's
+metadata (scan_runs; there is no run_index.csv since 2026-10-23). Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -27,9 +27,6 @@ import pandas as pd
 
 # Files whose presence alone does not make a run directory non-empty
 _IGNORABLE_NAMES = {".gitkeep", ".gitignore", ".DS_Store", "Thumbs.db"}
-
-RUN_INDEX_FILENAME = "run_index.csv"
-
 
 # Files a run writes back into the repository, so they do not count as uncommitted code
 EXCLUDED_FROM_DIRTY = (
@@ -637,21 +634,9 @@ def arms_holding(raw_runs, run_name, period, preset):
 
 # run_index.csv restates every run's metadata; rebuilt whole, so runs can finish concurrently
 
-INDEX_KEY = ("run_name", "kind", "tag")
-_LEGACY_INDEX_KEY = ("run_name", "Hs_m", "arm")
 INDEX_SECTION = "index row"
 _LEADING_COLUMNS = ("run_name", "kind", "tag", "status", "timestamp",
                     "start_year", "end_year", "source_sink_preset")
-
-
-def _read_index_rows(index_path):
-    """The index as a list of dicts of strings; [] if absent."""
-    import csv
-    index_path = Path(index_path)
-    if not index_path.is_file():
-        return []
-    with open(index_path, newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
 
 
 def _kind_tag_from_path(raw_runs, run_dir):
@@ -685,29 +670,8 @@ def _kind_tag_from_path(raw_runs, run_dir):
     return legacy_arm_to_kind_tag("/".join(rel[:i]))
 
 
-def _legacy_arm_from_path(raw_runs, run_dir):
-    """The `arm` a pre-09-16 index row spelled for a run at this path.
-
-    "calibration" for the unscoped tree (matrix runs AND token-named sweep
-    cells, either old layout); the arm folder(s) for arms/<arm>/ or a loose
-    pre-09-10 arm; and for the purpose layout, the arm LEGACY_ARMS maps the
-    (kind, tag) back to. This is what finds an old row for a moved run.
-    """
-    rel = Path(run_dir).relative_to(raw_runs).parts
-    i = next((k for k, part in enumerate(rel) if _PERIOD_DIR.fullmatch(part)),
-             len(rel))
-    if not rel:
-        return CALIBRATION_ARM
-    if rel[0] == ARMS_DIR:
-        return "/".join(rel[1:i]) or CALIBRATION_ARM
-    if rel[0] in KIND_DIR.values():
-        kind, tag = _kind_tag_from_path(raw_runs, run_dir)
-        return _legacy_arm_for(kind, tag, rel[-1]) or CALIBRATION_ARM
-    return "/".join(rel[:i]) or CALIBRATION_ARM
-
-
 def run_status(kind, product, version, current_versions):
-    """current / superseded / archived, for the index's `status` column.
+    """current / superseded / archived, for scan_runs' `status` column.
 
     A matrix or sensitivity run on a topography that is no longer the
     product's CURRENT is superseded: comparing it with a run made today would
@@ -724,40 +688,27 @@ def run_status(kind, product, version, current_versions):
     return "current"
 
 
-def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
-    """Regenerates run_index.csv from every run's metadata; returns the rows.
+def scan_runs(raw_runs, current_versions=None):
+    """Every run under raw_runs, one row each, read from its own metadata.
+
+    Replaces run_index.csv (removed 2026-10-23): the table is built when it is
+    asked for, so it cannot drift from what is on disk. A run's row is the
+    "index row" section of its metadata, plus kind and tag from where it sits
+    and a status. A run with no such section (made before 2026-09-16) gets its
+    identity columns only.
 
     Args:
         raw_runs: The output/raw_runs root.
-        index_path: Where to write; default raw_runs/run_index.csv.
         current_versions: {topo_product: CURRENT dune-topo version}, for the
-            status column. None leaves status "current" for everything but
-            the archive; pass hat_topo_version's answer to get supersession.
+            status column. None asks hat_topo_version.
 
     Returns:
-        The list of row dicts written, in file order.
-
-    Notes:
-        A run whose metadata has no "index row" section (made before
-        2026-09-16) keeps the row the existing file holds for it, found by the
-        old (run_name, Hs_m, arm) key and given kind/tag from its path. A run
-        with neither is indexed by its identity columns alone, so it is not
-        lost. Rows whose run is gone from disk are dropped here; recording
-        them is HAT_index_runs.py's job (retired_runs.csv), which calls this.
+        A DataFrame of strings, as the CSV used to read, identity columns first.
     """
-    import csv
-    import os
-    import tempfile
     raw_runs = Path(raw_runs)
-    index_path = Path(index_path) if index_path else raw_runs / RUN_INDEX_FILENAME
-    current_versions = current_versions or {}
-
-    existing = _read_index_rows(index_path)
-    by_new_key = {tuple(r.get(k, "") for k in INDEX_KEY): r for r in existing
-                  if r.get("kind")}
-    # The old key only means something in a file that still has the arm column
-    by_old_key = {tuple(r.get(k, "") for k in _LEGACY_INDEX_KEY): r
-                  for r in existing if "arm" in r}
+    if current_versions is None:
+        from site_layer.hat_topo_version import current_topo_versions
+        current_versions = current_topo_versions()
 
     rows = []
     for meta in sorted(raw_runs.rglob("*_run_metadata.json")):
@@ -767,50 +718,28 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
             continue
         run_dir = meta.parent
         kind, tag = _kind_tag_from_path(raw_runs, run_dir)
-        ident = data.get("identity", {})
-        row = None
         if INDEX_SECTION in data:
-            row = {k: ("" if v is None else v)
-                   for k, v in data[INDEX_SECTION].items()}
+            row = dict(data[INDEX_SECTION])
         else:
-            name = str(ident.get("run_name") or run_dir.name)
-            hs = str(data.get("wave climate", {}).get("wave_height_m", ""))
-            row = by_new_key.get((name, kind, tag))
-            row = dict(row) if row else None
-            if row is None:
-                old_arm = _legacy_arm_from_path(raw_runs, run_dir)
-                for probe in ((name, hs, old_arm), (name, hs, ""),
-                              (name, "", old_arm)):
-                    if probe in by_old_key:
-                        row = dict(by_old_key[probe])
-                        break
-            if row is None:
-                row = {
-                    "run_name": name, "timestamp": ident.get("timestamp", ""),
-                    "start_year": data.get("period", {}).get("start_year", ""),
-                    "end_year": data.get("period", {}).get("end_year", ""),
-                    "source_sink_preset": data.get("source/sink", {}).get("preset", ""),
-                    "Hs_m": hs,
-                    "topo_product": ident.get("topo_product", ""),
-                    "topo_dune_version": ident.get("topo_dune_version", "")}
+            ident = data.get("identity", {})
+            row = {
+                "run_name": str(ident.get("run_name") or run_dir.name),
+                "timestamp": ident.get("timestamp", ""),
+                "start_year": data.get("period", {}).get("start_year", ""),
+                "end_year": data.get("period", {}).get("end_year", ""),
+                "source_sink_preset": data.get("source/sink", {}).get("preset", ""),
+                "Hs_m": data.get("wave climate", {}).get("wave_height_m", ""),
+                "topo_product": ident.get("topo_product", ""),
+                "topo_dune_version": ident.get("topo_dune_version", "")}
         row.pop("arm", None)
         row["kind"], row["tag"] = kind, tag
         row["status"] = run_status(kind, row.get("topo_product", ""),
                                    row.get("topo_dune_version", ""),
                                    current_versions)
         rows.append(row)
-        # Backfill: a legacy run's row is written into its own metadata, so the next rebuild reads the run
-        if INDEX_SECTION not in data and row.get("rmse_interior_m_yr", "") != "":
-            data[INDEX_SECTION] = {k: v for k, v in row.items()
-                                   if k not in ("kind", "tag", "status")}
-            try:
-                meta.write_text(json.dumps(data, indent=2, ensure_ascii=False)
-                                + "\n", encoding="utf-8")
-            except OSError:
-                pass
 
     # Column order: identity first, then first-seen order
-    columns = [c for c in _LEADING_COLUMNS]
+    columns = list(_LEADING_COLUMNS)
     for row in rows:
         for column in row:
             if column not in columns:
@@ -818,53 +747,10 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
     rows.sort(key=lambda r: tuple(str(r.get(k, "")) for k in
                                   ("start_year", "kind", "tag", "source_sink_preset",
                                    "run_name")))
-
-    # csv, not pandas (which rewrites floats); written beside and replaced, so no reader sees half a file
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=".run_index_", suffix=".csv",
-                               dir=str(index_path.parent))
-    try:
-        with os.fdopen(fd, "w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=columns,
-                                    extrasaction="ignore")
-            writer.writeheader()
-            for row in rows:
-                writer.writerow({k: ("" if v is None else v) for k, v in row.items()})
-        # Windows: os.replace can be denied while another run holds the file, so retry
-        import time as _time
-        for attempt in range(20):
-            try:
-                os.replace(tmp, index_path)
-                break
-            except PermissionError:
-                if attempt == 19:
-                    raise
-                _time.sleep(0.5 + 0.25 * attempt)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    return rows
-
-
-def load_run_index(index_path):
-    """run_index.csv as a DataFrame with kind/tag/status guaranteed present.
-
-    A file from before 2026-09-16 has `arm` instead; it is translated so a
-    reader written against the new columns works on either.
-    """
-    frame = pd.read_csv(index_path, dtype=str, keep_default_na=False)
-    if "kind" not in frame.columns:
-        pairs = [legacy_arm_to_kind_tag(a) for a in frame.get("arm", "")]
-        frame["kind"] = [k for k, _ in pairs]
-        frame["tag"] = [t for _, t in pairs]
-        # A token-named cell sat in the calibration arm; say what it is.
-        fam = frame["run_name"].map(sweep_family)
-        cells = (frame["kind"] == MATRIX_KIND) & (fam != "")
-        frame.loc[cells, "kind"] = "sensitivity"
-        frame.loc[cells, "tag"] = fam[cells]
-    if "status" not in frame.columns:
-        frame["status"] = "current"
-    return frame
+    # As text, as the CSV read: callers compare and parse values themselves
+    return pd.DataFrame(
+        [{c: ("" if r.get(c) is None else str(r.get(c))) for c in columns} for r in rows],
+        columns=columns, dtype=str)
 
 
 def run_dir_contents(run_dir):
@@ -1096,63 +982,6 @@ def skill_vs_target(change_rate, target_table, geometry,
     }
 
 
-def append_run_index(index_path, row, key="run_name"):
-    """Adds one run to the cross-run index CSV, replacing any earlier row.
-
-    Replaces rather than appends on a repeat run name so the index tracks what
-    is currently on disk. A run directory holds exactly one result, so two
-    index rows for one name could only ever mean one of them is stale.
-
-    New columns are unioned in, so adding a field later does not invalidate an
-    index written before it existed -- older rows get NaN for it.
-
-    Args:
-        index_path: Path to the index CSV. Created if absent.
-        row: Mapping of column name to value for this run.
-        key: Column, or sequence of columns, identifying a run uniquely.
-
-    Returns:
-        The full index as a DataFrame, as written.
-
-    Note:
-        The index is a DERIVED view of the runs on disk: every value in it is
-        restated from a run's own metadata. This keeps it in step as runs are
-        made; `HAT_index_runs.py` rebuilds it from the runs, checks it against
-        them, and records anything whose run has been deleted.
-    """
-    index_path = Path(index_path)
-    new = pd.DataFrame([row])
-    # A composite key: two runs can share a name and differ in forcing
-    keys = (key,) if isinstance(key, str) else tuple(key)
-
-    if index_path.exists():
-        # As text: only the row being added changes (pandas would rewrite every float)
-        existing = pd.read_csv(index_path, dtype=str, keep_default_na=False)
-        usable = [k for k in keys if k in existing.columns]
-        if usable:
-            same = pd.Series(True, index=existing.index)
-            for k in usable:
-                same &= existing[k].astype(str) == str(row.get(k))
-            existing = existing[~same]
-        combined = pd.concat([existing, new], ignore_index=True)
-    else:
-        combined = new
-
-    # Stable ordering: identity columns first, then whatever else exists
-    leading = [c for c in keys + ("timestamp", "start_year", "end_year")
-               if c in combined.columns]
-    combined = combined[leading + [c for c in combined.columns
-                                   if c not in leading]]
-    sort_on = [k for k in keys if k in combined.columns]
-    if sort_on:
-        combined = combined.sort_values(sort_on,
-                                        kind="stable").reset_index(drop=True)
-
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    combined.to_csv(index_path, index=False)
-    return combined
-
-
 def timestamp():
-    """Current local time, formatted for metadata and the index."""
+    """Current local time, formatted for metadata."""
     return f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}"

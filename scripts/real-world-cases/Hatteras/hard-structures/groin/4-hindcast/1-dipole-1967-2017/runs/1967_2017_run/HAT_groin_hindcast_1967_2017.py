@@ -478,11 +478,11 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
     if groin_on:
         # The shared groin model in the package, the same one production fits (README)
         try:
-            from cascade.groin import GroinCallback
+            from cascade.groin import GroinManager
         except ImportError as e:
             sys.exit(f"ERROR: groin run needs cascade.groin importable: {e}")
 
-        groin_cb = GroinCallback(
+        groin_cb = GroinManager(
             updrift_pad=_gis_to_pad(GROIN_UPDRIFT_GIS),
             downdrift_pad=_gis_to_pad(GROIN_DOWNDRIFT_GIS),
             trapping_rate_m_yr=GROIN_TRAPPING_RATE_M_YR,
@@ -494,7 +494,7 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
             deterioration_ramp_years=GROIN_DETERIORATION_RAMP_YEARS,
             deterioration_fraction=GROIN_DETERIORATION_FRACTION,
         )
-        cascade._groin_callback = groin_cb
+        cascade._groin = groin_cb
         print(f"  Groin attached: updrift D{GROIN_UPDRIFT_GIS} "
               f"(pad {_gis_to_pad(GROIN_UPDRIFT_GIS)}), "
               f"downdrift D{GROIN_DOWNDRIFT_GIS} (pad {_gis_to_pad(GROIN_DOWNDRIFT_GIS)}), "
@@ -556,9 +556,9 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
 
     if groin_cb is not None and len(groin_cb.year_TS) == 0:
         print("\n" + "!" * 78)
-        print("WARNING: groin callback was never called. The pre-AST hook in")
-        print("cascade.py is missing, so this 'groin' run is identical to no_groin.")
-        print("Add the 3-line hook to cascade.py, then re-run.")
+        print("WARNING: the groin module was never called. The groin step in")
+        print("Cascade.update() is missing, so this 'groin' run is identical to no_groin.")
+        print("Add the groin step to Cascade.update(), then re-run.")
         print("!" * 78)
 
     run_dir = os.path.join(OUTPUT_BASE_DIR, run_name)

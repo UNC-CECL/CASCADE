@@ -76,9 +76,9 @@ def frac_year(t):
 # Each run's overwash per domain and model year: {first model year: (90, years) array}
 def model_overwash():
     out, names = {}, []
-    pads = [DOM.gis_to_pad(g) for g in range(1, 91)]
     for window in ovm.WINDOWS:
         q, name = ovm.load_qow(window, ARM)
+        pads = [DOM.for_total(q.shape[1]).gis_to_pad(g) for g in range(1, 91)]   # the run's own buffers, not the config's
         y0, y1 = ovm.model_years(window)
         out[y0] = q[1:y1 - y0 + 2][:, pads].T
         names.append(name)

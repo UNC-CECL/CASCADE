@@ -32,7 +32,7 @@ sys.path.insert(0, str(_HAT_DIR))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from site_layer.hatteras_site_config import HATTERAS_PERIODS, HATTERAS_BE_EDGE_DOMAINS  # noqa: E402
-from cascade_pipeline.run_registry import find_run_dir, load_run_index    # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir, scan_runs    # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
@@ -75,12 +75,12 @@ def rates_table(start, kind, tag):
     return pd.read_csv(run_dir / "tables" / "shoreline_change_rate.csv").set_index("gis_domain")
 
 
-# One solved run's run_index row
+# One solved run's row
 def index_row(index, start, kind, tag):
     rows = index[(index["run_name"] == RUN_NAME[start]) & (index["kind"] == kind)
                  & (index["tag"] == tag)]
     if rows.empty:
-        raise ValueError(f"{RUN_NAME[start]} ({kind}, {tag!r}) not in run_index.csv")
+        raise ValueError(f"{RUN_NAME[start]} ({kind}, {tag!r}) not under output/raw_runs")
     row = rows.iloc[-1].copy()
     # the index loader keeps every column as text; the two rates are numbers here
     for col in ("be_rate_gis1_m_yr", "be_rate_gis90_m_yr"):
@@ -107,7 +107,7 @@ def main(argv=None):
     global EXP_DIR
     EXP_DIR = RUN_ROOT / "experiments" / args.exp
     solve = _solve_module()
-    index = load_run_index(RUN_ROOT / "run_index.csv")
+    index = scan_runs(RUN_ROOT)
 
     solved_rows, skill_rows = [], []
     targets = {}

@@ -8,7 +8,7 @@ alt 2: model start + 16 x the 2010-2026 LRR, against the modelled end position.
 alt 3: the 1996 start + 30 x the 1996-2026 LRR, against the modelled end position.
 alt 4: CoastSat mean position over calendar 2025, against the modelled end position.
 alt 5: model start + 16 x the 1996-2026 LRR, against the modelled end position.
-Writes output/comparisons/alternative_targets/2010_2026/. Details: README.md there.
+Writes output/comparisons/target_comparison/alternative_targets/2010_2026/. Details: README.md there.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -59,7 +59,7 @@ LONG_YEARS = LONG_WINDOW[1] - LONG_WINDOW[0]
 # The CoastSat means within +/-1 yr of each start DEM (the shoreline offsets, v2)
 START_WINDOWS = {2010: "2008-08-17_2010-08-17", 1996: "1995-10-12_1997-10-12"}
 MEAN_ROOT = INIT_ROOT / "5-scr" / "1-observations" / "mean_shoreline"
-OUT = COMPARISONS_ROOT / "alternative_targets" / f"{PERIOD}_{mvo.end_year(PERIOD)}"
+OUT = COMPARISONS_ROOT / "target_comparison" / "alternative_targets" / f"{PERIOD}_{mvo.end_year(PERIOD)}"
 FIG_PRESET = "zeroBE"               # no source/sink anywhere (methodology note 3b)
 FIG_SCENARIO = "full_management"
 POS_HALF = 100.0                    # m, as target_comparison

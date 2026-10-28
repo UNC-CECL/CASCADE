@@ -66,6 +66,7 @@ from cascade_pipeline.hindcast import build_target_table   # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (                # noqa: E402
     CALIBRATION_ARM, preset_dir_for)
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS              # noqa: E402
@@ -140,7 +141,6 @@ DOMAIN_COL = "domain_number"
 
 # CASCADE structure
 NUM_REAL_DOMAINS = 90
-START_REAL_INDEX = 15        # buffer domains before domain 1
 CASCADE_SIGN     = -1        # x_s_TS increases landward = erosion → flip to standard
 # P1_START/P1_END and P2_START/P2_END are derived from PERIOD_STARTS above.
 
@@ -313,7 +313,7 @@ def _groin_run_at(period_dir, stem, fitted, tolerance=1e-6):
 # The forcing arm HAT_BE_HS selects, as run_registry spells arms
 def _wave_arm():
     # Hatteras_ms is not on the path for this script the way SCRIPTS_DIR is
-    _ms = str(SCRIPTS_DIR / "hatteras_ms")
+    _ms = str(SCRIPTS_DIR / "hatteras_ms" / "hindcast")
     if _ms not in sys.path:
         sys.path.insert(0, _ms)
     from cascade_pipeline.hindcast import wave_climate_token
@@ -374,7 +374,7 @@ def base_run_dir(period_start, period_end):
             f"  Expected the {BASE_PRESET} full_management run (groin off, "
             f"relocations off) for {period_start}-{period_end}.\n"
             f"  Run it with:\n"
-            f"    python scripts/hatteras_ms/HAT_run_matrix.py --stages 2 "
+            f"    python scripts/real-world-cases/Hatteras/hatteras_ms/HAT_run_matrix.py --stages 2 "
             f"--presets {BASE_PRESET} --scenarios full_management")
     raise RuntimeError(
         f"{len(hits)} candidate base runs in {period_dir}: "
@@ -427,15 +427,15 @@ def load_observed(period_start, csv_path):
 # Extract per-domain LRR (m/yr) from CASCADE base-run NPZ
 def load_cascade_lrr(npz_path, start_year, end_year):
     print(f"  Loading: {os.path.basename(npz_path)}")
-    data    = np.load(npz_path, allow_pickle=True)
-    cascade = data["cascade"][0]
+    cascade = load_saved_cascade(npz_path)
     b3d     = cascade.barrier3d
     n_years = end_year - start_year
     years   = np.arange(start_year, end_year + 1)
 
     lrr = {}
+    first = (len(b3d) - NUM_REAL_DOMAINS) // 2   # the run's own buffers: 15 a side before 2026-10-21, 30 since
     for dom in range(1, NUM_REAL_DOMAINS + 1):
-        idx   = START_REAL_INDEX + (dom - 1)
+        idx   = first + (dom - 1)
         b3d_i = b3d[idx]
         if hasattr(b3d_i, "x_s_TS"):
             xs = np.array(b3d_i.x_s_TS, dtype=float)

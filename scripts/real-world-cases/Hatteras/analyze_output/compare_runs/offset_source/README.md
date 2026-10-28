@@ -3,11 +3,11 @@
 The dune-line-built and the shoreline-built island offset, run otherwise
 identically (the 2026-09-28 option-A offset study), compared. Nothing here runs
 the model; the study's runs are made by
-`scripts/hatteras_ms/experiments/HAT_offset_source_comparison_option_a.py`.
+`scripts/real-world-cases/Hatteras/hatteras_ms/experiments/offset/HAT_offset_source_comparison_option_a.py`.
 
 | script | writes to `output/comparisons/` |
 |---|---|
-| `offset_source_comparison.py` | `offset_source/` |
+| `offset_source_comparison.py` | `offset_source/duneline_vs_shoreline/` |
 | `shoreline_v1_vs_v2_comparison.py` | `offset_source/shoreline_v1_vs_v2/` |
 
 ## The scripts in detail
@@ -53,7 +53,7 @@ groin and piers are drawn below that strip and named in the legend. Draw
 order, bottom to top: village and shoal bands, grid, zero line, groin and
 piers, the two runs, labels; the grid has no ticks inside the label strip.
 
-Output, `output/comparisons/offset_source/`:
+Output, `output/comparisons/offset_source/duneline_vs_shoreline/`:
 
 | file | shows |
 |---|---|

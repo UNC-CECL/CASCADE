@@ -33,7 +33,7 @@ The three scripts run from here: `python straight_coast_module_rules_figure.py` 
 
 | # | version | what it does each year | why it was dropped |
 |---|---|---|---|
-| 2 | **pinned** (`BlockingGroinCallback`, b 0.6, f 0.6) | cancels 60% of BRIE's own diffusive exchange across the groin face | Conserves sand, but blocks the wrong thing: that exchange follows the coast's tilt, not the drift, so on a straight coast it does nothing while 0.91 M m³/yr passes, and on a coast turned with the drift it builds the "fillet" on the downdrift side. **Still the groin in the runner** until the corrected groin replaces it. |
+| 2 | **pinned** (`BlockingGroinManager`, b 0.6, f 0.6) | cancels 60% of BRIE's own diffusive exchange across the groin face | Conserves sand, but blocks the wrong thing: that exchange follows the coast's tilt, not the drift, so on a straight coast it does nothing while 0.91 M m³/yr passes, and on a coast turned with the drift it builds the "fillet" on the downdrift side. **Still the groin in the runner** until the corrected groin replaces it. |
 | 3 | **conserving** | as 2, with one face coefficient on both sides | Balances its own books but leaves BRIE's solve error in place (+186 m at Buxton, 1996-2009). |
 | 4 | **drift** | holds back a fraction of the wave climate's net drift arriving at the groin | Traps the right quantity, but BRIE's row-scaled solve creates or destroys sand around the bend it makes (+107 m at Buxton). Version 6 is this plus the fix. |
 | 5 | **hybrid** | 4, plus 2's row correction at the groin face | Does not close the balance: the solve's error is spread along the whole fillet, not only at the face. |

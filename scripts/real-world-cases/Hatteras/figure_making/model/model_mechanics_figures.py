@@ -36,6 +36,7 @@ _HAT_DIR = next(p for p in Path(__file__).resolve().parents  if (p / "hatteras_p
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 sys.path.insert(0, str(_HAT_DIR))
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, INK, INK_MUTED, CELL_M, DOMAIN_AXIS_LABEL,
@@ -68,7 +69,13 @@ ORDER_START, ORDER_YEARS = 1996, 13   # the 1996-2009 run length
 def load_run(spec):
     window, preset, name = spec
     path = MATRIX / window / preset / name / f"{name}.npz"
-    return np.load(path, allow_pickle=True)["cascade"][0]
+    c = load_saved_cascade(path)
+    # pad() and the layout figure draw the site config's buffers; a run made with other buffers (15 a side
+    # before 2026-10-21) would be read domains off, so stop
+    if len(c.barrier3d) != DOM.total_domains:
+        raise SystemExit(f"{name}: {len(c.barrier3d)} domains, the site config has {DOM.total_domains}; "
+                         f"re-run the matrix on the current config")
+    return c
 
 
 # The start year of a run spec
@@ -1065,7 +1072,7 @@ def fig_cascade_coupling_loop():
     arrow((36.4, 22.5), (28.6, 22.5), "", 0, 0)
     arrow((15, 31.6), (40, 47.4), "", 0, 0, rad=-0.25)
     ax.text(20, 41.5, "next year", fontsize=7.3, ha="center")
-    ax.text(50, 6, "Groin callback (when on): after step 1, adds a source and sink to Δx$_s$ in metres "
+    ax.text(50, 6, "Groin (GroinManager, when on): after step 1, adds a source and sink to Δx$_s$ in metres "
             "at the groin's two domains.   Units: UNITS.md.", ha="center", fontsize=7.3, color=INK_MUTED)
 
     out = save(fig, OUT / "cascade" / "cascade_coupling_loop.png")

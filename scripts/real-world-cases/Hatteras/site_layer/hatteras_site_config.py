@@ -137,7 +137,7 @@ def island_offset_version(start_year):
 # target folder and the run folders (1996_2009, 2009_2025). "last_model_year" is the last calendar
 # year the model steps through. A run covers start_year .. last_model_year inclusive, one transition
 # per calendar year, so run_years(start) = last_model_year - start_year + 1, and the final saved
-# state is 1 January of last_model_year + 1. Full explanation: scripts/hatteras_ms/MODEL_YEARS.md
+# state is 1 January of last_model_year + 1. Full explanation: scripts/real-world-cases/Hatteras/hatteras_ms/docs/MODEL_YEARS.md
 HATTERAS_PERIODS = {
     1984: {
         "end_year": 2004,
@@ -216,7 +216,7 @@ def last_model_year(start_year):
     if last not in (p["end_year"] - 1, p["end_year"]):
         raise ValueError(
             f"period {start_year}: last_model_year {last} does not sit at end_year {p['end_year']} "
-            f"or the year before; set both when changing a window (scripts/hatteras_ms/MODEL_YEARS.md)")
+            f"or the year before; set both when changing a window (scripts/real-world-cases/Hatteras/hatteras_ms/docs/MODEL_YEARS.md)")
     return last
 
 

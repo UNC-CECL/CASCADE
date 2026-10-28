@@ -47,7 +47,8 @@ RUN_YAMLS = {   # period label -> that run's copy of the parameter yaml
                  / "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin-parameters.yaml",
 }
 LIVE_YAML = REPO / "data" / "hatteras_init" / "Hatteras-CASCADE-parameters.yaml"
-RUNNER = _HAT_DIR / "hatteras_ms" / "HAT_hindcast.py"
+# The runner's model parameters live in its setup module (since 2026-10-23)
+RUNNER = _HAT_DIR / "hatteras_ms" / "hindcast" / "HAT_hindcast_setup.py"
 OUT = figure_dir("mechanics", "barrier3d") / "barrier3d_parameters_table"
 # Grouped rows: (key, meaning, kind). kind picks the formatting:
 # elev = m NAVD88 converted to m MHW too; bay = depth below MHW; else a unit string
@@ -101,12 +102,12 @@ def load(path):
 def current_settings():
     src = RUNNER.read_text(encoding="utf-8")
     now = {"Dmaxel": load(LIVE_YAML)["Dmaxel"]}
-    for key in ("rmin", "rmax"):
-        m = re.search(rf"^{key.upper()} = \[([0-9.]+)\]", src, re.M)
-        if m is None:
-            raise SystemExit(f"{key.upper()} not found in {RUNNER.name}")
-        now[key] = float(m.group(1))
-    m = re.search(r"^BEACH_SLOPE = ([0-9.]+)", src, re.M)
+    # Dune growth bounds are per period since 2026-10-21; the calibration window's (1996) are the table's
+    m = re.search(r"DUNE_GROWTH_RATES = \{1996: \(([0-9.]+), ([0-9.]+)\)", src)
+    if m is None:
+        raise SystemExit(f"DUNE_GROWTH_RATES not found in {RUNNER.name}")
+    now["rmin"], now["rmax"] = float(m.group(1)), float(m.group(2))
+    m = re.search(r"^\s*(?:r\.)?BEACH_SLOPE = ([0-9.]+)", src, re.M)
     if m is None:
         raise SystemExit(f"BEACH_SLOPE not found in {RUNNER.name}")
     now["beta"] = float(m.group(1))

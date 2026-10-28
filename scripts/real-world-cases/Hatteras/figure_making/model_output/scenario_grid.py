@@ -80,7 +80,7 @@ from site_layer.hatteras_site_config import (                            # noqa:
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 # The model side's smoother, the target's own LOWESS (7 domains, GIS 1-10 raw)
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "experiments"))
-from HAT_metres_1_offset_units import smooth_like_target  # noqa: E402
+from site_layer.hat_scoring import smooth_like_target  # noqa: E402
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE  # noqa: E402
 from site_layer import hat_figure_style as _hs  # noqa: E402

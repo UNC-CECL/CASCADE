@@ -34,7 +34,6 @@ my_project/
     output/                everything the code produces
         figures/           PNGs; PDFs and CAPTIONS.md under supporting/
         logs/
-        archive/           YYYY-MM-DD_<what>/
 ```
 
 ## The rules
@@ -60,7 +59,7 @@ A `CURRENT` file in the folder names the version in use.
 
 **5. Retire, with a date and a reason.** Old work moves to
 `superseded_YYYYMMDD[_reason]/` with a `WHY.md` saying what it was and why it
-stopped being used; output goes to `output/archive/YYYY-MM-DD_<what>/`. Not
+stopped being used. Not
 `old/`, `backup/` or `_final2`. The date comes first so folders sort in order.
 If you delete instead, say in the README how to get it back from git.
 

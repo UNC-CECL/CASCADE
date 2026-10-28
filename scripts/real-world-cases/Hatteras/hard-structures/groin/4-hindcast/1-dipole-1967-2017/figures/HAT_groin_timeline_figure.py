@@ -49,7 +49,7 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
 WETDRY_TABLE = (workspace_twin(GROIN_DIR) / "1-observations" / "analysis" / "1-aerial_photo_gap"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 
-# The structure's documented history, as GroinCallback is configured (not fitted)
+# The structure's documented history, as the fixed-shift groin was configured (not fitted)
 INSTALL_YEAR = 1969
 LAST_REPAIR_YEAR = 1996
 STORM_YEAR = 2003
@@ -82,7 +82,7 @@ def observed_fillet():
     return dict(sorted(out.items()))
 
 
-# M_eff for a calendar year, mirroring GroinCallback._effective_trapping_rate
+# M_eff for a calendar year, mirroring the fixed-shift groin's _effective_trapping_rate
 def effective_trapping(year, M=CHOSEN_M, f=CHOSEN_F):
     if year < INSTALL_YEAR:
         return 0.0

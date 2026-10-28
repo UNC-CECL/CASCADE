@@ -9,7 +9,7 @@
 ## 1. The plan (dipole)
 
 **Turn the groin on for both periods with the schedule it already has.**
-`GroinCallback` carries an absolute calendar timeline — install 1969,
+The dipole groin carries an absolute calendar timeline — install 1969,
 deterioration onset 1996, linear ramp to 2003, then hold at `M × f`. That
 already reproduces the measured history. **No period-specific configuration.**
 

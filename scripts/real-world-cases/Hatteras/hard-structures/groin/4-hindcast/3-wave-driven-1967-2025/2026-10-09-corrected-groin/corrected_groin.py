@@ -30,11 +30,11 @@ shoreline in the same year, and only the difference is added to x_s_dt,
     L(x) = 2 (r_i - r_{i-1}) (x_i - x_{i-1}),   x_s_dt += L(x_groin) - L(x_none)   near the groin
 
 The groin-free shoreline x_none is, by default ("tracked", since 2026-10-12), this run's shoreline
-minus the groin's own footprint: each year the callback repeats BRIE's alongshore step for last
+minus the groin's own footprint: each year the groin module repeats BRIE's alongshore step for last
 year with and without its own contribution and keeps the difference, so fills and Barrier3D's
 change cancel and no no-groin run is needed; with no groin the footprint is exactly zero. With
 --reference baseline (the 10-09 runs) x_none is the no-groin run's shoreline instead. BRIE and
-Barrier3D are not changed: the class replaces BlockingGroinCallback in a child process, and the
+Barrier3D are not changed: the class replaces BlockingGroinManager in a child process, and the
 unchanged runner is driven as the 10-05 setup.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -200,7 +200,7 @@ def brie_step(brie, x, dx):
     return spsolve(csr_matrix((dv, (brie._di, brie._dj))), rhs)
 
 
-# Child process: the corrected groin in BlockingGroinCallback's place, then the unchanged runner
+# Child process: the corrected groin in BlockingGroinManager's place, then the unchanged runner
 def _launch():
     import runpy
     import cascade.groin as cg
@@ -212,14 +212,14 @@ def _launch():
     delay, mode, ramp = SCHEDULES.get(schedule, SCHEDULES["instant2004"])
     off = os.environ.get("CORRECTED_GROIN_OFF") or None
 
-    class CorrectedGroin(cg.BlockingGroinCallback):
+    class CorrectedGroin(cg.BlockingGroinManager):
         kind = "blocking"
 
         def __init__(self, *a, **kw):
             kw.update(deterioration_delay_years=delay, deterioration_mode=mode, deterioration_ramp_years=ramp)
             super().__init__(*a, **kw)
 
-        def __call__(self, cascade, x_s_dt):
+        def update(self, brie, x_s_dt):
             year = self.start_year + self._call_count
             k = self._call_count
             self._call_count += 1
@@ -228,7 +228,6 @@ def _launch():
                 b = strength_for(off, year) if active else 0.0
             else:
                 b = self._effective_trapping_rate(year) * end_factor(off, year) if active else 0.0
-            brie = cascade._brie_coupler._brie
             x_s = np.asarray(brie.x_s, dtype=float)
             ny, lo, hi = len(x_s), self._lo, self._hi
             if not hasattr(self, "_q_net"):
@@ -300,7 +299,7 @@ def _launch():
                            max_diff_from_no_groin_m=g, footprint_max_m=fp, tracked_vs_baseline_m=tv)
             return rows
 
-    cg.BlockingGroinCallback = CorrectedGroin
+    cg.BlockingGroinManager = CorrectedGroin
     sys.path.insert(0, str(RUNNER.parent))
     sys.argv = [str(RUNNER)]
     runpy.run_path(str(RUNNER), run_name="__main__")

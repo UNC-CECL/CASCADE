@@ -716,7 +716,6 @@ different experiment. Silently: the row exists and reads cleanly.
 Since 2026-09-16 the index is keyed on (run_name, kind, tag): a cell is
 a `sensitivity` row tagged with its axis and its baseline a `matrix` row,
 so the two are distinct rows even though their names differ by one token.
-load_run_index translates a file from before that date.
 
 Returns:
     DataFrame indexed by (run_name, kind, tag), one row per key. Numeric
@@ -818,9 +817,20 @@ cs_series / target must already be in metres (position_layers).
 THE LEGEND IS NOT IN THE DATA AREA. A 16-entry legend box placed inside
 these axes sat directly on the target curve and the southern transect
 scatter, which is the densest and most important corner of the panel. The
-swept values become a discrete colourbar on the right -- correct anyway,
-because they are an ordered ramp rather than unrelated categories -- and
-the four reference curves get a horizontal legend beneath the axes.
+swept values get a legend outside the axes on the right, one coloured line
+per value in value order, the current setting among them as an ordinary
+ramp colour and line weight, marked "(current)" only in the legend (it
+replaced a discrete colourbar and a magenta current line, 2026-10-27, on
+advisor request); the observed curve and
+transects get a horizontal legend beneath the axes.
+
+`shown` limits the drawn values (main() passes ALONGSHORE_VALUES: Hs 2, 3,
+4, 5); a value with no completed cell is printed and skipped, and one whose
+run failed in the manifest is named, greyed, in the value legend.
+site_zones() draws the community zones (grey, town_bands, named at the top)
+and the Avon and Wimble shoal zones (hatched gold, named at the foot) from
+HATTERAS_ANNOTATIONS, under the data; plot_sensitivity_pair.py uses it too,
+with ramp colours and the same line weight.
 ```
 
 **`plot_relocation_outcomes()`**

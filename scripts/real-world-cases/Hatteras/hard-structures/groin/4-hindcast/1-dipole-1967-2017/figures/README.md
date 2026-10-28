@@ -9,7 +9,7 @@ Writes `groin_timeline_and_hindcast.png` beside the script, and its PDF and capt
 ## HAT_groin_timeline_figure.py
 
 The fillet (GIS 5 minus GIS 6) through time, in two opposite regimes, against
-the trapping rate `GroinCallback` applies on its absolute calendar (install
+the trapping rate the dipole groin applies on its absolute calendar (install
 1969, ramp from the 1996 repair to the 2003 storm, then M x f).
 
 From the script's original header:
@@ -30,7 +30,7 @@ One figure answering three questions that kept getting tangled:
         here and quoted in the caption.
 
     HOW DOES THE MODULE REPRESENT THAT?
-        `GroinCallback` carries an absolute calendar schedule -- install 1969,
+        The dipole groin carries an absolute calendar schedule -- install 1969,
         deterioration onset 1996 (last repair), linear ramp to 2003 (storm),
         then hold at M*f. The lower panel draws that schedule against the
         observations, which is the clearest way to see that the module's
@@ -89,7 +89,7 @@ them a month ("1972_july"), so a formatted name misses.
 Notes moved out of the code (effective_trapping(), its docstring, as of the original):
 
 ```text
-M_eff for a calendar year -- mirrors GroinCallback._effective_trapping_rate.
+M_eff for a calendar year -- mirrors the dipole groin's _effective_trapping_rate.
 ```
 
 Notes moved out of the code (phase(), its docstring, as of the original):
@@ -111,7 +111,7 @@ The twin of this helper is in HAT_groin_two_shorelines_figure.py.
 Notes moved out of the code (comment above line 79, as of the original):
 
 ```text
-# The structure's documented history. These are the values GroinCallback is
+# The structure's documented history. These are the values the dipole groin is
 # configured with, not fitted quantities.
 ```
 
@@ -168,7 +168,7 @@ follow part of it and not the rest, by putting the mechanics next to the
 consequence.
 
 THE MECHANICS (left panel)
-    `GroinCallback` is four lines of arithmetic, applied once a year just
+    The dipole groin is four lines of arithmetic, applied once a year just
     before BRIE's alongshore solve:
 
         M_eff        = M, tapering to M*f between 1996 and 2003

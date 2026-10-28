@@ -5,7 +5,7 @@ Build the historical storm series CASCADE reads for one hindcast window, from Du
 
 Total water level = gauge + Stockdon R2%; events above the berm, split,
 capped and trimmed; writes the storm .npy and its summary CSV. Its four
-functions are also read by hatteras_ms/experiments/HAT_storm_max_duration.py. Details: scripts/input_prep/3-env-forcings/README.md.
+functions are also read by hatteras_ms/experiments/storms/HAT_storm_max_duration.py. Details: scripts/input_prep/3-env-forcings/README.md.
 
 Adapted from: from_lexi/historical_storm_creation_v3.ipynb, by Lexi
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,

@@ -49,7 +49,7 @@ if str(_HAT_DIR) not in _hat_sys.path:
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 for p in (_HAT_DIR, _HAT_DIR / "hatteras_ms", _HAT_DIR / "hatteras_ms" / "experiments",
           _HAT_DIR / "analyze_output" / "compare_runs" / "matrix_vs_observed",
-          workspace_twin(HERE.parent) / "2026-10-09-corrected-groin"):
+          HERE.parent / "2026-10-09-corrected-groin"):
     sys.path.insert(0, str(p))
 
 # --- CONFIG ------------------------------------------------------------------
@@ -70,15 +70,16 @@ DUNE_GROWTH = (0.005, 0.01)
 # -----------------------------------------------------------------------------
 
 
-# The taper, patched into cascade.groin before the runner imports it. Each year the gain the groin put in GIS 6
+# The taper, patched into the GroinManager Cascade builds before the runner runs. Each year the gain the groin put in GIS 6
 # is re-shared over GIS 6-8, in the step and in the groin's own contribution the footprint is built from
 def patch_groin():
+    import cascade.cascade as cc
     import cascade.groin as cg
-    base = cg.GroinCallback
+    base = cg.GroinManager
 
     class TaperedGroin(base):
-        def __call__(self, cascade, x_s_dt):
-            x_s_dt = super().__call__(cascade, x_s_dt)
+        def update(self, brie, x_s_dt):
+            x_s_dt = super().update(brie, x_s_dt)
             gain = self.record[-1]["applied_dx_updrift_m"]
             self.record[-1]["taper_moved_m"] = 0.0
             if gain >= 0.0:                              # drift from the south this year: the gain is not in GIS 6
@@ -91,7 +92,7 @@ def patch_groin():
             self.record[-1]["taper_moved_m"] = -(1 - TAPER[0]) * gain
             return x_s_dt
 
-    cg.GroinCallback = TaperedGroin
+    cc.GroinManager = cg.GroinManager = TaperedGroin
 
 
 def member(layout, s):
@@ -190,7 +191,7 @@ def cmd_run(a):
 
 def cmd_score(_a):
     import corrected_groin as cgm
-    import HAT_metres_1_offset_units as common
+    import site_layer.hat_scoring as common
     from matrix_vs_observed import model_end_change
     from site_layer.hat_observed_rates import net_change_domain_csv
     rows, doms, settings = [], [], set()

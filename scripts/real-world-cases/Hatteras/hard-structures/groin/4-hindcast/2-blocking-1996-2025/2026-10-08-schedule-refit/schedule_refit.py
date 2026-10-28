@@ -9,7 +9,7 @@ Refit the blocking groin (b, f) on 1996-2009 under three failure schedules, scor
 Schedules: the runner's instant failure at the 2004 step; instant from 1996, the first
 year after the 1995 last repair; a linear ramp from full strength in 1995 to the floor in
 2003, so 1996 is the first weakened year. The unchanged runner is driven in a child
-process with BlockingGroinCallback patched to the schedule (rule: experiments don't
+process with BlockingGroinManager patched to the schedule (rule: experiments don't
 touch main code); the runner's own report still prints its default schedule, so each
 run gets a schedule.json. Every run: full management, the solved edgeBE ends,
 relocations off. Primary score: RMSE of the modelled GIS 5|6 gap change against the
@@ -105,19 +105,19 @@ def baseline_file(period):
     return RAW / "matrix" / window(period) / "edgeBE" / name / f"{name}_shoreline_matrix.npy"
 
 
-# Child process: patch the callback to the schedule, then run the unchanged runner
+# Child process: patch the groin module to the schedule, then run the unchanged runner
 def _launch(schedule):
     import runpy
     import cascade.groin as cg
     delay, mode, ramp = SCHEDULES[schedule]
 
-    class Scheduled(cg.BlockingGroinCallback):
+    class Scheduled(cg.BlockingGroinManager):
         def __init__(self, *a, **kw):
             kw.update(deterioration_delay_years=delay, deterioration_mode=mode,
                       deterioration_ramp_years=ramp)
             super().__init__(*a, **kw)
 
-    cg.BlockingGroinCallback = Scheduled
+    cg.BlockingGroinManager = Scheduled
     sys.path.insert(0, str(RUNNER.parent))
     sys.argv = [str(RUNNER)]
     runpy.run_path(str(RUNNER), run_name="__main__")

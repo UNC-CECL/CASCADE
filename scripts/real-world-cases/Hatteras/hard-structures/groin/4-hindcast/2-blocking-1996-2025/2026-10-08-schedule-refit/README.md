@@ -2,7 +2,7 @@
 
 **Question.** Does the blocking groin fit the 1996–2009 calibration period better if it starts failing in 1996 rather than at the 2004 step? The condition analysis (`hard-structures/groin/1-observations/analysis/2-coastsat_gap/`) found that the CoastSat gap across the groin stopped widening in 1995, at the last repair, rather than at Isabel. This study refits strength b and post-failure fraction f under three failure schedules and scores them on that annual CoastSat gap.
 
-**Setup.** `schedule_refit.py` drives the unchanged runner. A child process patches `cascade.groin.BlockingGroinCallback` to the schedule, and each run records its schedule in `schedule.json`. The runner's own report still prints its default schedule.
+**Setup.** `schedule_refit.py` drives the unchanged runner. A child process patches `cascade.groin.BlockingGroinManager` to the schedule, and each run records its schedule in `schedule.json`. The runner's own report still prints its default schedule.
 
 | schedule | delay from 1969 install | mode | strength each year |
 |---|---|---|---|

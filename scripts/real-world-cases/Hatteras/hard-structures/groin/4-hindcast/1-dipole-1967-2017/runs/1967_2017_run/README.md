@@ -59,12 +59,13 @@ folders and the plotter's `RUNS` list. (The run names actually come out as
 
 **Which Cascade.** While testing the groin, the runner uses a sandbox copy of
 `cascade.py`, `cascade/cascade_groin.py`, inside the package beside the real
-one, with the 3-line groin hook added; the real `cascade.py` stays
-untouched. Once the groin is proven, fold the hook into the real `cascade.py`
-and set `USE_SANDBOX_CASCADE = False`. The `"no_groin"` run needs nothing
+one, with a 3-line groin step added; the real `cascade.py` stays
+untouched. Once the groin is proven, fold it into the real `cascade.py`
+and set `USE_SANDBOX_CASCADE = False` (done since: the groin is now
+`cascade.groin.GroinManager`, switched on with `Cascade(groin_module=True, ...)`). The `"no_groin"` run needs nothing
 beyond the working base setup; the `"groin"` run needs `cascade.groin`
-importable and the inert pre-AST hook (it sets `cascade._groin_callback`).
-If the hook is missing, the groin run warns loudly (the diagnostics stay
+importable and the sandbox Cascade's inert groin step.
+If that step is missing, the groin run warns loudly (the diagnostics stay
 empty), so a no-op is never mistaken for a real groin run.
 
 **The groin is the shared module.** This used to import

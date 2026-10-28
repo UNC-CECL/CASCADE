@@ -81,9 +81,9 @@ BRIE's island offset built from the 1997 dune line or from the mean CoastSat sho
 
 | for | open | note |
 |---|---|---|
-| Start here: both starts against the target | `output/comparisons/offset_source/offset_source_model_change_vs_projected_full_management.png` | both periods, against projected change (1996–2024 LRR x 14 yr, LOWESS 7). **Barely**: bias and RMS differ by under 0.5 m. |
-| How far apart the two runs are | `output/comparisons/offset_source/offset_source_difference_full_management.png` | both periods, no observation; about 3 m on average, up to 15–18 m. |
-| What drives the difference | `output/comparisons/offset_source/offset_source_orientation_vs_model_full_management.png` | the offset's turning (embayments, bulges), not its orientation. |
+| Start here: both starts against the target | `output/comparisons/offset_source/duneline_vs_shoreline/offset_source_model_change_vs_projected_full_management.png` | both periods, against projected change (1996–2024 LRR x 14 yr, LOWESS 7). **Barely**: bias and RMS differ by under 0.5 m. |
+| How far apart the two runs are | `output/comparisons/offset_source/duneline_vs_shoreline/offset_source_difference_full_management.png` | both periods, no observation; about 3 m on average, up to 15–18 m. |
+| What drives the difference | `output/comparisons/offset_source/duneline_vs_shoreline/offset_source_orientation_vs_model_full_management.png` | the offset's turning (embayments, bulges), not its orientation. |
 
 ## Cross-reference: what `model_vs_observed/` actually plots
 
@@ -108,4 +108,4 @@ All of it in **m/yr** except `vs_shoreline_and_duneline/net_change/`, the combin
 | Finished figures for the paper | `output/figures/<subject>/` |
 | How the repo is laid out | [`ORGANIZATION.md`](ORGANIZATION.md) |
 | Figure house style | `scripts/site_layer/hat_figure_style.py`, `figure_making/STYLE.md`, `output/figures/style/` |
-| Model runs | `output/raw_runs/`, indexed in `run_index.csv` |
+| Model runs | `output/raw_runs/`, tabled by `run_registry.scan_runs` |

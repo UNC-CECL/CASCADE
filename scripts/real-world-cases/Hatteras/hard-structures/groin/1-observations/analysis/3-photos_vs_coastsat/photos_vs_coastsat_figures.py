@@ -45,7 +45,7 @@ if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 sys.path[:0] = [str(_HAT_DIR), str(HERE), str(HERE.parent / "2-coastsat_gap"),
-                str(workspace_twin(HERE.parent) / "1-aerial_photo_gap")]
+                str(HERE.parent / "1-aerial_photo_gap")]
 from coastsat_gap_across_groins import BOUNDARIES, ERAS, FIT  # noqa: E402
 from coastsat_gap_figures import (  # noqa: E402
     COL, FILL_HANDLE, GAP_LABEL, NAME, SIDE, SIDE_COL, chart, events, fill_shade, question)

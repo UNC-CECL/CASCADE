@@ -5,8 +5,8 @@ Approach 1: a groin that blocks a fraction b of alongshore transport, in two imp
     python blocking_groin_emulator.py
 
 "exact" scales the D5|D6 face's coupling in both halves of BRIE's Crank-Nicolson
-step by (1 - b); "callback" is the pre-solve x_s_dt correction GroinCallback's
-hook can make. Scored as the 14-yr D5-D6 gap change against observed_fillet_m,
+step by (1 - b); "pre_solve" is the pre-solve x_s_dt correction the groin step in
+Cascade.update() can make. Scored as the 14-yr D5-D6 gap change against observed_fillet_m,
 raw and adjusted by the full-model no-groin offset. Writes blocking_groin_scores.csv.
 Details: README.md beside this script.
 
@@ -53,7 +53,7 @@ D, U = DOWNDRIFT_PAD, UPDRIFT_PAD          # 19 (GIS 5), 20 (GIS 6)
 assert U == D + 1
 
 
-# Blocked fraction in a year: b0, ramping to b0*f over 1996-2003 (GroinCallback's schedule)
+# Blocked fraction in a year: b0, ramping to b0*f over 1996-2003 (the fixed-shift groin's schedule)
 def b_of_year(b0, f, year):
     if year < DETERIORATION_YEAR:
         return b0
@@ -61,7 +61,7 @@ def b_of_year(b0, f, year):
     return b0 - taper * (b0 - b0 * f)
 
 
-# BRIE's alongshore solve, blocked at the D|U face by mode "exact" or "callback"; one state per year
+# BRIE's alongshore solve, blocked at the D|U face by mode "exact" or "pre_solve"; one state per year
 def solve(x0, start, b0, f, mode, climate=CLIMATES["optionA"]):
     ny = x0.size
     coast_diff, di, dj = brie_diffusivity(
@@ -82,7 +82,7 @@ def solve(x0, start, b0, f, mode, climate=CLIMATES["optionA"]):
         if mode == "exact":
             w_up[D] *= (1.0 - b)
             w_dn[U] *= (1.0 - b)
-        elif mode == "callback":
+        elif mode == "pre_solve":
             x_s_dt[D] -= b * 2.0 * r[D] * (x[U] - x[D])
             x_s_dt[U] -= b * 2.0 * r[U] * (x[D] - x[U])
         # Assemble as BRIE does, from the two weight vectors (b = 0 reproduces BRIE term for term)
@@ -115,7 +115,7 @@ def main():
         assert np.allclose(mine[-1], np.r_[ref.x_down.iloc[-1]] if False else mine[-1])
         assert abs((mine[-1, D] - mine[-1, U]) - ref.gap_m.iloc[-1]) < 1e-6, "matrix mismatch"
         offset = FULL_NOGROIN[start] - base
-        for mode in ("exact", "callback"):
+        for mode in ("exact", "pre_solve"):
             for b0 in B_VALUES:
                 for f in F_VALUES:
                     st = solve(x0, start, b0, f, mode)
@@ -135,7 +135,7 @@ def main():
     t.to_csv(workspace_twin(HERE) / "tables" / "blocking_groin_scores.csv", index=False)
 
     pd.set_option("display.width", 220)
-    for mode in ("exact", "callback"):
+    for mode in ("exact", "pre_solve"):
         for start in (1996, 2010):
             sub = t[(t["mode"] == mode) & (t.start == start)]
             print(f"\n=== {mode}, {start}: ADJUSTED gap change (observed {OBSERVED[start]:+.1f}); rows b0, cols f ===")

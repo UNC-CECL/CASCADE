@@ -1,6 +1,6 @@
 # 3-wave-driven-1967-2025 — the wave-driven groin fitted to Buxton
 
-The wave-driven groin (`cascade.groin.GroinCallback`, once "corrected"; version 6 of `../../3-module-tests/`): the drift groin of `../2-blocking-1996-2025/2026-10-08-drift-groin/` plus a correction for BRIE's sand leak at the groin's own bends. The runner's only groin since 2026-10-14. Fitted on the calibration window 1996-2009 and the test window 2009-2025, and from 1967 on the groins' whole life, with full management, the solved edgeBE ends and relocations off. Scored on the GIS 5|6 gap against annual CoastSat and the wet/dry photos.
+The wave-driven groin (`cascade.groin.GroinManager`, once "corrected"; version 6 of `../../3-module-tests/`): the drift groin of `../2-blocking-1996-2025/2026-10-08-drift-groin/` plus a correction for BRIE's sand leak at the groin's own bends. The runner's only groin since 2026-10-14. Fitted on the calibration window 1996-2009 and the test window 2009-2025, and from 1967 on the groins' whole life, with full management, the solved edgeBE ends and relocations off. Scored on the GIS 5|6 gap against annual CoastSat and the wet/dry photos.
 
 The studies before 2026-10-14 patched the groin in-process (`corrected_groin.py`); from 2026-10-14 they drive the unchanged runner.
 

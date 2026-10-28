@@ -43,7 +43,7 @@ for p in (_HAT_DIR, _HAT_DIR / "hatteras_ms", _HAT_DIR / "hatteras_ms" / "experi
 import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-import HAT_metres_1_offset_units as common  # noqa: E402
+import site_layer.hat_scoring as common  # noqa: E402
 from matrix_vs_observed import model_end_change  # noqa: E402
 from site_layer import hat_figure_style as fs  # noqa: E402
 from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402

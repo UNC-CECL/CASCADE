@@ -361,7 +361,7 @@ def skill_rows(window, df):
 
 # {(set, window): (GIS 1 term, GIS 90 term, nonzero domains)} from the run index
 def end_values(rows_by_key):
-    idx = rw.load_run_index(rw.RUN_INDEX)
+    idx = rw.run_table()
     out = {}
     for key, rows in rows_by_key.items():
         for r in rows:

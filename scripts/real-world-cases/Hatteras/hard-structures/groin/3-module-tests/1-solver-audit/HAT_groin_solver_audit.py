@@ -4,7 +4,7 @@ Stage 0 of the groin module test: BRIE's alongshore solve under a groin dipole, 
 
     python HAT_groin_solver_audit.py [--years 200] [--outdir DIR]
 
-An emulator of BRIE's implicit shoreline-diffusion solve plus GroinCallback's
+An emulator of BRIE's implicit shoreline-diffusion solve plus the fixed-shift groin's
 +/-M dipole, built from BRIE's own coast_diff table and sparse indices. Six
 audits: diffusivity, fillet vs M, closure vs f, domain count, groin fields, the
 chosen rig. Writes tables/solver_audit_<audit>.csv. Needs brie, numpy, pandas, scipy.
@@ -86,7 +86,7 @@ def solve_reach(ny, groins, years, climate, record_years=()):
     for updrift, downdrift, _, _ in groins:
         if abs(updrift - downdrift) != 1:
             raise ValueError(
-                "groin domains must be adjacent, as GroinCallback requires; "
+                "groin domains must be adjacent, as the groin module requires; "
                 f"got updrift={updrift}, downdrift={downdrift}."
             )
 

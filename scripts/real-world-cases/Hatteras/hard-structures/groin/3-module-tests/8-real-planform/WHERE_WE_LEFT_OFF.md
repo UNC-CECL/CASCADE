@@ -12,7 +12,7 @@ short version: what's settled, what's waiting on a decision, and what's loose.
   that the data don't show. The observed gap holds at 134–155 m through 2004 and falls after it.
 - **In the code (uncommitted):**
   - failure schedule is now **instant from the 2004 step** (runner `.py` + notebook);
-  - `BlockingGroinCallback` in `cascade/groin.py`, selected by `groin.kind` / `HAT_GROIN_KIND`,
+  - `BlockingGroinManager` in `cascade/groin.py`, selected by `groin.kind` / `HAT_GROIN_KIND`,
     with `groin.blocking_b` / `HAT_GROIN_BLOCKING_FRACTION`;
   - runner reads r_ipl at the groin cell's own angle (the 0° value crashed every groin run under
     option A);

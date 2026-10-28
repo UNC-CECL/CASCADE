@@ -1,7 +1,8 @@
 """
 Redraw every figure published under output/figures/ from its own script, then rewrite the index.
+Also the cross-run overwash figures, which sit beside the overwash record.
 
-    python scripts/figure_making/tools/regenerate_all_figures.py [--only 4-model-mechanics] [--list]
+    python scripts/real-world-cases/Hatteras/figure_making/tools/regenerate_all_figures.py [--only 4-model-mechanics] [--list]
 
 Runs each producer in STEPS in the numbered layout's order, logging each to
 output/logs/scratch/figures_<timestamp>/ and reporting failures at the end. Details: scripts/figure_making/tools/README.md.
@@ -9,7 +10,7 @@ output/logs/scratch/figures_<timestamp>/ and reporting failures at the end. Deta
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-10-28
 """
 from __future__ import annotations
 
@@ -27,7 +28,9 @@ _HAT_DIR = next(p for p in Path(__file__).resolve().parents  if (p / "hatteras_p
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
-S = "scripts/"
+# Producers are paths under Hatteras/, run from there; the workspace's own scripts/ has held no code since
+# the move to CASCADE-obx (2026-10-23)
+S = ""
 
 # --- CONFIG ------------------------------------------------------------------
 # (top folder it fills, label, command). Order = the layout's order.
@@ -37,6 +40,7 @@ STEPS = [
     ("2-observations", "CoastSat periods, LOWESS 7", [S + "figure_making/shoreline/plot_coastsat_poster.py"]),
     ("2-observations", "shoreline vs dune line", [S + "input_prep/5-scr/4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py"]),
     ("2-observations", "dune-line positions", [S + "input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py"]),
+    ("2-observations", "lidar transect profiles", [S + "figure_making/shoreline/transect_profiles.py"]),
     ("2-observations", "mean shoreline 1996 (DEM-centred)",
      [S + "input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline_on_imagery.py",
       "--centred-on", "alace_1996"]),
@@ -62,7 +66,14 @@ STEPS = [
     ("5-results", "hindcast edgeBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "edgeBE"]),
     ("5-results", "hindcast zeroBE", [S + "figure_making/model_output/hindcast_final_figure_lowess.py", "--preset", "zeroBE"]),
     ("5-results", "scenario grid", [S + "figure_making/model_output/scenario_grid.py"]),
-    ("5-results", "GIS 11 relocation", [S + "figure_making/model_output/gis11_relocation_drown_figure.py"]),
+    # Overwash against the imagery across the matrix runs, both windows; written to
+    # data/hatteras_init/8-overwash-analysis/4-vs-model/, not output/figures/
+    ("5-results", "overwash vs observed, managed",
+     [S + "input_prep/8-overwash-analysis/4-vs-model/overwash_vs_model.py"]),
+    ("5-results", "overwash vs observed, natural 1996",
+     [S + "input_prep/8-overwash-analysis/4-vs-model/overwash_vs_model.py", "--arm", "natural", "--window", "1996"]),
+    ("5-results", "overwash timeline", [S + "input_prep/8-overwash-analysis/4-vs-model/overwash_timeline.py"]),
+    ("5-results", "storms vs overwash", [S + "input_prep/8-overwash-analysis/4-vs-model/storms_vs_overwash.py"]),
     ("talk", "site maps, projector set", [S + "figure_making/island/study_area_figures.py", "--talk"]),
     ("style", "style sheet", [S + "site_layer/hat_figure_style.py"]),
 ]
@@ -99,7 +110,7 @@ def main():
         before = png_times()
         log = logs / f"{i:02d}_{label.replace(' ', '_').replace('/', '-')}.log"
         with open(log, "w", encoding="utf-8") as fh:
-            rc = subprocess.run([sys.executable, *cmd], cwd=REPO, stdout=fh,
+            rc = subprocess.run([sys.executable, str(_HAT_DIR / cmd[0]), *cmd[1:]], cwd=_HAT_DIR, stdout=fh,
                                 stderr=subprocess.STDOUT).returncode
         # every PNG this step wrote or rewrote is attributed to its script
         for rel, t in png_times().items():
@@ -112,7 +123,7 @@ def main():
               flush=True)
         if rc:
             failed.append((label, log))
-    subprocess.run([sys.executable, *INDEX], cwd=REPO)
+    subprocess.run([sys.executable, str(_HAT_DIR / INDEX[0])], cwd=_HAT_DIR)
     print(f"\nlogs: {logs.relative_to(REPO)}")
     for label, log in failed:
         print(f"FAILED: {label}  ->  {log.relative_to(REPO)}")

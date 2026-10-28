@@ -1,7 +1,7 @@
 # cascade_pipeline - the library the runner imports
 
 Not a stage and not a script: this is the shared code behind
-`scripts/hatteras_ms/HAT_hindcast.py` and everything that reads its
+`scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast.py` and everything that reads its
 output.
 
 | Module | Holds |
@@ -407,7 +407,7 @@ Generic CASCADE grid geometry: real domains padded by buffers on each end.
 A CASCADE/BRIE run pads its GIS-numbered real domains with buffer domains
 on each side so alongshore diffusion doesn't see an artificial edge at the
 real-domain boundary. DomainGeometry's field defaults happen to match the
-Hatteras Island hindcast (90 real domains, 15-domain buffers, 500 m
+Hatteras Island hindcast (90 real domains, 30-domain buffers, 500 m
 spacing, starting at GIS ID 1) -- override them for a different site or
 grid resolution; nothing else in this module assumes Hatteras' numbers.
 ```
@@ -423,7 +423,7 @@ Attributes:
     num_real_domains: Count of real, GIS-numbered domains (defaults to
         90, matching the Hatteras Island hindcast).
     num_buffer_domains: Count of buffer domains padding each end
-        (defaults to 15).
+        (defaults to 30; 15 before 2026-10-23).
     first_gis_id: GIS ID of the first real domain (defaults to 1).
     domain_spacing_m: Alongshore width of one domain, in meters
         (defaults to 500).
@@ -497,8 +497,9 @@ THE SYNC RULE
 Notes that were in the code:
 
 ```text
-True: sandbox copy with the pre-AST groin hook. False: real package, hook
-folded in. Resolved here so the notebook, the .py and the sweep worker cannot
+True: the old cascade_groin sandbox copy, which only the
+hannahaline/hatteras-cascade branch has. False: the real package, whose
+Cascade has the GroinManager module. Resolved here so the notebook, the .py and the sweep worker cannot
 disagree about which Cascade they built.
 
 Read from the environment rather than from `HAT_hindcast_config`, which is
@@ -863,13 +864,12 @@ Raises:
 ```text
 The groin's strength for every model year of a period.
 
-Reads the callback's strength history without running it.
-`strength` is a pure function of the year -- it does not
-touch `_call_count` -- so querying it here leaves the callback's year
-counter at zero for the actual run.
+Reads the strength history the GroinManager is built with, so it can be
+reported before the Cascade (and its GroinManager) exists.
 
 Args:
-    callback: A GroinCallback.
+    strength_history: (from_year, strength) pairs, as passed to
+        Cascade(groin_strength_history=...).
     start_year: First model year.
     end_year: Last model year, exclusive.
 
@@ -1072,7 +1072,7 @@ Returns:
 **`build_cascade()`**
 
 ```text
-Constructs a Cascade and attaches the groin, without stepping it.
+Constructs a Cascade, with its GroinManager if groin_module, without stepping it.
 
 Separate from run_cascade_simulation so section 11 can inspect the model
 before any time step runs: BRIE's diffusivity and the shoreface depth are
@@ -1112,7 +1112,14 @@ Args:
         against.
     parameter_file: Barrier3D parameter yaml name, resolved by
         CASCADE inside data_base.
-    groin_callback: A GroinCallback to attach, or None.
+    groin_module: Whether Cascade builds its GroinManager.
+    groin_updrift_pad, groin_downdrift_pad: Padded indices of the two
+        domains sharing the groin face.
+    groin_strength_history: (from_year, strength) pairs, calendar years.
+    groin_start_year: Calendar year of the first update, so the
+        GroinManager counts in the same years as the history.
+    groin_spread_weights: Shares of the updrift pad's loss across the
+        face kept on it and moved to the two pads beyond it.
     relocation_setback_m: Standard distance behind the dune line, in
         metres, that a relocated roadway is rebuilt at. None leaves every
         domain relocating to its own measured setback, which is CASCADE's
@@ -1141,7 +1148,6 @@ Args:
     relocations_enabled: Global toggle for relocation events.
     setback_check: {gis: measured_setback_m} reported beside relocations.
     nourishment_schedule: A NourishmentSchedule, or None for no fills.
-    groin_callback: The attached GroinCallback, for diagnostics output.
     progress: Optional tqdm-like object with update() and write().
         When given, the year counter advances the bar and every event
         message is written through it, so the messages scroll above a
@@ -3423,7 +3429,7 @@ Args:
 **`pre_run_report()`**
 
 ```text
-Prints what was built, the resolved profile, and the groin attached.
+Prints what was built, the resolved profile, and the Cascade's GroinManager.
 ```
 
 **`nourishment_report()`**
@@ -3992,9 +3998,8 @@ the three failure modes that costs are all bookkeeping ones:
     the sandbox flag or the extractor version was flipped days earlier
     (git_provenance, and the [identity] section callers pass),
   * twelve runs whose results can only be compared by opening twelve
-    hand-formatted text files (rebuild_run_index, which derives run_index.csv
-    from every run's metadata; append_run_index is the pre-2026-09-16 writer
-    and is kept for the groin sweep).
+    hand-formatted text files (scan_runs, which reads every run's metadata
+    into one table on demand; there is no run_index.csv since 2026-10-23).
 
 Metadata is written twice from ONE structure: a .txt to read and a .json to
 parse. Rendering both from the same `sections` mapping is what keeps them from
@@ -4128,15 +4133,12 @@ or, for the matrix, periods directly.
 ```
 
 ```text
-run_index.csv is a RESTATEMENT of every run's metadata JSON in one table, so
-a question across runs is one read. Since 2026-09-16 no run appends to it:
-each run writes the row it would have appended INTO its metadata, under
-"index row", and the runner then calls rebuild_run_index, which regenerates
-the whole file from every metadata on disk and replaces it atomically. Two
-runs finishing at once both rebuild the same complete table, so the last
-writer wins nothing -- which is what lets runs be concurrent. Rows for runs
-that predate the "index row" section are carried over from the existing
-file by their old key, so nothing is lost in the changeover.
+Each run writes its summary row INTO its own metadata, under "index row",
+and scan_runs reads every run's row back into one table when asked. There
+is no run_index.csv (removed 2026-10-23): a table built on demand cannot
+drift from the disk, and no run writes a shared file, so runs stay
+concurrent. A run made before 2026-09-16 has no "index row" and gets its
+identity columns only.
 ```
 
 ```text
@@ -4536,17 +4538,6 @@ Either layout: a purpose folder says so directly; an old arms/<arm>/ path
 or a token-named cell is translated as legacy_arm_to_kind_tag would.
 ```
 
-**`_legacy_arm_from_path()`**
-
-```text
-The `arm` a pre-09-16 index row spelled for a run at this path.
-
-"calibration" for the unscoped tree (matrix runs AND token-named sweep
-cells, either old layout); the arm folder(s) for arms/<arm>/ or a loose
-pre-09-10 arm; and for the purpose layout, the arm LEGACY_ARMS maps the
-(kind, tag) back to. This is what finds an old row for a moved run.
-```
-
 **`run_status()`**
 
 ```text
@@ -4559,37 +4550,24 @@ or experiment run is judged against nothing -- it names its own inputs
 deliberately -- and an archived run says so by where it sits.
 ```
 
-**`rebuild_run_index()`**
+**`scan_runs()`**
 
 ```text
-Regenerates run_index.csv from every run's metadata; returns the rows.
+Every run under raw_runs, one row each, read from its own metadata.
+
+Replaces run_index.csv (removed 2026-10-23): the table is built when it is
+asked for, so it cannot drift from what is on disk. A run's row is the
+"index row" section of its metadata, plus kind and tag from where it sits
+and a status. A run with no such section (made before 2026-09-16) gets its
+identity columns only.
 
 Args:
     raw_runs: The output/raw_runs root.
-    index_path: Where to write; default raw_runs/run_index.csv.
     current_versions: {topo_product: CURRENT dune-topo version}, for the
-        status column. None leaves status "current" for everything but
-        the archive; pass hat_topo_version's answer to get supersession.
+        status column. None asks hat_topo_version.
 
 Returns:
-    The list of row dicts written, in file order.
-
-Notes:
-    A run whose metadata has no "index row" section (made before
-    2026-09-16) keeps the row the existing file holds for it, found by the
-    old (run_name, Hs_m, arm) key and given kind/tag from its path. A run
-    with neither is indexed by its identity columns alone, so it is not
-    lost. Rows whose run is gone from disk are dropped here; recording
-    them is HAT_index_runs.py's job (retired_runs.csv), which calls this.
-```
-
-**`load_run_index()`**
-
-```text
-run_index.csv as a DataFrame with kind/tag/status guaranteed present.
-
-A file from before 2026-09-16 has `arm` instead; it is translated so a
-reader written against the new columns works on either.
+    A DataFrame of strings, as the CSV used to read, identity columns first.
 ```
 
 **`run_dir_contents()`**
@@ -4705,33 +4683,6 @@ Args:
 Returns:
     A dict of mean bias and RMSE in m/yr, island-wide and interior, plus
     the domain count each was computed over. NaN where no domains remain.
-```
-
-**`append_run_index()`**
-
-```text
-Adds one run to the cross-run index CSV, replacing any earlier row.
-
-Replaces rather than appends on a repeat run name so the index tracks what
-is currently on disk. A run directory holds exactly one result, so two
-index rows for one name could only ever mean one of them is stale.
-
-New columns are unioned in, so adding a field later does not invalidate an
-index written before it existed -- older rows get NaN for it.
-
-Args:
-    index_path: Path to the index CSV. Created if absent.
-    row: Mapping of column name to value for this run.
-    key: Column, or sequence of columns, identifying a run uniquely.
-
-Returns:
-    The full index as a DataFrame, as written.
-
-Note:
-    The index is a DERIVED view of the runs on disk: every value in it is
-    restated from a run's own metadata. This keeps it in step as runs are
-    made; `HAT_index_runs.py` rebuilds it from the runs, checks it against
-    them, and records anything whose run has been deleted.
 ```
 
 </details>

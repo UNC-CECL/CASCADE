@@ -137,12 +137,6 @@ and the rule's point -- a date says when the decision was taken -- survives.
 ```
 
 ```text
-`output/archive/` files retired material as `YYYY-MM-DD_<what>/`, its own
-documented idiom (output/README.md). What sits inside one of those is filed,
-not stray, so it is not asked to be a superseded_ folder as well.
-```
-
-```text
 Rule 5: a counted depth used to find a root. Only flagged when the name being
 assigned looks like a root, so ordinary parents[] use is not noise.
 ```

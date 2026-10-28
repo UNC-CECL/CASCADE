@@ -9,7 +9,7 @@ BRIE's alongshore solve alone (option A waves; no Barrier3D, storms, sea level o
 started from the BRIE shoreline after year 1 of the adopted 1996-2025 edgeBE no-groin matrix run.
 One groin between GIS 5 and GIS 6, held at one blocking fraction for the whole run (no failure
 schedule). Every groin run is compared with a no-groin run from the same start. BRIE is not
-changed: each module only adds to the yearly shoreline change, as CASCADE's groin callbacks do.
+changed: each module only adds to the yearly shoreline change, as CASCADE's groin modules do.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -45,6 +45,7 @@ _HAT_DIR = next(p for p in HERE.parents  if (p / "hatteras_paths.py").exists())
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 sys.path[:0] = [str(HERE.parents[1] / "2-straight-coast" / "1-run"), str(_HAT_DIR)]
 import straight_coast_test as sc  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
@@ -66,8 +67,8 @@ assert U == D + 1
 
 # BRIE x_s (m, landward +) after the first model year of the no-groin run
 def load_planform():
-    npz = np.load(PLANFORM_RUN / f"{PLANFORM_RUN.name}.npz", allow_pickle=True)
-    return np.asarray(npz["cascade"][0].brie._x_s_save, float)[:, 1].copy()
+    cascade = load_saved_cascade(PLANFORM_RUN / f"{PLANFORM_RUN.name}.npz")
+    return np.asarray(cascade.brie._x_s_save, float)[:, 1].copy()
 
 
 # BRIE's row-scaled Crank-Nicolson solve on a periodic coast, with a module's yearly addition
@@ -83,7 +84,7 @@ def run(x0, t, module, years, blocking_fraction=sc.BLOCKING_FRACTION):
         r = np.maximum(0.0, t["coast_diff"][sc.angle_index(theta, t["climl"])] * sc.DT_YR / 2 / sc.DY_M ** 2)
         dx = np.zeros(ny)
         q = corr = 0.0
-        if module == "pinned":                              # BlockingGroinCallback
+        if module == "pinned":                              # BlockingGroinManager
             dx[D] -= blocking_fraction * 2 * r[D] * (x[U] - x[D])
             dx[U] -= blocking_fraction * 2 * r[U] * (x[D] - x[U])
             q = -dx[U]

@@ -3,13 +3,13 @@ Generic CASCADE grid geometry: real domains padded by buffers on each end.
 
     from cascade_pipeline.domains import DomainGeometry
 
-Defaults match the Hatteras hindcast (90 real, 15-domain buffers, 500 m); override for
+Defaults match the Hatteras hindcast (90 real, 30-domain buffers, 500 m); override for
 another site. Details: scripts/cascade_pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-08-19
+Version: 2026-10-23
 """
 
 import dataclasses
@@ -23,14 +23,15 @@ class DomainGeometry:
         num_real_domains: Count of real, GIS-numbered domains (defaults to
             90, matching the Hatteras Island hindcast).
         num_buffer_domains: Count of buffer domains padding each end
-            (defaults to 15).
+            (defaults to 30, the hindcast's since 2026-10-21; it was 15, whose ring
+            closure bent too sharply at the joins and drained GIS 88-90).
         first_gis_id: GIS ID of the first real domain (defaults to 1).
         domain_spacing_m: Alongshore width of one domain, in meters
             (defaults to 500).
     """
 
     num_real_domains: int = 90
-    num_buffer_domains: int = 15
+    num_buffer_domains: int = 30
     first_gis_id: int = 1
     domain_spacing_m: float = 500.0
 
@@ -79,6 +80,30 @@ class DomainGeometry:
             The GIS domain ID (or array of IDs).
         """
         return self.first_gis_id + (pad_index - self.num_buffer_domains)
+
+    def for_total(self, total_domains):
+        """This geometry with the buffer count of a run that has `total_domains`.
+
+        Saved runs keep the buffers they were made with (15 a side before
+        2026-10-21, 30 since), so a script reading a run takes its geometry
+        from the run, e.g. `geometry.for_total(len(cascade.barrier3d))`,
+        rather than from the site config. Buffers are symmetric.
+
+        Args:
+            total_domains: Length of the run's padded domain array.
+
+        Returns:
+            A DomainGeometry with the matching num_buffer_domains.
+
+        Raises:
+            ValueError: If total_domains minus the real domains is not even
+                and non-negative.
+        """
+        extra = total_domains - self.num_real_domains
+        if extra < 0 or extra % 2:
+            raise ValueError(f"{total_domains} domains cannot hold {self.num_real_domains} "
+                             f"real domains with equal buffers")
+        return dataclasses.replace(self, num_buffer_domains=extra // 2)
 
 
 DEFAULT_DOMAINS = DomainGeometry()

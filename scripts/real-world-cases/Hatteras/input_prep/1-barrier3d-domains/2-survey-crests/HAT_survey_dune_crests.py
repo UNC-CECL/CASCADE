@@ -33,14 +33,21 @@ Before any survey, the start's own arrays go through this code and must
 reproduce its dune files. A second column widens the window by WIDEN_CELLS each
 side, as a sensitivity only.
 
+Lidar spikes (since 2026-10-26): once every survey is in, a crest more than
+SPIKE_M above the same cell's crest both before (the previous survey, or the
+start's own crest for the first) and after (the next survey) is blanked with
+status "spike"; the value it had stays in crest_raw_m_navd88. 179 cells on the
+1996 start, mostly 1996 and 1998, up to 60 m; none on the 2009 start.
+
 Writes data/hatteras_init/1-barrier3d-domains/<start>/survey-crests/:
 survey_dune_crests.csv (one row per survey, domain and 10 m cell),
-survey_coverage.csv (per survey and domain) and survey_sources.csv (per survey).
+survey_coverage.csv (per survey and domain, with cells_spike) and
+survey_sources.csv (per survey).
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-20
+Version: 2026-10-26
 """
 from __future__ import annotations
 
@@ -130,6 +137,12 @@ ASSUMED_CRS = CRS.from_epsg(26918)
 US_FT = 1200 / 3937
 WIDEN_CELLS = 2                  # sensitivity column only: the window grown this many 10 m cells each side
 BLOCK = 10                       # 1 m -> 10 m
+# Lidar spikes (2026-10-26): the 1996-1998 ATM grids carry returns up to 60 m (a run of 25-60 m at GIS 38 in
+# 1998, 5-6 m there in 1997 and 1999), which the window's highest point picks up. A crest more than SPIKE_M above
+# the cell's crest both before and after it in time is a spike (drop_spikes). Not a ceiling, which would cut the
+# dunes that stand 11-13 m survey after survey (GIS 18, 26-27); not the cell's median over the surveys, which also
+# caught real dunes that were later lost (GIS 81-82 in 1999, 2009-start GIS 59 and 75 after 2014)
+SPIKE_M = 5.0
 # -----------------------------------------------------------------------------
 
 
@@ -254,15 +267,18 @@ def crests(z, i0, i1):
     return out, edge, status
 
 
-# The check: the start's arrays through this code, exact windows, must give its dune files
+# The check: the start's arrays through this code, exact windows, must give its dune files. Returns the start's
+# crests (m NAVD88, domain x cell), the reference the first survey's spikes are judged against
 def check_start(start, frames):
     worst = 0.0
+    out = np.full((91, 50), np.nan)
     for g in range(1, 91):
         shear, c0, i0, i1 = frames[g]
         z = profiles(np.load(tv.npy_dirs(start)[0] / f"domain_{g}.npy").astype(float), shear, c0)
         above = z > X.BEACH_START_THR_M
         sb = np.where(above.any(axis=1), above.argmax(axis=1), -1)
         e, _ = X.find_dunes(z, sb, i0, i1)
+        out[g] = np.asarray(e[:50], float) + X.MHW_M
         h = e - (X.BERM_ELEV_NAVD_M - X.MHW_M)
         h[np.isfinite(h) & (h < 0)] = X.MIN_DUNE_H_M
         h[~np.isfinite(h)] = X.MIN_DUNE_H_M
@@ -271,6 +287,7 @@ def check_start(start, frames):
     if worst > 1e-3:
         raise SystemExit(f"{start} check failed: max |difference| from the dune files {worst:.4f} m")
     print(f"{start} check passed: this code reproduces its dune files (max |difference| {worst:.1e} m)")
+    return out
 
 
 # Vertical unit of a raster survey: stated in its CRS, else from its land elevations against the start's arrays
@@ -291,6 +308,44 @@ def unit_of(sources, start, grids):
     return ("ft" if r > 2 else "m"), f"land elevation ratio {r:.2f} to the start's arrays"
 
 
+# Spikes, once every survey is in: a crest more than SPIKE_M above the cell's crest both before and after it in
+# time, an up-and-straight-back-down no dune does. Before: the previous survey with a crest, or for the first survey
+# the start's own crest (start_crests, from check_start); after: the next. A survey with nothing on one side is
+# judged on the other. A dune that persists, or is lost and stays lost, fails one side. Blanked, status "spike",
+# the value kept in crest_raw_m_navd88; the widened column is judged the same way on its own values
+def spike_mask(t, col, start_crests):
+    w = t.pivot_table(index=["gis", "cell"], columns="survey", values=col, dropna=False).sort_index(axis=1)
+    # The start's crest as a column ahead of the first survey, so it stands in until a survey has a crest
+    with_start = pd.concat([pd.Series(start_crests[w.index.get_level_values("gis"), w.index.get_level_values("cell")],
+                                      index=w.index, name="start"), w], axis=1)
+    prev = with_start.ffill(axis=1).shift(1, axis=1)[w.columns]
+    nxt = w.bfill(axis=1).shift(-1, axis=1)
+    up_prev, up_next = w - prev > SPIKE_M, w - nxt > SPIKE_M
+    spike = (up_prev | prev.isna()) & (up_next | nxt.isna()) & (prev.notna() | nxt.notna()) & w.notna()
+    s = spike.stack().rename("spike")
+    return t.join(s, on=["gis", "cell", "survey"]).spike.fillna(False).astype(bool)
+
+
+def drop_spikes(t, cover, start_crests):
+    t["crest_raw_m_navd88"] = t.crest_m_navd88
+    spikes = {col: spike_mask(t, col, start_crests) for col in ("crest_m_navd88", "crest_widened_window_m_navd88")}
+    for col, spike in spikes.items():
+        t.loc[spike, col] = np.nan
+    main_spike = spikes["crest_m_navd88"]
+    t.loc[main_spike, "status"] = "spike"
+    t.loc[main_spike, "at_landward_edge"] = False
+    # Coverage recounted from the cleaned table
+    by = t.assign(crest=t.crest_m_navd88.notna(), spike=main_spike, edge=t.at_landward_edge & t.crest_m_navd88.notna())         .groupby(["survey", "gis"])[["crest", "spike", "edge"]].sum()
+    key = pd.MultiIndex.from_frame(cover[["survey", "gis"]])
+    cover["cells_with_crest"] = by.crest.reindex(key).to_numpy()
+    cover["landward_edge_hits"] = by.edge.reindex(key).to_numpy()
+    cover["cells_spike"] = by.spike.reindex(key).to_numpy()
+    print(f"spikes (> {SPIKE_M:g} m above the crest before and after): "
+          f"{t[main_spike].groupby('survey').size().to_dict()}; widened window: "
+          f"{t[spikes['crest_widened_window_m_navd88']].groupby('survey').size().to_dict()}", flush=True)
+    return t, cover
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--start", choices=list(STARTS), default="2009-start")
@@ -299,7 +354,7 @@ def main():
     windows = json.loads(tv.picks_dir(start).joinpath(
         f"HAT_dune_search_windows_{tv.topo_dirs(start)[2]}.json").read_text(encoding="utf-8"))
     frames = {g: frame(start, g, windows) for g in range(1, 91)}
-    check_start(start, frames)
+    start_crests = check_start(start, frames)
     clips = product(prod).gapfill_1m
     grids = {g: clip_grid(clips / f"clip_domain_{g}_filled.tif") for g in range(1, 91)}
     # 1 m road pixels per domain and the 2009 lidar on them, for the road check
@@ -359,10 +414,11 @@ def main():
                 s.close()
         n = sum(r["cells_with_crest"] for r in cover if r["survey"] == year)
         print(f"{year}: crest in {n} of 4500 cells ({n / 45:.0f}%)", flush=True)
+    t, cover = drop_spikes(pd.DataFrame(rows), pd.DataFrame(cover), start_crests)
     out = tv.product_dir(start) / "survey-crests"
     out.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows).round(3).to_csv(out / "survey_dune_crests.csv", index=False)
-    pd.DataFrame(cover).to_csv(out / "survey_coverage.csv", index=False)
+    t.round(3).to_csv(out / "survey_dune_crests.csv", index=False)
+    cover.to_csv(out / "survey_coverage.csv", index=False)
     pd.DataFrame(sources_tab).to_csv(out / "survey_sources.csv", index=False)
     print(out)
 

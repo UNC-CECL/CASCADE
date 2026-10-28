@@ -107,7 +107,8 @@ def observed(start):
 def modelled(run_dir, start):
     m = np.load(next(Path(run_dir).glob("*_shoreline_matrix.npy")))
     assert m.shape[0] == run_years(start) + 1, f"{run_dir}: unexpected run length"
-    return smooth_like_model(pd.Series(-(m[-1] - m[0])[D.start_real_index:D.end_real_index], index=GIS))
+    d = D.for_total(m.shape[1])   # the run's own buffers, not the config's
+    return smooth_like_model(pd.Series(-(m[-1] - m[0])[d.start_real_index:d.end_real_index], index=GIS))
 
 
 def shoals(ax):

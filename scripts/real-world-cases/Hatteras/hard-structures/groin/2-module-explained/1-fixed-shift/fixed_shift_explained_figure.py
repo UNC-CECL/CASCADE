@@ -12,9 +12,9 @@ straight-coast runs, the fixed amount it moved against the sand BRIE's solve mad
 created. The companion of wave_driven_explained_figure.py. Reads the fixed-shift groin's by-year table from
 straight_coast_test.py; nothing is rerun.
 
-The fixed-shift groin (cascade/groin.py GroinCallback, removed from the runner on 2026-10-13 in favour of the wave-driven
-groin; in git before 563a542e) was a callback on the sandbox Cascade (cascade/cascade_groin.py,
-`_groin_callback`). Each model year, after every Barrier3D domain had run and before BRIE's alongshore step,
+The fixed-shift groin (cascade/groin.py, removed from the runner on 2026-10-13 in favour of the wave-driven
+groin; in git before 563a542e) was attached by hand to the sandbox Cascade (cascade/cascade_groin.py,
+a groin hook in its update()). Each model year, after every Barrier3D domain had run and before BRIE's alongshore step,
 it added M of seaward change to the updrift domain (GIS 6) and M of landward change to the downdrift one
 (GIS 5) in x_s_dt, the shoreline change each domain hands to BRIE. It never read the waves.
 
@@ -129,8 +129,8 @@ def fig_model_year():
         "within one year: every Barrier3D domain runs first, including its background erosion (BE), and hands "
         "BRIE its shoreline change for the year; the fixed-shift groin then edits that change in the two domains either side "
         "of the groin, adding M seaward to GIS 6 (north, updrift) and M landward to GIS 5 (south, downdrift); BRIE "
-        "then moves the shoreline alongshore. The fixed-shift groin was a callback on the sandbox Cascade "
-        "(`cascade/cascade_groin.py`, `_groin_callback`), not part of the BE rates, though it entered the same "
+        "then moves the shoreline alongshore. The fixed-shift groin was attached by hand to the sandbox Cascade "
+        "(`cascade/cascade_groin.py`, a groin hook in its update()), not part of the BE rates, though it entered the same "
         "number BE ends up in. (b) an illustrative example of the edit: grey, a uniform "
         f"{EXAMPLE_BE:g} m of retreat from Barrier3D in every domain (made up for the example); dark, what BRIE "
         f"receives, the same except GIS 5 and GIS 6, moved {sc.M:g} m apart (gold). **Shows:** the fixed-shift groin is a "

@@ -38,7 +38,7 @@ if str(_HAT_DIR) not in _hat_sys.path:
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 sys.path.insert(0, str(_HAT_DIR))
 sys.path.insert(0, str(_HAT_DIR / "figure_making" / "island"))
-sys.path.insert(0, str(_HAT_DIR / "hatteras_ms"))
+sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "hindcast"))
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer import hat_env_forcings as env  # noqa: E402
 from site_layer import hat_observed_rates as obs  # noqa: E402

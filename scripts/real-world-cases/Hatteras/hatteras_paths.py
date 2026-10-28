@@ -1,7 +1,7 @@
 """
 Where the Hatteras code and the Hatteras workspace are: the two roots every script reads.
 
-    from hatteras_paths import HATTERAS_DIR, WORKSPACE, workspace_twin
+    from hatteras_paths import HATTERAS_DIR, WORKSPACE, BARRIER3D_DIR, workspace_twin
 
 HATTERAS_DIR is this folder, scripts/real-world-cases/Hatteras/ in the
 obx-cascade clone: the scripts, and nothing else (the lab rule for the clone).
@@ -9,6 +9,11 @@ WORKSPACE is everything the scripts read and write -- data/, output/,
 hard-structures/ results -- laid out at the paths the old repository had them,
 D:\\hatteras_ch1\\model_runs, unless the environment variable HATTERAS_WORKSPACE
 names another folder (a second drive under another letter, say).
+
+BARRIER3D_DIR is the Barrier3D checkout beside the obx-cascade clone (../Barrier3D,
+on hatteras/adopted); its worktrees (Barrier3D-overwashfix, ...) sit beside it, so
+BARRIER3D_DIR.with_name("Barrier3D-overwashfix") names one. In the old repository
+they sat beside the workspace, which scripts reached as WORKSPACE.parent.
 
 workspace_twin(folder) is where a folder of scripts keeps its non-code files:
 the same place in the workspace. In the old repository a study wrote its
@@ -36,6 +41,7 @@ DEFAULT_WORKSPACE = Path(r"D:\hatteras_ch1\model_runs")
 
 HATTERAS_DIR = Path(__file__).resolve().parent
 WORKSPACE = Path(os.environ.get("HATTERAS_WORKSPACE", DEFAULT_WORKSPACE))
+BARRIER3D_DIR = next(p for p in HATTERAS_DIR.parents if (p / ".git").exists()).parent / "Barrier3D"
 
 
 

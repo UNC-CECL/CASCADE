@@ -13,6 +13,7 @@ dsas/dsas_rate_verification.py         check the DSAS rates against known values
 dsas/dsas_shoreline_analysis.py        DSAS rates, all in one: table and four figures
 chainage/shoreline_chainage_*.py       40 years of CoastSat chainage: decade panels, GIFs
 rodanthe_erosion_example_poster.py     Rodanthe erosion trends, for a poster
+transect_profiles.py                   lidar cross-shore profiles 1996-2019, per domain and examples
 ```
 
 What not to trust:
@@ -363,6 +364,86 @@ bridging a gap that has no data behind it.
 A CHECK, SO IT LIVES UNDER supporting/. The caption is keyed to the
 figure's name in the folder's one CAPTIONS.md, beside the primary's.
 ```
+
+### transect_profiles.py
+
+Cross-shore elevation profiles from every lidar survey, coloured by year
+(oldest red to newest purple), written to
+`output/figures/2-observations/transect_profiles/`: `by_domain/` has one
+figure per GIS domain and `examples/` eleven named sites, each the median over
+the domain's CoastSat transects. `--all-surveys` draws every survey at full
+width into `by_domain_all_surveys/` and `examples_all_surveys/`, for checking.
+
+Kept clean on purpose (2026-10-27; fourteen rainbow lines, ~140 per-transect
+lines and a 470 m window were too much to read):
+
+- **Six surveys, not fourteen** (`SHOW_YEARS`: 1997, 2001, 2005, 2009, 2014,
+  2019), spread over the record and favouring bare-earth surveys; neighbouring
+  years in a rainbow are indistinguishable anyway. The caption lists the
+  surveys not drawn.
+- **Spread as a band, not lines**: the 25th-75th percentile across transects,
+  shaded for the first and last survey only.
+- **The beach and dune** (`ZOOM_M`, -150 to +100 m). Full width only where
+  the interior is the point (`WIDE_EXAMPLES`: Rodanthe-Pea Island overwash, the 1999
+  road relocation).
+- **No legend, x = 0 line or "ocean"**: dashed (storm) and faint (pre-2009
+  interior) are explained in the caption; the colorbar is labelled only with
+  the years drawn. `supporting/transect_profile_coverage.csv` gives, per domain and
+survey, how many transects have data, the share of the plotted window the
+median covers, and the lidar spike points removed.
+
+Choices, and why:
+
+- **Surveys.** The fourteen surveys `HAT_survey_dune_crests.py` reads (1996-
+  2005 ALACE/NCFMP/USACE grids, 2009 USACE, 2014-2019), with its files and its
+  vertical shifts onto the 2009 lidar along NC-12, so the profiles share a datum
+  with the dune-crest work. The 2008 and 2011 surveys are point clouds and are
+  left out until they are gridded.
+- **Vertical unit.** Read from the CRS where it says, otherwise whichever of
+  metres or US feet puts the survey's land closer to the 2009 lidar on GIS 10,
+  30, 50 and 70; the other unit must fit at least twice as badly or the script
+  stops. Comparing medians, as the dune-crest script does against whole domain
+  arrays, was too unstable on transect samples, which are mostly beach (1997
+  read 4.2 against a 4.2 limit).
+- **x = 0 is CoastSat, not the lidar.** Each transect is placed on its median
+  CoastSat position from 2008-08-17 to 2010-08-17, the 2009 start's shoreline.
+  The lidar MHW crossing was tried first, but the 2009 survey has no water
+  returns and stops on the upper beach (GIS 13: 9 of 11 transects had no
+  crossing). A fixed reference, not each survey's own shoreline, so retreat
+  shows as the profile moving left.
+- **Median over transects**, drawn where at least half have data. A single
+  1 m line catches footpaths and dune gaps, and the median matches how rates
+  are averaged per domain.
+- **Spikes.** A point more than 5 m above both the survey before and after
+  at the same x is blanked (the dune-crest rule, `SPIKE_M`). Houses in the
+  2001 unclassified returns and the 1996-1998 grids partly survive it, which
+  is one reason for the median.
+- **Pre-2009 surveys are faint behind the dune.** The 1996-2005 grids are
+  first-return (2001: unclassified), so buildings and trees stay in. Landward of
+  120 m from the shoreline (`BEHIND_DUNE_M`) they are drawn faint, not removed;
+  the beach and foredune are drawn at full strength. Not filtered against the
+  later surveys, which would also erase dunes that were really lost (Avon's
+  seaward ridge). The ground-filtered 2001 grid (`derived_filtered/
+  2001_ground_only.tif`) was considered and not used: it has no nodata and
+  carries an interpolated surface (~0.2 m) over the water, and the script that
+  made it is not in the repository.
+- **Datum check, reported and never applied.** The NC-12 check behind
+  `SURVEY_VERTICAL_OFFSET_M` only tests ground near the road (none at Cape
+  Point, where 1999 reads 1.3-1.7 m high on GIS 2-5). Per domain, each survey's median
+  difference from 2009 is taken on ground behind the dune that the 2009-2019
+  bare-earth surveys agree has not changed (range within 0.2 m, at least 0.3 m
+  above MHW, 200+ points). It goes to `supporting/transect_profile_coverage.csv`
+  (`interior_offset_m`, `stable_points`) and, domain by survey, to
+  `supporting/interior_offset_vs_2009.csv`. A survey more than 0.3 m off is
+  starred on the colorbar and named in the caption; nothing is shifted. For the
+  old surveys the median sits partly on roofs and canopy, so a small positive
+  reading there is expected.
+- **Dashed lines** are surveys flown within weeks of a storm: 1999 (Dennis),
+  2016 (Matthew), 2018 (Florence). They show short-term storm damage, not the
+  long-term trend.
+
+The examples, their domains and why each was picked are in `EXAMPLES` in the
+script's CONFIG; each one's reason is the last sentence of its caption.
 
 ### plot_coastsat_calibration_periods.py
 

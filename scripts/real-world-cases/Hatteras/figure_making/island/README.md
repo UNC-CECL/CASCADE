@@ -53,6 +53,11 @@ supporting/, through the house `save()`. Three figures per folder:
                                        its true offset, 90 real domains
     island_<year>_absolute_buffers.png ABSOLUTE, one panel: the same with the
                                        buffer domains
+    true_scale/island_<year>_absolute*.png
+                                       the two ABSOLUTE maps again at 1:1,
+                                       cross-shore not exaggerated, in their
+                                       own subfolder with its own supporting/
+                                       (Hannah, 2026-10-26)
 
 ...for each of the four hindcast starts (1984, 1996, 2004, 2010) in each of
 the two elevation treatments (classes, terrain): 24 figures from two
@@ -115,6 +120,12 @@ THE CROSS-SHORE IS EXAGGERATED, AND SAYS SO
     only place a panel height comes from, and both captions state them. The
     old poster stretched the cross-shore by an unstated `fig_w * aspect * 1.8`
     capped at 7.5 in.
+
+    The absolute maps are ALSO drawn at 1:1 into <year>/<scheme>/true_scale/
+    (TRUE_SCALE_SUBDIR), because the stretched view makes a 2 km island look
+    as wide as the reach is long; at 1:1 it reads as the thin strip it is
+    (Hannah, 2026-10-26). Same file names as the stretched pair, so the
+    subfolder is what keeps them apart.
 
 HOUSE STYLE
     Elevation is drawn in CLASSES, not a ramp (`elevation_cmap()`): the back

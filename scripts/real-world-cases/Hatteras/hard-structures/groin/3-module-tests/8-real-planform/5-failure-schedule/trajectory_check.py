@@ -37,7 +37,7 @@ if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 sys.path[:0] = [str(HERE), str(HERE.parent / "4-blocking-emulator"), str(HERE.parent / "1-dipole-stability"),
-                str(workspace_twin(HERE.parents[1]) / "1-solver-audit"),
+                str(HERE.parents[1] / "1-solver-audit"),
                 str(_HAT_DIR / "hatteras_ms" / "groin-sweep"),
                 str(_HAT_DIR / "hatteras_ms"),
                 str(_HAT_DIR / "site_layer"), str(_HAT_DIR)]
@@ -75,7 +75,7 @@ for start in (1996, 2010):
     yrs = [y for y in obs.index if start < y <= start + bg.YEARS]
     for kind, s, f in cands:
         st = (base if kind == "none" else
-              bg.solve(x0, start, s, f, "callback") if kind == "blocking" else
+              bg.solve(x0, start, s, f, "pre_solve") if kind == "blocking" else
               fs.dipole(x0, start, s, f, FAIL))
         g = st[:, bg.D] - st[:, bg.U]
         g = g - g[0] + off * np.arange(g.size) / (g.size - 1)

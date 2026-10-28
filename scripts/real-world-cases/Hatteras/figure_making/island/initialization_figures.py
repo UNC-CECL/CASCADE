@@ -96,6 +96,9 @@ VERTICAL_EXAGGERATION = 8.0
 
 # The absolute-placement maps need less stretch to fit a page
 VERTICAL_EXAGGERATION_ABSOLUTE = 3.0
+
+# ...and are drawn again unstretched, into this subfolder, to show the island's real shape
+TRUE_SCALE_SUBDIR = "true_scale"
 # -----------------------------------------------------------------------------
 
 
@@ -356,8 +359,9 @@ def figure_for_year(year, scheme):
 
 
 # Draw and save one absolute-placement map
-def figure_absolute(year, scheme, include_buffers):
+def figure_absolute(year, scheme, include_buffers, true_scale=False):
     _, product, version, _rows = product_for(year)
+    exaggeration = 1.0 if true_scale else VERTICAL_EXAGGERATION_ABSOLUTE
     cmap, norm, cb_ticks, water = scheme_colours(scheme)
     mark = SCHEME_MARK[scheme]
 
@@ -366,7 +370,7 @@ def figure_absolute(year, scheme, include_buffers):
     span_domains = TOTAL_DOMAINS if include_buffers else NUM_REAL_DOMAINS
     m_per_in = span_domains * DOMAIN_M / _AXW_FULL
     top_km = canvas.shape[0] * CELL_SIZE_M / 1000.0
-    map_h = (top_km * 1000.0 / m_per_in) * VERTICAL_EXAGGERATION_ABSOLUTE
+    map_h = (top_km * 1000.0 / m_per_in) * exaggeration
     yticks = list(range(0, int(top_km) + 1, 2))
 
     cbar_h = 0.11
@@ -402,7 +406,10 @@ def figure_absolute(year, scheme, include_buffers):
 
     real_off = load_offsets_m(year)[START_REAL_INDEX:END_REAL_INDEX]
     stem = f"island_{year}_absolute" + ("_buffers" if include_buffers else "")
-    out = save(fig, year_dir(year, scheme) / f"{stem}.png", vector=True, dpi=300)
+    folder = year_dir(year, scheme)
+    if true_scale:
+        folder = folder / TRUE_SCALE_SUBDIR
+    out = save(fig, folder / f"{stem}.png", vector=True, dpi=300)
     which = (f"the 90 real domains and the {NUM_BUFFER_DOMAINS} buffer domains at "
              f"each end, whose topography is one sampled array repeated and carries "
              f"no survey"
@@ -410,6 +417,15 @@ def figure_absolute(year, scheme, include_buffers):
     companion = (f"island_{year}_absolute.png drops the buffers"
                  if include_buffers
                  else f"island_{year}_absolute_buffers.png adds the buffer domains")
+    if true_scale:
+        scale = ("drawn at true scale, the cross-shore not exaggerated against the "
+                 "alongshore")
+        companion = (f"{companion} at true scale, and the files of the same name "
+                     f"one folder up stretch the cross-shore "
+                     f"{VERTICAL_EXAGGERATION_ABSOLUTE:g}x")
+    else:
+        scale = (f"with the cross-shore exaggerated {exaggeration:g}x against the "
+                 f"alongshore")
     record_caption(out[0],
         f"The island as the model starts it in {year}, from the {product} {version} "
         f"extraction, with every domain at its TRUE cross-shore position: each "
@@ -420,8 +436,7 @@ def figure_absolute(year, scheme, include_buffers):
         f"over the real domains, which is the seaward bend from Pea Island to Cape "
         f"Point and why the island crosses the canvas rather than running level. "
         f"Seaward at the bottom; {span_domains} domains across the page at "
-        f"{m_per_in:,.0f} m per inch, with the cross-shore exaggerated "
-        f"{VERTICAL_EXAGGERATION_ABSOLUTE:g}x against the alongshore. Companions: "
+        f"{m_per_in:,.0f} m per inch, {scale}. Companions: "
         f"{companion}, and island_{year}.png detrends this onto each domain's own "
         f"frame and carries the offsets as a panel of their own.")
     plt.close(fig)
@@ -441,8 +456,9 @@ def main():
         for _scheme in SCHEMES:
             print(f"  [{_scheme}]")
             print(f"    {figure_for_year(_year, _scheme)}")
-            for _buffers in (False, True):
-                print(f"    {figure_absolute(_year, _scheme, _buffers)}")
+            for _true_scale in (False, True):
+                for _buffers in (False, True):
+                    print(f"    {figure_absolute(_year, _scheme, _buffers, _true_scale)}")
 
 
 if __name__ == "__main__":

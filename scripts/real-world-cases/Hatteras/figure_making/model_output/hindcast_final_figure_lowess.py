@@ -58,7 +58,7 @@ from site_layer.hat_observed_rates import lrr_csv                # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS     # noqa: E402
 # The model side's smoother, the target's own LOWESS (7 domains, D1-D10 raw)
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "experiments"))
-from HAT_metres_1_offset_units import smooth_like_target         # noqa: E402
+from site_layer.hat_scoring import smooth_like_target  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 LOWESS_PATH = (_HAT_DIR / "input_prep" / "7-source-sink"

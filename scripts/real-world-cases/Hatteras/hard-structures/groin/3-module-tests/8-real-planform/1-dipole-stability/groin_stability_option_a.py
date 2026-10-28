@@ -44,6 +44,7 @@ _HAT_DIR = next(p for p in Path(__file__).resolve().parents  if (p / "hatteras_p
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
+from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
 PLANFORM_RUNS = {                  # the adopted road_nobdm edgeBE runs (README)
     1996: MATRIX / "1996_2010/edgeBE/HAT_1996_2010_edgeBE_offsetmetres_road_nobdm_nogroin",
@@ -51,7 +52,7 @@ PLANFORM_RUNS = {                  # the adopted road_nobdm edgeBE runs (README)
 }
 RUN_YEARS = 14                     # 1996-2009 and 2010-2023, as the matrix runs them
 
-NUM_BUFFER = 15                    # GroinCallback wiring as in HAT_groin_sweep_config
+NUM_BUFFER = 15                    # fixed-shift groin wiring as in HAT_groin_sweep_config
 UPDRIFT_PAD, DOWNDRIFT_PAD = NUM_BUFFER + 6 - 1, NUM_BUFFER + 5 - 1   # GIS 6 updrift, GIS 5 downdrift
 REAL = slice(NUM_BUFFER, NUM_BUFFER + 90)
 INSTALL_YEAR, DETERIORATION_YEAR, RAMP_YEARS = 1969, 1996, 7
@@ -70,8 +71,7 @@ FILLET_TARGET_M = 22.11            # the period-1 fillet M = 60 was fitted to
 # BRIE x_s (metres, landward +) after the first model year of a matrix run
 def load_planform(start):
     run = PLANFORM_RUNS[start]
-    npz = np.load(run / f"{run.name}.npz", allow_pickle=True)
-    brie = npz["cascade"][0].brie
+    brie = load_saved_cascade(run / f"{run.name}.npz").brie
     return np.asarray(brie._x_s_save, float)[:, 1].copy()
 
 
@@ -108,7 +108,7 @@ def solve(x0, climate, years, M_of_year):
     return pd.DataFrame(rows)
 
 
-# GroinCallback._effective_trapping_rate, linear_ramp mode
+# the fixed-shift groin's _effective_trapping_rate, linear_ramp mode
 def effective_M(M, f, year):
     if year < DETERIORATION_YEAR:
         return M

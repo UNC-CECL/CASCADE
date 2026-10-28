@@ -45,7 +45,7 @@ from cascade_pipeline.coastsat_lowess import (  # noqa: E402
     lowess_smooth_transect_to_domains)
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
-    find_run_dir, legacy_arm_to_kind_tag, load_run_index)
+    find_run_dir, legacy_arm_to_kind_tag, scan_runs)
 from site_layer.hat_observed_rates import (  # noqa: E402
     coastsat_endpoint_csv, dune_endpoint_csv, lrr_csv)
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
@@ -61,12 +61,11 @@ import coastsat_vs_duneline as dune  # noqa: E402
 from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
 # The model side's smoother, the target's own LOWESS (7 domains, GIS 1-10 raw)
 sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "experiments"))
-from HAT_metres_1_offset_units import smooth_like_target  # noqa: E402
+from site_layer.hat_scoring import smooth_like_target  # noqa: E402
 
 
 # --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = _REPO / "output" / "raw_runs"
-RUN_INDEX = RAW_RUNS / "run_index.csv"
 OUT_DIR = COMPARISONS_ROOT / "model_vs_observed"
 PRESET = "edgeBE"
 # Window set -> {window: (run, arm)}, the edgeBE full-management matrix cell of each window.
@@ -218,6 +217,17 @@ def runs_for(model_set):
     return dune_solved_runs(_smooth_of(model_set))
 
 
+# Every run's row, scanned once per session (scan_runs reads every run's metadata)
+_RUN_TABLE = None
+
+
+def run_table():
+    global _RUN_TABLE
+    if _RUN_TABLE is None:
+        _RUN_TABLE = scan_runs(RAW_RUNS)
+    return _RUN_TABLE
+
+
 # Both per-domain estimators for one run, and its runs_used.csv row
 def load_model(window, spec, model_set, preset=None):
     period = "{}_{}".format(*window)
@@ -236,9 +246,9 @@ def load_model(window, spec, model_set, preset=None):
             df.set_index("domain_number")[col]).to_numpy()
     row = {"window": period, "model_ends": model_set, "run_name": run_name,
            "arm": arm, "run_dir": str(run_dir.relative_to(_REPO)), "note": ""}
-    if RUN_INDEX.is_file():
-        # The index is keyed on (run_name, kind, tag); translate the legacy arm name
-        idx = load_run_index(RUN_INDEX)
+    if RAW_RUNS.is_dir():
+        # The table is keyed on (run_name, kind, tag); translate the legacy arm name
+        idx = run_table()
         kind, tag = legacy_arm_to_kind_tag(arm)
         hit = idx[(idx["run_name"] == run_name) & (idx["kind"] == kind)
                   & (idx["tag"] == tag)]

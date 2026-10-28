@@ -2,11 +2,11 @@
 """
 Which runs under output/raw_runs are candidates for retirement, and why (read-only).
 
-    python scripts/hatteras_ms/tools/HAT_run_supersession_report.py
-    python scripts/hatteras_ms/tools/HAT_run_supersession_report.py --print
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_run_supersession_report.py
+    python scripts/real-world-cases/Hatteras/hatteras_ms/tools/HAT_run_supersession_report.py --print
 
 Flags runs on a stale topography, superseded arms and duplicates; writes
-a report, moves nothing. Details: scripts/hatteras_ms/README.md.
+a report, moves nothing. Details: scripts/real-world-cases/Hatteras/hatteras_ms/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -21,7 +21,7 @@ from pathlib import Path as _HatPath  # noqa: E402
 _HAT_DIR = next(_p for _p in _HatPath(__file__).resolve().parents if (_p / "hatteras_paths.py").exists())
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
-from hatteras_paths import workspace_twin  # noqa: E402
+from hatteras_paths import WORKSPACE as REPO, workspace_twin  # noqa: E402  (REPO: data/, output/)
 import argparse
 import json
 import re
@@ -30,16 +30,6 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-
-# Walk up until a directory holds data/hatteras_init
-def _find_root(start: Path) -> Path:
-    for p in [start, *start.parents]:
-        if (p / "data" / "hatteras_init").is_dir():
-            return p
-    raise SystemExit("could not locate the project root")
-
-
-REPO = _find_root(Path(__file__).resolve())
 # --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = workspace_twin(REPO) / "output" / "raw_runs"
 import sys as _b3dsys

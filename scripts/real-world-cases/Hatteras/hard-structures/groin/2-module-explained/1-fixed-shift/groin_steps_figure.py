@@ -8,8 +8,8 @@ One model year, step by step, from a straight coast, for the fixed-shift groin o
 
 Top: the order of operations in one call of Cascade.update(): Barrier3D in every domain (storms, overwash,
 dunes, background erosion), then the groin hook, then BRIE's alongshore transport, then the management
-modules. The fixed-shift groin sat on the sandbox Cascade's `_groin_callback` (cascade/cascade_groin.py, before
-563a542e); the wave-driven groin uses the same hook. Bottom: the first year of the straight-coast run
+modules. The fixed-shift groin sat on the sandbox Cascade's groin hook (cascade/cascade_groin.py, before
+563a542e); the wave-driven groin (GroinManager) acts at the same point, the groin step in Cascade.update(). Bottom: the first year of the straight-coast run
 (straight_coast_test.py in ../../3-module-tests/2-straight-coast/1-run/: BRIE's alongshore step alone), from
 a straight coast, at the shoreline after each step, then the same year repeated. The groin's edit is
 computed as straight_coast_test.run() computes it; the profiles are run()'s own. Reruns one coast (a few
@@ -198,7 +198,7 @@ def main():
     save(fig, out, dpi=250, close=True)
     common = (
         "**How to read:** (a) the order within one call of `Cascade.update()`: Barrier3D in every domain (storms, "
-        "overwash, dunes, background erosion), then the groin hook (`_groin_callback`), then BRIE's alongshore "
+        "overwash, dunes, background erosion), then the groin step (`GroinManager.update`), then BRIE's alongshore "
         "transport, then the management modules; then the next year. (b)-(e) the first year of the "
         f"straight-coast run, from a straight coast at {a.theta:+d} degrees (BRIE's alongshore step alone, option "
         "A waves): the shoreline at the start, after Barrier3D (unchanged: the test has none; at Buxton storms "

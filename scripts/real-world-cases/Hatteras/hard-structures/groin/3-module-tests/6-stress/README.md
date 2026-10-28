@@ -5,16 +5,16 @@ asks where it stops behaving: push each input past where the Buxton hindcast use
 groin keeps the sand balance, stays stable, and settles. Asked for on 2026-10-15 ("try to break it"). What
 came out of it, the module's tested range and the guard that now enforces it, is at the end.
 
-**What is tested.** The runner's own groin, `cascade.groin.GroinCallback`, imported as it stands in
+**What is tested.** The runner's own groin, `cascade.groin.GroinManager`, imported as it stands in
 `cascade/` (not a copy, unlike tests 1-6): the drift groin plus the leak correction against the tracked
 groin-free shoreline, with the runner's 10-cell correction zone. It is driven on the straight-coast rig of
 `../2-straight-coast/1-run/`: 61 domains of 500 m, one groin at the middle face, BRIE's implicit alongshore
 step alone on an infinitely long coast at angle θ0 (the tilt is added only where angles are read, so the
-periodic wrap never meets the groin). The callback reads a stand-in for BRIE carrying a real Brie
+periodic wrap never meets the groin). The groin reads a stand-in for BRIE carrying a real Brie
 instance's tables and the rig's shoreline, and gets `x_s_dt` as a list, as CASCADE hands it over. No
 Barrier3D, storms or sea level, except where the background family imitates what Barrier3D passes in.
 
-**Rig check.** At strength 0.6 and a 5-cell zone, on a straight coast, the callback reproduces the wave-driven groin of
+**Rig check.** At strength 0.6 and a 5-cell zone, on a straight coast, the groin reproduces the wave-driven groin of
 `1-run/` to 0.0 m at all 17 orientations, in both the updrift cell and the coast's total
 (`tables/stress_rig_check.csv`). On a straight coast the tracked groin-free shoreline is the straight line, so
 the two must agree; they do.
@@ -46,7 +46,7 @@ Buxton's two groin cells start at about −12° and −25°.
 | notch | a step already at the groin when it starts, −300 to +300 m (Buxton's is 256 m) |
 | switch-off | on for 50 years, off for 100 |
 | cycling | on and off every 5 years |
-| variable | a new climate each year (asymmetry 0.40-0.80, Hs 1.5-2.5; below 0.5 the drift reverses); the callback as written (drift table read once) and with the table refreshed each year; 3 seeds, at −20°, 0°, +20° |
+| variable | a new climate each year (asymmetry 0.40-0.80, Hs 1.5-2.5; below 0.5 the drift reverses); the groin as written (drift table read once) and with the table refreshed each year; 3 seeds, at −20°, 0°, +20° |
 | background | `x_s_dt` arriving non-zero, as from Barrier3D: 2 m/yr retreat; ±10 m/yr noise per domain; a 30 m cut every 10 years |
 | placement | the groin face near the end of the array (lower domain 0, 1, 2, 5, 9, 58, 59 of 61) |
 | long | 500 years |
@@ -67,7 +67,7 @@ stopped each run and lets it finish, so the outcome can be checked against it.
 2. **It breaks two ways, both set by BRIE's diffusion number r = D dt / 2 dy² at the groin** (figure 3):
    - **r too large: the leak correction overshoots.** The correction is an explicit term in front of BRIE's
      implicit step. At high-angle fraction 0.3 the groin loses 434 to 3,250 m of summed shoreline in 100
-     years at −30° to −10°. At 0.1 it runs until an angle leaves BRIE's diffusivity table and the callback
+     years at −30° to −10°. At 0.1 it runs until an angle leaves BRIE's diffusivity table and the groin
      crashed (`IndexError: index 180`; fixed, below). Hs 2.5 and above does the same on coasts turned with
      the drift: 22 to 67 km. On the rig, losses start once r at the start angle is above about 0.13.
    - **r = 0: the coast is frozen.** At asymmetry 0.7 and above, BRIE's diffusivity is clipped to zero at
@@ -128,9 +128,9 @@ Buxton windows at option A run with the guard silent, and their shorelines are i
 (0.0 m). Asymmetry 0.8 is stopped in 2000 (face 46.3°); high-angle 0.3 in its third year (10.8 m lost
 against 111.2 m gross).
 
-**The angle clip.** The callback's re-run of BRIE's step clipped the angle index to `_wave_climl`, one past
+**The angle clip.** The groin's re-run of BRIE's step clipped the angle index to `_wave_climl`, one past
 the end of BRIE's diffusivity table, and crashed at faces steeper than about 89.5°. It now clips to the
-table's last entry, as the rest of the callback already did; results are otherwise bit-identical (0.0 m).
+table's last entry, as the rest of the groin already did; results are otherwise bit-identical (0.0 m).
 BRIE's own step (brie.py line 1297) has the same clip and is not changed here.
 
 ## What this means for reporting

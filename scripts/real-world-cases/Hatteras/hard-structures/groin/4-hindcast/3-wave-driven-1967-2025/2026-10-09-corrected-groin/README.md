@@ -10,7 +10,7 @@
 
 **Why.** The drift groin (`../../2-blocking-1996-2025/2026-10-08-drift-groin/`) fitted better than the pin, but leaked about 107 m of summed shoreline onto the island through BRIE's solve. Module 6's correction removes that leak on a straight coast (`../../../3-module-tests/`). As built, though, the correction also acted on Buxton's natural bend, changing the no-groin baseline by about 100 m (`../../../3-module-tests/8-real-planform/7-wave-driven-groin/`).
 
-**Setup.** `corrected_groin.py` replaces `BlockingGroinCallback` with the corrected groin in a child process and drives the unchanged runner, as the drift-groin study does: full management, the solved edgeBE ends, relocations off, instant failure at the 2004 step (b falls to b·f). Each year:
+**Setup.** `corrected_groin.py` replaces `BlockingGroinManager` with the corrected groin in a child process and drives the unchanged runner, as the drift-groin study does: full management, the solved edgeBE ends, relocations off, instant failure at the 2004 step (b falls to b·f). Each year:
 - **The groin** moves b of BRIE's wave-climate net drift at the updrift approach face from GIS 5 to GIS 6, as `drift_groin.py` does.
 - **The correction (option B, chosen 2026-10-09)** is applied to the groin's own bends only. Within 10 cells of the groin face, it is module 6's leak term for this run's BRIE shoreline minus the same term for the groin-free shoreline in that year. Since 10-12 the groin-free shoreline is this run's minus the groin's own tracked footprint, so no no-groin run is needed (section below); the 10-09 runs rebuilt it from the no-groin run instead. The zone is 10 cells, not module 6's 5, because 5 leaks on a grid-aligned coast (`../../../3-module-tests/5-long-term/`).
 - **Check (`check`):** at b 0 the run reproduces the no-groin run exactly (0.000 m in every year and domain with the tracked reference; 5 × 10⁻¹³ m with the 10-09 one). So the correction leaves the baseline untouched.
@@ -165,13 +165,13 @@ no-groin run. Two ways to drop that were tried.
 1. **Freeze the natural bend at the start** (correction = L(x) − L(x₀)). Rejected without a run: from the
    no-groin runs, the natural bend's leak changes so much that this would put up to 175-220 m of false
    correction into the cells beside the groin, more than the groin's own effect (about 80 m by 2009).
-2. **Track the groin's own footprint** (`tracked`, adopted). Each year the callback repeats BRIE's alongshore
+2. **Track the groin's own footprint** (`tracked`, adopted). Each year the groin repeats BRIE's alongshore
    step for last year (`brie_step`, a copy of `brie.py:1293-1326`) twice, with and without its own
    contribution (the drift it moved and the correction it added), and keeps the difference as the groin's
    footprint a. The groin-free shoreline is then x − a. Fills, Barrier3D's shoreline change and anything else
    enter both steps alike and cancel. With no groin, a is exactly zero, so the no-groin run is reproduced by
    construction. What it leaves out: Barrier3D responding differently to the groin's sand (overwash,
-   shoreface), since a is spread only by BRIE's step. It adds 15 lines to the callback.
+   shoreface), since a is spread only by BRIE's step. It adds 15 lines to the groin module.
 
 **Test (`python corrected_groin.py tracked`, `tracked_vs_baseline.csv`).** Both references on the same
 setup (10-12; the option-B runs rerun as `now_*`), the two-number groin, off from 2017:
@@ -198,7 +198,7 @@ setup (10-12; the option-B runs rerun as `now_*`), the two-number groin, off fro
 
 ## The calendar-year refit (2026-10-12 night)
 
-**Setup.** The calibration and test were moved to calendar-year shorelines (start and end lines are calendar-year means; offset v4; storms 1997-2009 and 2010-2025; RSLR 0.002 and 0.006; the solved edgeBE ends for each). Row k of a run is calendar year start + k and the start line is row 0, so both periods start from a gap change of exactly zero. The runner passes the first model year to the callback, so the 2004 failure and the 2017 switch-off land in the right calendar years. `corrected_groin.py` scores this with its own `observed_change`, `model_change`, `score_annual`, `score_photos` and `split_scores`, which fall back to `schedule_refit.py`'s under `--setup six-month`. The test splits are now **2010-2016** (fully independent) and **2017-2025**. CoastSat's gap changes by −18.6 m over 1996-2009 and −60.2 m over 2009-2025; the photo dates are 1997, 2004 and 2008 in calibration, 2014-2023 in the test.
+**Setup.** The calibration and test were moved to calendar-year shorelines (start and end lines are calendar-year means; offset v4; storms 1997-2009 and 2010-2025; RSLR 0.002 and 0.006; the solved edgeBE ends for each). Row k of a run is calendar year start + k and the start line is row 0, so both periods start from a gap change of exactly zero. The runner passes the first model year to the groin, so the 2004 failure and the 2017 switch-off land in the right calendar years. `corrected_groin.py` scores this with its own `observed_change`, `model_change`, `score_annual`, `score_photos` and `split_scores`, which fall back to `schedule_refit.py`'s under `--setup six-month`. The test splits are now **2010-2016** (fully independent) and **2017-2025**. CoastSat's gap changes by −18.6 m over 1996-2009 and −60.2 m over 2009-2025; the photo dates are 1997, 2004 and 2008 in calibration, 2014-2023 in the test.
 
 **Runs.** `python corrected_groin.py check` (b 0 reproduces no groin to 0.000 m, as before), then `refresh` (98 runs plus 2 re-tests, all clean), then by hand with `periods`: calibration at s 0.20, 0.22 and 0.25, test at s 0.16 and 0.20; then `score`. Logs are in `logs/calendar/`. The pinned and drift groins were not rerun, so they have no calendar-year numbers.
 

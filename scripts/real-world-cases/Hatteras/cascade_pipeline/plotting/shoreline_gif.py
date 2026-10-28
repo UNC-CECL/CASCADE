@@ -294,6 +294,8 @@ def make_shoreline_gif(shoreline_m, run,
     keep_frames = gif_config.keep_frames if keep_frames is None else keep_frames
     baseline_label = gif_config.baseline_label if baseline_label is None else baseline_label
     target_label = gif_config.target_label if target_label is None else target_label
+    # A saved run keeps the buffers it was made with (15 a side before 2026-10-21, 30 since): take them from the matrix
+    domains = domains.for_total(np.shape(shoreline_m)[1])
 
     mode = str(mode).strip().lower()
     if mode not in ("position", "displacement", "difference"):
@@ -403,6 +405,9 @@ def make_shoreline_gif(shoreline_m, run,
 
     frames = []
     pad_town_spans = None
+    any_relocation_in_view = relocations is not None and any(
+        np.asarray(relocations[t], dtype=bool)[pad_lo:pad_hi].any()
+        for t in year_idx if t < len(relocations))
     for t in year_idx:
         cur = series[t]
 
@@ -462,8 +467,12 @@ def make_shoreline_gif(shoreline_m, run,
                 my = [cur[p - pad_lo] for p in in_view]
                 ax.plot(mx, my, linestyle="none", marker="v", markersize=9,
                         color=RELOCATION_COLOR, markeredgecolor="white",
-                        markeredgewidth=0.7, zorder=6,
-                        label=f"relocated ({len(in_view)})")
+                        markeredgewidth=0.7, zorder=6)
+        # One fixed legend entry in every frame when any relocation is in view, so the legend never reflows
+        if any_relocation_in_view:
+            ax.plot([], [], linestyle="none", marker="v", markersize=9,
+                    color=RELOCATION_COLOR, markeredgecolor="white",
+                    markeredgewidth=0.7, label="road relocated")
 
         # Axes
         ax.set_xlim(x_lo - 0.5, x_hi + 0.5)

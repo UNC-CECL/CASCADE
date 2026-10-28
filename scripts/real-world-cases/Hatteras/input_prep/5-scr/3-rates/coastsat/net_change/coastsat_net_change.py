@@ -244,7 +244,7 @@ def write_provenance(period, tr, dom, dropped, out):
     interior = dom.loc[2:89]
     if period == FULL:
         what = """Context, not a target: the full record from the calibration start window to the test end
-window, for reading the full-window run (`scripts/hatteras_ms/HAT_full_window_1996_2025.py`)
+window, for reading the full-window run (`scripts/real-world-cases/Hatteras/hatteras_ms/experiments/windows/HAT_full_window_1996_2025.py`)
 against. Because the 2009 mean cancels between the two model periods, a transect's change here is its 1996-2009 change plus
 its 2009-2025 change."""
     else:

@@ -35,7 +35,7 @@ metres planform), and what M does the old fillet now cost?
 **Method.** `groin_stability_option_a.py` uses the solver audit's emulator (BRIE's own
 `coast_diff` and sparse solve, no Barrier3D, no source/sink, no storms). It starts from the
 BRIE shoreline after year 1 of the adopted `road_nobdm_nogroin` edgeBE runs (1996 and 2010), and
-applies GroinCallback's dipole (GIS 6 updrift, GIS 5 downdrift) with the 1996→2003 linear ramp.
+applies the dipole groin (GIS 6 updrift, GIS 5 downdrift) with the 1996→2003 linear ramp.
 Fillet = groin run minus a no-groin run from the same planform. The old climate is judged on the
 same planform ÷10, which is what it was calibrated on. The audit's straight-coast rig can't be
 used: at 0° option A's diffusivity is −119 m²/yr, so it shuts down in year 1 at any M.
@@ -153,7 +153,7 @@ running the other way. No (M, f) choice is made here; the options go to Hannah.
 
 ## In the code (2026-09-29)
 
-- `cascade/groin.py`: adds `BlockingGroinCallback` (kind "blocking"; the callback form above, reading
+- `cascade/groin.py`: adds `BlockingGroinManager` (kind "blocking"; the pre-solve form above, reading
   `cascade._brie_coupler._brie`). The schedule and validation moved into shared helpers with the same
   arithmetic, and the dipole is bit-identical to HEAD over both modes and 80 years. Tests are in
   `tests/test_groin_blocking.py` (11 pass).
@@ -217,7 +217,7 @@ Why it exists, what it is and is not, and the result are in the sections above
 - `PLANFORM_RUNS` are the adopted natural-dunes-with-road (`road_nobdm`)
   edgeBE runs. Any matrix run gives the same BRIE planform at year 1 to within
   the year's cross-shore change.
-- The groin wiring is GroinCallback's, as in `HAT_groin_sweep_config`: GIS 6
+- The groin wiring is the dipole groin's, as in `HAT_groin_sweep_config`: GIS 6
   updrift, GIS 5 downdrift, 15 buffer domains, first GIS 1.
 - The old climate was calibrated on the /10 planform, so it is judged there:
   every alongshore difference one tenth as large.
@@ -246,7 +246,7 @@ WHY THIS EXISTS
 WHAT IT IS AND IS NOT
     The same emulator as the audit: BRIE's own coast_diff table and sparse
     indices, the same row-scaled implicit solve, the same clip at zero. It adds
-    only the groin dipole, with GroinCallback's linear-ramp deterioration
+    only the groin dipole, with the dipole groin's linear-ramp deterioration
     schedule. No Barrier3D, no source/sink, no storms: every number here is the
     alongshore solve's response to the dipole alone, measured against a no-groin
     run from the same planform. Anything a full CASCADE run does differently is
@@ -262,7 +262,7 @@ Author: Hannah A. Henry, UNC CECL
 **`effective_M()`**
 
 ```text
-GroinCallback._effective_trapping_rate, linear_ramp mode.
+The dipole groin's _effective_trapping_rate, linear_ramp mode.
 ```
 
 **`load_planform()`**
@@ -384,24 +384,24 @@ The dipole groin imposes +/-M metres a year whatever the state, so it cannot
 hold the 256 m step BRIE flattens at GIS 5/6. A physical groin intercepts the
 transport arriving at it; this emulator removes a fraction b of the D5|D6
 face's share of BRIE's alongshore solve, in two implementations (exact, which
-needs a BRIE change, and callback, which does not). The full-model no-groin
+needs a BRIE change, and pre_solve, which does not). The full-model no-groin
 gap change in `FULL_NOGROIN` is from the adopted matrix road_bdm[_nourish]
 runs. In the solve, each row couples to both neighbours with its own r[i]
 (BRIE's row scaling): the face D|U is row D's upper link and row U's lower
 link. The matrix is assembled exactly as BRIE does, but from the two weight
 vectors, so the unblocked case reproduces BRIE's matrix term for term.
 
-From the script's original header, as it stood before 2026-10-01, word for word:
+From the script's original header, as it stood before 2026-10-01 (the groin and the `pre_solve` mode under their current names):
 
 ```text
 Approach 1: a groin that BLOCKS a fraction b of alongshore transport.
 
-The dipole groin (GroinCallback) imposes +/-M metres a year regardless of
+The dipole groin imposes +/-M metres a year regardless of
 state, so it cannot hold the 256 m step BRIE flattens at GIS 5/6 (see the
 diagnosis in README.md). A physical groin intercepts the transport arriving at
 it. Here the groin removes a fraction b of the D5|D6 face's share of BRIE's
 alongshore solve, with b ramping b0 -> b0*f over 1996-2003 (the same schedule
-GroinCallback uses for M).
+the dipole groin uses for M).
 
 TWO IMPLEMENTATIONS, because only one of them can go into CASCADE unchanged:
 
@@ -409,7 +409,7 @@ TWO IMPLEMENTATIONS, because only one of them can go into CASCADE unchanged:
              Crank-Nicolson step (the explicit Laplacian on the right-hand
              side and the implicit matrix) by (1 - b). The upper bound on
              what the idea can do. Needs a BRIE change.
-  callback   What GroinCallback's hook can do: a pre-solve x_s_dt correction.
+  pre_solve  What the groin module can do: a pre-solve x_s_dt correction.
              It cancels b times the explicit estimate of the face's full
              step, 2 * r_i * (x_j - x_i) on each side (the explicit half
              doubled to stand in for the implicit half). Needs no BRIE change.
@@ -431,7 +431,7 @@ Tests whether an intact groin that fails at once after the 2003 storm fits both
 windows, where the linear 1996->2003 wear-down put the decline inside the 1996
 window, in which the data show none.
 
-From the script's original header, as it stood before 2026-10-01, word for word:
+From the script's original header, as it stood before 2026-10-01 (the groin and the `pre_solve` mode under their current names):
 
 ```text
 Does an INSTANT failure at the 2003 storm let one groin fit both windows?
@@ -442,11 +442,11 @@ That is an intact groin failing after the 2003 storm, NOT the linear
 1996 -> 2003 wear-down both groin emulators were given -- which puts the decline
 inside the 1996 window, where the data show none.
 
-Tests both representations under GroinCallback's existing "instant" mode (full
+Tests both representations under the groin module's existing "instant" mode (full
 strength until the failure year, x f from then on; no new code needed for the
 schedule):
-  blocking  approach 1, callback implementation (blocking_groin_emulator.py)
-  dipole    today's GroinCallback, M m/yr
+  blocking  approach 1, pre_solve implementation (blocking_groin_emulator.py)
+  dipole    today's dipole groin, M m/yr
 
 Scored as there: adjusted OLS gap change vs observed_fillet_m.
 
@@ -458,7 +458,7 @@ Author: Hannah A. Henry, UNC CECL
 **`dipole()`**
 
 ```text
-GroinCallback's +/-M dipole on the same solve (x_s_dt only).
+The dipole groin's +/-M dipole on the same solve (x_s_dt only).
 ```
 
 </details>
