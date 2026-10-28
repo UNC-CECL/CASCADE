@@ -5,6 +5,7 @@ Figures for the hindcast sensitivity sweep: skill per axis, alongshore rates per
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --preset edgeBE
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --quantity position --reference total
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --quantity position --reference net_change
+    python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --quantity position --reference net_change --no-groin
     python scripts/sensitivity_analysis/plot_sensitivity.py --start-year 1996 --circularity
 
 Reads the sweep manifest, run_index.csv and each cell's rates; scores against
@@ -118,8 +119,8 @@ ALONGSHORE_VALUES = {"wave_height": (2.0, 3.0, 4.0, 5.0)}
 
 # Reading the sweep
 
-# Every completed cell for one period and preset, newest wins
-def load_cells(start_year, preset):
+# Every completed cell for one period, preset and groin state, newest wins
+def load_cells(start_year, preset, groin=True):
     manifest = OUT_ROOT / f"sensitivity_{start_year}.jsonl"
     if not manifest.exists():
         raise FileNotFoundError(f"no sweep manifest at {manifest}")
@@ -130,6 +131,9 @@ def load_cells(start_year, preset):
             continue
         row = json.loads(line)
         if row.get("preset") != preset or not row.get("ok"):
+            continue
+        # Groin-on and groin-off cells share values; mixed, the newest would win (2026-10-28)
+        if row.get("groin", True) != groin:
             continue
         # The manifest's absolute path goes stale; re-resolve from the run name
         run_dir = Path(row["detail"])
@@ -148,11 +152,11 @@ def load_cells(start_year, preset):
         rows.append(dict(sweep=row["sweep"], setting=row["setting"],
                          value=row["value"], run_dir=run_dir,
                          run_name=run_dir.name, kind="sensitivity", tag=family,
-                         base_name=baseline_name(run_dir.name)))
+                         base_name=baseline_name(run_dir.name), groin=groin))
     if not rows:
         return pd.DataFrame(columns=["sweep", "setting", "value", "sort_key",
                                      "run_dir", "run_name", "kind", "tag",
-                                     "base_name", "key", "base_key"])
+                                     "base_name", "groin", "key", "base_key"])
 
     frame = pd.DataFrame(rows)
     # Keyed on (run_name, kind, tag): a cell and its baseline are two rows
@@ -167,15 +171,16 @@ def load_cells(start_year, preset):
     return frame.sort_values(["sweep", "sort_key"]).reset_index(drop=True)
 
 
-# The values of one axis whose cells failed, for one period and preset
-def failed_values(start_year, preset, sweep):
+# The values of one axis whose cells failed, for one period, preset and groin state
+def failed_values(start_year, preset, sweep, groin=True):
     manifest = OUT_ROOT / f"sensitivity_{start_year}.jsonl"
     failed = set()
     for line in manifest.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        if row.get("preset") == preset and row.get("sweep") == sweep and not row.get("ok"):
+        if (row.get("preset") == preset and row.get("sweep") == sweep
+                and row.get("groin", True) == groin and not row.get("ok")):
             failed.add(normalise(row["value"]))
     return failed
 
@@ -419,6 +424,11 @@ def site_zones(ax):
 
 # Figures
 
+# The groin state as a title suffix: the calibrated groin-on set is unmarked
+def groin_text(groin):
+    return "" if groin else ", groin off"
+
+
 # A swept value as it appears in a legend or colourbar tick
 def value_label(value):
     norm = normalise(value)
@@ -525,7 +535,8 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir, scores=None,
                bbox_to_anchor=(0.5, -0.085), frameon=False)
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
-    caption = (f"Parameter sensitivity, {start_year}–{end_year}, {preset}. "
+    caption = (f"Parameter sensitivity, {start_year}–{end_year}, {preset}"
+               f"{groin_text(bool(cells.groin.iloc[0]))}. "
                f"Interior domains (GIS 2–89).{note}")
     if footnotes:
         caption += "  " + "; ".join(footnotes) + "."
@@ -537,13 +548,13 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir, scores=None,
     return path
 
 
-# Modelled LRR per domain for every cell of one axis, over the observed layer
-def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
-                    out_dir, position=None, shown=None):
+# One axis of the sweep on `ax`: the observed layer, then one ramp-coloured line per value
+# Returns the (handle, text) value-legend entries and how many of them are drawn lines
+def draw_alongshore(ax, cells, sweep, start_year, preset, cs_series, target,
+                    position=None, shown=None):
     block = cells[cells.sweep == sweep]
-    if block.empty:
-        return None
     base = block.iloc[0].base_name
+    groin = bool(block.iloc[0].groin)
     # `shown`: the values to draw; one with no completed cell is reported, not drawn
     absent = []
     if shown is not None:
@@ -554,8 +565,6 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
             print(f"  {sweep}: no completed cell at {', '.join(f'{v:g}' for v in absent)}; "
                   f"not drawn")
         block = block[block.norm.isin(wanted)]
-
-    fig, ax = plt.subplots(figsize=(9.6, 4.5), constrained_layout=True)
 
     # The observed layer is one curve: the scoring target
     skip = LOWESS_CONFIG.skip_southern_domains
@@ -605,7 +614,10 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
                         alpha=0.95, zorder=6)
         entries.append((line, text))
     # A value whose run failed is named in the legend, greyed, with no line
-    failed = failed_values(start_year, preset, sweep) & set(absent)
+    # Every failed value on an unfiltered axis; only the selected ones on a filtered one
+    failed = failed_values(start_year, preset, sweep, groin) - set(block.norm) - {current}
+    if shown is not None:
+        failed &= set(absent)
     for value in sorted(failed):
         entries.append((Line2D([], [], color="none"), f"{value:g}{unit}: run failed"))
 
@@ -613,10 +625,43 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     ax.set_xlim(HATTERAS_DOMAINS.first_gis_id - 0.5,
                 HATTERAS_DOMAINS.last_gis_id + 0.5)
     site_zones(ax)
-    ax.set_xlabel("Alongshore position (GIS domain, south → north)")
     ax.set_ylabel("Shoreline change rate, LRR (m/yr)" if position is None
                   else "Shoreline position change (m)")
     tidy(ax)
+    return entries, len(curves)
+
+
+# The value legend to the right of `ax`: one coloured line per value, failed runs greyed
+def value_legend(ax, sweep, entries, drawn):
+    values = ax.legend([e[0] for e in entries], [e[1] for e in entries],
+                       title=SWEEPS[sweep]["label"], loc="upper left",
+                       bbox_to_anchor=(1.01, 1.0), frameon=False, handlelength=2.4,
+                       alignment="left")
+    for text in values.get_texts()[drawn:]:
+        text.set_color(INK_MUTED)
+        text.set_style("italic")
+
+
+# The title tail naming the observed quantity
+def observed_text(position):
+    if position is None:
+        return ""
+    if position[0] == "net_change":
+        return ": position change vs CoastSat net change"
+    return f": position change vs {position[0]} change"
+
+
+# Modelled LRR per domain for every cell of one axis, over the observed layer
+def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
+                    out_dir, position=None, shown=None):
+    block = cells[cells.sweep == sweep]
+    if block.empty:
+        return None
+    groin = bool(block.iloc[0].groin)
+    fig, ax = plt.subplots(figsize=(9.6, 4.5), constrained_layout=True)
+    entries, drawn = draw_alongshore(ax, cells, sweep, start_year, preset, cs_series,
+                                     target, position=position, shown=shown)
+    ax.set_xlabel("Alongshore position (GIS domain, south → north)")
 
     # Legend below the axes: the observed curve, then the transect dots
     handles, labels = ax.get_legend_handles_labels()
@@ -626,24 +671,56 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
                           frameon=False, handlelength=2.4, columnspacing=2.0)
     ax.add_artist(reference)
 
-    # Value legend on the right: one coloured line per value, in value order
-    values = ax.legend([e[0] for e in entries], [e[1] for e in entries],
-                       title=SWEEPS[sweep]["label"], loc="upper left",
-                       bbox_to_anchor=(1.01, 1.0), frameon=False, handlelength=2.4,
-                       alignment="left")
-    for text in values.get_texts()[len(curves):]:
-        text.set_color(INK_MUTED)
-        text.set_style("italic")
+    # Value legend on the right, in value order
+    value_legend(ax, sweep, entries, drawn)
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     ax.set_title(f"{SWEEPS[sweep]['label']} sensitivity, "
-                 f"{start_year}–{end_year}, {preset}"
-                 + ("" if position is None else
-                    ": position change vs CoastSat net change" if position[0] == "net_change" else
-                    f": position change vs {position[0]} change"), pad=8)
+                 f"{start_year}–{end_year}, {preset}{groin_text(groin)}"
+                 + observed_text(position), pad=8)
 
     path = out_dir / f"{AXIS_ORDER.index(sweep) + 2:02d}_alongshore_{sweep}.png"
     fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+# Every swept axis stacked on one alongshore axis, a panel per wave parameter (2026-10-28)
+def plot_alongshore_panels(cells, start_year, preset, cs_series, target, out_dir,
+                           position=None):
+    sweeps = [s for s in AXIS_ORDER if s in set(cells.sweep)]
+    if len(sweeps) < 2:
+        return None
+    groin = bool(cells.iloc[0].groin)
+    fig, axes = plt.subplots(len(sweeps), 1, figsize=(9.6, 2.9 * len(sweeps)),
+                             sharex=True, constrained_layout=True)
+    towns = set(HATTERAS_ANNOTATIONS.town_spans)
+    for i, (ax, sweep) in enumerate(zip(axes, sweeps)):
+        entries, drawn = draw_alongshore(ax, cells, sweep, start_year, preset, cs_series,
+                                         target, position=position,
+                                         shown=ALONGSHORE_VALUES.get(sweep))
+        value_legend(ax, sweep, entries, drawn)
+        panel_label(ax, PANEL_LETTERS[i])
+        # Community names on the top panel only; the grey bands stay on every panel
+        if i:
+            for text in ax.texts:
+                if text.get_text() in towns:
+                    text.set_visible(False)
+    axes[-1].set_xlabel("Alongshore position (GIS domain, south → north)")
+
+    # The observed layer once, below the last panel
+    handles, labels = axes[-1].get_legend_handles_labels()
+    order = sorted(range(len(labels)), key=lambda i: "LOWESS" not in labels[i])
+    fig.legend([handles[i] for i in order], [labels[i] for i in order],
+               loc="upper center", bbox_to_anchor=(0.5, 0.0), ncol=2,
+               frameon=False, handlelength=2.4, columnspacing=2.0)
+
+    end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
+    fig.suptitle(f"Wave climate sensitivity, {start_year}–{end_year}, {preset}"
+                 f"{groin_text(groin)}{observed_text(position)}")
+
+    path = out_dir / "06_alongshore_all_parameters.png"
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
     return path
 
@@ -867,6 +944,8 @@ def main():
                              "(total), the 1996-2024 LRR (projected), or the "
                              "CoastSat net change the run figure draws (net_change: "
                              "the main folder, with skill and summary in metres)")
+    parser.add_argument("--no-groin", dest="groin", action="store_false",
+                        help="the groin-off cells, into <start>_<end>_<preset>_nogroin/")
     args = parser.parse_args()
 
     # One directory per (period, preset)
@@ -876,16 +955,18 @@ def main():
     net_change = args.quantity == "position" and args.reference == "net_change"
     if args.quantity == "position" and not net_change:
         root = root / "position_change" / args.reference
-    out_dir = root / f"{args.start_year}_{end_year}_{args.preset}"
+    out_dir = root / (f"{args.start_year}_{end_year}_{args.preset}"
+                      + ("" if args.groin else "_nogroin"))
     # The main folder holds the net-change position set; the rate set sits under rate/ (2026-10-26)
     if args.quantity == "rate":
         out_dir = out_dir / "rate"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     index = load_index()
-    cells = load_cells(args.start_year, args.preset)
+    cells = load_cells(args.start_year, args.preset, groin=args.groin)
     if cells.empty:
-        print(f"no completed cells for {args.start_year} / {args.preset}")
+        print(f"no completed cells for {args.start_year} / {args.preset}"
+              f"{groin_text(args.groin)}")
         return 1
     known = set(index.index)
     missing = sorted(set(cells.key) - known)
@@ -909,6 +990,9 @@ def main():
                                    position=(args.reference, obs_label),
                                    shown=ALONGSHORE_VALUES.get(sweep))
                    for sweep in AXIS_ORDER if sweep in set(cells.sweep)]
+        written.append(plot_alongshore_panels(cells, args.start_year, args.preset,
+                                              cs_series, target, out_dir,
+                                              position=(args.reference, obs_label)))
         if net_change:
             scores = position_scores(cells, args.start_year, args.preset, target)
             written.insert(0, plot_skill_overview(
@@ -933,6 +1017,8 @@ def main():
         written.append(plot_alongshore(cells, sweep, args.start_year,
                                        args.preset, cs_series, target, out_dir,
                                        shown=ALONGSHORE_VALUES.get(sweep)))
+    written.append(plot_alongshore_panels(cells, args.start_year, args.preset,
+                                          cs_series, target, out_dir))
     written.append(plot_relocation_outcomes(cells, index, args.start_year,
                                             args.preset, out_dir))
     if args.circularity:

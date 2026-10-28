@@ -70,7 +70,7 @@ SWEEPS = {
         "setting": "hs",
         "label": "Wave height Hs",
         "units": "m",
-        "values": [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0],
+        "values": [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 4.0, 5.0],
     },
     "wave_period": {
         "setting": "wave_period_s",
@@ -82,13 +82,15 @@ SWEEPS = {
         "setting": "wave_asymmetry",
         "label": "Wave asymmetry",
         "units": "",
-        "values": [0.5, 0.55, 0.6, 0.65, 0.7, 0.8],
+        # 0.4-0.45 reverse the net drift (2026-10-28)
+        "values": [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8],
     },
     "wave_angle_high_fraction": {
         "setting": "wave_angle_high_fraction",
         "label": "Wave angle high fraction",
         "units": "",
-        "values": [0.3, 0.4, 0.45, 0.5, 0.55],
+        # 0.6-0.65 into the high-angle instability (2026-10-28)
+        "values": [0.2, 0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65],
     },
 
     # Relocation target: its margin over the GIS 11 drowning, run with the historical events on

@@ -833,6 +833,18 @@ HATTERAS_ANNOTATIONS, under the data; plot_sensitivity_pair.py uses it too,
 with ramp colours and the same line weight.
 ```
 
+**`plot_alongshore_panels()`**
+
+```text
+Every swept axis stacked on one alongshore axis, a panel per wave parameter.
+
+06_alongshore_all_parameters.png, in both the position and rate sets and
+with --no-groin. Each panel is drawn by draw_alongshore(), the same code as
+the single-axis figures, with its own value legend and its own y range (the
+wave-angle response is several times the wave-period one). Community names
+sit on the top panel only; the observed-layer legend once, under the last.
+```
+
 **`plot_relocation_outcomes()`**
 
 ```text
