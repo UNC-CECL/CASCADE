@@ -1,8 +1,8 @@
 """
 Does a gentler, more realistic post-storm dune repair along NC-12 change the shoreline?
 
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_road_dune_rebuild.py run
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_road_dune_rebuild.py score
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_road_dune_rebuild.py run
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_road_dune_rebuild.py score
 
 RoadwayManager rebuilds a road domain's dunes only when a front-row cell falls 0.3 m above the berm
 (about 2.0 m NAVD88), and then resets every cell of the domain to the design crest, 4.3 m NAVD88, so

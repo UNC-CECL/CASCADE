@@ -1,10 +1,10 @@
 """
 Does the missed erosion north of Buxton come from dunes that never came down after Dennis?
 
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_forced_dune_crests.py run
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_forced_dune_crests.py score
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_forced_dune_crests.py plot
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_forced_dune_crests.py crests
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py run
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py score
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py plot
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py crests
 
 Barrier3D lowers a dune cell only when Rhigh overtops it, so Dennis (Rhigh 3.65 m NAVD88) leaves the
 5-7 m modelled dunes at GIS 8-12 standing, while the 1999 post-Dennis lidar has them at 1.7-4.7 m.

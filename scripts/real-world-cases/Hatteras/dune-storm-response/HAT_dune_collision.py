@@ -1,13 +1,13 @@
 """
 Dune toes from the lidar, and a collision-regime dune erosion rule calibrated on the 1996-2009 surveys.
 
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py toes
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py twl
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py calibrate
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py empirical
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py run
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py score
-    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_dune_collision.py plot
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py toes
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py twl
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py calibrate
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py empirical
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py run
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py score
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py plot
 
 Barrier3D lowers a dune only when Rhigh overtops it. Sallenger (2000) puts a storm in the collision regime
 when the water reaches the dune toe but not the crest (D_low < R_high < D_high), where the real dunes lose
