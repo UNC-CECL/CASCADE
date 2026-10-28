@@ -135,7 +135,7 @@ def searched_producers() -> dict[str, str]:
         if "__pycache__" in py.parts or "superseded" in str(py):
             continue
         text = py.read_text(encoding="utf-8", errors="ignore")
-        rel = py.relative_to(REPO).as_posix()
+        rel = py.relative_to(SCRIPTS).as_posix()     # as regenerate_all_figures names producers
         for m in re.finditer(r'["\']([a-z0-9_]+)\.png["\']', text):
             hits.setdefault(m.group(1), rel)
     return hits
