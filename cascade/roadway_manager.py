@@ -1062,7 +1062,7 @@ class RoadwayManager:
         # Dune min elevation should likely be altered
         if self._dune_design_elevation is None or self._dune_minimum_elevation is None:
             pass
-        elif road_dune_rebuild_disabled:
+        if self._dune_mgmt_road_setback_trigger is not None and self._road_setback > self._dune_mgmt_road_setback_trigger:
             pass
         else:
             # in B3D, dune height is the height above the berm crest
