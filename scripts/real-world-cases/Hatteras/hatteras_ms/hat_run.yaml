@@ -9,7 +9,7 @@
 start_year: 1996
 
 # zeroBE (none) | edgeBE (end domains only) | calibBE (per-domain fit)
-source_sink: zeroBE
+source_sink: edgeBE
 
 # natural | roadway_only | beachdune_only | full_management | full_no_fill (2009 only)
 scenario: full_management
@@ -17,7 +17,7 @@ scenario: full_management
 # --- the groin ---------------------------------------------------------------
 
 groin:
-  enabled: false
+  enabled: true
   # Share of arriving drift held back (0-1), per start year
   strength_1996: 0.10
   strength_2009: 0.10
@@ -33,7 +33,7 @@ groin:
 # solved at these values; change one and they need re-solving.
 
 physics:
-  wave_height_Hs: 2.0           # m
+  wave_height_Hs: 3.0           # m (2.0 before 2026-10-29)
   wave_period_s: 7.5            # s
   wave_asymmetry: 0.6           # fraction from the left of shore-normal
   wave_angle_high_fraction: 0.5 # fraction at more than 45 deg
@@ -49,6 +49,9 @@ relocation_setback_m: 20
 
 # Road manager stops rebuilding dunes where the road is farther than this behind them, m
 road_dune_rebuild_trigger_m: 20
+
+# Village (beach/dune manager) dune cap, m NAVD88; obx-cascade's own is 5.7 (4 m above the berm)
+village_dune_cap_navd88_m: 8.0
 
 sandbags: false
 

@@ -37,7 +37,7 @@ Compiled 2026-10-13 from the code, not from a run's saved output.
 | `sandbag_management_on` | Modules | False | False | no | — | Sandbag height floor |
 | `enable_shoreline_offset` | Modules | False | True | yes | — | Apply a starting shoreline offset |
 | `shoreline_offset` | Modules | [] | measured offset per domain | yes | m | Cross-shore start position |
-| `wave_height` | Waves | 1 | 2.0 | yes | m | Deepwater Hs |
+| `wave_height` | Waves | 1 | 3.0 since 2026-10-29 (was 2.0): best shoreline fit of Hs 2.0/2.5/3.0 | yes | m | Deepwater Hs |
 | `wave_period` | Waves | 7 | 7.5 | yes | s | Peak period |
 | `wave_asymmetry` | Waves | 0.8 | 0.6 | yes | — | Fraction of waves from the left, looking onshore |
 | `wave_angle_high_fraction` | Waves | 0.2 | 0.5 | yes | — | Fraction of waves at more than 45° |

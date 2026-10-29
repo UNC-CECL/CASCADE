@@ -142,6 +142,7 @@ r.cascade = build_cascade(
     road_dune_rebuild_trigger_m=r.ROAD_DUNE_REBUILD_TRIGGER_M,
 
     # The villages: beach/dune management, overwash removal and nourishment
+    village_dune_cap_navd88_m=r.VILLAGE_DUNE_CAP_NAVD88_M,
     beach_dune_manager_on=r.BEACH_DUNE_MANAGEMENT_ON,
     overwash_filter=r.OVERWASH_FILTER,
     overwash_to_dune=r.OVERWASH_TO_DUNE,

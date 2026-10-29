@@ -229,6 +229,9 @@ def setup_scenario(r):
 
     # The road manager rebuilds dunes only where the road is within this many metres of the dune (obx-cascade)
     r.ROAD_DUNE_REBUILD_TRIGGER_M = r.RUN_CONFIG.road_dune_rebuild_trigger_m
+
+    # The beach/dune manager clips village dunes to this every year, m NAVD88 (lidar-measured, 2026-10-29)
+    r.VILLAGE_DUNE_CAP_NAVD88_M = r.RUN_CONFIG.village_dune_cap_navd88_m
     # -----------------------------------------------------------------------------
 
     # Sensitivity tokens

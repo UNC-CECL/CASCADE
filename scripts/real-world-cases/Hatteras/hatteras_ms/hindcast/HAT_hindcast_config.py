@@ -138,7 +138,9 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("groin_end_year",               ("groin", "end_year"),        _as_int,   2017),
 
     # Wave climate: option A since 2026-09-27; moving one earns a name token (README)
-    ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.0),
+    # Hs 3.0 since 2026-10-29 (was 2.0): best shoreline fit of 2.0/2.5/3.0 in both windows
+    # (dune-storm-response/HAT_measured_dune_heights.py); the edgeBE ends were re-solved at 3.0 on 2026-10-28
+    ("hs",                           ("physics", "wave_height_Hs"), _as_float, 3.0),
     ("wave_period_s",                ("physics", "wave_period_s"),  _as_float, 7.5),
     ("wave_asymmetry",               ("physics", "wave_asymmetry"), _as_float, 0.6),
     ("wave_angle_high_fraction",     ("physics", "wave_angle_high_fraction"),
@@ -148,6 +150,10 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("relocation_setback_m",         ("relocation_setback_m",),   _as_opt_float, 20.0),
     # obx-cascade's dune_mgmt_road_setback_trigger: no road dune rebuild beyond this setback (obx default 20 m)
     ("road_dune_rebuild_trigger_m",  ("road_dune_rebuild_trigger_m",), _as_float, 20.0),
+
+    # beach_dune_manager's village dune cap, m NAVD88 (2026-10-29): obx-cascade's 4 m above the berm
+    # (5.7 m, Nags Head) pinned village dunes below lidar; 8.0 m is the lidar village p95 / tallest medians
+    ("village_dune_cap_navd88_m",    ("village_dune_cap_navd88_m",), _as_float, 8.0),
 
     # Management, not physics: a defence someone decides to build
     ("sandbags",                     ("sandbags",),                 _as_bool,  False),

@@ -323,6 +323,8 @@ def write_run_outputs(r):
             "road_width_m": r.ROAD_WIDTH,
             "road_dune_rebuild_trigger_m": (r.ROAD_DUNE_REBUILD_TRIGGER_M,
                                             "no road dune rebuild beyond this setback"),
+            "village_dune_cap_m_navd88": (r.VILLAGE_DUNE_CAP_NAVD88_M,
+                                          "beach_dune_manager clips village dunes to this"),
             "relocations_enabled": r.ENABLE_HISTORICAL_ROAD_RELOCATIONS,
         },
         "source/sink": {
@@ -448,6 +450,7 @@ def write_run_outputs(r):
                          else "uniform"),
         "storm_file": r.STORM_FILE.name,
         "bdm_dune_cap": getattr(_bdm_module, "DUNE_CAP_APPLIES_TO", "whole dune cell"),
+        "village_dune_cap_m_navd88": r.VILLAGE_DUNE_CAP_NAVD88_M,
         "barrier3d_route_overwash_fix": r.B3D["route_overwash_fix"],
     }
     # The row goes into the metadata; scan_runs builds the cross-run table from every run's metadata

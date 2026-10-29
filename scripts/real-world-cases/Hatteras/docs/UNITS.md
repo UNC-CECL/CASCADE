@@ -75,7 +75,7 @@ from Duck water levels (m NAVD88, metric) + WIS Hs (m) / Tp (s). The storm thres
 
 | Quantity | Value (option A) | Unit | Status |
 |---|---|---|---|
-| `wave_height` (Hs) | 2.0 | m, deep water | ✅ also sets shoreface depth `d_sf = 8.9 * Hs` |
+| `wave_height` (Hs) | 3.0 (2.0 before 2026-10-29) | m, deep water | ✅ also sets shoreface depth `d_sf = 8.9 * Hs` |
 | `wave_period` (Tp) | 7.5 | s | ✅ |
 | `wave_asymmetry` | 0.6 | fraction from the left, looking onshore | ✅ |
 | `wave_angle_high_fraction` | 0.5 | fraction | ✅ |
@@ -88,7 +88,7 @@ from Duck water levels (m NAVD88, metric) + WIS Hs (m) / Tp (s). The storm thres
 | `overwash_filter` | **percent** | percent | `filter_overwash` `/100` | ✅ values in (0, 1) are rejected |
 | `overwash_to_dune` | percent | percent | `/100` | ✅ |
 | `rmin`, `rmax` | 0.55 / 0.95 | unitless growth rates | none | ✅ |
-| bulldozer dune cap (`_artificial_maximum_dune_height`) | 4 (fixed in CASCADE, Nags Head value) | m above the berm | `filter_overwash`: `/10` → dam | ✅ since 2026-09-28 it limits only the overwash sand the manager adds to the dunes (`DUNE_CAP_APPLIES_TO`); before, it clipped the whole dune cell every year and cut natural village dunes |
+| bulldozer dune cap (`_artificial_maximum_dune_height`) | 6.3 since 2026-10-29 (village_dune_cap_navd88_m 8.0 m NAVD88, lidar village p95, set on each manager in build_cascade); obx-cascade's own is 4 (Nags Head) | m above the berm | `filter_overwash`: `/10` → dam | ✅ since 2026-09-28 it limits only the overwash sand the manager adds to the dunes (`DUNE_CAP_APPLIES_TO`); before, it clipped the whole dune cell every year and cut natural village dunes |
 
 ---
 
