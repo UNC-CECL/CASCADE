@@ -537,7 +537,11 @@ HATTERAS_BE_EDGE_ONLY = {
     # Re-solved 2026-10-21 with one dune growth rate island-wide (Cape Point's own 0.10-0.20 dropped);
     # residuals -0.000 / -0.027 m (experiments/end-domain-boundaries-2009-2025/2026-10-21-ends-solved-island-wide-dune-growth-2009_2025).
     # Before (cape growth 0.10-0.20): (+55.2654, +7.5470)
-    2009: (+64.2148, +7.5470),
+    # Re-solved 2026-10-29 on CASCADE-obx at Hs 3.0 (the default since 2026-10-29) with StormStart 1 and the 8.0 m
+    # village dune cap, six steps, residuals -0.290 / -0.130 m; GIS 1 still scatters (step 5, 0.16 m/yr away, missed
+    # by -5.5 m) (experiments/end-domain-boundaries-2009-2025/2026-10-29-ends-solved-on-obx-hs3-2009_2025).
+    # Hs 2.0 (island-wide dune growth): (+64.2148, +7.5470)
+    2009: (+51.0016, +10.3255),
     # before 2026-10-04: (+172.89, +24.08); 2010-2024 before it: (+8.0405, +21.2582), split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
