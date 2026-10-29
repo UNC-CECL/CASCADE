@@ -8,11 +8,47 @@ output.
 |---|---|
 | `hindcast.py` | building and running CASCADE, the run name, the shoreline target |
 | `run_registry.py` | where a run lives, and the run index. **Address runs through this**, never by joining paths |
+| `run_names.py` | the run-name grammar: building a name, and reading one back in either spelling |
 | `domains.py` | the padded and GIS domain geometry, and the conversions between them |
 | `roadway.py`, `nourishment.py` | the management forcing a period carries |
 | `coastsat_lowess.py` | the observed rate series and its smoothing |
 | `annotations.py`, `plotting/` | the geography layer and the figure types |
 | `reports.py` | the blocks the runner prints, so a run log states how it was driven |
+
+## Run names (since 2026-10-29)
+
+A name is one cell of the experimental design, one field per slot, every slot always present:
+
+```text
+HAT_<start>-<end>_<scenario>_<groin>_<preset>[_<perturbation>...]
+
+HAT_1996-2009_managed_groin_edgeBE
+HAT_2009-2025_natural_nogroin_edgeBE
+HAT_2009-2025_managed-nofill_groin_edgeBE
+HAT_1996-2009_managed_groin_edgeBE_waveHs1p2
+```
+
+| Slot | Values | From |
+|---|---|---|
+| period | `1996-2009` | the window; `-` so `name.split("_")` always gives the same fields |
+| scenario | `natural`, `road`, `dune`, `managed` | roadway and beach/dune management, as the manuscript names them |
+| | `-nofill`, `-reloc` | a departure from the scenario: fills withheld in a period that has them; the 1989/1999 relocations on |
+| groin | `groin`, `nogroin` | every scenario runs both ways |
+| preset | `edgeBE`, `zeroBE`, ... | the source/sink preset |
+| perturbation | `rset40`, `waveHs1p2` | sensitivity cells only; the wave token last, where `sweep_family` reads the axis |
+
+What a name no longer carries, all still in `run_metadata.json`: `offsetmetres` (always on since
+2026-10-23), `nourish` (whether a period has fills follows from the period), and the separate
+`road`/`bdm` flags. The `HAT_hindcast_setup.SCENARIOS` keys map to the words as
+`roadway_only` -> `road`, `beachdune_only` -> `dune`, `full_management` -> `managed`,
+`full_no_fill` -> `managed-nofill` (the same as `managed` in a period with no fills, as before).
+
+Runs made before 2026-10-29 keep their old names on disk
+(`HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin`). `parse_run_name` reads both spellings,
+and `find_run_dir` tries the other spelling of the same cell when the one given is not there,
+so a script naming an old run keeps working after the matrix is rerun. Build file paths from
+the returned directory's `.name`, not the name passed in. Old names without `offsetmetres`
+(pre-metres runs, a different model) and the retired `groinblock` runs are not translated.
 
 Changing anything here changes every run made afterwards. The run index records
 enough per run - preset values, digest, topography version, git commit - to

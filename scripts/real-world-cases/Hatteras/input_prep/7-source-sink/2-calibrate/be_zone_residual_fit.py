@@ -64,6 +64,7 @@ from cascade_pipeline.coastsat_lowess import (        # noqa: E402
 )
 from cascade_pipeline.hindcast import build_target_table   # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+from cascade_pipeline.run_names import parse_run_name     # noqa: E402
 from cascade_pipeline.run_registry import (                # noqa: E402
     CALIBRATION_ARM, preset_dir_for)
 from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
@@ -279,16 +280,27 @@ def _fitted_groin(preset=BASE_PRESET):
     return float(fit["M"]), float(fit["fraction"])
 
 
-# The groin base run carrying exactly the fitted (M, f), if present
-def _groin_run_at(period_dir, stem, fitted, tolerance=1e-6):
+# The full-management runs of one period folder with the groin on or off, either name spelling (run_names);
+# relocations and the fills-off contrast left out. A design cell made under both spellings keeps the new one
+def _full_management_runs(period_dir, groin):
     if not period_dir.exists():
-        return None
+        return []
+    cells = {}
+    for run in sorted(period_dir.iterdir()):
+        parsed = parse_run_name(run.name) if run.is_dir() else None
+        if (parsed is None or not (parsed.roadway and parsed.beach_dune)
+                or parsed.relocations or parsed.fills_withheld or parsed.perturbations
+                or parsed.groin != groin or parsed.preset != BASE_PRESET):
+            continue
+        if parsed.name not in cells or not parsed.legacy:
+            cells[parsed.name] = run
+    return sorted(cells.values())
+
+
+# The groin base run carrying exactly the fitted (M, f), if present
+def _groin_run_at(period_dir, fitted, tolerance=1e-6):
     want_m, want_f = fitted
-    for run in sorted(period_dir.glob(f"{stem}*_groin")):
-        if not run.is_dir() or run.name.endswith("_nogroin"):
-            continue
-        if "reloc" in run.name or "nonourish" in run.name:
-            continue
+    for run in _full_management_runs(period_dir, groin=True):
         meta = resolve_run_file(run, "metadata_json", run.name)
         if not meta.exists():
             continue
@@ -341,8 +353,6 @@ def base_run_dir(period_start, period_end):
         # Hs_experiment/runs/ keeps its 2026-09-02 shape, <arm>/<period>/ <preset>/, and is a closed experiment
         period_dir = (Path(ARM_RUNS_DIR) / arm
                       / f"{period_start}_{period_end}" / BASE_PRESET)
-    stem = f"HAT_{period_start}_{period_end}_{BASE_PRESET}_road_bdm"
-
     # GROIN-ON BASE RUN, WHEN ONE EXISTS AT THE FITTED (M, f)
     if GROIN_AWARE_BASE_RUN:
         fitted = _fitted_groin()
@@ -352,7 +362,7 @@ def base_run_dir(period_start, period_end):
                   "back to the no-groin base run. The source/sink field "
                   "will absorb the groin's D5/D6 signal.")
         else:
-            matched = _groin_run_at(period_dir, stem, fitted)
+            matched = _groin_run_at(period_dir, fitted)
             if matched is not None:
                 return matched
             print(f"  WARNING: no groin base run at the fitted "
@@ -361,11 +371,7 @@ def base_run_dir(period_start, period_end):
                   "first if the source/sink should carry only what the "
                   "groin could not.")
 
-    hits = sorted(
-        d for d in period_dir.glob(f"{stem}*_nogroin")
-        if d.is_dir()
-        and "reloc" not in d.name          # the prescribed-relocation arm
-        and "nonourish" not in d.name)     # the fills-off contrast
+    hits = _full_management_runs(period_dir, groin=False)
     if len(hits) == 1:
         return hits[0]
     if not hits:

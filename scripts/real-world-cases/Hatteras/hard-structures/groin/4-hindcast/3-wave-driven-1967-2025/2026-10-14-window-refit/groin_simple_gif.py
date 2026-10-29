@@ -44,14 +44,15 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.animation import PillowWriter  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer import hat_figure_style as fs  # noqa: E402
 from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-MATRIX = REPO / "output" / "raw_runs" / "matrix"
-PERIODS = {  # name: (start, end, run-name stem without the groin token, strength, groin off from, GIS shown)
-    "calibration": (1996, 2009, "HAT_1996_2009_edgeBE_offsetmetres_road_bdm", 0.16, None, np.arange(1, 16)),
-    "test": (2009, 2025, "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish", 0.10, 2017, np.arange(2, 16)),
+RAW_RUNS = REPO / "output" / "raw_runs"
+PERIODS = {  # name: (start, end, run name with {groin} for the groin token, strength, groin off from, GIS shown)
+    "calibration": (1996, 2009, "HAT_1996-2009_managed_{groin}_edgeBE", 0.16, None, np.arange(1, 16)),
+    "test": (2009, 2025, "HAT_2009-2025_managed_{groin}_edgeBE", 0.10, 2017, np.arange(2, 16)),
 }
 PAD = 15                                   # buffer domains before GIS 1 in the model's arrays
 GROIN_FACE = 5.5
@@ -64,8 +65,8 @@ HOLD = 6
 
 
 def model_change(start, end, stem, token, gis):
-    name = f"{stem}_{token}"
-    x = np.load(MATRIX / f"{start}_{end}" / "edgeBE" / name / f"{name}_shoreline_matrix.npy")
+    run = find_run_dir_or_expected(RAW_RUNS, stem.format(groin=token), (start, end), "edgeBE")
+    x = np.load(run / f"{run.name}_shoreline_matrix.npy")
     idx = PAD + gis - 1
     return -(x[:, idx] - x[0, idx])        # the matrix counts landward +; seaward + here
 

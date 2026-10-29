@@ -32,6 +32,7 @@ from matplotlib.patches import Patch  # noqa: E402
 
 import groin_on_off_gif as G  # noqa: E402
 from site_layer.hat_figure_style import C, INK, INK_MUTED, apply_style, figsize, open_frame, panel_title  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer.hatteras_site_config import last_model_year  # noqa: E402
 
 P, rf, pv, SR, cgm = G.P, G.rf, G.pv, G.SR, G.cgm
@@ -144,7 +145,9 @@ def panels(period):
     if period == rf.CAL:
         return [("No groin", base, False, None),
                 ("Corrected groin (strength 0.16)", rf.two_number_file(period, 0.16), False, 0.16)]
-    nofill = base.parent.parent / base.parent.name.replace("_nourish_", "_nonourish_")
+    w = SR.window(period)
+    nofill = find_run_dir_or_expected(SR.RAW, f"HAT_{w.replace('_', '-')}_managed-nofill_nogroin_edgeBE",
+                                      w, "edgeBE")
     nofill = nofill / f"{nofill.name}_shoreline_matrix.npy"
     return [("No groin, no fills", nofill, False, None),
             ("Fills, no groin", base, True, None),

@@ -45,14 +45,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import site_layer.hat_scoring as common  # noqa: E402
 from matrix_vs_observed import model_end_change  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer import hat_figure_style as fs  # noqa: E402
 from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-MATRIX = REPO / "output" / "raw_runs" / "matrix"
-RUNS = {  # (start, end): (label, run-name stem without the groin token, groin strength)
-    (1996, 2009): ("Calibration 1996-2009", "1996_2009/edgeBE/HAT_1996_2009_edgeBE_offsetmetres_road_bdm", 0.16),
-    (2009, 2025): ("Test 2009-2025", "2009_2025/edgeBE/HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish", 0.10),
+RAW_RUNS = REPO / "output" / "raw_runs"
+RUNS = {  # (start, end): (label, run name with {groin} for the groin token, groin strength)
+    (1996, 2009): ("Calibration 1996-2009", "HAT_1996-2009_managed_{groin}_edgeBE", 0.16),
+    (2009, 2025): ("Test 2009-2025", "HAT_2009-2025_managed_{groin}_edgeBE", 0.10),
 }
 ZOOM = (1, 15)                 # GIS domains drawn around the groin (GIS 5|6)
 LOCAL = (2, 12)                # scored near the groin; GIS 1 is Cape Point, outside the interior
@@ -64,9 +65,9 @@ OUT = workspace_twin(HERE) / "figures" / "matrix_groin_effect_full_management_ed
 # -----------------------------------------------------------------------------
 
 
-def run_change(stem, token):
-    name = Path(stem).name + "_" + token
-    return common.smooth_like_target(model_end_change(MATRIX / Path(stem).parent / name))
+def run_change(key, stem, token):
+    run = find_run_dir_or_expected(RAW_RUNS, stem.format(groin=token), key, "edgeBE")
+    return common.smooth_like_target(model_end_change(run))
 
 
 def observed(key):
@@ -84,7 +85,7 @@ def main():
     fig, axes = plt.subplots(2, 2, figsize=fs.figsize("double", height=5.6),
                              gridspec_kw=dict(width_ratios=(3, 1.2)), constrained_layout=True)
     for row, (key, (label, stem, s)) in enumerate(RUNS.items()):
-        obs, on, off = observed(key), run_change(stem, "groin"), run_change(stem, "nogroin")
+        obs, on, off = observed(key), run_change(key, stem, "groin"), run_change(key, stem, "nogroin")
         for col, ax in enumerate(axes[row]):
             lo, hi = (2, 89) if col == 0 else LOCAL
             rmse = {}

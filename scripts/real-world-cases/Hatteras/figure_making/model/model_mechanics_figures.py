@@ -36,6 +36,7 @@ _HAT_DIR = next(p for p in Path(__file__).resolve().parents  if (p / "hatteras_p
 if str(_HAT_DIR) not in _hat_sys.path:
     _hat_sys.path.insert(0, str(_HAT_DIR))
 from hatteras_paths import WORKSPACE as REPO  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir  # noqa: E402
 from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 sys.path.insert(0, str(_HAT_DIR))
 from site_layer.hat_figure_style import (  # noqa: E402
@@ -47,13 +48,13 @@ from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E40
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from storm_replay import replay  # noqa: E402
 OUT = figure_dir("mechanics")   # one sub-folder per model: barrier3d/, brie/, cascade/, storm_routing/
-MATRIX = REPO / "output" / "raw_runs" / "matrix"
+RAW_RUNS = REPO / "output" / "raw_runs"
 DAM = 10.0                      # Barrier3D decametre -> metre
-RUN_NATURAL = ("1996_2009", "edgeBE", "HAT_1996_2009_edgeBE_offsetmetres_noroad_nobdm_nogroin")
-RUN_ROAD = ("1996_2009", "edgeBE", "HAT_1996_2009_edgeBE_offsetmetres_road_nobdm_nogroin")
+RUN_NATURAL = ("1996_2009", "edgeBE", "HAT_1996-2009_natural_nogroin_edgeBE")
+RUN_ROAD = ("1996_2009", "edgeBE", "HAT_1996-2009_road_nogroin_edgeBE")
 # The fill pair differs only in the fills: same road, same beach/dune management
-RUN_NOURISH = ("2009_2025", "edgeBE", "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin")
-RUN_NOURISH_OFF = ("2009_2025", "edgeBE", "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nonourish_nogroin")
+RUN_NOURISH = ("2009_2025", "edgeBE", "HAT_2009-2025_managed_nogroin_edgeBE")
+RUN_NOURISH_OFF = ("2009_2025", "edgeBE", "HAT_2009-2025_managed-nofill_nogroin_edgeBE")
 STORM_GIS, STORM_T = 6, 11      # 2006 storms: an intact dune (mean crest 2.9 m) that 40% of storms overtop
 BUDGET_GIS = 45                 # the project's example domain (site/domain_schematic)
 ROAD_GIS = 13                   # most overwash cleared off NC-12 in the road run
@@ -68,7 +69,9 @@ ORDER_START, ORDER_YEARS = 1996, 13   # the 1996-2009 run length
 @functools.lru_cache(maxsize=4)
 def load_run(spec):
     window, preset, name = spec
-    path = MATRIX / window / preset / name / f"{name}.npz"
+    # Found in either name spelling; the files inside carry the folder's own name
+    run_dir = find_run_dir(RAW_RUNS, name, window, preset)
+    path = run_dir / f"{run_dir.name}.npz"
     c = load_saved_cascade(path)
     # pad() and the layout figure draw the site config's buffers; a run made with other buffers (15 a side
     # before 2026-10-21) would be read domains off, so stop

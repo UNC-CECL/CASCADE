@@ -64,9 +64,9 @@ from site_layer.hat_scoring import smooth_like_target  # noqa: E402
 LOWESS_PATH = (_HAT_DIR / "input_prep" / "7-source-sink"
               / "2-calibrate" / "be_zone_residual_fit.py")
 
-# The two windows, ends from HATTERAS_PERIODS; 1996-2009 has no fills, so its full-management run is road_bdm
+# The two windows, ends from HATTERAS_PERIODS; the full-management run of each (fills follow from the period)
 GROIN = "nogroin"
-_CHAIN = ((1996, "road_bdm", "a", C_1984), (2009, "road_bdm_nourish", "b", C_1997))
+_CHAIN = ((1996, "managed", "a", C_1984), (2009, "managed", "b", C_1997))
 PERIODS = {}
 for _st, _scen, _panel, _colour in _CHAIN:
     _end = HATTERAS_PERIODS[_st]["end_year"]
@@ -128,16 +128,16 @@ def lowess_and_spread(module, start, csv_path):
 
 # One run's per-domain rates and its name, resolved through run_registry
 def run_rates(period, preset, scenario):
-    # Matrix runs carry the offset token since the metres fix (2026-09-24)
-    name = f"HAT_{period}_{preset}_offsetmetres_{scenario}_{GROIN}"
+    # The run-name grammar (cascade_pipeline/run_names.py); find_run_dir also finds the pre-2026-10-29 spelling
+    name = f"HAT_{period.replace('_', '-')}_{scenario}_{GROIN}_{preset}"
     # Resolved through run_registry, never joined by hand
     try:
         run_dir = find_run_dir(RAW_RUNS, name, period, preset)
     except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"{exc}  Run HAT_run_matrix.py first.") from None
-    path = resolve(run_dir, "rate_csv", name)
-    return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"], name
+    path = resolve(run_dir, "rate_csv", run_dir.name)
+    return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"], run_dir.name
 
 
 # The preset names the file, title and footnote, so presets never overwrite each other

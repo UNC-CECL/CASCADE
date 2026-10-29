@@ -47,6 +47,7 @@ sys.path[:0] = [str(HERE.parents[2] / "3-module-tests" / "8-real-planform" / "6-
                 str(_HAT_DIR / "hatteras_ms" / "groin-sweep"),
                 str(_HAT_DIR / "hatteras_ms"), str(_HAT_DIR)]
 from score_instant_grid import observed_series  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS, run_years  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
@@ -72,9 +73,9 @@ def window(period):
 # The matrix files of a cell, or the no-groin edgeBE baseline when b is None
 def shoreline_file(period, b=None, f=None):
     if b is None:
-        fill = "_nourish" if HATTERAS_PERIODS[period]["enable_nourishment"] else ""
-        name = f"HAT_{window(period)}_edgeBE_offsetmetres_road_bdm{fill}_nogroin"
-        return RAW / "matrix" / window(period) / "edgeBE" / name / f"{name}_shoreline_matrix.npy"
+        name = f"HAT_{window(period).replace('_', '-')}_managed_nogroin_edgeBE"
+        run = find_run_dir_or_expected(RAW, name, window(period), "edgeBE")
+        return run / f"{run.name}_shoreline_matrix.npy"
     hits = sorted((RAW / "experiments" / STUDY / member(b, f)).glob(
         f"{window(period)}/edgeBE/*/*_shoreline_matrix.npy"))
     return hits[-1] if hits else None

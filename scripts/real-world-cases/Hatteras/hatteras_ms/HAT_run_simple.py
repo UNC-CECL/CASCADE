@@ -99,13 +99,15 @@ cascade_patch.apply()
 from cascade.cascade import Cascade  # noqa: E402
 from cascade_pipeline.hindcast import build_island_offset  # noqa: E402
 from cascade_pipeline.domains import DomainGeometry  # noqa: E402
+from cascade_pipeline.run_names import scenario_field  # noqa: E402
 
 period = PERIODS[START_YEAR]
 first_year, last_year = period["first_year"], period["last_year"]
 years = last_year - first_year + 1
 
-name = (f"simple_{START_YEAR}_{last_year}_{'road' if ROAD_MANAGEMENT else 'noroad'}"
-        f"_{'bdm' if BEACH_DUNE_MANAGEMENT else 'nobdm'}_{'groin' if GROIN else 'nogroin'}")
+# The hindcast's grammar (cascade_pipeline/run_names.py) with its own site word and no preset
+name = (f"simple_{START_YEAR}-{last_year}_{scenario_field(ROAD_MANAGEMENT, BEACH_DUNE_MANAGEMENT)}"
+        f"_{'groin' if GROIN else 'nogroin'}")
 run_dir = WORKSPACE / "output" / "raw_runs" / "simple" / name
 run_dir.mkdir(parents=True, exist_ok=True)
 os.chdir(WORKSPACE)

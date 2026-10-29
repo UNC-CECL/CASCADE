@@ -51,14 +51,15 @@ sys.path[:0] = [str(REPO / "hard-structures" / "groin" / "3-module-tests" / "8-r
 from score_instant_grid import observed_series  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, INK, INK_MUTED, _title, apply_style, figsize, open_frame, record_caption, save)
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 RAW = REPO / "output" / "raw_runs" / "experiments" / "groin-blocking"
 PIN = RAW / "2026-10-05-blocking-fit-dem-to-dem"
 CONS = RAW / "2026-10-08-conserving-groin"
-NOGROIN = (REPO / "output" / "raw_runs" / "matrix" / "1996_2009" / "edgeBE"
-           / "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_nogroin")
+NOGROIN = find_run_dir_or_expected(REPO / "output" / "raw_runs",
+                                   "HAT_1996-2009_managed_nogroin_edgeBE", "1996_2009", "edgeBE")
 WINDOW = "1996_2009"
 START = 1996
 UP, DOWN = 15 + 6 - 1, 15 + 5 - 1          # GIS 6 / GIS 5 in the padded array

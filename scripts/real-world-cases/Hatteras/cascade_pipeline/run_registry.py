@@ -21,6 +21,7 @@ import shutil
 from pathlib import Path
 
 from cascade_pipeline.run_layout import SUBFOLDERS
+from cascade_pipeline.run_names import other_spellings
 
 import numpy as np
 import pandas as pd
@@ -530,9 +531,15 @@ def find_run_dir(raw_runs, run_name, period, preset, kind=MATRIX_KIND, tag="",
     existed, so routing an existing script through this cannot change which
     run it reads.
 
+    EITHER RUN-NAME SPELLING FINDS THE RUN. Names changed on 2026-10-29
+    (cascade_pipeline/run_names.py) and runs already made kept theirs, so the
+    other spellings of the same design cell are tried after the one given.
+    The directory returned carries the name it was made under: build file
+    paths from its .name, not from the name passed in.
+
     Args:
         raw_runs: The output/raw_runs root.
-        run_name: The run's directory name.
+        run_name: The run's directory name, in either spelling.
         period: "1984_2004" or (1984, 2004).
         preset: Source/sink preset.
         kind: One of KINDS. Defaults to the matrix.
@@ -550,14 +557,17 @@ def find_run_dir(raw_runs, run_name, period, preset, kind=MATRIX_KIND, tag="",
             is over there" rather than as "it was never made".
     """
     directory = run_dir_for(raw_runs, run_name, period, preset, kind, tag, arm)
-    if directory.is_dir():
-        return directory
-    kind, tag = _resolve_identity(kind, tag, arm, run_name)
-    legacy_arm = arm if arm else _legacy_arm_for(kind, tag, run_name)
-    for candidate in legacy_run_dirs_for(raw_runs, run_name, period, preset,
-                                         legacy_arm):
+    for name in [run_name] + other_spellings(run_name):
+        candidate = directory.with_name(name)
         if candidate.is_dir():
             return candidate
+    kind, tag = _resolve_identity(kind, tag, arm, run_name)
+    legacy_arm = arm if arm else _legacy_arm_for(kind, tag, run_name)
+    for name in [run_name] + other_spellings(run_name):
+        for candidate in legacy_run_dirs_for(raw_runs, name, period, preset,
+                                             legacy_arm):
+            if candidate.is_dir():
+                return candidate
 
     elsewhere = [f"{k}:{t}" if t else k
                  for k, t in kinds_holding(raw_runs, run_name, period, preset)
@@ -569,6 +579,26 @@ def find_run_dir(raw_runs, run_name, period, preset, kind=MATRIX_KIND, tag="",
     where = f"{kind}:{tag}" if tag else kind
     raise FileNotFoundError(
         f"no run directory for {run_name!r} in {where}.\n  {directory}" + hint)
+
+
+def find_run_dir_or_expected(raw_runs, run_name, period, preset,
+                             kind=MATRIX_KIND, tag=""):
+    """find_run_dir, or the path the run would have when it is absent.
+
+    For a module-level constant: a script whose other figures do not need the
+    run should not fail on import, so the error comes where the path is
+    opened, and names it.
+
+    Args:
+        As find_run_dir.
+
+    Returns:
+        The run directory as a Path, which may not exist.
+    """
+    try:
+        return find_run_dir(raw_runs, run_name, period, preset, kind, tag)
+    except FileNotFoundError:
+        return run_dir_for(raw_runs, run_name, period, preset, kind, tag)
 
 
 def run_dir_for_index_row(raw_runs, row):

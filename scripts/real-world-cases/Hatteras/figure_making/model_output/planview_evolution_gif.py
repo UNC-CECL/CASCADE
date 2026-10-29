@@ -58,6 +58,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 # Defined as the hindcast runner defines it; the period table's paths are relative to it
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 from cascade_pipeline.hindcast import load_island_offset_dam  # noqa: E402
+from cascade_pipeline.run_names import parse_run_name  # noqa: E402
 from cascade_pipeline.plotting.init_planview import (  # noqa: E402
     DEFAULT_PLAN_VIEW, build_canvas, pad_cross_shore, plot_canvas)
 from cascade_pipeline.plotting.road_planview import overlay_roadway  # noqa: E402
@@ -79,6 +80,9 @@ SCALE_BAR_KM = 5.0
 
 # The hindcast period a run belongs to, from its name first
 def _period_start(run_dir, cascade):
+    parsed = parse_run_name(Path(run_dir).name)
+    if parsed is not None and parsed.start_year in HATTERAS_PERIODS:
+        return parsed.start_year
     for token in Path(run_dir).name.split("_"):
         if token.isdigit() and int(token) in HATTERAS_PERIODS:
             return int(token)
@@ -310,6 +314,8 @@ def main():
 
     # The calendar year comes from the run name's period
     start_year = args.start_year or history.start_year
+    if start_year is None and parse_run_name(run_dir.name) is not None:
+        start_year = parse_run_name(run_dir.name).start_year
     if start_year is None:
         for token in run_dir.name.split("_"):
             if token.isdigit() and len(token) == 4:

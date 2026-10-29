@@ -74,6 +74,7 @@ from site_layer import hat_figure_style as fs  # noqa: E402
 from site_layer import hat_observed_rates as obsr  # noqa: E402
 from site_layer import hat_overwash as ow  # noqa: E402
 from site_layer.hat_elevation_products import product  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 
 X, tv = S.X, S.tv
 
@@ -99,11 +100,16 @@ MIN_CELLS = 25                              # domains with fewer fully surveyed 
 SOURCES = {"1996-start": ("2009-2014-1996", 1996), "2009-start": ("2009-2014", 2009)}
 # The current runner's 1996 full-management run (HAT_run_matrix matrix, 2026-10-21: spread groin 0.10, ends re-solved),
 # for the island-wide alongshore figure; the study's own runs carry the 2026-10-20 groin and ends
-MATRIX_RUN = R.U.PROJECT_ROOT / "output" / "raw_runs" / "matrix" / "1996_2009" / "edgeBE" \
-    / "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin"
+MATRIX_RUN_NAME = "HAT_1996-2009_managed_groin_edgeBE"
 # The same matrix's natural run (no roadway or beach/dune management, groin on), for comparison
-MATRIX_RUN_NATURAL = MATRIX_RUN.with_name("HAT_1996_2009_edgeBE_offsetmetres_noroad_nobdm_groin")
+MATRIX_RUN_NATURAL_NAME = "HAT_1996-2009_natural_groin_edgeBE"
 # -----------------------------------------------------------------------------
+
+
+# The two 1996 matrix runs, in either name spelling
+MATRIX_RUN, MATRIX_RUN_NATURAL = (
+    find_run_dir_or_expected(R.U.PROJECT_ROOT / "output" / "raw_runs", name, "1996_2009", "edgeBE")
+    for name in (MATRIX_RUN_NAME, MATRIX_RUN_NATURAL_NAME))
 
 
 def folder(name):

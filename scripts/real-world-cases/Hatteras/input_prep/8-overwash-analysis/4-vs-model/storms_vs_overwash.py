@@ -81,8 +81,7 @@ def load_storms(forcing):
 
 # Each model year's lowest dune crest per domain (m MHW), GIS 1-90, from the matrix run
 def crest_by_year(window):
-    name = ovm.WINDOWS[window][ARM]
-    c = load_saved_cascade(ovm.MATRIX / f"{window[0]}_{window[1]}" / "edgeBE" / name / f"{name}.npz")
+    c = load_saved_cascade(ovm.matrix_npz(window, ovm.WINDOWS[window][ARM]))
     rows = []
     dom = DOM.for_total(len(c.barrier3d))   # the run's own buffers, not the config's
     for gis in range(1, 91):

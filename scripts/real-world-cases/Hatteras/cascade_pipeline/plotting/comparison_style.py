@@ -19,9 +19,13 @@ from matplotlib.lines import Line2D
 from matplotlib.transforms import ScaledTranslation
 import numpy as np
 
+from cascade_pipeline import nourishment
 from cascade_pipeline.annotations import annotation_legend_handles
+from cascade_pipeline.run_names import parse_run_name
 from site_layer.hat_observed_rates import WINDOW_ROLE
-from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS
+from site_layer.hatteras_site_config import (
+    HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS, HATTERAS_NOURISHMENT_PROJECTS,
+    HATTERAS_PERIODS, first_model_year, last_model_year)
 
 # --- CONFIG ------------------------------------------------------------------
 # The top km axis: tick step (km), and the room the title and subtitle make for it (points)
@@ -39,25 +43,53 @@ SIGN_LABELS = {"accretion ▲": "accretion →", "erosion ▼": "← erosion"}
 # -----------------------------------------------------------------------------
 
 
-# Source/sink, groin and management in plain words, from the run name's tokens
+# Whether fills were placed: the old spelling says; the new leaves it to the period's schedule
+def _fills_applied(parsed):
+    if parsed.fills is not None:
+        return parsed.fills
+    if not parsed.beach_dune or parsed.fills_withheld:
+        return False
+    if parsed.start_year not in HATTERAS_PERIODS:
+        return False
+    return bool(nourishment.build_schedule(
+        HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS,
+        first_model_year(parsed.start_year), last_model_year(parsed.start_year)).projects)
+
+
+# Source/sink, groin and management in plain words, from the run name (either spelling, run_names)
 def setup_text(run_name):
-    tokens = run_name.split("_")
-    preset = tokens[3] if len(tokens) > 3 else ""
-    groin = ("blocking groin" if "groinblock" in tokens
-             else "groin" if "groin" in tokens else "no groin")
-    management = [text for token, text in MANAGEMENT_TOKENS if token in tokens]
-    return PRESET_TEXT.get(preset, preset), groin, management
+    parsed = parse_run_name(run_name)
+    if parsed is None:
+        # Pre-metres and blocking-groin names: read token by token, as before 2026-10-29
+        tokens = run_name.split("_")
+        preset = tokens[3] if len(tokens) > 3 else ""
+        groin = ("blocking groin" if "groinblock" in tokens
+                 else "groin" if "groin" in tokens else "no groin")
+        management = [text for token, text in MANAGEMENT_TOKENS if token in tokens]
+        return PRESET_TEXT.get(preset, preset), groin, management
+    on = {"road": parsed.roadway, "bdm": parsed.beach_dune,
+          "nourish": _fills_applied(parsed),
+          "reloc": parsed.relocations}
+    management = [text for token, text in MANAGEMENT_TOKENS if on[token]]
+    return (PRESET_TEXT.get(parsed.preset, parsed.preset),
+            "groin" if parsed.groin else "no groin", management)
 
 
-# The scenario (HAT_hindcast_setup.SCENARIOS) from the run name's tokens, for the subtitle
+# The scenario (HAT_hindcast_setup.SCENARIOS) from the run name, for the subtitle
 def scenario_text(run_name):
-    tokens = run_name.split("_")
-    road, bdm = "road" in tokens, "bdm" in tokens
+    parsed = parse_run_name(run_name)
+    if parsed is None:
+        tokens = run_name.split("_")
+        road, bdm = "road" in tokens, "bdm" in tokens
+        withheld, reloc = "nonourish" in tokens, "reloc" in tokens
+    else:
+        road, bdm = parsed.roadway, parsed.beach_dune
+        withheld, reloc = parsed.fills_withheld, parsed.relocations
     scenario = ("full management" if road and bdm else "roadway only" if road
                 else "beach/dune only" if bdm else "natural")
-    if road and bdm and "nonourish" in tokens:
+    if road and bdm and withheld:
         scenario += " without fills"
-    if "reloc" in tokens:
+    if reloc:
         scenario += " + road relocation"
     groin = setup_text(run_name)[1]
     return scenario + (", no groin" if groin == "no groin" else f" + {groin}")

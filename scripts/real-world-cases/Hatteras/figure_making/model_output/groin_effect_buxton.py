@@ -39,11 +39,13 @@ sys.path.insert(0, str(_HAT_DIR))
 from cascade_pipeline.annotations import annotation_legend_handles  # noqa: E402
 from cascade_pipeline.coastsat_lowess import (  # noqa: E402
     CoastSatDataset, LowessConfig, build_coastsat_series)
+from cascade_pipeline.plotting.comparison_style import setup_text  # noqa: E402
 from cascade_pipeline.plotting.net_change_comparison import smooth_model  # noqa: E402
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
     DEFAULT_RATE_COMPARISON, plot_annotated_rate_comparison)
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.run_layout import resolve  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir  # noqa: E402
 from cascade_pipeline.shoreline import compute_change_rate  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, COMPARISONS_ROOT, mark_offaxis, offaxis_clause, record_caption, save)
@@ -52,13 +54,13 @@ from site_layer.hat_observed_rates import (  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-MATRIX = REPO / "output" / "raw_runs" / "matrix"
+RAW_RUNS = REPO / "output" / "raw_runs"
 # Full management, edgeBE, groin on vs off; nothing else differs within a pair
 PAIRS = {
-    "1996_2009": ("HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin",
-                  "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_nogroin"),
-    "2009_2025": ("HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin",
-                  "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin"),
+    "1996_2009": ("HAT_1996-2009_managed_groin_edgeBE",
+                  "HAT_1996-2009_managed_nogroin_edgeBE"),
+    "2009_2025": ("HAT_2009-2025_managed_groin_edgeBE",
+                  "HAT_2009-2025_managed_nogroin_edgeBE"),
 }
 GIS_RANGE = (1, 10)
 Y_HALF = 55.0
@@ -73,8 +75,8 @@ OUT = COMPARISONS_ROOT / "groin_effect"
 
 # End minus start (m, seaward positive) over every padded domain of one run
 def position_change(run_name: str, window: str) -> np.ndarray:
-    run_dir = MATRIX / window / "edgeBE" / run_name
-    shoreline_m = np.load(resolve(run_dir, "matrix", run_name))
+    run_dir = find_run_dir(RAW_RUNS, run_name, window, "edgeBE")
+    shoreline_m = np.load(resolve(run_dir, "matrix", run_dir.name))
     return compute_change_rate(shoreline_m, span_years=1, flip_sign=FLIP_SIGN_MODEL)
 
 
@@ -112,7 +114,8 @@ def main() -> None:
         domain_mean_lw=2.0, domain_mean_alpha=1.0,
         subtitle=" · ".join(p for p in (role, "Buxton, GIS 1–10",
                                         "with and without the groin") if p))
-    run = RunInfo(run_name=groin_run, run_dir=str(MATRIX / args.window / "edgeBE" / groin_run),
+    groin_dir = find_run_dir(RAW_RUNS, groin_run, args.window, "edgeBE")
+    run = RunInfo(run_name=groin_dir.name, run_dir=str(groin_dir),
                   start_year=start, end_year=end, Hs=2.0, flip_sign_model=FLIP_SIGN_MODEL)
     fig, ax = plot_annotated_rate_comparison(
         with_groin, cs_series, run, estimator=None, domains=HATTERAS_DOMAINS,
@@ -168,7 +171,7 @@ def main() -> None:
     keep = (gis >= GIS_RANGE[0]) & (gis <= GIS_RANGE[1])
     x, diff = gis[keep], (with_groin - without)[real][keep]
     i = int(np.argmax(np.abs(diff)))
-    nourish = "nourishment, " if "nourish" in groin_run.split("_") else ""
+    nourish = "nourishment, " if "nourishment" in setup_text(groin_run)[2] else ""
     record_caption(path, (
         f"Shoreline position change at the cape end of Hatteras Island, GIS domains "
         f"{GIS_RANGE[0]}–{GIS_RANGE[1]}, {start}–{end} ({role.lower()}); positive is seaward. "

@@ -47,6 +47,7 @@ from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 NC = _HAT_DIR / "input_prep" / "5-scr" / "3-rates" / "coastsat" / "net_change"
 sys.path[:0] = [str(_HAT_DIR), str(NC)]
 from coastsat_net_change import smooth_like_model  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style, figsize, open_frame, record_caption,
     save, structures, town_bands)
@@ -56,12 +57,12 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS as A, HATTERAS_DOMAINS as D, HATTERAS_PERIODS, run_years)
 
 # --- CONFIG ------------------------------------------------------------------
-RAW = REPO / "output" / "raw_runs" / "matrix"
+RAW = REPO / "output" / "raw_runs"
 GIS = pd.RangeIndex(1, 91)
 INTERIOR = slice(2, 89)
 PERIODS = {
-    1996: ("Calibration", RAW / "1996_2009/edgeBE/HAT_1996_2009_edgeBE_offsetmetres_road_bdm_nogroin"),
-    2009: ("Test", RAW / "2009_2025/edgeBE/HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_nogroin"),
+    1996: ("Calibration", "HAT_1996-2009_managed_nogroin_edgeBE"),
+    2009: ("Test", "HAT_2009-2025_managed_nogroin_edgeBE"),
 }
 REFERENCE_M_YR = 0.5            # the old zone method's significance threshold, drawn for reference
 WIDER_M_YR = 1.0                # a second reference line on the overlap figure (2026-10-12)
@@ -87,6 +88,12 @@ AGREE = {"source": ("Source in both", C_SOURCE), "sink": ("Sink in both", C_SINK
          "opposite": ("Opposite signs, both beyond the threshold", "0.35"),
          "weak": ("Within the threshold in at least one period", "0.90")}
 # -----------------------------------------------------------------------------
+
+
+# Each name to its matrix folder, in either spelling
+PERIODS = {start: (role, find_run_dir_or_expected(
+               RAW, name, (start, HATTERAS_PERIODS[start]["end_year"]), "edgeBE"))
+           for start, (role, name) in PERIODS.items()}
 
 
 # e.g. 1-rate/zone_residuals_rate_edgeBE.png (both periods), ..._edgeBE_test_2009_2025.png (one),

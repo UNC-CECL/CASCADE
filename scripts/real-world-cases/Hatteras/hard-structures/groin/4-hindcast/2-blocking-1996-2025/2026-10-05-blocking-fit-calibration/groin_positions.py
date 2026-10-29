@@ -44,6 +44,7 @@ sys.path.insert(0, str(_HAT_DIR))
 from site_layer.hat_figure_style import (  # noqa: E402
     C, C_1997, DOMAIN_AXIS_LABEL, INK, _title, apply_style, figsize, open_frame,
     record_caption, save, town_bands)
+from cascade_pipeline.run_registry import find_run_dir_or_expected  # noqa: E402
 from site_layer.hat_observed_rates import net_change_domain_csv  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
@@ -69,9 +70,8 @@ def window(p):
 
 def run_dir(period, member):
     if member is None:
-        fill = "_nourish" if period[0] == 2009 else ""
-        return RAW / "matrix" / window(period) / "edgeBE" / (
-            f"HAT_{window(period)}_edgeBE_offsetmetres_road_bdm{fill}_nogroin")
+        return find_run_dir_or_expected(
+            RAW, f"HAT_{period[0]}-{period[1]}_managed_nogroin_edgeBE", period, "edgeBE")
     return sorted((STUDY / member / window(period) / "edgeBE").glob("*/"))[-1]
 
 

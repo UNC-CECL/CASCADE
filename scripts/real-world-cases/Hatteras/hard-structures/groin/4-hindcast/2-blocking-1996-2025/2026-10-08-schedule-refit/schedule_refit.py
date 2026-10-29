@@ -99,10 +99,10 @@ def shoreline_file(schedule, period, b, f):
 
 
 def baseline_file(period):
-    from site_layer.hatteras_site_config import HATTERAS_PERIODS
-    fill = "_nourish" if HATTERAS_PERIODS[period]["enable_nourishment"] else ""
-    name = f"HAT_{window(period)}_edgeBE_offsetmetres_road_bdm{fill}_nogroin"
-    return RAW / "matrix" / window(period) / "edgeBE" / name / f"{name}_shoreline_matrix.npy"
+    from cascade_pipeline.run_registry import find_run_dir_or_expected
+    name = f"HAT_{window(period).replace('_', '-')}_managed_nogroin_edgeBE"
+    run = find_run_dir_or_expected(RAW, name, window(period), "edgeBE")
+    return run / f"{run.name}_shoreline_matrix.npy"
 
 
 # Child process: patch the groin module to the schedule, then run the unchanged runner

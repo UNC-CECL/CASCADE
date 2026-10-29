@@ -43,6 +43,8 @@ from cascade_pipeline.coastsat_lowess import (
     build_coastsat_series,
 )
 from cascade_pipeline.run_layout import resolve
+from cascade_pipeline.run_names import (
+    SITE as RUN_NAME_SITE, build_run_name, other_spellings, scenario_field)
 from cascade_pipeline.run_registry import (
     barrier3d_provenance,
     sweep_family,
@@ -320,7 +322,7 @@ def setup_scenario(r):
         r.ENABLE_HISTORICAL_ROAD_RELOCATIONS = False
 
     # Run name: the period stem; the scenario suffix is derived from the switches in 7.5
-    r.RUN_NAME_STEM = f"HAT_{r.START_YEAR}_{r.END_YEAR}"
+    r.RUN_NAME_STEM = f"{RUN_NAME_SITE}_{r.START_YEAR}-{r.END_YEAR}"
 
     # Run directories are filed by period, so every later path (RUN_DIR, the 12.3 baseline) is too
     r.PERIOD_TAG = f"{r.START_YEAR}_{r.END_YEAR}"
@@ -394,21 +396,16 @@ def setup_scenario(r):
     _PERIOD_HAS_FILL = bool(nourishment.build_schedule(
         HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_DOMAINS,
         r.FIRST_MODEL_YEAR, r.LAST_MODEL_YEAR).projects)
-    _PREVIEW_TOKENS = [
-        r.SOURCE_SINK_PRESET,
-        "offsetmetres",
-        "road" if r.ENABLE_ROADWAY_MANAGEMENT else "noroad",
-        "reloc" if r.ENABLE_HISTORICAL_ROAD_RELOCATIONS else None,
-        "bdm" if r.ENABLE_BEACH_DUNE_MANAGEMENT else "nobdm",
-        ("nourish" if (r.ENABLE_NOURISHMENT_FILLS and _PERIOD_HAS_FILL)
-         else ("nonourish" if _PERIOD_HAS_FILL and r.ENABLE_BEACH_DUNE_MANAGEMENT
-               else None)),
-        r.GROIN_TOKEN,
-        r.RELOCATION_SETBACK_TOKEN,
-        r.WAVE_TOKEN,
-    ]
-    r.RUN_NAME_PREVIEW = (f"{r.RUN_NAME_STEM}_"
-                        + "_".join(t for t in _PREVIEW_TOKENS if t))
+    # Grammar in cascade_pipeline/run_names.py: HAT_<start>-<end>_<scenario>_<groin>_<preset>[_<perturbation>]
+    r.RUN_NAME_PREVIEW = build_run_name(
+        r.START_YEAR, r.END_YEAR,
+        roadway=r.ENABLE_ROADWAY_MANAGEMENT,
+        beach_dune=r.ENABLE_BEACH_DUNE_MANAGEMENT,
+        groin=r.GROIN_ENABLED, preset=r.SOURCE_SINK_PRESET,
+        fills_withheld=(_PERIOD_HAS_FILL and r.ENABLE_BEACH_DUNE_MANAGEMENT
+                        and not r.ENABLE_NOURISHMENT_FILLS),
+        relocations=r.ENABLE_HISTORICAL_ROAD_RELOCATIONS,
+        perturbations=(r.RELOCATION_SETBACK_TOKEN, r.WAVE_TOKEN))
 
     # Name, destination, collision and rough run time, reported before sections 4-10 run
     print("\n" + _preflight(r.RUN_NAME_PREVIEW,
@@ -711,29 +708,30 @@ def setup_run_name(r):
 
     # The run-name suffix is derived from the switches, never typed
 
+    # Tokens join in the run_names grammar's order; the management switches feed the one scenario slot
+    # "-nofill" only when there was fill to withhold and a module to withhold it in
+    _FILLS_WITHHELD = bool(not r.BN_SCHEDULE_APPLIED.projects and r.BN_SCHEDULE.projects
+                           and r.ENABLE_BEACH_DUNE_MANAGEMENT)
     r.SCENARIO_SWITCHES = [
         ("period", f"{r.START_YEAR}-{r.END_YEAR} ({r.RUN_YEARS} yr)", None),
-        ("source/sink preset", r.SOURCE_SINK_PRESET, r.SOURCE_SINK_PRESET),
-        # Always metres since 2026-10-23; the token stays so run names do not change
-        ("shoreline offset", "metres", "offsetmetres"),
-        # No token of its own: implied by the preset, and checked against it in 4.3
-        ("background erosion", r.USE_BACKGROUND_EROSION, None),
+        ("scenario", r.SCENARIO, scenario_field(
+            r.ENABLE_ROADWAY_MANAGEMENT, r.ENABLE_BEACH_DUNE_MANAGEMENT,
+            _FILLS_WITHHELD, r.ENABLE_HISTORICAL_ROAD_RELOCATIONS)),
         ("roadway management", f"{sum(r.ROADWAY_MANAGEMENT_ON)} domains"
-         if r.ENABLE_ROADWAY_MANAGEMENT else "off",
-         "road" if r.ENABLE_ROADWAY_MANAGEMENT else "noroad"),
-        ("historical relocations", r.ENABLE_HISTORICAL_ROAD_RELOCATIONS,
-         "reloc" if r.ENABLE_HISTORICAL_ROAD_RELOCATIONS else None),
+         if r.ENABLE_ROADWAY_MANAGEMENT else "off", None),
+        ("historical relocations", r.ENABLE_HISTORICAL_ROAD_RELOCATIONS, None),
         ("beach/dune manager", f"{sum(r.BEACH_DUNE_MANAGEMENT_ON)} domains"
-         if r.ENABLE_BEACH_DUNE_MANAGEMENT else "off",
-         "bdm" if r.ENABLE_BEACH_DUNE_MANAGEMENT else "nobdm"),
-        # "nonourish" only when there was fill to withhold and a module to withhold it in
+         if r.ENABLE_BEACH_DUNE_MANAGEMENT else "off", None),
+        # Whether a period has fills follows from the period, so applied fills carry no token
         ("nourishment fills", f"{len(r.BN_SCHEDULE_APPLIED.projects)} applied"
          if r.ENABLE_NOURISHMENT_FILLS
-         else ("suppressed" if r.BN_SCHEDULE.projects else "none in period"),
-         "nourish" if r.BN_SCHEDULE_APPLIED.projects
-         else ("nonourish" if r.BN_SCHEDULE.projects and r.ENABLE_BEACH_DUNE_MANAGEMENT
-               else None)),
+         else ("suppressed" if r.BN_SCHEDULE.projects else "none in period"), None),
         ("groin", "on" if r.GROIN_ENABLED else "off", r.GROIN_TOKEN),
+        ("source/sink preset", r.SOURCE_SINK_PRESET, r.SOURCE_SINK_PRESET),
+        # Always metres since 2026-10-23; no token since 2026-10-29
+        ("shoreline offset", "metres", None),
+        # No token of its own: implied by the preset, and checked against it in 4.3
+        ("background erosion", r.USE_BACKGROUND_EROSION, None),
         ("relocation target",
          "each domain's measured offset" if r.RELOCATION_SETBACK_M is None
          else f"{r.RELOCATION_SETBACK_M:g} m behind the dune line",
@@ -886,9 +884,12 @@ def setup_conventions(r):
     if r.GROIN_ENABLED:
         r.GROIN_BASELINE_NAME = scenario_run_name(
             r.SCENARIO_SWITCHES, r.RUN_NAME_STEM, groin="nogroin")
-        _baseline = resolve(r.OUTPUT_BASE_DIR / r.GROIN_BASELINE_NAME, "matrix",
-                            r.GROIN_BASELINE_NAME)
-        r.GROIN_BASELINE_NPY = str(_baseline) if _baseline.exists() else None
+        # A twin made before the 2026-10-29 rename sits under its old spelling
+        for _twin in [r.GROIN_BASELINE_NAME] + other_spellings(r.GROIN_BASELINE_NAME):
+            _baseline = resolve(r.OUTPUT_BASE_DIR / _twin, "matrix", _twin)
+            if _baseline.exists():
+                r.GROIN_BASELINE_NPY = str(_baseline)
+                break
 
     # 10. build_cascade + run_cascade_simulation
 

@@ -66,6 +66,7 @@ from cascade_pipeline.coastsat_lowess import (                 # noqa: E402
 )
 from cascade_pipeline.hindcast import build_target_table      # noqa: E402
 from cascade_pipeline.run_layout import resolve             # noqa: E402
+from cascade_pipeline.run_names import parse_run_name       # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for      # noqa: E402
 # Which scenarios are distinct runs is the run driver's rule, asked, not copied
 from HAT_run_matrix import scenario_applies                      # noqa: E402
@@ -139,26 +140,22 @@ SCENARIO_COLOUR = {
 # -----------------------------------------------------------------------------
 
 
-# (scenario, relocations) from a run name's switch tokens
+# (scenario, relocations) from a run name, in either spelling (run_names); the no-groin runs only
 def classify(run_name):
-    tokens = run_name.split("_")
-    if "groin" in tokens:            # "nogroin" is its own token, so this is
-        return None, None            # the groin-attached arm only
-    road = "road" in tokens
-    bdm = "bdm" in tokens
-    reloc = "reloc" in tokens
-
-    if not road and not bdm:
+    parsed = parse_run_name(run_name)
+    if parsed is None or parsed.groin:
+        return None, None
+    if not parsed.roadway and not parsed.beach_dune:
         scenario = "natural"
-    elif road and not bdm:
+    elif parsed.roadway and not parsed.beach_dune:
         scenario = "roadway_only"
-    elif not road and bdm:
+    elif not parsed.roadway and parsed.beach_dune:
         scenario = "beachdune_only"
-    elif "nonourish" in tokens:
+    elif parsed.fills_withheld:
         scenario = "full_no_fill"
     else:
         scenario = "full_management"
-    return scenario, reloc
+    return scenario, parsed.relocations
 
 
 # Every nogroin run of one period and preset, keyed by (scenario, reloc)

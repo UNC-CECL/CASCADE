@@ -48,6 +48,7 @@ from hatteras_paths import WORKSPACE as REPO  # noqa: E402
 from site_layer import hat_overwash as ow  # noqa: E402
 from site_layer import hat_env_forcings as env  # noqa: E402
 from cascade_pipeline.run_layout import write_path  # noqa: E402
+from cascade_pipeline.run_registry import find_run_dir  # noqa: E402
 from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, INK_MUTED, figsize, save, record_caption,
@@ -58,13 +59,13 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 from site_layer.hatteras_site_config import first_model_year, last_model_year  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-MATRIX = REPO / "output" / "raw_runs" / "matrix"
+RAW_RUNS = REPO / "output" / "raw_runs"
 # Keyed by the matrix folder (DEM year, end year); the storms run first_model_year..last_model_year
 WINDOWS = {
-    (1996, 2009): {"managed": "HAT_1996_2009_edgeBE_offsetmetres_road_bdm_groin",
-                   "natural": "HAT_1996_2009_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
-    (2009, 2025): {"managed": "HAT_2009_2025_edgeBE_offsetmetres_road_bdm_nourish_groin",
-                   "natural": "HAT_2009_2025_edgeBE_offsetmetres_noroad_nobdm_nogroin"},
+    (1996, 2009): {"managed": "HAT_1996-2009_managed_groin_edgeBE",
+                   "natural": "HAT_1996-2009_natural_nogroin_edgeBE"},
+    (2009, 2025): {"managed": "HAT_2009-2025_managed_groin_edgeBE",
+                   "natural": "HAT_2009-2025_natural_nogroin_edgeBE"},
 }
 THRESHOLDS = (0.0, 1.0, 5.0)        # m3/m
 QOW_FULL = 400.0                    # m3/m: a cell's volume bar fills the column here (sqrt scale, capped)
@@ -121,11 +122,16 @@ def qow(cascade):
     return np.array([np.asarray(b.QowTS) for b in cascade.barrier3d]).T
 
 
+# A matrix run's .npz, found in either name spelling (the files inside carry the folder's own name)
+def matrix_npz(window, name):
+    run_dir = find_run_dir(RAW_RUNS, name, window, "edgeBE")
+    return run_dir / f"{run_dir.name}.npz"
+
+
 # A matrix run's overwash and its name
 def load_qow(window, arm):
-    name = WINDOWS[window][arm]
-    path = MATRIX / f"{window[0]}_{window[1]}" / "edgeBE" / name / f"{name}.npz"
-    return qow(load_saved_cascade(path)), name
+    path = matrix_npz(window, WINDOWS[window][arm])
+    return qow(load_saved_cascade(path)), path.parent.name
 
 
 # Per model year: the end date of its largest storm, and of every storm

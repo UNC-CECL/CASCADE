@@ -38,6 +38,7 @@ sys.path.insert(0, str(_HAT_DIR / "hatteras_ms" / "experiments"))
 
 import site_layer.hat_scoring as common  # noqa: E402
 from cascade_pipeline.hindcast import build_shoreline_target  # noqa: E402
+from cascade_pipeline.run_names import parse_run_name  # noqa: E402
 from cascade_pipeline.run_registry import find_run_dir, scan_runs  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     COMPARISONS_ROOT, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
@@ -124,7 +125,11 @@ def observed_change(period, window_domains=SMOOTH):
 # The option A matrix runs from the run index, with their folders
 def matrix_runs():
     idx = scan_runs(RAW_RUNS)
-    m = idx[(idx["kind"] == "matrix") & idx["run_name"].str.contains("offsetmetres")].copy()
+    # Either spelling (run_names) reads only metres-offset runs; one design cell made under both keeps the newer
+    m = idx[idx["kind"] == "matrix"].copy()
+    m["cell"] = [p.name if p else None for p in map(parse_run_name, m["run_name"])]
+    m = (m[m["cell"].notna()].sort_values("timestamp")
+         .drop_duplicates(["cell", "source_sink_preset"], keep="last").copy())
     m["period"] = m["start_year"].astype(int)
     # The configured windows only; the index also holds the retired 14-yr ones
     m = m[m["end_year"].astype(int) == m["period"].map(end_year)].copy()

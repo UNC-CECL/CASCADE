@@ -38,18 +38,13 @@ BRACKET_EXP = "end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline"
 sys.path.insert(0, str(_HAT_DIR))
 from site_layer.hatteras_site_config import HATTERAS_PERIODS  # noqa: E402
 END = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
-# Every window now carries a fill, so the full-management run is the _nourish one
-SUFFIX = {1996: "road_bdm_nourish", 2004: "road_bdm_nourish", 2010: "road_bdm_nourish"}
-
-
-# The matrix run names carry the offset token since the metres offset became the default (2026-09-24
-OFFSET_TOKEN = "offsetmetres"
 # -----------------------------------------------------------------------------
 
 
 # [(run_name, kind, tag), ...] for zeroBE then edgeBE, full management
 def brackets(start):
-    name = lambda p: f"HAT_{start}_{END[start]}_{p}_{OFFSET_TOKEN}_{SUFFIX[start]}_nogroin"  # noqa: E731
+    # The run-name grammar (cascade_pipeline/run_names.py); find_run_dir also finds the old spelling
+    name = lambda p: f"HAT_{start}-{END[start]}_managed_nogroin_{p}"  # noqa: E731
     if start == 2004:
         tag = f"{BRACKET_EXP}/brackets"
         return [(name("zeroBE"), "experiment", tag), (name("edgeBE"), "experiment", tag)]
