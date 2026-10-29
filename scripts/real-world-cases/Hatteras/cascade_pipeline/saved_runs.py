@@ -1,6 +1,6 @@
 """
 Open a run's saved model state (the run folder's {run}.npz), including runs saved before the groin
-became Cascade's GroinManager module.
+became Cascade's GroinManager module, and collision runs saved before the DuneCollisionManager's rewrite.
 
     from cascade_pipeline.saved_runs import load_saved_cascade
     cascade = load_saved_cascade(run_dir / f"{run_dir.name}.npz")
@@ -17,10 +17,15 @@ diagnostics_frame() read as for a new run. The loaded groin is for reading: an o
 on. Older groin kinds (the dipole and blocking groins) stay as their stand-in, their saved attributes
 readable. Runs without a groin load unchanged.
 
+Collision runs (cascade.dune_collision) saved before 2026-10-29 hold the manager behind two classes the
+module no longer has (_GrowthHook, _DiffuseHook), set on each Barrier3D as its DuneGrowth and
+DiffuseDunes. They load the same way, as stand-ins; each is then replaced by its DuneCollisionManager,
+its attributes renamed to the current ones, standing in for the two methods again.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-23
+Version: 2026-10-29
 """
 from __future__ import annotations
 
@@ -30,6 +35,7 @@ import sys
 import numpy as np
 
 import cascade.cascade as cascade_module
+import cascade.dune_collision as collision_module
 import cascade.groin as groin_module
 from cascade.groin import GroinManager
 
@@ -53,13 +59,23 @@ _RENAMED = {
 }
 
 
+# The old DuneCollisionManager's attribute names, and the current ones
+_COLLISION_RENAMED = {
+    "barrier3d": "_barrier3d",
+    "_toe": "_toe_elevation",
+    "crest_lowering_TS": "_crest_lowering_TS",
+    "volume_TS": "_volume_TS",
+}
+
+
 class _SavedObject:
-    """Stand-in for a class an old run pickled from cascade.groin; holds the saved attributes."""
+    """Stand-in for a class an old run pickled from cascade.groin or cascade.dune_collision; holds the
+    saved attributes."""
 
 
-def _stand_in(name):
-    """A plain class under ``name``, for pickle to rebuild an old object into."""
-    return type(name, (_SavedObject,), {"__module__": groin_module.__name__})
+def _stand_in(name, module):
+    """A plain class under ``name`` in ``module``, for pickle to rebuild an old object into."""
+    return type(name, (_SavedObject,), {"__module__": module.__name__})
 
 
 def _as_groin_manager(old):
@@ -97,8 +113,29 @@ def _attach_groin(cascade):
     return cascade
 
 
+def _attach_collision(cascade):
+    """Give each Barrier3D of an old collision run the current DuneCollisionManager (for reading)."""
+    for b3d in cascade.barrier3d:
+        hooks = [vars(b3d).get(name) for name in ("DuneGrowth", "DiffuseDunes")]
+        if not isinstance(hooks[0], _SavedObject):
+            continue
+        manager = hooks[0].manager
+        state = vars(manager)
+        for old_name, new_name in _COLLISION_RENAMED.items():
+            if old_name in state:
+                state[new_name] = state.pop(old_name)
+        if state.get("_crest_prestorm") is not None:
+            # the old manager kept the pre-storm crest above the berm; the current one in dam MHW
+            state["_crest_prestorm"] = state["_crest_prestorm"] + b3d._BermEl
+        state.setdefault("_beach_width", None)
+        state.setdefault("_beach_width_limit", None)
+        b3d.DuneGrowth = manager.dune_growth
+        b3d.DiffuseDunes = manager.diffuse_dunes
+    return cascade
+
+
 def load_saved_cascade(path):
-    """Load the Cascade saved in a run's .npz, whichever groin version and Cascade saved it.
+    """Load the Cascade saved in a run's .npz, whichever groin and collision version and Cascade saved it.
 
     Args:
         path: The run's {run}.npz (Cascade.save output).
@@ -106,30 +143,35 @@ def load_saved_cascade(path):
     Returns:
         The saved Cascade, with cascade.groin set (None for a run without a groin).
     """
-    had_getattr = "__getattr__" in vars(groin_module)
+    def missing_name_in(module):
+        def missing_name(name):
+            if name.startswith("__"):
+                raise AttributeError(name)
+            stand_in = _stand_in(name, module)
+            setattr(module, name, stand_in)
+            return stand_in
 
-    def missing_name(name):
-        if name.startswith("__"):
-            raise AttributeError(name)
-        stand_in = _stand_in(name)
-        setattr(groin_module, name, stand_in)
-        return stand_in
+        return missing_name
 
     map_sandbox = SANDBOX_MODULE not in sys.modules and importlib.util.find_spec(SANDBOX_MODULE) is None
     if map_sandbox:
         sys.modules[SANDBOX_MODULE] = cascade_module
-    if not had_getattr:
-        groin_module.__getattr__ = missing_name
-    names_before = set(vars(groin_module))
+    modules = (groin_module, collision_module)
+    had_getattr = {module: "__getattr__" in vars(module) for module in modules}
+    names_before = {module: set(vars(module)) for module in modules}
+    for module in modules:
+        if not had_getattr[module]:
+            module.__getattr__ = missing_name_in(module)
     try:
         # the object array is unpickled when it is indexed, so index inside the try
         with np.load(path, allow_pickle=True) as saved:
             cascade = saved["cascade"].flat[0]
     finally:
-        if not had_getattr:
-            del groin_module.__getattr__
-        for name in set(vars(groin_module)) - names_before:
-            delattr(groin_module, name)
+        for module in modules:
+            if not had_getattr[module]:
+                del module.__getattr__
+            for name in set(vars(module)) - names_before[module] - {"__getattr__"}:
+                delattr(module, name)
         if map_sandbox:
             del sys.modules[SANDBOX_MODULE]
-    return _attach_groin(cascade)
+    return _attach_collision(_attach_groin(cascade))

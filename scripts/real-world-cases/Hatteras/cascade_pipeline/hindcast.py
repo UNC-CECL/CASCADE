@@ -754,8 +754,11 @@ def build_cascade(
     groin_module=False, groin_updrift_pad=None, groin_downdrift_pad=None,
     groin_strength_history=None, groin_start_year=1,
     groin_spread_weights=(1.0, 0.0, 0.0),
+    dune_collision_module=False, dune_collision_toe_elevation=None, dune_collision_cs=None,
+    dune_collision_beach_width=None, dune_collision_beach_width_limit=45.0,
 ):
-    """Constructs a Cascade, with its GroinManager if groin_module, without stepping it.
+    """Constructs a Cascade, with its GroinManager if groin_module and its
+    DuneCollisionManagers if dune_collision_module, without stepping it.
 
     Separate from run_cascade_simulation so section 11 can inspect the model
     before any time step runs: BRIE's diffusivity and the shoreface depth are
@@ -805,6 +808,15 @@ def build_cascade(
             GroinManager counts in the same years as the history.
         groin_spread_weights: Shares of the updrift pad's loss across the
             face kept on it and moved to the two pads beyond it.
+        dune_collision_module: Whether Cascade builds its DuneCollisionManagers
+            (collision-regime dune erosion, storm by storm; cascade/dune_collision.py).
+        dune_collision_toe_elevation: Per padded domain, the dune toe per dune
+            cell, m MHW; None leaves the domain out.
+        dune_collision_cs: Larson et al. (2004) impact coefficient.
+        dune_collision_beach_width: Per padded domain, the beach width per dune
+            cell, m; None leaves the beach out.
+        dune_collision_beach_width_limit: Beach width at and beyond which a dune
+            loses nothing to collision, m.
         road_dune_rebuild_trigger_m: obx-cascade's
             dune_mgmt_road_setback_trigger: where the road sits farther than
             this behind the dune, RoadwayManager leaves the dunes to
@@ -886,6 +898,12 @@ def build_cascade(
         groin_strength_history=groin_strength_history,
         groin_start_year=groin_start_year,
         groin_spread_weights=groin_spread_weights,
+
+        dune_collision_module=dune_collision_module,
+        dune_collision_toe_elevation=dune_collision_toe_elevation,
+        dune_collision_cs=dune_collision_cs,
+        dune_collision_beach_width=dune_collision_beach_width,
+        dune_collision_beach_width_limit=dune_collision_beach_width_limit,
     )
 
     # The cap is set in BeachDuneManager.__init__, not an argument, so it goes onto each manager here

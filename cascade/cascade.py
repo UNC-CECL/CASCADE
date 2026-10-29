@@ -11,6 +11,7 @@ from .brie_coupler import batchB3D
 from .brie_coupler import initialize_equal
 from .brie_coupler import set_specified_variable_RSLR
 from .chom_coupler import ChomCoupler
+from .dune_collision import DuneCollisionManager
 from .groin import GroinManager
 from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
@@ -139,6 +140,7 @@ class Cascade:
         community_economics_module=False,
         outwash_module=False,
         groin_module=False,
+        dune_collision_module=False,  # erode dunes that storms reach but do not overtop
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -199,6 +201,12 @@ class Cascade:
         groin_start_year=1,
         groin_half_width=10,
         groin_spread_weights=(1.0, 0.0, 0.0),
+        # --------- dune collision ------------ #
+        dune_collision_toe_elevation=None,  # dune toe per domain [m MHW]
+        dune_collision_cs=None,  # Larson et al. (2004) impact coefficient [-]
+        dune_collision_beach_width=None,  # beach width per domain [m]
+        dune_collision_beach_width_limit=45.0,  # no dune erosion on beaches this wide [m]
+        dune_collision_dune_width=20.0,  # dune width the eroded sand comes from [m]
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -364,6 +372,22 @@ class Cascade:
             Shares of the updrift domain's yearly loss across the groin face taken from
             the updrift domain and the two domains beyond it; summing to 1 [default is
             (1, 0, 0), no spread]
+        dune_collision_module: bool, optional
+            If True, use the DuneCollisionManager module (collision-regime dune erosion,
+            storm by storm, on the domains given a toe elevation)
+        dune_collision_toe_elevation: list, optional
+            Per domain, the dune toe elevation per alongshore dune cell [m MHW]; None
+            leaves that domain out (required if dune_collision_module)
+        dune_collision_cs: float, optional
+            Larson et al. (2004) impact coefficient [-] (required if
+            dune_collision_module)
+        dune_collision_beach_width: list, optional
+            Per domain, the beach width per alongshore dune cell [m]; None leaves the
+            beach out [default is None, no beach]
+        dune_collision_beach_width_limit: float, optional
+            The beach width at and beyond which a dune loses nothing to collision [m]
+        dune_collision_dune_width: float, optional
+            Cross-shore width the eroded volume is spread over [m]
 
         Examples
         --------
@@ -420,6 +444,7 @@ class Cascade:
         self._use_defined_beach_width = use_defined_beach_width
         self._user_inputed_beach_width = user_inputed_beach_width
         self._groin_module = groin_module
+        self._dune_collision_module = dune_collision_module
 
         # initialization errors
         if (
@@ -447,6 +472,14 @@ class Cascade:
             raise CascadeError(
                 "The groin_module needs groin_updrift_pad, groin_downdrift_pad and"
                 " groin_strength_history"
+            )
+        if dune_collision_module and None in (
+            dune_collision_toe_elevation,
+            dune_collision_cs,
+        ):
+            raise CascadeError(
+                "The dune_collision_module needs dune_collision_toe_elevation and"
+                " dune_collision_cs"
             )
 
         ###############################################################################
@@ -687,6 +720,28 @@ class Cascade:
                 spread_weights=groin_spread_weights,
             )
 
+        ###############################################################################
+        # initialize dune collision
+        ###############################################################################
+        # each manager installs itself on its domain (DuneCollisionManager); see dune_collision
+        if self._dune_collision_module:
+            if dune_collision_beach_width is None:
+                dune_collision_beach_width = [None] * self._ny
+            for iB3D in range(self._ny):
+                if dune_collision_toe_elevation[iB3D] is None:
+                    continue
+                beach_width = dune_collision_beach_width[iB3D]
+                DuneCollisionManager(
+                    self._barrier3d[iB3D],
+                    np.asarray(dune_collision_toe_elevation[iB3D]) / 10,  # m to dam
+                    cs=dune_collision_cs,
+                    dune_width=dune_collision_dune_width / 10,  # m to dam
+                    beach_width=(
+                        None if beach_width is None else np.asarray(beach_width) / 10
+                    ),  # m to dam
+                    beach_width_limit=dune_collision_beach_width_limit / 10,  # m to dam
+                )
+
     @property
     def road_break(self):
         return self._road_break
@@ -714,6 +769,18 @@ class Cascade:
     @property
     def groin_module(self):
         return self._groin_module
+
+    @property
+    def dune_collision(self):
+        # read off each domain, as the parallel step returns copies of the domains
+        return [
+            getattr(vars(barrier3d).get("DuneGrowth"), "__self__", None)
+            for barrier3d in self._barrier3d
+        ]
+
+    @property
+    def dune_collision_module(self):
+        return self._dune_collision_module
 
     @property
     def roadways(self):
