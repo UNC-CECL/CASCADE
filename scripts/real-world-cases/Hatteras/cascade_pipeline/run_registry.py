@@ -162,7 +162,7 @@ def values_digest(mapping, length=12):
 
 # Filed by purpose: matrix/, sensitivity/<axis>/, experiments/<tag>/, versions/<tag>/, archive/<tag>/
 
-KINDS = ("matrix", "sensitivity", "experiment", "version", "archive")
+KINDS = ("matrix", "sensitivity", "experiment", "version", "archive", "dune-storm-response")
 MATRIX_KIND = "matrix"
 KIND_DIR = {
     "matrix": "matrix",
@@ -170,6 +170,8 @@ KIND_DIR = {
     "experiment": "experiments",
     "version": "versions",
     "archive": "archive",
+    # Active work, out of experiments/ (2026-10-29): scripts in Hatteras/dune-storm-response/
+    "dune-storm-response": "dune-storm-response",
 }
 # The legacy name of the unscoped tree, still in old index rows and call sites
 CALIBRATION_ARM = "calibration"

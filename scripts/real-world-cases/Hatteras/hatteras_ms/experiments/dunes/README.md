@@ -460,4 +460,4 @@ WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-dune-rec
 
 Moved 2026-10-27 to `scripts/real-world-cases/Hatteras/dune-storm-response/`, with
 `HAT_road_dune_rebuild.py` and `HAT_dune_collision.py`; its notes and results are in that
-folder's README. Output stays under `output/raw_runs/experiments/dunes/`.
+folder's README. Its output moved on 2026-10-29 to `output/raw_runs/dune-storm-response/`.

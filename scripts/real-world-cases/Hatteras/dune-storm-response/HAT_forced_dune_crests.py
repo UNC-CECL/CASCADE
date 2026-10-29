@@ -54,8 +54,8 @@ from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
 from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "dunes/2026-10-26-forced-dune-crests"
-EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
+TAG = "2026-10-26-forced-dune-crests"
+EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / TAG
 HINDCAST = _HAT_DIR / "hatteras_ms" / "HAT_hindcast.py"
 SURVEY_CRESTS = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / "1996-start"
                  / "survey-crests" / "survey_dune_crests.csv")
@@ -163,7 +163,7 @@ def launch(variant):
     env = dict(os.environ)
     env.update({"HAT_IGNORE_SETTINGS": "1", "HAT_START_YEAR": str(START),
                 "HAT_SOURCE_SINK_PRESET": PRESET, "HAT_SCENARIO": SCENARIO, "HAT_GROIN_ENABLED": "1",
-                "HAT_RUN_KIND": "experiment", "HAT_RUN_TAG": f"{TAG}/runs/{variant}",
+                "HAT_RUN_KIND": "dune-storm-response", "HAT_RUN_TAG": f"{TAG}/runs/{variant}",
                 "HAT_SAVE_MODEL_STATE": "1", "HAT_MAKE_GIFS": "0", "HAT_SHOW_FIGURES": "0",
                 "HAT_OVERWRITE": "1", "PYTHONIOENCODING": "utf-8"})
     t0 = time.time()

@@ -8,15 +8,15 @@ the lidar shows them dropping at GIS 2-3, 10-12 and 84-86.
 
 The three scripts drive the unchanged runner (`../hatteras_ms/HAT_hindcast.py`),
 patched in-process only: managed edgeBE 1996-2009 with the groin, as the
-headline matrix run. Model output stays under
-`output/raw_runs/experiments/dunes/<tag>/` on the workspace, as for
-`../hard-structures/`.
+headline matrix run. Model output is under
+`output/raw_runs/dune-storm-response/<tag>/` on the workspace (run kind
+`dune-storm-response`; moved out of `experiments/dunes/` on 2026-10-29).
 
 | Script | What it asks | Output tag |
 |---|---|---|
-| `HAT_forced_dune_crests.py` | If the dunes are set to the lidar crests after key storms, does the shoreline follow CoastSat? | `dunes/2026-10-26-forced-dune-crests` (holds the control run the others use) |
-| `HAT_road_dune_rebuild.py` | Does a raise-only, lower post-storm dune rebuild along NC-12 change the shoreline? | `dunes/2026-10-26-road-dune-rebuild` |
-| `HAT_dune_collision.py` | Collision-regime dune erosion: lidar toes, the hourly TWL, the Larson et al. (2004) and beach-width calibrations, and the runs | `dunes/2026-10-26-dune-collision` |
+| `HAT_forced_dune_crests.py` | If the dunes are set to the lidar crests after key storms, does the shoreline follow CoastSat? | `2026-10-26-forced-dune-crests` (holds the control run the others use) |
+| `HAT_road_dune_rebuild.py` | Does a raise-only, lower post-storm dune rebuild along NC-12 change the shoreline? | `2026-10-26-road-dune-rebuild` |
+| `HAT_dune_collision.py` | Collision-regime dune erosion: lidar toes, the hourly TWL, the Larson et al. (2004) and beach-width calibrations, and the runs | `2026-10-26-dune-collision` |
 
 ## Where things stand (2026-10-27)
 
@@ -207,7 +207,7 @@ all_surveys (1-90; every survey).
     python HAT_forced_dune_crests.py plot     # position change vs CoastSat
     python HAT_forced_dune_crests.py crests   # control vs lidar, GIS 8-15
 
-Results 2026-10-26 (`output/raw_runs/experiments/dunes/2026-10-26-forced-dune-crests/`):
+Results 2026-10-26 (`output/raw_runs/dune-storm-response/2026-10-26-forced-dune-crests/`):
 the control reproduces the matrix run (interior bias -0.445 m/yr). Forcing the
 1999 crests at GIS 8-12 or 8-15 makes the erosion appear: GIS 11-12 match
 CoastSat, GIS 8-10 overshoot (GIS 10 -4.0 against ~-0.9 m/yr). 1998 forcing

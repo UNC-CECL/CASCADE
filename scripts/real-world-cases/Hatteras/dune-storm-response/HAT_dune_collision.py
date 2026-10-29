@@ -85,8 +85,8 @@ if str(_HAT_DIR) not in sys.path:
 from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-TAG = "dunes/2026-10-26-dune-collision"
-EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
+TAG = "2026-10-26-dune-collision"
+EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / TAG
 START = "1996-start"
 SURVEY_CRESTS = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / START
                  / "survey-crests" / "survey_dune_crests.csv")
@@ -111,7 +111,7 @@ EMPIRICAL_INTERVALS = ("1998-1999", "2004-2005")
 BACKGROUND_BEACH_WIDTH_M = 60.0
 # Model runs
 HINDCAST = _HAT_DIR / "hatteras_ms" / "HAT_hindcast.py"
-CONTROL_DIR = (PROJECT_ROOT / "output" / "raw_runs" / "experiments" / "dunes" / "2026-10-26-forced-dune-crests"
+CONTROL_DIR = (PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / "2026-10-26-forced-dune-crests"
                / "runs" / "control")
 RUN_START, RUN_END, PRESET, SCENARIO = 1996, 2009, "edgeBE", "full_management"
 # The rule, its Cs (Larson) or the lowest year-maximum TWL it acts in (beach width, m NAVD88; None: any year
@@ -630,7 +630,7 @@ def launch(variant):
     env = dict(os.environ)
     env.update({"HAT_IGNORE_SETTINGS": "1", "HAT_START_YEAR": str(RUN_START),
                 "HAT_SOURCE_SINK_PRESET": PRESET, "HAT_SCENARIO": SCENARIO, "HAT_GROIN_ENABLED": "1",
-                "HAT_RUN_KIND": "experiment", "HAT_RUN_TAG": f"{TAG}/runs/{variant}",
+                "HAT_RUN_KIND": "dune-storm-response", "HAT_RUN_TAG": f"{TAG}/runs/{variant}",
                 "HAT_SAVE_MODEL_STATE": "1", "HAT_MAKE_GIFS": "0", "HAT_SHOW_FIGURES": "0",
                 "HAT_OVERWRITE": "1", "PYTHONIOENCODING": "utf-8"})
     t0 = time.time()
