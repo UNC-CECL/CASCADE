@@ -8,6 +8,7 @@ beach_nourishment.py                 when and where the beach was nourished (fig
 road_elevation/HAT_road_elevation.py the per-domain road elevation, one set for both starts
 road_offset/                         the road setback per domain: produce, audit, figures, compare (own README)
 road_relocation/                     how far the road moved between vintages (own README)
+village_dune_cap/HAT_village_dune_cap.py  the village dune cap per village, from the lidar (a measurement; the runner reads one value)
 ```
 
 
