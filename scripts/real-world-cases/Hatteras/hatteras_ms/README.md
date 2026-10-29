@@ -369,9 +369,9 @@ hatteras_site_config.HATTERAS_WAVE_OPTION_B.
 HS 3.0 SINCE 2026-10-29 (Hannah): the best shoreline fit of Hs 2.0 / 2.5 /
 3.0 in both windows, full management, with the 8.0 m village dune cap
 (dune-storm-response/HAT_measured_dune_heights.py). Tp, asymmetry and
-high-angle are unchanged. Runs named before then are at Hs 2.0, and
-HATTERAS_BE_EDGE_ONLY still holds the Hs 2.0 ends until the Hs 3.0 solve
-(2026-10-28) is copied in.
+high-angle are unchanged. Runs named before then are at Hs 2.0. The
+1996-2009 edge ends in HATTERAS_BE_EDGE_ONLY are the Hs 3.0 solve
+(2026-10-28); the 2009-2025 ends are still the Hs 2.0 solve.
 Until 2026-09-27 these read 2.5 / 8.0 / 0.7 / 0.1, the /10-offset
 calibration; every run named before then is named against those.
 ```
