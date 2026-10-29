@@ -7,6 +7,7 @@ by zone), the wave height and the groin strength.
     python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py groin [run ...]
     python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py hs
     python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py gsweep
+    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py buxton
 
 The runs are HAT_dune_collision.py's cal_* variants (managed edgeBE 1996-2009, groin, StormStart 1, village dune cap
 8.0 m NAVD88; the module at Cs 1.24e-4, W0 45 m), filed under its runs/. This script only scores them.
@@ -25,6 +26,12 @@ hs      the wave-height sweep (HS_RUNS) from run_scores.csv and groin_scores.csv
         Writes tables/hs_sweep.csv and figures/hs_sweep.png
 gsweep  the groin strength sweep (GROIN_RUNS) the same way: the groin's fit and the shoreline by zone against
         the strength. Writes tables/groin_sweep.csv and figures/groin_sweep.png
+buxton  is the CoastSat erosion at GIS 10-15 (Buxton-Avon) steady or in steps at the storms? Per window
+        (BUXTON_WINDOWS: 1996-2009, and 2009-2025 with the 2017-18 and 2022 fills), per transect the annual
+        median chainage (seaward +) less its median over the window's base years, then the median per GIS;
+        the change across each storm or fill, the trends between them, and for 1996-2009 the model's own
+        shoreline (cal_control, cal_r03). Writes tables/buxton_coastsat_annual_<window>.csv,
+        tables/buxton_steps_<window>.csv, tables/buxton_trends_<window>.csv and figures/buxton_coastsat_<window>.png
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -55,6 +62,30 @@ GROWTH_RUNS = {"cal_r02": 0.02, "cal_r03": 0.03, "cal_r04": 0.04, "cal_r05": 0.0
 HS_RUNS = {"cal_hs2": 2.0, "cal_hs2p5": 2.5, "cal_r03": 3.0, "cal_hs3p5": 3.5, "cal_hs4": 4.0}
 # The groin strength sweep at Hs 3.0 (cal_r03 is the 0.10 default)
 GROIN_RUNS = {"cal_r03": 0.10, "cal_g13": 0.13, "cal_g16": 0.16, "cal_g19": 0.19, "cal_g22": 0.22}
+# The Buxton-Avon erosion check, per window: the years shown, each transect's zero (its median over base), the
+# trend extended (trend), the events marked (decimal years; fills as start, end), the changes across events
+# (label, years before, years after) and the trends between them; the model is drawn for 1996-2009 only
+BUXTON_GIS = range(10, 16)
+BUXTON_MIN_OBS = 3                    # images a transect needs in a year for that year's median
+BUXTON_WINDOWS = {
+    "1996_2009": dict(
+        years=(1988, 2012), base=(1994, 1997), trend=(1988, 1997),
+        storms={"Bonnie": 1998.65, "Dennis / Floyd": 1999.70, "Isabel": 2003.71},
+        fills={},
+        steps=[("Bonnie, Dennis / Floyd", (1996, 1997), (1999, 2000)), ("Isabel", (2002, 2003), (2005, 2006))],
+        trends=[(1988, 1997), (2000, 2003), (2006, 2010)],
+        model=("cal_control", "cal_r03")),
+    "2009_2025": dict(
+        years=(2005, 2025), base=(2008, 2010), trend=(2005, 2010),
+        storms={"Irene": 2011.65, "Sandy": 2012.83, "Matthew": 2016.77, "Dorian": 2019.68, "Erin": 2025.63},
+        # Buxton beach nourishment 2017-06-21 to 2018-02-27; Buxton shore protection 2022-06-30 to 2022-08-16 (GIS 6-16)
+        fills={"2017-18 fill": (2017.47, 2018.16), "2022 fill": (2022.49, 2022.62)},
+        steps=[("Irene, Sandy", (2009, 2010), (2012, 2013)), ("2017-18 fill", (2015, 2016), (2018, 2018)),
+               ("Dorian", (2018, 2018), (2020, 2020)), ("2022 fill", (2021, 2021), (2023, 2023)),
+               ("Erin (2025 partial)", (2024, 2024), (2025, 2025))],
+        trends=[(2005, 2010), (2013, 2016), (2018, 2021), (2023, 2025)],
+        model=()),
+}
 # -----------------------------------------------------------------------------
 
 
@@ -342,12 +373,139 @@ def cmd_gsweep(_):
     print(f"wrote {out}")
 
 
+def cmd_buxton(_):
+    import glob
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from site_layer.hat_figure_style import apply_style, record_caption
+    from site_layer.hat_observed_rates import COASTSAT_TIMESERIES, transect_lookup
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM
+    apply_style()
+
+    # Every transect's annual median chainage (m, seaward +), years with BUXTON_MIN_OBS images or more
+    lookup = pd.read_csv(transect_lookup()).dropna(subset=["domain_number"])
+    lookup = lookup[lookup.domain_number.astype(int).isin(BUXTON_GIS)]
+    annual = {}
+    for tid, g in zip(lookup.transect_id, lookup.domain_number.astype(int)):
+        hits = glob.glob(str(COASTSAT_TIMESERIES / "*" / f"{tid}.csv"))
+        if not hits:
+            continue
+        ts = pd.read_csv(hits[0])
+        ts.columns = ["date", "chainage_m"]
+        ts["year"] = pd.to_datetime(ts.date, utc=True).dt.year
+        ann = ts.groupby("year").chainage_m.agg(["median", "size"])
+        annual[tid] = (g, ann[ann["size"] >= BUXTON_MIN_OBS]["median"])
+
+    # A straight-line fit over the years given: (slope m/yr, intercept)
+    def fit(sr, a, b):
+        x = sr.loc[a:b].dropna()
+        return np.polyfit(x.index, x.to_numpy(), 1)
+
+    for window, w in BUXTON_WINDOWS.items():
+        rows = []
+        for tid, (g, ann) in annual.items():
+            base = ann.loc[w["base"][0]:w["base"][1]]
+            if len(base) < 2:
+                continue
+            rel = ann.loc[w["years"][0]:w["years"][1]] - base.median()
+            rows += [dict(transect=tid, gis=g, year=y, position_m=v) for y, v in rel.items()]
+        t = pd.DataFrame(rows)
+        per_gis = t.groupby(["gis", "year"]).position_m.median().unstack("gis")
+        n_transects = t.groupby("gis").transect.nunique()
+        stretch = t.groupby("year").position_m.median()
+        (OUT / "tables").mkdir(parents=True, exist_ok=True)
+        per_gis.assign(gis_10_15=stretch).round(2).to_csv(OUT / "tables" / f"buxton_coastsat_annual_{window}.csv")
+
+        # The change across each storm or fill, and what the window's trend alone gives over the same years
+        slope0 = fit(stretch, *w["trend"])[0]
+        reaches = [*((f"GIS {g}", per_gis[g]) for g in per_gis), ("GIS 10-15", stretch)]
+        steps, trends = [], []
+        for name, sr in reaches:
+            for label, before, after in w["steps"]:
+                change = float(sr.loc[after[0]:after[1]].mean() - sr.loc[before[0]:before[1]].mean())
+                years = np.mean(after) - np.mean(before)
+                steps.append(dict(reach=name, event=label, change_m=change, trend_expected_m=slope0 * years,
+                                  beyond_trend_m=change - slope0 * years))
+            trends.append(dict(reach=name, **{f"trend_{a}_{b}_m_yr": fit(sr, a, b)[0] for a, b in w["trends"]}))
+        steps, trends = pd.DataFrame(steps), pd.DataFrame(trends)
+        steps.round(2).to_csv(OUT / "tables" / f"buxton_steps_{window}.csv", index=False)
+        trends.round(2).to_csv(OUT / "tables" / f"buxton_trends_{window}.csv", index=False)
+        pd.set_option("display.width", 220)
+        print(f"\n{window}  transects per GIS: {n_transects.to_dict()}")
+        print(steps.pivot(index="reach", columns="event", values="change_m")
+              .loc[[r for r, _ in reaches], [e for e, *_ in w["steps"]]].round(1).to_string())
+        print(trends.set_index("reach").round(2).to_string())
+
+        # The model's shoreline over the same GIS, seaward + from its start (matrix rows are the start year, ...)
+        model = {}
+        for v in w["model"]:
+            rd = H.run_dir(v)
+            m = np.load(next(rd.glob("*_shoreline_matrix.npy")))
+            dom = DOM.for_total(m.shape[1])
+            pads = [dom.gis_to_pad(g) for g in BUXTON_GIS]
+            model[v] = pd.Series(np.median(-(m[:, pads] - m[0, pads]), axis=1),
+                                 index=H.RUN_START + np.arange(len(m)))
+
+        fig, axs = plt.subplots(2, 1, figsize=(10, 8.2), sharex=True)
+        shades = ["#C6DBEF", "#9ECAE1", "#6BAED6", "#4292C6", "#2171B5", "#08519C"]
+        ax = axs[0]
+        for g, col in zip(per_gis, shades):
+            ax.plot(per_gis.index, per_gis[g], "o-", color=col, lw=1.4, ms=3.5, label=f"GIS {g} ({n_transects[g]})")
+        ax.set_ylabel(f"CoastSat shoreline position (m)\nseaward +, from the {w['base'][0]}-{w['base'][1] % 100:02d} "
+                      "median")
+        ax.legend(fontsize=7, ncol=3, loc="lower left", title="transects per GIS", title_fontsize=7)
+        ax = axs[1]
+        slope, icpt = fit(stretch, *w["trend"])
+        yrs = np.arange(w["trend"][0], w["years"][1] + 1)
+        ax.plot(yrs, np.polyval([slope, icpt], yrs), "--", color="0.45", lw=1.2,
+                label=f"{w['trend'][0]}-{w['trend'][1] % 100:02d} trend extended ({slope:+.2f} m/yr)")
+        ax.plot(stretch.index, stretch, "o-", color="#08519C", lw=2.2, ms=4, label="CoastSat, GIS 10-15 median")
+        styles = {"cal_control": ("s-", "#8C8C8C", "model, no collision"),
+                  "cal_r03": ("^-", "#D95F02", "model, collision module")}
+        # the model starts at the CoastSat value in its start year so the two share a zero
+        off = float(stretch.get(H.RUN_START, 0.0))
+        for v, sr in model.items():
+            mk, col, label = styles[v]
+            ax.plot(sr.index, sr + off, mk, color=col, lw=1.7, ms=3.5, label=label)
+        ax.set_ylabel("Shoreline position (m), seaward +")
+        ax.legend(fontsize=7, loc="lower left")
+        for ax, k in zip(axs, "ab"):
+            ax.axhline(0, color="0.75", lw=0.8)
+            for name, (x0, x1) in w["fills"].items():
+                ax.axvspan(x0, x1, color="#E6AB02", alpha=0.25, lw=0)
+                if k == "a":
+                    ax.text(x0, 0.03, name, transform=ax.get_xaxis_transform(), fontsize=7, color="#8C6D00")
+            for name, x in w["storms"].items():
+                ax.axvline(x, color="#B2182B", lw=0.9, ls=":")
+                if k == "a":
+                    ax.text(x + 0.1, 0.97, name, transform=ax.get_xaxis_transform(), fontsize=7, color="#B2182B",
+                            va="top")
+            ax.set_title(f"({k})", loc="left", fontsize=9)
+        axs[1].set_xlabel("Year")
+        fig.tight_layout()
+        out = OUT / "figures" / f"buxton_coastsat_{window}.png"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out, dpi=200, facecolor="white")
+        plt.close(fig)
+        fills = (" Shaded: the Buxton nourishment placements (GIS 6-16), " + ", ".join(w["fills"]) + ".") if w["fills"] else ""
+        record_caption(out, (
+            f"Is the Buxton-Avon (GIS 10-15) erosion steady or in steps at the storms, {window.replace('_', '-')}? "
+            "(a) CoastSat shoreline position per GIS: per transect the annual median chainage (years with at least "
+            f"{BUXTON_MIN_OBS} images) less its {w['base'][0]}-{w['base'][1]} median, then the median over the "
+            f"GIS's transects. (b) The GIS 10-15 median with its {w['trend'][0]}-{w['trend'][1]} trend extended"
+            + (", and the model's shoreline over the same GIS (median of the domains, seaward +) without and with "
+               "the collision module, started at the CoastSat value in its start year" if model else "")
+            + f". Dotted lines: hurricanes {', '.join(w['storms'])}.{fills} Experiment {TAG}."))
+        print(f"wrote {out}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("action", choices=["growth", "runs", "groin", "hs", "gsweep"])
+    ap.add_argument("action", choices=["growth", "runs", "groin", "hs", "gsweep", "buxton"])
     ap.add_argument("runs", nargs="*")
     a = ap.parse_args()
-    {"growth": cmd_growth, "runs": cmd_runs, "groin": cmd_groin, "hs": cmd_hs, "gsweep": cmd_gsweep}[a.action](a)
+    {"growth": cmd_growth, "runs": cmd_runs, "groin": cmd_groin, "hs": cmd_hs, "gsweep": cmd_gsweep, "buxton": cmd_buxton}[a.action](a)
 
 
 if __name__ == "__main__":

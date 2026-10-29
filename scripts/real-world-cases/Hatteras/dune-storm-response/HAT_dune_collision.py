@@ -184,24 +184,42 @@ VARIANTS = {"larson_lost": ("larson", 1.7e-4, False, None),
             # Hs sweep: cal_r03 (growth 0.02-0.04) at Hs 2.0-4.0, each on its own ends (ENDS_BY_HS); cal_r03 is Hs 3.0
             **{f"cal_hs{h:g}".replace(".", "p"): ("storm", 1.24e-4, False, (0.02, 0.04)) for h in (2.0, 2.5, 3.5, 4.0)},
             # Groin strength sweep on cal_r03 (Hs 3.0, growth 0.02-0.04; 0.10 is cal_r03 itself)
-            **{f"cal_g{round(g * 100):02d}": ("storm", 1.24e-4, False, (0.02, 0.04)) for g in (0.13, 0.16, 0.19, 0.22)}}
+            **{f"cal_g{round(g * 100):02d}": ("storm", 1.24e-4, False, (0.02, 0.04)) for g in (0.13, 0.16, 0.19, 0.22)},
+            # The control at the chosen settings (Hs 3.0, groin 0.16), against cal_g16
+            "cal_control_g16": (None, None, False, None),
+            # A quick look at Hs 2.75 on interpolated ends (ENDS_BY_HS), groin 0.16
+            "cal_hs2p75": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # cal_g16 with the module off at Cape Point, south of the Buxton groin (GIS 1-5), where it lowers
+            # the lidar's crests too far and the toes cannot be picked reliably (berm and runnel)
+            "cal_g16_nocape": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # The alternative to cal_g16_nocape: the module everywhere, with faster dune recovery at Cape Point
+            # (GIS 1-5; 0.10-0.20 is the cape's own rate of the 2026-10-20 calibration, dropped 2026-10-21)
+            **{f"cal_g16_capeg{lo * 100:02.0f}": ("storm", 1.24e-4, False,
+                                                 {g: ((lo, hi) if g <= 5 else (0.02, 0.04)) for g in range(1, 91)})
+               for lo, hi in ((0.05, 0.10), (0.10, 0.20))}}
+# The GIS the module runs on per variant; GIS 1-90 otherwise
+COLLISION_GIS = {"cal_g16_nocape": range(6, 91)}
 # Groin strength per sweep variant; every other variant runs at GROIN_STRENGTH_BASE, the runner's default when
 # these runs were made (hat_run.yaml moved to 0.16 on 2026-10-29)
 GROIN_STRENGTH_BASE = 0.10
 GROIN_STRENGTH = {f"storm_w45_r04_{h}_g{round(g * 100):02d}": g for h in ("hs2p5", "hs3") for g in (0.04, 0.06, 0.08, 0.13, 0.16, 0.19)}
 GROIN_STRENGTH.update({f"cal_g{round(g * 100):02d}": g for g in (0.13, 0.16, 0.19, 0.22)})
+GROIN_STRENGTH["cal_control_g16"] = GROIN_STRENGTH["cal_hs2p75"] = GROIN_STRENGTH["cal_g16_nocape"] = 0.16
+GROIN_STRENGTH.update({"cal_g16_capeg05": 0.16, "cal_g16_capeg10": 0.16})
 # CASCADE's wave height (m) per variant off the runner's 2.0
 HS_M = {"control_hs3": 3.0, "storm_w45_r04_hs3": 3.0, "control_hs3_ends": 3.0, "storm_w45_r04_hs3_ends": 3.0,
         "control_hs2p5": 2.5, "storm_w45_r04_hs2p5": 2.5, "storm_cs145_r04_hs3_ends": 3.0, "storm_cs145_r04_hs2p5": 2.5,
         **{v: (2.5 if "_hs2p5_" in v else 3.0) for v in GROIN_STRENGTH},
         **{v: 3.0 for v in VARIANTS if v.startswith("cal_")},
-        **{f"cal_hs{h:g}".replace(".", "p"): h for h in (2.0, 2.5, 3.5, 4.0)}}
+        **{f"cal_hs{h:g}".replace(".", "p"): h for h in (2.0, 2.5, 2.75, 3.5, 4.0)}}
 # The end rates (m/yr) solved at Hs 3.0 with StormStart 1 (input_prep/7-source-sink/2-calibrate/
 # be_end_solve_net_change.py --hs 3, 2026-10-28, step 8), in place of edgeBE's Hs 2.0 values
 ENDS_HS3 = {1: 3.0688, 90: 2.0647}
 # The same solve at each wave height on the 2026-10-29 defaults (village dune cap 8.0 m; --hs 2 ... 4, last step)
 ENDS_BY_HS = {2.0: {1: 3.9595, 90: 1.2255}, 2.5: {1: 3.4009, 90: 1.5958}, 3.0: ENDS_HS3,
               3.5: {1: 2.8201, 90: 2.6656}, 4.0: {1: 2.6813, 90: 3.5346}}
+# Hs 2.75 not solved: halfway between the 2.5 and 3.0 ends, for a quick look (cal_hs2p75)
+ENDS_BY_HS[2.75] = {g: round((ENDS_BY_HS[2.5][g] + ENDS_BY_HS[3.0][g]) / 2, 4) for g in (1, 90)}
 ENDS = {"control_hs3_ends": ENDS_HS3, "storm_w45_r04_hs3_ends": ENDS_HS3, "storm_cs145_r04_hs3_ends": ENDS_HS3,
         **{v: ENDS_HS3 for v in GROIN_STRENGTH if "_hs3_" in v},
         **{v: ENDS_BY_HS[HS_M[v]] for v in VARIANTS if v.startswith("cal_")}}
@@ -209,7 +227,7 @@ ENDS = {"control_hs3_ends": ENDS_HS3, "storm_w45_r04_hs3_ends": ENDS_HS3, "storm
 BEACH_W0_M = {"storm_w45": 45.0, "storm_w45_r04": 45.0, "storm_w45_r06": 45.0, "storm_w45_r04_ss1": 45.0,
               "storm_w45_r04_hs3": 45.0, "storm_w45_r04_hs3_ends": 45.0, "storm_w45_r04_hs2p5": 45.0,
               "storm_cs145_r04_hs3_ends": 45.0, "storm_cs145_r04_hs2p5": 45.0,
-              **{v: 45.0 for v in GROIN_STRENGTH},
+              **{v: 45.0 for v in GROIN_STRENGTH if VARIANTS[v][0]},
               **{v: 45.0 for v in VARIANTS if v.startswith(("cal_r", "cal_zone", "cal_hs", "cal_g"))}}
 # The sink, m/yr as Barrier3D's Rat ((-) erosion): CoastSat LRR less the control's at GIS 9-14, where the
 # control erodes too little and edgeBE has no rate
@@ -702,15 +720,16 @@ def _launch(variant):
     def build_cascade(*a, **k):
         if rule == "storm":
             # The process itself: Cascade's dune_collision_module (cascade/dune_collision.py) inside each
-            # domain's storm loop, on GIS 1-90 (the buffers left out), nothing after the year
+            # domain's storm loop, on the variant's GIS (COLLISION_GIS; the buffers left out), nothing after the year
             dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+            on = COLLISION_GIS.get(variant, range(1, 91))
             w0 = BEACH_W0_M.get(variant)
             toe_m = [None] * dom.total_domains
             width_m = [None] * dom.total_domains
             if w0:
                 # Each cell's median beach width over the surveys, 1998 left out as for the toe
                 width = per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median())
-            for g in range(1, 91):
+            for g in on:
                 toe_m[dom.gis_to_pad(g)] = toe[g] - MHW_NAVD88_M
                 if w0:
                     width_m[dom.gis_to_pad(g)] = width[g]
@@ -718,8 +737,8 @@ def _launch(variant):
                      dune_collision_beach_width=width_m if w0 else None,
                      **({"dune_collision_beach_width_limit": w0} if w0 else {}))
             c = orig_build(*a, **k)
-            managers.update({g: dom.gis_to_pad(g) for g in range(1, 91)}, cascade=c)
-            print(f"\nEXPERIMENT collision: dune_collision_module on GIS 1-90, Cs {cs:.1e}"
+            managers.update({g: dom.gis_to_pad(g) for g in on}, cascade=c)
+            print(f"\nEXPERIMENT collision: dune_collision_module on GIS {on[0]}-{on[-1]}, Cs {cs:.1e}"
                   + (f", beach W0 {w0:g} m" if w0 else ""), flush=True)
             return c
         c = orig_build(*a, **k)
@@ -792,6 +811,9 @@ def launch(variant):
                 "HAT_SAVE_MODEL_STATE": "1", "HAT_MAKE_GIFS": "0", "HAT_SHOW_FIGURES": "0",
                 "HAT_OVERWRITE": "1", "PYTHONIOENCODING": "utf-8"})
     rule, cs, to_beach, growth = VARIANTS[variant]
+    # The hindcast turns the module on by default since 2026-10-29; here only the "storm" variants have it, through
+    # their own toes and Cs (_launch), and every other variant runs without it, as it was made
+    env["HAT_DUNE_COLLISION"] = "1" if rule == "storm" else "0"
     if growth:
         per = growth if isinstance(growth, dict) else {g: growth for g in range(1, 91)}
         env["HAT_GROWTH_OVERRIDE"] = ",".join(f"{g}={lo:.3f}:{hi:.3f}" for g, (lo, hi) in sorted(per.items()))
@@ -954,6 +976,11 @@ RUN_STYLES = {
     "cal_g16": ("Hs 3.0, groin 0.16", "#41AE76", 1.7),
     "cal_g19": ("Hs 3.0, groin 0.19", "#006D2C", 1.8),
     "cal_g22": ("Hs 3.0, groin 0.22", "#00441B", 1.8),
+    "cal_control_g16": ("No collision", "#8C8C8C", 1.7),
+    "cal_hs2p75": ("Hs 2.75 m", "#E7298A", 1.8),
+    "cal_g16_nocape": ("Collision, off south of the groin", "#1B9E77", 1.9),
+    "cal_g16_capeg05": ("Collision, cape growth 0.05-0.10", "#E7298A", 1.7),
+    "cal_g16_capeg10": ("Collision, cape growth 0.10-0.20", "#7570B3", 1.9),
 }
 # (file tag, GIS range or None for the whole island, y half-range in m)
 VIEWS = (("island", None, 100.0), ("buxton", (1, 25), 60.0), ("rodanthe", (70, 90), 60.0))
