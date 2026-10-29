@@ -55,8 +55,10 @@ SCENARIO = "full_management"
 # windows for the quintic 30-buffer ring closure (hindcast.close_offset_ring) and Cape Point growth
 # 0.10-0.20 at GIS 1-5 (runner CAPE_GROWTH_RATE); the same day re-solved with the cape's own rate dropped
 # (one dune growth rate island-wide); 2026-10-26 the 1996-2009 ends on CASCADE-obx (the obx-cascade
-# branch), at Hs 2.0 and, with --hs 2.5, at Hs 2.5 to test whether the sweep's Hs gain survives its own ends
-SOLVE_DATE = "2026-10-26"
+# branch), at Hs 2.0 and, with --hs 2.5, at Hs 2.5 to test whether the sweep's Hs gain survives its own ends;
+# 2026-10-28, with --hs 3, the advisors' Hs 3.0, and the first solve with StormStart 1 (the 1997 storms run);
+# 2026-10-29, with --hs 2, 2.5, 3, 3.5 and 4, the Hs sweep for the collision module on the village dune cap 8.0 m
+SOLVE_DATE = "2026-10-29"
 SOLVE_NAME = "ends-solved-on-obx"
 MAX_STEPS = 8
 LOG_ROOT = PROJECT_ROOT / "output" / "logs" / "driver" / "dem_to_dem"

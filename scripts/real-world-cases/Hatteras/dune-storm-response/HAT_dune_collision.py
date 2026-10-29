@@ -47,15 +47,26 @@ run        the managed edgeBE 1996-2009 hindcast with the groin, as the headline
                width_beach         sand to the beach
                width_storms_beach  sand to the beach, only in years whose highest water reaches 3.1 m NAVD88,
                                    the lowest R_high of the two storm intervals the rule is fit on
+           and the dune growth rate refit under width_storms_beach, which takes the 2009 median crest 1.2 m
+           below the lidar's at the calibrated 0.01-0.03: the same rule with Barrier3D's growth bounds on
+           every domain at mean r +- 0.01:
+               width_storms_r04 ... width_storms_r10   mean r 0.04, 0.06, 0.08, 0.10
+           or, process-based, by cascade/dune_collision.py inside Barrier3D's storm loop: each storm lowers the
+           cells it leaves in collision (toe < its peak Rhigh < crest) by Larson's rule per storm,
+           Cs 4 (Rhigh - toe)^2 duration / T / 20 m, before the next storm; nothing is changed after the year.
+           Cs from calibrate's per-storm fit (island 2.0e-5, Dennis 4.2e-5); the eroded sand lost:
+               storm_cs2e5, storm_cs4e5               the calibrated growth rate, 0.01-0.03
+               storm_cs2e5_r06, storm_cs4e5_r06       growth 0.05-0.07
            A threshold rule (no loss below an exposure, steeper above) fit Dennis no better than the linear
            one (r 0.45 against 0.50 on domain medians; best threshold 0), so it is not run. The control is
            the forced-dune-crests experiment's control run (same code, nothing added)
 score      island skill, per-GIS LRR against CoastSat, and the model's crests against the lidar's in each
-           survey's model state. Writes collision_runs_summary.csv, collision_runs_by_gis.csv and
+           survey's model state: the RMSE of the island's median crest over the surveys, and the stable
+           dunes the growth rate was calibrated on (GIS 20-22, 59-62) in 2009. Writes collision_runs_summary.csv, collision_runs_by_gis.csv and
            collision_runs_crests.csv
 plot       every run's end-minus-start shoreline position change against the CoastSat net change, in the
            layout of the run's shoreline_position_change figure, for the island, Buxton and Rodanthe; the
-           runs named after it (and the control), or every run.
+           runs named after it (and the control; the files then carry their names), or every run.
            Writes collision_runs_position_<view>.png
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -115,14 +126,97 @@ CONTROL_DIR = (PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / "2
                / "runs" / "control")
 RUN_START, RUN_END, PRESET, SCENARIO = 1996, 2009, "edgeBE", "full_management"
 # The rule, its Cs (Larson) or the lowest year-maximum TWL it acts in (beach width, m NAVD88; None: any year
-# the water reaches the toe), and whether the eroded sand goes onto the beach
-VARIANTS = {"larson_lost": ("larson", 1.7e-4, False),
-            "larson_beach": ("larson", 1.7e-4, True),
-            "strong_lost": ("larson", 4e-4, False),
-            "strong_beach": ("larson", 4e-4, True),
-            "width_lost": ("width", None, False),
-            "width_beach": ("width", None, True),
-            "width_storms_beach": ("width", 3.1, True)}
+# the water reaches the toe), whether the eroded sand goes onto the beach, and the dune growth bounds
+# (rmin, rmax) on every domain (None: the runner's calibrated 0.01-0.03)
+VARIANTS = {"larson_lost": ("larson", 1.7e-4, False, None),
+            "larson_beach": ("larson", 1.7e-4, True, None),
+            "strong_lost": ("larson", 4e-4, False, None),
+            "strong_beach": ("larson", 4e-4, True, None),
+            "width_lost": ("width", None, False, None),
+            "width_beach": ("width", None, True, None),
+            "width_storms_beach": ("width", 3.1, True, None),
+            # In-model, storm by storm (cascade/dune_collision.py): Cs from the per-storm calibration, island fit
+            # 2.0e-5 or Dennis 4.2e-5; the eroded sand lost
+            "storm_cs2e5": ("storm", 2.0e-5, False, None),
+            "storm_cs4e5": ("storm", 4.2e-5, False, None),
+            "storm_cs2e5_r06": ("storm", 2.0e-5, False, (0.05, 0.07)),
+            "storm_cs4e5_r06": ("storm", 4.2e-5, False, (0.05, 0.07)),
+            **{f"width_storms_r{round(r * 100):02d}": ("width", 3.1, True, (r - 0.01, r + 0.01))
+               for r in (0.04, 0.06, 0.08, 0.10)},
+            # Committee test: a source/sink where the model's dunes do not erode, with and without collision
+            "sink": (None, None, False, None),
+            "storm_cs2e5_r06_sink": ("storm", 2.0e-5, False, (0.05, 0.07)),
+            # Per storm with the beach: Larson scaled by max(0, 1 - W / 45 m), W each cell's median beach width
+            # over the surveys (1998 left out); Cs refit with the factor (domain medians, r 0.48, Dennis 0.86)
+            "storm_w45": ("storm", 1.24e-4, False, None),
+            "storm_w45_r04": ("storm", 1.24e-4, False, (0.03, 0.05)),
+            "storm_w45_r06": ("storm", 1.24e-4, False, (0.05, 0.07)),
+            # From 2026-10-28 the parameter file sets StormStart: 1 (the 1997 storms run); every run above had 2
+            "control_ss1": (None, None, False, None),
+            "storm_w45_r04_ss1": ("storm", 1.24e-4, False, (0.03, 0.05)),
+            # Advisors' Hs 3.0 m (CASCADE's wave_height: BRIE's alongshore transport and shoreface depth; the
+            # storm series and so the collision forcing are unchanged); the edgeBE ends were solved at 2.0
+            "control_hs3": (None, None, False, None),
+            "storm_w45_r04_hs3": ("storm", 1.24e-4, False, (0.03, 0.05)),
+            # The same on the ends solved at Hs 3.0 (ENDS_HS3)
+            "control_hs3_ends": (None, None, False, None),
+            "storm_w45_r04_hs3_ends": ("storm", 1.24e-4, False, (0.03, 0.05)),
+            # Hs 2.5 on the Hs 2.0 ends: is 2.5 better than 3.0 (the ends moved the Hs 3.0 scores <= 0.07 m/yr)
+            "control_hs2p5": (None, None, False, None),
+            "storm_w45_r04_hs2p5": ("storm", 1.24e-4, False, (0.03, 0.05)),
+            # Groin strength sweep at Hs 2.5 and 3.0 (the 0.10 runs are storm_w45_r04_hs2p5 / _hs3_ends)
+            **{f"storm_w45_r04_{h}_g{round(g * 100):02d}": ("storm", 1.24e-4, False, (0.03, 0.05))
+               for h in ("hs2p5", "hs3") for g in (0.04, 0.06, 0.08, 0.13, 0.16, 0.19)},
+            # Cs 1.45e-4: the per-storm beach fit with the module's toe floor (HAT_collision_rule_comparison.py,
+            # 2026-10-29); 1.24e-4 above was fit without it
+            "storm_cs145_r04_hs3_ends": ("storm", 1.45e-4, False, (0.03, 0.05)),
+            "storm_cs145_r04_hs2p5": ("storm", 1.45e-4, False, (0.03, 0.05)),
+            # Calibration on the 2026-10-29 defaults (village dune cap 8.0 m NAVD88, Hs 3.0): a new control, and
+            # the module (Cs 1.24e-4, W0 45 m) over the growth rates, Hs 3.0 on ENDS_HS3; compare within this set
+            "cal_control": (None, None, False, None),
+            **{f"cal_r{round(r * 100):02d}": ("storm", 1.24e-4, False, (round(r - 0.01, 3), round(r + 0.01, 3)))
+               for r in (0.02, 0.03, 0.04, 0.05, 0.06)},
+            # Zoned growth (HAT_collision_calibration.py growth): 0.02-0.04 everywhere but the Buxton-Avon road
+            # (GIS 8-20), which still sat 0.35 m above the lidar at 0.01-0.03
+            **{f"cal_zone_bx{lo * 100:.0f}{hi * 100:.0f}": ("storm", 1.24e-4, False,
+                                              {g: ((lo, hi) if 8 <= g <= 20 else (0.02, 0.04)) for g in range(1, 91)})
+               for lo, hi in ((0.0, 0.02), (0.0, 0.01))},
+            # Hs sweep: cal_r03 (growth 0.02-0.04) at Hs 2.0-4.0, each on its own ends (ENDS_BY_HS); cal_r03 is Hs 3.0
+            **{f"cal_hs{h:g}".replace(".", "p"): ("storm", 1.24e-4, False, (0.02, 0.04)) for h in (2.0, 2.5, 3.5, 4.0)},
+            # Groin strength sweep on cal_r03 (Hs 3.0, growth 0.02-0.04; 0.10 is cal_r03 itself)
+            **{f"cal_g{round(g * 100):02d}": ("storm", 1.24e-4, False, (0.02, 0.04)) for g in (0.13, 0.16, 0.19, 0.22)}}
+# Groin strength per sweep variant; every other variant runs at GROIN_STRENGTH_BASE, the runner's default when
+# these runs were made (hat_run.yaml moved to 0.16 on 2026-10-29)
+GROIN_STRENGTH_BASE = 0.10
+GROIN_STRENGTH = {f"storm_w45_r04_{h}_g{round(g * 100):02d}": g for h in ("hs2p5", "hs3") for g in (0.04, 0.06, 0.08, 0.13, 0.16, 0.19)}
+GROIN_STRENGTH.update({f"cal_g{round(g * 100):02d}": g for g in (0.13, 0.16, 0.19, 0.22)})
+# CASCADE's wave height (m) per variant off the runner's 2.0
+HS_M = {"control_hs3": 3.0, "storm_w45_r04_hs3": 3.0, "control_hs3_ends": 3.0, "storm_w45_r04_hs3_ends": 3.0,
+        "control_hs2p5": 2.5, "storm_w45_r04_hs2p5": 2.5, "storm_cs145_r04_hs3_ends": 3.0, "storm_cs145_r04_hs2p5": 2.5,
+        **{v: (2.5 if "_hs2p5_" in v else 3.0) for v in GROIN_STRENGTH},
+        **{v: 3.0 for v in VARIANTS if v.startswith("cal_")},
+        **{f"cal_hs{h:g}".replace(".", "p"): h for h in (2.0, 2.5, 3.5, 4.0)}}
+# The end rates (m/yr) solved at Hs 3.0 with StormStart 1 (input_prep/7-source-sink/2-calibrate/
+# be_end_solve_net_change.py --hs 3, 2026-10-28, step 8), in place of edgeBE's Hs 2.0 values
+ENDS_HS3 = {1: 3.0688, 90: 2.0647}
+# The same solve at each wave height on the 2026-10-29 defaults (village dune cap 8.0 m; --hs 2 ... 4, last step)
+ENDS_BY_HS = {2.0: {1: 3.9595, 90: 1.2255}, 2.5: {1: 3.4009, 90: 1.5958}, 3.0: ENDS_HS3,
+              3.5: {1: 2.8201, 90: 2.6656}, 4.0: {1: 2.6813, 90: 3.5346}}
+ENDS = {"control_hs3_ends": ENDS_HS3, "storm_w45_r04_hs3_ends": ENDS_HS3, "storm_cs145_r04_hs3_ends": ENDS_HS3,
+        **{v: ENDS_HS3 for v in GROIN_STRENGTH if "_hs3_" in v},
+        **{v: ENDS_BY_HS[HS_M[v]] for v in VARIANTS if v.startswith("cal_")}}
+# The beach width W0 (m) beyond which a dune loses nothing to collision, per variant using the beach
+BEACH_W0_M = {"storm_w45": 45.0, "storm_w45_r04": 45.0, "storm_w45_r06": 45.0, "storm_w45_r04_ss1": 45.0,
+              "storm_w45_r04_hs3": 45.0, "storm_w45_r04_hs3_ends": 45.0, "storm_w45_r04_hs2p5": 45.0,
+              "storm_cs145_r04_hs3_ends": 45.0, "storm_cs145_r04_hs2p5": 45.0,
+              **{v: 45.0 for v in GROIN_STRENGTH},
+              **{v: 45.0 for v in VARIANTS if v.startswith(("cal_r", "cal_zone", "cal_hs", "cal_g"))}}
+# The sink, m/yr as Barrier3D's Rat ((-) erosion): CoastSat LRR less the control's at GIS 9-14, where the
+# control erodes too little and edgeBE has no rate
+BUXTON_SINK = {9: -0.61, 10: -0.56, 11: -0.35, 12: -1.77, 13: -1.92, 14: -0.89}
+SINK_VARIANTS = ("sink", "storm_cs2e5_r06_sink")
+# The stable dunes the growth rate was calibrated on (HAT_stable_dune_growth_rate.py)
+STABLE_GIS = (20, 21, 22, 59, 60, 61, 62)
 WORKERS = 4
 REPORT_GIS = range(5, 21)
 # -----------------------------------------------------------------------------
@@ -271,6 +365,18 @@ def cell_toes(t):
     return good.groupby(["gis", "cell"]).toe_m_navd88.median().rename("toe_cell_m_navd88")
 
 
+# The model's storm series: peak Rhigh (m NAVD88), period (s) and duration (h) per storm
+def storm_table():
+    st = pd.read_csv(STORM_SUMMARY, parse_dates=["StartTime", "EndTime"])
+    return st.assign(rhigh_m_navd88=st.Rhigh * 10 + MHW_NAVD88_M)
+
+
+# Per cell, the Larson exposure sum((Rhigh - toe)^2 duration / T) over the given storms (m^2)
+def storm_exposure(storms, toe):
+    excess = np.clip(storms.rhigh_m_navd88.to_numpy()[None, :] - toe[:, None], 0, None)
+    return (excess ** 2 * (storms.duration * 3600.0 / storms.period).to_numpy()[None, :]).sum(axis=1)
+
+
 # First and last day flown, from "YYYY-MM" or "YYYY-MM to YYYY-MM"
 def flown_span(flown):
     parts = flown.split(" to ")
@@ -292,6 +398,7 @@ def calibrate():
           f"10-90% {toe_cell.quantile(0.1):.2f}-{toe_cell.quantile(0.9):.2f} m NAVD88")
     flown = pd.read_csv(SURVEY_CRESTS).groupby("survey").flown.first()
     h = pd.read_csv(EXP_DIR / "twl_hourly_1996_2009.csv", index_col="time", parse_dates=True)
+    storms = storm_table()
     years = sorted(t.survey.unique())
     cells, summary = [], []
     for a, b in zip(years[:-1], years[1:]):
@@ -309,6 +416,9 @@ def calibrate():
         excess = np.clip(hh.TWL.to_numpy()[None, :] - toe, 0, None)
         j["exposure_m2"] = (excess ** 2 * 3600.0 / hh.Tp.to_numpy()[None, :]).sum(axis=1)
         j["hours_above_toe"] = (excess > 0).sum(axis=1)
+        # The same per storm, as the model sees it: each storm's peak Rhigh held over its duration
+        ss = storms[(storms.StartTime >= t0) & (storms.StartTime <= t1)]
+        j["exposure_storm_m2"] = storm_exposure(ss, j.toe_cell_m_navd88.to_numpy())
         j["crest_loss_m"] = j.crest_m_navd88 - j.crest_m_navd88_b
         j["interval"] = f"{a}-{b}"
         j["years"] = (t1 - t0).days / 365.25
@@ -340,6 +450,17 @@ def calibrate():
     d["predicted_loss_m"] = 4 * cs_dom * d.exposure_m2 / DUNE_WIDTH_M - g_dom * d.years
     r_cells = np.corrcoef(c.predicted_loss_m, c.crest_loss_m)[0, 1]
     r_dom = np.corrcoef(d.predicted_loss_m, d.crest_loss_m)[0, 1]
+    # Per-storm form, fit the same way: the Cs the model's module takes
+    ds = c.groupby(["interval", "gis"]).agg(exposure_m2=("exposure_storm_m2", "median"), years=("years", "first"),
+                                            crest_loss_m=("crest_loss_m", "median")).reset_index()
+    A = np.column_stack([4 * ds.exposure_m2 / DUNE_WIDTH_M, -ds.years])
+    cs_storm, g_storm = np.linalg.lstsq(A[fit], ds.crest_loss_m[fit], rcond=None)[0]
+    r_storm = np.corrcoef(A[fit] @ [cs_storm, g_storm], ds.crest_loss_m[fit])[0, 1]
+    s["cs_storm_interval"] = [
+        float(np.sum(4 * x.exposure_m2 / DUNE_WIDTH_M * (x.crest_loss_m + g_storm * x.years))
+              / np.sum((4 * x.exposure_m2 / DUNE_WIDTH_M) ** 2)) if (x.exposure_m2 > 0).any() else np.nan
+        for _, x in ds.groupby("interval", sort=False)]
+    s["exposure_storm_median_m2"] = c.groupby("interval", sort=False).exposure_storm_m2.median()
 
     pd.set_option("display.width", 250)
     pd.set_option("display.max_columns", 30)
@@ -347,9 +468,11 @@ def calibrate():
     print(f"\ncells:   Cs {cs_all:.2e}  growth {g_all:+.3f} m/yr   (n={len(c)})")
     print(f"domains: Cs {cs_dom:.2e}  growth {g_dom:+.3f} m/yr   r {r_dom:.2f} (cells r {r_cells:.2f}, n={len(d)}); "
           f"every interval, 2001-2004 too: Cs {cs_every:.2e}")
+    print(f"per storm: Cs {cs_storm:.2e}  growth {g_storm:+.3f} m/yr   r {r_storm:.2f} (domain medians)")
     print(f"Larson et al. (2004) laboratory Cs: 1.7e-04")
     c.round(4).to_csv(EXP_DIR / "collision_calibration_cells.csv", index=False)
-    s.assign(cs_domains=cs_dom, growth_domains_m_yr=g_dom, r_domains=r_dom).round(6).to_csv(
+    s.assign(cs_domains=cs_dom, growth_domains_m_yr=g_dom, r_domains=r_dom, cs_storm_domains=cs_storm,
+             growth_storm_m_yr=g_storm, r_storm_domains=r_storm).round(6).to_csv(
         EXP_DIR / "collision_calibration.csv")
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 4.2))
@@ -537,7 +660,7 @@ def _launch(variant):
     import runpy
     import cascade_pipeline.hindcast as H
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
-    rule, cs, to_beach = VARIANTS[variant]
+    rule, cs, to_beach, _ = VARIANTS[variant]
     st = survey_table()
 
     # Per GIS, 50 cells from a (gis, cell) series, the domain median where a cell has none
@@ -574,8 +697,34 @@ def _launch(variant):
     log = []
     orig_build = H.build_cascade
 
+    managers = {}
+
     def build_cascade(*a, **k):
+        if rule == "storm":
+            # The process itself: Cascade's dune_collision_module (cascade/dune_collision.py) inside each
+            # domain's storm loop, on GIS 1-90 (the buffers left out), nothing after the year
+            dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+            w0 = BEACH_W0_M.get(variant)
+            toe_m = [None] * dom.total_domains
+            width_m = [None] * dom.total_domains
+            if w0:
+                # Each cell's median beach width over the surveys, 1998 left out as for the toe
+                width = per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median())
+            for g in range(1, 91):
+                toe_m[dom.gis_to_pad(g)] = toe[g] - MHW_NAVD88_M
+                if w0:
+                    width_m[dom.gis_to_pad(g)] = width[g]
+            k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs,
+                     dune_collision_beach_width=width_m if w0 else None,
+                     **({"dune_collision_beach_width_limit": w0} if w0 else {}))
+            c = orig_build(*a, **k)
+            managers.update({g: dom.gis_to_pad(g) for g in range(1, 91)}, cascade=c)
+            print(f"\nEXPERIMENT collision: dune_collision_module on GIS 1-90, Cs {cs:.1e}"
+                  + (f", beach W0 {w0:g} m" if w0 else ""), flush=True)
+            return c
         c = orig_build(*a, **k)
+        if rule is None:
+            return c
         cls = type(c)
         orig_update = cls.update
         calls = [0]
@@ -612,6 +761,14 @@ def _launch(variant):
     try:
         runpy.run_path(str(HINDCAST), run_name="__main__")
     finally:
+        if managers:
+            # Each domain's manager, read off the model at the end (Cascade.dune_collision)
+            collision = managers.pop("cascade").dune_collision
+            log = [pd.DataFrame([dict(year=RUN_START + 1 + i, gis=g, crest_lowering_m=dh * 10, volume_m3_m=vol * 1000,
+                                      shoreline_seaward_m=0.0)
+                                 for g, pad in managers.items()
+                                 for i, (dh, vol) in enumerate(zip(collision[pad].crest_lowering_TS,
+                                                                   collision[pad].volume_TS))])]
         if log:
             pd.concat(log).round(4).to_csv(EXP_DIR / "logs" / f"collision_{variant}.csv", index=False)
 
@@ -619,8 +776,9 @@ def _launch(variant):
 def run_dir(variant):
     root = CONTROL_DIR if variant == "control" else EXP_DIR / "runs" / variant
     base = root / f"{RUN_START}_{RUN_END}" / PRESET
-    hits = sorted(d for d in base.glob("HAT_*") if any(d.glob("*_run_metadata.json"))) if base.exists() else []
-    return hits[-1] if hits else None
+    # the newest run: run names changed on 2026-10-29, so a variant's folder can hold both
+    meta = sorted(base.glob("HAT_*/*_run_metadata.json"), key=lambda f: f.stat().st_mtime) if base.exists() else []
+    return meta[-1].parent if meta else None
 
 
 # One run in its own process, logged, with its launch record
@@ -633,13 +791,24 @@ def launch(variant):
                 "HAT_RUN_KIND": "dune-storm-response", "HAT_RUN_TAG": f"{TAG}/runs/{variant}",
                 "HAT_SAVE_MODEL_STATE": "1", "HAT_MAKE_GIFS": "0", "HAT_SHOW_FIGURES": "0",
                 "HAT_OVERWRITE": "1", "PYTHONIOENCODING": "utf-8"})
+    rule, cs, to_beach, growth = VARIANTS[variant]
+    if growth:
+        per = growth if isinstance(growth, dict) else {g: growth for g in range(1, 91)}
+        env["HAT_GROWTH_OVERRIDE"] = ",".join(f"{g}={lo:.3f}:{hi:.3f}" for g, (lo, hi) in sorted(per.items()))
+    sink = BUXTON_SINK if variant in SINK_VARIANTS else None
+    overrides = {**(sink or {}), **ENDS.get(variant, {})}
+    if overrides:
+        env["HAT_BE_OVERRIDE"] = ",".join(f"{g}={r}" for g, r in overrides.items())
+    if variant in HS_M:
+        env["HAT_HS"] = str(HS_M[variant])
+    env["HAT_GROIN_STRENGTH"] = str(GROIN_STRENGTH.get(variant, GROIN_STRENGTH_BASE))
     t0 = time.time()
     with open(logs / f"{variant}.log", "w", encoding="utf-8") as fh:
         p = subprocess.run([sys.executable, str(_HERE), "_launch", variant],
                            env=env, cwd=HINDCAST.parent, stdout=fh, stderr=subprocess.STDOUT)
-    rule, cs, to_beach = VARIANTS[variant]
-    rec = dict(variant=variant, rule=rule, **({"cs": cs} if rule == "larson" else {"min_twl_m": cs}),
-               sand_to_beach=to_beach,
+    rec = dict(variant=variant, rule=rule, **({"min_twl_m": cs} if rule == "width" else {"cs": cs}),
+               sand_to_beach=to_beach, growth=growth, sink=sink, beach_w0_m=BEACH_W0_M.get(variant),
+               hs_m=HS_M.get(variant), ends=ENDS.get(variant), groin_strength=GROIN_STRENGTH.get(variant, GROIN_STRENGTH_BASE),
                returncode=p.returncode, minutes=round((time.time() - t0) / 60, 1))
     with open(logs / "launches.jsonl", "a", encoding="utf-8") as fh:
         fh.write(json.dumps(rec) + "\n")
@@ -692,6 +861,8 @@ def score():
             crests.append(dict(run=v, survey=survey, model_median=np.median(m), lidar_median=np.median(o),
                                model_p10=np.percentile(m, 10), lidar_p10=np.percentile(o, 10),
                                model_below_4m=np.mean(m < 4), lidar_below_4m=np.mean(o < 4),
+                               model_stable_median=np.median(m[grp.gis.isin(STABLE_GIS).to_numpy()]),
+                               lidar_stable_median=np.median(o[grp.gis.isin(STABLE_GIS).to_numpy()]),
                                r_domains=np.corrcoef(mg, og)[0, 1]))
         lrr = frames[v].lrr
         sk = meta["skill"]
@@ -701,8 +872,15 @@ def score():
                             island_overwash=frames[v].overwash.loc[2:89].sum()))
     pd.set_option("display.width", 250)
     pd.set_option("display.max_columns", 40)
-    summary = pd.DataFrame(summary).set_index("run")
     crests = pd.DataFrame(crests)
+    # Dunes: the island's median crest over the surveys after the start, and the stable dunes in 2009
+    later = crests[crests.survey != crests.survey.min()]
+    dunes = pd.DataFrame({
+        "crest_median_rmse": later.groupby("run").apply(
+            lambda x: np.sqrt(((x.model_median - x.lidar_median) ** 2).mean()), include_groups=False),
+        "stable_2009_minus_lidar": crests[crests.survey == crests.survey.max()].set_index("run").eval(
+            "model_stable_median - lidar_stable_median")})
+    summary = pd.DataFrame(summary).set_index("run").join(dunes)
     out = pd.concat(frames, axis=1)
     print(summary.round(3))
     print(out.xs("lrr", axis=1, level=1).loc[list(REPORT_GIS) + list(range(80, 90))].round(2))
@@ -729,6 +907,53 @@ RUN_STYLES = {
     "width_lost": ("Beach width, sand lost", "#A1D99B", 1.6),
     "width_beach": ("Beach width, sand to beach", "#238B45", 1.8),
     "width_storms_beach": ("Beach width, storm years, sand to beach", "#00441B", 1.8),
+    "width_storms_r04": ("Storm years, growth r 0.03-0.05", "#FCC5C0", 1.6),
+    "width_storms_r06": ("Storm years, growth r 0.05-0.07", "#F768A1", 1.7),
+    "width_storms_r08": ("Storm years, growth r 0.07-0.09", "#AE017E", 1.8),
+    "width_storms_r10": ("Storm years, growth r 0.09-0.11", "#49006A", 1.8),
+    "storm_cs2e5": ("Per storm, Cs 2.0e-5", "#80CDC1", 1.6),
+    "storm_cs4e5": ("Per storm, Cs 4.2e-5", "#DFC27D", 1.6),
+    "storm_cs2e5_r06": ("Per storm, Cs 2.0e-5, growth r 0.05-0.07", "#01665E", 1.8),
+    "storm_cs4e5_r06": ("Per storm, Cs 4.2e-5, growth r 0.05-0.07", "#8C510A", 1.8),
+    "sink": ("No collision, sink at GIS 9-14", "#F4A582", 1.6),
+    "storm_cs2e5_r06_sink": ("Per storm, Cs 2.0e-5, growth r 0.05-0.07, sink at GIS 9-14", "#B2182B", 1.8),
+    "storm_w45": ("Per storm with beach, Cs 1.24e-4", "#C2A5CF", 1.6),
+    "storm_w45_r04": ("Per storm with beach, Cs 1.24e-4, growth r 0.03-0.05", "#9970AB", 1.7),
+    "storm_w45_r06": ("Per storm with beach, Cs 1.24e-4, growth r 0.05-0.07", "#762A83", 1.8),
+    "control_ss1": ("No collision, 1997 storms on", "#4D4D4D", 1.6),
+    "storm_w45_r04_ss1": ("Per storm with beach, growth r 0.03-0.05, 1997 storms on", "#E7298A", 1.8),
+    "control_hs3": ("No collision, Hs 3.0 m", "#FDB863", 1.6),
+    "storm_w45_r04_hs3": ("Per storm with beach, growth r 0.03-0.05, Hs 3.0 m", "#B35806", 1.8),
+    "control_hs3_ends": ("No collision, Hs 3.0 m, ends re-solved", "#BABABA", 1.6),
+    "storm_w45_r04_hs3_ends": ("Per storm with beach, growth r 0.03-0.05, Hs 3.0 m, ends re-solved", "#542788", 1.8),
+    "control_hs2p5": ("No collision, Hs 2.5 m", "#D9D9D9", 1.6),
+    "storm_w45_r04_hs2p5": ("Per storm with beach, growth r 0.03-0.05, Hs 2.5 m", "#1B7837", 1.8),
+    "storm_w45_r04_hs2p5_g04": ("Hs 2.5, groin 0.04", "#D9F0D3", 1.6),
+    "storm_w45_r04_hs2p5_g06": ("Hs 2.5, groin 0.06", "#A6DBA0", 1.6),
+    "storm_w45_r04_hs2p5_g08": ("Hs 2.5, groin 0.08", "#5AAE61", 1.7),
+    "storm_w45_r04_hs3_g04": ("Hs 3.0, groin 0.04", "#E7D4E8", 1.6),
+    "storm_w45_r04_hs3_g06": ("Hs 3.0, groin 0.06", "#C2A5CF", 1.6),
+    "storm_w45_r04_hs3_g08": ("Hs 3.0, groin 0.08", "#9970AB", 1.7),
+    "storm_w45_r04_hs2p5_g13": ("Hs 2.5, groin 0.13", "#FDAE61", 1.6),
+    "storm_w45_r04_hs2p5_g16": ("Hs 2.5, groin 0.16", "#F46D43", 1.7),
+    "storm_w45_r04_hs2p5_g19": ("Hs 2.5, groin 0.19", "#A50026", 1.8),
+    "storm_w45_r04_hs3_g13": ("Hs 3.0, groin 0.13", "#80CDC1", 1.6),
+    "storm_w45_r04_hs3_g16": ("Hs 3.0, groin 0.16", "#35978F", 1.7),
+    "storm_w45_r04_hs3_g19": ("Hs 3.0, groin 0.19", "#01665E", 1.8),
+    "storm_cs145_r04_hs3_ends": ("Cs 1.45e-4, Hs 3.0 m, ends re-solved", "#E08214", 1.8),
+    "storm_cs145_r04_hs2p5": ("Cs 1.45e-4, Hs 2.5 m", "#C51B7D", 1.8),
+    # The 2026-10-29 calibration (village dune cap 8.0 m); drawn against cal_control, Hs in purples off
+    # CoastSat's blue
+    "cal_control": ("No collision, Hs 3.0 m", "#8C8C8C", 1.6),
+    "cal_hs2": ("Hs 2.0 m", "#CBC9E2", 1.6),
+    "cal_hs2p5": ("Hs 2.5 m", "#9E9AC8", 1.6),
+    "cal_r03": ("Hs 3.0 m (growth 0.02-0.04, groin 0.10)", "#756BB1", 1.8),
+    "cal_hs3p5": ("Hs 3.5 m", "#54278F", 1.7),
+    "cal_hs4": ("Hs 4.0 m", "#3F007D", 1.8),
+    "cal_g13": ("Hs 3.0, groin 0.13", "#99D8C9", 1.6),
+    "cal_g16": ("Hs 3.0, groin 0.16", "#41AE76", 1.7),
+    "cal_g19": ("Hs 3.0, groin 0.19", "#006D2C", 1.8),
+    "cal_g22": ("Hs 3.0, groin 0.22", "#00441B", 1.8),
 }
 # (file tag, GIS range or None for the whole island, y half-range in m)
 VIEWS = (("island", None, 100.0), ("buxton", (1, 25), 60.0), ("rodanthe", (70, 90), 60.0))
@@ -738,7 +963,7 @@ ZOOM_HIDDEN_FEATURES = {"Shoal influence zone", "Village center", "Pier"}
 
 # Every run's end-minus-start position change against the CoastSat net change, in the layout of the run's
 # shoreline_position_change figure (net_change_comparison.py), as the forced-dune-crests plot does
-def plot(variants=None):
+def plot(variants=None, base="control"):
     import dataclasses
     import matplotlib
     matplotlib.use("Agg")
@@ -759,14 +984,14 @@ def plot(variants=None):
 
     # End minus start (m, seaward positive), smoothed as the run figure smooths it
     runs = {}
-    for v in ["control", *(variants or [v for v in RUN_STYLES if v != "control"])]:
+    for v in [base, *(variants or [v for v in RUN_STYLES if v != base and not v.startswith("cal_")])]:
         rd = run_dir(v)
         if rd is None:
             print(f"  missing {v}")
             continue
         shoreline_m = np.load(resolve(rd, "matrix", rd.name))
         runs[v] = (rd, smooth_model(compute_change_rate(shoreline_m, span_years=1, flip_sign=True)))
-    if "control" not in runs:
+    if base not in runs:
         print("  the control run is needed to draw the figures")
         return
 
@@ -777,8 +1002,8 @@ def plot(variants=None):
                          rate_col="net_change_m")],
         active_period_start=RUN_START, lowess_config=LOWESS_CONFIG, domains=HATTERAS_DOMAINS)
 
-    control_dir, control = runs["control"]
-    label_c, color_c, _ = RUN_STYLES["control"]
+    control_dir, control = runs[base]
+    label_c, color_c, _ = RUN_STYLES[base]
     gis = np.arange(HATTERAS_DOMAINS.first_gis_id, HATTERAS_DOMAINS.last_gis_id + 1)
     geometry = HATTERAS_DOMAINS.for_total(len(control))     # the runs' own buffers, not the config's
     real = slice(geometry.start_real_index, geometry.end_real_index)
@@ -809,7 +1034,7 @@ def plot(variants=None):
         for v, (rd, change) in runs.items():
             label, color, lw = RUN_STYLES[v]
             handles.append(Line2D([0], [0], color=color, lw=lw + 0.4, label=label))
-            if v == "control":
+            if v == base:
                 # Drawn by the run figure's call; given its width here, under the collision runs
                 for line in ax.get_lines():
                     if line.get_label() == label_c:
@@ -841,7 +1066,7 @@ def plot(variants=None):
                    loc="outside lower center")
         restyle(fig, ax, subtitle)
 
-        out = EXP_DIR / f"collision_runs_position_{view}.png"
+        out = EXP_DIR / f"collision_runs_position_{view}{'__' + '_'.join(variants) if variants else ''}.png"
         fig.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
         plt.close("all")
         (s0, s1), (e0, e1) = NET_CHANGE_WINDOWS[(RUN_START, RUN_END)]
@@ -877,7 +1102,9 @@ def main():
         with ThreadPoolExecutor(WORKERS) as ex:
             list(ex.map(launch, args.variant or list(VARIANTS)))
     elif args.action == "plot":
-        plot(args.variant or None)
+        # The calibration runs (cal_*) are on the 2026-10-29 defaults; their baseline is cal_control
+        cal = any(v.startswith("cal_") for v in args.variant)
+        plot([v for v in args.variant if v != "cal_control"] or None, base="cal_control" if cal else "control")
     else:
         {"toes": toes, "twl": twl, "calibrate": calibrate, "empirical": empirical, "score": score}[args.action]()
 

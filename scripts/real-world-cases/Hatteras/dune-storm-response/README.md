@@ -17,6 +17,7 @@ headline matrix run. Model output is under
 | `HAT_forced_dune_crests.py` | If the dunes are set to the lidar crests after key storms, does the shoreline follow CoastSat? | `2026-10-26-forced-dune-crests` (holds the control run the others use) |
 | `HAT_road_dune_rebuild.py` | Does a raise-only, lower post-storm dune rebuild along NC-12 change the shoreline? | `2026-10-26-road-dune-rebuild` |
 | `HAT_dune_collision.py` | Collision-regime dune erosion: lidar toes, the hourly TWL, the Larson et al. (2004) and beach-width calibrations, and the runs | `2026-10-26-dune-collision` |
+| `HAT_collision_rule_comparison.py` | Offline, no runs: which collision erosion rule (none, Long et al. 2014 fractions, Larson per storm or hourly, each with and without the beach factor) fits the lidar crest change best, and which is simplest | `2026-10-29-collision-rule-comparison` (its `NOTE.md` lists every collision test, offline and in-model) |
 
 ## Where things stand (2026-10-27)
 
@@ -168,6 +169,39 @@ Interior LRR bias / RMSE against CoastSat (m/yr), managed edgeBE 1996-2009:
   alongshore transport rules (cape, centre); with it the collision run is
   within 0.05 m/yr of the control island-wide and beats it at Buxton and
   Rodanthe. To confirm once the ends are re-solved at Hs 3.0.
+
+  Ends re-solved at Hs 3.0 with StormStart 1 (`be_end_solve_net_change.py --hs 3`,
+  `end-domain-boundaries-1996-2009/2026-10-28-ends-solved-on-obx-hs3-1996_2009`,
+  step 8): GIS 1 +3.07, GIS 90 +2.06 m/yr (edgeBE at Hs 2.0: +3.94, +1.21).
+  Runs `control_hs3_ends` / `storm_w45_r04_hs3_ends`: island RMSE 1.185 / 1.235,
+  cape 1.74 / 2.51, GIS 8-15 1.13 / 0.94, centre 1.16 / 1.16, GIS 80-89
+  1.35 / 0.98; within 0.07 m/yr of the runs on the Hs 2.0 ends. The groin face
+  still over-erodes at Hs 3.0 (GIS 6 -3.59 against CoastSat -1.22; -2.6 at
+  Hs 2.0): the groin's 0.10 strength, fitted at Hs 2.0, is the next thing to refit.
+
+  Hs 2.5 (`control_hs2p5`, `storm_w45_r04_hs2p5`, on the Hs 2.0 ends). Shoreline
+  RMSE (m/yr), collision run at Hs 2.0 / 2.5 / 3.0: island 1.40 / 1.29 / 1.23,
+  cape 3.27 / 2.86 / 2.51, GIS 8-15 0.83 / 0.88 / 0.94, centre 1.25 / 1.19 /
+  1.16, GIS 80-89 1.02 / 0.95 / 0.98, GIS 6 -2.59 / -3.04 / -3.59 (CoastSat
+  -1.22). Control: island 1.28 / 1.19 / 1.19, GIS 80-89 1.12 / 1.07 / 1.35.
+  Hs 3.0 wins island-wide only through the cape; 2.5 is as good or better
+  everywhere else, and the groin face erodes less.
+
+  Groin strength sweep, collision run, 0.04 / 0.06 / 0.08 / 0.10 (`storm_w45_r04_hs2p5_g*`,
+  `storm_w45_r04_hs3_g*`; Hs 3.0 on its own ends). Island RMSE moves <= 0.02
+  m/yr. A weaker groin makes GIS 6 worse, not better (Hs 3.0: -4.77 / -4.49 /
+  -3.84 / -3.59; Hs 2.5: -4.03 / -3.92 / -3.21 / -3.04; CoastSat -1.22) and
+  barely moves GIS 2-3. 0.10 is best of the four at both Hs: the groin-face
+  over-erosion at higher Hs is not the groin holding back too much.
+
+  Extended to 0.13 / 0.16 / 0.19. Island RMSE stays flat (Hs 3.0 1.23-1.25,
+  Hs 2.5 1.29-1.30; the 0.02 wobbles are run noise). A stronger groin moves
+  the error from GIS 6 to GIS 7: Hs 3.0 GIS 6 -3.59 -> -2.58, GIS 7 -1.52 ->
+  -0.70 (CoastSat -1.22, -2.01); GIS 6-8 RMSE 1.57 -> 1.25 at Hs 3.0, 1.41 ->
+  1.22 at Hs 2.5; Buxton 0.94 -> 0.91 / 0.88 -> 0.85; GIS 2-3 slightly worse.
+  No optimum inside the range on the LRR; the groin's own fit metrics (gap,
+  fillet, net GIS 2-12 / 4-9, `hard-structures/groin/.../2026-10-20-spread-relaxation`)
+  were not rerun.
 - Found on the way: the Hatteras runs keep Barrier3D's default `StormStart: 2`,
   so the 1997 storms (time 1; 5 storms, peak 2.45 m NAVD88) never run.
 
