@@ -47,7 +47,6 @@ ISLAND_CAP_M = 8.0                   # the current island-wide cap, m NAVD88
 # The villages (HATTERAS_COMMUNITY_ZONES); the Tri-Village split at the midpoints between village centres
 VILLAGES = {"Buxton": (7, 8), "Avon": (21, 31), "Salvo": (68, 71), "Waves": (72, 76), "Rodanthe": (77, 83)}
 RODANTHE_ALT = (78, 83)              # without GIS 77's Waves-like dunes
-COLOURS = {"Buxton": "#1B9E77", "Avon": "#D95F02", "Salvo": "#7570B3", "Waves": "#E7298A", "Rodanthe": "#66A61E"}
 # -----------------------------------------------------------------------------
 
 
@@ -77,56 +76,73 @@ def main():
     print(t.round(2).to_string(index=False))
     caps = dict(zip(t.village, t.cap_m_navd88))
 
-    # Draw the crests along the island with each village's cap, and each village's spread
+    # Draw the crests along the island with each village's cap, and each village's spread (house paper style)
     per = sv.groupby("gis").crest_m_navd88.agg(median="median", p95=lambda a: a.quantile(0.95),
                                                p05=lambda a: a.quantile(0.05))
-    fig, axs = plt.subplots(2, 1, figsize=(12, 8.6), gridspec_kw={"height_ratios": [1.15, 1]})
+    fig, axs = plt.subplots(2, 1, figsize=fs.figsize("double", aspect=0.72), layout="constrained",
+                            gridspec_kw={"height_ratios": [1.25, 1]})
+    ylim = (0, 10.4)
     ax = axs[0]
-    ax.fill_between(per.index, per.p05, per.p95, color="0.85", lw=0, label="lidar cells, 5th-95th percentile")
-    ax.plot(per.index, per["median"], color="0.35", lw=1.4, label="lidar, domain median crest")
-    ax.axhline(ISLAND_CAP_M, color="#B2182B", lw=1.4, ls="--", label=f"current island-wide cap {ISLAND_CAP_M:g} m")
-    for name, (lo, hi) in VILLAGES.items():
-        ax.axvspan(lo - 0.5, hi + 0.5, color=COLOURS[name], alpha=0.12, lw=0)
-        ax.hlines(caps[name], lo - 0.5, hi + 0.5, color=COLOURS[name], lw=3)
-        ax.text((lo + hi) / 2, 9.35, name, ha="center", fontsize=8, color=COLOURS[name], fontweight="bold")
-        ax.text((lo + hi) / 2, caps[name] + 0.15, f"{caps[name]:g}", ha="center", fontsize=8, color=COLOURS[name])
-    ax.plot([], [], color="0.3", lw=3, label=f"per-village cap: lidar {CAP_QUANTILE * 100:.0f}th percentile")
     ax.set_xlim(0.5, 90.5)
-    ax.set_ylim(0, 9.8)
-    ax.set_xlabel("GIS domain (south → north)")
-    ax.set_ylabel("Dune crest (m NAVD88)")
-    ax.legend(fontsize=7.5, loc="lower center", ncol=2)
-    ax.set_title("(a)", loc="left", fontsize=9)
+    ax.set_ylim(*ylim)
+    band = ax.fill_between(per.index, per.p05, per.p95, color=fs.C["BASE_FILL"], lw=0, zorder=1)
+    (line,) = ax.plot(per.index, per["median"], color=fs.INK, lw=1.0, zorder=3)
+    island = ax.axhline(ISLAND_CAP_M, color=fs.INK_MUTED, lw=0.9, ls="--", zorder=2)
+    for name, (lo, hi) in VILLAGES.items():
+        ax.hlines(caps[name], lo - 0.5, hi + 0.5, color=fs.C["ACCENT"], lw=2.2, zorder=4)
+        ax.text(hi + 0.9, caps[name], f"{caps[name]:.1f}", va="center", ha="left", fontsize=7,
+                color=fs.C["ACCENT"], zorder=5, bbox=dict(facecolor="white", edgecolor="none", pad=0.6))
+    # Villages as a strip along the top, drawn over the data: a full-height wash would merge with the band
+    before = set(ax.patches) | set(ax.texts)
+    fs.town_bands(ax, spans=VILLAGES, fontsize=7, strip=0.07, shade="0.82")
+    for artist in (set(ax.patches) | set(ax.texts)) - before:
+        artist.set_zorder(6)
+    ax.set_xlabel(fs.DOMAIN_AXIS_LABEL)
+    ax.set_ylabel("Dune crest elevation (m NAVD88)")
+    fs._title(ax, 0, "Lidar dune crests along the island")
     ax = axs[1]
     names = list(VILLAGES)
     data = [sv[sv.gis.between(*VILLAGES[n])].crest_m_navd88.dropna().to_numpy() for n in names]
-    parts = ax.violinplot(data, showextrema=False, widths=0.8)
-    for body, n in zip(parts["bodies"], names):
-        body.set_facecolor(COLOURS[n])
-        body.set_alpha(0.35)
+    ax.boxplot(data, whis=(5, 95), showfliers=False, widths=0.5, patch_artist=True,
+               boxprops=dict(facecolor=fs.C["BASE_FILL"], edgecolor=fs.INK, lw=0.8),
+               medianprops=dict(color=fs.INK, lw=1.2), whiskerprops=dict(color=fs.INK, lw=0.8),
+               capprops=dict(color=fs.INK, lw=0.8))
+    ax.axhline(ISLAND_CAP_M, color=fs.INK_MUTED, lw=0.9, ls="--", zorder=1)
     for i, n in enumerate(names, start=1):
-        ax.hlines(np.median(data[i - 1]), i - 0.25, i + 0.25, color="0.25", lw=1.5)
-        ax.hlines(caps[n], i - 0.4, i + 0.4, color=COLOURS[n], lw=3)
-        ax.text(i + 0.42, caps[n], f"cap {caps[n]:g}", va="center", fontsize=8, color=COLOURS[n])
-    ax.axhline(ISLAND_CAP_M, color="#B2182B", lw=1.4, ls="--")
+        ax.hlines(caps[n], i - 0.36, i + 0.36, color=fs.C["ACCENT"], lw=2.2, zorder=4)
+        ax.text(i + 0.4, caps[n], f"{caps[n]:.1f}", va="center", ha="left", fontsize=7, color=fs.C["ACCENT"],
+                zorder=5, bbox=dict(facecolor="white", edgecolor="none", pad=0.6))
     ax.set_xticks(range(1, len(names) + 1))
-    ax.set_xticklabels([f"{n}\nGIS {VILLAGES[n][0]}-{VILLAGES[n][1]}" for n in names])
-    ax.set_ylabel("Lidar dune crest, all cells (m NAVD88)")
-    ax.set_ylim(0, 9.8)
-    ax.set_title("(b)", loc="left", fontsize=9)
-    fig.tight_layout()
+    ax.set_xticklabels([f"{n}\n(GIS {VILLAGES[n][0]}–{VILLAGES[n][1]})" for n in names])
+    ax.set_xlim(0.4, len(names) + 0.75)
+    ax.set_ylim(0, 9.5)
+    ax.set_ylabel("Dune crest elevation (m NAVD88)")
+    ax.grid(axis="y", color=fs.C["GRID"], lw=0.5)
+    ax.set_axisbelow(True)
+    fs._title(ax, 1, "Crest distribution by village")
 
-    # Write the figure and its caption
+    # One frameless legend under both panels
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    handles = [line, band, Patch(facecolor=fs.C["BASE_FILL"], edgecolor=fs.INK, lw=0.8),
+               Line2D([], [], color=fs.C["ACCENT"], lw=2.2), island]
+    labels = ["Domain median", "5th–95th percentile of cells",
+              "Village cells: median, quartiles, 5th–95th percentile",
+              f"Village cap: {CAP_QUANTILE * 100:.0f}th percentile", f"Island-wide cap ({ISLAND_CAP_M:.1f} m)"]
+    fig.legend(handles, labels, loc="outside lower center", ncol=3, frameon=False, fontsize=8)
+
+    # Write the figure (PNG, and a PDF under supporting/) and its caption
     out = fs.figure_dir("inputs", "4-management", "village_dune_cap") / "village_dune_caps.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, dpi=200, facecolor="white")
+    fs.save(fig, out, dpi=300, facecolor="white")
     fs.record_caption(out, (
-        "The village dune cap per village, from the lidar. (a) Dune crest along the island: the median of each "
-        f"domain's spike-screened lidar cells over the {START} surveys ({', '.join(map(str, SURVEYS_EXCLUDED))} "
-        "left out) and their 5th-95th percentile band; coloured bars, each village's cap, the "
-        f"{CAP_QUANTILE * 100:.0f}th percentile of its cells, measured as the island-wide {ISLAND_CAP_M:g} m was "
-        "(dashed). (b) Each village's lidar crests (violins, median line) with its cap. Tri-Village split at the "
-        "midpoints between village centres: Salvo 68-71, Waves 72-76, Rodanthe 77-83."))
+        "Village dune caps measured from the lidar. (a) Dune crest elevation along the island (GIS 1 at Cape "
+        "Point, 90 at the Pea Island boundary): the median of each domain's spike-screened lidar crest cells over "
+        f"the {START} surveys ({', '.join(map(str, SURVEYS_EXCLUDED))} excluded), with the 5th-95th percentile of "
+        f"the cells shaded. Purple bars: each village's cap, the {CAP_QUANTILE * 100:.0f}th percentile of its cells, "
+        f"measured as the island-wide {ISLAND_CAP_M:.1f} m cap was (dashed). Villages named in the strip along the top. (b) The "
+        "crest cells of each village: box, median and quartiles; whiskers, 5th-95th percentile; purple, the "
+        "village cap. The Tri-Village is split at the midpoints between village centres (Salvo 68-71, Waves 72-76, "
+        "Rodanthe 77-83)."))
     print(f"wrote {out} and {OUT_DIR / 'village_dune_caps.csv'}")
 
 
