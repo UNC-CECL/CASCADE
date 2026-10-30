@@ -207,6 +207,7 @@ class Cascade:
         dune_collision_beach_width=None,  # beach width per domain [m]
         dune_collision_beach_width_limit=45.0,  # no dune erosion on beaches this wide [m]
         dune_collision_dune_width=20.0,  # dune width the eroded sand comes from [m]
+        dune_collision_beach_follows_shoreline=False,  # beach width takes the shoreline's change
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -388,6 +389,10 @@ class Cascade:
             The beach width at and beyond which a dune loses nothing to collision [m]
         dune_collision_dune_width: float, optional
             Cross-shore width the eroded volume is spread over [m]
+        dune_collision_beach_follows_shoreline: bool, optional
+            If True, each year's beach width is the given width less the shoreline's
+            landward move since the start: the dune held, the beach narrowing with
+            retreat and widening with nourishment [default is False, width fixed]
 
         Examples
         --------
@@ -740,6 +745,7 @@ class Cascade:
                         None if beach_width is None else np.asarray(beach_width) / 10
                     ),  # m to dam
                     beach_width_limit=dune_collision_beach_width_limit / 10,  # m to dam
+                    beach_follows_shoreline=dune_collision_beach_follows_shoreline,
                 )
 
     @property

@@ -9,7 +9,8 @@ DuneCollisionManager adds that loss storm by storm, inside Barrier3D's own storm
 1. the wave-impact rule of Larson et al. (2004), per storm: dV = 4 Cs (R_high - z_toe)^2 t / T, the
    storm's peak R_high held over its duration t, T its peak period, and
 2. optionally, the beach in front of the dune: dV scaled by max(0, 1 - W / W0), W the beach width, as
-   the dunes behind wide beaches lost no sand to collision in the Hatteras lidar, and
+   the dunes behind wide beaches lost no sand to collision in the Hatteras lidar; W fixed, or
+   (beach_follows_shoreline) narrowing as the shoreline retreats toward a dune held in place, and
 3. the crest lowering over the dune's cross-shore width: dH = dV / W_dune, both dune rows lowered in
    proportion, no lower than the toe.
 
@@ -194,6 +195,7 @@ class DuneCollisionManager:
         dune_width=2.0,
         beach_width=None,
         beach_width_limit=4.5,
+        beach_follows_shoreline=False,
     ):
         """The DuneCollisionManager module
 
@@ -211,6 +213,11 @@ class DuneCollisionManager:
             Beach width per alongshore dune cell [dam]; None leaves the beach out
         beach_width_limit: float, optional
             The beach width W0 at and beyond which a dune loses nothing to collision [dam]
+        beach_follows_shoreline: bool, optional
+            If True, the dune is held in place and the beach takes the shoreline's change: each
+            year's beach width is beach_width less the shoreline's landward move since the start
+            (x_s_TS), no less than 0, so it narrows as the shoreline retreats and widens with
+            nourishment
         """
 
         n = barrier3d.BarrierLength
@@ -235,6 +242,9 @@ class DuneCollisionManager:
         self._beach_width = beach_width
         self._beach_width_limit = beach_width_limit
         self._beach = beach
+        self._beach_follows_shoreline = beach_follows_shoreline and beach_width is not None
+        self._shoreline_start = barrier3d.x_s_TS[-1]  # dam, landward positive
+        self._beach_width_TS = []  # per model year, mean beach width [dam]
         self._cs = cs
         self._dune_width = dune_width
         self._crest_prestorm = None  # dam MHW, set each year after dune growth
@@ -257,6 +267,11 @@ class DuneCollisionManager:
         crest = DuneDomain[t].max(axis=1)
         self._crest_prestorm = np.maximum(crest, b3d._DuneRestart) + b3d._BermEl
         self._storm = 0
+        if self._beach_follows_shoreline:
+            retreat = b3d.x_s_TS[-1] - self._shoreline_start
+            width = np.maximum(self._beach_width - retreat, 0)
+            self._beach = beach_factor(width, self._beach_width_limit)
+            self._beach_width_TS.append(float(width.mean()))
         self._crest_lowering_TS.append(0.0)
         self._volume_TS.append(0.0)
 
@@ -327,6 +342,14 @@ class DuneCollisionManager:
     @property
     def beach_width_limit(self):
         return self._beach_width_limit
+
+    @property
+    def beach_follows_shoreline(self):
+        return self._beach_follows_shoreline
+
+    @property
+    def beach_width_TS(self):
+        return self._beach_width_TS
 
     @property
     def cs(self):
