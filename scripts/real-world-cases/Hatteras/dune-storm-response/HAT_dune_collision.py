@@ -192,20 +192,60 @@ VARIANTS = {"larson_lost": ("larson", 1.7e-4, False, None),
             # cal_g16 with the module off at Cape Point, south of the Buxton groin (GIS 1-5), where it lowers
             # the lidar's crests too far and the toes cannot be picked reliably (berm and runnel)
             "cal_g16_nocape": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # cal_g16_nocape with a dune cap per village, then also no bulldozed overwash on Rodanthe's dunes
+            "cal_g16_nocape_vcap": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            "cal_g16_nocape_vcap_ow0": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # cal_g16_nocape on toes and beach widths from the 1996 start profile alone (TOES_FROM_START), not the
+            # median over the 1996-2009 surveys: a Cs sweep, the start's toes taking nothing from after it
+            **{f"cal_g16_nocape_ts{round(cs * 1e6):d}": ("storm", cs, False, (0.02, 0.04))
+               for cs in (1.24e-4, 2.5e-4, 5e-4, 1e-3)},
+            # cal_g16_nocape with the beach following the modelled shoreline (DuneCollisionManager
+            # beach_follows_shoreline): from the median widths, then from the 1996 start profile's widths
+            "cal_g16_nocape_dynw": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            "cal_g16_nocape_dynw_sw": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # cal_g16_nocape with the road's dune rebuild set from the lidar rebuilds (ROAD_DUNE_REBUILD): the
+            # setback gate alone, then with the rebuild trigger height too
+            "cal_g16_nocape_rd150": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            "cal_g16_nocape_rd150h": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # ... and with NCDOT's own criterion: dune maintenance where NC 12 is within 650 ft (198 m) of the
+            # shoreline (SHORELINE_GATE)
+            "cal_g16_nocape_rd198": ("storm", 1.24e-4, False, (0.02, 0.04)),
             # The alternative to cal_g16_nocape: the module everywhere, with faster dune recovery at Cape Point
             # (GIS 1-5; 0.10-0.20 is the cape's own rate of the 2026-10-20 calibration, dropped 2026-10-21)
             **{f"cal_g16_capeg{lo * 100:02.0f}": ("storm", 1.24e-4, False,
                                                  {g: ((lo, hi) if g <= 5 else (0.02, 0.04)) for g in range(1, 91)})
                for lo, hi in ((0.05, 0.10), (0.10, 0.20))}}
 # The GIS the module runs on per variant; GIS 1-90 otherwise
-COLLISION_GIS = {"cal_g16_nocape": range(6, 91)}
+COLLISION_GIS = {"cal_g16_nocape": range(6, 91), "cal_g16_nocape_vcap": range(6, 91),
+                 "cal_g16_nocape_vcap_ow0": range(6, 91),
+                 **{v: range(6, 91) for v in VARIANTS if v.startswith(("cal_g16_nocape_ts", "cal_g16_nocape_dynw",
+                                                                         "cal_g16_nocape_rd"))}}
+TOES_FROM_START = tuple(v for v in VARIANTS if v.startswith("cal_g16_nocape_ts"))
+BEACH_FOLLOWS_SHORELINE = ("cal_g16_nocape_dynw", "cal_g16_nocape_dynw_sw")
+WIDTH_FROM_START = TOES_FROM_START + ("cal_g16_nocape_dynw_sw",)
+# The road's dune rebuild per variant, (setback gate m, rebuild trigger m MHW or None for the hindcast's berm floor),
+# from the lidar rebuilds along NC-12 (dune-storm-response/2026-10-29-collision-test-2009-2025, tables/
+# observed_dune_rebuilds.csv): rebuilt up to 140 m behind the dune; crest before a rebuild median 2.66 m NAVD88
+ROAD_DUNE_REBUILD = {"cal_g16_nocape_rd150": (150.0, None), "cal_g16_nocape_rd150h": (150.0, 2.66 - MHW_NAVD88_M)}
+# NCDOT's criterion: dune maintenance where NC 12 is within 650 ft (198 m) of the shoreline (Bonner Bridge
+# Replacement FEIS, NCDOT/FHWA 2008, p. 2-128); the road manager measures from the dune, so each domain's gate is
+# 198 m less its median beach width (the toe table's, as the collision module's)
+SHORELINE_GATE, SHORELINE_GATE_M = ("cal_g16_nocape_rd198",), 198.0
+# Per-village dune caps, m NAVD88: the lidar 95th percentile of each village's crest cells
+# (input_prep/4-mgmt-forcings/village_dune_cap/HAT_village_dune_cap.py), in place of the one 8.0 m
+VILLAGE_DOMAINS = {"Buxton": (7, 8), "Avon": (21, 31), "Salvo": (68, 71), "Waves": (72, 76), "Rodanthe": (77, 83)}
+VILLAGE_CAPS_M = {"Buxton": 7.6, "Avon": 7.9, "Salvo": 6.7, "Waves": 8.2, "Rodanthe": 6.8}
+VILLAGE_CAP_VARIANTS = ("cal_g16_nocape_vcap", "cal_g16_nocape_vcap_ow0")
+# No bulldozed overwash onto the Rodanthe village dunes (the manager's overwash_to_dune share 0)
+RODANTHE_NO_OW_TO_DUNE = ("cal_g16_nocape_vcap_ow0",)
 # Groin strength per sweep variant; every other variant runs at GROIN_STRENGTH_BASE, the runner's default when
 # these runs were made (hat_run.yaml moved to 0.16 on 2026-10-29)
 GROIN_STRENGTH_BASE = 0.10
 GROIN_STRENGTH = {f"storm_w45_r04_{h}_g{round(g * 100):02d}": g for h in ("hs2p5", "hs3") for g in (0.04, 0.06, 0.08, 0.13, 0.16, 0.19)}
 GROIN_STRENGTH.update({f"cal_g{round(g * 100):02d}": g for g in (0.13, 0.16, 0.19, 0.22)})
 GROIN_STRENGTH["cal_control_g16"] = GROIN_STRENGTH["cal_hs2p75"] = GROIN_STRENGTH["cal_g16_nocape"] = 0.16
-GROIN_STRENGTH.update({"cal_g16_capeg05": 0.16, "cal_g16_capeg10": 0.16})
+GROIN_STRENGTH.update({"cal_g16_capeg05": 0.16, "cal_g16_capeg10": 0.16, "cal_g16_nocape_vcap": 0.16,
+                       "cal_g16_nocape_vcap_ow0": 0.16, **{v: 0.16 for v in TOES_FROM_START + BEACH_FOLLOWS_SHORELINE + tuple(ROAD_DUNE_REBUILD) + SHORELINE_GATE}})
 # CASCADE's wave height (m) per variant off the runner's 2.0
 HS_M = {"control_hs3": 3.0, "storm_w45_r04_hs3": 3.0, "control_hs3_ends": 3.0, "storm_w45_r04_hs3_ends": 3.0,
         "control_hs2p5": 2.5, "storm_w45_r04_hs2p5": 2.5, "storm_cs145_r04_hs3_ends": 3.0, "storm_cs145_r04_hs2p5": 2.5,
@@ -694,6 +734,13 @@ def _launch(variant):
         return out
 
     toe = per_gis(cell_toes(st))
+    if variant in WIDTH_FROM_START:
+        sp = pd.read_csv(EXP_DIR / "dune_toes.csv")
+        sp = sp[sp.survey == "start"]
+        start_width = per_gis(sp.set_index(["gis", "cell"]).beach_width_m)
+    if variant in TOES_FROM_START:
+        good = sp[(sp.toe_m_navd88 > TOE_MIN_M_NAVD88) & (sp.toe_m_navd88 < sp.crest_m_navd88 - TOE_BELOW_CREST_M)]
+        toe = per_gis(good.set_index(["gis", "cell"]).toe_m_navd88)
     hours = pd.read_csv(EXP_DIR / "twl_hourly_1996_2009.csv", index_col="time", parse_dates=True)
     if rule == "width":
         fit = pd.read_csv(EXP_DIR / "collision_empirical_fit.csv").iloc[0]
@@ -729,14 +776,45 @@ def _launch(variant):
             if w0:
                 # Each cell's median beach width over the surveys, 1998 left out as for the toe
                 width = per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median())
+                if variant in WIDTH_FROM_START:
+                    width = start_width
             for g in on:
                 toe_m[dom.gis_to_pad(g)] = toe[g] - MHW_NAVD88_M
                 if w0:
                     width_m[dom.gis_to_pad(g)] = width[g]
             k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs,
                      dune_collision_beach_width=width_m if w0 else None,
-                     **({"dune_collision_beach_width_limit": w0} if w0 else {}))
+                     **({"dune_collision_beach_width_limit": w0} if w0 else {}),
+                     dune_collision_beach_follows_shoreline=variant in BEACH_FOLLOWS_SHORELINE)
+            if variant in ROAD_DUNE_REBUILD:
+                gate, trigger = ROAD_DUNE_REBUILD[variant]
+                k["road_dune_rebuild_trigger_m"] = gate
+                if trigger is not None:
+                    k["dune_minimum_elevation"] = [trigger] * len(k["dune_minimum_elevation"])
+                print(f"\nEXPERIMENT road dune rebuild: setback gate {gate:g} m, trigger "
+                      + ("berm floor" if trigger is None else f"{trigger:.2f} m MHW"), flush=True)
             c = orig_build(*a, **k)
+            # NCDOT's 650 ft (198 m) shoreline-to-road criterion as each road manager's gate behind the dune
+            if variant in SHORELINE_GATE:
+                w = pd.Series({g: np.nanmedian(width[g]) for g in range(1, 91)})
+                w = w.fillna(w.median())
+                for g in range(1, 91):
+                    r = c.roadways[dom.gis_to_pad(g)]
+                    if r is not None:
+                        r._dune_mgmt_road_setback_trigger = max(SHORELINE_GATE_M - w[g], 0.0)
+                print(f"\nEXPERIMENT road dune rebuild where NC 12 is within {SHORELINE_GATE_M:g} m of the shoreline: "
+                      f"gates median {SHORELINE_GATE_M - w.median():.0f} m, range {SHORELINE_GATE_M - w.max():.0f}-"
+                      f"{SHORELINE_GATE_M - w.min():.0f} m", flush=True)
+            # Per-village dune caps and Rodanthe's overwash-to-dune share, on the village managers (m above the berm)
+            for name, (lo, hi) in VILLAGE_DOMAINS.items():
+                for g in range(lo, hi + 1):
+                    mgr = c.nourishments[dom.gis_to_pad(g)]
+                    if mgr is None or not c._beach_nourishment_module[dom.gis_to_pad(g)]:
+                        continue
+                    if variant in VILLAGE_CAP_VARIANTS:
+                        mgr._artificial_maximum_dune_height = VILLAGE_CAPS_M[name] - k["berm_elevation"]
+                    if variant in RODANTHE_NO_OW_TO_DUNE and name == "Rodanthe":
+                        mgr._overwash_to_dune = 0
             managers.update({g: dom.gis_to_pad(g) for g in on}, cascade=c)
             print(f"\nEXPERIMENT collision: dune_collision_module on GIS {on[0]}-{on[-1]}, Cs {cs:.1e}"
                   + (f", beach W0 {w0:g} m" if w0 else ""), flush=True)
@@ -976,16 +1054,20 @@ RUN_STYLES = {
     "cal_g16": ("Hs 3.0, groin 0.16", "#41AE76", 1.7),
     "cal_g19": ("Hs 3.0, groin 0.19", "#006D2C", 1.8),
     "cal_g22": ("Hs 3.0, groin 0.22", "#00441B", 1.8),
-    "cal_control_g16": ("No collision", "#8C8C8C", 1.7),
+    "cal_control_g16": ("No collision", "#7f7f7f", 1.6),
     "cal_hs2p75": ("Hs 2.75 m", "#E7298A", 1.8),
-    "cal_g16_nocape": ("Collision, off south of the groin", "#1B9E77", 1.9),
+    "cal_g16_nocape": ("Current calibration (collision, off at Cape Point)", "#7b3294", 2.0),
     "cal_g16_capeg05": ("Collision, cape growth 0.05-0.10", "#E7298A", 1.7),
     "cal_g16_capeg10": ("Collision, cape growth 0.10-0.20", "#7570B3", 1.9),
+    "cal_g16_nocape_vcap": ("Per-village dune caps", "#7B3294", 1.8),
+    "cal_g16_nocape_vcap_ow0": ("Per-village caps, no overwash onto Rodanthe dunes", "#E66101", 1.8),
 }
 # (file tag, GIS range or None for the whole island, y half-range in m)
-VIEWS = (("island", None, 100.0), ("buxton", (1, 25), 60.0), ("rodanthe", (70, 90), 60.0))
+VIEWS = (("island", None, 100.0), ("buxton", (1, 25), 60.0), ("avon_salvo_road", (45, 60), 40.0), ("rodanthe", (70, 90), 60.0))
 # Map features with nothing to point at in a zoomed view
 ZOOM_HIDDEN_FEATURES = {"Shoal influence zone", "Village center", "Pier"}
+# Per view where it differs: the Avon-Salvo road has no village, pier or groin in view
+ZOOM_HIDDEN_BY_VIEW = {"avon_salvo_road": {"Shoal influence zone", "Village center", "Pier", "Groin", "Community"}}
 
 
 # Every run's end-minus-start position change against the CoastSat net change, in the layout of the run's
@@ -1085,7 +1167,7 @@ def plot(variants=None, base="control"):
 
         # The figure's legend with every run in place of the one model line, then the house finish
         old = fig.legends.pop()
-        hidden = {label_c} | (set() if gis_range is None else ZOOM_HIDDEN_FEATURES)
+        hidden = {label_c} | (set() if gis_range is None else ZOOM_HIDDEN_BY_VIEW.get(view, ZOOM_HIDDEN_FEATURES))
         entries = [(h, t.get_text()) for h, t in zip(old.legend_handles, old.get_texts())
                    if t.get_text() not in hidden]
         fig.legend(handles + [h for h, _ in entries],
