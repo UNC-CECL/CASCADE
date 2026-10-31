@@ -7,7 +7,7 @@ HATTERAS_DIR is this folder, scripts/real-world-cases/Hatteras/ in the
 obx-cascade clone: the scripts, and nothing else (the lab rule for the clone).
 WORKSPACE is everything the scripts read and write -- data/, output/,
 hard-structures/ results -- laid out at the paths the old repository had them,
-D:\\hatteras_ch1\\model_runs, unless the environment variable HATTERAS_WORKSPACE
+D:\\research\\UNC\\hatteras_ch1\\model_runs, unless the environment variable HATTERAS_WORKSPACE
 names another folder (a second drive under another letter, say).
 
 BARRIER3D_DIR is the Barrier3D checkout beside the obx-cascade clone (../Barrier3D,
@@ -36,7 +36,7 @@ import os
 from pathlib import Path
 
 # --- CONFIG ------------------------------------------------------------------
-DEFAULT_WORKSPACE = Path(r"D:\hatteras_ch1\model_runs")
+DEFAULT_WORKSPACE = Path(r"D:\research\UNC\hatteras_ch1\model_runs")
 # -----------------------------------------------------------------------------
 
 HATTERAS_DIR = Path(__file__).resolve().parent

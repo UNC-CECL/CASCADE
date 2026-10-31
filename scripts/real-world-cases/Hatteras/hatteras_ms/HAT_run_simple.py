@@ -36,7 +36,7 @@ BACKGROUND_EROSION = {}
 # -----------------------------------------------------------------------------
 
 # --- INPUT FILES ---------------------------------------------------------------
-WORKSPACE = Path(r"D:\hatteras_ch1\model_runs")
+WORKSPACE = Path(r"D:\research\UNC\hatteras_ch1\model_runs")
 DATA = WORKSPACE / "data" / "hatteras_init"
 DOMAINS = DATA / "1-barrier3d-domains"
 OFFSETS = DATA / "2-brie-offset"

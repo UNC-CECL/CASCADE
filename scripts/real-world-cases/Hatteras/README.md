@@ -14,8 +14,8 @@ outputs that were tracked there.
 | what | where |
 |---|---|
 | scripts (this folder) | `scripts/real-world-cases/Hatteras/` on `obx-cascade` |
-| data, runs, figures, study results | the workspace, `D:\hatteras_ch1\model_runs\` |
-| raw GIS sources, ArcGIS project | `D:\hatteras_ch1\gis_sources\`, `D:\hatteras_ch1\gis_project\` |
+| data, runs, figures, study results | the workspace, `D:\research\UNC\hatteras_ch1\model_runs\` |
+| raw GIS sources, ArcGIS project | `D:\research\UNC\hatteras_ch1\gis_sources\`, `D:\research\UNC\hatteras_ch1\gis_project\` |
 | the model | this repository's `cascade/`, plus [`cascade_patch.py`](cascade_patch.py) |
 | Barrier3D | published Barrier3D plus [`barrier3d-patch/`](barrier3d-patch/README.md) |
 
@@ -66,7 +66,7 @@ The folders keep the names they had in the old repository's `scripts/`:
    if the workspace is missing.
 3. Choose the run in `hatteras_ms/hat_run.yaml`, then run
    `hatteras_ms/HAT_hindcast.ipynb` (or `HAT_hindcast.py`). Results go to
-   `D:\hatteras_ch1\model_runs\output\raw_runs\`.
+   `D:\research\UNC\hatteras_ch1\model_runs\output\raw_runs\`.
 
 ## How the runs differ from the old branch
 

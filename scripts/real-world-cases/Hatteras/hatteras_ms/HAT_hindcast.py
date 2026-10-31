@@ -6,7 +6,7 @@ HOW TO USE
     1. Choose the run in hat_run.yaml: the period, the source/sink preset, the scenario, groin on or off.
     2. Run this file:
            python scripts/real-world-cases/Hatteras/hatteras_ms/HAT_hindcast.py
-    3. The results are in D:\\hatteras_ch1\\model_runs\\output\\raw_runs\\matrix\\<period>\\<preset>\\<run name>\\
+    3. The results are in D:\\research\\UNC\\hatteras_ch1\\model_runs\\output\\raw_runs\\matrix\\<period>\\<preset>\\<run name>\\
 
 WHAT IT DOES
     Step 1  Gather every input the model needs, from the settings    (hindcast/HAT_hindcast_setup.py)

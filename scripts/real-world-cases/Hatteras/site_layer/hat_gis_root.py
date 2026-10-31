@@ -3,10 +3,10 @@ Where the Hatteras GIS drive is: the one setting every script reads it from.
 
     from site_layer.hat_gis_root import GIS_ROOT, GIS_PROJECT
 
-GIS_ROOT is the raw GIS sources, D:\\hatteras_ch1\\gis_sources, unless the
+GIS_ROOT is the raw GIS sources, D:\\research\\UNC\\hatteras_ch1\\gis_sources, unless the
 environment variable HATTERAS_GIS_ROOT names another folder (a second drive
 under another letter, say). GIS_PROJECT is the ArcGIS Pro project beside it,
-D:\\hatteras_ch1\\gis_project. What is in them: D:\\hatteras_ch1\\README.md.
+D:\\research\\UNC\\hatteras_ch1\\gis_project. What is in them: D:\\research\\UNC\\hatteras_ch1\\README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 
 # --- CONFIG ------------------------------------------------------------------
-DEFAULT_GIS_ROOT = Path(r"D:\hatteras_ch1\gis_sources")
+DEFAULT_GIS_ROOT = Path(r"D:\research\UNC\hatteras_ch1\gis_sources")
 # -----------------------------------------------------------------------------
 
 GIS_ROOT = Path(os.environ.get("HATTERAS_GIS_ROOT", DEFAULT_GIS_ROOT))
