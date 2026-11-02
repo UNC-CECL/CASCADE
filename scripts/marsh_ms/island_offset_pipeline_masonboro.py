@@ -237,14 +237,17 @@ def pad_for_cascade(df, padding_zeros, target_length):
 # =============================================================================
 
 # Year and input file
-YEAR = 2014
-RAW_FILE = r"C:\Users\agfig\model\calibration\offsets\dune_offsets_{0}_raw.csv".format(YEAR)
+YEAR = 2003
+# RAW_FILE = r"C:\Users\agfig\model\calibration\offsets\dune_offsets_{0}_raw.csv".format(YEAR)
+RAW_FILE = r"C:\Users\agfig\model\calibration\offsets\coastsat_2003\coastsat_offsets_{0}_raw.csv".format(YEAR)  # coastsat
+
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\agfig\model\calibration\offsets"
+# OUTPUT_DIR = r"C:\Users\agfig\model\calibration\offsets"
+OUTPUT_DIR = r"C:\Users\agfig\model\calibration\offsets\coastsat_2003"
 
 # Base name for output files
-OUTPUT_BASENAME = "Island_Dune_Offsets_{0}".format(YEAR)
+OUTPUT_BASENAME = "Island_CoastSat_Offsets_{0}".format(YEAR)
 
 # Real domains included in this run (whole-island)
 START_DOMAIN = 3
