@@ -1317,14 +1317,16 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
     shoreline_ax = subfigs[0].subplots(1, 1)
     shoreline_ax.set_xlabel("Simulation Years")
     shoreline_ax.set_ylabel("Overwash Flux (m$^3$/m)")
+    shoreline_ax.set_xlim(0,100)
+
 
     subfigs[0].suptitle("r = {0}".format(r_value), fontsize='x-large', fontweight="bold")
-    # add text for subfigure "numbering"
-    subfigs[0].text(x=-0.032, y=1.08, s="a",
-                      fontsize=30,
-                      fontweight="bold",
-                      transform=shoreline_ax.transAxes,
-                      )
+    # # add text for subfigure "numbering"
+    # subfigs[0].text(x=-0.032, y=1.08, s="a",
+    #                   fontsize=30,
+    #                   fontweight="bold",
+    #                   transform=shoreline_ax.transAxes,
+    #                   )
 
     # make each subplot for the classes
     for c in range(len(cascade_list)):
@@ -1349,12 +1351,12 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
             ax = axs[row_pos, col_pos]
         else:
             ax = axs[col_pos]
-        # add text for subfigure "numbering"
-        subfigs[c+1].text(x=-0.38, y=1.08, s=subplot_numbering,
-                        fontsize=30,
-                        fontweight="bold",
-                        transform=ax.transAxes,
-                        )
+        # # add text for subfigure "numbering"
+        # subfigs[c+1].text(x=-0.38, y=1.08, s=subplot_numbering,
+        #                 fontsize=30,
+        #                 fontweight="bold",
+        #                 transform=ax.transAxes,
+        #                 )
 
         # plot the overwash flux
         QowTS = barrier3d[0].QowTS  # m^3/m, all model years for this storm sequence
@@ -1568,15 +1570,17 @@ def plot_Elev_CASCADE_subplots_all_scenarios_overwash(
             # if col_pos == 5 and row_pos == 1:
             #     subfigs[c].colorbar(cax, ax=axs, pad=0.01, label="elevation (m MHW)")
 
-        subfigs[c+1].colorbar(
+        cbar = subfigs[c+1].colorbar(
             cax,
             ax=axs,
             location="right",
             pad=0.01,
-            label="elevation (m MHW)",
-            ticks=np.arange(-2,z_lim+1, 2),
-            spacing="proportional",
+            # label="elevation (m MHW)",
+            # ticks=np.arange(-2,z_lim+1, 2),
+            # spacing="proportional",
         )
+        cbar.set_label("m MHW", rotation=270, labelpad=10)
+        cbar.ax.set_yscale('linear')
         shoreline_ax.legend(loc="upper left")
         shoreline_ax.set_ylim(0,150)
         # axs[1,5].remove()
