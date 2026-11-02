@@ -649,3 +649,54 @@ def test_thin_layer_placement(initial_elev):
     if len(orig_high_cells)>0:
         assert_array_almost_equal(orig_high_cells, new_high_cells)
 
+
+def test_dredge():
+    """
+    run cascade with dredging turned on and make sure the barrier never widens
+    :return:
+    """
+    datadir = r"C:\Users\agfig\model\basic_cascade_run\marsh"
+    min_dune_r = 0.05
+    max_dune_r = 0.45
+    beach_slope = 0.06
+    model_duration = 30
+    slr_m_yr = 0.004
+    berm_elev = 2.00 # m NAVD88
+    MHW = 0.421
+
+    overwash_storm = "cascade-default-storms.npy"
+
+    # marsh class on
+    dredge_casc = Cascade(
+        datadir,
+        name="dredge_run",
+        elevation_file=f"domain_11_interior_2014_short.npy",
+        dune_file=f"domain_11_dunes_2014_doubled.npy",
+        parameter_file="marsh-default-parameters.yaml",
+        storm_file=overwash_storm,
+        marsh_module=False,
+        alongshore_section_count=1,
+        time_step_count=model_duration,
+        # ---------- for BRIE and Barrier3D --------------- #
+        beta=beach_slope,
+        sea_level_rise_rate=slr_m_yr,
+        min_dune_growth_rate=min_dune_r,
+        max_dune_growth_rate=max_dune_r,
+        berm_elevation=berm_elev,
+        MHW=MHW,
+        # dredge
+        dredge_on=True
+        )
+    # run the time loop/update function
+    for time_step in range(dredge_casc._nt - 1):
+        print("\r", "Time Step: ", time_step + 1, end="")
+        dredge_casc.update()
+        if dredge_casc.b3d_break:
+            break
+
+    # check that the final barrier width is equal or smaller than the beginning
+    for ib3d in range(dredge_casc._ny):
+        initial_width = np.shape(dredge_casc.barrier3d[ib3d].DomainTS[0])[0]
+        expected_width = initial_width + sum(dredge_casc.barrier3d[ib3d].ShorelineChangeTS)
+        actual_width = np.shape(dredge_casc.barrier3d[ib3d].InteriorDomain)[0]
+        assert actual_width <= expected_width

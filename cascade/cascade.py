@@ -188,8 +188,8 @@ class Cascade:
         use_defined_beach_width=False,
         user_inputed_beach_width=30,
         # --------- outwasher (in development) ------------ #
-        outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
-        outwash_beach_file="NCB-default_beach.npy",
+        outwash_storms_file="outwash-default-storms.npy",
+        outwash_beach_file=None,
         percent_washout_to_shoreface=100,
         # --------------- marsh dynamics -----------------------------------
         SSCb=0.05,
@@ -387,7 +387,7 @@ class Cascade:
         density_organic_matter: int or float
             organic matter bulk density [kg/m3]
         density_sediment: int or float
-            sediment bulk density [kg/m3
+            sediment bulk density [kg/m3]
         max_depth_decomp: float
             depth in marsh where decomp goes to 0 [m]
         decomp_coeff: float
@@ -877,8 +877,34 @@ class Cascade:
         # on the bay side, reset that row to the bay depth.
         for iB3D in range(self._ny):
             if self._dredge_on[iB3D]:
-                # update interior domain variable
                 dredge_channel(self._barrier3d[iB3D])
+                # check for barrier drowning
+                if np.shape(self._barrier3d[iB3D].InteriorDomain)[0] <= 0:
+                    self._barrier3d[iB3D]._drown_break = 1
+                if self._barrier3d[iB3D]._drown_break == 1:
+                    self._barrier3d[iB3D]._TMAX = self._barrier3d[iB3D].time_index - 1
+                    print(
+                        "Barrier has WIDTH DROWNED at t = {time} years".format(
+                            time=self._barrier3d[iB3D].time_index - 1
+                        )
+                    )
+
+                elif all(
+                        j <= self._barrier3d[iB3D].SL
+                        for j in self._barrier3d[iB3D].InteriorDomain[0, :]
+                ):
+                    self._barrier3d[iB3D]._TMAX = self._barrier3d[iB3D].time_index - 1
+                    print(
+                        "Barrier has HEIGHT DROWNED at t = {time} years".format(
+                            time=self._barrier3d[iB3D].time_index - 1
+                        )
+                    )
+                    self._barrier3d[iB3D]._drown_break = 1
+
+                # update cascade's drown break
+                if self._barrier3d[iB3D].drown_break == 1:
+                    self._b3d_break = 1
+                    return
 
         ###############################################################################
         # human dynamics modules
