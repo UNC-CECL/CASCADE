@@ -4,27 +4,45 @@
 """Simulate marsh dynamics in CASCADE
 
 This module provides functions for modifying a barrier segment from Barrier3D --
-consisting of an interior grid with marsh cells to replicate marsh dynamics
+consisting of an interior grid with "marsh" cells to replicate marsh dynamics
 including:
 
 1. marsh platform accretion based on the sum of mineral and organic contributions of mud-sized particles
 2. marsh platform decomposition based on organic sediment within the marsh soil profile
+3. OPTIONAL: thin layer placement
 
+These formulations were modified from PyBMFT-C (Reeves et al., 2023) which combined Barrier3D (Reeves et al., 2021)
+with CoLT (Valentine et al., 2023). CoLT added carbon cycling to BMFT (Kirwan et al., 2016)
 
 References
 ----------
+.. [1] Reeves, I. R. B., Moore, L. J., Valentine, K., Fagherazzi, S., & Kirwan, M. L. (2023).
+Sediment Exchange Across Coastal Barrier Landscapes Alters Ecosystem Extents.
+Geophysical Research Letters,
+50(14), e2023GL103680. https://doi.org/10.1029/2023GL103680
 
-.. [1]
 
-.. [2]
+.. [2] Valentine, K., Herbert, E. R., Walters, D. C., Chen, Y., Smith, A. J., & Kirwan, M. L. (2023).
+csdms-contrib/colt: V1.0 [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.7625873
 
-.. [3]
+
+.. [3] Kirwan, M. L., Walters, D. C., Reay, W. G., & Carr, J. A. (2016).
+Sea level driven marsh expansion in a coupled model of marsh erosion and migration.
+Geophysical Research Letters,
+43(9), 4366–4373. https://doi.org/10.1002/2016GL068507
 
 
 Notes
 -----
-Here, we assume all contributions from suspended sediment in the bay are mineral
-
+Changes from PyBMFT-C
+- we assume all contributions from suspended sediment in the bay are mineral (no organic)
+- we assume alloch. organic matter gets deposited regardless of vegetation presence
+- alloch. organic matter is deposited exponentially based on the distance of each cell from the marsh edge (no ponding)
+- there are no fluxes calculated here, so "marsh" cells are determined based on elevation only
+    - previously, the transect was split into bay, marsh, and forest cells
+    where the width of the bay determined the start of the marsh
+    - we don't calculate bay width, so the user-input marsh elevations
+    are used to define the start and end of the "marsh"
 """
 
 import math
@@ -49,7 +67,9 @@ def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
         model year (int)
     :param c:
         column index of the interior domain (int)
-    :return:
+    :return shift_marsh:
+        the index of where the marsh starts so the cells line up every year regardless
+        of shoreline/baack-barrier position changes (int)
     """
     shoreline_change = int(
         sc_TS[year])  # neg = landward movement (lose cells), pos = seaward movement (add cells)
@@ -100,6 +120,7 @@ def find_non_marsh_cells(
     """
     this function is predominantly used for testing the marsh module. cells not included in the marsh transect should
     not change in elevation during the marsh module dynamics
+
     :param start_marsh_cell: int, first index of the marsh
     :param end_marsh_cell: int, last index of the marsh
     :param marsh_transect_length: int, length of the marsh transect
@@ -154,8 +175,45 @@ def evolvemarsh(
         min_dep_method,     # method for mineral deposition, see options below
         plot,
 ):
-    """Calculates biomass and mineral and organic deposition for each cell in the marsh as a function of flooding
-    frequency; calculates the total flux of sediment onto the marsh from the bay."""
+    """
+    Calculates biomass and mineral and organic deposition for each cell in the marsh as a function of flooding
+    frequency
+
+    :param marshelevation: 1D array
+        elevation domain [m MSL]
+        here it is the full range of marsh cells (which may include some non-marsh cells)
+    :param msl: float
+        this year's sea level [m MSL]
+    :param C_e: float
+        suspended sediment concentration at marsh edge [kg/m3]
+    :param OCb: float
+        organic content of uppermost layer of bay sediment (%)
+    :param tr: float
+        tidal range [m]
+    :param numiterations: int
+        tidal iterations, currently set to 500
+    :param P: float
+        tidal period [s], 12.5 hours for semi-diurnal tide, converted to seconds
+    :param ws: float
+        settling velocity [m/s]
+    :param timestep: int
+        number of tidal cycles per year
+    :param Bmax: int
+        maximum biomass [g]
+    :param Dmin: float
+        minimum depth below high water that marsh vegetation can grow [m[
+    :param Dmax: float
+        maximum depth below high water that marsh vegetation can grow [m]
+    :param rhoo: int or float
+        organic matter bulk density [kg/m3]
+    :param rhos: int or float
+        sediment bulk density [kg/m3]
+    :param min_dep_method
+        method for mineral deposition, see options below
+    :param plot: bool
+        if True, make some plots to show dynamics
+    :return:
+    """
     plt.rcParams.update({"font.size": 16})
 
     # updates from original:
@@ -163,7 +221,7 @@ def evolvemarsh(
     # 2. we now have multiple transects that represent the marsh, so loop through all columns of the interior domain
     # 3. we need to identify the marsh cells
 
-    # min_dep_method: see options below
+    # min_dep_method:
     # 1 for original
     # 2 for Brad's method
 
@@ -187,7 +245,7 @@ def evolvemarsh(
         depth[i, :] = depth_iteration  # Store depths in array
 
     # -------------------------
-    # Belowground Productivity
+    # Belowground Productivity (akin to vegetation trapping sediment)
     # Creates a biomass curve (Mariotti & Carr, 2014) where peak biomass occurs at a depth halfway between the maximum
     # depth for vegetation and the minimum (here, mean high water level)
     dm = msl + tr / 2 - marshelevation  # [m] Depth of the marsh surface below HWL at any given point
@@ -217,14 +275,16 @@ def evolvemarsh(
     organic_autoch = np.zeros([L])  # Autochthonous organic material
 
     for ii in range(L):
-        if dm[ii] > Dmax:  # If depth is above vegetation maximum, there is no production
+        if dm[ii] > Dmax:  # If depth is too deep to sustain vegetation, there is no production
             bgb[ii] = 0  # [g] Mudflat
-            organic_autoch[ii] = 0  # [g] No autochthonous material stored in the soil; we do not multiply by lingin content (as in earlier version of the model) because we subtract mass due to decomposition in the 'decompose' function
-        elif dm[ii] <= Dmin:  # If depth is below vegetation minimum, there is very little belowground productivity
+            organic_autoch[ii] = 0  # [g] No autochthonous material stored in the soil; we do not multiply by lingin
+            # content (as in earlier version of the model) because we subtract mass due to decomposition in the
+            # 'decompose' function (this is still true, as we have a decompose function)
+        elif dm[ii] <= Dmin:  # If depth is too shallow to sustain vegetation, there is very little belowground productivity
             bgb[ii] = 0.1  # [g] "Forest" - really high marsh
             # bgb[ii] = 0  # [g] "Forest" - really high marsh
             organic_autoch[ii] = bgb[ii]  # [g] Forest organic matter stored in soil
-        else:
+        else:  # water depth is ideal for vegetation growth
             bgb[ii] = Bmax * (dm[ii] - Dmax) * (dm[ii] - Dmin) / (0.25 * (-Dmin - Dmax) * (Dmax - 3 * Dmin))  # [g] Marsh
             organic_autoch[ii] = bgb[ii]  # [g] As mentioned above, no longer multiply by lingin content
 
@@ -244,9 +304,13 @@ def evolvemarsh(
         ax2.tick_params(axis='y', labelcolor='b')
         ax2.set_ylim([0, 2600])
 
+    # -------------------------
+    # Mineral Deposition
+    # contribution of sediment that is just suspended in the channel
     if min_dep_method == 1:
-        # -------------------------
-        # Mineral Deposition - Original
+        # Original (PyBMFTC version)
+        # deposition of alloch. depends on autoch. (which represents presence of vegetation)
+        # assumes that cells with vegetation will retain more sediment than cells without vegetation
         coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
         distance = 0  # [m] Initialize, distance from marsh edge
         pond_index = []
@@ -258,7 +322,7 @@ def evolvemarsh(
                 distance += 1  # [m]
                 C[xx] = C_e * math.exp(coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
             else:
-                if not pond:  # Allow sediment suply to beyond first ponded cell: this is an ALTERATION/NEW ADDITION not included in original Matlab CoLT version
+                if not pond:  # Allow sediment supply to beyond first ponded cell: this is an ALTERATION/NEW ADDITION not included in original Matlab CoLT version
                     C_e = C_e * 0.9  # Decrease concentration at the new "marsh edge" by 10% with each subsequent pond formation
                     pond = True
                 distance = 1  # [m]
@@ -268,12 +332,13 @@ def evolvemarsh(
 
     elif min_dep_method == 2:
         # Brad's suggestion: always distribute sediment exponentially regardless of vegetation presence
+        # does not include Ian's "pond" rule
         coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
         distance = 0  # [m] Initialize, distance from marsh edge
         for xx in range(L):
             distance += 1  # [m]
             C[xx] = C_e * math.exp(
-                coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+                coeff * distance)  # [kg/m3] Concentration at each marsh cell
 
     else:
         print("not a valid mineral deposition method")
@@ -296,15 +361,19 @@ def evolvemarsh(
         # if min_dep_method != 3:
         #     ax4.scatter(pond_index, pond_y, marker="*", c="b")
 
+    # I think this calculates the suspended sediment at each part of a single tidal cycle where the tidal cycle was
+    # broken into numiterations
+    # IMPORTANT: only calculated for submerged cells, cells above the water line are kept at 0 (no deposition)
     for i in range(1, numiterations):
-        tempdepth = depth[i, :]
+        tempdepth = depth[i, :]  # water depth at this moment in the tidal cycle
         tempy = np.zeros([L])
         tempy[tempdepth > 0] = C[tempdepth > 0] * ws * dt * (10*10)  # [kg] mass of mineral sediment deposited, where depth > 0
         # not entirely sure how tempy is in kg bc C is kg/m3, ws is m/s, and dt is s, so it seems like it is kg/m2
-        # they are assuming 1m x 1m cells, but our cells are 10m x 10m, so I added conversion
+        # they are assuming 1m x 1m cells, but our cells are 10m x 10m, so I added the conversion
         sedimentcycle[i, :] = tempy
-
+    # total suspended sediment deposition for a full year
     susp_dep = np.sum(sedimentcycle, axis=0) * timestep * 1000  # [g/yr] suspended sediment deposition in an entire year, in each cell
+    # split where the suspended sediment comes from (no longer necessary since we are not calculating fluxes)
     mineral = susp_dep * (1 - OCb)  # [g] Mineral deposition of suspended sediment in a given year is equal determined by the organic content of the bay sediment
     organic_alloch = susp_dep * OCb  # [g] Organic deposition of suspended sediment is equal determined by the organic content of bay sed
 
@@ -340,7 +409,6 @@ def evolvemarsh(
         ax4.set_ylabel('SSC (kg/yr)', color='b')
         ax4.tick_params(axis='y', labelcolor='b')
         ax4.set_ylim([0, 7500])
-
 
     # -------------------------
     # Calculations & Conversions
@@ -389,17 +457,43 @@ def evolvemarsh(
 
 
 def decompose(
-        x_m,  # marsh position
-        x_f,  # forest position
-        yr,   # current year
+        x_m,
+        x_f,
+        yr,
         organic_dep_autoch,
-        elevation,  # elevation domain
-        B,  # transect width (marsh, bay, and forest)
-        mui,  # depth in marsh where decomp goes to 0 (m)
-        mki,  # decomp coefficient
-        rhoo,  # organic matter bulk density (kg/m3)
+        elevation,
+        B,
+        mui,
+        mki,
+        rhoo,
 ):
-    """Decomposes all the autochthonous organic sediment within the marsh soil profile at a rate determined by depth."""
+    """
+    Decomposes all the autochthonous organic sediment within the marsh soil profile at a rate determined by depth
+
+    :param x_m: int
+        the index of the first marsh cell
+    :param x_f: int
+        the index of the last marsh cell
+    :param yr: int
+        current model year
+    :param organic_dep_autoch: array
+        the yearly array of autoch. organic matter values [g]
+        the array is for one FULL transect extending from the first interior cell to the bay
+        each row corresponds to a model year, so most recent years are on the bottom
+    :param elevation: array
+        the yearly array of elevations [m MSL]
+        the array is for one FULL transect extending from the first interior cell to the bay
+        each row corresponds to a model year, so most recent years are on the bottom
+    :param B: int
+        FULL transect width (bay, marsh, and barrier interior)
+    :param mui: float
+        marsh layer depth (as in the mud/dirt) where decomp goes to 0 [m]
+        a.k.a. the maximum depth for decomposition to occur
+    :param mki: float
+        decomposition coefficient
+    :param rhoo: int or float
+        organic matter bulk density [kg/m3]
+    """
 
     compaction = np.zeros([B])
     compaction_volume = np.zeros([B])
@@ -408,7 +502,7 @@ def decompose(
     for x in range(x_m, x_f):  # Loop through each marsh cell in the domain
         decomp = np.zeros([yr + 1])
         for tempyr in range(yr, 0, -1):  # Loop through each layer of sediment in each cell, starting at the most recently deposited layer of sediment at the surface
-            # but the most recent layer is actually on the "bottom" of the array because row number increases as you go down in the array
+            # but the most recent layer is actually on the "bottom" of the array because row number increases as you go down the rows
             depth = elevation[yr, x] - elevation[tempyr, x]  # Depth of sediment layer below the surface
             if np.isnan(depth):
                 depth = 0
@@ -714,7 +808,7 @@ class Marsh:
                 # currently oriented with marsh on top, dunes/ocean on bottom
                 self._accretion_TS[model_year][start_marsh_cell:end_marsh_cell+1, c] = accretion  # [m]
 
-                # oriented marsh at column 0, barrier dunes at last column, newest elevation layer on bottom, olders on top
+                # oriented marsh at column 0, barrier dunes at last column, newest elevation layer on bottom, older on top
                 # add the most recent marsh transect to the marsh cells
                 self._yearly_decomp_elev_TS[c][model_year, start_marsh_cell+shift_marsh:end_marsh_cell+shift_marsh+1] = copy.deepcopy(marsh_transect)  # m MSL
                 # previous time periods as well as marsh_transect updates
