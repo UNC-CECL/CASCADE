@@ -414,7 +414,7 @@ def evolvemarsh(
     # Calculations & Conversions
 
     # Calculate thickness of new sediment (mineral+organic) based off LOI and its effect on density
-    total = (mineral + organic_autoch + organic_alloch)
+    total = (mineral + organic_autoch + organic_alloch)  # [g/yr]
     # if all three are 0, get error message RuntimeWarning: invalid value encountered in divide, so set to nan instead
     zero_vals = np.where(total==0)[0]
     total[zero_vals] = np.nan
@@ -629,8 +629,8 @@ class Marsh:
         alongshore_length,  # alongshore length of the barrier (500 m or 50 cells)
         tidal_amplitude,    # tidal amplitude (m)
         initial_width,      # initial width of the barrier
-        bay_depth=3,           # bay depth (m MHW)
-        accretion_method=1,  # method for mineral deposition
+        bay_depth=3,        # bay depth (m MHW)
+        accretion_method=1, # method for mineral deposition
         enable_TLP=False,   # specify if thin layer placement occurs (bool)
         TLP_years = [],     # specify years when thin layer placement occurs for this iB3D domain (list)
         min_TLP=0,          # minimum elevation for thin layer placement sediment (dam MHW)
