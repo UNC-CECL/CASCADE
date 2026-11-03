@@ -28,7 +28,7 @@ the experiments are run and filed, and how they import each other across folders
 | `HAT_dune_recovery_slow_growth.py` | Does a recovery term for flattened dunes remove the chronic overwash that slow dune growth leaves at Cape Point? |
 | `HAT_dune_crest_dem_vs_model.py` | Does the model build the dunes up in its first years? |
 | `HAT_dune_crest_vs_surveys.py` | How well do the modelled dunes follow the surveyed ones through the calibration and test windows? |
-| `HAT_forced_dune_crests.py` | Moved 2026-10-27 to `../../../dune-collision/1-observations/1-forced-dune-crests/` (the folder was `dune-storm-response/` until 2026-11-03) |
+| `HAT_forced_dune_crests.py` | Moved 2026-10-27 to `../../../dune-collision/1-observations/5-forced-dune-crests/` (the folder was `dune-storm-response/` until 2026-11-03) |
 | `HAT_road_dune_rebuild.py` | Does a raise-only, lower post-storm dune rebuild along NC-12 change the shoreline? (in `../../../dune-storm-response/` 2026-10-27 to 2026-11-03) |
 | `HAT_measured_dune_heights.py` | Do lidar-measured management heights (village cap 8.0, road design 5.4, rebuild trigger 3.5 m NAVD88) fix the managed dunes? (in `../../../dune-storm-response/` until 2026-11-03) |
 | `HAT_dune_findings_figures.py` | Three summary figures of the dune ceiling (Dmaxel) and growth-rate studies. |
@@ -461,7 +461,7 @@ WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-dune-rec
 ### HAT_forced_dune_crests.py
 
 Moved 2026-10-27 to `scripts/real-world-cases/Hatteras/dune-storm-response/` (since 2026-11-03
-`dune-collision/1-observations/1-forced-dune-crests/`), with
+`dune-collision/1-observations/5-forced-dune-crests/`), with
 `HAT_dune_collision.py` (and `HAT_road_dune_rebuild.py`, back here since 2026-11-03); its notes and results are in that
 folder's README. Its output moved on 2026-10-29 to `output/raw_runs/dune-storm-response/`.
 

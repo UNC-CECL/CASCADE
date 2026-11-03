@@ -13,7 +13,10 @@ Notes, data and figures that are not model runs go in the matching folders of
 ```
 1-observations/            the problem, in the lidar and CoastSat; no model fit
     README.md                  lidar crest loss in collision, and what sets it (beach width)
-    1-forced-dune-crests/      the lidar's crests forced into the model: the shoreline erosion appears
+    1-mismatch-along-island/   (figures only, in the workspace) the crest offset by domain and survey
+    ...                        2-hotspots, 3-mechanism, 4-drivers: HAT_collision_motivation*.py here
+    5-forced-dune-crests/      the lidar's crests forced into the model: the shoreline erosion appears
+    6-toes-vs-dunelines/       the lidar toes against the dune traced from the imagery
 2-module-explained/        how DuneCollisionManager works, step by step: regimes, beach factor, the model year
 3-module-tests/            which rule, and what the module does on its own; no hindcast runs
     README.md                  the unit tests (tests/test_dune_collision.py) and what is still to test
@@ -26,7 +29,7 @@ Notes, data and figures that are not model runs go in the matching folders of
 
 | Script | Folder | Output tag |
 |---|---|---|
-| `HAT_forced_dune_crests.py` | `1-observations/1-forced-dune-crests/` | `2026-10-26-forced-dune-crests` (holds the control run the others use) |
+| `HAT_forced_dune_crests.py` | `1-observations/5-forced-dune-crests/` | `2026-10-26-forced-dune-crests` (holds the control run the others use) |
 | `HAT_collision_rule_comparison.py` | `3-module-tests/1-rule-comparison/` | none: offline, written to the workspace's `dune-collision/3-module-tests/1-rule-comparison/` (its `NOTE.md` lists every collision test) |
 | `HAT_dune_collision.py` | `4-hindcast/1-calibration-1996-2009/` | `2026-10-26-dune-collision` |
 | `HAT_collision_calibration.py` | `4-hindcast/1-calibration-1996-2009/` | `2026-10-29-collision-calibration` |

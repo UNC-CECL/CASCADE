@@ -1,6 +1,6 @@
-# 1-forced-dune-crests — do the lidar's dunes make the shoreline erosion appear?
+# 5-forced-dune-crests — do the lidar's dunes make the shoreline erosion appear?
 
-`HAT_forced_dune_crests.py`. A diagnosis, not a model change: the evidence that the missing dune lowering matters for the shoreline. Runs and logs: `output/raw_runs/dune-storm-response/2026-10-26-forced-dune-crests/`, which also holds the control run the other collision studies compare against. Figures, with the tables and captions under `supporting/`: `D:\research\UNC\hatteras_ch1\model_runs\dune-collision\1-observations\1-forced-dune-crests\` (moved there 2026-11-03; the script writes them there).
+`HAT_forced_dune_crests.py`. A diagnosis, not a model change: the evidence that the missing dune lowering matters for the shoreline. Runs and logs: `output/raw_runs/dune-storm-response/2026-10-26-forced-dune-crests/`, which also holds the control run the other collision studies compare against. Figures, with the tables and captions under `supporting/`: `D:\research\UNC\hatteras_ch1\model_runs\dune-collision\1-observations\5-forced-dune-crests\` (moved there 2026-11-03; the script writes them there).
 
 Asked (Hannah, 2026-10-26) because the managed edgeBE 1996-2009 run misses the
 CoastSat erosion at GIS ~8-15. Dennis (1999) runs up to 3.65 m NAVD88, the
@@ -23,7 +23,7 @@ all_surveys (1-90; every survey).
     python HAT_forced_dune_crests.py plot     # position change vs CoastSat
     python HAT_forced_dune_crests.py crests   # control vs lidar, GIS 8-15
 
-Results 2026-10-26 (figures in the workspace's `dune-collision/1-observations/1-forced-dune-crests/`):
+Results 2026-10-26 (figures in the workspace's `dune-collision/1-observations/5-forced-dune-crests/`):
 the control reproduces the matrix run (interior bias -0.445 m/yr). Forcing the
 1999 crests at GIS 8-12 or 8-15 makes the erosion appear: GIS 11-12 match
 CoastSat, GIS 8-10 overshoot (GIS 10 -4.0 against ~-0.9 m/yr). 1998 forcing

@@ -1,4 +1,4 @@
-# 2-toes-vs-dunelines — do the lidar toes sit on the dune Hannah traced?
+# 6-toes-vs-dunelines — do the lidar toes sit on the dune Hannah traced?
 
 `HAT_dune_toes_vs_dunelines.py` (2026-11-03). The module's toes are picked from the lidar by
 `input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py`. This check puts every survey's toe, beach start and
@@ -6,7 +6,7 @@ crest back on the map and measures each against the dune line digitised from aer
 (`data/hatteras_init/2-brie-offset/dunelines/`): 1997, 2004 and 2009 lines on the same year's lidar, the 2023 line
 on the 2020 lidar (the last public survey). Distances run along the east-west profiles; positive is the line landward.
 
-Outputs, in the workspace's `dune-collision/1-observations/2-toes-vs-dunelines/`: `dune_toes_vs_dunelines.png`
+Outputs, in the workspace's `dune-collision/1-observations/6-toes-vs-dunelines/`: `dune_toes_vs_dunelines.png`
 (offsets alongshore and their spread) and `dune_toes_on_imagery.png` (each survey's toes, crests and beach starts
 with the traced line on the aerial image of the same months: the 1997 lidar on the 12 Oct 1997 USGS/USACE photo
 with the 1997 line, the 2020 lidar on the Jan-Apr 2020 NOAA image with the 2023 line; GIS 12, 22, 34, 66, 85,

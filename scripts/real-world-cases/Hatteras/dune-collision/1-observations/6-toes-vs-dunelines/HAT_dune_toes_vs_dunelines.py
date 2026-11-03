@@ -1,7 +1,7 @@
 """
 How the lidar dune toes (HAT_dune_toes.py) sit against the dune lines Hannah digitised from aerial imagery.
 
-    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/2-toes-vs-dunelines/HAT_dune_toes_vs_dunelines.py
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/6-toes-vs-dunelines/HAT_dune_toes_vs_dunelines.py
 
 Each lidar survey is paired with the dune line traced from imagery of the same year (2023's line with the 2020
 lidar, the last public survey). On every 10 m dune cell the toe, beach start and crest are picked as HAT_dune_toes.py
@@ -10,7 +10,7 @@ is the line landward of the feature. The lidar profile's elevation at the line i
 east-west (the domain clips are north-up UTM), so where the shore is oblique (the cape) distances are along the
 profile, not shore-normal.
 
-Writes to the workspace's dune-collision/1-observations/2-toes-vs-dunelines/: dune_toes_vs_dunelines.png, and
+Writes to the workspace's dune-collision/1-observations/6-toes-vs-dunelines/: dune_toes_vs_dunelines.png, and
 supporting/dune_toes_vs_dunelines.csv (one row per survey cell) and supporting/dune_toes_vs_dunelines_summary.csv.
 The toe pick itself is the input step's (input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py).
 
@@ -43,7 +43,7 @@ PAIRS = (("1996-start", 1997, 1997, "Oct 1997 photo / Sep-Oct 1997 lidar"),
          ("1996-start", 2004, 2004, "May 2004 image / Apr-Sep 2004 lidar"),
          ("1996-start", 2009, 2009, "May 2009 image / Aug 2009 lidar"),
          ("2009-start", 2020, 2023, "2023 image / 2019-20 lidar (3 years apart)"))
-OUT_DIR = T.S.REPO / "dune-collision" / "1-observations" / "2-toes-vs-dunelines"
+OUT_DIR = T.S.REPO / "dune-collision" / "1-observations" / "6-toes-vs-dunelines"
 # The imagery figure: surveys with an aerial image from the same months (label, file glob under IMAGERY_ROOT),
 # and the domains drawn: GIS 22 and 85 agree, 12 is Buxton, 34 and 66 the two stretches that disagree
 IMAGERY_ROOT = T.S.GIS_ROOT / "aerial_imagery"

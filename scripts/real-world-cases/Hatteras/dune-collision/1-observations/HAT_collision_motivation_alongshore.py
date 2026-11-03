@@ -66,9 +66,9 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_DOMAI
 import HAT_collision_motivation as M  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-# The topic folders under collision-motivation/ (1-mechanism is HAT_collision_motivation.py's)
-WHERE_DIR = M.ROOT_DIR / "2-mismatch-along-island"     # the heatmap and the crests along the island
-HOT_DIR = M.ROOT_DIR / "3-hotspots"
+# The topic folders under 1-observations/ (3-mechanism is HAT_collision_motivation.py's)
+WHERE_DIR = M.ROOT_DIR / "1-mismatch-along-island"     # the heatmap and the crests along the island
+HOT_DIR = M.ROOT_DIR / "2-hotspots"
 DRIVER_DIR = M.ROOT_DIR / "4-drivers"                   # collision exposure and beach width
 RUNS = M.RUNS
 PERIODS = {

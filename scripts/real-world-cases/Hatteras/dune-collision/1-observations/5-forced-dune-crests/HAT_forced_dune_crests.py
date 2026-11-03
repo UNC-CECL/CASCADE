@@ -1,10 +1,10 @@
 """
 Does the missed erosion north of Buxton come from dunes that never came down after Dennis?
 
-    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py run
-    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py score
-    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py plot
-    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py crests
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/5-forced-dune-crests/HAT_forced_dune_crests.py run
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/5-forced-dune-crests/HAT_forced_dune_crests.py score
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/5-forced-dune-crests/HAT_forced_dune_crests.py plot
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/5-forced-dune-crests/HAT_forced_dune_crests.py crests
 
 Barrier3D lowers a dune cell only when Rhigh overtops it, so Dennis (Rhigh 3.65 m NAVD88) leaves the
 5-7 m modelled dunes at GIS 8-12 standing, while the 1999 post-Dennis lidar has them at 1.7-4.7 m.
@@ -58,7 +58,7 @@ TAG = "2026-10-26-forced-dune-crests"
 # The runs and their logs stay where the runner files them (cascade_pipeline/run_registry.py); the figures and
 # tables go to the step's workspace folder (moved there 2026-11-03), the tables under supporting/
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / TAG
-FIG_DIR = PROJECT_ROOT / "dune-collision" / "1-observations" / "1-forced-dune-crests"
+FIG_DIR = PROJECT_ROOT / "dune-collision" / "1-observations" / "5-forced-dune-crests"
 TABLE_DIR = FIG_DIR / "supporting"
 HINDCAST = _HAT_DIR / "hatteras_ms" / "HAT_hindcast.py"
 SURVEY_CRESTS = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / "1996-start"

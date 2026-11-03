@@ -41,9 +41,9 @@ if str(_HAT_DIR) not in sys.path:
 from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-# One folder per topic, each with its PNGs and a supporting/ (2026-11-03); this script draws 1-mechanism
-ROOT_DIR = PROJECT_ROOT / "dune-collision" / "1-observations" / "collision-motivation"
-OUT_DIR = ROOT_DIR / "1-mechanism"
+# One folder per topic in 1-observations/, each with its PNGs and a supporting/ (2026-11-03); this script draws 3-mechanism
+ROOT_DIR = PROJECT_ROOT / "dune-collision" / "1-observations"
+OUT_DIR = ROOT_DIR / "3-mechanism"
 RUNS = PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response"
 COLLISION_DIR = RUNS / "2026-10-26-dune-collision"
 CONTROL_NPZ = (COLLISION_DIR / "runs" / "cal_control_g16" / "1996_2009" / "edgeBE" / "HAT_1996-2009_managed_groin_edgeBE"
