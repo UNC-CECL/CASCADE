@@ -90,6 +90,13 @@ POINTS = GIS_ROOT / "elevation" / "lidar"
 # year -> (kind, file or tile glob, flight dates from the metadata, the model state compared, note)
 STARTS = {
     "2009-start": ("2009-2014", {
+        # 2011, 2012 and 2020 added 2026-11-03 for the collision-motivation figures; 2011 and 2012 are the ground
+        # returns gridded at 1 m on the 2009 mosaic's grid, 2020 the NGS DEM copied onto it
+        # (gis_sources/elevation/_scripts/make_survey_dems.py). 2020 is the last public lidar of the island
+        2011: ("mosaic", POLYGONS / "2011/noaa_2011_post_irene_NC_J1437890_grid1m/2011_full.tif",
+               "2011-08", "2012-01-01", "post-Irene (NOAA NGS); the model state includes the rest of 2011"),
+        2012: ("mosaic", POLYGONS / "2012/noaa_2012_usgs_postsandy_2488_grid1m/2012_full.tif",
+               "2012-11", "2013-01-01", "post-Sandy (USGS), flown 10-12 Nov 2012"),
         2014: ("mosaic", POLYGONS / "2014/noaa_2014_NOAA_Post_Sandy_DEM_Job1076021/2014_full.tif",
                "2013-11 to 2014-06", "2014-01-01", ""),
         2016: ("mosaic", POLYGONS / "2016/noaa_2016_USACE_post_matthew_Job1076022/2016_full.tif",
@@ -100,6 +107,8 @@ STARTS = {
                "2018-10", "2019-01-01", ""),
         2019: ("mosaic", POLYGONS / "2019/noaa_nc2019_dunex_Job1076025/2019_full.tif",
                "2019-09 to 2019-10", "2020-01-01", ""),
+        2020: ("mosaic", POLYGONS / "2020/noaa_NGS_VAtoSC_Topobathy_DEM_2020_9468/2020_full.tif",
+               "2019-12 to 2020-08", "2020-01-01", "NOAA NGS topobathy; a Buxton tile was flown 22 Feb 2020"),
     }),
     "1996-start": ("2009-2014-1996", {
         1996: ("raster", POINTS / "1996/noaa_beta_1996_FallEC_J114106/1996_full.tif",
@@ -126,8 +135,12 @@ STARTS = {
 # The 2009-start surveys all read NC-12 above 2009 (2014 +0.13, 2016 +0.21, 2017 +0.10, 2018 +0.12, 2019 +0.12;
 # road check 2026-10-20): consistent across three agencies, so each is shifted to the 2009 reference (Hannah,
 # 2026-10-21), keeping every survey on the datum of the model's starting DEM
+# 2011, 2012 and 2020 (added 2026-11-03) read NC-12 +0.79, +0.09 and +0.13 m above 2009 on the same check and are
+# shifted by the same rule. 2011's +0.79 m is uniform along the island (land too, not only the road) though its
+# metadata says it was taken from the ellipsoid to NAVD88 with Geoid18: read as a datum bias of that product
 SURVEY_VERTICAL_OFFSET_M = {"1996-start": {1996: -0.24, 1997: -0.34, 1999: -0.32},
-                            "2009-start": {2014: -0.13, 2016: -0.21, 2017: -0.10, 2018: -0.12, 2019: -0.12}}
+                            "2009-start": {2011: -0.79, 2012: -0.09, 2014: -0.13, 2016: -0.21, 2017: -0.10,
+                                           2018: -0.12, 2019: -0.12, 2020: -0.13}}
 # The road check: every survey against the 2009 lidar on the 2008 NC-12 line
 REF_2009 = POLYGONS / "2009/noaa_usace2009_nc_dem_Job1076020/2009_full.tif"
 ROAD_LINE = tv.MGMT_ROOT / "road_offset" / "raw_offset" / "2008" / "nc12_2008.geojson"
