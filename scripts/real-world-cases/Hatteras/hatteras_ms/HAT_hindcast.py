@@ -157,6 +157,13 @@ r.cascade = build_cascade(
     groin_strength_history=r.GROIN_STRENGTH_HISTORY,
     groin_start_year=r.FIRST_MODEL_YEAR,
     groin_spread_weights=r.GROIN_SPREAD_WEIGHTS,
+
+    # Collision-regime dune erosion, storm by storm (toes and beach widths per dune cell)
+    dune_collision_module=r.DUNE_COLLISION,
+    dune_collision_toe_elevation=r.DUNE_COLLISION_TOE_M,
+    dune_collision_cs=r.DUNE_COLLISION_CS,
+    dune_collision_beach_width=r.DUNE_COLLISION_BEACH_WIDTH_M,
+    dune_collision_beach_width_limit=r.DUNE_COLLISION_BEACH_WIDTH_LIMIT_M,
 )
 
 pre_run_diagnostics(r)      # a few read-outs of the built model, printed before it runs

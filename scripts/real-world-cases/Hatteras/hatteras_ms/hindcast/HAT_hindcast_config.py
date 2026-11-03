@@ -125,12 +125,13 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("run_tag",                      ("run_tag",),           _as_str,      ""),
 
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
-    # The spread groin (2026-10-21): share of the arriving drift held back, per window, for a run
-    # started from that window's observed shoreline (fitted on the calibration window in hard-structures/
-    # groin/4-hindcast/3-wave-driven-1967-2025/2026-10-20-spread-relaxation, carried unchanged to 2009);
+    # The spread groin: share of the arriving drift held back, per window, for a run started from that
+    # window's observed shoreline. 0.16 since 2026-10-29, refit with the dune-collision module at Hs 3.0
+    # (dune-storm-response/2026-10-29-collision-calibration), carried unchanged to 2009; 0.10 before
+    # (hard-structures/groin/4-hindcast/3-wave-driven-1967-2025/2026-10-20-spread-relaxation).
     # `strength`, when set, overrides both and is the only way to run another start year with the groin on
-    ("groin_strength_1996",          ("groin", "strength_1996"),   _as_float, 0.10),
-    ("groin_strength_2009",          ("groin", "strength_2009"),   _as_float, 0.10),
+    ("groin_strength_1996",          ("groin", "strength_1996"),   _as_float, 0.16),
+    ("groin_strength_2009",          ("groin", "strength_2009"),   _as_float, 0.16),
     ("groin_strength",               ("groin", "strength"),        _as_opt_float, None),
     # Shares of GIS 6's loss across the groin face taken from GIS 6, 7, 8 (cascade.groin spread_weights)
     ("groin_spread_weights",         ("groin", "spread_weights"),  _as_float_triple, (0.0, 2 / 3, 1 / 3)),
@@ -139,12 +140,21 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
 
     # Wave climate: option A since 2026-09-27; moving one earns a name token (README)
     # Hs 3.0 since 2026-10-29 (was 2.0): best shoreline fit of 2.0/2.5/3.0 in both windows
-    # (dune-storm-response/HAT_measured_dune_heights.py); the edgeBE ends were re-solved at 3.0 on 2026-10-28
+    # (hatteras_ms/experiments/dunes/HAT_measured_dune_heights.py); the edgeBE ends were re-solved at 3.0 on 2026-10-28
     ("hs",                           ("physics", "wave_height_Hs"), _as_float, 3.0),
     ("wave_period_s",                ("physics", "wave_period_s"),  _as_float, 7.5),
     ("wave_asymmetry",               ("physics", "wave_asymmetry"), _as_float, 0.6),
     ("wave_angle_high_fraction",     ("physics", "wave_angle_high_fraction"),
                                                                     _as_float, 0.5),
+
+    # Collision-regime dune erosion (cascade/dune_collision.py), on since 2026-10-29: Larson et al. (2004)
+    # per storm, scaled by max(0, 1 - W / limit) for the beach; Cs and the limit from the 1996-2009
+    # calibration (dune-storm-response/2026-10-29-collision-calibration, cal_g16), carried unchanged to 2009.
+    # Toes and beach widths per cell come from input_prep/1-barrier3d-domains/3-dune-toes. Off earns a
+    # `nocollision` name token
+    ("dune_collision",               ("dune_collision", "enabled"), _as_bool, True),
+    ("dune_collision_cs",            ("dune_collision", "cs"),      _as_float, 1.02e-4),
+    ("dune_collision_beach_width_limit_m", ("dune_collision", "beach_width_limit_m"), _as_float, 25.0),
 
     # WHERE A RELOCATED ROAD GOES, in metres behind the dune line
     ("relocation_setback_m",         ("relocation_setback_m",),   _as_opt_float, 20.0),

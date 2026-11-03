@@ -38,6 +38,7 @@ from hatteras_paths import WORKSPACE as PROJECT_BASE_DIR  # noqa: E402
 
 from cascade_pipeline import nourishment  # noqa: E402
 from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
+from cascade_pipeline.run_names import parse_run_name  # noqa: E402
 from cascade_pipeline.run_registry import values_digest  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_PRESETS,
@@ -62,6 +63,10 @@ LAST_MODEL_YEAR = {p: last_model_year(p) for p in HATTERAS_PERIODS}
 GROIN_STRENGTH = {p: groin_strength_for(p) for p in PERIODS}
 GROIN_END_YEAR = field_default("groin_end_year")
 GROIN_SPREAD_WEIGHTS = field_default("groin_spread_weights")
+# Dune collision (on since 2026-10-29) reaches the runner as code defaults too; it keys every run
+DUNE_COLLISION = field_default("dune_collision")
+DUNE_COLLISION_KEY = (f"coll{field_default('dune_collision_cs'):g}"
+                      f"w{field_default('dune_collision_beach_width_limit_m'):g}")
 
 HINDCAST = _HERE.parent / "HAT_hindcast.py"
 # The runner's SCENARIOS table lives in its setup module (since 2026-10-23)
@@ -224,6 +229,9 @@ def job_key(stage, period=None, preset=None, scenario=None, groin=None,
         # The spread joined the key on 2026-10-21; the plain groin keeps its old key
         if tuple(GROIN_SPREAD_WEIGHTS) != (1.0, 0.0, 0.0):
             parts.append("spread" + "-".join(f"{w:.3g}" for w in GROIN_SPREAD_WEIGHTS))
+    # Collision joined the key on 2026-10-29: a run made without it, or with other settings, is a different job
+    if DUNE_COLLISION:
+        parts.append(DUNE_COLLISION_KEY)
     digest = be_digest_for(period, preset)
     if digest != "empty":
         parts.append(digest)
@@ -262,8 +270,12 @@ def already_done(manifest, key):
         return False
     # The key names the start year only; a row from the same start's earlier window is a different job
     name, period = row.get("run_name"), row.get("period")
-    if name and period in END_YEAR and not name.startswith(f"HAT_{period}_{END_YEAR[period]}_"):
-        return False
+    if name and period in END_YEAR:
+        # Read off the name in either spelling (run_names): HAT_1996-2009_... or HAT_1996_2009_...
+        parsed = parse_run_name(name)
+        window = (parsed.start_year, parsed.end_year) if parsed else None
+        if window != (period, END_YEAR[period]) and not name.startswith(f"HAT_{period}_{END_YEAR[period]}_"):
+            return False
     return True
 
 

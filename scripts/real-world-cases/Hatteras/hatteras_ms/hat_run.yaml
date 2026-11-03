@@ -19,8 +19,8 @@ scenario: full_management
 groin:
   enabled: true
   # Share of arriving drift held back (0-1), per start year
-  strength_1996: 0.10
-  strength_2009: 0.10
+  strength_1996: 0.16
+  strength_2009: 0.16
   # Shares of GIS 6's loss taken from GIS 6, 7, 8; [1, 0, 0] is the plain groin
   spread_weights: [0, 2/3, 1/3]
   # strength: 0.25   # overrides both; needed for any other start year
@@ -37,6 +37,19 @@ physics:
   wave_period_s: 7.5            # s
   wave_asymmetry: 0.6           # fraction from the left of shore-normal
   wave_angle_high_fraction: 0.5 # fraction at more than 45 deg
+
+
+# --- dune collision ----------------------------------------------------------
+# Storms that reach a dune's toe but not its crest lower it (cascade/dune_collision.py).
+# Toes and beach widths: input_prep/1-barrier3d-domains/3-dune-toes. Off earns a
+# `nocollision` token in the run name.
+
+dune_collision:
+  enabled: true
+  cs: 1.02e-4                 # Larson et al. (2004) impact coefficient: the dry-beach fit (2026-11-03), checked
+                              # in-model (cal_g16_nocape_rd198_dry; 0.87e-4 no better). 1.24e-4 with the width to the crest
+  beach_width_limit_m: 25     # no collision loss on a dry beach (beach start to toe) this wide or wider
+                              # (45 m until 2026-11-03, when the width ran to the crest)
 
 
 # --- management --------------------------------------------------------------

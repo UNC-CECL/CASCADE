@@ -117,7 +117,7 @@ template's value.
 | `beta` | Storms | 0.04 | 0.04 | no | ✓ | Beach slope for run-up |
 | `storm_file` | Storms | default series | period storm series | period | ✓ | Storm series file |
 | `StormSeries` | Storms | [] | [] | no | | Storm series held in memory |
-| `StormStart` | Storms | 2 | 2 (built-in) | no | | Year storms start |
+| `StormStart` | Storms | 2 | 1 since 2026-10-28: storms run from the first model year (1997 for the 1996 start); before, unset, Barrier3D's 2 skipped the first year's storms | no | ✓ | Model year storms start |
 | `BermEl` | Dunes | 1.9 | 1.7 | yes | ✓ | Berm elevation [m NAVD88] |
 | `Dmaxel` | Dunes | 3.4 | 12.2 since 2026-10-20: Dmax 10.5 m above the berm (1.7), near the tallest 1996 crest (12.1); one value island-wide, both periods; paired with growth 0.01-0.03 (was 5.5, 10-13 to 10-20) | yes | | Maximum dune elevation [m NAVD88]; the height every dune grows toward |
 | `DuneCeilingFromStart` | Dunes | not in base Barrier3D (local fork only; built-in false) | removed 2026-10-13 (was true 09-28 to 10-13) | no | | Per-cell ceiling = starting crest; dropped to stay on the base model |

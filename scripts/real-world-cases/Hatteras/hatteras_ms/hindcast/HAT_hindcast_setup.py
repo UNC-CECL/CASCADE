@@ -20,6 +20,8 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
+
 
 from hatteras_paths import WORKSPACE as PROJECT_BASE_DIR
 
@@ -76,7 +78,7 @@ from site_layer.hatteras_site_config import (
 from site_layer.hat_topo_version import RUN_OFFSET_SOURCE  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # the surveyed reach, GIS 1-90
 # Which extraction: resolved by topo_dirs(); an old one only by override, e.g. topo_dirs("2009-start", override="v3")
-from site_layer.hat_topo_version import topo_dirs
+from site_layer.hat_topo_version import product_dir, topo_dirs
 from site_layer.hat_topo_version import BUFFER_DIR as _BUFFER_DIR
 # Where the rate fits live is hat_observed_rates' to say
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR
@@ -250,6 +252,9 @@ def setup_scenario(r):
     r.WAVE_TOKEN = wave_climate_token(r.WAVE_VALUES, _WAVE_DEFAULTS)
     r.RELOCATION_SETBACK_TOKEN = relocation_setback_token(
         r.RELOCATION_SETBACK_M, _field_default("relocation_setback_m"))
+    # Dune collision is on by default (2026-10-29); a run without it is named for it, so it never takes the matrix name
+    r.DUNE_COLLISION = r.RUN_CONFIG.dune_collision
+    r.COLLISION_TOKEN = None if r.DUNE_COLLISION else "nocollision"
 
     print("\n" + _describe_run_config())
 
@@ -349,6 +354,10 @@ def setup_scenario(r):
             f"carries no offset token, so this would overwrite the matrix run it is "
             f"meant to be compared against. Use HAT_RUN_KIND=experiment with "
             f"HAT_RUN_TAG=<name>.")
+    if r.RUN_KIND == "matrix" and r.COLLISION_TOKEN:
+        raise ValueError(
+            "dune collision is off but HAT_RUN_KIND is matrix. A run without collision is an "
+            "experiment (HAT_RUN_KIND=experiment HAT_RUN_TAG=<name>).")
     if r.RUN_KIND == "sensitivity" and not (r.WAVE_TOKEN or r.RELOCATION_SETBACK_TOKEN):
         raise ValueError(
             "HAT_RUN_KIND=sensitivity but every swept forcing is at its default; "
@@ -405,7 +414,7 @@ def setup_scenario(r):
         fills_withheld=(_PERIOD_HAS_FILL and r.ENABLE_BEACH_DUNE_MANAGEMENT
                         and not r.ENABLE_NOURISHMENT_FILLS),
         relocations=r.ENABLE_HISTORICAL_ROAD_RELOCATIONS,
-        perturbations=(r.RELOCATION_SETBACK_TOKEN, r.WAVE_TOKEN))
+        perturbations=(r.COLLISION_TOKEN, r.RELOCATION_SETBACK_TOKEN, r.WAVE_TOKEN))
 
     # Name, destination, collision and rough run time, reported before sections 4-10 run
     print("\n" + _preflight(r.RUN_NAME_PREVIEW,
@@ -732,6 +741,10 @@ def setup_run_name(r):
         ("shoreline offset", "metres", None),
         # No token of its own: implied by the preset, and checked against it in 4.3
         ("background erosion", r.USE_BACKGROUND_EROSION, None),
+        ("dune collision",
+         f"Cs {r.RUN_CONFIG.dune_collision_cs:g}, no loss on beaches "
+         f"{r.RUN_CONFIG.dune_collision_beach_width_limit_m:g} m or wider" if r.DUNE_COLLISION else "off",
+         r.COLLISION_TOKEN),
         ("relocation target",
          "each domain's measured offset" if r.RELOCATION_SETBACK_M is None
          else f"{r.RELOCATION_SETBACK_M:g} m behind the dune line",
@@ -921,7 +934,9 @@ def setup_parameters(r):
     # lidar's median crest within 0.16 m (0.01-0.03 falls 0.14-0.39 m behind); fitted to the test window's own
     # surveys, so that window tests overwash and shoreline, not dune growth
     # (data/.../2009-start/dune-growth-rate/README.md). 1984/2004 keep the calibration rate.
-    r.DUNE_GROWTH_RATES = {1996: (0.01, 0.03), 2009: (0.02, 0.04)}
+    # 1996 at 0.02-0.04 too since 2026-10-29, with dune collision on: the calibration's best fit paired the
+    # module with it (dune-storm-response/2026-10-29-collision-calibration, cal_g16); 0.01-0.03 without it
+    r.DUNE_GROWTH_RATES = {1996: (0.02, 0.04), 2009: (0.02, 0.04)}
     _RLO, _RHI = r.DUNE_GROWTH_RATES.get(r.START_YEAR, r.DUNE_GROWTH_RATES[1996])
     r.RMIN = [_RLO] * HATTERAS_DOMAINS.total_domains
     r.RMAX = [_RHI] * HATTERAS_DOMAINS.total_domains
@@ -984,6 +999,30 @@ def setup_parameters(r):
     r.SANDBAG_ELEVATION = 0
 
     r.SEA_LEVEL_CONSTANT = True
+
+    # Dune collision: each padded domain's toe (m MHW) and beach width (m) per dune cell, from the
+    # start's own surveys (input_prep/1-barrier3d-domains/3-dune-toes); the buffers left out (None)
+    r.DUNE_COLLISION_CS = r.RUN_CONFIG.dune_collision_cs
+    r.DUNE_COLLISION_BEACH_WIDTH_LIMIT_M = r.RUN_CONFIG.dune_collision_beach_width_limit_m
+    r.DUNE_COLLISION_TOE_M = r.DUNE_COLLISION_BEACH_WIDTH_M = None
+    if r.DUNE_COLLISION:
+        r.DUNE_TOE_FILE = product_dir(r.TOPO_PRODUCT) / "dune-toes" / "dune_toe_cells.csv"
+        if not r.DUNE_TOE_FILE.exists():
+            raise FileNotFoundError(
+                f"dune collision is on but {r.DUNE_TOE_FILE} is missing: run "
+                f"input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py --start {r.TOPO_PRODUCT}")
+        _cells = pd.read_csv(r.DUNE_TOE_FILE).sort_values(["gis", "cell"])
+        r.DUNE_COLLISION_TOE_M = [None] * HATTERAS_DOMAINS.total_domains
+        r.DUNE_COLLISION_BEACH_WIDTH_M = [None] * HATTERAS_DOMAINS.total_domains
+        for _gis, _d in _cells.groupby("gis"):
+            _pad = HATTERAS_DOMAINS.gis_to_pad(int(_gis))
+            r.DUNE_COLLISION_TOE_M[_pad] = (_d.toe_m_navd88 - r.MHW_ELEVATION).to_numpy()
+            r.DUNE_COLLISION_BEACH_WIDTH_M[_pad] = _d.beach_width_m.to_numpy()
+        print(f"dune collision        on, Cs {r.DUNE_COLLISION_CS:g}, beach limit "
+              f"{r.DUNE_COLLISION_BEACH_WIDTH_LIMIT_M:g} m; toes {r.DUNE_TOE_FILE} "
+              f"(median {_cells.toe_m_navd88.median():.2f} m NAVD88, {_cells.toe_m_navd88.isna().sum()} cells empty)")
+    else:
+        print("dune collision        off")
 
 
 STEPS = (setup_topography, setup_scenario, setup_island_offset, setup_forcings, setup_roadway, setup_beach_dune, setup_groin, setup_run_name, setup_coastsat_target, setup_conventions, setup_parameters)
