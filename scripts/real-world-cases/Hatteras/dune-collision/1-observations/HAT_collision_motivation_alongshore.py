@@ -6,7 +6,7 @@ Where along the island, and when, the model without the collision module misses 
 Five figures beside collision_motivation.png, each with a calibration (1996-2009) and a test (2009-2025) part,
 both from the module-off controls:
 
-    collision_offset_heatmap.png     model minus lidar crest per GIS domain and survey; villages marked under the axis
+    collision_offset_heatmap.png     model minus lidar crest per GIS domain and survey, under a strip map of the island
     collision_hotspot_crests.png     crest through time at each hotspot, model band against lidar dots
     collision_alongshore_crests.png  crest along the island in three surveys per period
     collision_exposure_offset.png    storms that put each domain's dunes in collision, above its crest offset
@@ -35,6 +35,7 @@ Version: 2026-11-03
 """
 from __future__ import annotations
 
+import functools
 import json
 import sys
 from pathlib import Path
@@ -50,6 +51,7 @@ for _p in (_HAT_DIR, _HERE.parent):
 from hatteras_paths import WORKSPACE as PROJECT_ROOT  # noqa: E402
 
 import matplotlib  # noqa: E402
+import matplotlib.patheffects  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import BoundaryNorm, ListedColormap  # noqa: E402
@@ -81,8 +83,8 @@ PERIODS = {
 }
 MIN_CELLS = 10                   # a domain-survey counts with this many surveyed cells
 HOT_M, HOT_N = 1.0, 4            # hotspots: mean offset above this, the largest this many
-# The three surveys per period drawn along the island
-PROFILE_SURVEYS = {"calibration": (1999, 2005, 2009), "test": (2012, 2017, 2020)}
+# The survey per period drawn along the island: each period's last (2026-11-03; was three per period, too busy)
+END_SURVEY = {"calibration": 2009, "test": 2020}
 UNCLASSIFIED = {2001}
 SURVEY_NOTES = {1999: "post-Dennis", 2011: "post-Irene", 2012: "post-Sandy", 2004: "post-Isabel"}
 # Offset bands as the run overview's (dune_crest_comparison), RdBu with a neutral middle
@@ -92,6 +94,16 @@ MODEL_C, LIDAR_C, HIGH_C, LOW_C = M.MODEL_C, M.LIDAR_C, "#B2182B", "#2166AC"
 EXPOSURE_C = M.WATER_C
 BEACH_C = "#B08D57"              # sand
 HOT_SHADE = "#FBE3D6"
+# The heatmap's island strip, a line map: white island, dark coast, light-grey domain lines (every tenth darker)
+STRIP_LAND, STRIP_EDGE, STRIP_GRID, STRIP_GRID_10 = "white", "0.25", "0.72", "0.45"
+STRIP_GAP = 0.035                # figure fraction between the map and panel (a)'s axes: room for its title
+STRIP_HALO = [matplotlib.patheffects.withStroke(linewidth=2.2, foreground="white")]   # labels over the coast
+SHOAL_C = HATTERAS_ANNOTATIONS.color_shoal                 # the house shoal amber
+SHOAL_INK = "#8A6A00"                                       # its name, darker to read as text
+STRIP_CUT = "dashed"               # how the land cut west of Buxton reads (island_strip): open, fade, break, dashed
+STRIP_FADE, STRIP_BEYOND_M = 2.5, 1500.0   # fade length (domains); dashed coast drawn this far past the cut (m)
+STRIP_SOUTH_DOMAINS = 6.0        # domains' worth of island drawn south of GIS 1: Cape Hatteras
+UNDER_C = "#D9D9D9"             # the alongshore figure's "model too low" fill: neutral, so the red reads
 OFFSET_CLIP_M = 4.0              # the driver figures' offset axis; a bar beyond it is cut and labelled
 HOT_DEF = ("the stretches of neighbouring GIS domains where the model's crests stand most above the lidar's: "
            "the domain's crest offset, averaged over a period's surveys after its start, above {m:g} m in either "
@@ -197,6 +209,128 @@ def shade_hotspots(ax, hots, label=False):
                     ha="center", va="bottom", fontsize=6.5, color=INK)
 
 
+@functools.lru_cache(maxsize=1)
+def strip_layers():
+    """The island and its domains in the strip's frame: turned a quarter so north points right (the ocean below,
+    the sound above), in units of one domain (the boxes stand ~502.5 m apart due north in UTM), so each domain
+    sits over its own column of the plot below. Returns (land rings, coast lines,
+    {gis: [rings of the box inside the land]}, the cut's y, the coast just beyond the cut)."""
+    import geopandas as gpd
+    from shapely.geometry import box
+    from site_layer import hat_map_layers as ml
+    from site_layer.hat_observed_rates import DOMAIN_BOXES
+    dom = gpd.read_file(DOMAIN_BOXES).to_crs(26918)
+    dom["ID"] = dom.domain_id.astype(int)
+    dom = dom[(dom.ID >= 1) & (dom.ID <= 90)].sort_values("ID")
+    step, n0 = np.polyfit(dom.ID.to_numpy(), dom.geometry.centroid.y.to_numpy(), 1)   # northing = n0 + step*gis
+    e_mid = float(dom.geometry.centroid.x.mean())
+
+    def to_ax(xy):                                                # (easting, northing) -> (gis, -east in domains)
+        xy = np.asarray(xy)[:, :2]
+        return np.c_[(xy[:, 1] - n0) / step, -(xy[:, 0] - e_mid) / step]
+
+    def rings(geom):
+        return [to_ax(g.exterior.coords) for g in getattr(geom, "geoms", [geom])
+                if g.geom_type == "Polygon" and not g.is_empty]
+
+    def lines(geom):
+        parts = getattr(geom, "geoms", [geom])
+        return [to_ax(g.coords) for g in parts if g.geom_type == "LineString" and not g.is_empty]
+
+    x0, _, x1, _ = dom.total_bounds
+    # the reach and, south of GIS 1, Cape Hatteras (its point ~2 km south): westward only to a box's width
+    # beyond the domains, where the land is cut; the coast is drawn, the cut is not
+    full = gpd.read_file(ml.ISLAND_OUTLINE).to_crs(26918).geometry.union_all()
+    win = box(x0 - 2000, n0 - STRIP_SOUTH_DOMAINS * step, x1 + 2000, n0 + 90.5 * step)
+    land = full.intersection(win)
+    coast = full.boundary.intersection(win.buffer(-1.0))
+    beyond = full.boundary.intersection(box(x0 - 2000 - STRIP_BEYOND_M, n0 - STRIP_SOUTH_DOMAINS * step,
+                                            x0 - 2000, n0 + 90.5 * step))
+    y_cut = -(x0 - 2000 - e_mid) / step
+    return (rings(land), lines(coast), {int(i): rings(g.intersection(land)) for i, g in zip(dom.ID, dom.geometry)},
+            y_cut, lines(beyond))
+
+
+def strip_ylim():
+    land = strip_layers()[0]
+    ys = np.concatenate([r[:, 1] for r in land])
+    return ys.min() - 4.6, ys.max() + 3.5         # room below for the shoal bands and their names
+
+
+def island_strip(ax, cut=None):
+    """Hatteras Island above a GIS-domain axis (strip_layers), as a line map: the coast, the domains cut to it
+    with every tenth numbered and its line darker, and the villages. No water drawn. `cut` (STRIP_CUT by default):
+    how the land cut off west of Buxton reads, "open" (the coast stops), "fade" (the coast fades out to the cut),
+    "break" (a wavy break line across the land at the cut) or "dashed" (the coast continues dashed past it)."""
+    from matplotlib.collections import LineCollection
+    cut = cut or STRIP_CUT
+    land, coast, doms, y_cut, beyond = strip_layers()
+    # the cape lies left of GIS 1, past the axis: drawn into the margin (clip_on=False), the axis unchanged
+    for r in land:
+        ax.fill(*r.T, facecolor=STRIP_LAND, edgecolor="none", zorder=1, clip_on=False)
+    for gis, rs in doms.items():
+        tenth = gis == 1 or gis % 10 == 0
+        for r in rs:
+            ax.plot(*r.T, color=STRIP_GRID_10 if tenth else STRIP_GRID, lw=0.45 if tenth else 0.3,
+                    zorder=2.5 if tenth else 2)
+    for c in coast:
+        if cut == "fade":
+            seg = np.stack([c[:-1], c[1:]], axis=1)
+            a = np.clip((y_cut - seg[:, :, 1].mean(axis=1)) / STRIP_FADE, 0, 1)
+            rgba = np.tile(matplotlib.colors.to_rgba(STRIP_EDGE), (len(seg), 1))
+            rgba[:, 3] = a
+            ax.add_collection(LineCollection(seg, colors=rgba, lw=0.7, zorder=3, clip_on=False))
+        else:
+            ax.plot(*c.T, color=STRIP_EDGE, lw=0.7, zorder=3, clip_on=False)
+    if cut == "fade":                                             # the land fades too, to the cut
+        from matplotlib.colors import LinearSegmentedColormap
+        x_lo = min(r[:, 0].min() for r in land)
+        ax.imshow(np.linspace(0, 1, 50)[:, None], extent=(x_lo - 1, 12, y_cut - STRIP_FADE, y_cut + 0.05),
+                  origin="lower", aspect="auto", zorder=2.8, clip_on=False,
+                  cmap=LinearSegmentedColormap.from_list("f", [(1, 1, 1, 0), (1, 1, 1, 1)]))
+    elif cut == "break":                                          # pair the coast ends at the cut, wave between
+        ends = sorted(pt[0] for c in coast for pt in (c[0], c[-1]) if abs(pt[1] - y_cut) < 0.2)
+        for xa, xb in zip(ends[0::2], ends[1::2]):
+            t = np.linspace(0, 1, 60)
+            ax.plot(xa + (xb - xa) * t, y_cut - 0.35 + 0.28 * np.sin(2 * np.pi * 2.5 * t), color=STRIP_EDGE,
+                    lw=0.7, zorder=3, clip_on=False)
+    elif cut == "dashed":
+        for c in beyond:
+            ax.plot(*c.T, color=STRIP_EDGE, lw=0.6, ls=(0, (2.5, 1.5)), zorder=3, clip_on=False)
+    tip = min(land, key=lambda r: r[:, 0].min())
+    tip = tip[tip[:, 0].argmin()]
+    ax.text(tip[0] - 0.5, tip[1], "Cape\nHatteras", ha="right", va="center", fontsize=6.5, color=INK_MUTED,
+            clip_on=False, path_effects=STRIP_HALO)
+    for gis, rs in doms.items():
+        if rs and (gis == 1 or gis % 10 == 0):
+            ax.text(gis, min(r[:, 1].min() for r in rs) - 0.4, str(gis), ha="center", va="top", fontsize=6,
+                    color=INK_MUTED, zorder=4, path_effects=STRIP_HALO)
+    # the offshore shoals (the site's shoal zones, footprints picked by eye), hatched on the ocean side
+    for name, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
+        y = min(r[:, 1].min() for g in range(lo, hi + 1) for r in doms[g]) - 1.9
+        ax.fill_between([lo - 0.5, hi + 0.5], y - 0.55, y, facecolor=(*matplotlib.colors.to_rgb(SHOAL_C), 0.18),
+                        edgecolor=SHOAL_C, hatch="////", lw=0, zorder=2)
+        ax.text((lo + hi) / 2, y - 0.75, name, ha="center", va="top", fontsize=6.5, color=SHOAL_INK,
+                style="italic", zorder=4, path_effects=STRIP_HALO)
+    for name, (lo, hi) in HATTERAS_ANNOTATIONS.town_spans.items():
+        top = max(r[:, 1].max() for g in range(lo, hi + 1) for r in doms[g])
+        ax.plot([lo - 0.5, hi + 0.5], [top + 0.8] * 2, color=INK_MUTED, lw=1.6, solid_capstyle="butt", zorder=4)
+        ax.text((lo + hi) / 2, top + 1.3, name, ha="center", va="bottom", fontsize=6.5, color=INK_MUTED, zorder=4,
+                path_effects=STRIP_HALO)
+    ax.annotate("N", xy=(0.99, 0.85), xytext=(0.945, 0.85), xycoords="axes fraction", ha="right", va="center",
+                fontsize=7, color=INK_MUTED, arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=0.8))
+    # the water, named where it is open: the ocean below the south end, the sound above the middle
+    ax.text(0.10, 0.04, "Atlantic Ocean", transform=ax.transAxes, ha="left", va="bottom", fontsize=7,
+            color=INK_MUTED, style="italic")
+    ax.text(0.58, 0.80, "Pamlico Sound", transform=ax.transAxes, ha="center", va="center", fontsize=7,
+            color=INK_MUTED, style="italic")
+    ax.set_ylim(*strip_ylim())
+    ax.set_facecolor("none")
+    ax.tick_params(axis="both", which="both", left=False, labelleft=False, bottom=False, labelbottom=False)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+
 def title(ax, letter, text):
     ax.set_title(f"({letter})", loc="left", fontweight="bold")
     ax.set_title(text, loc="center")
@@ -211,35 +345,40 @@ def fig_heatmap(data, hots):
     cmap.set_over(colors[-1])
     cmap.set_bad(NO_SURVEY)
     norm = BoundaryNorm(OFFSET_BINS_M, cmap.N)
-    n_rows = [d["table"].survey.nunique() for d in data.values()]
-    fig, axs = plt.subplots(2, 1, figsize=(7.48, 6.6), sharex=True,
-                            gridspec_kw=dict(height_ratios=n_rows, hspace=0.32))
+    # Time runs up the whole figure (Hannah, 2026-11-03): the test period on top, calibration below, and the
+    # oldest survey at the bottom of each panel, so 1996 is at the foot and 2020 at the head
+    periods = [data["test"], data["calibration"]]
+    n_rows = [d["table"].survey.nunique() for d in periods]
+    # The island on top, the domains over their columns (2026-11-03)
+    # the strip's height in survey rows, so the island is drawn near true shape (1 domain ~ 0.069 in wide; a row ~0.3 in)
+    y0, y1 = strip_ylim()
+    fig, (ax_map, *axs) = plt.subplots(3, 1, figsize=(7.48, 7.1 + (y1 - y0) * 0.069), sharex=True,
+                                       gridspec_kw=dict(height_ratios=[(y1 - y0) * 0.069 / 0.3] + n_rows,
+                                                        hspace=0.32))
+    island_strip(ax_map)
     out = []
-    for ax, (letter, d) in zip(axs, zip("ab", data.values())):
+    for ax, (letter, d) in zip(axs, zip("ab", periods)):
         piv = d["table"].pivot(index="survey", columns="gis", values="model_minus_survey_m").reindex(
             columns=range(1, 91))
         piv = piv.sort_index()
         im = ax.pcolormesh(np.arange(0.5, 91), np.arange(len(piv) + 1), np.ma.masked_invalid(piv.to_numpy()),
                            cmap=cmap, norm=norm, edgecolors="white", linewidth=0.3)
-        ax.set_ylim(len(piv), 0)                                   # time runs down
+        ax.set_ylim(0, len(piv))                                   # time runs up
         ax.set_yticks(np.arange(len(piv)) + 0.5)
         ax.set_yticklabels([f"{s}{'*' if s in UNCLASSIFIED else ''}"
                             + (f" {SURVEY_NOTES[s]}" if s in SURVEY_NOTES else "") for s in piv.index], fontsize=7)
         gis_axis(ax, label=letter == "b")
         ax.set_ylabel("Lidar survey")
-        title(ax, letter, d["label"])
+        ax.set_title(f"({letter})", loc="left", fontweight="bold")
+        ax.set_title(d["label"], loc="center")
         out.append(piv.stack(dropna=False).rename("model_minus_lidar_m").reset_index().assign(period=d["key"]))
-    # villages under the bottom panel's GIS ticks
-    for name, (lo, hi) in HATTERAS_ANNOTATIONS.town_spans.items():
-        for ax in axs:
-            ax.plot([lo - 0.5, hi + 0.5], [-0.02, -0.02], transform=ax.get_xaxis_transform(), color=INK_MUTED,
-                    lw=2.2, clip_on=False, solid_capstyle="butt")
-        axs[1].text((lo + hi) / 2, -0.30, name, transform=axs[1].get_xaxis_transform(), ha="center", va="top",
-                    fontsize=6.5, color=INK_MUTED)
     cb = fig.colorbar(im, ax=axs, orientation="horizontal", fraction=0.035, pad=0.13, extend="both",
                       ticks=OFFSET_BINS_M)
     cb.set_label("Model minus lidar crest, domain median (m): red, model dunes too high")
     cb.ax.tick_params(labelsize=7)
+    # the map sits just over (a)'s title, not a full panel gap above it (the crop takes the space left on top)
+    m, a = ax_map.get_position(), axs[0].get_position()
+    ax_map.set_position([m.x0, a.y1 + STRIP_GAP, m.width, m.height])
     out_png = WHERE_DIR / "collision_offset_heatmap.png"
     save(fig, out_png, dpi=300, facecolor="white", bbox_inches="tight", close=True)
     pd.concat(out).round(3).to_csv(WHERE_DIR / "supporting" / "collision_offset_heatmap.csv", index=False)
@@ -247,12 +386,15 @@ def fig_heatmap(data, hots):
         "Where and when the modelled dune crests leave the lidar's, without the collision module. Each cell: the "
         "median modelled crest minus the median lidar crest over a GIS domain's surveyed 10 m cells (at least "
         f"{MIN_CELLS}), against the model state of the 1 January the survey is compared with; red, the model's "
-        "dunes too high; white, within 0.5 m; grey, fewer surveyed cells. (a) Calibration, 1996–2009, the "
-        "calibration control (Hs 3.0, StormStart 1, groin 0.16); (b) test, 2009–2025, the test control (the "
-        "2014, 2017 and 2022 fills in). Both with the module off. A cell whose dune window is now beach counts as "
+        "dunes too high; white, within 0.5 m; grey, fewer surveyed cells. Time runs up the figure, oldest survey "
+        "at the bottom. (a) Test, 2009–2025, the test control (the 2014, 2017 and 2022 fills in); (b) calibration, "
+        "1996–2009, the calibration control (Hs 3.0, StormStart 1, groin 0.16). Both with the module off. A cell whose dune window is now beach counts as "
         "the berm. *2001, unclassified lidar. 2011 and 2012 were gridded from the ground returns at 1 m; 2020 "
-        "(flown Feb 2020 at Buxton) is the last public lidar of the island. Bars under the axis: Buxton, Avon and the Tri-Village "
-        "(Salvo, Waves, Rodanthe)."))
+        "(flown Feb 2020 at Buxton) is the last public lidar of the island. Top: Hatteras Island turned a quarter so "
+        "north points right (the ocean side below), true to scale, from Cape Hatteras (left of GIS 1), divided into its 90 GIS domains, each over its "
+        "column, every tenth numbered; the coast dashed where the island continues west beyond the map; hatched "
+        "offshore, the alongshore footprints of Avon and Wimble Shoals (picked by eye); bars, Buxton, "
+        "Avon and the Tri-Village (Salvo, Waves, Rodanthe)."))
     print(f"wrote {out_png}")
 
 
@@ -312,56 +454,54 @@ def fig_hotspots(data, hots):
 
 # ---- 3: alongshore crests ---------------------------------------------------------------------------------------
 def fig_alongshore(data, hots):
-    n = max(len(v) for v in PROFILE_SURVEYS.values())
-    fig, axs = plt.subplots(n, 2, figsize=(7.48, 1.9 * n + 0.6), sharex=True, sharey=True)
-    rows = []
-    for j, d in enumerate(data.values()):
-        for i, sv in enumerate(PROFILE_SURVEYS[d["key"]]):
-            ax = axs[i, j]
-            s = d["surveys"][d["surveys"].survey == sv]
-            if s.empty:
-                ax.text(0.5, 0.5, f"no {sv} survey", transform=ax.transAxes, ha="center", color=INK_MUTED)
+    """One panel per period, its last survey: model and lidar crests along the island, the gap filled."""
+    fig, axs = plt.subplots(2, 1, figsize=(7.48, 5.0), sharex=True, sharey=True)
+    rows, gaps = [], {}
+    for ax, letter, d in zip(axs, "ab", data.values()):
+        sv = END_SURVEY[d["key"]]
+        s = d["surveys"][d["surveys"].survey == sv]
+        state = int(s.state_year.iloc[0]) - d["fmy"]
+        g_rows = []
+        for g, grp in s.groupby("gis"):
+            if len(grp) < MIN_CELLS:
                 continue
-            state = int(s.state_year.iloc[0]) - d["fmy"]
-            g_rows = []
-            for g, grp in s.groupby("gis"):
-                if len(grp) < MIN_CELLS:
-                    continue
-                m = d["crests"][state, g - 1, grp.cell.to_numpy()]
-                g_rows.append(dict(gis=g, model_p25=np.percentile(m, 25), model_median=np.median(m),
-                                   model_p75=np.percentile(m, 75), lidar_median=grp.crest.median()))
-            t = pd.DataFrame(g_rows).set_index("gis").reindex(range(1, 91))
-            ax.fill_between(t.index, t.model_p25, t.model_p75, color=MODEL_C, alpha=0.22, lw=0, step="mid")
-            ax.plot(t.index, t.model_median, color=MODEL_C, lw=1.5, drawstyle="steps-mid")
-            ax.plot(t.index, t.lidar_median, "o", ms=2.6, color=LIDAR_C, zorder=5)
-            gis_axis(ax, label=i == n - 1)
-            shade_hotspots(ax, hots, label=i == 0)
-            note = f", {SURVEY_NOTES[sv]}" if sv in SURVEY_NOTES else ""
-            ax.text(0.01, 0.96, f"{sv} lidar{note}", transform=ax.transAxes, ha="left", va="top", fontsize=7.5,
-                    color=INK)
-            ax.set_title(f"({'abcdefgh'[2 * i + j]})", loc="left", fontweight="bold")
-            if i == 0:
-                ax.set_title(d["label"], loc="center", pad=12)
-            if j == 0:
-                ax.set_ylabel("Crest (m NAVD88)")
-            rows += [dict(period=d["key"], survey=sv, gis=g, **r) for g, r in t.dropna(how="all").iterrows()]
-    axs[0, 0].set_ylim(1, 12)
-    fig.legend(handles=[Line2D([], [], color=MODEL_C, lw=2, label="Model without the module (median; band 25th–75th)"),
-                        Line2D([], [], color=LIDAR_C, marker="o", ls="none", ms=4, label="Lidar (domain median)"),
-                        Patch(color=HOT_SHADE, label="Hotspot")],
-               loc="lower center", ncol=3, frameon=False, fontsize=7.5)
-    fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=0.6)
+            m = d["crests"][state, g - 1, grp.cell.to_numpy()]
+            g_rows.append(dict(gis=g, model_median=np.median(m), lidar_median=grp.crest.median()))
+        t = pd.DataFrame(g_rows).set_index("gis").reindex(range(1, 91))
+        x, mod, lid = t.index.to_numpy(), t.model_median.to_numpy(), t.lidar_median.to_numpy()
+        ok = np.isfinite(mod) & np.isfinite(lid)
+        ax.fill_between(x, lid, mod, where=ok & (mod > lid), step="mid", color=HIGH_C, alpha=0.35, lw=0)
+        ax.fill_between(x, lid, mod, where=ok & (mod < lid), step="mid", color=UNDER_C, lw=0)
+        ax.plot(x, mod, color=MODEL_C, lw=1.4, drawstyle="steps-mid")
+        ax.plot(x, lid, color=LIDAR_C, lw=1.4, drawstyle="steps-mid")
+        town_bands(ax, where="top", strip=0.07, label=True, fontsize=6.5)
+        gis_axis(ax, label=letter == "b")
+        ax.set_ylabel("Dune crest (m NAVD88)")
+        ax.set_title(f"({letter})", loc="left", fontweight="bold")
+        ax.set_title(f"{d['label']}: model on 1 Jan {int(s.state_year.iloc[0])} vs. the {sv} lidar", loc="center")
+        gaps[d["key"]] = (int((mod - lid > 1)[ok].sum()), int(ok.sum()))
+        rows += [dict(period=d["key"], survey=sv, gis=g, **r) for g, r in t.dropna(how="all").iterrows()]
+    axs[0].set_ylim(0, 11.5)
+    fig.legend(handles=[Line2D([], [], color=MODEL_C, lw=2, label="Model without the module"),
+                        Line2D([], [], color=LIDAR_C, lw=2, label="Lidar"),
+                        Patch(color=HIGH_C, alpha=0.35, lw=0, label="Model dunes too high"),
+                        Patch(color=UNDER_C, lw=0, label="Model dunes too low")],
+               loc="lower center", ncol=4, frameon=False, fontsize=7.5)
+    fig.tight_layout(rect=(0, 0.04, 1, 1), h_pad=0.8)
     out = WHERE_DIR / "collision_alongshore_crests.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
     pd.DataFrame(rows).round(3).to_csv(WHERE_DIR / "supporting" / "collision_alongshore_crests.csv", index=False)
+    cal, test = gaps["calibration"], gaps["test"]
     record_caption(out, (
-        "Dune crests along the island in three lidar surveys of each period: the model without the collision "
-        "module (line, median over each GIS domain's surveyed 10 m cells; band, 25th–75th percentile) at the "
-        "1 January the survey is compared with, and the lidar (dot, the domain's median), in domains with at least "
-        f"{MIN_CELLS} surveyed cells. Calibration (left): {', '.join(map(str, PROFILE_SURVEYS['calibration']))}; "
-        f"test (right): {', '.join(map(str, PROFILE_SURVEYS['test']))}. Shaded, the hotspots: "
-        f"{HOT_DEF.format(m=HOT_M, n=HOT_N)}."))
-    print(f"wrote {out}")
+        "Dune crests along the island at the end of each period, the model without the collision module against "
+        "the lidar. (a) Calibration: the model on 1 January 2010 against the 2009 lidar; (b) test: the model on "
+        "1 January 2020 against the 2020 lidar (the last public survey; flown Feb 2020 at Buxton). Each line is the "
+        "median crest over a GIS domain's surveyed 10 m cells (domains with at least "
+        f"{MIN_CELLS}); red fill, the model's dunes above the lidar's; grey, below. The model stands more than 1 m "
+        f"too high in {cal[0]} of {cal[1]} domains in (a) and {test[0]} of {test[1]} in (b). Bars along the top: "
+        "Buxton, Avon and the Tri-Village (Salvo, Waves, Rodanthe). The crests through time and in every survey "
+        "are in collision_offset_heatmap.png."))
+    print(f"wrote {out}; >1 m too high: calibration {cal}, test {test}")
 
 
 # ---- 4 and 5: a driver above the offset --------------------------------------------------------------------------
