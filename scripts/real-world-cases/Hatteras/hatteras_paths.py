@@ -55,7 +55,7 @@ def workspace_twin(folder) -> Path:
     if folder.is_relative_to(WORKSPACE):
         return folder
     rel = folder.resolve().relative_to(HATTERAS_DIR)
-    if rel.parts and rel.parts[0] == "hard-structures":
+    if rel.parts and rel.parts[0] in ("hard-structures", "dune-collision"):   # laid out alike, D: twin at the top
         return WORKSPACE / rel
     return WORKSPACE / "scripts" / rel
 

@@ -66,8 +66,10 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_DOMAI
 import HAT_collision_motivation as M  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT_DIR = M.OUT_DIR
-SUPPORT_DIR = M.SUPPORT_DIR
+# The topic folders under collision-motivation/ (1-mechanism is HAT_collision_motivation.py's)
+WHERE_DIR = M.ROOT_DIR / "2-mismatch-along-island"     # the heatmap and the crests along the island
+HOT_DIR = M.ROOT_DIR / "3-hotspots"
+DRIVER_DIR = M.ROOT_DIR / "4-drivers"                   # collision exposure and beach width
 RUNS = M.RUNS
 PERIODS = {
     "calibration": dict(label="Calibration, 1996–2009", start="1996-start",
@@ -238,9 +240,9 @@ def fig_heatmap(data, hots):
                       ticks=OFFSET_BINS_M)
     cb.set_label("Model minus lidar crest, domain median (m): red, model dunes too high")
     cb.ax.tick_params(labelsize=7)
-    out_png = OUT_DIR / "collision_offset_heatmap.png"
+    out_png = WHERE_DIR / "collision_offset_heatmap.png"
     save(fig, out_png, dpi=300, facecolor="white", bbox_inches="tight", close=True)
-    pd.concat(out).round(3).to_csv(SUPPORT_DIR / "collision_offset_heatmap.csv", index=False)
+    pd.concat(out).round(3).to_csv(WHERE_DIR / "supporting" / "collision_offset_heatmap.csv", index=False)
     record_caption(out_png, (
         "Where and when the modelled dune crests leave the lidar's, without the collision module. Each cell: the "
         "median modelled crest minus the median lidar crest over a GIS domain's surveyed 10 m cells (at least "
@@ -295,9 +297,9 @@ def fig_hotspots(data, hots):
                         Line2D([], [], color=LIDAR_C, marker="o", ls="none", label="Lidar (median; bar 25th–75th)")],
                loc="lower center", ncol=2, frameon=False, fontsize=7.5)
     fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=0.8)
-    out = OUT_DIR / "collision_hotspot_crests.png"
+    out = HOT_DIR / "collision_hotspot_crests.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
-    pd.DataFrame(rows).round(3).to_csv(SUPPORT_DIR / "collision_hotspot_crests.csv", index=False)
+    pd.DataFrame(rows).round(3).to_csv(HOT_DIR / "supporting" / "collision_hotspot_crests.csv", index=False)
     record_caption(out, (
         f"Dune crests at the hotspots, {HOT_DEF.format(m=HOT_M, n=HOT_N)}; calibration (left) and test (right). Line and "
         "band: the model without the collision module, median and 25th–75th percentile over the hotspot's 10 m "
@@ -349,9 +351,9 @@ def fig_alongshore(data, hots):
                         Patch(color=HOT_SHADE, label="Hotspot")],
                loc="lower center", ncol=3, frameon=False, fontsize=7.5)
     fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=0.6)
-    out = OUT_DIR / "collision_alongshore_crests.png"
+    out = WHERE_DIR / "collision_alongshore_crests.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
-    pd.DataFrame(rows).round(3).to_csv(SUPPORT_DIR / "collision_alongshore_crests.csv", index=False)
+    pd.DataFrame(rows).round(3).to_csv(WHERE_DIR / "supporting" / "collision_alongshore_crests.csv", index=False)
     record_caption(out, (
         "Dune crests along the island in three lidar surveys of each period: the model without the collision "
         "module (line, median over each GIS domain's surveyed 10 m cells; band, 25th–75th percentile) at the "
@@ -410,9 +412,9 @@ def fig_driver(data, hots, kind):
         town_bands(ax, where="top", strip=0.09, label=True, fontsize=6)
     fig.tight_layout(h_pad=0.5)
     name = "collision_exposure_offset" if kind == "exposure" else "collision_beach_offset"
-    out = OUT_DIR / f"{name}.png"
+    out = DRIVER_DIR / f"{name}.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
-    pd.concat(rows).round(3).to_csv(SUPPORT_DIR / f"{name}.csv", index=False)
+    pd.concat(rows).round(3).to_csv(DRIVER_DIR / "supporting" / f"{name}.csv", index=False)
     print(f"{name}: " + "; ".join(stats))
     off_txt = ("(c, d) Model minus lidar crest per GIS domain, averaged over the surveys after each period's start "
                "(the domain median of the surveyed cells, at least "
@@ -437,11 +439,12 @@ def fig_driver(data, hots, kind):
 
 def main():
     apply_style()
-    SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
+    for d in (WHERE_DIR, HOT_DIR, DRIVER_DIR):
+        (d / "supporting").mkdir(parents=True, exist_ok=True)
     data = {k: load(k) for k in PERIODS}
     hots, score = hotspots(data)
     print("hotspots:", [(h["name"], h["lo"], h["hi"], round(h["mean_m"], 2)) for h in hots])
-    pd.DataFrame(hots).round(3).to_csv(SUPPORT_DIR / "collision_hotspots.csv", index=False)
+    pd.DataFrame(hots).round(3).to_csv(HOT_DIR / "supporting" / "collision_hotspots.csv", index=False)
     fig_heatmap(data, hots)
     fig_hotspots(data, hots)
     fig_alongshore(data, hots)

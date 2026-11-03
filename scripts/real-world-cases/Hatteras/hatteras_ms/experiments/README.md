@@ -15,7 +15,7 @@ Their runs and write-ups stay on D: under `output/raw_runs/experiments/<theme>/`
 | Folder | Scripts | What it calibrates |
 |---|---|---|
 | `waves/` | `HAT_wave_grid.py` | the wave climate for each window |
-| `dunes/` | `HAT_stable_dune_growth_rate.py`, `HAT_test_period_growth_rate.py` and their figures, plus the seven modules they import | the dune growth rate for each window |
+| `dunes/` | `HAT_stable_dune_growth_rate.py`, `HAT_test_period_growth_rate.py` and their figures, plus the seven modules they import; `HAT_road_dune_rebuild.py`, `HAT_measured_dune_heights.py` | the dune growth rate for each window; the road and village dune management heights |
 | `ends/` | `HAT_buffer_closure_test.py`, `HAT_cape_source_shape.py` | the buffer ring closure; the Cape Point source shape |
 
 The helpers the matrix analysis and figures import (`coastsat_target`, `interior`,

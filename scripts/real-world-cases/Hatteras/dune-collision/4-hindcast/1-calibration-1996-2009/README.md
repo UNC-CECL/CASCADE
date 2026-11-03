@@ -1,25 +1,21 @@
-# dune-storm-response — how the dunes respond to storms, and how they are rebuilt
+# 1-calibration-1996-2009 — the module fitted on the 1996-2009 lidar and CoastSat
 
-Active work (2026-10-26 on). The modelled dunes match the 1996 lidar (r 0.99) but
-stop matching it after Dennis (1999): Barrier3D lowers a dune only where the water
-overtops it (Rhigh > crest), so storms that only reach the dune face, the
-collision regime of Sallenger (2000), leave the model's dunes untouched while
-the lidar shows them dropping at GIS 2-3, 10-12 and 84-86.
+`HAT_dune_collision.py` and `HAT_collision_calibration.py`. Managed edgeBE 1996-2009 with the groin, as the
+headline matrix run, driving the unchanged runner (`../../../hatteras_ms/HAT_hindcast.py`) in-process.
+Each script's header lists its actions and variants. Runs: `output/raw_runs/dune-storm-response/`
+`2026-10-26-dune-collision/` (HAT_dune_collision.py) and `2026-10-29-collision-calibration/`
+(HAT_collision_calibration.py scores the `cal_*` variants filed under the first).
 
-The three scripts drive the unchanged runner (`../hatteras_ms/HAT_hindcast.py`),
-patched in-process only: managed edgeBE 1996-2009 with the groin, as the
-headline matrix run. Model output is under
-`output/raw_runs/dune-storm-response/<tag>/` on the workspace (run kind
-`dune-storm-response`; moved out of `experiments/dunes/` on 2026-10-29).
+`HAT_dune_collision.py` is also the hub the other folders use: its `toes`, `twl`, `calibrate` and
+`empirical` actions are the measurements in `../../1-observations/`, and
+`../../3-module-tests/1-rule-comparison/` imports it for the calibration cells. It stays in one piece
+here until it is split (top README, Next).
 
-| Script | What it asks | Output tag |
-|---|---|---|
-| `HAT_forced_dune_crests.py` | If the dunes are set to the lidar crests after key storms, does the shoreline follow CoastSat? | `2026-10-26-forced-dune-crests` (holds the control run the others use) |
-| `HAT_road_dune_rebuild.py` | Does a raise-only, lower post-storm dune rebuild along NC-12 change the shoreline? | `2026-10-26-road-dune-rebuild` |
-| `HAT_dune_collision.py` | Collision-regime dune erosion: lidar toes, the hourly TWL, the Larson et al. (2004) and beach-width calibrations, and the runs | `2026-10-26-dune-collision` |
-| `HAT_collision_rule_comparison.py` | Offline, no runs: which collision erosion rule (none, Long et al. 2014 fractions, Larson per storm or hourly, each with and without the beach factor) fits the lidar crest change best, and which is simplest | `2026-10-29-collision-rule-comparison` (its `NOTE.md` lists every collision test, offline and in-model) |
+The record below is the folder README as it stood on 2026-11-03, moved here unchanged. The year-end
+rules (`width_*`, `larson_*`) ran outside the model and came before the module; the `storm_*` and
+`cal_*` runs use `cascade/dune_collision.py`.
 
-## Where things stand (2026-10-27)
+## The record (from 2026-10-27)
 
 Interior LRR bias / RMSE against CoastSat (m/yr), managed edgeBE 1996-2009:
 
@@ -114,7 +110,9 @@ Interior LRR bias / RMSE against CoastSat (m/yr), managed edgeBE 1996-2009:
   scales Larson by max(0, 1 - W / 45 m), W each cell's median beach width over the
   surveys (1998 left out), held for the run. Offline, against the lidar crest
   change (domain medians, fit intervals): r 0.28 -> 0.48, Dennis 0.63 -> 0.86,
-  and Cs 2.0e-5 -> 1.24e-4, near Larson's laboratory 1.7e-4. A width from the
+  and Cs 2.0e-5 -> 1.24e-4, on Larson et al.'s (2004) value for US East Coast
+  storms (Birkemeier et al. 1988 data: 1.3e-4 fit, 1.7e-4 mean per case; their
+  laboratory and short field sets give ~1.4e-3). A width from the
   survey before each storm fits worse (r 0.38).
 
   | Run | Bias | RMSE | GIS 8-15 | GIS 80-89 | Cape 2-7 | Centre 26-75 | Crest RMSE | Stable | Crest r 1999 / 2009 |
@@ -204,56 +202,3 @@ Interior LRR bias / RMSE against CoastSat (m/yr), managed edgeBE 1996-2009:
   were not rerun.
 - Found on the way: the Hatteras runs keep Barrier3D's default `StormStart: 2`,
   so the 1997 storms (time 1; 5 storms, peak 2.45 m NAVD88) never run.
-
-## Next
-
-1. Put the eroded sand on the beach in the per-storm runs (the year-end runs
-   did better with it), and wire DuneCollisionManager into `cascade.py` behind
-   a switch, as the groin.
-2. The cape and centre over-erosion, which collision adds to but does not cause.
-3. `StormStart: 1` for the hindcasts.
-4. Pair the chosen rule with the 3.0 m raise-only rebuild floor.
-3. Once a rule is chosen: the toes, beach width and TWL go to `input_prep/`, the
-   calibration's parameters to `data/hatteras_init/`, and the rule itself to a
-   CASCADE module (`cascade/dune_collision.py`, as `cascade/groin.py`) switched
-   on from `hat_run.yaml`.
-
-## HAT_forced_dune_crests.py
-
-Asked (Hannah, 2026-10-26) because the managed edgeBE 1996-2009 run misses the
-CoastSat erosion at GIS ~8-15. Dennis (1999) runs up to 3.65 m NAVD88, the
-modelled dunes there stand 5-7 m, and Barrier3D lowers a dune only where a
-storm overtops it, so Dennis leaves them untouched while the lidar shows
-GIS 10-12 dropping to ~1.7 m. Datums (MHW 0.36, berm 1.7 m NAVD88) and the
-Duck gauge were checked and are not the cause: the Cape Hatteras Pier gauge
-peaked lower than Duck during Dennis.
-
-In-process, before the given storm year, each cell's two dune rows are scaled
-so the crest equals the survey crest (`survey_dune_crests.csv`; beach landward
-of the window counts as the berm). Managed edgeBE, groin, 1996-2009.
-Variants: control, buxton (GIS 8-12, 1999), buxton_pre (8-12, 1998),
-buxton_both (8-12, 1998 and 1999), buxton_8_15 (8-15, 1999), island (1-90, 1999),
-events (1-90; 1998, 2000, 2004), buxton_events (8-15; 1998, 2000, 2004),
-all_surveys (1-90; every survey).
-
-    python HAT_forced_dune_crests.py run [variants...]
-    python HAT_forced_dune_crests.py score
-    python HAT_forced_dune_crests.py plot     # position change vs CoastSat
-    python HAT_forced_dune_crests.py crests   # control vs lidar, GIS 8-15
-
-Results 2026-10-26 (`output/raw_runs/dune-storm-response/2026-10-26-forced-dune-crests/`):
-the control reproduces the matrix run (interior bias -0.445 m/yr). Forcing the
-1999 crests at GIS 8-12 or 8-15 makes the erosion appear: GIS 11-12 match
-CoastSat, GIS 8-10 overshoot (GIS 10 -4.0 against ~-0.9 m/yr). 1998 forcing
-alone barely changes anything. GIS 13-15 do not move: their lidar crests
-(5.7-6.9 m) stand above every storm's run-up, so the erosion there needs
-another mechanism (background or alongshore loss). Interior bias: buxton
--0.538, buxton_8_15 -0.538, island -0.689 m/yr. Forcing every event makes it
-worse (events -0.865, all_surveys -0.931; GIS 9-12 overshoot 2-4x).
-
-The modelled and lidar crests agree through 1997 and part in 1998-1999,
-when Bonnie and Dennis lowered the real dunes and not the modelled ones.
-Island-wide, per run: `cascade_pipeline/plotting/dune_crest_comparison.py`
-(drawn by `run_figures.py` into each run's `figures/dune_crests/`); in the
-managed 1996-2009 run 17-21 domains end more than 1 m above the lidar after
-1999. Not adopted: a diagnosis, not a model change.

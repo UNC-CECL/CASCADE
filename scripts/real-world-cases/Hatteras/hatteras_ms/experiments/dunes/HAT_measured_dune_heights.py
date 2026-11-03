@@ -1,8 +1,8 @@
 """
 Do dune management heights measured from the lidar, instead of the defaults, fix the full-management dunes?
 
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_measured_dune_heights.py run
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_measured_dune_heights.py score
+    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_measured_dune_heights.py run
+    python scripts/real-world-cases/Hatteras/hatteras_ms/experiments/dunes/HAT_measured_dune_heights.py score
 
 Three heights, all m NAVD88, from survey_dune_crests.csv (2001's unclassified survey left out):
 

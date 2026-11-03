@@ -1,8 +1,8 @@
 """
 Does the 1996-2009 calibration of the dune collision module hold in 2009-2025, with nothing refit?
 
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_test_2009.py run [variant ...]
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_test_2009.py score
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/2-test-2009-2025/HAT_collision_test_2009.py run [variant ...]
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/2-test-2009-2025/HAT_collision_test_2009.py score
 
 The test window run on the hindcast's own defaults (managed edgeBE, groin 0.16 until the 2017 Buxton fill, Hs 3.0
 on the 2009 ends solved at Hs 3.0, dune growth 0.02-0.04, village dune cap 8.0 m NAVD88, the 2014, 2017 and 2022
@@ -15,6 +15,9 @@ calibration), on the 2009 start's own toes and beach widths. Variants:
     nocape_rNN   nocape with faster dune growth, NN its mean (r +/- 0.01): do the 2009-2025 dunes grow faster?
     *_hsX        control and nocape at another wave height (alongshore diffusivity), on approximate ends (ENDS_BY_HS)
     nocape_dynw  nocape with the beach following the modelled shoreline; nocape_dynw_sw from the start widths
+    nocape_dry, nocape_rd198_dry  nocape and nocape_rd198 on the dry beach (beach start to toe), Cs 1.02e-4, limit
+                 25 m (2026-11-03). The variants before them ran on the beach to the crest, Cs 1.24e-4, limit 45 m;
+                 rerun now they would pick up the dry inputs and the new defaults
     nocape_toestart  nocape on toes and beach widths from the 2009 start profile alone (the default median is of
                  the 2014-2019 surveys, all after Irene and Sandy)
 
@@ -89,11 +92,23 @@ ROAD_DUNE_REBUILD = {"nocape_rd150": (150.0, None), "nocape_rd150h": (150.0, 2.6
 # shoreline (Bonner Bridge Replacement FEIS, NCDOT/FHWA 2008, p. 2-128, from Isabel's washover fans). The road
 # manager measures the road from the dune, so each domain's gate is 198 m less its median beach width
 VARIANTS["nocape_rd198"] = VARIANTS["nocape"]
-SHORELINE_GATE, SHORELINE_GATE_M = ("nocape_rd198",), 198.0
+# ... with the beach acting on the water instead of the volume (RUNUP_LOSS, Cs 1.64e-4), and the ramp at Cs 1.45e-4:
+# each at its offline fit with the toe floor (HAT_collision_rule_comparison.py)
+VARIANTS["nocape_rd198_rl02"] = VARIANTS["nocape_rd198_cs145"] = VARIANTS["nocape"]
+# The module on the dry beach (beach start to toe, HAT_dune_toes.py since 2026-11-03), Cs 1.02e-4 and limit 25 m as
+# refit on 1996-2009 (rule comparison, then cal_g16_nocape_rd198_dry); the variants above ran before the switch,
+# on the beach to the crest, Cs 1.24e-4 and 45 m. The road gate stays on the beach to the crest
+VARIANTS["nocape_dry"] = VARIANTS["nocape_rd198_dry"] = VARIANTS["nocape"]
+DRY_BEACH, DRY_CS, DRY_LIMIT_M = ("nocape_dry", "nocape_rd198_dry"), 1.02e-4, 25.0
+OLD_CS, OLD_LIMIT_M = 1.24e-4, 45.0
+SHORELINE_GATE = ("nocape_rd198", "nocape_rd198_rl02", "nocape_rd198_cs145", "nocape_rd198_dry")
+SHORELINE_GATE_M = 198.0
+# The beach lowering the water at the dune, m per m of beach (DuneCollisionManager beach_runup_loss)
+RUNUP_LOSS = {"nocape_rd198_rl02": 0.02}
 WIDTH_FROM_START = ("nocape_dynw_sw",)
 # Cs per variant, the hindcast's 1.24e-4 otherwise: 2.5e-4 the best island crest fit of the 1996-2009 sweep on
 # start-profile toes (HAT_dune_collision.py cal_g16_nocape_ts250)
-CS = {"nocape_toestart_cs250": 2.5e-4}
+CS = {"nocape_toestart_cs250": 2.5e-4, "nocape_rd198_rl02": 1.64e-4, "nocape_rd198_cs145": 1.45e-4}
 TOE_SURVEYS = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / "2009-start" / "dune-toes"
                / "survey_dune_toes.csv")
 TOE_MIN_M_NAVD88, TOE_BELOW_CREST_M, MHW_M_NAVD88 = 1.0, 0.5, 0.36   # as HAT_dune_toes.py and the hindcast setup
@@ -101,6 +116,9 @@ TOE_MIN_M_NAVD88, TOE_BELOW_CREST_M, MHW_M_NAVD88 = 1.0, 0.5, 0.36   # as HAT_du
 ZONES = (("cape", 1, 7), ("buxton_avon_road", 8, 20), ("avon", 21, 31), ("avon_salvo_road", 32, 67),
          ("tri_village", 68, 83), ("rodanthe_north", 84, 90))
 WORKERS = 3
+# The surveys the dune crests are scored on: the runs before 2026-11-03 compared these five; later runs also
+# carry 2011, 2012 and 2020 (added to the crest surveys that day), left out so every run is scored alike
+SCORE_SURVEYS = (2014, 2016, 2017, 2018, 2019)
 # -----------------------------------------------------------------------------
 
 
@@ -115,7 +133,9 @@ def run_dir(variant):
 def shoreline_gate(c, toe_cells):
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
     dom = HATTERAS_DOMAINS.for_total(len(c.barrier3d))
-    w = pd.read_csv(toe_cells).groupby("gis").beach_width_m.median().reindex(range(1, 91))
+    t = pd.read_csv(toe_cells)
+    col = "beach_to_crest_m" if "beach_to_crest_m" in t else "beach_width_m"   # the road is measured from the crest
+    w = t.groupby("gis")[col].median().reindex(range(1, 91))
     w = w.fillna(w.median())
     for g in range(1, 91):
         r = c.roadways[dom.gis_to_pad(g)]
@@ -172,6 +192,12 @@ def _launch(variant):
                   + ("berm floor" if trigger is None else f"{trigger:.2f} m MHW"), flush=True)
         if variant in SHORELINE_GATE:
             print(f"\nEXPERIMENT road dune rebuild where NC 12 is within {SHORELINE_GATE_M:g} m of the shoreline", flush=True)
+        if variant in RUNUP_LOSS and k.get("dune_collision_module"):
+            k["dune_collision_beach_runup_loss"] = RUNUP_LOSS[variant]
+            print(f"\nEXPERIMENT the beach lowers the water at the dune by {RUNUP_LOSS[variant]:g} m per m", flush=True)
+        if variant in DRY_BEACH and k.get("dune_collision_module"):
+            k["dune_collision_cs"], k["dune_collision_beach_width_limit"] = DRY_CS, DRY_LIMIT_M
+            print(f"\nEXPERIMENT dry beach (start to toe), Cs {DRY_CS:.2e}, limit {DRY_LIMIT_M:g} m", flush=True)
         if variant in CS and k.get("dune_collision_module"):
             k["dune_collision_cs"] = CS[variant]
             print(f"\nEXPERIMENT Cs {CS[variant]:.2e}", flush=True)
@@ -245,7 +271,8 @@ def score():
             row[f"lrr_rmse_{z}"] = float(np.sqrt((e ** 2).mean()))
         crest_table = rd / TABLES / TABLE
         if crest_table.exists():
-            d = pd.read_csv(crest_table).model_minus_survey_m.dropna()
+            d = pd.read_csv(crest_table)
+            d = d[d.survey.isin(SCORE_SURVEYS)].model_minus_survey_m.dropna()
             row.update(dune_cells=len(d), dune_within_05=float((d.abs() <= 0.5).mean()),
                        dune_over_1m_high=float((d > 1).mean()), dune_over_1m_low=float((d < -1).mean()))
         rows.append(row)

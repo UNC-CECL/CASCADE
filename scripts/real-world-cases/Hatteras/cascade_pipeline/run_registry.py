@@ -171,7 +171,7 @@ KIND_DIR = {
     "experiment": "experiments",
     "version": "versions",
     "archive": "archive",
-    # Active work, out of experiments/ (2026-10-29): scripts in Hatteras/dune-storm-response/
+    # Active work, out of experiments/ (2026-10-29): scripts in Hatteras/dune-collision/ (named dune-storm-response/ until 2026-11-03)
     "dune-storm-response": "dune-storm-response",
 }
 # The legacy name of the unscoped tree, still in old index rows and call sites

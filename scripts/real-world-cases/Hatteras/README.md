@@ -51,7 +51,7 @@ The folders keep the names they had in the old repository's `scripts/`:
 | `input_prep/` | the scripts that built the model inputs, by stage (0-elevation ... 8-overwash-analysis) |
 | `figure_making/`, `analyze_output/`, `sensitivity_analysis/` | figures and run comparisons |
 | `hard-structures/` | the groin and revetment studies (their results are in the workspace) |
-| `dune-storm-response/` | active: collision-regime dune erosion, post-storm rebuild and dunes forced to the lidar (results in the workspace) |
+| `dune-collision/` | active: the dune collision module (`cascade/dune_collision.py`), laid out like `hard-structures/groin/`; runs under `output/raw_runs/dune-storm-response/` in the workspace |
 | `repo_tools/`, `other_ms/` | style checks and templates; the Pea Island manuscript scripts |
 | `tests/` | `test_groin.py`, `test_hatteras_config.py` |
 | `docs/` | project notes carried from the old repository (`UNITS.md`, `ORGANIZATION.md`, ...). Paths inside them describe the old layout |

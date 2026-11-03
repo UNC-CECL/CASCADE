@@ -1,6 +1,6 @@
 # Dunes
 
-Kept on 2026-10-23: HAT_dune_ceiling_dem_growth.py, HAT_dune_ceiling_growth_grid.py, HAT_dune_ceiling_uniform.py, HAT_dune_crest_vs_surveys.py, HAT_dune_growth_low_rates.py, HAT_low_growth_test_period.py, HAT_stable_dune_figures.py, HAT_stable_dune_growth_rate.py, HAT_test_period_domain_figures.py, HAT_test_period_growth_figures.py, HAT_test_period_growth_rate.py. The other scripts this README describes were retired (see ../RETIRED_STUDIES.md; recover from commit a7c4358c).
+Kept on 2026-10-23: HAT_dune_ceiling_dem_growth.py, HAT_dune_ceiling_growth_grid.py, HAT_dune_ceiling_uniform.py, HAT_dune_crest_vs_surveys.py, HAT_dune_growth_low_rates.py, HAT_low_growth_test_period.py, HAT_stable_dune_figures.py, HAT_stable_dune_growth_rate.py, HAT_test_period_domain_figures.py, HAT_test_period_growth_figures.py, HAT_test_period_growth_rate.py. On 2026-11-03 HAT_road_dune_rebuild.py and HAT_measured_dune_heights.py moved here from `../../../dune-storm-response/` (they test the road and village dune management, not storm response). The other scripts this README describes were retired (see ../RETIRED_STUDIES.md; recover from commit a7c4358c).
 
 The dune ceiling (Dmaxel), dune growth and recovery rates, and how the modelled crest compares with the DEMs and surveys, in the calibration and test windows.
 
@@ -28,7 +28,9 @@ the experiments are run and filed, and how they import each other across folders
 | `HAT_dune_recovery_slow_growth.py` | Does a recovery term for flattened dunes remove the chronic overwash that slow dune growth leaves at Cape Point? |
 | `HAT_dune_crest_dem_vs_model.py` | Does the model build the dunes up in its first years? |
 | `HAT_dune_crest_vs_surveys.py` | How well do the modelled dunes follow the surveyed ones through the calibration and test windows? |
-| `HAT_forced_dune_crests.py` | Moved 2026-10-27 to `../../../dune-storm-response/`, with `HAT_road_dune_rebuild.py` and `HAT_dune_collision.py` |
+| `HAT_forced_dune_crests.py` | Moved 2026-10-27 to `../../../dune-collision/1-observations/1-forced-dune-crests/` (the folder was `dune-storm-response/` until 2026-11-03) |
+| `HAT_road_dune_rebuild.py` | Does a raise-only, lower post-storm dune rebuild along NC-12 change the shoreline? (in `../../../dune-storm-response/` 2026-10-27 to 2026-11-03) |
+| `HAT_measured_dune_heights.py` | Do lidar-measured management heights (village cap 8.0, road design 5.4, rebuild trigger 3.5 m NAVD88) fix the managed dunes? (in `../../../dune-storm-response/` until 2026-11-03) |
 | `HAT_dune_findings_figures.py` | Three summary figures of the dune ceiling (Dmaxel) and growth-rate studies. |
 | `HAT_dune_findings_simple_figures.py` | Publication versions of the dune ceiling and growth-rate findings, one point per figure. |
 | `HAT_stable_dune_growth_rate.py` | Which dune growth rate reproduces the stable dunes of 1996-2009 under Dmax 10.5 m above the berm? |
@@ -458,6 +460,18 @@ WHERE: output/raw_runs/experiments/storms-overwash-and-dunes/2026-10-01-dune-rec
 
 ### HAT_forced_dune_crests.py
 
-Moved 2026-10-27 to `scripts/real-world-cases/Hatteras/dune-storm-response/`, with
-`HAT_road_dune_rebuild.py` and `HAT_dune_collision.py`; its notes and results are in that
+Moved 2026-10-27 to `scripts/real-world-cases/Hatteras/dune-storm-response/` (since 2026-11-03
+`dune-collision/1-observations/1-forced-dune-crests/`), with
+`HAT_dune_collision.py` (and `HAT_road_dune_rebuild.py`, back here since 2026-11-03); its notes and results are in that
 folder's README. Its output moved on 2026-10-29 to `output/raw_runs/dune-storm-response/`.
+
+### HAT_road_dune_rebuild.py and HAT_measured_dune_heights.py
+
+Back here from `dune-storm-response/` on 2026-11-03: they test the road and village dune management
+(RoadwayManager, BeachDuneManager), not the dunes' storm response. Each script's header says what it asks
+and how to run it. Their runs stay where they were made, under `output/raw_runs/dune-storm-response/`
+(`2026-10-26-road-dune-rebuild`, `2026-10-28-measured-dune-heights`); the road rebuild's control is the
+forced-dune-crests control (`2026-10-26-forced-dune-crests`). Result, 1996-2009 managed edgeBE: the
+raise-only rebuild to 3.0 m on every road domain (`floor_3p0_anyroad`) gives interior LRR bias / RMSE
+-0.366 / 1.241 m/yr against the control's -0.445 / 1.276. The measured heights set the hindcast's 8.0 m
+village cap and its Hs 3.0 (`../../hindcast/HAT_hindcast_config.py`).

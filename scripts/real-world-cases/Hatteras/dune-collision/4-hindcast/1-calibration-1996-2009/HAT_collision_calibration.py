@@ -2,12 +2,12 @@
 Calibrating the model with the collision module on the 2026-10-29 defaults: the dune growth rate (island-wide and
 by zone), the wave height and the groin strength.
 
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py growth
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py runs [run ...]
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py groin [run ...]
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py hs
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py gsweep
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_collision_calibration.py buxton
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_collision_calibration.py growth
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_collision_calibration.py runs [run ...]
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_collision_calibration.py groin [run ...]
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_collision_calibration.py hs
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_collision_calibration.py gsweep
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_collision_calibration.py buxton
 
 The runs are HAT_dune_collision.py's cal_* variants (managed edgeBE 1996-2009, groin, StormStart 1, village dune cap
 8.0 m NAVD88; the module at Cs 1.24e-4, W0 45 m), filed under its runs/. This script only scores them.

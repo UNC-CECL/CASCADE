@@ -1,13 +1,13 @@
 """
 Dune toes from the lidar, and a collision-regime dune erosion rule calibrated on the 1996-2009 surveys.
 
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py toes
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py twl
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py calibrate
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py empirical
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py run
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py score
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_dune_collision.py plot
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py toes
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py twl
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py calibrate
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py empirical
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py run
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py score
+    python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py plot
 
 Barrier3D lowers a dune only when Rhigh overtops it. Sallenger (2000) puts a storm in the collision regime
 when the water reaches the dune toe but not the crest (D_low < R_high < D_high), where the real dunes lose
@@ -36,7 +36,7 @@ run        the managed edgeBE 1996-2009 hindcast with the groin, as the headline
            toe and its crest, down to no lower than the toe; both dune rows scaled together, as the forced
            crests are. Optionally the eroded sand goes onto the beach, moving the shoreline seaward as
            CASCADE's shoreface nourishment does (dx_s = 2 V / (2 h_b + D_sf)), passed on to BRIE:
-               larson_lost     Cs 1.7e-4 (Dennis fit, = Larson's laboratory value), sand lost
+               larson_lost     Cs 1.7e-4 (Dennis fit, = Larson's US East Coast storm value), sand lost
                larson_beach    Cs 1.7e-4, sand to the beach
                strong_lost     Cs 4e-4 (what the Dennis hotspots, GIS 11 and 86, need), sand lost
                strong_beach    Cs 4e-4, sand to the beach
@@ -210,6 +210,14 @@ VARIANTS = {"larson_lost": ("larson", 1.7e-4, False, None),
             # ... and with NCDOT's own criterion: dune maintenance where NC 12 is within 650 ft (198 m) of the
             # shoreline (SHORELINE_GATE)
             "cal_g16_nocape_rd198": ("storm", 1.24e-4, False, (0.02, 0.04)),
+            # ... with the beach acting on the water instead of the volume (RUNUP_LOSS): R_high less 0.02 m per m
+            # of beach at the dune, Cs 1.64e-4 its offline fit with the toe floor; and the ramp at its own such fit
+            "cal_g16_nocape_rd198_rl02": ("storm", 1.64e-4, False, (0.02, 0.04)),
+            "cal_g16_nocape_rd198_cs145": ("storm", 1.45e-4, False, (0.02, 0.04)),
+            # ... with the beach factor on the dry beach (beach start to toe, 2026-11-03) at W0 25 m: Cs 1.02e-4 its
+            # offline fit with the toe floor, and 0.87e-4 (scaled as the crest-based 1.45e-4 -> 1.24e-4 in-model)
+            "cal_g16_nocape_rd198_dry": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            "cal_g16_nocape_rd198_dry_cs087": ("storm", 0.87e-4, False, (0.02, 0.04)),
             # The alternative to cal_g16_nocape: the module everywhere, with faster dune recovery at Cape Point
             # (GIS 1-5; 0.10-0.20 is the cape's own rate of the 2026-10-20 calibration, dropped 2026-10-21)
             **{f"cal_g16_capeg{lo * 100:02.0f}": ("storm", 1.24e-4, False,
@@ -230,7 +238,13 @@ ROAD_DUNE_REBUILD = {"cal_g16_nocape_rd150": (150.0, None), "cal_g16_nocape_rd15
 # NCDOT's criterion: dune maintenance where NC 12 is within 650 ft (198 m) of the shoreline (Bonner Bridge
 # Replacement FEIS, NCDOT/FHWA 2008, p. 2-128); the road manager measures from the dune, so each domain's gate is
 # 198 m less its median beach width (the toe table's, as the collision module's)
-SHORELINE_GATE, SHORELINE_GATE_M = ("cal_g16_nocape_rd198",), 198.0
+SHORELINE_GATE, SHORELINE_GATE_M = ("cal_g16_nocape_rd198", "cal_g16_nocape_rd198_rl02", "cal_g16_nocape_rd198_cs145",
+                                    "cal_g16_nocape_rd198_dry", "cal_g16_nocape_rd198_dry_cs087"), 198.0
+# The collision beach width on the dry beach, beach start to toe (2026-11-03; HAT_dune_toes.py since then); the
+# road gate above keeps the width to the crest, so that only the beach factor changes
+DRY_BEACH = ("cal_g16_nocape_rd198_dry", "cal_g16_nocape_rd198_dry_cs087")
+# The beach lowering the water at the dune, m per m of beach (DuneCollisionManager beach_runup_loss), per variant
+RUNUP_LOSS = {"cal_g16_nocape_rd198_rl02": 0.02}
 # Per-village dune caps, m NAVD88: the lidar 95th percentile of each village's crest cells
 # (input_prep/4-mgmt-forcings/village_dune_cap/HAT_village_dune_cap.py), in place of the one 8.0 m
 VILLAGE_DOMAINS = {"Buxton": (7, 8), "Avon": (21, 31), "Salvo": (68, 71), "Waves": (72, 76), "Rodanthe": (77, 83)}
@@ -269,6 +283,7 @@ BEACH_W0_M = {"storm_w45": 45.0, "storm_w45_r04": 45.0, "storm_w45_r06": 45.0, "
               "storm_cs145_r04_hs3_ends": 45.0, "storm_cs145_r04_hs2p5": 45.0,
               **{v: 45.0 for v in GROIN_STRENGTH if VARIANTS[v][0]},
               **{v: 45.0 for v in VARIANTS if v.startswith(("cal_r", "cal_zone", "cal_hs", "cal_g"))}}
+BEACH_W0_M.update({v: 25.0 for v in DRY_BEACH})
 # The sink, m/yr as Barrier3D's Rat ((-) erosion): CoastSat LRR less the control's at GIS 9-14, where the
 # control erodes too little and edgeBE has no rate
 BUXTON_SINK = {9: -0.61, 10: -0.56, 11: -0.35, 12: -1.77, 13: -1.92, 14: -0.89}
@@ -282,39 +297,16 @@ REPORT_GIS = range(5, 21)
 
 # Toes
 
-# Beach start, crest and toe per profile (m MHW, ocean first): the crest as HAT_survey_dune_crests.crests finds it
+# Beach start, crest and toe per profile (m MHW, ocean first): the input step's picker
+# (input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py), so the calibration and the runner read one rule.
+# Until 2026-11-03 this was a copy of it, with the chord to the highest crest (deepest dip); since, the chord runs
+# to the first dune (FOREDUNE_DROP_M there)
 def crest_and_toe(z, i0, i1, X):
-    n = z.shape[0]
-    out = {k: np.full(n, np.nan) for k in ("crest", "toe", "beach_start_idx", "crest_idx", "toe_idx")}
-    above = z > X.BEACH_START_THR_M
-    sb = np.where(above.any(axis=1), above.argmax(axis=1), -1)
-    for i in range(n):
-        if sb[i] < 0:
-            continue
-        a = max(i0, int(sb[i])) if X.CLIP_WINDOW_TO_BEACH else i0
-        b = min(i1, z.shape[1])
-        if b <= a:
-            continue
-        win = z[i, a:b]
-        if (win <= X.NODATA_SENTINEL_M + 1e-9).any():
-            continue
-        valid = win > X.SENTINEL_WATER_M + 1e-9
-        if not valid.any():
-            continue
-        c = a + int(np.argmax(np.where(valid, win, -np.inf)))
-        out["crest"][i], out["crest_idx"][i], out["beach_start_idx"][i] = z[i, c], c, sb[i]
-        s = int(sb[i])
-        if c - s < MIN_BEACH_CELLS:
-            continue
-        seg = z[i, s:c + 1]
-        if (seg <= X.NODATA_SENTINEL_M + 1e-9).any():
-            continue
-        line = seg[0] + (seg[-1] - seg[0]) * np.arange(len(seg)) / (len(seg) - 1)
-        k = int(np.argmax(line - seg))
-        if k in (0, len(seg) - 1):
-            k = 0 if seg[0] >= seg[-1] else k      # a straight or convex face: the toe is the beach start
-        out["toe"][i], out["toe_idx"][i] = seg[k], s + k
-    return out
+    p = str(_HAT_DIR / "input_prep" / "1-barrier3d-domains" / "3-dune-toes")
+    if p not in sys.path:
+        sys.path.insert(0, p)
+    import HAT_dune_toes
+    return HAT_dune_toes.crest_and_toe(z, i0, i1, X)
 
 
 def toes():
@@ -778,14 +770,22 @@ def _launch(variant):
                 width = per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median())
                 if variant in WIDTH_FROM_START:
                     width = start_width
+                width_collision = width
+                if variant in DRY_BEACH:
+                    # the dry beach, as HAT_dune_toes.py: 0 where the crest is within one cell of the beach start
+                    s0 = st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)]
+                    dry = np.where(s0.toe_to_crest_m.notna(), s0.beach_width_m - s0.toe_to_crest_m,
+                                   np.where(s0.beach_width_m < 2 * 10, 0.0, np.nan))
+                    width_collision = per_gis(s0.assign(dry=dry).groupby(["gis", "cell"]).dry.median())
             for g in on:
                 toe_m[dom.gis_to_pad(g)] = toe[g] - MHW_NAVD88_M
                 if w0:
-                    width_m[dom.gis_to_pad(g)] = width[g]
+                    width_m[dom.gis_to_pad(g)] = width_collision[g]
             k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs,
                      dune_collision_beach_width=width_m if w0 else None,
                      **({"dune_collision_beach_width_limit": w0} if w0 else {}),
-                     dune_collision_beach_follows_shoreline=variant in BEACH_FOLLOWS_SHORELINE)
+                     dune_collision_beach_follows_shoreline=variant in BEACH_FOLLOWS_SHORELINE,
+                     dune_collision_beach_runup_loss=RUNUP_LOSS.get(variant))
             if variant in ROAD_DUNE_REBUILD:
                 gate, trigger = ROAD_DUNE_REBUILD[variant]
                 k["road_dune_rebuild_trigger_m"] = gate

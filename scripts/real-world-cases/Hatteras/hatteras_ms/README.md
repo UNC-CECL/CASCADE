@@ -368,7 +368,7 @@ Option B (Hs 2.5 in 2010-2024 only) is recorded, not wired:
 hatteras_site_config.HATTERAS_WAVE_OPTION_B.
 HS 3.0 SINCE 2026-10-29 (Hannah): the best shoreline fit of Hs 2.0 / 2.5 /
 3.0 in both windows, full management, with the 8.0 m village dune cap
-(dune-storm-response/HAT_measured_dune_heights.py). Tp, asymmetry and
+(experiments/dunes/HAT_measured_dune_heights.py). Tp, asymmetry and
 high-angle are unchanged. Runs named before then are at Hs 2.0. The
 edge ends in HATTERAS_BE_EDGE_ONLY are the Hs 3.0 solves (1996-2009
 2026-10-28, 2009-2025 2026-10-29).

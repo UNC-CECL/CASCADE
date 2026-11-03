@@ -1,10 +1,10 @@
 """
 Does the missed erosion north of Buxton come from dunes that never came down after Dennis?
 
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py run
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py score
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py plot
-    python scripts/real-world-cases/Hatteras/dune-storm-response/HAT_forced_dune_crests.py crests
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py run
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py score
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py plot
+    python scripts/real-world-cases/Hatteras/dune-collision/1-observations/1-forced-dune-crests/HAT_forced_dune_crests.py crests
 
 Barrier3D lowers a dune cell only when Rhigh overtops it, so Dennis (Rhigh 3.65 m NAVD88) leaves the
 5-7 m modelled dunes at GIS 8-12 standing, while the 1999 post-Dennis lidar has them at 1.7-4.7 m.
@@ -55,7 +55,11 @@ from cascade_pipeline.saved_runs import load_saved_cascade  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
 TAG = "2026-10-26-forced-dune-crests"
+# The runs and their logs stay where the runner files them (cascade_pipeline/run_registry.py); the figures and
+# tables go to the step's workspace folder (moved there 2026-11-03), the tables under supporting/
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / TAG
+FIG_DIR = PROJECT_ROOT / "dune-collision" / "1-observations" / "1-forced-dune-crests"
+TABLE_DIR = FIG_DIR / "supporting"
 HINDCAST = _HAT_DIR / "hatteras_ms" / "HAT_hindcast.py"
 SURVEY_CRESTS = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / "1996-start"
                  / "survey-crests" / "survey_dune_crests.csv")
@@ -213,8 +217,9 @@ def score():
     pd.set_option("display.width", 250)
     pd.set_option("display.max_columns", 40)
     print(out.round(2))
-    out.to_csv(EXP_DIR / "forced_dune_crests_by_gis.csv")
-    print(f"\nwrote {EXP_DIR / 'forced_dune_crests_by_gis.csv'}")
+    TABLE_DIR.mkdir(parents=True, exist_ok=True)
+    out.to_csv(TABLE_DIR / "forced_dune_crests_by_gis.csv")
+    print(f"\nwrote {TABLE_DIR / 'forced_dune_crests_by_gis.csv'}")
 
 
 # Figures
@@ -344,7 +349,8 @@ def plot():
                    loc="outside lower center")
         restyle(fig, ax, subtitle)
 
-        out = EXP_DIR / f"forced_dune_crests_position_{view}.png"
+        FIG_DIR.mkdir(parents=True, exist_ok=True)
+        out = FIG_DIR / f"forced_dune_crests_position_{view}.png"
         fig.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
         plt.close("all")
         (s0, s1), (e0, e1) = NET_CHANGE_WINDOWS[(START, END)]
@@ -432,7 +438,8 @@ def crests():
     fig.suptitle(f"Modelled and surveyed dune crests north of Buxton, {START}–{END}",
                  fontsize=12, fontweight="bold")
     fig.tight_layout(rect=(0, 0.05, 1, 1))
-    out = EXP_DIR / "dune_crests_model_vs_lidar_gis8_15.png"
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    out = FIG_DIR / "dune_crests_model_vs_lidar_gis8_15.png"
     fig.savefig(out, dpi=250, facecolor="white")
     plt.close(fig)
     record_caption(out, (
@@ -444,7 +451,8 @@ def crests():
         f"its crests. Run {rd.name}, experiment {TAG}."))
     d = pd.DataFrame(rows)
     d["model_minus_lidar"] = d.model - d.lidar
-    d.round(3).to_csv(EXP_DIR / "dune_crests_model_vs_lidar_gis8_15.csv", index=False)
+    TABLE_DIR.mkdir(parents=True, exist_ok=True)
+    d.round(3).to_csv(TABLE_DIR / "dune_crests_model_vs_lidar_gis8_15.csv", index=False)
     print(d.pivot(index="gis", columns="survey", values="model_minus_lidar").round(1))
     print(f"wrote {out}")
 
