@@ -10,8 +10,8 @@ both from the module-off controls:
     collision_hotspot_crests.png     crest through time at each hotspot, model band against lidar dots
     collision_alongshore_crests.png  crest along the island at each period's end (2009, 2020)
     collision_alongshore_crests_<period>_all.png   the same in every survey, one panel each (supplement)
-    collision_exposure_offset.png    storms that put each domain's dunes in collision, above its crest offset
-    collision_beach_offset.png       each domain's beach width, above its crest offset
+    collision_drivers_scatter.png    each domain's crest offset against the storms that put its dunes in
+                                     collision and against its dry beach width
 
 Model: cal_control_g16 (2026-10-26-dune-collision; Hs 3.0, StormStart 1, groin 0.16, module off) and the
 2009-2025 test's control (2026-10-29-collision-test-2009-2025, module off, the 2014, 2017 and 2022 fills in).
@@ -76,7 +76,7 @@ import HAT_collision_motivation as M  # noqa: E402
 # The topic folders under 1-observations/ (3-mechanism is HAT_collision_motivation.py's)
 WHERE_DIR = M.ROOT_DIR / "1-mismatch-along-island"     # the heatmap and the crests along the island
 HOT_DIR = M.ROOT_DIR / "2-hotspots"
-DRIVER_DIR = M.ROOT_DIR / "4-drivers"                   # collision exposure and beach width
+DRIVER_DIR = M.ROOT_DIR / "4-storms-and-beach-width"    # the offset against collision storms and beach width
 RUNS = M.RUNS
 PERIODS = {
     "calibration": dict(label="Calibration, 1996–2009", start="1996-start",
@@ -661,75 +661,83 @@ def fig_alongshore_series(data):
 
 
 # ---- 4 and 5: a driver above the offset --------------------------------------------------------------------------
-def fig_driver(data, hots, kind):
-    fig, axs = plt.subplots(2, 2, figsize=(7.48, 4.6), sharex=True, sharey="row",
-                            gridspec_kw=dict(height_ratios=[1, 1.15]))
-    rows = []
-    stats = []
-    for j, d in enumerate(data.values()):
-        off = mean_offset(d)
-        if kind == "exposure":
-            e = exposure(d)
-            top = e.collision_storms_per_cell
-            colour, ylab = EXPOSURE_C, "Storms in collision\nper cell"
-        else:
-            top = beach_width(d)
-            colour, ylab = BEACH_C, "Dry beach width (m)"
-        ax = axs[0, j]
-        shade_hotspots(ax, hots[d["key"]], label=True)   # the hotspots found in this period
-        ax.bar(top.index, top.to_numpy(), width=0.8, color=colour, lw=0, zorder=2)
-        if kind == "beach":
-            ax.axhline(M.W0_M, color=INK, lw=0.8, ls="--", zorder=3)
-            ax.text(90.3, M.W0_M, f"{M.W0_M:.0f} m", ha="right", va="bottom", fontsize=6.5, color=INK)
-        ax.set_title(d["label"], loc="center", pad=18)
-        ax.set_title(f"({'abcd'[j]})", loc="left", fontweight="bold", pad=18)
-        if j == 0:
-            ax.set_ylabel(ylab)
-        ax = axs[1, j]
-        shade_hotspots(ax, hots[d["key"]])
-        v = off.to_numpy()
-        ax.bar(off.index, np.clip(v, -OFFSET_CLIP_M, OFFSET_CLIP_M), width=0.8,
-               color=np.where(v > 0, HIGH_C, LOW_C), lw=0, zorder=2)
-        for g, x in off[off.abs() > OFFSET_CLIP_M].items():      # clipped bars carry their value
-            ax.text(g - 0.8, np.sign(x) * (OFFSET_CLIP_M - 0.15), f"{x:.1f}", ha="right",
-                    va="bottom" if x < 0 else "top", fontsize=6.5, color=INK)
-        ax.set_ylim(-OFFSET_CLIP_M, OFFSET_CLIP_M)
-        ax.axhline(0, color=INK, lw=0.7, zorder=3)
-        ax.set_title(f"({'abcd'[2 + j]})", loc="left", fontweight="bold")
-        gis_axis(ax)
-        if j == 0:
-            ax.set_ylabel("Model minus lidar\ncrest (m)")
-        ok = top.notna() & off.notna()
-        rho = pd.Series(top[ok]).rank().corr(pd.Series(off[ok]).rank())
-        stats.append(f"{d['key']} Spearman r {rho:.2f} ({int(ok.sum())} domains)")
-        rows.append(pd.DataFrame({"period": d["key"], "gis": top.index, kind: top.to_numpy(),
-                                  "mean_offset_m": off.to_numpy()}))
-    for ax in axs[0]:
-        town_bands(ax, where="top", strip=0.09, label=True, fontsize=6)
-    fig.tight_layout(h_pad=0.5)
-    name = "collision_exposure_offset" if kind == "exposure" else "collision_beach_offset"
-    out = DRIVER_DIR / f"{name}.png"
+def fig_drivers(data, hots):
+    """One scatter per period and driver: each domain's mean crest offset against the storms that put its dunes in
+    collision (top) and against its dry beach width (bottom); the collision hotspots in red."""
+    keys = list(data)
+    fig, axs = plt.subplots(2, len(keys), figsize=(7.48, 5.6), sharey=True)
+    rows, stats = [], {}
+    drivers = (("exposure", "Storms in collision per cell", EXPOSURE_C),
+               ("beach", "Dry beach width (m)", BEACH_C))
+    letter = iter("abcdefgh")
+    for i, (kind, xlab, _) in enumerate(drivers):
+        for j, key in enumerate(keys):
+            d = data[key]
+            ax = axs[i, j]
+            off = mean_offset(d)
+            x = exposure(d).collision_storms_per_cell if kind == "exposure" else beach_width(d)
+            cls = collision_hotspots(d)[0]["class"].reindex(off.index).fillna("")
+            in_run = pd.Series(False, index=off.index)
+            for h in hots[key]:
+                in_run.loc[h["lo"]:h["hi"]] = True
+            cls = cls.where(~(cls.eq("collision") & ~in_run), "single")   # meets the rule alone, not a stretch
+            ok = x.notna() & off.notna()
+            y = off.clip(-OFFSET_CLIP_M, OFFSET_CLIP_M)
+            for c, colour, size, z, lab in (("", "0.72", 14, 2, "Other domains"),
+                                            ("too_high_other", "0.35", 16, 3, "Too high, no missed lowering"),
+                                            ("single", "none", 22, 4, "Meets the hotspot rule alone"),
+                                            ("collision", HIGH_C, 26, 5, "Collision hotspot")):
+                sel = ok & cls.eq(c)
+                ax.scatter(x[sel], y[sel], s=size, facecolor=colour, lw=0.9 if c == "single" else 0.4,
+                           edgecolor=HIGH_C if c == "single" else "white", zorder=z,
+                           label=lab if (i, j) == (0, 0) else None)
+            for g in off[ok & (off.abs() > OFFSET_CLIP_M)].index:   # off the axis: drawn at the edge, value written
+                ax.annotate(f"GIS {g} ({off[g]:.1f})", (x[g], y[g]), xytext=(4, -3 if off[g] > 0 else 3),
+                            textcoords="offset points", fontsize=6, color=INK_MUTED,
+                            va="top" if off[g] > 0 else "bottom")
+            for h in hots[key]:                                        # each hotspot named once
+                pts = [g for g in range(h["lo"], h["hi"] + 1) if ok.get(g, False)]
+                if pts:
+                    g = max(pts, key=lambda k: y[k])
+                    ax.annotate(span(h).replace("GIS ", ""), (x[g], y[g]), xytext=(5, 2), textcoords="offset points",
+                                fontsize=6.5, fontweight="bold", color=HIGH_C, path_effects=STRIP_HALO, zorder=5)
+            ax.axhline(0, color=INK, lw=0.6, zorder=1)
+            ax.axhline(HOT_OFF_M, color=INK_MUTED, lw=0.6, ls=(0, (3, 2)), zorder=1)
+            if kind == "beach":
+                ax.axvline(M.W0_M, color=INK, lw=0.6, ls="--", zorder=1)
+                ax.text(M.W0_M, OFFSET_CLIP_M - 0.1, f" {M.W0_M:.0f} m", fontsize=6.5, color=INK, va="top")
+            rho = pd.Series(x[ok]).rank().corr(pd.Series(off[ok]).rank())
+            stats[(kind, key)] = (rho, int(ok.sum()))
+            ax.text(0.98, 0.04, f"Spearman r = {rho:.2f}", transform=ax.transAxes, ha="right", fontsize=7,
+                    color=INK)
+            ax.set_ylim(-OFFSET_CLIP_M - 0.3, OFFSET_CLIP_M + 0.3)
+            ax.set_xlabel(xlab)
+            ax.set_title(f"({next(letter)})", loc="left", fontweight="bold")
+            if i == 0:
+                ax.set_title(d["label"], loc="center", pad=8)
+            if j == 0:
+                ax.set_ylabel("Model minus lidar crest (m)")
+            rows.append(pd.DataFrame({"period": key, "driver": kind, "gis": off.index, "driver_value": x.to_numpy(),
+                                      "mean_offset_m": off.to_numpy(),
+                                      "class": cls.to_numpy()}))
+    fig.legend(loc="lower center", ncol=4, frameon=False, fontsize=7)
+    fig.tight_layout(rect=(0, 0.05, 1, 1), h_pad=1.0)
+    out = DRIVER_DIR / "collision_drivers_scatter.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
-    pd.concat(rows).round(3).to_csv(DRIVER_DIR / "supporting" / f"{name}.csv", index=False)
-    print(f"{name}: " + "; ".join(stats))
-    off_txt = ("(c, d) Model minus lidar crest per GIS domain, averaged over the surveys after each period's start "
-               "(the domain median of the surveyed cells, at least "
-               f"{MIN_CELLS}); red, the model's dunes too high; a bar beyond ±{OFFSET_CLIP_M:g} m is cut and its value written. "
-               f"Model: the module-off controls. Shaded, each period's collision "
-               f"hotspots: {HOT_DEF}. Rank correlation of the top row with the offset: "
-               f"{'; '.join(stats)}.")
-    if kind == "exposure":
-        record_caption(out, (
-            "How often the storms reached each domain's dunes without overtopping them. (a, b) Storms per 10 m cell "
-            "in the collision regime (Sallenger 2000): the storm's peak runup in the run's own storm series "
-            "(R_high, m NAVD88) above the cell's dune toe (the module's toe) and below the model's crest at the "
-            "start of that storm's year; counted over the run, averaged over the domain's cells. Barrier3D lowers "
-            "none of these dunes. " + off_txt))
-    else:
-        record_caption(out, (
-            "The beach in front of each domain's dunes. (a, b) The dry beach width the collision module reads "
-            "(beach start, 0.5 m above MHW, to the dune toe), the domain's median over its cells; dashed, "
-            f"the {M.W0_M:.0f} m beyond which the module's beach factor is zero. " + off_txt))
+    pd.concat(rows).round(3).to_csv(DRIVER_DIR / "supporting" / "collision_drivers_scatter.csv", index=False)
+    txt = "; ".join(f"{k} {p}: Spearman r {r:.2f} ({n} domains)" for (k, p), (r, n) in stats.items())
+    print(f"collision_drivers_scatter: {txt}")
+    record_caption(out, (
+        "What sets where the model's dunes stand too high. Each point is one GIS domain: its model minus lidar "
+        "crest, averaged over the surveys after the period's start (the domain median of the surveyed cells, at "
+        f"least {MIN_CELLS}; beyond ±{OFFSET_CLIP_M:g} m drawn at the edge, value written), against (a, b) the "
+        "storms that put its dunes in collision (Sallenger 2000: the storm's peak runup in the run's own storm series "
+        "above the cell's dune toe and below the model's crest at the start of that storm's year; per cell, averaged "
+        "over the domain), which Barrier3D lowers none of, and (c, d) its dry beach width (beach start, 0.5 m above "
+        f"MHW, to the dune toe; domain median), dashed at the {M.W0_M:.0f} m beyond which the collision module's "
+        f"beach factor is zero. Dotted, the hotspot rule's {HOT_OFF_M:g} m. Red, the collision hotspots: {HOT_DEF}; "
+        "open red, a domain meeting that rule alone; dark grey, domains too high without that missed lowering. Model: the module-off controls. "
+        f"Rank correlations: {txt}."))
     print(f"wrote {out}")
 
 
@@ -747,8 +755,7 @@ def main():
     fig_hotspots(data, hots)
     fig_alongshore(data, hots)
     fig_alongshore_series(data)
-    fig_driver(data, hots, "exposure")
-    fig_driver(data, hots, "beach")
+    fig_drivers(data, hots)
 
 
 if __name__ == "__main__":

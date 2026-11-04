@@ -14,8 +14,9 @@ from the same module-off controls, lidar and hotspot rule as HAT_collision_motiv
                                           started from and its last survey, the model's crest at both
 
 Profiles: the start's own 1 m DEM clip (what the model started from) and the period's last lidar on the same
-grid, as HAT_survey_dune_crests.py reads them (its vertical shifts applied), oriented ocean first; the median of
-the cell's ten 1 m transects. The representative cell is the hotspot cell whose lidar crest loss, start to last
+grid, as HAT_survey_dune_crests.py reads them (its vertical shifts applied), oriented ocean first and put in that
+script's straightened frame (each transect shifted by its cell's shear); the median of the cell's ten 1 m
+transects. The dune window at the start and at the last survey (moved landward by the shoreline retreat) are shaded. The representative cell is the hotspot cell whose lidar crest loss, start to last
 survey, is nearest the hotspot's median.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -264,14 +265,15 @@ def representative_cell(d, h):
     last = max(d["surveys"].survey)
     s = d["surveys"][(d["surveys"].survey == last) & d["surveys"].gis.between(h["lo"], h["hi"])].copy()
     s["start"] = [d["crests"][0, g - 1, c] for g, c in zip(s.gis, s.cell)]
-    s["loss"] = s.start - s.crest                          # crest: the berm where the dune became beach
+    s["loss"] = s.start - s.crest
     s = s[s.loss.notna()]
     r = s.iloc[(s.loss - s.loss.median()).abs().argmin()]
     return int(r.gis), int(r.cell), int(last), float(r.crest), str(r.status)
 
 
-def cell_profile(start, g, cell, year, S):
-    """The median of a cell's ten 1 m transects, ocean first: the start's DEM clip (year None) or a survey."""
+def cell_rows(start, g, cell, year, S):
+    """A cell's ten 1 m transects, ocean first, m NAVD88: the start's DEM clip (year None) or a survey, read as
+    HAT_survey_dune_crests.py reads them (its vertical shifts applied)."""
     import rasterio
     prod, surveys = S.STARTS[start]
     clip = S.product(prod).gapfill_1m / f"clip_domain_{g}_filled.tif"
@@ -295,19 +297,35 @@ def cell_profile(start, g, cell, year, S):
             for f in srcs:
                 f.close()
     a = S.X.orient_ocean_right(a, S.X.OCEAN_LOC)[:, ::-1]
-    rows = a[10 * cell:10 * cell + 10]
-    return np.nanmedian(np.where(rows < SPIKE_M, rows, np.nan), axis=0)
+    rows = a[S.BLOCK * cell:S.BLOCK * cell + S.BLOCK]
+    return np.where(rows < SPIKE_M, rows, np.nan)
+
+
+def straightened(rows, shear_cells, c0_cells, B):
+    """The crest script's frame at 1 m: each transect shifted by its cell's shear and the water trim (both in
+    10 m columns there), then the median of the ten. Index k here is 1 m; the crest script's column j covers
+    k = B*j .. B*j + B - 1."""
+    k = int(shear_cells) * B
+    out = np.full_like(rows, np.nan)
+    out[:, :rows.shape[1] - k] = rows[:, k:]
+    return np.nanmedian(out[:, int(c0_cells) * B:], axis=0)
 
 
 def fig_profiles(data, hots):
     S = survey_module()
     apply_style()                                                  # the survey script's import resets rcParams
     warnings.filterwarnings("ignore")
-    fig, axs, keys, n = period_grid(data, hots, height=1.85)
+    B = S.BLOCK
+    rows_n = max(len(v) for v in hots.values())
+    fig, axs, keys, n = period_grid(data, hots, height=1.85 if rows_n > 1 else 2.6)
     rows, let = [], letters(hots, keys, n)
     for j, key in enumerate(keys):
         d = data[key]
         start = A.PERIODS[key]["start"]
+        windows = json.loads(S.tv.picks_dir(start).joinpath(
+            f"HAT_dune_search_windows_{S.tv.topo_dirs(start)[2]}.json").read_text(encoding="utf-8"))
+        frames = {g: S.frame(start, g, windows) for g in range(1, 91)}
+        _, start_loc = S.check_start(start, frames, with_index=True)
         for i in range(n):
             ax = axs[i, j]
             if i >= len(hots[key]):
@@ -315,30 +333,44 @@ def fig_profiles(data, hots):
                 continue
             h = hots[key][i]
             g, cell, last, lid1, status = representative_cell(d, h)
-            z0 = cell_profile(start, g, cell, None, S)
-            z1 = cell_profile(start, g, cell, last, S)
+            shear, c0, i0, i1 = frames[g]
+            z0 = straightened(cell_rows(start, g, cell, None, S), shear[cell], c0, B)
+            z1 = straightened(cell_rows(start, g, cell, last, S), shear[cell], c0, B)
+            w0, w1 = S.survey_windows(start, last, g, i0, i1)
+            sh = int(w0[cell] - i0)                                # the window's move, 10 m columns, landward +
             state = int(d["surveys"].query("survey == @last").state_year.iloc[0]) - d["fmy"]
             m0, m1 = d["crests"][0, g - 1, cell], d["crests"][state, g - 1, cell]
-            x = np.arange(len(z0), dtype=float)
-            # the window around the start's crest: the highest point within the first 150 m of land
-            land = np.where(np.isfinite(z0) & (z0 > 1.5))[0]
-            seek = slice(land[0], land[0] + 150) if land.size else slice(None)
-            xc = int(np.nanargmax(np.where(np.isfinite(z0[seek]), z0[seek], -9)) + (seek.start or 0))
-            xr = x - xc                                            # m from the start crest, seaward positive
-            xr = -xr                                               # ocean first, so flip: seaward to the right
-            keep = (xr >= PROFILE_HALF_M[0]) & (xr <= PROFILE_HALF_M[1])
-            ax.plot(xr[keep], z0[keep], color=START_C, lw=1.3, label="start")
-            ax.plot(xr[keep], z1[keep], color=END_C, lw=1.5, label="last")
+            # x: m seaward of the start crest (the centre of the start's crest column), ocean to the right
+            xc = B * start_loc[g, cell] + (B - 1) / 2
+            x = xc - np.arange(len(z0), dtype=float)
+            keep = (x >= PROFILE_HALF_M[0]) & (x <= PROFILE_HALF_M[1])
+
+            def span(a, b):                                        # 10 m columns [a, b) as x (m)
+                return xc - (B * b - 0.5), xc - (B * a - 0.5)
+            ax.axvspan(*span(i0, i1), color="0.88", lw=0, zorder=0)
+            if sh:
+                ax.axvspan(*span(i0 + sh, i1 + sh), color=END_C, alpha=0.13, lw=0, zorder=0)
+            ax.plot(x[keep], z0[keep], color=START_C, lw=1.3)
+            ax.plot(x[keep], z1[keep], color=END_C, lw=1.5)
+            # the lidar's crest at the last survey: its 10 m column, in the window moved by the shoreline retreat
+            ws = (B * sh)
+            if np.isfinite(lid1):
+                seg = span(i0 + sh, i1 + sh)
+                zz = np.where((x >= seg[0]) & (x <= seg[1]), z1, np.nan)
+                xl = x[int(np.nanargmax(zz))] if np.isfinite(zz).any() else -ws
+                ax.plot([xl - 6, xl + 6], [lid1, lid1], color=END_C, lw=1.2, ls=(0, (2, 1)), zorder=4)
             for mz, c in ((m0, START_C), (m1, A.MODEL_C)):
                 ax.plot([-6, 6], [mz, mz], color=c, lw=3.2, solid_capstyle="butt", alpha=0.9, zorder=4)
-            # the lidar's crest at the last survey, in the start's dune window (the berm where it became beach)
-            ax.plot([-6, 6], [lid1, lid1], color=END_C, lw=1.2, ls=(0, (2, 1)), zorder=4)
-            ax.annotate("", xy=(10, m1), xytext=(10, lid1),
+            xa = PROFILE_HALF_M[1] - 14
+            ax.annotate("", xy=(xa, m1), xytext=(xa, lid1),
                         arrowprops=dict(arrowstyle="<->", color=A.HIGH_C, lw=1.0, shrinkA=0, shrinkB=0), zorder=5)
-            ax.text(12, (m1 + lid1) / 2, f"{m1 - lid1:+.1f} m", fontsize=6.5, color=A.HIGH_C, va="center",
+            ax.text(xa + 2, (m1 + lid1) / 2, f"{m1 - lid1:+.1f} m", fontsize=6.5, color=A.HIGH_C, va="center",
                     path_effects=A.STRIP_HALO)
+            if sh:
+                ax.text(0.02, 0.04, f"window moved {ws} m landward with the shoreline", transform=ax.transAxes,
+                        fontsize=6.5, color=INK_MUTED, va="bottom", path_effects=A.STRIP_HALO)
             if status != "ok":
-                ax.text(0.02, 0.05, "dune now beach", transform=ax.transAxes, fontsize=6.5, color=INK_MUTED)
+                ax.text(0.02, 0.14, status.replace("_", " "), transform=ax.transAxes, fontsize=6.5, color=INK_MUTED)
             ax.set_xlim(*PROFILE_HALF_M)
             ax.set_title(f"({let[(i, key)]}) {A.span(h)}: GIS {g}, cell {cell}", loc="left", fontweight="bold",
                          fontsize=8.5)
@@ -348,16 +380,20 @@ def fig_profiles(data, hots):
             if i == len(hots[key]) - 1:
                 ax.set_xlabel("Distance from the start crest (m; ocean right)")
             rows.append(pd.DataFrame({"period": key, "hotspot": A.span(h), "gis": g, "cell": cell,
-                                      "x_from_start_crest_m": xr[keep], "z_start_m_navd88": z0[keep],
-                                      f"z_last_m_navd88": z1[keep], "last_survey": last,
+                                      "x_from_start_crest_m": x[keep], "z_start_m_navd88": z0[keep],
+                                      "z_last_m_navd88": z1[keep], "last_survey": last,
+                                      "window_shift_landward_m": ws, "lidar_crest_last_m": lid1,
                                       "model_crest_start_m": m0, "model_crest_last_m": m1}))
     fig.legend(handles=[Line2D([], [], color=START_C, lw=1.5, label="Lidar the period started from (the start DEM)"),
                         Line2D([], [], color=END_C, lw=1.5, label="Lidar, the period's last survey"),
+                        Patch(color="0.88", label="Dune window at the start"),
+                        Patch(color=END_C, alpha=0.13, label="Dune window at the last survey (moved by shoreline retreat)"),
                         Line2D([], [], color=START_C, lw=3.2, label="Model crest at the start"),
                         Line2D([], [], color=A.MODEL_C, lw=3.2, label="Model crest at the last survey"),
                         Line2D([], [], color=END_C, lw=1.2, ls=(0, (2, 1)), label="Lidar crest at the last survey")],
-               loc="lower center", ncol=2, frameon=False, fontsize=7.5)
-    fig.tight_layout(rect=(0, 0.06, 1, 0.965), h_pad=0.9)
+               loc="lower center", ncol=3, frameon=False, fontsize=7)
+    hgt = fig.get_figheight()
+    fig.tight_layout(rect=(0, 0.75 / hgt, 1, 1 - 0.3 / hgt), h_pad=0.9)    # the legend 0.75 in, the titles 0.3 in
     column_titles(fig, axs, data, keys)
     out = OUT_DIR / "collision_hotspot_profiles.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
@@ -366,10 +402,12 @@ def fig_profiles(data, hots):
         "What the missed crest lowering looked like at each collision hotspot. One representative 10 m cell per "
         "hotspot (the cell whose lidar crest loss is nearest the hotspot's median): the median of its ten 1 m "
         "cross-shore transects in the DEM the model started from (grey) and in the period's last lidar survey "
-        "(blue), against distance from the starting crest, the ocean to the right. Bars: the model's crest "
-        "without the collision module at the start (grey) and at the last survey (dark grey); dashed, the lidar's "
-        "crest at the last survey, the highest point in the start's dune window (the berm where the dune has "
-        "become beach); the arrow, the model's crest minus the lidar's."))
+        "(blue), in the frame the dune crests are measured in (each transect shifted by its cell's shear), against "
+        "distance from the starting crest, the ocean to the right. Shaded, the cell's dune window at the start "
+        "(grey) and at the last survey (blue; moved landward by the observed shoreline retreat since the start, "
+        "never seaward). Bars: the model's crest without the collision module at the start (grey) and at the last "
+        "survey (dark grey); dashed, the lidar's crest at the last survey, the highest point in that "
+        "window; the arrow, the model's crest minus the lidar's."))
     print(f"wrote {out}")
 
 

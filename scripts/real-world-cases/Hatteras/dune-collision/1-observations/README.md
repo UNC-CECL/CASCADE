@@ -1,4 +1,4 @@
-# 1-observations â€” the dune loss the model misses
+# 1-observations — the dune loss the model misses
 
 True whatever the model does. Measured from the 1996-2009 lidar surveys (`survey_dune_crests.csv`) and
 the storm series, by the measurement actions of
@@ -19,9 +19,9 @@ each with its PNGs and a `supporting/` (PDFs, `CAPTIONS.md`, the numbers behind 
 | Folder | Figures | Script |
 |---|---|---|
 | `1-mismatch-along-island` | `collision_offset_heatmap.png`, `collision_alongshore_crests.png` | `HAT_collision_motivation_alongshore.py` |
-| `2-hotspots` | `collision_hotspot_crests.png` (and `collision_hotspots.csv`) | same |
+| `2-hotspots` | `collision_hotspot_crests.png` (and `collision_hotspots.csv`); `collision_hotspot_classification.png`, `collision_hotspot_storms.png`, `collision_hotspot_profiles.png` | same; `HAT_collision_hotspot_diagnostics.py` |
 | `3-mechanism` | `collision_motivation.png`, `two_dunes.png` | `HAT_collision_motivation.py profiles`, `plot`, `two_dunes` |
-| `4-drivers` | `collision_exposure_offset.png`, `collision_beach_offset.png` | same |
+| `4-storms-and-beach-width` | `collision_drivers_scatter.png` | `HAT_collision_motivation_alongshore.py` |
 
 `collision_motivation.png` has four panels,
 against the calibration control (`cal_control_g16`, module off): (a) the 1998 and 1999 lidar at GIS 12 cell 22,
@@ -34,27 +34,36 @@ Buxton cells behind beaches over 60 m and reverse the pattern there).
 Where along the island (2026-11-03): `HAT_collision_motivation_alongshore.py`, five more figures (folders 1, 2 and 4),
 each with a calibration (1996-2009) and a test (2009-2025) part against the module-off controls. They are
 the offset heatmap (domain x survey, the hotspots boxed), the crests at the collision hotspots, the crests
-along the island at each period's end (and in every survey, the `_all` supplements), and collision-storm exposure
-and dry beach width each above the crest offset.
+along the island at each period's end (and in every survey, the `_all` supplements), and one scatter of each
+domain's crest offset against its collision-storm count and its dry beach width (was two bar figures in `4-drivers/`
+until 2026-11-03).
 
 Collision hotspots (since 2026-11-03), found in each period on its own: stretches of at least two domains where the
 model is more than 1 m too high in at least half the surveys after the start (1 m on average) AND the lidar crest
 fell at least 1 m from the period's first survey to its last while the model's fell at least 1 m less, the crest
-lowering the module is there to supply. Calibration: GIS 10-13, 51-53, 84-88; test: GIS 22-25 (Avon), 75-76
-(Rodanthe); missed lowering 2.4-4.0 m. Too high without that missed loss, so not the module's to fix (dune growth or
-rebuilding too fast, or a start mismatch): test GIS 7-9, 39, 47, 60, 84; calibration GIS 2-3, 55, 78
-(`2-hotspots/supporting/collision_hotspots_by_domain.csv`). Before: the four stretches with the largest mean offset
-over either period (GIS 7-13, 22-25, 75-78, 84-88).
+lowering the module is there to supply. Lidar crests in the dune window moved landward by the observed shoreline
+retreat, never seaward (the crest tables of 2026-11-03 22:09; `HAT_survey_dune_crests.py`). Calibration: GIS 12-13
+(Buxton); test: GIS 23-25 (Avon); missed lowering 3.2 and 2.2 m. Domains meeting the rule alone (no neighbour): see
+`2-hotspots/supporting/collision_hotspots_by_domain.csv`. Too high without that missed loss, so not the module's to
+fix (dune growth or rebuilding too fast, or a start mismatch): calibration GIS 3, 10-11, 55; test GIS 7-9, 22, 39,
+47, 60, 84. Both hotspots hold on the 1 m lidar: the 10 m block-centre crests read 0.4-0.6 m (median) below the
+1 m crests in the same window, but the 1 m crest still falls 1.1-1.8 m at GIS 12-13 (1996-2009) and 1.5-1.9 m at
+GIS 23-25 (2009-2020).
+
+How the list changed with the dune window (2026-11-03): fixed start windows gave calibration GIS 10-13, 51-53, 84-88
+and test GIS 22-25, 75-76, but counted dune retreat as lowering (in the last survey 67-91% of those cells had the
+crest on the window's landward edge). A window that followed the crest landward found back dunes already standing
+at the start (60% of moved cells; 98% at Avon). The shoreline window, adopted, reads the crest where Barrier3D's
+dune row sits, a fixed distance behind its shoreline: at GIS 51-53, 84-88 and 75-76 the dune moved landward with
+the shoreline and kept its height, so no missed lowering remains there.
+
 `HAT_collision_hotspot_diagnostics.py` adds three figures to `2-hotspots`: each domain's mean offset against its
-missed lowering (the rule at work), lidar and model crest change in each survey interval with the largest storm
-between, and a lidar profile at a representative cell of each hotspot, start against last survey. All of these
-were made on the crest tables before the 2009 survey was read in the 2009-start windows (20:15): on the new table
-the calibration hotspots are GIS 12-13 and 84-88, and the profiles show many dunes moved 15-50 m landward of the
-start window. To redo once every survey is read in a window that follows the dune; the profiles are not yet in the
-crest script's straightened frame (GIS 75 disagrees with the table). Domains whose dunes saw more collision storms are too high in the model (Spearman r 0.51 / 0.44);
-domains behind narrower beaches are too (r -0.68 / -0.44). These are with the dune toes regenerated on
-2026-11-03 15:50 (the 2009-start toes now over all eight surveys); on the earlier toes they were 0.41 / 0.47
-and -0.64 / -0.40. The 2009-start lidar now includes 2011, 2012 and
+missed lowering (the rule at work); lidar and model crest change in each survey interval with the largest storm
+between (by R_high in the model's storm series); and a lidar profile at a representative cell of each hotspot, start
+against last survey, in the crest script's straightened frame with the start's and the moved dune window shaded.
+Domains whose dunes saw more collision storms are too high in the model (Spearman r 0.40 / 0.40); domains behind
+narrower beaches are too (r -0.56 / -0.43), with the shoreline-window crests and the toes of 22:16-22:18. The
+2009-start lidar now includes 2011, 2012 and
 2020 (see that start's `survey-crests/README.md`).
 
 Whether the lidar toes sit on the dune traced from the aerial imagery (2026-11-03): `6-toes-vs-dunelines/`
