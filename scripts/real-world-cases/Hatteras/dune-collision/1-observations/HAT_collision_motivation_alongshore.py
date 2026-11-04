@@ -8,7 +8,8 @@ both from the module-off controls:
 
     collision_offset_heatmap.png     model minus lidar crest per GIS domain and survey, under a strip map of the island
     collision_hotspot_crests.png     crest through time at each hotspot, model band against lidar dots
-    collision_alongshore_crests.png  crest along the island in three surveys per period
+    collision_alongshore_crests.png  crest along the island at each period's end (2009, 2020)
+    collision_alongshore_crests_<period>_all.png   the same in every survey, one panel each (supplement)
     collision_exposure_offset.png    storms that put each domain's dunes in collision, above its crest offset
     collision_beach_offset.png       each domain's beach width, above its crest offset
 
@@ -19,9 +20,13 @@ its model_state names as cascade_pipeline/plotting/dune_crest_comparison.py does
 now beach counts as the berm). The 2009-start surveys are 2011 (post-Irene), 2012 (post-Sandy), 2014,
 2016-2019 and 2020 (Feb; the last public lidar of the island, searched 2026-11-03).
 
-Hotspots: the runs of neighbouring domains whose crest offset, averaged over the surveys after each start, exceeds
-HOT_M in either period (gaps of one domain bridged), the HOT_N largest by summed offset.
-Only too-high runs: the module lowers dunes, it cannot raise them.
+Collision hotspots (since 2026-11-03; collision_hotspots), found in each period on its own: stretches of at least
+two neighbouring domains (one-domain gaps bridged) whose modelled crest stands more than HOT_OFF_M above the
+lidar's in at least HOT_PERSIST of the surveys after the start, HOT_OFF_M on average, AND whose lidar crest fell at
+least HOT_DROP_M from the period's first survey to its last while the model's fell at least HOT_DROP_M less: the
+crest lowering the model did not reproduce, the loss the module is there to supply. Domains too high without that
+missed loss (dune growth or rebuilding too fast, a start mismatch) are not hotspots; the per-domain table marks
+them too_high_other. Before 2026-11-03: the 4 runs with the largest mean offset over either period.
 
 Collision exposure: per cell and storm of the run's own storm series, the storm's peak runup (R_high, m NAVD88)
 above the cell's dune toe (the module's toe, dune-toes/dune_toe_cells.csv) and below the model's crest at the
@@ -82,7 +87,8 @@ PERIODS = {
                  / "HAT_2009-2025_managed_groin_edgeBE_nocollision"),
 }
 MIN_CELLS = 10                   # a domain-survey counts with this many surveyed cells
-HOT_M, HOT_N = 1.0, 4            # hotspots: mean offset above this, the largest this many
+# Collision hotspots (collision_hotspots, 2026-11-03): persistently too high AND observed crest lowering missed
+HOT_OFF_M, HOT_PERSIST, HOT_DROP_M = 1.0, 0.5, 1.0
 # The survey per period drawn along the island: each period's last (2026-11-03; was three per period, too busy)
 END_SURVEY = {"calibration": 2009, "test": 2020}
 UNCLASSIFIED = {2001}
@@ -98,6 +104,7 @@ HOT_SHADE = "#FBE3D6"
 STRIP_LAND, STRIP_EDGE, STRIP_GRID, STRIP_GRID_10 = "white", "0.25", "0.72", "0.45"
 STRIP_GAP = 0.035                # figure fraction between the map and panel (a)'s axes: room for its title
 STRIP_HALO = [matplotlib.patheffects.withStroke(linewidth=2.2, foreground="white")]   # labels over the coast
+SERIES_TOWN_C = "#F7F7F7"                                  # the small multiples' village bands
 SHOAL_C = HATTERAS_ANNOTATIONS.color_shoal                 # the house shoal amber
 SHOAL_INK = "#8A6A00"                                       # its name, darker to read as text
 STRIP_CUT = "dashed"               # how the land cut west of Buxton reads (island_strip): open, fade, break, dashed
@@ -105,9 +112,11 @@ STRIP_FADE, STRIP_BEYOND_M = 2.5, 1500.0   # fade length (domains); dashed coast
 STRIP_SOUTH_DOMAINS = 6.0        # domains' worth of island drawn south of GIS 1: Cape Hatteras
 UNDER_C = "#D9D9D9"             # the alongshore figure's "model too low" fill: neutral, so the red reads
 OFFSET_CLIP_M = 4.0              # the driver figures' offset axis; a bar beyond it is cut and labelled
-HOT_DEF = ("the stretches of neighbouring GIS domains where the model's crests stand most above the lidar's: "
-           "the domain's crest offset, averaged over a period's surveys after its start, above {m:g} m in either "
-           "period (a one-domain gap bridged), the {n} largest by summed offset")
+HOT_DEF = (f"the stretches of at least two neighbouring GIS domains (a one-domain gap bridged), found in each "
+           f"period on its own, where the modelled crest stands more than {HOT_OFF_M:g} m above the lidar's in at "
+           f"least half the surveys after the period's start ({HOT_OFF_M:g} m on average) and the lidar crest fell "
+           f"at least {HOT_DROP_M:g} m from the period's first survey to its last while the model's fell at least "
+           f"{HOT_DROP_M:g} m less: observed crest lowering the model did not reproduce")
 # -----------------------------------------------------------------------------
 
 
@@ -146,25 +155,62 @@ def span(h):
 
 
 def hotspots(data):
-    score = pd.concat([mean_offset(d) for d in data.values()], axis=1).max(axis=1)
-    hot = (score > HOT_M).to_numpy()
-    # bridge single-domain gaps
-    for i in range(1, len(hot) - 1):
-        if not hot[i] and hot[i - 1] and hot[i + 1]:
-            hot[i] = True
-    runs, i = [], 0
-    while i < len(hot):
-        if hot[i]:
+    """{period: [hotspot]} from collision_hotspots, each hotspot a dict (period, lo, hi and its stretch means), and
+    the per-domain table of both periods."""
+    sets, tables = {}, []
+    for key, d in data.items():
+        m, runs, _ = collision_hotspots(d)
+        tables.append(m.assign(period=key).reset_index().rename(columns={"index": "gis"}))
+        sets[key] = [dict(period=key, lo=lo, hi=hi, **m.loc[lo:hi, ["mean_m", "lidar_drop_m", "missed_loss_m"]]
+                          .mean().round(3).to_dict()) for lo, hi in runs]
+    return sets, pd.concat(tables)
+
+
+def stretches(flags, min_len=2):
+    """Runs of True along GIS 1-90 (one-domain gaps bridged), at least min_len domains: [(lo, hi)]."""
+    f = np.asarray(flags, bool).copy()
+    for i in range(1, len(f) - 1):
+        if not f[i] and f[i - 1] and f[i + 1]:
+            f[i] = True
+    out, i = [], 0
+    while i < len(f):
+        if f[i]:
             j = i
-            while j + 1 < len(hot) and hot[j + 1]:
+            while j + 1 < len(f) and f[j + 1]:
                 j += 1
-            g = list(range(i + 1, j + 2))
-            runs.append((g[0], g[-1], float(score.loc[g].clip(lower=0).sum()), float(score.loc[g].mean())))
+            if j - i + 1 >= min_len:
+                out.append((i + 1, j + 1))
             i = j + 1
         else:
             i += 1
-    runs = sorted(sorted(runs, key=lambda r: -r[2])[:HOT_N])
-    return [dict(name="ABCDEFG"[k], lo=r[0], hi=r[1], summed_m=r[2], mean_m=r[3]) for k, r in enumerate(runs)], score
+    return out
+
+
+def collision_hotspots(d):
+    """Per period (proposed 2026-11-03): a domain is persistently too high when its modelled crest stands more
+    than HOT_OFF_M above the lidar's in at least HOT_PERSIST of the surveys after the start, HOT_OFF_M on
+    average; it is a collision hotspot when, besides, the lidar crest fell at least HOT_DROP_M from the period's
+    first survey to its last and the model's fell at least HOT_DROP_M less (the loss the model missed).
+    Returns (per-domain table, collision stretches, other too-high stretches)."""
+    t = d["table"]
+    post = t[t.survey > d["start_year"]]
+    g = post.groupby("gis").model_minus_survey_m
+    m = pd.DataFrame({"persist": g.apply(lambda x: (x > HOT_OFF_M).mean()), "mean_m": g.mean()})
+    by = t.sort_values("survey").groupby("gis")
+    first, last = by.first(), by.last()
+    m["lidar_drop_m"] = first.survey_median_m - last.survey_median_m
+    m["model_drop_m"] = first.model_median_m - last.model_median_m
+    m["missed_loss_m"] = m.lidar_drop_m - m.model_drop_m
+    m = m.reindex(range(1, 91))
+    high = (m.persist >= HOT_PERSIST) & (m.mean_m >= HOT_OFF_M)
+    col = high & (m.lidar_drop_m >= HOT_DROP_M) & (m.missed_loss_m >= HOT_DROP_M)
+    m["class"] = np.where(col, "collision", np.where(high, "too_high_other", ""))
+    col_runs = stretches(col.to_numpy())
+    covered = np.zeros(90, bool)
+    for lo, hi in col_runs:
+        covered[lo - 1:hi] = True
+    other_runs = stretches((high & ~col).to_numpy() & ~covered, min_len=1)
+    return m, col_runs, other_runs
 
 
 def exposure(d):
@@ -337,7 +383,9 @@ def title(ax, letter, text):
 
 
 # ---- 1: heatmap ----------------------------------------------------------------------------------------------
-def fig_heatmap(data, hots):
+def fig_heatmap(data, hots, mark_hotspots=True, out_png=None):
+    """The offset heatmap. mark_hotspots outlines the collision hotspots (collision_hotspots) on it, over the
+    surveys after the start; out_png set writes only that image (a preview: no table, no caption)."""
     colors = plt.get_cmap("RdBu_r", len(OFFSET_BINS_M) + 1)(np.arange(len(OFFSET_BINS_M) + 1))
     colors[len(colors) // 2] = (0.97, 0.97, 0.97, 1)
     cmap = ListedColormap(colors[1:-1])
@@ -372,13 +420,36 @@ def fig_heatmap(data, hots):
         ax.set_title(f"({letter})", loc="left", fontweight="bold")
         ax.set_title(d["label"], loc="center")
         out.append(piv.stack(dropna=False).rename("model_minus_lidar_m").reset_index().assign(period=d["key"]))
+        if mark_hotspots:
+            from matplotlib.patches import Rectangle
+            _, col_runs, _ = collision_hotspots(d)                   # the other too-high domains: not drawn
+            y_lo = int((piv.index <= d["start_year"]).sum())         # the scored surveys: after the start
+            for lo, hi in col_runs:
+                ax.add_patch(Rectangle((lo - 0.5, y_lo), hi - lo + 1, len(piv) - y_lo, facecolor="none",
+                                       edgecolor=INK, lw=1.6, zorder=5, clip_on=False))
+            for lo, hi in col_runs:
+                ax.text((lo + hi) / 2, len(piv) - 0.08, f"{lo}–{hi}", ha="center", va="top", fontsize=6.5,
+                        fontweight="bold", color=INK, zorder=6, path_effects=STRIP_HALO)
+    # with the hotspots marked, the colour bar takes the left part of the row and their key the right
     cb = fig.colorbar(im, ax=axs, orientation="horizontal", fraction=0.035, pad=0.13, extend="both",
-                      ticks=OFFSET_BINS_M)
-    cb.set_label("Model minus lidar crest, domain median (m): red, model dunes too high")
+                      ticks=OFFSET_BINS_M, **(dict(shrink=0.52, anchor=(0.04, 1.0)) if mark_hotspots else {}))
+    cb.set_label("Modelled minus observed dune crest (m)\n(domain median; positive, overpredicted)" if mark_hotspots
+                 else "Model minus lidar crest, domain median (m): red, model dunes too high")
     cb.ax.tick_params(labelsize=7)
     # the map sits just over (a)'s title, not a full panel gap above it (the crop takes the space left on top)
     m, a = ax_map.get_position(), axs[0].get_position()
     ax_map.set_position([m.x0, a.y1 + STRIP_GAP, m.width, m.height])
+    if mark_hotspots:                                              # what the outline means, beside the colour bar
+        cbp = cb.ax.get_position()
+        fig.legend(handles=[
+            Patch(facecolor="none", edgecolor=INK, lw=1.6,
+                  label="Collision hotspot:\nobserved crest lowering not reproduced")],   # thresholds: caption
+            loc="center left", bbox_to_anchor=(cbp.x1 + 0.06, cbp.y0 + cbp.height / 2), ncol=1, frameon=False,
+            fontsize=7.5, handlelength=2.2)
+    if out_png is not None:                                        # a preview: the image only
+        save(fig, out_png, dpi=300, facecolor="white", bbox_inches="tight", close=True)
+        print(f"wrote {out_png}")
+        return
     out_png = WHERE_DIR / "collision_offset_heatmap.png"
     save(fig, out_png, dpi=300, facecolor="white", bbox_inches="tight", close=True)
     pd.concat(out).round(3).to_csv(WHERE_DIR / "supporting" / "collision_offset_heatmap.csv", index=False)
@@ -386,7 +457,8 @@ def fig_heatmap(data, hots):
         "Where and when the modelled dune crests leave the lidar's, without the collision module. Each cell: the "
         "median modelled crest minus the median lidar crest over a GIS domain's surveyed 10 m cells (at least "
         f"{MIN_CELLS}), against the model state of the 1 January the survey is compared with; red, the model's "
-        "dunes too high; white, within 0.5 m; grey, fewer surveyed cells. Time runs up the figure, oldest survey "
+        "dunes too high; white, within 0.5 m; grey, fewer surveyed cells. Boxed (over the surveys after each "
+        f"period's start), the collision hotspots: {HOT_DEF}. Time runs up the figure, oldest survey "
         "at the bottom. (a) Test, 2009–2025, the test control (the 2014, 2017 and 2022 fills in); (b) calibration, "
         "1996–2009, the calibration control (Hs 3.0, StormStart 1, groin 0.16). Both with the module off. A cell whose dune window is now beach counts as "
         "the berm. *2001, unclassified lidar. 2011 and 2012 were gridded from the ground returns at 1 m; 2020 "
@@ -400,14 +472,21 @@ def fig_heatmap(data, hots):
 
 # ---- 2: hotspot time series -------------------------------------------------------------------------------------
 def fig_hotspots(data, hots):
-    fig, axs = plt.subplots(len(hots), 2, figsize=(7.48, 1.95 * len(hots) + 0.6), sharey=True,
-                            gridspec_kw=dict(width_ratios=[13, 16]))
-    axs = np.atleast_2d(axs)
-    rows = []
-    for i, h in enumerate(hots):
-        gs = range(h["lo"], h["hi"] + 1)
-        for j, d in enumerate(data.values()):
-            ax = axs[i, j]
+    """Crest through time at each collision hotspot, in the period it belongs to: calibration hotspots in the
+    left column, test hotspots in the right."""
+    keys = list(data)                                              # calibration, test
+    n = max(len(hots[k]) for k in keys)
+    fig, axs = plt.subplots(n, 2, figsize=(7.48, 1.95 * n + 0.6), sharey=True,
+                            gridspec_kw=dict(width_ratios=[13, 16]), squeeze=False)
+    rows, letter = [], iter("abcdefghij")
+    for i in range(n):
+        for j, key in enumerate(keys):
+            ax, d = axs[i, j], data[key]
+            if i >= len(hots[key]):
+                ax.set_visible(False)
+                continue
+            h = hots[key][i]
+            gs = range(h["lo"], h["hi"] + 1)
             mod = np.concatenate([d["crests"][:, g - 1, :] for g in gs], axis=1)
             q = np.percentile(mod, [25, 50, 75], axis=1)
             ax.fill_between(d["years"], q[0], q[2], color=MODEL_C, alpha=0.22, lw=0)
@@ -418,7 +497,7 @@ def fig_hotspots(data, hots):
                 ax.errorbar(grp.when.iloc[0], qq[1], yerr=[[qq[1] - qq[0]], [qq[2] - qq[1]]], fmt="o", ms=4,
                             color=LIDAR_C, mfc="white" if sv in UNCLASSIFIED else LIDAR_C, elinewidth=1,
                             capsize=0, zorder=5)
-                rows.append(dict(hotspot=span(h), gis=f"{h['lo']}-{h['hi']}", period=d["key"], survey=sv,
+                rows.append(dict(hotspot=span(h), gis=f"{h['lo']}-{h['hi']}", period=key, survey=sv,
                                  lidar_p25=qq[0], lidar_median=qq[1], lidar_p75=qq[2]))
             for t, lab in d["storms"]:
                 ax.axvline(t, color=INK_MUTED, lw=0.6, ls=":")
@@ -430,63 +509,80 @@ def fig_hotspots(data, hots):
             ax.xaxis.set_major_locator(FixedLocator(range(int(np.ceil(lo_y / 2) * 2), int(d["years"][-1]) + 1, 2)))
             ax.xaxis.set_minor_locator(MultipleLocator(1))
             ax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
-            if i == 0:
-                ax.set_title(d["label"], loc="center")
-            if j == 0:
-                ax.set_ylabel(f"{span(h)}\ncrest (m NAVD88)")
-            ax.set_title(f"({'abcdefghij'[2 * i + j]})", loc="left", fontweight="bold")
+            # heading: the hotspot on the left, the crest lowering the model missed on the right
+            ax.set_title(f"({next(letter)}) {span(h)}", loc="left", fontweight="bold", fontsize=8.5)
+            ax.set_title(f"missed lowering {h['missed_loss_m']:.1f} m", loc="right", fontsize=7, color=INK_MUTED)
+            if j == 0 or not axs[i, 0].get_visible():
+                ax.set_ylabel("Crest (m NAVD88)")
     fig.legend(handles=[Line2D([], [], color=MODEL_C, lw=2, label="Model without the module (median; band 25th–75th)"),
                         Line2D([], [], color=LIDAR_C, marker="o", ls="none", label="Lidar (median; bar 25th–75th)")],
                loc="lower center", ncol=2, frameon=False, fontsize=7.5)
-    fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=0.8)
+    fig.tight_layout(rect=(0, 0.035, 1, 0.965), h_pad=0.8)
+    # the period over each column, above the panel headings (a title would share their offset)
+    for j, key in enumerate(keys):
+        p = axs[0, j].get_position()
+        fig.text((p.x0 + p.x1) / 2, 0.985, data[key]["label"], ha="center", va="top", fontsize=10.5, color=INK)
     out = HOT_DIR / "collision_hotspot_crests.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
     pd.DataFrame(rows).round(3).to_csv(HOT_DIR / "supporting" / "collision_hotspot_crests.csv", index=False)
     record_caption(out, (
-        f"Dune crests at the hotspots, {HOT_DEF.format(m=HOT_M, n=HOT_N)}; calibration (left) and test (right). Line and "
-        "band: the model without the collision module, median and 25th–75th percentile over the hotspot's 10 m "
-        "cells, each 1 January; dots and bars: each lidar survey on the same cells, at the middle of the months "
-        "flown (hollow, 2001 unclassified lidar; a cell whose dune window is now beach counts as the berm). Dotted: "
-        "each period's three largest storms by R_high in the model's storm series. The test period has no lidar "
-        "after Feb 2020."))
+        f"Dune crests at the collision hotspots, {HOT_DEF}; each in the period it was found in, calibration (left) "
+        "and test (right). Line and band: the model without the collision module, median and 25th–75th percentile "
+        "over the hotspot's 10 m cells, each 1 January; dots and bars: each lidar survey on the same cells, at the "
+        "middle of the months flown (hollow, 2001 unclassified lidar; a cell whose dune window is now beach counts "
+        "as the berm). Right of each heading: the crest lowering the model missed, the lidar's crest loss from "
+        "the period's first survey to its last less the model's, averaged over the hotspot's domains. Dotted: each "
+        "period's three largest storms by R_high in the model's storm series. The test period has no lidar after "
+        "Feb 2020."))
     print(f"wrote {out}")
 
 
 # ---- 3: alongshore crests ---------------------------------------------------------------------------------------
+def crest_panel(ax, d, sv, lw=1.4):
+    """Model and lidar crests along the island for one survey, the gap filled red (model too high) or grey.
+    Returns the per-domain table and (domains > 1 m too high, domains compared)."""
+    s = d["surveys"][d["surveys"].survey == sv]
+    state = int(s.state_year.iloc[0]) - d["fmy"]
+    g_rows = []
+    for g, grp in s.groupby("gis"):
+        if len(grp) < MIN_CELLS:
+            continue
+        m = d["crests"][state, g - 1, grp.cell.to_numpy()]
+        g_rows.append(dict(gis=g, model_median=np.median(m), lidar_median=grp.crest.median()))
+    t = pd.DataFrame(g_rows, columns=["gis", "model_median", "lidar_median"]).set_index("gis").reindex(range(1, 91))
+    x, mod, lid = t.index.to_numpy(), t.model_median.to_numpy(), t.lidar_median.to_numpy()
+    ok = np.isfinite(mod) & np.isfinite(lid)
+    ax.fill_between(x, lid, mod, where=ok & (mod > lid), step="mid", color=HIGH_C, alpha=0.35, lw=0)
+    ax.fill_between(x, lid, mod, where=ok & (mod < lid), step="mid", color=UNDER_C, lw=0)
+    ax.plot(x, mod, color=MODEL_C, lw=lw, drawstyle="steps-mid")
+    ax.plot(x, lid, color=LIDAR_C, lw=lw, drawstyle="steps-mid")
+    t.insert(0, "model_state", f"{int(s.state_year.iloc[0])}-01-01")
+    return t, (int((mod - lid > 1)[ok].sum()), int(ok.sum()))
+
+
+def crest_legend(fig, y=0.0):
+    fig.legend(handles=[Line2D([], [], color=MODEL_C, lw=2, label="Model without the module"),
+                        Line2D([], [], color=LIDAR_C, lw=2, label="Lidar"),
+                        Patch(color=HIGH_C, alpha=0.35, lw=0, label="Model dunes too high"),
+                        Patch(color=UNDER_C, lw=0, label="Model dunes too low")],
+               loc="lower center", bbox_to_anchor=(0.5, y), ncol=4, frameon=False, fontsize=7.5)
+
+
 def fig_alongshore(data, hots):
     """One panel per period, its last survey: model and lidar crests along the island, the gap filled."""
     fig, axs = plt.subplots(2, 1, figsize=(7.48, 5.0), sharex=True, sharey=True)
     rows, gaps = [], {}
     for ax, letter, d in zip(axs, "ab", data.values()):
         sv = END_SURVEY[d["key"]]
-        s = d["surveys"][d["surveys"].survey == sv]
-        state = int(s.state_year.iloc[0]) - d["fmy"]
-        g_rows = []
-        for g, grp in s.groupby("gis"):
-            if len(grp) < MIN_CELLS:
-                continue
-            m = d["crests"][state, g - 1, grp.cell.to_numpy()]
-            g_rows.append(dict(gis=g, model_median=np.median(m), lidar_median=grp.crest.median()))
-        t = pd.DataFrame(g_rows).set_index("gis").reindex(range(1, 91))
-        x, mod, lid = t.index.to_numpy(), t.model_median.to_numpy(), t.lidar_median.to_numpy()
-        ok = np.isfinite(mod) & np.isfinite(lid)
-        ax.fill_between(x, lid, mod, where=ok & (mod > lid), step="mid", color=HIGH_C, alpha=0.35, lw=0)
-        ax.fill_between(x, lid, mod, where=ok & (mod < lid), step="mid", color=UNDER_C, lw=0)
-        ax.plot(x, mod, color=MODEL_C, lw=1.4, drawstyle="steps-mid")
-        ax.plot(x, lid, color=LIDAR_C, lw=1.4, drawstyle="steps-mid")
+        t, gaps[d["key"]] = crest_panel(ax, d, sv)
         town_bands(ax, where="top", strip=0.07, label=True, fontsize=6.5)
         gis_axis(ax, label=letter == "b")
         ax.set_ylabel("Dune crest (m NAVD88)")
         ax.set_title(f"({letter})", loc="left", fontweight="bold")
-        ax.set_title(f"{d['label']}: model on 1 Jan {int(s.state_year.iloc[0])} vs. the {sv} lidar", loc="center")
-        gaps[d["key"]] = (int((mod - lid > 1)[ok].sum()), int(ok.sum()))
+        ax.set_title(f"{d['label']}: model on 1 Jan {t.model_state.iloc[0][:4]} vs. the {sv} lidar", loc="center")
         rows += [dict(period=d["key"], survey=sv, gis=g, **r) for g, r in t.dropna(how="all").iterrows()]
     axs[0].set_ylim(0, 11.5)
-    fig.legend(handles=[Line2D([], [], color=MODEL_C, lw=2, label="Model without the module"),
-                        Line2D([], [], color=LIDAR_C, lw=2, label="Lidar"),
-                        Patch(color=HIGH_C, alpha=0.35, lw=0, label="Model dunes too high"),
-                        Patch(color=UNDER_C, lw=0, label="Model dunes too low")],
-               loc="lower center", ncol=4, frameon=False, fontsize=7.5)
+    crest_legend(fig)
     fig.tight_layout(rect=(0, 0.04, 1, 1), h_pad=0.8)
     out = WHERE_DIR / "collision_alongshore_crests.png"
     save(fig, out, dpi=300, facecolor="white", close=True)
@@ -502,6 +598,66 @@ def fig_alongshore(data, hots):
         "Buxton, Avon and the Tri-Village (Salvo, Waves, Rodanthe). The crests through time and in every survey "
         "are in collision_offset_heatmap.png."))
     print(f"wrote {out}; >1 m too high: calibration {cal}, test {test}")
+
+
+# ---- 3s: alongshore crests in every survey (supplementary small multiples) ------------------------------------------
+def fig_alongshore_series(data):
+    """Per period, one thin panel per lidar survey, oldest at the top: collision_alongshore_crests_<period>_all.png."""
+    for d in data.values():
+        surveys = sorted(int(v) for v in d["table"].survey.unique())
+        n = len(surveys)
+        fig, axs = plt.subplots(n, 1, figsize=(7.48, 0.85 * n + 0.8), sharex=True, sharey=True)
+        rows, counts = [], []
+        for i, (ax, sv) in enumerate(zip(axs, surveys)):
+            # villages: faint bands through every panel, named once above the top one
+            for name, (lo, hi_) in HATTERAS_ANNOTATIONS.town_spans.items():
+                ax.axvspan(lo - 0.5, hi_ + 0.5, color=SERIES_TOWN_C, lw=0, zorder=0)
+                if i == 0:
+                    ax.text((lo + hi_) / 2, 1.04, name, transform=ax.get_xaxis_transform(), ha="center",
+                            va="bottom", fontsize=6.5, color=INK_MUTED)
+            t, (hi, n_dom) = crest_panel(ax, d, sv, lw=1.0)
+            counts.append((sv, hi, n_dom))
+            # the survey in bold, the model date it is set against in grey after it
+            note = f" {SURVEY_NOTES[sv]}" if sv in SURVEY_NOTES else ""
+            star = "*" if sv in UNCLASSIFIED else ""
+            lab = ax.text(0.006, 0.95, f"({'abcdefghijkl'[i]}) {sv}{star}{note}", transform=ax.transAxes,
+                          ha="left", va="top", fontsize=7.5, fontweight="bold", color=INK, path_effects=STRIP_HALO)
+            ax.annotate(f"   model, 1 Jan {t.model_state.iloc[0][:4]}", xy=(1, 0), xycoords=lab, ha="left",
+                        va="bottom", fontsize=6.5, color=INK_MUTED, path_effects=STRIP_HALO)
+            ax.text(0.994, 0.95, f"{hi} of {n_dom} domains >1 m too high", transform=ax.transAxes, ha="right",
+                    va="top", fontsize=6.5, color=INK_MUTED, path_effects=STRIP_HALO)
+            gis_axis(ax, label=i == n - 1)
+            ax.set_yticks([2, 5, 8])
+            # a light frame: no top or right border, tick marks on the bottom panel only
+            for side in ("top", "right"):
+                ax.spines[side].set_visible(False)
+            for side in ("left", "bottom"):
+                ax.spines[side].set_linewidth(0.6)
+                ax.spines[side].set_color(INK_MUTED)
+            ax.tick_params(axis="both", width=0.6, color=INK_MUTED, labelsize=7)
+            if i < n - 1:
+                ax.tick_params(axis="x", which="both", bottom=False)
+            rows += [dict(period=d["key"], survey=sv, gis=g, **r) for g, r in t.dropna(how="all").iterrows()]
+        axs[0].set_ylim(0.5, 12.6)                  # the crests reach ~10 m; the top ~2 m keeps the labels clear
+        fig.supylabel("Dune crest (m NAVD88)", fontsize=9)
+        crest_legend(fig)
+        fig.tight_layout(rect=(0.01, 0.035, 1, 0.985), h_pad=0.1)
+        name = f"collision_alongshore_crests_{d['key']}_all"
+        out = WHERE_DIR / f"{name}.png"
+        save(fig, out, dpi=300, facecolor="white", close=True)
+        pd.DataFrame(rows).round(3).to_csv(WHERE_DIR / "supporting" / f"{name}.csv", index=False)
+        first, last = counts[0], counts[-1]
+        record_caption(out, (
+            f"Dune crests along the island in every lidar survey of the {d['label'].lower()} period, the model "
+            "without the collision module against the lidar, oldest survey at the top. Each panel: the median "
+            f"crest over a GIS domain's surveyed 10 m cells (domains with at least {MIN_CELLS}) in the lidar (blue) "
+            "and in the model (grey) at the 1 January the survey is compared with; red fill, the model's dunes "
+            "above the lidar's; grey, below. Top right of each panel, the domains whose modelled crest stands more "
+            f"than 1 m above the lidar's: {first[1]} of {first[2]} in {first[0]}, {last[1]} of {last[2]} in "
+            f"{last[0]}. " + ("*2001, unclassified lidar. " if any(c[0] in UNCLASSIFIED for c in counts) else "")
+            + "Shaded bands: Buxton, Avon and the Tri-Village (Salvo, Waves, Rodanthe). The supplement to "
+            "collision_alongshore_crests.png; the same offsets as one picture in collision_offset_heatmap.png."))
+        print(f"wrote {out}: " + ", ".join(f"{sv} {h}/{m}" for sv, h, m in counts))
 
 
 # ---- 4 and 5: a driver above the offset --------------------------------------------------------------------------
@@ -520,7 +676,7 @@ def fig_driver(data, hots, kind):
             top = beach_width(d)
             colour, ylab = BEACH_C, "Dry beach width (m)"
         ax = axs[0, j]
-        shade_hotspots(ax, hots, label=True)
+        shade_hotspots(ax, hots[d["key"]], label=True)   # the hotspots found in this period
         ax.bar(top.index, top.to_numpy(), width=0.8, color=colour, lw=0, zorder=2)
         if kind == "beach":
             ax.axhline(M.W0_M, color=INK, lw=0.8, ls="--", zorder=3)
@@ -530,7 +686,7 @@ def fig_driver(data, hots, kind):
         if j == 0:
             ax.set_ylabel(ylab)
         ax = axs[1, j]
-        shade_hotspots(ax, hots)
+        shade_hotspots(ax, hots[d["key"]])
         v = off.to_numpy()
         ax.bar(off.index, np.clip(v, -OFFSET_CLIP_M, OFFSET_CLIP_M), width=0.8,
                color=np.where(v > 0, HIGH_C, LOW_C), lw=0, zorder=2)
@@ -559,8 +715,8 @@ def fig_driver(data, hots, kind):
     off_txt = ("(c, d) Model minus lidar crest per GIS domain, averaged over the surveys after each period's start "
                "(the domain median of the surveyed cells, at least "
                f"{MIN_CELLS}); red, the model's dunes too high; a bar beyond ±{OFFSET_CLIP_M:g} m is cut and its value written. "
-               f"Model: the module-off controls. Shaded, the "
-               f"hotspots: {HOT_DEF.format(m=HOT_M, n=HOT_N)}. Rank correlation of the top row with the offset: "
+               f"Model: the module-off controls. Shaded, each period's collision "
+               f"hotspots: {HOT_DEF}. Rank correlation of the top row with the offset: "
                f"{'; '.join(stats)}.")
     if kind == "exposure":
         record_caption(out, (
@@ -582,12 +738,15 @@ def main():
     for d in (WHERE_DIR, HOT_DIR, DRIVER_DIR):
         (d / "supporting").mkdir(parents=True, exist_ok=True)
     data = {k: load(k) for k in PERIODS}
-    hots, score = hotspots(data)
-    print("hotspots:", [(h["name"], h["lo"], h["hi"], round(h["mean_m"], 2)) for h in hots])
-    pd.DataFrame(hots).round(3).to_csv(HOT_DIR / "supporting" / "collision_hotspots.csv", index=False)
+    hots, by_domain = hotspots(data)
+    print("collision hotspots:", {k: [(h["lo"], h["hi"]) for h in v] for k, v in hots.items()})
+    pd.DataFrame([h for v in hots.values() for h in v]).to_csv(HOT_DIR / "supporting" / "collision_hotspots.csv",
+                                                               index=False)
+    by_domain.round(3).to_csv(HOT_DIR / "supporting" / "collision_hotspots_by_domain.csv", index=False)
     fig_heatmap(data, hots)
     fig_hotspots(data, hots)
     fig_alongshore(data, hots)
+    fig_alongshore_series(data)
     fig_driver(data, hots, "exposure")
     fig_driver(data, hots, "beach")
 
