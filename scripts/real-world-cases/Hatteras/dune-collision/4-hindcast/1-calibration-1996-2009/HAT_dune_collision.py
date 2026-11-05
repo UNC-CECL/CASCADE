@@ -781,12 +781,10 @@ def _launch(variant):
                 toe_m[dom.gis_to_pad(g)] = toe[g] - MHW_NAVD88_M
                 if w0:
                     width_m[dom.gis_to_pad(g)] = width_collision[g]
-            k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs,
-                     dune_collision_beach_width=width_m if w0 else None,
-                     **({"dune_collision_beach_width_limit": w0} if w0 else {}))
-            if variant in BEACH_FOLLOWS_SHORELINE or variant in RUNUP_LOSS:
-                raise SystemExit(f"{variant}: beach_follows_shoreline and beach_runup_loss were removed from "
-                                 "cascade/dune_collision.py on 2026-11-04; check out an earlier commit to rerun it")
+            if w0 or variant in BEACH_FOLLOWS_SHORELINE or variant in RUNUP_LOSS:
+                raise SystemExit(f"{variant}: the module's beach options were removed from cascade/dune_collision.py on "
+                                 "2026-11-04; check out git tag collision-with-beach-factor to rerun it")
+            k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs)
             if variant in ROAD_DUNE_REBUILD:
                 gate, trigger = ROAD_DUNE_REBUILD[variant]
                 k["road_dune_rebuild_trigger_m"] = gate

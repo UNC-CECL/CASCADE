@@ -742,8 +742,7 @@ def setup_run_name(r):
         # No token of its own: implied by the preset, and checked against it in 4.3
         ("background erosion", r.USE_BACKGROUND_EROSION, None),
         ("dune collision",
-         f"Cs {r.RUN_CONFIG.dune_collision_cs:g}, no loss on beaches "
-         f"{r.RUN_CONFIG.dune_collision_beach_width_limit_m:g} m or wider" if r.DUNE_COLLISION else "off",
+         f"Cs {r.RUN_CONFIG.dune_collision_cs:g}, Larson alone" if r.DUNE_COLLISION else "off",
          r.COLLISION_TOKEN),
         ("relocation target",
          "each domain's measured offset" if r.RELOCATION_SETBACK_M is None
@@ -1000,11 +999,10 @@ def setup_parameters(r):
 
     r.SEA_LEVEL_CONSTANT = True
 
-    # Dune collision: each padded domain's toe (m MHW) and beach width (m) per dune cell, from the
-    # start's own surveys (input_prep/1-barrier3d-domains/3-dune-toes); the buffers left out (None)
+    # Dune collision: each padded domain's toe (m MHW) per dune cell, from the start's own surveys
+    # (input_prep/1-barrier3d-domains/3-dune-toes); the buffers left out (None)
     r.DUNE_COLLISION_CS = r.RUN_CONFIG.dune_collision_cs
-    r.DUNE_COLLISION_BEACH_WIDTH_LIMIT_M = r.RUN_CONFIG.dune_collision_beach_width_limit_m
-    r.DUNE_COLLISION_TOE_M = r.DUNE_COLLISION_BEACH_WIDTH_M = None
+    r.DUNE_COLLISION_TOE_M = None
     if r.DUNE_COLLISION:
         r.DUNE_TOE_FILE = product_dir(r.TOPO_PRODUCT) / "dune-toes" / "dune_toe_cells.csv"
         if not r.DUNE_TOE_FILE.exists():
@@ -1013,13 +1011,10 @@ def setup_parameters(r):
                 f"input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py --start {r.TOPO_PRODUCT}")
         _cells = pd.read_csv(r.DUNE_TOE_FILE).sort_values(["gis", "cell"])
         r.DUNE_COLLISION_TOE_M = [None] * HATTERAS_DOMAINS.total_domains
-        r.DUNE_COLLISION_BEACH_WIDTH_M = [None] * HATTERAS_DOMAINS.total_domains
         for _gis, _d in _cells.groupby("gis"):
             _pad = HATTERAS_DOMAINS.gis_to_pad(int(_gis))
             r.DUNE_COLLISION_TOE_M[_pad] = (_d.toe_m_navd88 - r.MHW_ELEVATION).to_numpy()
-            r.DUNE_COLLISION_BEACH_WIDTH_M[_pad] = _d.beach_width_m.to_numpy()
-        print(f"dune collision        on, Cs {r.DUNE_COLLISION_CS:g}, beach limit "
-              f"{r.DUNE_COLLISION_BEACH_WIDTH_LIMIT_M:g} m; toes {r.DUNE_TOE_FILE} "
+        print(f"dune collision        on, Cs {r.DUNE_COLLISION_CS:g}, Larson alone; toes {r.DUNE_TOE_FILE} "
               f"(median {_cells.toe_m_navd88.median():.2f} m NAVD88, {_cells.toe_m_navd88.isna().sum()} cells empty)")
     else:
         print("dune collision        off")

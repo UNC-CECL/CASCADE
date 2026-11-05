@@ -127,8 +127,6 @@ def _attach_collision(cascade):
         if state.get("_crest_prestorm") is not None:
             # the old manager kept the pre-storm crest above the berm; the current one in dam MHW
             state["_crest_prestorm"] = state["_crest_prestorm"] + b3d._BermEl
-        state.setdefault("_beach_width", None)
-        state.setdefault("_beach_width_limit", None)
         b3d.DuneGrowth = manager.dune_growth
         b3d.DiffuseDunes = manager.diffuse_dunes
     return cascade

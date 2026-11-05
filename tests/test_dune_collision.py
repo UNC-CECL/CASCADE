@@ -15,7 +15,6 @@ from barrier3d import Barrier3d
 from cascade.dune_collision import (
     DuneCollisionManager,
     DuneCollisionOutsideTestedRange,
-    beach_factor,
     collision_cells,
     larson_volume,
     lower_dunes,
@@ -61,31 +60,21 @@ def plain_run():
 
 
 # --------------------------------------------------------------------------- #
-# beach_factor
-# --------------------------------------------------------------------------- #
-def test_beach_factor_falls_linearly_to_zero():
-    w = np.array([0.0, 2.25, 4.5, 9.0])
-    np.testing.assert_allclose(beach_factor(w, 4.5), [1.0, 0.5, 0.0, 0.0])
-
-
-# --------------------------------------------------------------------------- #
 # collision_cells
 # --------------------------------------------------------------------------- #
 def test_collision_cells_needs_toe_below_water_below_crest():
     r_high = 0.5
-    crest_pre = np.array([0.6, 0.4, 0.6, 0.6, 0.6, 0.6])
-    crest = np.array([0.6, 0.6, 0.5, 0.6, 0.6, 0.6])
-    toe = np.array([0.3, 0.3, 0.3, 0.5, 0.3, 0.3])
-    beach = np.array([1.0, 1.0, 1.0, 1.0, 0.0, 0.2])
-    hit = collision_cells(crest_pre, crest, toe, r_high, beach)
-    # 0 in collision; 1 overwashed by Barrier3D; 2 crest now at the water; 3 water at the toe;
-    # 4 behind a beach too wide; 5 in collision, part beach
-    np.testing.assert_array_equal(hit, [True, False, False, False, False, True])
+    crest_pre = np.array([0.6, 0.4, 0.6, 0.6])
+    crest = np.array([0.6, 0.6, 0.5, 0.6])
+    toe = np.array([0.3, 0.3, 0.3, 0.5])
+    hit = collision_cells(crest_pre, crest, toe, r_high)
+    # 0 in collision; 1 overwashed by Barrier3D; 2 crest now at the water; 3 water at the toe
+    np.testing.assert_array_equal(hit, [True, False, False, False])
 
 
 def test_collision_cells_crest_prestorm_at_water_is_not_overwashed():
     # Barrier3D overwashes where crest < Rhigh, so crest == Rhigh is left to the module
-    hit = collision_cells(np.array([0.5]), np.array([0.6]), np.array([0.3]), 0.5, np.ones(1))
+    hit = collision_cells(np.array([0.5]), np.array([0.6]), np.array([0.3]), 0.5)
     assert hit[0]
 
 
@@ -94,12 +83,12 @@ def test_collision_cells_crest_prestorm_at_water_is_not_overwashed():
 # --------------------------------------------------------------------------- #
 def test_larson_volume_by_hand():
     # 1 m above the toe, Cs 1e-4, 10 h, T 10 s: 4 * 1e-4 * 1^2 * 36000 / 10 = 1.44 m3/m
-    v = larson_volume(0.3, np.array([0.2, 0.2]), 10.0, 10.0, 1e-4, np.array([1.0, 0.5]))
-    np.testing.assert_allclose(v, [1.44, 0.72])
+    v = larson_volume(0.3, np.array([0.2]), 10.0, 10.0, 1e-4)
+    np.testing.assert_allclose(v, [1.44])
 
 
 def test_larson_volume_scales_with_square_of_excess():
-    v = larson_volume(0.4, np.array([0.3, 0.2]), 10.0, 10.0, 1e-4, np.ones(2))
+    v = larson_volume(0.4, np.array([0.3, 0.2]), 10.0, 10.0, 1e-4)
     np.testing.assert_allclose(v[1] / v[0], 4.0)
 
 
@@ -153,13 +142,10 @@ def test_manager_installs_itself():
     assert b3d.DiffuseDunes.__self__ is m
 
 
-@pytest.mark.parametrize("name", ["toe_elevation", "beach_width"])
-def test_manager_rejects_wrong_lengths(name):
+def test_manager_rejects_a_wrong_toe_length():
     b3d = new_barrier3d()
-    kwds = {"toe_elevation": low_toe(b3d), "beach_width": np.ones(b3d.BarrierLength)}
-    kwds[name] = np.ones(b3d.BarrierLength + 1)
-    with pytest.raises(ValueError, match=name):
-        DuneCollisionManager(b3d, cs=1e-4, **kwds)
+    with pytest.raises(ValueError, match="toe_elevation"):
+        DuneCollisionManager(b3d, np.ones(b3d.BarrierLength + 1), cs=1e-4)
 
 
 # --------------------------------------------------------------------------- #
@@ -317,7 +303,7 @@ def test_overwash_lowering_is_barrier3d_own(monkeypatch):
     np.testing.assert_array_equal(before[overwashed], after[overwashed])
     changed = np.any(before != after, axis=1)
     assert changed.any()
-    hit = collision_cells(crest_pre, before.max(axis=1) + start._BermEl, m.toe_elevation, r_high, np.ones(len(crest_pre)))
+    hit = collision_cells(crest_pre, before.max(axis=1) + start._BermEl, m.toe_elevation, r_high)
     np.testing.assert_array_equal(changed, hit)
 
 
@@ -332,9 +318,3 @@ def test_manager_survives_pickling():
     run(copied, 6)
     assert len(m.volume_TS) == 6 and sum(m.volume_TS) > 0
 
-
-def test_fixed_beach_keeps_its_width():
-    b3d = new_barrier3d()
-    m = DuneCollisionManager(b3d, low_toe(b3d), cs=1.24e-4, beach_width=np.ones(b3d.BarrierLength))
-    run(b3d, 4)
-    np.testing.assert_array_equal(m.beach_width, 1.0)

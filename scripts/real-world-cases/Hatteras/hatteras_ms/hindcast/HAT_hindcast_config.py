@@ -148,13 +148,10 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
                                                                     _as_float, 0.5),
 
     # Collision-regime dune erosion (cascade/dune_collision.py), on since 2026-10-29: Larson et al. (2004)
-    # per storm, scaled by max(0, 1 - W / limit) for the beach; Cs and the limit from the 1996-2009
-    # calibration (dune-storm-response/2026-10-29-collision-calibration, cal_g16), carried unchanged to 2009.
-    # Toes and beach widths per cell come from input_prep/1-barrier3d-domains/3-dune-toes. Off earns a
-    # `nocollision` name token
+    # per storm, alone since 2026-11-04 (the beach factor removed: git tag collision-with-beach-factor).
+    # Toes per cell come from input_prep/1-barrier3d-domains/3-dune-toes. Off earns a `nocollision` name token
     ("dune_collision",               ("dune_collision", "enabled"), _as_bool, True),
-    ("dune_collision_cs",            ("dune_collision", "cs"),      _as_float, 1.02e-4),
-    ("dune_collision_beach_width_limit_m", ("dune_collision", "beach_width_limit_m"), _as_float, 25.0),
+    ("dune_collision_cs",            ("dune_collision", "cs"),      _as_float, 1.9e-5),
 
     # WHERE A RELOCATED ROAD GOES, in metres behind the dune line
     ("relocation_setback_m",         ("relocation_setback_m",),   _as_opt_float, 20.0),

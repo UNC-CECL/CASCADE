@@ -65,8 +65,8 @@ GROIN_END_YEAR = field_default("groin_end_year")
 GROIN_SPREAD_WEIGHTS = field_default("groin_spread_weights")
 # Dune collision (on since 2026-10-29) reaches the runner as code defaults too; it keys every run
 DUNE_COLLISION = field_default("dune_collision")
-DUNE_COLLISION_KEY = (f"coll{field_default('dune_collision_cs'):g}"
-                      f"w{field_default('dune_collision_beach_width_limit_m'):g}")
+# w25 is the beach width limit the module had until 2026-11-04, kept so the runs made before keep their key
+DUNE_COLLISION_KEY = f"coll{field_default('dune_collision_cs'):g}w25"
 
 HINDCAST = _HERE.parent / "HAT_hindcast.py"
 # The runner's SCENARIOS table lives in its setup module (since 2026-10-23)

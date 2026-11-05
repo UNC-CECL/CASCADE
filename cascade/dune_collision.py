@@ -8,9 +8,7 @@ DuneCollisionManager adds that loss storm by storm, inside Barrier3D's own storm
 
 1. the wave-impact rule of Larson et al. (2004), per storm: dV = 4 Cs (R_high - z_toe)^2 t / T, the
    storm's peak R_high held over its duration t, T its peak period, and
-2. optionally, the beach in front of the dune: dV scaled by max(0, 1 - W / W0), W the beach width, as
-   the dunes behind wide beaches lost no sand to collision in the Hatteras lidar, and
-3. the crest lowering over the dune's cross-shore width: dH = dV / W_dune, both dune rows lowered in
+2. the crest lowering over the dune's cross-shore width: dH = dV / W_dune, both dune rows lowered in
    proportion, no lower than the toe.
 
 Calibration on the 1996-2009 lidar at Hatteras Island, NC:
@@ -26,24 +24,18 @@ References
 
 Notes
 -----
-Barrier3D's units: elevations in dam relative to MHW, dune heights in dam above the berm. The toe and
-the beach width are taken per alongshore dune cell, in dam, and held for the run.
+Units are Barrier3D's: elevations in dam above MHW, dune heights in dam above the berm. The toe is
+per dune cell and fixed for the run.
 
-Barrier3D's source is not changed, and Barrier3D has no step between storms that CASCADE can call.
-So the manager stands in for two of Barrier3D's methods on the instance it is given, each running
-Barrier3D's own method as before: DuneGrowth, called once a year just before the storms, after
-which the manager keeps the pre-storm crest Barrier3D uses to find the overwashed cells; and
-DiffuseDunes, called once after each storm's overwash lowering, before which the manager lowers the
-cells that storm left in the collision regime (update). A cell is in collision when Barrier3D did
-not overwash it (pre-storm crest at or above R_high), the water reaches its toe, and its current
-crest still stands above R_high. Later storms in the same year see the lowered dunes.
+Barrier3D has no hook between storms, so the manager replaces two methods on the Barrier3d instance,
+each still calling the original: DuneGrowth (once a year, before the storms), after which it saves
+the pre-storm crest; and DiffuseDunes (after each storm's overwash), before which it lowers the
+collision cells (update). Later storms in the same year see the lowered dunes.
 
-The manager stops the run with DuneCollisionOutsideTestedRange when it leaves the conditions it was
-calibrated and run in at Hatteras (1996-2025 storm series, both start years): Cs from 0 (off) to no more
-than 2.5e-4 (the highest run); toes at or above MHW; and, for a storm that lowers dunes, a duration of
-no more than 200 h (the series: 8-193 h), a peak period of 5-20 s (7-19 s) and water no more than
-5 m above a toe it acts on (up to 4.6 m). The beach width limit has been run only at 4.5 dam (45 m)
-and is not bounded. Tests: scripts/real-world-cases/Hatteras/dune-collision/3-module-tests/.
+Outside the conditions tested at Hatteras (1996-2025 storms), the manager raises
+DuneCollisionOutsideTestedRange: toes below MHW, or Cs, storm duration, peak period or water above
+the toe beyond the limits set as DuneCollisionManager's class constants.
+Tests: scripts/real-world-cases/Hatteras/dune-collision/3-module-tests/.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -55,7 +47,6 @@ import numpy as np
 __all__ = [
     "DuneCollisionManager",
     "DuneCollisionOutsideTestedRange",
-    "beach_factor",
     "collision_cells",
     "larson_volume",
     "lower_dunes",
@@ -66,28 +57,7 @@ class DuneCollisionOutsideTestedRange(ValueError):
     """The run has left the conditions the dune collision module was tested in; its results would not hold."""
 
 
-def beach_factor(beach_width, beach_width_limit):
-    """
-    The share of the collision volume a dune loses behind its beach: 1 on no beach, falling
-    linearly to 0 at ``beach_width_limit`` and beyond.
-
-    Parameters
-    ----------
-    beach_width: array of float
-        Beach width per alongshore dune cell [dam]
-    beach_width_limit: float
-        The beach width W0 at and beyond which a dune loses nothing to collision [dam]
-
-    Returns
-    -------
-    array of float
-        max(0, 1 - W / W0) per dune cell [-]
-    """
-
-    return np.clip(1 - beach_width / beach_width_limit, 0, None)
-
-
-def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach):
+def collision_cells(crest_prestorm, crest, toe_elevation, r_high):
     """
     The dune cells a storm leaves in the collision regime (Sallenger, 2000): not overwashed by
     Barrier3D, the water above the toe, and the crest still above the water.
@@ -103,8 +73,6 @@ def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach):
         Dune toe elevation [dam MHW]
     r_high: float
         The storm's peak runup elevation [dam MHW]
-    beach: array of float
-        Beach factor per cell (beach_factor) [-]; cells at 0 are left out
 
     Returns
     -------
@@ -116,15 +84,13 @@ def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach):
         (crest_prestorm >= r_high)  # not overwashed by Barrier3D
         & (r_high > toe_elevation)
         & (crest > r_high)
-        & (beach > 0)
     )
 
 
-def larson_volume(r_high, toe_elevation, period, duration, cs, beach):
+def larson_volume(r_high, toe_elevation, period, duration, cs):
     """
     Following Larson et al. (2004), the dune volume eroded by wave impact over one storm,
-    with the storm's peak runup held over its duration and scaled by the beach in front of
-    the dune.
+    with the storm's peak runup held over its duration.
 
     Parameters
     ----------
@@ -138,8 +104,6 @@ def larson_volume(r_high, toe_elevation, period, duration, cs, beach):
         Storm duration [hr]
     cs: float
         Larson et al. (2004) impact coefficient [-]
-    beach: array of float
-        Beach factor per cell (beach_factor) [-]
 
     Returns
     -------
@@ -148,7 +112,7 @@ def larson_volume(r_high, toe_elevation, period, duration, cs, beach):
     """
 
     excess_m = (r_high - toe_elevation) * 10  # dam to m
-    return 4 * cs * excess_m**2 * duration * 3600.0 / period * beach
+    return 4 * cs * excess_m**2 * duration * 3600.0 / period
 
 
 def lower_dunes(dune_rows, volume, toe_elevation, berm_elevation, dune_width, dune_restart):
@@ -214,8 +178,6 @@ class DuneCollisionManager:
         toe_elevation,
         cs,
         dune_width=2.0,
-        beach_width=None,
-        beach_width_limit=4.5,
     ):
         """The DuneCollisionManager module
 
@@ -229,10 +191,6 @@ class DuneCollisionManager:
             Larson et al. (2004) impact coefficient [-]
         dune_width: float, optional
             Cross-shore width the eroded volume is spread over [dam]; Barrier3D's two dune rows
-        beach_width: array of float, optional
-            Beach width per alongshore dune cell [dam]; None leaves the beach out
-        beach_width_limit: float, optional
-            The beach width W0 at and beyond which a dune loses nothing to collision [dam]
         """
 
         n = barrier3d.BarrierLength
@@ -252,22 +210,9 @@ class DuneCollisionManager:
                 f"a dune toe lies {-np.nanmin(toe) * 10:.2f} m below MHW; the module was tested only "
                 "with toes at or above MHW (the toe sits on the dry beach)."
             )
-        if beach_width is None:
-            beach = np.ones(n)
-        else:
-            beach_width = np.asarray(beach_width, dtype=float)
-            if beach_width.shape != (n,):
-                raise ValueError(
-                    f"beach_width needs one value per dune cell ({n}), "
-                    f"got shape {beach_width.shape}"
-                )
-            beach = beach_factor(beach_width, beach_width_limit)
 
         self._barrier3d = barrier3d
         self._toe_elevation = toe
-        self._beach_width = beach_width
-        self._beach_width_limit = beach_width_limit
-        self._beach = beach
         self._cs = cs
         self._dune_width = dune_width
         self._crest_prestorm = None  # dam MHW, set each year after dune growth
@@ -322,14 +267,12 @@ class DuneCollisionManager:
 
         dune_rows = DuneDomain[t]  # (cells, dune rows)
         crest = dune_rows.max(axis=1) + b3d._BermEl  # dam MHW
-        hit = collision_cells(self._crest_prestorm, crest, self._toe_elevation, r_high, self._beach)
+        hit = collision_cells(self._crest_prestorm, crest, self._toe_elevation, r_high)
         if not hit.any():
             return
         self._check_storm(r_high, self._toe_elevation[hit], period, duration)
 
-        volume = larson_volume(
-            r_high, self._toe_elevation[hit], period, duration, self._cs, self._beach[hit]
-        )
+        volume = larson_volume(r_high, self._toe_elevation[hit], period, duration, self._cs)
         new_rows = lower_dunes(
             dune_rows[hit],
             volume,
@@ -370,14 +313,6 @@ class DuneCollisionManager:
     @property
     def toe_elevation(self):
         return self._toe_elevation
-
-    @property
-    def beach_width(self):
-        return self._beach_width
-
-    @property
-    def beach_width_limit(self):
-        return self._beach_width_limit
 
     @property
     def cs(self):

@@ -46,10 +46,9 @@ physics:
 
 dune_collision:
   enabled: true
-  cs: 1.02e-4                 # Larson et al. (2004) impact coefficient: the dry-beach fit (2026-11-03), checked
-                              # in-model (cal_g16_nocape_rd198_dry; 0.87e-4 no better). 1.24e-4 with the width to the crest
-  beach_width_limit_m: 25     # no collision loss on a dry beach (beach start to toe) this wide or wider
-                              # (45 m until 2026-11-03, when the width ran to the crest)
+  cs: 1.9e-5                  # Larson et al. (2004) impact coefficient, Larson alone (2026-11-04): its offline fit
+                              # on the re-read crests (rule comparison, larson_storm; 2.0e-5 on the old crests).
+                              # The beach factor (Cs 1.02e-4) was removed 2026-11-04: git tag collision-with-beach-factor
 
 
 # --- management --------------------------------------------------------------

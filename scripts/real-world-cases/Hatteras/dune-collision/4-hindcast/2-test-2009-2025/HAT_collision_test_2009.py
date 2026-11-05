@@ -155,6 +155,10 @@ def _launch(variant):
     orig_build = hc.build_cascade
 
     def build_cascade(*a, **k):
+        # every collision variant here was made with the beach factor, which the module no longer has
+        if k.get("dune_collision_module"):
+            raise SystemExit(f"{variant}: the module's beach options were removed from cascade/dune_collision.py on "
+                             "2026-11-04; check out git tag collision-with-beach-factor to rerun it")
         if variant in TOES_FROM_START and k.get("dune_collision_module"):
             t = pd.read_csv(TOE_SURVEYS)
             t = t[t.survey.astype(str) == "start"]

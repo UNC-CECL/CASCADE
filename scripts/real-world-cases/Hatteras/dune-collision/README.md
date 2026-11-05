@@ -49,11 +49,13 @@ dropping at GIS 2-3, 10-12 and 84-86.
 
 Inside Barrier3D's storm loop, without editing Barrier3D, each cell a storm leaves in collision
 (lidar toe < peak Rhigh < crest) loses Larson et al.'s (2004) volume per storm,
-4 Cs (Rhigh - toe)^2 t / T, scaled by max(0, 1 - W / W0) for the beach in front of it, and taken as a
-crest lowering over the 20 m dune; later storms that year see the lowered dunes. Barrier3D's own
-overwash lowering is untouched. Switched on in `../hatteras_ms/hat_run.yaml` (`dune_collision`:
-Cs 1.02e-4, W0 25 m on the dry beach, beach start to toe, since 2026-11-03; Cs 1.24e-4 and W0 45 m on
-the width to the crest before); toes and beach widths from `../input_prep/1-barrier3d-domains/3-dune-toes/`.
+4 Cs (Rhigh - toe)^2 t / T, taken as a crest lowering over the 20 m dune; later storms that year see the
+lowered dunes. Barrier3D's own overwash lowering is untouched. Switched on in `../hatteras_ms/hat_run.yaml`
+(`dune_collision`): Larson alone, Cs 1.9e-5, since 2026-11-04. Before that the volume was also scaled by
+max(0, 1 - W / W0) for the beach in front of the dune (the beach factor): Cs 1.02e-4 with W0 25 m on the dry beach
+(2026-11-03), and Cs 1.24e-4 with W0 45 m on the width to the crest. The beach factor was removed from the module on
+2026-11-04; the last version with it is git tag `collision-with-beach-factor`. Toes from
+`../input_prep/1-barrier3d-domains/3-dune-toes/`.
 
 ## Next
 
