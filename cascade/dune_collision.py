@@ -146,7 +146,7 @@ def lower_dunes(dune_rows, volume, toe_elevation, berm_elevation, dune_width, du
     crest = top + berm_elevation
     new_crest = np.maximum(crest - volume / (dune_width * 10) / 10, toe_elevation)
     new_top = np.maximum(new_crest - berm_elevation, dune_restart)
-    scale = np.where(top > 0, new_top / np.where(top > 0, top, 1.0), 1.0)
+    scale = new_top / np.where(top > 0, top, 1.0)
 
     new_rows = np.minimum(np.maximum(dune_rows * scale[:, None], dune_restart), dune_rows)
 
@@ -160,25 +160,19 @@ class DuneCollisionManager:
     Examples
     --------
     # >>> from cascade.dune_collision import DuneCollisionManager
-    # >>> collision = DuneCollisionManager(barrier3d, toe_elevation_dam, cs=1.24e-4)
+    # >>> collision = DuneCollisionManager(barrier3d, toe_elevation_dam, cs=1.9e-5)
     # >>> barrier3d.update()  # collision erosion runs within each storm
 
     The manager installs itself on ``barrier3d``; each later ``barrier3d.update()`` includes it.
     """
 
-    # The tested range (module Notes); outside it the manager raises DuneCollisionOutsideTestedRange
+    # The tested range; outside it the manager raises DuneCollisionOutsideTestedRange
     CS_MAX = 2.5e-4  # the highest Cs run at Hatteras [-]
     MAX_STORM_DURATION_HR = 200.0  # the storm series run reach 193 h [hr]
     STORM_PERIOD_RANGE_S = (5.0, 20.0)  # the storm series run span 7-19 s [s]
     MAX_WATER_ABOVE_TOE_DAM = 0.5  # 5 m; the storms run put water up to 4.6 m above a toe [dam]
 
-    def __init__(
-        self,
-        barrier3d,
-        toe_elevation,
-        cs,
-        dune_width=2.0,
-    ):
+    def __init__(self, barrier3d, toe_elevation, cs, dune_width=2.0):
         """The DuneCollisionManager module
 
         Parameters
@@ -202,7 +196,7 @@ class DuneCollisionManager:
         if not 0 <= cs <= self.CS_MAX:
             raise DuneCollisionOutsideTestedRange(
                 f"cs {cs:g} is outside the tested range [0, {self.CS_MAX:g}]; the module was calibrated "
-                "and run at Hatteras with Cs from 2.0e-5 to 2.5e-4 "
+                "and run at Hatteras with Cs from 1.0e-5 to 2.5e-4 "
                 "(scripts/real-world-cases/Hatteras/dune-collision/3-module-tests/)."
             )
         if np.nanmin(toe) < 0:
