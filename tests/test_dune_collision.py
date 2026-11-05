@@ -89,14 +89,6 @@ def test_collision_cells_crest_prestorm_at_water_is_not_overwashed():
     assert hit[0]
 
 
-def test_collision_cells_r_dune_sets_only_the_toe_test():
-    crest = np.array([0.6, 0.6])
-    toe = np.array([0.3, 0.3])
-    r_dune = np.array([0.4, 0.25])  # the second falls short of its toe
-    hit = collision_cells(crest, crest, toe, 0.5, np.ones(2), r_dune)
-    np.testing.assert_array_equal(hit, [True, False])
-
-
 # --------------------------------------------------------------------------- #
 # larson_volume
 # --------------------------------------------------------------------------- #
@@ -168,15 +160,6 @@ def test_manager_rejects_wrong_lengths(name):
     kwds[name] = np.ones(b3d.BarrierLength + 1)
     with pytest.raises(ValueError, match=name):
         DuneCollisionManager(b3d, cs=1e-4, **kwds)
-
-
-@pytest.mark.parametrize(
-    "option", [{"beach_follows_shoreline": True}, {"beach_runup_loss": 0.05}]
-)
-def test_manager_rejects_beach_options_without_a_beach(option):
-    b3d = new_barrier3d()
-    with pytest.raises(ValueError, match="needs a beach_width"):
-        DuneCollisionManager(b3d, low_toe(b3d), cs=1e-4, **option)
 
 
 # --------------------------------------------------------------------------- #
@@ -278,8 +261,8 @@ def test_storms_handled_match_the_storm_series():
     handled = {}
     update = m.update
 
-    def counting(barrier3d, DuneDomain, t):
-        update(barrier3d, DuneDomain, t)
+    def counting(DuneDomain, t):
+        update(DuneDomain, t)
         handled[t] = m._storm
 
     m.update = counting
@@ -350,65 +333,8 @@ def test_manager_survives_pickling():
     assert len(m.volume_TS) == 6 and sum(m.volume_TS) > 0
 
 
-def test_beach_follows_shoreline():
-    b3d = new_barrier3d()
-    width = np.linspace(0.0, 6.0, b3d.BarrierLength)
-    m = DuneCollisionManager(
-        b3d, low_toe(b3d), cs=1.24e-4, beach_width=width, beach_follows_shoreline=True
-    )
-    x0 = b3d.x_s_TS[-1]
-    shorelines = []
-    run(b3d, before_update=lambda b: shorelines.append(b.x_s_TS[-1]))
-    expected = [np.maximum(width - (x - x0), 0).mean() for x in shorelines]
-    np.testing.assert_allclose(m.beach_width_TS, expected)
-
-
 def test_fixed_beach_keeps_its_width():
     b3d = new_barrier3d()
     m = DuneCollisionManager(b3d, low_toe(b3d), cs=1.24e-4, beach_width=np.ones(b3d.BarrierLength))
     run(b3d, 4)
-    assert m.beach_width_TS == []
     np.testing.assert_array_equal(m.beach_width, 1.0)
-
-
-def test_runup_loss_zero_is_no_beach():
-    runs = []
-    for runup in (False, True):
-        b3d = new_barrier3d()
-        extra = (
-            {"beach_width": np.full(b3d.BarrierLength, 3.0), "beach_runup_loss": 0.0}
-            if runup
-            else {}
-        )
-        DuneCollisionManager(b3d, low_toe(b3d), cs=1.24e-4, **extra)
-        runs.append(run(b3d))
-    assert_same_run(*runs)
-
-
-def test_runup_loss_beyond_every_toe_is_plain_barrier3d(plain_run):
-    b3d = new_barrier3d()
-    m = DuneCollisionManager(
-        b3d,
-        low_toe(b3d),
-        cs=1.24e-4,
-        beach_width=np.full(b3d.BarrierLength, 10.0),
-        beach_runup_loss=1.0,  # the beach takes 10 dam of water level
-    )
-    run(b3d)
-    assert_same_run(plain_run, b3d)
-    assert not any(m.volume_TS)
-
-
-def test_runup_loss_replaces_the_beach_factor():
-    # with beach_runup_loss, a beach wider than beach_width_limit no longer stops collision
-    b3d = new_barrier3d()
-    m = DuneCollisionManager(
-        b3d,
-        low_toe(b3d),
-        cs=1.24e-4,
-        beach_width=np.full(b3d.BarrierLength, 10.0),
-        beach_width_limit=4.5,
-        beach_runup_loss=1e-4,
-    )
-    run(b3d)
-    assert sum(m.volume_TS) > 0

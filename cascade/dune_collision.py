@@ -9,10 +9,7 @@ DuneCollisionManager adds that loss storm by storm, inside Barrier3D's own storm
 1. the wave-impact rule of Larson et al. (2004), per storm: dV = 4 Cs (R_high - z_toe)^2 t / T, the
    storm's peak R_high held over its duration t, T its peak period, and
 2. optionally, the beach in front of the dune: dV scaled by max(0, 1 - W / W0), W the beach width, as
-   the dunes behind wide beaches lost no sand to collision in the Hatteras lidar; or instead
-   (beach_runup_loss) the water reaching the dune lowered by k W, R_high - k W in place of R_high in
-   the toe test and the volume, as the swash loses height crossing the beach; W fixed, or
-   (beach_follows_shoreline) narrowing as the shoreline retreats toward a dune held in place, and
+   the dunes behind wide beaches lost no sand to collision in the Hatteras lidar, and
 3. the crest lowering over the dune's cross-shore width: dH = dV / W_dune, both dune rows lowered in
    proportion, no lower than the toe.
 
@@ -90,7 +87,7 @@ def beach_factor(beach_width, beach_width_limit):
     return np.clip(1 - beach_width / beach_width_limit, 0, None)
 
 
-def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach, r_dune=None):
+def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach):
     """
     The dune cells a storm leaves in the collision regime (Sallenger, 2000): not overwashed by
     Barrier3D, the water above the toe, and the crest still above the water.
@@ -108,8 +105,6 @@ def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach, r_dune=
         The storm's peak runup elevation [dam MHW]
     beach: array of float
         Beach factor per cell (beach_factor) [-]; cells at 0 are left out
-    r_dune: array of float, optional
-        The water level reaching each dune, for the toe test [dam MHW]; r_high if None
 
     Returns
     -------
@@ -117,11 +112,9 @@ def collision_cells(crest_prestorm, crest, toe_elevation, r_high, beach, r_dune=
         True where the dune is in collision
     """
 
-    if r_dune is None:
-        r_dune = r_high
     return (
         (crest_prestorm >= r_high)  # not overwashed by Barrier3D
-        & (r_dune > toe_elevation)
+        & (r_high > toe_elevation)
         & (crest > r_high)
         & (beach > 0)
     )
@@ -223,8 +216,6 @@ class DuneCollisionManager:
         dune_width=2.0,
         beach_width=None,
         beach_width_limit=4.5,
-        beach_follows_shoreline=False,
-        beach_runup_loss=None,
     ):
         """The DuneCollisionManager module
 
@@ -242,21 +233,7 @@ class DuneCollisionManager:
             Beach width per alongshore dune cell [dam]; None leaves the beach out
         beach_width_limit: float, optional
             The beach width W0 at and beyond which a dune loses nothing to collision [dam]
-        beach_follows_shoreline: bool, optional
-            If True, the dune is held in place and the beach takes the shoreline's change: each
-            year's beach width is beach_width less the shoreline's landward move since the start
-            (x_s_TS), no less than 0, so it narrows as the shoreline retreats and widens with
-            nourishment
-        beach_runup_loss: float, optional
-            If given, the beach acts on the water rather than the volume: the water reaching each
-            dune is R_high less beach_runup_loss times its beach width, and beach_width_limit is not
-            used [m of water level per m of beach]; None scales the volume by beach_factor
         """
-
-        if beach_width is None and beach_follows_shoreline:
-            raise ValueError("beach_follows_shoreline needs a beach_width")
-        if beach_width is None and beach_runup_loss is not None:
-            raise ValueError("beach_runup_loss needs a beach_width")
 
         n = barrier3d.BarrierLength
         toe = np.asarray(toe_elevation, dtype=float)
@@ -285,19 +262,12 @@ class DuneCollisionManager:
                     f"got shape {beach_width.shape}"
                 )
             beach = beach_factor(beach_width, beach_width_limit)
-        self._runup_loss = beach_runup_loss
-        if self._runup_loss is not None:
-            beach = np.ones(n)
-        self._width = beach_width  # dam, the beach width now
 
         self._barrier3d = barrier3d
         self._toe_elevation = toe
         self._beach_width = beach_width
         self._beach_width_limit = beach_width_limit
         self._beach = beach
-        self._beach_follows_shoreline = beach_follows_shoreline
-        self._shoreline_start = barrier3d.x_s_TS[-1]  # dam, landward positive
-        self._beach_width_TS = []  # per model year, mean beach width [dam]
         self._cs = cs
         self._dune_width = dune_width
         self._crest_prestorm = None  # dam MHW, set each year after dune growth
@@ -320,13 +290,6 @@ class DuneCollisionManager:
         crest = DuneDomain[t].max(axis=1)
         self._crest_prestorm = np.maximum(crest, b3d._DuneRestart) + b3d._BermEl
         self._storm = 0
-        if self._beach_follows_shoreline:
-            retreat = b3d.x_s_TS[-1] - self._shoreline_start
-            width = np.maximum(self._beach_width - retreat, 0)
-            self._width = width
-            if self._runup_loss is None:
-                self._beach = beach_factor(width, self._beach_width_limit)
-            self._beach_width_TS.append(float(width.mean()))
         self._crest_lowering_TS.append(0.0)
         self._volume_TS.append(0.0)
 
@@ -335,54 +298,45 @@ class DuneCollisionManager:
     def diffuse_dunes(self, DuneDomain, t):
         """Collision lowering for the storm just run (update); then Barrier3D's DiffuseDunes."""
 
-        b3d = self._barrier3d
-        self.update(b3d, DuneDomain, t)
+        self.update(DuneDomain, t)
 
-        return type(b3d).DiffuseDunes(b3d, DuneDomain, t)
+        return type(self._barrier3d).DiffuseDunes(self._barrier3d, DuneDomain, t)
 
-    def update(self, barrier3d, DuneDomain, t):
+    def update(self, DuneDomain, t):
         """Lower the dunes the year's next storm left in the collision regime.
 
         Parameters
         ----------
-        barrier3d: Barrier3d
-            The domain, mid storm loop (its storm series is read)
         DuneDomain: array of float
             Barrier3D's dune domain, (years, cells, dune rows) [dam above the berm]; changed in place
         t: int
             Barrier3D's time index
         """
 
-        storms = np.flatnonzero(barrier3d._StormSeries[:, 0] == t)
+        b3d = self._barrier3d
+        storms = np.flatnonzero(b3d._StormSeries[:, 0] == t)
         if self._storm >= len(storms):
             return
-        r_high, period, duration = barrier3d._StormSeries[storms[self._storm], [1, 3, 4]]
+        r_high, period, duration = b3d._StormSeries[storms[self._storm], [1, 3, 4]]
         self._storm += 1
 
         dune_rows = DuneDomain[t]  # (cells, dune rows)
-        crest = dune_rows.max(axis=1) + barrier3d._BermEl  # dam MHW
-        # The water reaching each dune: R_high, or less what the beach takes (beach_runup_loss)
-        if self._runup_loss is None:
-            r_dune = np.full(len(crest), r_high)
-        else:
-            r_dune = r_high - self._runup_loss * self._width
-        hit = collision_cells(
-            self._crest_prestorm, crest, self._toe_elevation, r_high, self._beach, r_dune
-        )
+        crest = dune_rows.max(axis=1) + b3d._BermEl  # dam MHW
+        hit = collision_cells(self._crest_prestorm, crest, self._toe_elevation, r_high, self._beach)
         if not hit.any():
             return
-        self._check_storm(r_dune[hit], self._toe_elevation[hit], period, duration)
+        self._check_storm(r_high, self._toe_elevation[hit], period, duration)
 
         volume = larson_volume(
-            r_dune[hit], self._toe_elevation[hit], period, duration, self._cs, self._beach[hit]
+            r_high, self._toe_elevation[hit], period, duration, self._cs, self._beach[hit]
         )
         new_rows = lower_dunes(
             dune_rows[hit],
             volume,
             self._toe_elevation[hit],
-            barrier3d._BermEl,
+            b3d._BermEl,
             self._dune_width,
-            barrier3d._DuneRestart,
+            b3d._DuneRestart,
         )
 
         n = len(dune_rows)
@@ -392,7 +346,7 @@ class DuneCollisionManager:
         self._volume_TS[-1] += float((dune_rows[hit] - new_rows).sum() / n)
         dune_rows[hit] = new_rows
 
-    def _check_storm(self, r_dune, toe, period, duration):
+    def _check_storm(self, r_high, toe, period, duration):
         """Raise DuneCollisionOutsideTestedRange if a storm that lowers dunes is outside the tested range."""
         if duration > self.MAX_STORM_DURATION_HR:
             raise DuneCollisionOutsideTestedRange(
@@ -406,7 +360,7 @@ class DuneCollisionManager:
                 f"a storm with a {period:g} s peak period lowers dunes; the module was tested on "
                 f"periods of {lo:g}-{hi:g} s."
             )
-        above = float(np.max(r_dune - toe))
+        above = float(np.max(r_high - toe))
         if above > self.MAX_WATER_ABOVE_TOE_DAM:
             raise DuneCollisionOutsideTestedRange(
                 f"a storm puts the water {above * 10:.2f} m above a dune toe; the module was tested "
@@ -424,18 +378,6 @@ class DuneCollisionManager:
     @property
     def beach_width_limit(self):
         return self._beach_width_limit
-
-    @property
-    def beach_follows_shoreline(self):
-        return self._beach_follows_shoreline
-
-    @property
-    def beach_width_TS(self):
-        return self._beach_width_TS
-
-    @property
-    def beach_runup_loss(self):
-        return self._runup_loss
 
     @property
     def cs(self):

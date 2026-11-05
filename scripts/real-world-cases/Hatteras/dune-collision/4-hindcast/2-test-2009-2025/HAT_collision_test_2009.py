@@ -180,9 +180,9 @@ def _launch(variant):
                     widths[dom.gis_to_pad(int(gis))] = d.sort_values("cell").beach_width_m.to_numpy()
             k["dune_collision_beach_width"] = widths
             print("\nEXPERIMENT beach widths from the 2009 start profile", flush=True)
-        if variant in BEACH_FOLLOWS_SHORELINE and k.get("dune_collision_module"):
-            k["dune_collision_beach_follows_shoreline"] = True
-            print("\nEXPERIMENT beach width follows the shoreline", flush=True)
+        if variant in BEACH_FOLLOWS_SHORELINE or variant in RUNUP_LOSS:
+            raise SystemExit(f"{variant}: beach_follows_shoreline and beach_runup_loss were removed from "
+                             "cascade/dune_collision.py on 2026-11-04; check out an earlier commit to rerun it")
         if variant in ROAD_DUNE_REBUILD:
             gate, trigger = ROAD_DUNE_REBUILD[variant]
             k["road_dune_rebuild_trigger_m"] = gate
@@ -192,9 +192,6 @@ def _launch(variant):
                   + ("berm floor" if trigger is None else f"{trigger:.2f} m MHW"), flush=True)
         if variant in SHORELINE_GATE:
             print(f"\nEXPERIMENT road dune rebuild where NC 12 is within {SHORELINE_GATE_M:g} m of the shoreline", flush=True)
-        if variant in RUNUP_LOSS and k.get("dune_collision_module"):
-            k["dune_collision_beach_runup_loss"] = RUNUP_LOSS[variant]
-            print(f"\nEXPERIMENT the beach lowers the water at the dune by {RUNUP_LOSS[variant]:g} m per m", flush=True)
         if variant in DRY_BEACH and k.get("dune_collision_module"):
             k["dune_collision_cs"], k["dune_collision_beach_width_limit"] = DRY_CS, DRY_LIMIT_M
             print(f"\nEXPERIMENT dry beach (start to toe), Cs {DRY_CS:.2e}, limit {DRY_LIMIT_M:g} m", flush=True)

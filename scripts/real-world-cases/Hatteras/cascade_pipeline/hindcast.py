@@ -756,7 +756,6 @@ def build_cascade(
     groin_spread_weights=(1.0, 0.0, 0.0),
     dune_collision_module=False, dune_collision_toe_elevation=None, dune_collision_cs=None,
     dune_collision_beach_width=None, dune_collision_beach_width_limit=25.0,
-    dune_collision_beach_follows_shoreline=False, dune_collision_beach_runup_loss=None,
 ):
     """Constructs a Cascade, with its GroinManager if groin_module and its
     DuneCollisionManagers if dune_collision_module, without stepping it.
@@ -818,11 +817,6 @@ def build_cascade(
             cell, m; None leaves the beach out.
         dune_collision_beach_width_limit: Beach width at and beyond which a dune
             loses nothing to collision, m.
-        dune_collision_beach_follows_shoreline: If True, the beach width narrows
-            as the shoreline retreats toward the dune and widens with nourishment.
-        dune_collision_beach_runup_loss: If given, the beach lowers the water
-            reaching each dune by this much per metre of beach (m/m), in place of
-            the beach_width_limit scaling.
         road_dune_rebuild_trigger_m: obx-cascade's
             dune_mgmt_road_setback_trigger: where the road sits farther than
             this behind the dune, RoadwayManager leaves the dunes to
@@ -910,8 +904,6 @@ def build_cascade(
         dune_collision_cs=dune_collision_cs,
         dune_collision_beach_width=dune_collision_beach_width,
         dune_collision_beach_width_limit=dune_collision_beach_width_limit,
-        dune_collision_beach_follows_shoreline=dune_collision_beach_follows_shoreline,
-        dune_collision_beach_runup_loss=dune_collision_beach_runup_loss,
     )
 
     # The cap is set in BeachDuneManager.__init__, not an argument, so it goes onto each manager here
