@@ -88,3 +88,18 @@ What they show (from the 2026-10-27/28 record, `../4-hindcast/1-calibration-1996
   R_high/D_high alone 0.29). Figure `collision_empirical.png`.
 - Forcing the lidar crests into the model makes the missing Buxton shoreline erosion appear
   (`5-forced-dune-crests/`; figures in the workspace's `5-forced-dune-crests/`).
+
+## 8-buxton-dune-change (2026-11-11)
+
+`8-buxton-dune-change/HAT_buxton_dune_change.py`: every 1996-2009 lidar survey of GIS 10-15 on the 2009 datum (the
+model's vertical offsets, then each survey's remaining NC-12 difference from 2009; on the road at GIS 15 every survey is
+within 0.05 m of 2009, `supporting/buxton_datum_check.csv`), on the model clips' 1 m grid: maps by survey, change between
+surveys, and one cross-shore profile per domain. Asked because the collision module cannot lower GIS 10-12 in time
+(`../4-hindcast/TESTING_2026-11-09_to_11.md`, section 4).
+
+Found: at GIS 10-12 the original foredune was cut down and pushed landward in 1997-1999 (GIS 11 already by 1998;
+1998-1999 the strongest loss, along the dune front), ending at about the Dennis peak water level (3.6-4 m); then a new,
+taller dune (6-7 m) was built about 50-80 m landward, beside the relocated NC-12, from 2001 to 2004. GIS 13 kept its
+front dune (about 6 m) and gained a second, lower ridge behind it; GIS 14-15 held. So the lidar "crest" at GIS 10-12
+is one dune until 1999 and a different, built dune after 2001: the model, with one dune line and no road relocation,
+cannot follow either the loss or the rebuild. The 2005 survey does not cover GIS 10-11.
