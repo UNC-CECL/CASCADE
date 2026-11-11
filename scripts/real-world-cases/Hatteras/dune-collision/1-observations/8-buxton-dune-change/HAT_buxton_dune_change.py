@@ -61,6 +61,11 @@ STRIP_STEP_M = 1.0
 # row). The September 1999 lidar, flown just after Dennis, still has the old alignment (washed out); the February-
 # March 2000 survey is the first with the new one. The strips draw the road where it was in each survey
 RELOCATED_BY_SURVEY = 2000
+IMAGERY_YEARS = (1993, 1995, 1996, 1997, 1998, 2002, 2004, 2008)    # the photographs on D: around 1996-2009
+# (2009: none of Hannah's five georeferenced Google Earth captures reaches GIS 10-15)
+IMAGERY_LABELS = {1993: "2 Sep", 1995: "18 Oct", 1996: "14 Oct", 1997: "12 Oct", 1998: "2 Oct", 2002: "18 Oct",
+                  2004: "25 May", 2008: "26-27 Mar", 2009: "30 May"}
+IMAGERY_CACHE = OUT / "supporting" / "imagery_2002_unzipped"   # the 2002 frames, unzipped from the USGS delivery
 ROAD_C, BOUNDARY_C = "#AE017E", "0.45"           # NC-12 (magenta), the domain boundaries (grey)
 MONTHS = {1996: "Aug-Oct", 1997: "Sep-Oct", 1998: "Sep", 1999: "Sep", 2000: "Feb-Mar", 2001: "Jan-Mar",
           2004: "Apr-Sep", 2005: "Aug-Nov", 2009: "Aug"}   # the flights (survey_sources.csv)
@@ -514,6 +519,94 @@ def profiles(surv, g, dom, roads, S_, plt):
     print(f"wrote {out}")
 
 
+def _imagery(year):
+    """One year's photographs as site_layer.hat_aerial_imagery.Imagery, with two additions: 2002, which exists only as
+    the USGS delivery's zipped frames (unzipped once into IMAGERY_CACHE, the drive untouched), and 2009, Hannah's
+    Google Earth captures, of which only those with a coordinate system are used."""
+    import glob
+    import zipfile
+    import rasterio
+    from rasterio.warp import transform_bounds
+    from shapely.geometry import box
+    from site_layer import hat_aerial_imagery as AI
+    files = AI.year_files(year)
+    date = AI.year_date(year)
+    if not files and year == 2002:
+        IMAGERY_CACHE.mkdir(parents=True, exist_ok=True)
+        for z in sorted(glob.glob(str(AI.AERIAL_ROOT / "_delivered" / "usgs_henderson_2025_draft" /
+                                      "Hatteras_Georeferenced_DRAFT" / "2002" / "2002_georef_TIF" / "*.zip"))):
+            with zipfile.ZipFile(z) as zz:
+                for n in zz.namelist():
+                    out = IMAGERY_CACHE / Path(n).name
+                    if not out.exists():
+                        out.write_bytes(zz.read(n))
+        files, date = sorted(IMAGERY_CACHE.glob("2002_*.tif")), "2002-10-18"
+    if not files and year == 2009:
+        for f in sorted(glob.glob(str(AI.AERIAL_ROOT / "2009" / "google_earth_captures" / "raw_ge" / "*.jpg"))):
+            with rasterio.open(f) as src:
+                if src.crs is not None:
+                    files.append(Path(f))
+        date = "2009-05-30"
+    im = AI.Imagery.__new__(AI.Imagery)
+    im.year, im.date, im.files, im.foot, im.has_mosaic = year, date, files, [], False
+    for f in files:
+        with rasterio.open(f) as src:
+            b = transform_bounds(src.crs, "EPSG:3725", *src.bounds)
+            unit = 0.3048 if "foot" in str(src.crs).lower() or "us_survey_feet" in str(src.crs).lower() else 1.0
+            im.foot.append((box(*b), src.res[0] * unit))
+    im.has_mosaic = bool(files) and files[0].name.endswith("_full_aerial.tif")
+    return im
+
+
+def imagery_strips(st, g, S_, plt):
+    """The aerial photographs in the strips' frame, one row per year, with NC-12 where it was that year."""
+    from scipy.ndimage import map_coordinates
+    from matplotlib.lines import Line2D
+    t, (h, w), crs = g
+    x0, x1, y0, y1 = t.c, t.c + w * t.a, t.f + h * t.e, t.f
+    rows = []
+    for y in IMAGERY_YEARS:
+        im = _imagery(y)
+        if not im.files:
+            print(f"  no imagery for {y}")
+            continue
+        rgb = im.read(x0, x1, y0, y1, RES_M, crs)                        # (H, W, 3) uint8, 0 where no photograph
+        strip = np.stack([map_coordinates(rgb[..., c].astype(float), [st.row, st.col], order=1, mode="constant",
+                                          cval=0) for c in range(3)], axis=-1)
+        rows.append((y, im.date, np.clip(strip / 255.0, 0, 1)))
+    fig, axs = plt.subplots(len(rows), 1, figsize=(S_.FIG_W_DOUBLE, 0.82 * len(rows) + 1.0), sharex=True,
+                            layout="constrained")
+    for ax, (y, date, img) in zip(axs, rows):
+        blank = img.sum(axis=-1) == 0
+        img = img.copy()
+        img[blank] = 1.0
+        ext = (st.s[0] / 1000, st.s[-1] / 1000, st.n[0], st.n[-1])
+        ax.imshow(img, extent=ext, origin="lower", aspect="auto", interpolation="bilinear")
+        st.draw(ax, y)
+        ax.lines[0].set_alpha(0.45)                    # the road line see-through: the road in the photograph shows
+        _row_label(ax, str(y), IMAGERY_LABELS.get(y, date[5:] if len(date) > 4 else None))
+    st.top_axis(axs[0])
+    axs[-1].set_xlabel("Alongshore distance along NC-12, south to north (km)", fontsize=8)
+    fig.supylabel("Cross-shore distance from NC-12 (2008 alignment), seaward down (m)", fontsize=8)
+    h_ = [Line2D([], [], color=ROAD_C, lw=1.0, label="NC-12 (relocation records)"),
+          Line2D([], [], color=BOUNDARY_C, lw=0.6, label="Domain boundary")]
+    fig.legend(handles=h_, loc="outside lower center", ncol=2, fontsize=7, frameon=False, handlelength=2.2)
+    out = OUT / "buxton_aerial_by_year.png"
+    S_.save(fig, out, bbox_inches="tight", close=True)
+    S_.record_caption(out, (
+        "Aerial photographs of GIS 10-15, north of Buxton, 1993-2008 (rows; flight dates beside each year), in the frame "
+        "of buxton_dunes_by_survey: the coast unrolled along NC-12, alongshore distance north along the road's 2008 "
+        "alignment against cross-shore distance from it, seaward down, the cross-shore axis stretched. Sources: 1993-1998 "
+        "and 2002, USGS georeferenced scans of USACE Field Research Facility photography (Henderson, in prep., "
+        "doi:10.5066/P1CXBCDW; 2002 from the draft delivery); 2004, Google Earth Pro historical imagery captured "
+        "and georeferenced by Hannah Henry (none of the 2009 captures reaches GIS 10-15); 2008, NOAA NGS ortho-rectified colour "
+        "mosaic (InPort 48695). Magenta, see-through: NC-12 where the relocation records put it in that year (the old alignment "
+        "through 1998, the relocated one from 2002; relocated after Hurricane Dennis, 1999, in place by 16 March 2000; "
+        "NCDOT 2015), to check against the road in the photographs. Grey: the domain boundaries. White: no photograph. "
+        "Georeferencing errors of a few metres (USGS: about 1.2 m) can offset a photograph against the road line."))
+    print(f"wrote {out}")
+
+
 def main():
     import matplotlib
     matplotlib.use("Agg")
@@ -527,6 +620,7 @@ def main():
     st = strips(surv, g, dom, roads, S_, plt)
     strip_changes(surv, st, S_, plt)
     profiles(surv, g, dom, roads, S_, plt)
+    imagery_strips(st, g, S_, plt)
 
 
 if __name__ == "__main__":

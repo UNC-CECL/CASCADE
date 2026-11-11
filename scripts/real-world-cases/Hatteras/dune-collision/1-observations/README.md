@@ -103,3 +103,11 @@ taller dune (6-7 m) was built about 50-80 m landward, beside the relocated NC-12
 front dune (about 6 m) and gained a second, lower ridge behind it; GIS 14-15 held. So the lidar "crest" at GIS 10-12
 is one dune until 1999 and a different, built dune after 2001: the model, with one dune line and no road relocation,
 cannot follow either the loss or the rebuild. The 2005 survey does not cover GIS 10-11.
+
+Also `buxton_aerial_by_year.png` (2026-11-11): the aerial photographs of 1993-2008 in the same unrolled frame (USGS
+scans 1993-1998 and 2002, the 2002 frames unzipped from the draft delivery into `supporting/imagery_2002_unzipped/`;
+Google Earth 2004; NOAA 2008; no 2009 capture reaches GIS 10-15). They confirm the road positions: the paved road sits
+on the old alignment through 1997 (1998 covers GIS 12-15 only) and on the relocated one by October 2002, when the strip
+between the new road and the beach at GIS 10-12 is bare sand where the old road and foredune were; the vegetated old
+foredune survives at GIS 13-15. The relocation (after Dennis, in place by 16 March 2000) is from the NCDOT NC 12 Buxton
+to Avon Feasibility Study (December 2015), section 2.1 and Figure 4.
