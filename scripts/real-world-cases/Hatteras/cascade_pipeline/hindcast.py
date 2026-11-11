@@ -755,6 +755,7 @@ def build_cascade(
     groin_strength_history=None, groin_start_year=1,
     groin_spread_weights=(1.0, 0.0, 0.0),
     dune_collision_module=False, dune_collision_toe_elevation=None, dune_collision_cs=None,
+    dune_collision_rows="proportional",
 ):
     """Constructs a Cascade, with its GroinManager if groin_module and its
     DuneCollisionManagers if dune_collision_module, without stepping it.
@@ -812,6 +813,8 @@ def build_cascade(
         dune_collision_toe_elevation: Per padded domain, the dune toe per dune
             cell, m MHW; None leaves the domain out.
         dune_collision_cs: Larson et al. (2004) impact coefficient.
+        dune_collision_rows: Which dune rows lose the eroded volume: "proportional"
+            (default), "front", "equal" or "lateral" (cascade/dune_collision.py).
         road_dune_rebuild_trigger_m: obx-cascade's
             dune_mgmt_road_setback_trigger: where the road sits farther than
             this behind the dune, RoadwayManager leaves the dunes to
@@ -897,6 +900,7 @@ def build_cascade(
         dune_collision_module=dune_collision_module,
         dune_collision_toe_elevation=dune_collision_toe_elevation,
         dune_collision_cs=dune_collision_cs,
+        dune_collision_rows=dune_collision_rows,
     )
 
     # The cap is set in BeachDuneManager.__init__, not an argument, so it goes onto each manager here

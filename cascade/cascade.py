@@ -205,6 +205,7 @@ class Cascade:
         dune_collision_toe_elevation=None,  # dune toe per domain [m MHW]
         dune_collision_cs=None,  # Larson et al. (2004) impact coefficient [-]
         dune_collision_dune_width=20.0,  # dune width the eroded sand comes from [m]
+        dune_collision_rows="proportional",  # which dune rows lose it: proportional, front, equal, lateral
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -381,6 +382,11 @@ class Cascade:
             dune_collision_module)
         dune_collision_dune_width: float, optional
             Cross-shore width the eroded volume is spread over [m]
+        dune_collision_rows: str, optional
+            Which dune rows lose the eroded volume: "proportional" (both, in proportion to
+            their height; the default), "front" (the seaward row only), "equal" (both by
+            the same height) or "lateral" (the face retreats through the front row, which
+            keeps its height until its sand is gone); see dune_collision
 
         Examples
         --------
@@ -726,6 +732,7 @@ class Cascade:
                     np.asarray(dune_collision_toe_elevation[iB3D]) / 10,  # m to dam
                     cs=dune_collision_cs,
                     dune_width=dune_collision_dune_width / 10,  # m to dam
+                    rows=dune_collision_rows,
                 )
 
     @property

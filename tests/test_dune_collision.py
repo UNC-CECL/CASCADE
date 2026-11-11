@@ -16,8 +16,10 @@ from cascade.dune_collision import (
     DuneCollisionManager,
     DuneCollisionOutsideTestedRange,
     collision_cells,
+    erode_laterally,
     larson_volume,
     lower_dunes,
+    refill_deficit,
 )
 
 DATA_DIR = Path(__file__).parent / "test_coupling"
@@ -132,6 +134,173 @@ def test_lower_dunes_zero_volume_is_exact():
     np.testing.assert_array_equal(new, rows)
 
 
+def test_lower_dunes_front_by_hand():
+    # 20 m3/m over the front row's 10 m lowers it 2 m: 0.4 -> 0.2 dam; the back row is unchanged
+    new = lower_dunes(np.array([[0.4, 0.2]]), np.array([20.0]), np.array([0.2]), BERM, WIDTH, RESTART,
+                      rows="front")
+    np.testing.assert_allclose(new, [[0.2, 0.2]])
+
+
+def test_lower_dunes_equal_by_hand():
+    # 20 m3/m over 20 m of dune lowers every row 1 m: 0.4 -> 0.3 and 0.2 -> 0.1 dam
+    new = lower_dunes(np.array([[0.4, 0.2]]), np.array([20.0]), np.array([0.1]), BERM, WIDTH, RESTART,
+                      rows="equal")
+    np.testing.assert_allclose(new, [[0.3, 0.1]])
+
+
+@pytest.mark.parametrize("rows", ["front", "equal"])
+def test_lower_dunes_front_and_equal_conserve_volume(rows):
+    # away from the toe and DuneRestart, the sand taken from the rows is the eroded volume
+    dune_rows = np.array([[0.6, 0.5], [0.5, 0.6]])
+    volume = np.array([10.0, 30.0])  # m3/m
+    new = lower_dunes(dune_rows, volume, np.full(2, 0.11), BERM, WIDTH, RESTART, rows=rows)
+    taken = (dune_rows - new).sum(axis=1) * 10 * 10 * (WIDTH / 2) * 10 / 10  # dam of height x 10 m rows -> m3/m
+    np.testing.assert_allclose(taken, volume)
+
+
+@pytest.mark.parametrize("rows", ["front", "equal"])
+def test_lower_dunes_other_modes_stop_at_the_toe_and_never_raise(rows):
+    rng = np.random.default_rng(3)
+    dune_rows = rng.uniform(0, 0.6, (200, 2))
+    toe = rng.uniform(0.1, 0.4, 200)
+    new = lower_dunes(dune_rows, rng.uniform(0, 80, 200), toe, BERM, WIDTH, RESTART, rows=rows)
+    assert np.all(new <= dune_rows)
+    floor = np.maximum(toe - BERM, RESTART)
+    lowered = new < dune_rows
+    assert np.all(new[lowered] >= np.broadcast_to(floor[:, None], new.shape)[lowered] - 1e-12)
+
+
+@pytest.mark.parametrize("rows", ["front", "equal"])
+def test_lower_dunes_other_modes_zero_volume_is_exact(rows):
+    rng = np.random.default_rng(4)
+    dune_rows = rng.uniform(0.01, 0.6, (100, 2))
+    new = lower_dunes(dune_rows, np.zeros(100), np.full(100, 0.12), 0.144, WIDTH, RESTART, rows=rows)
+    np.testing.assert_array_equal(new, dune_rows)
+
+
+# lateral: the toe at the berm, so a row holds its height x 10 m: front 0.4 dam -> 40 m3/m, back 0.2 -> 20
+LAT_ROWS, LAT_TOE = np.array([[0.4, 0.2]]), np.array([BERM])
+
+
+def test_erode_laterally_keeps_the_height_until_the_front_row_is_gone():
+    rows, lost = erode_laterally(LAT_ROWS, np.zeros((1, 2)), np.array([30.0]), LAT_TOE, BERM, RESTART, 1.0)
+    np.testing.assert_allclose(rows, LAT_ROWS)
+    np.testing.assert_allclose(lost, [[30.0, 0.0]])
+
+
+def test_erode_laterally_removes_the_front_row_and_carries_the_rest_back():
+    rows, lost = erode_laterally(LAT_ROWS, np.zeros((1, 2)), np.array([50.0]), LAT_TOE, BERM, RESTART, 1.0)
+    np.testing.assert_allclose(rows, [[RESTART, 0.2]])
+    np.testing.assert_allclose(lost, [[0.0, 10.0]])
+
+
+def test_erode_laterally_carries_the_deficit_between_storms():
+    rows, lost = erode_laterally(LAT_ROWS, np.zeros((1, 2)), np.array([30.0]), LAT_TOE, BERM, RESTART, 1.0)
+    rows, lost = erode_laterally(rows, lost, np.array([20.0]), LAT_TOE, BERM, RESTART, 1.0)
+    np.testing.assert_allclose(rows, [[RESTART, 0.2]])
+    np.testing.assert_allclose(lost, [[0.0, 10.0]])
+
+
+def test_erode_laterally_both_rows_gone_stops_at_the_toe():
+    toe = np.array([0.15])  # 0.05 dam above the berm: the rows drop to it, the sand below it stays
+    rows, lost = erode_laterally(LAT_ROWS, np.zeros((1, 2)), np.array([1e4]), toe, BERM, RESTART, 1.0)
+    np.testing.assert_allclose(rows, [[0.05, 0.05]])
+    np.testing.assert_allclose(lost, 0.0)
+
+
+def test_erode_laterally_zero_volume_is_exact():
+    rng = np.random.default_rng(5)
+    dune_rows, lost = rng.uniform(0.01, 0.6, (100, 2)), rng.uniform(0, 5, (100, 2))
+    rows, new_lost = erode_laterally(dune_rows, lost, np.zeros(100), np.full(100, BERM), BERM, RESTART, 1.0)
+    np.testing.assert_array_equal(rows, dune_rows)
+    np.testing.assert_array_equal(new_lost, lost)
+
+
+def test_refill_deficit_pays_back_growth_first():
+    # 0.05 dam of growth over a 10 m row is 5 m3/m: it repays 5 of the 30 lost and the row stays at 0.4
+    rows, lost = refill_deficit(np.array([[0.45, 0.25]]), LAT_ROWS, np.array([[30.0, 0.0]]), 1.0)
+    np.testing.assert_allclose(rows, [[0.4, 0.25]])
+    np.testing.assert_allclose(lost, [[25.0, 0.0]])
+
+
+def test_refill_deficit_beyond_the_deficit_raises_the_row():
+    rows, lost = refill_deficit(np.array([[0.45, 0.2]]), LAT_ROWS, np.array([[2.0, 0.0]]), 1.0)
+    np.testing.assert_allclose(rows, [[0.43, 0.2]])
+    np.testing.assert_allclose(lost, 0.0)
+
+
+def test_lateral_deficit_moves_with_the_rows_when_the_shoreline_erodes():
+    b3d = new_barrier3d()
+    m = DuneCollisionManager(b3d, low_toe(b3d), cs=1e-4, rows="lateral")
+    m._deficit[:, 0], m._deficit[:, 1] = 7.0, 3.0
+    b3d.migrate_dunes(-1.0, 1, 0)  # erosion: the front row goes, the back row moves to the front
+    np.testing.assert_allclose(m.deficit[:, 0], 3.0)
+    np.testing.assert_allclose(m.deficit[:, 1], 0.0)
+
+
+def test_lateral_deficit_moves_with_the_rows_when_the_shoreline_progrades():
+    b3d = new_barrier3d()
+    m = DuneCollisionManager(b3d, low_toe(b3d), cs=1e-4, rows="lateral")
+    m._deficit[:, 0], m._deficit[:, 1] = 7.0, 3.0
+    b3d.migrate_dunes(1.0, 1, 0)  # progradation: a new front row, the old front moves back
+    np.testing.assert_allclose(m.deficit[:, 0], 0.0)
+    np.testing.assert_allclose(m.deficit[:, 1], 7.0)
+
+
+def test_lateral_runs_and_keeps_a_valid_deficit():
+    b3d = new_barrier3d()
+    m = DuneCollisionManager(b3d, low_toe(b3d), cs=1.24e-4, rows="lateral")
+    run(b3d)
+    assert np.isfinite(m.deficit).all() and (m.deficit >= 0).all()
+    assert sum(m.volume_TS) > 0
+    pickle.loads(pickle.dumps(m))
+
+
+@pytest.mark.parametrize("rows", ["proportional", "lateral"])
+def test_per_cell_series_add_up(rows):
+    b3d = new_barrier3d()
+    m = DuneCollisionManager(b3d, low_toe(b3d), cs=1.24e-4, rows=rows)
+    run(b3d)
+    n = b3d.BarrierLength
+    assert m.collision_volume_TS.shape == (b3d._TMAX, n)
+    assert m.dune_row_loss_TS.shape == (b3d._TMAX, n, b3d._DuneWidth)
+    assert (m.collision_volume_TS >= 0).all() and (m.dune_row_loss_TS >= 0).all()
+    assert m.collision_storms_TS.sum() > 0
+    # no volume in a cell-year without a collision storm
+    assert not (m.collision_volume_TS[m.collision_storms_TS == 0] > 0).any()
+    if rows == "lateral":
+        # the island mean of the per-cell volume is the existing yearly series
+        yearly = m.collision_volume_TS.sum(axis=1) / n
+        np.testing.assert_allclose(yearly[1:1 + len(m.volume_TS)], m.volume_TS, rtol=1e-9, atol=1e-12)
+        assert m.collision_deficit_TS.shape == (b3d._TMAX, n, b3d._DuneWidth)
+
+
+def test_a_flattened_row_is_not_counted_again():
+    # a row already at its toe, topped up by a sliver, is not a new collapse when a storm takes the sliver
+    b3d = new_barrier3d()
+    m = DuneCollisionManager(b3d, low_toe(b3d), cs=1e-4, rows="lateral")
+    hit = np.zeros(b3d.BarrierLength, bool)
+    hit[:2] = True
+    floor = max(low_toe(b3d)[0] - b3d.BermEl, b3d._DuneRestart)
+    old = np.array([[floor + 0.01, 0.2], [floor + 0.2, 0.2]])   # a sliver above the toe, and a real dune
+    new = np.array([[floor, 0.2], [floor, 0.2]])
+    m._track(1, hit, np.array([5.0, 50.0]), old, new)
+    np.testing.assert_array_equal(m.dune_row_loss_TS[1, :2, 0], [0, 1])
+
+
+def test_lateral_records_a_collapse_when_a_front_row_is_eroded_through():
+    b3d = new_barrier3d()
+    m = DuneCollisionManager(b3d, low_toe(b3d), cs=2.5e-4, rows="lateral")
+    run(b3d)
+    assert m.dune_row_loss_TS[..., 0].sum() > 0
+
+
+def test_lower_dunes_rejects_an_unknown_row_mode():
+    with pytest.raises(ValueError, match="rows must be one of"):
+        lower_dunes(np.array([[0.4, 0.2]]), np.array([20.0]), np.array([0.2]), BERM, WIDTH, RESTART,
+                    rows="back")
+
+
 # --------------------------------------------------------------------------- #
 # DuneCollisionManager: construction
 # --------------------------------------------------------------------------- #
@@ -140,6 +309,22 @@ def test_manager_installs_itself():
     m = DuneCollisionManager(b3d, low_toe(b3d), cs=1e-4)
     assert b3d.DuneGrowth.__self__ is m
     assert b3d.DiffuseDunes.__self__ is m
+
+
+def test_manager_rejects_an_unknown_row_mode():
+    with pytest.raises(ValueError, match="rows must be one of"):
+        DuneCollisionManager(new_barrier3d(), low_toe(new_barrier3d()), cs=1e-4, rows="back")
+
+
+def test_front_mode_leaves_the_back_row_to_barrier3d(plain_run):
+    # collision takes sand only from the front row, so the back row matches plain Barrier3D's until
+    # the alongshore diffusion or overwash moves sand between cells; at least it is never lower
+    # than with both rows lowered
+    both, front = new_barrier3d(), new_barrier3d()
+    DuneCollisionManager(both, low_toe(both), cs=1.24e-4)
+    DuneCollisionManager(front, low_toe(front), cs=1.24e-4, rows="front")
+    run(both), run(front)
+    assert front.DuneDomain[:, :, 1].sum() > both.DuneDomain[:, :, 1].sum()
 
 
 def test_manager_rejects_a_wrong_toe_length():

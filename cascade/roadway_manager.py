@@ -698,6 +698,10 @@ class RoadwayManager:
         self._road_width = road_width
         self._road_setback = road_setback
         self._road_ele = initial_road_elevation
+        # The first bulldozing grades the road but leaves the dunes alone; that first pass
+        # clears the starting topography above the road, not overwash. False: as before 2026-11-09
+        self._discard_first_bulldoze = True
+        self._first_bulldoze_done = False
         # can be `None` if user doesn't want to rebuild
         self._dune_design_elevation = initial_dune_design_elevation
         self._dune_minimum_elevation = initial_dune_minimum_elevation
@@ -1039,6 +1043,11 @@ class RoadwayManager:
 
             self._release_beach_width_control(barrier3d)
             return nourish_now  # exit program
+
+        if self._discard_first_bulldoze and not self._first_bulldoze_done:
+            new_dune_domain = np.copy(barrier3d.DuneDomain[self._time_index - 1, :, :])
+            road_overwash_removal = 0.0
+        self._first_bulldoze_done = True
 
         self._road_overwash_volume[self._time_index - 1] = (
             road_overwash_removal * dm3_to_m3
