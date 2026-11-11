@@ -88,9 +88,11 @@ SCENARIO_OF = {"control_nofill": "full_no_fill"}
 # NAVD88); (gate m, trigger m MHW or None for the hindcast's berm floor)
 VARIANTS["nocape_rd150"] = VARIANTS["nocape_rd150h"] = VARIANTS["nocape"]
 ROAD_DUNE_REBUILD = {"nocape_rd150": (150.0, None), "nocape_rd150h": (150.0, 2.66 - 0.36)}   # 0.36: MHW, m NAVD88
-# NCDOT's own criterion in place of the fitted gate: dune maintenance where NC 12 is within 650 ft (198 m) of the
-# shoreline (Bonner Bridge Replacement FEIS, NCDOT/FHWA 2008, p. 2-128, from Isabel's washover fans). The road
-# manager measures the road from the dune, so each domain's gate is 198 m less its median beach width
+# A 198 m shoreline-to-road gate in place of the fitted gate: the Bonner Bridge Replacement FEIS (NCDOT/FHWA 2008,
+# p. 2-128) lists a shoreline within 650 ft (198 m) of the road as a monitoring warning sign for bridge phasing (from
+# Isabel's washover fans), not as a dune maintenance rule; NCDOT's criterion is 230 ft (70 m) from MHW to the
+# pavement (p. 2-64; input_prep/4-mgmt-forcings/road_dune_rebuild/NCDOT_road_dune_criteria.txt). The road manager
+# measures the road from the dune, so each domain's gate is 198 m less its median beach width
 VARIANTS["nocape_rd198"] = VARIANTS["nocape"]
 # ... with the beach acting on the water instead of the volume (RUNUP_LOSS, Cs 1.64e-4), and the ramp at Cs 1.45e-4:
 # each at its offline fit with the toe floor (HAT_collision_rule_comparison.py)
@@ -101,8 +103,102 @@ VARIANTS["nocape_rd198_rl02"] = VARIANTS["nocape_rd198_cs145"] = VARIANTS["nocap
 VARIANTS["nocape_dry"] = VARIANTS["nocape_rd198_dry"] = VARIANTS["nocape"]
 DRY_BEACH, DRY_CS, DRY_LIMIT_M = ("nocape_dry", "nocape_rd198_dry"), 1.02e-4, 25.0
 OLD_CS, OLD_LIMIT_M = 1.24e-4, 45.0
-SHORELINE_GATE = ("nocape_rd198", "nocape_rd198_rl02", "nocape_rd198_cs145", "nocape_rd198_dry")
+# nocape_rd198_dry with the eroded dune sand put on the beach and shoreface, not deleted (2026-11-03): after each
+# storm's lowering, the domain's eroded volume is placed as CASCADE places a nourishment (shoreface_nourishment,
+# Ashton & Lorenzo-Trueba 2018), the shoreline moving seaward by 2V / (2 h_b + D_shoreface). An experiment here, not
+# yet a DuneCollisionManager option
+VARIANTS["nocape_rd198_dry_sand"] = VARIANTS["nocape"]
+SAND_TO_BEACH = {"nocape_rd198_dry_sand": 1.0}   # share of the eroded volume put back
+DRY_BEACH = DRY_BEACH + ("nocape_rd198_dry_sand",)
+# The control with the 198 m road rule and the module off: against nocape_rd198_dry, the module alone (2026-11-03)
+VARIANTS["control_rd198"] = VARIANTS["control"]
+# Rodanthe village dune upkeep (2026-11-03), on control_rd198, at GIS 77-83 only. The model over-erodes the village
+# shoreline 2009-2018 (about 4-5 m/yr against CoastSat's ~1) while its dunes there (GIS 78, 82) drop 0.7-1 m in
+# 2010-11 and overwash every year; the lidar crests held within a few tenths of a metre 2009-2014
+# (1-observations/7-rodanthe-dunes-2009-2014). Two ways the village could keep its dunes:
+#   option 1, OVERWASH_TO_DUNE: more of each year's overwash pushed back onto the dune (the village default bulldozes
+#     9% and returns 40% to the shoreface, HATTERAS_BEACH_DUNE); the sand the storm moved, nothing added
+#   option 2, DUNE_UPKEEP: a dune cell more than the trigger below its 2009 starting height is rebuilt to that height
+#     after the year's storms, the volume taken off the beach (the shoreline moves landward by 2V / (2 h_b + D_sf),
+#     shoreface_nourishment run backwards)
+UPKEEP_GIS = tuple(range(77, 84))
+OVERWASH_TO_DUNE = {"control_rd198_ow30": 30.0, "control_rd198_ow59": 59.0}   # percent; filter 40 + this < 100
+DUNE_UPKEEP = {"control_rd198_upkeep": 0.5}                                     # trigger, m below the 2009 crest
+for _v in (*OVERWASH_TO_DUNE, *DUNE_UPKEEP):
+    VARIANTS[_v] = VARIANTS["control"]
+# The village overwash filter (2026-11-03): the share of each year's overwash every village (Buxton, Avon, the
+# Tri-Village) returns to the shoreface, one setting for all, at points in Rogers et al.'s (2015) 40-90%; 40 is the
+# hindcast's, and the 9% onto the dune is kept. Chosen on 1996-2009 (HAT_dune_collision.py VILLAGE_FILTER), checked
+# here. _vf40 reruns each base on the toes from the survey windows that follow the dune (regenerated the same day)
+VILLAGE_FILTER = {f"{b}_vf{p}": p for b in ("control_rd198", "nocape_rd198_dry") for p in (40, 65, 90)}
+for _v in VILLAGE_FILTER:
+    VARIANTS[_v] = VARIANTS[_v.rsplit("_vf", 1)[0]]
+DRY_BEACH = DRY_BEACH + tuple(v for v in VILLAGE_FILTER if v.startswith("nocape_rd198_dry"))
+# nocape_rd198_dry on toes and beach widths from the 2009 start profile alone (TOES_FROM_START), no survey after
+# the start (2026-11-04): the clean hindcast against the default median of the 2014-2019 surveys
+VARIANTS["nocape_rd198_dry_ts"] = VARIANTS["nocape"]
+TOES_FROM_START = TOES_FROM_START + ("nocape_rd198_dry_ts",)
+DRY_BEACH = DRY_BEACH + ("nocape_rd198_dry_ts",)
+# The model-change steps (2026-11-04), each adding one change to the one before: the base; + the module (dry beach,
+# W0 25 m, Cs 1.02e-4, off at Cape Point); + the 198 m road rule; then nocape_rd198_dry (+ Rodanthe 90%, the
+# default since 2026-11-04) and nocape_rd198_dry_ts (+ 2009 start toes). Steps 1-3 hold Rodanthe at 40% (RODANTHE_40)
+VARIANTS["step1_base"] = VARIANTS["control"]
+VARIANTS["step2_module"] = VARIANTS["step3_road"] = VARIANTS["nocape"]
+DRY_BEACH = DRY_BEACH + ("step2_module", "step3_road")
+RODANTHE_40 = ("step1_base", "step2_module", "step3_road")
+# nocape_rd198_dry with one toe per domain, the mean of its screened cells over the lidar up to the start, 2004, 2005
+# and 2009 (read on the 1996 start's windows moved with the shoreline; nothing after 2009), 2026-11-04
+VARIANTS["nocape_rd198_dry_toeavg"] = VARIANTS["nocape"]
+TOE_DOMAIN_AVG = {"nocape_rd198_dry_toeavg": (2004, 2005, 2009)}
+TOE_DOMAIN_AVG_TABLE = PROJECT_ROOT / "output" / "raw_runs" / "dune-storm-response" / "2026-10-26-dune-collision" / "dune_toes.csv"
+DRY_BEACH = DRY_BEACH + tuple(TOE_DOMAIN_AVG)
+# Steps 2 and 3 again on the domain toes, which dune_toe_cells.csv holds since 2026-11-04 (HAT_dune_toes.py
+# TOE_DOMAIN_SURVEYS; step 4 is nocape_rd198_dry_toeavg, the same toes)
+VARIANTS["step2_module_dt"] = VARIANTS["step3_road_dt"] = VARIANTS["nocape"]
+TOE_DOMAIN_AVG.update({"step2_module_dt": (2004, 2005, 2009), "step3_road_dt": (2004, 2005, 2009)})
+# Domain toes with the per-cell beach widths (the 2011-2020 survey medians, beach_width_cell_median_m), for the
+# comparison with the domain beach factor
+VARIANTS["nocape_rd198_dry_toeavg_cw"] = VARIANTS["nocape"]
+TOE_DOMAIN_AVG["nocape_rd198_dry_toeavg_cw"] = (2004, 2005, 2009)
+CELL_WIDTHS = ("nocape_rd198_dry_toeavg_cw",)
+DRY_BEACH = DRY_BEACH + CELL_WIDTHS
+DRY_BEACH = DRY_BEACH + ("step2_module_dt", "step3_road_dt")
+# nocape_rd198_dry_toeavg with Larson alone: the beach factor 1 everywhere (width 0), Cs 1.9e-5 its offline fit
+# without the factor (rule comparison, larson_storm, re-read crests; 2.0e-5 on the old), 2026-11-04
+LARSON_ALONE = {"nocape_rd198_dry_toeavg_la": 1.9e-5}
+VARIANTS["nocape_rd198_dry_toeavg_la"] = VARIANTS["nocape"]
+TOE_DOMAIN_AVG["nocape_rd198_dry_toeavg_la"] = (2004, 2005, 2009)
+DRY_BEACH = DRY_BEACH + tuple(LARSON_ALONE)
+RODANTHE_40 = RODANTHE_40 + ("step2_module_dt", "step3_road_dt")
+SHORELINE_GATE = ("nocape_rd198", "nocape_rd198_rl02", "nocape_rd198_cs145", "nocape_rd198_dry", "control_rd198", "nocape_rd198_dry_sand", "nocape_rd198_dry_ts", "step3_road", "nocape_rd198_dry_toeavg", "step3_road_dt", "nocape_rd198_dry_toeavg_cw", "nocape_rd198_dry_toeavg_la",
+                  *OVERWASH_TO_DUNE, *DUNE_UPKEEP, *VILLAGE_FILTER)
 SHORELINE_GATE_M = 198.0
+# Larson alone's Cs, in the model (2026-11-04): the calibration's sweep (HAT_dune_collision.py LA_CS_SWEEP) run
+# here to show the sensitivity; Cs is chosen on 1996-2009
+for _cs in (1e-5, 3e-5, 5e-5, 8e-5):
+    _v = f"la_cs{round(_cs * 1e6):d}"
+    LARSON_ALONE[_v] = _cs
+    VARIANTS[_v] = VARIANTS["nocape"]
+    TOE_DOMAIN_AVG[_v] = (2004, 2005, 2009)
+    DRY_BEACH = DRY_BEACH + (_v,)
+    SHORELINE_GATE = SHORELINE_GATE + (_v,)
+# The model-change steps with Larson alone, the default since 2026-11-04 (Cs 1.9e-5, no beach factor): steps 2 and
+# 3 again (Rodanthe 40%); step 4 is nocape_rd198_dry_toeavg_la
+for _v in ("step2_module_la", "step3_road_la"):
+    LARSON_ALONE[_v] = 1.9e-5
+    VARIANTS[_v] = VARIANTS["nocape"]
+    TOE_DOMAIN_AVG[_v] = (2004, 2005, 2009)
+    DRY_BEACH = DRY_BEACH + (_v,)
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+SHORELINE_GATE = SHORELINE_GATE + ("step3_road_la",)
+# nocape_rd198_dry_toeavg_la with the 198 m gate as one island-wide road trigger, 198 m less the island's median beach
+# (~50 m) = 150 m, the roadway manager's own setting (road_dune_rebuild_trigger_m), in place of the per-domain
+# gates (2026-11-04)
+ROAD_TRIGGER_M = {"final_rd150u": 150.0}
+LARSON_ALONE["final_rd150u"] = 1.9e-5
+VARIANTS["final_rd150u"] = VARIANTS["nocape"]
+TOE_DOMAIN_AVG["final_rd150u"] = (2004, 2005, 2009)
+DRY_BEACH = DRY_BEACH + ("final_rd150u",)
 # The beach lowering the water at the dune, m per m of beach (DuneCollisionManager beach_runup_loss)
 RUNUP_LOSS = {"nocape_rd198_rl02": 0.02}
 WIDTH_FROM_START = ("nocape_dynw_sw",)
@@ -155,10 +251,56 @@ def _launch(variant):
     orig_build = hc.build_cascade
 
     def build_cascade(*a, **k):
-        # every collision variant here was made with the beach factor, which the module no longer has
-        if k.get("dune_collision_module"):
-            raise SystemExit(f"{variant}: the module's beach options were removed from cascade/dune_collision.py on "
-                             "2026-11-04; check out git tag collision-with-beach-factor to rerun it")
+        if k.get("dune_collision_module") and k.get("dune_collision_beach_width") is None:
+            # hat_run.yaml's default since 2026-11-04 is Larson alone (beach: none), which sends no widths; these
+            # variants were made with the beach factor, so give them the toe table's widths as before (Larson-alone
+            # variants zero them below)
+            dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+            cw = pd.read_csv(TOE_SURVEYS.with_name("dune_toe_cells.csv")).sort_values(["gis", "cell"])
+            widths = [None] * dom.total_domains
+            for gis, d in cw.groupby("gis"):
+                widths[dom.gis_to_pad(int(gis))] = d.beach_width_m.to_numpy()
+            k["dune_collision_beach_width"] = widths
+        if variant in TOE_DOMAIN_AVG and k.get("dune_collision_module"):
+            t = pd.read_csv(TOE_DOMAIN_AVG_TABLE)
+            t = t[(t.survey.astype(str).isin([str(y) for y in TOE_DOMAIN_AVG[variant]])) & (t.status == "ok")]
+            t = t[(t.toe_m_navd88 > TOE_MIN_M_NAVD88) & (t.toe_m_navd88 < t.crest_m_navd88 - TOE_BELOW_CREST_M)]
+            dm = t.groupby("gis").toe_m_navd88.mean()
+            dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+            toes = list(k["dune_collision_toe_elevation"])
+            for gis in range(1, 91):
+                i = dom.gis_to_pad(gis)
+                if toes[i] is not None:
+                    toes[i] = np.full(len(toes[i]), dm.get(gis, dm.median()) - MHW_M_NAVD88)
+            k["dune_collision_toe_elevation"] = toes
+            # one beach factor per domain, the mean of max(0, 1 - W / DRY_LIMIT_M) over every ok cell of the same
+            # surveys, given to the module as the width DRY_LIMIT_M (1 - factor) (2026-11-04; HAT_dune_toes.py)
+            w = pd.read_csv(TOE_DOMAIN_AVG_TABLE)
+            w = w[(w.survey.astype(str).isin([str(y) for y in TOE_DOMAIN_AVG[variant]])) & (w.status == "ok")]
+            dw = pd.Series(np.where(w.toe_to_crest_m.notna(), w.beach_width_m - w.toe_to_crest_m,
+                                    np.where(w.beach_width_m < 2 * 10, 0.0, np.nan)), index=w.index)
+            bf = np.clip(1 - dw / DRY_LIMIT_M, 0, None).groupby(w.gis).mean()
+            wm = DRY_LIMIT_M * (1 - bf)
+            widths = list(k["dune_collision_beach_width"])
+            for gis in range(1, 91):
+                i = dom.gis_to_pad(gis)
+                if widths[i] is not None:
+                    widths[i] = np.full(len(widths[i]), wm.get(gis, wm.median()))
+            k["dune_collision_beach_width"] = widths
+            print(f"EXPERIMENT one beach factor per domain, the mean over the same surveys: island {bf.mean():.2f}",
+                  flush=True)
+            if variant in CELL_WIDTHS:
+                cw = pd.read_csv(TOE_SURVEYS.with_name("dune_toe_cells.csv")).sort_values(["gis", "cell"])
+                widths = list(k["dune_collision_beach_width"])
+                for gis, d in cw.groupby("gis"):
+                    i = dom.gis_to_pad(int(gis))
+                    if widths[i] is not None:
+                        widths[i] = d.beach_width_cell_median_m.to_numpy()
+                k["dune_collision_beach_width"] = widths
+                print("EXPERIMENT ... replaced by the per-cell beach widths (beach_width_cell_median_m)", flush=True)
+            print()
+            print(f"EXPERIMENT one toe per domain, the mean over the {TOE_DOMAIN_AVG[variant]} surveys: island "
+                  f"{dm.mean():.2f} m NAVD88, range {dm.min():.2f}-{dm.max():.2f}", flush=True)
         if variant in TOES_FROM_START and k.get("dune_collision_module"):
             t = pd.read_csv(TOE_SURVEYS)
             t = t[t.survey.astype(str) == "start"]
@@ -202,6 +344,24 @@ def _launch(variant):
         if variant in CS and k.get("dune_collision_module"):
             k["dune_collision_cs"] = CS[variant]
             print(f"\nEXPERIMENT Cs {CS[variant]:.2e}", flush=True)
+        if variant in OVERWASH_TO_DUNE:
+            dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+            share = k["overwash_to_dune"]
+            share = list(share) if np.size(share) > 1 else [share] * k["alongshore_section_count"]
+            for g in UPKEEP_GIS:
+                share[dom.gis_to_pad(g)] = OVERWASH_TO_DUNE[variant]
+            k["overwash_to_dune"] = share
+            print(f"\nEXPERIMENT {OVERWASH_TO_DUNE[variant]:g}% of the overwash bulldozed onto the dune at GIS "
+                  f"{UPKEEP_GIS[0]}-{UPKEEP_GIS[-1]}", flush=True)
+        if variant in ROAD_TRIGGER_M:
+            k["road_dune_rebuild_trigger_m"] = ROAD_TRIGGER_M[variant]
+            print(f"\nEXPERIMENT road dune rebuild trigger {ROAD_TRIGGER_M[variant]:g} m island-wide", flush=True)
+        if variant in LARSON_ALONE and k.get("dune_collision_module"):
+            k["dune_collision_cs"] = LARSON_ALONE[variant]
+            k["dune_collision_beach_width"] = [None if w is None else np.zeros(len(w))
+                                               for w in k["dune_collision_beach_width"]]
+            print()
+            print(f"EXPERIMENT Larson alone: beach factor 1 everywhere, Cs {LARSON_ALONE[variant]:.1e}", flush=True)
         if off and k.get("dune_collision_module"):
             dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
             for key in ("dune_collision_toe_elevation", "dune_collision_beach_width"):
@@ -210,15 +370,111 @@ def _launch(variant):
                     for g in off:
                         k[key][dom.gis_to_pad(g)] = None
             print(f"\nEXPERIMENT collision off at GIS {off[0]}-{off[-1]}", flush=True)
+        # The module has no beach since 2026-11-04: Larson-alone variants (widths zeroed above) run as before
+        widths = k.pop("dune_collision_beach_width", None)
+        k.pop("dune_collision_beach_width_limit", None)
+        if (k.get("dune_collision_module") and variant not in LARSON_ALONE
+                and widths is not None and any(w is not None for w in widths)):
+            raise SystemExit(f"{variant}: the module's beach options were removed from cascade/dune_collision.py on "
+                             "2026-11-04; check out git tag collision-with-beach-factor to rerun it")
         c = orig_build(*a, **k)
         if variant in SHORELINE_GATE:
             shoreline_gate(c, TOE_SURVEYS.with_name("dune_toe_cells.csv"))
+        if variant in RODANTHE_40:
+            dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+            n = 0
+            for g in range(77, 84):
+                i = dom.gis_to_pad(g)
+                if c.nourishments[i] is not None and c._beach_nourishment_module[i]:
+                    c.nourishments[i]._overwash_filter = 40.0
+                    n += 1
+            print(f"\nEXPERIMENT Rodanthe overwash filter held at 40% on {n} domains (GIS 77-83)", flush=True)
+        if variant in VILLAGE_FILTER:
+            n = 0
+            for i, mgr in enumerate(c.nourishments):
+                if mgr is not None and c._beach_nourishment_module[i]:
+                    mgr._overwash_filter = VILLAGE_FILTER[variant]
+                    n += 1
+            print(f"\nEXPERIMENT village overwash filter {VILLAGE_FILTER[variant]:g}% to the shoreface on {n} "
+                  f"village domains", flush=True)
+        if variant in DUNE_UPKEEP:
+            dom = HATTERAS_DOMAINS.for_total(len(c.barrier3d))
+            for g in UPKEEP_GIS:
+                p = dom.gis_to_pad(g)
+                # the 2009 starting dune (dam above the berm), the height each cell is kept to
+                c.nourishments[p]._upkeep_target = np.asarray(c.barrier3d[p].DuneDomain[0], float).copy()
+                c.nourishments[p]._upkeep_gis = g
         return c
 
+    if variant in DUNE_UPKEEP:
+        from cascade.beach_dune_manager import BeachDuneManager, shoreface_nourishment
+        trigger_dam, orig_bdm_update = DUNE_UPKEEP[variant] / 10.0, BeachDuneManager.update
+        upkeep_log = []
+
+        def bdm_update(self, barrier3d, nourish_now, rebuild_dune_now, nourishment_interval):
+            out = orig_bdm_update(self, barrier3d, nourish_now, rebuild_dune_now, nourishment_interval)
+            target = getattr(self, "_upkeep_target", None)
+            if target is None or self.narrow_break:
+                return out
+            t = barrier3d.time_index - 1
+            dunes = np.asarray(barrier3d.DuneDomain[t], float)
+            low = dunes.max(axis=1) < target.max(axis=1) - trigger_dam
+            if not low.any():
+                return out
+            new = dunes.copy()
+            new[low] = np.maximum(dunes[low], target[low])
+            v = float((new - dunes).sum()) / barrier3d.BarrierLength   # dam^3 per dam of shore
+            barrier3d.DuneDomain[t] = new
+            # the sand comes off the beach: the nourishment formula with the volume taken away
+            x_s, s_sf, _ = shoreface_nourishment(barrier3d.x_s, barrier3d.x_t, -v, barrier3d.h_b_TS[-1],
+                                                 barrier3d.DShoreface, 0.0)
+            dx_m = (x_s - barrier3d.x_s) * 10
+            barrier3d.x_s, barrier3d.x_s_TS[-1], barrier3d.s_sf_TS[-1] = x_s, x_s, s_sf
+            self._beach_width[t] = max(self._beach_width[t] - dx_m, 0.0)
+            upkeep_log.append(dict(year=RUN_START + t, gis=self._upkeep_gis, cells=int(low.sum()),
+                                   volume_m3_per_m=v * 100, shoreline_landward_m=dx_m))
+            return out
+
+        BeachDuneManager.update = bdm_update
+        import atexit
+
+        def write_log():
+            if upkeep_log:
+                rd = run_dir(variant)
+                if rd is not None:
+                    (rd / "tables").mkdir(exist_ok=True)
+                    pd.DataFrame(upkeep_log).to_csv(rd / "tables" / "dune_upkeep_log.csv", index=False)
+        atexit.register(write_log)
+        print(f"\nEXPERIMENT village dunes at GIS {UPKEEP_GIS[0]}-{UPKEEP_GIS[-1]} kept to their 2009 height "
+              f"(rebuilt when {DUNE_UPKEEP[variant]:g} m below), the sand taken off the beach", flush=True)
+
+    if variant in SAND_TO_BEACH:
+        from cascade import dune_collision as dc
+        from cascade.beach_dune_manager import shoreface_nourishment
+        share, orig_update = SAND_TO_BEACH[variant], dc.DuneCollisionManager.update
+
+        def update(self, barrier3d, DuneDomain, t):
+            before = self._volume_TS[-1] if self._volume_TS else 0.0
+            orig_update(self, barrier3d, DuneDomain, t)
+            v = (self._volume_TS[-1] - before) * share   # dam^3 per dam of shore, this storm
+            if v > 0:
+                barrier3d._x_s = shoreface_nourishment(barrier3d._x_s, barrier3d._x_t, v, barrier3d._h_b_TS[-1],
+                                                       barrier3d._DShoreface, 0.0)[0]
+                self.sand_to_beach_dam3 = getattr(self, "sand_to_beach_dam3", 0.0) + v
+
+        dc.DuneCollisionManager.update = update
+        print(f"\nEXPERIMENT {share:.0%} of the collision-eroded dune sand onto the beach and shoreface", flush=True)
     hc.build_cascade = build_cascade
     sys.path.insert(0, str(HINDCAST.parent))
     sys.argv = [str(HINDCAST)]
-    runpy.run_path(str(HINDCAST), run_name="__main__")
+    if variant in SAND_TO_BEACH:
+        # Cascade's domains run in joblib worker processes, which import the module afresh and would not see the
+        # patched update: threads keep them in this process
+        import joblib
+        with joblib.parallel_config(backend="threading"):
+            runpy.run_path(str(HINDCAST), run_name="__main__")
+    else:
+        runpy.run_path(str(HINDCAST), run_name="__main__")
 
 
 # One variant in its own process, logged

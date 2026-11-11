@@ -78,7 +78,10 @@ LIDAR_C, MODEL_C, WATER_C, LATER_C, HIGH_C = "#2166AC", "#8C8C8C", "#D94801", "#
 # 1998 grid's spikes. GIS 12 lies where NC-12 was relocated in 1999, but its change is on the seaward face only
 TWO_DUNES = {"narrow": (12, 22), "wide": (21, 33)}       # GIS, cell
 # Each dune's toe and dry beach width (beach start to toe) as the model reads them, and the module's limit on it
-TOE_CELLS = PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / START / "dune-toes" / "dune_toe_cells.csv"
+# Each cell's own median over the surveys (1998 left out): the per-cell table the module read until 2026-11-04; it
+# now reads one toe and one beach factor per domain, so the live dune_toe_cells.csv no longer holds these values
+TOE_CELLS = (PROJECT_ROOT / "data" / "hatteras_init" / "9-dune-toes" / "0-previous-methods" / START
+             / "per-cell-median-until-2026-11-04" / "dune_toe_cells.csv")
 W0_M = 25.0                      # hat_run.yaml dune_collision beach_width_limit_m, on the dry beach since 2026-11-03
 TWO_DUNES_X = (-110, 40)         # cross-shore window, m from each dune's 1998 crest
 # -----------------------------------------------------------------------------

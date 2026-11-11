@@ -1,4 +1,4 @@
-# 1-observations — the dune loss the model misses
+# 1-observations â€” the dune loss the model misses
 
 True whatever the model does. Measured from the 1996-2009 lidar surveys (`survey_dune_crests.csv`) and
 the storm series, by the measurement actions of
@@ -69,6 +69,14 @@ narrower beaches are too (r -0.56 / -0.43), with the shoreline-window crests and
 Whether the lidar toes sit on the dune traced from the aerial imagery (2026-11-03): `6-toes-vs-dunelines/`
 (figures in the workspace's `6-toes-vs-dunelines/`).
 The traced line is on the dune face, a median 7-17 m landward of the lidar toe; GIS ~32-36 and ~63-67 disagree.
+
+Rodanthe village, 2009-2014 (2026-11-03): `7-rodanthe-dunes-2009-2014/` (figure in the workspace's
+`7-rodanthe-dunes-2009-2014/`). Asked while finding why the 2009-2025 model over-erodes the village shoreline
+(GIS 77-81): the 2009, 2011 and 2014 lidar on one datum beside the 2008, 2009 and 2014 imagery. The crests barely
+change (no rebuild after 2009; the model starts from the right dunes); the beach at GIS 79-81 is cut back 20-40 m
+in the post-Irene 2011 survey and partly back by 2014. It also showed that the 1996-start table had read the 2009
+lidar in the 1996 dune windows (crests at the berm at GIS 78-80): fixed the same day with SURVEY_WINDOWS_FROM in
+`input_prep/1-barrier3d-domains/2-survey-crests/HAT_survey_dune_crests.py`.
 
 What they show (from the 2026-10-27/28 record, `../4-hindcast/1-calibration-1996-2009/README.md`):
 

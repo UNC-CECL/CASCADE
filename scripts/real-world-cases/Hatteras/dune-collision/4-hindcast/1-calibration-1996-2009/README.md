@@ -202,3 +202,46 @@ Interior LRR bias / RMSE against CoastSat (m/yr), managed edgeBE 1996-2009:
   were not rerun.
 - Found on the way: the Hatteras runs keep Barrier3D's default `StormStart: 2`,
   so the 1997 storms (time 1; 5 storms, peak 2.45 m NAVD88) never run.
+
+## 2026-11-04: the model-change steps, the road rule fix and the domain toes
+
+- The module-off runs never got the 198 m road rule: `SHORELINE_GATE` was applied only in the module-on branch
+  (`cal_control_g16_rd198` first ran without it). Fixed: `road_gate()` runs in both branches.
+- `cal_step1_base` (module off, no road rule, Rodanthe 40%, growth 0.01-0.03, the rate before the module),
+  `cal_step2_growth` (0.02-0.04, the 1996 default since 2026-10-29), `cal_step3_module`, `cal_step4_road`,
+  `cal_step5_rodanthe90`, `cal_step6_starttoes` (per-cell toes; start-profile toes and widths in the last), then on
+  one toe and one beach factor per domain from the 1996 and 1997 lidar (`TOE_DOMAIN_AVG`): `cal_step3_module_dt`,
+  `cal_step4_road_dt`, `cal_step6_toeavg`; `cal_step6_toeavg_cw` with the per-cell beach widths. `RODANTHE_40`
+  holds Rodanthe at 40% before step 5.
+- Results and the settings adopted: `../../README.md`, Settings. The 1996 start-profile toes are 0.3 m below the
+  1996 and 1997 survey grids' (0.5 m at Avon) and over-erode: crest RMSE 1.33 m against 0.71 m.
+
+## 2026-11-04 (evening): Larson alone
+
+- `cal_step6_toeavg_la`: `cal_step6_toeavg` with Larson alone (`LARSON_ALONE`: the beach factor 1 everywhere, Cs
+  1.9e-5, its offline fit). Larson alone became the default (`hat_run.yaml` `dune_collision.beach: none`).
+- `LA_CS_SWEEP`: the same at Cs 1e-5, 3e-5, 5e-5 and 8e-5 (`cal_la_cs10` ... `cal_la_cs80`), scored by
+  `../3-on-vs-off/HAT_collision_cs_sweep.py`. 1.9e-5 kept.
+- `cal_step3_module_la`, `cal_step4_road_la`: steps 3 and 4 with Larson alone (Rodanthe 40%), for the step figure.
+
+## 2026-11-09 to 11: toes, the road fix, the berm toe and the row modes
+
+What was found, and the figures: `../TESTING_2026-11-09_to_11.md`. The variants added here, all Larson alone, growth
+0.02-0.04, groin 0.16 and, unless named otherwise, no road rule and Rodanthe 40% (the module-only setup):
+
+- Automorph toes (`AUTOMORPH_TOES`, `input_prep/9-dune-toes/1-toes/automorph_domain_toes_1996.csv`):
+  `cal_automorph_cs10`, `_cs19` (with the road rule and Rodanthe 90%, as `cal_step6_toeavg_la`);
+  `cal_automorph_module_cs10` and `AUTOMORPH_CS_SWEEP` (`cal_automorph_module_cs30` ... `_cs200`), module only.
+- Toes per cell (`automorph_cell_toes[_all]_1996.csv`): `cal_automorph_cells_9_15`, `cal_automorph_cellmed_9_15`
+  (GIS 9-15 only); `AUTOMORPH_CELLS_ALL`, `cal_automorph_cellsall_cs10` ... `_cs200` (every domain).
+- The road fix (`NO_FIRST_SCRAPE`, `_noscrape`): the road manager's first bulldozing kept off the dunes; since
+  2026-11-09 the default in `cascade/roadway_manager.py`, so every later run has it whether named so or not.
+  `cal_step2_growth_noscrape` (module off), `cal_automorph_module_cs*_noscrape`, `cal_automorph_cellsall_cs*_noscrape`.
+- The toe at the berm (`TOE_AT_BERM`, 1.7 m NAVD88): `cal_toeberm_cs0p1`, `_cs0p3`, `_cs1` ... `_cs100`; lateral
+  erosion `cal_toeberm_lat_cs1` ... `_cs250` (`COLLISION_ROWS`, the module's `rows` option).
+- `COLLISION_ROWS`: which dune rows lose the collision volume per variant ("proportional", every variant not listed;
+  "front", "equal", "lateral").
+- Every run with the module now writes `logs/collision_cells_<variant>.csv` and its `tables/collision_cells.csv`
+  (`collision_cell_table`: per domain and year the eroded volume, collision storms, cells in collision, front and
+  back rows collapsed, lateral deficits); `python HAT_dune_collision.py collapse <variant>` draws them
+  (`collision_collapse_<variant>.png`).

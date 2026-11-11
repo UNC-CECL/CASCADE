@@ -53,6 +53,8 @@ MAP_IMAGERY = {1997: ("1997 lidar on the 12 Oct 1997 photo\n(1997 line)", "1997/
 MAP_SITES = (12, 22, 34, 66, 85)
 MAP_HALF_M = 150.0
 LINE_C, TOE_C, CREST_C, START_C = "#00e5ff", "#ff2d55", "#ffd60a", "#ffffff"
+# A toe agrees with the traced line within AGREE_M (two lidar cells; the line sits ~10 m up the face): drawn green
+AGREE_M, AGREE_C = 20.0, "#39ff14"
 ZONES = (("cape", 1, 7), ("buxton_avon_road", 8, 20), ("avon", 21, 31), ("avon_salvo_road", 32, 67),
          ("tri_village", 68, 83), ("rodanthe_north", 84, 90))
 # -----------------------------------------------------------------------------
@@ -110,6 +112,8 @@ def compare():
             off = S.SURVEY_VERTICAL_OFFSET_M.get(start, {}).get(year, 0.0)
             for g in T.GIS:
                 shear, c0, i0, i1 = S.frame(start, g, windows)
+                # The survey's windows follow the dune, as the crest script moved them (2026-11-03)
+                i0, i1 = S.survey_windows(start, year, g, i0, i1)
                 raw = S.mosaic_on_clip(srcs[0], grids[g]) if kind == "mosaic" else S.raster_on_clip(srcs, grids[g])
                 z = S.profiles(S.downsample(raw * scale + off), shear, c0)
                 xx, yy = frame_coords(grids[g], shear, c0)
@@ -251,7 +255,9 @@ def maps(t):
                 ax.plot(xs, ys, color=LINE_C, lw=1.6, zorder=3, solid_capstyle="round")
             ax.plot(d.beach_start_x, d.y, "^", ms=3, color=START_C, mec="k", mew=0.3, zorder=4)
             ax.plot(d.crest_x, d.y, "s", ms=3, color=CREST_C, mec="k", mew=0.3, zorder=4)
-            ax.plot(k.toe_x, k.y, "o", ms=3.6, color=TOE_C, mec="k", mew=0.3, zorder=5)
+            agree = k.line_minus_toe_m.abs() <= AGREE_M
+            ax.plot(k[~agree].toe_x, k[~agree].y, "o", ms=3.6, color=TOE_C, mec="k", mew=0.3, zorder=5)
+            ax.plot(k[agree].toe_x, k[agree].y, "o", ms=3.6, color=AGREE_C, mec="k", mew=0.3, zorder=5)
             ax.plot(d[~d.toe_kept].toe_x, d[~d.toe_kept].y, "o", ms=3.6, mfc="none", mec=TOE_C, mew=0.8, zorder=5)
             ax.set_xlim(bounds[0], bounds[2])
             ax.set_ylim(bounds[1], bounds[3])
@@ -263,15 +269,18 @@ def maps(t):
             ax.plot([sx, sx + 50], [sy, sy], color="white", lw=2.5, zorder=6)
             ax.text(sx + 25, sy + 0.025 * 2 * half, "50 m", color="white", ha="center", va="bottom", fontsize=7, zorder=6)
             med = k.line_minus_toe_m.median()
-            ax.set_title(f"GIS {g}: line {med:+.0f} m from toe" if np.isfinite(med) else f"GIS {g}", fontsize=8)
+            ax.set_title(f"GIS {g}: {agree.mean():.0%} agree, median {med:+.0f} m" if np.isfinite(med) else f"GIS {g}",
+                         fontsize=8)
             if c == 0:
                 ax.set_ylabel(label, fontsize=8)
     handles = [Line2D([], [], color=LINE_C, lw=1.6, label="dune line traced from imagery"),
-               Line2D([], [], ls="none", marker="o", ms=4, color=TOE_C, mec="k", mew=0.3, label="lidar toe (kept)"),
+               Line2D([], [], ls="none", marker="o", ms=4, color=AGREE_C, mec="k", mew=0.3, label=f"lidar toe within {AGREE_M:g} m of the line"),
+               Line2D([], [], ls="none", marker="o", ms=4, color=TOE_C, mec="k", mew=0.3,
+                      label=f"lidar toe more than {AGREE_M:g} m off"),
                Line2D([], [], ls="none", marker="o", ms=4, mfc="none", mec=TOE_C, label="lidar toe (screened out)"),
                Line2D([], [], ls="none", marker="s", ms=4, color=CREST_C, mec="k", mew=0.3, label="lidar crest"),
                Line2D([], [], ls="none", marker="^", ms=4, color=START_C, mec="k", mew=0.3, label="lidar beach start")]
-    fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=7, bbox_to_anchor=(0.5, -0.04))
+    fig.legend(handles=handles, loc="lower center", ncol=3, frameon=False, fontsize=7, bbox_to_anchor=(0.5, -0.04))
     png = OUT_DIR / "dune_toes_on_imagery.png"
     fig.savefig(png, dpi=220, bbox_inches="tight")
     plt.close(fig)

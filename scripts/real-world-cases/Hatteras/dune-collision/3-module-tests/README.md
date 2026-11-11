@@ -18,6 +18,13 @@ in the workspace twin, `D:\research\UNC\hatteras_ch1\model_runs\dune-collision\3
   following the shoreline, and the run-up-loss option. Since 2026-11-03 also the module's tested range:
   `DuneCollisionOutsideTestedRange` for Cs outside 0-2.5e-4, a toe below MHW, and, for a storm that
   lowers dunes, more than 200 h, a period outside 5-20 s or water more than 5 m above a toe (41 tests).
+  Since 2026-11-10/11 (56 tests): the row modes (`rows`: "front" and "equal" by hand, both taking exactly the eroded
+  volume, never below the toe nor raising a row, zero volume exact; an unknown mode rejected); lateral erosion
+  (`erode_laterally` by hand: the front row keeps its height until its sand above the toe is gone, the rest carried
+  to the back row and between storms, both rows gone stopping at the toe; `refill_deficit`: growth repays the deficit
+  first; the deficit moved with the rows on dune migration, both ways; a full Barrier3D run with a valid deficit,
+  pickled); and the per-cell series (`collision_volume_TS` adding up to the yearly `volume_TS`, no volume without a
+  collision storm, a front-row collapse recorded, a flattened row topped up by a sliver not counted again). What the options do on Hatteras: `../4-hindcast/TESTING_2026-11-09_to_11.md`.
 
 ## 2-long-term (2026-11-03)
 

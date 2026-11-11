@@ -207,8 +207,8 @@ VARIANTS = {"larson_lost": ("larson", 1.7e-4, False, None),
             # setback gate alone, then with the rebuild trigger height too
             "cal_g16_nocape_rd150": ("storm", 1.24e-4, False, (0.02, 0.04)),
             "cal_g16_nocape_rd150h": ("storm", 1.24e-4, False, (0.02, 0.04)),
-            # ... and with NCDOT's own criterion: dune maintenance where NC 12 is within 650 ft (198 m) of the
-            # shoreline (SHORELINE_GATE)
+            # ... and with a 198 m shoreline-to-road gate, the FEIS's 650 ft monitoring warning sign, not an NCDOT
+            # dune maintenance rule (SHORELINE_GATE)
             "cal_g16_nocape_rd198": ("storm", 1.24e-4, False, (0.02, 0.04)),
             # ... with the beach acting on the water instead of the volume (RUNUP_LOSS): R_high less 0.02 m per m
             # of beach at the dune, Cs 1.64e-4 its offline fit with the toe floor; and the ramp at its own such fit
@@ -217,32 +217,222 @@ VARIANTS = {"larson_lost": ("larson", 1.7e-4, False, None),
             # ... with the beach factor on the dry beach (beach start to toe, 2026-11-03) at W0 25 m: Cs 1.02e-4 its
             # offline fit with the toe floor, and 0.87e-4 (scaled as the crest-based 1.45e-4 -> 1.24e-4 in-model)
             "cal_g16_nocape_rd198_dry": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            # the module-off control with the 198 m road rule too: against cal_g16_nocape_rd198_dry, the module alone
+            "cal_control_g16_rd198": (None, None, False, None),
+            # The model-change steps (2026-11-04), each adding one change to the one before: the base; + the dune
+            # growth paired with the module; + the module (dry beach, W0 25 m, Cs 1.02e-4, off at Cape Point);
+            # + the 198 m road rule; + Rodanthe 90% (the default since 2026-11-04); + toes and beach widths
+            # from the 1996 start profile. Steps 1-4 hold Rodanthe at 40% (RODANTHE_40)
+            # the base at the growth bounds the calibration had before the module (0.01-0.03); the 1996 default
+            # has been 0.02-0.04 since 2026-10-29, paired with the module
+            "cal_step1_base": (None, None, False, (0.01, 0.03)),
+            "cal_step2_growth": (None, None, False, (0.02, 0.04)),
+            "cal_step3_module": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            "cal_step4_road": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            "cal_step5_rodanthe90": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            "cal_step6_starttoes": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            # cal_step5_rodanthe90 with one toe per domain, the mean of its screened cells over the two surveys
+            # nearest the start, 1996 and 1997 (TOE_DOMAIN_AVG; 2026-11-04)
+            "cal_step6_toeavg": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            # steps 3 and 4 again on the domain toes, the default since 2026-11-04 (step 5 is cal_step6_toeavg)
+            "cal_step3_module_dt": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            "cal_step4_road_dt": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            "cal_step6_toeavg_cw": ("storm", 1.02e-4, False, (0.02, 0.04)),
+            # cal_step6_toeavg with Larson alone: the beach factor 1 everywhere (width 0), Cs 1.9e-5 its offline fit
+            # without the factor (rule comparison, larson_storm, re-read crests; 2.0e-5 on the old), 2026-11-04
+            "cal_step6_toeavg_la": ("storm", 1.9e-5, False, (0.02, 0.04)),
             "cal_g16_nocape_rd198_dry_cs087": ("storm", 0.87e-4, False, (0.02, 0.04)),
             # The alternative to cal_g16_nocape: the module everywhere, with faster dune recovery at Cape Point
             # (GIS 1-5; 0.10-0.20 is the cape's own rate of the 2026-10-20 calibration, dropped 2026-10-21)
             **{f"cal_g16_capeg{lo * 100:02.0f}": ("storm", 1.24e-4, False,
                                                  {g: ((lo, hi) if g <= 5 else (0.02, 0.04)) for g in range(1, 91)})
                for lo, hi in ((0.05, 0.10), (0.10, 0.20))}}
+# The village overwash filter (2026-11-03): the share of each year's overwash the villages (Buxton, Avon, the
+# Tri-Village; HATTERAS_COMMUNITY_ZONES) return to the shoreface, one setting for all of them, at points in Rogers et
+# al.'s (2015) 40-90% (residential to commercial); 40 is the hindcast's. The 9% bulldozed onto the dune is kept.
+# At Rodanthe the village rule drove most of the 2009-2025 shoreline miss (2-test-2009-2025, control_rd198_ow*).
+# Chosen here and checked on 2009-2025 (HAT_collision_test_2009.py VILLAGE_FILTER). _vf40 reruns its base on the
+# survey windows that follow the dune (toes regenerated the same day), so the three compare
+VILLAGE_FILTER = {f"{b}_vf{p}": p for b in ("cal_control_g16", "cal_g16_nocape_rd198_dry") for p in (40, 65, 90)}
+VILLAGE_FILTER.pop("cal_control_g16_vf40")       # the module off reads no toes: cal_control_g16 is its base as run
+for _v in VILLAGE_FILTER:
+    VARIANTS[_v] = VARIANTS[_v.rsplit("_vf", 1)[0]]
 # The GIS the module runs on per variant; GIS 1-90 otherwise
 COLLISION_GIS = {"cal_g16_nocape": range(6, 91), "cal_g16_nocape_vcap": range(6, 91),
                  "cal_g16_nocape_vcap_ow0": range(6, 91),
                  **{v: range(6, 91) for v in VARIANTS if v.startswith(("cal_g16_nocape_ts", "cal_g16_nocape_dynw",
                                                                          "cal_g16_nocape_rd"))}}
-TOES_FROM_START = tuple(v for v in VARIANTS if v.startswith("cal_g16_nocape_ts"))
+TOES_FROM_START = tuple(v for v in VARIANTS if v.startswith("cal_g16_nocape_ts")) + ("cal_step6_starttoes",)
+CAL_STEPS = ("cal_step1_base", "cal_step2_growth", "cal_step3_module", "cal_step4_road", "cal_step5_rodanthe90",
+             "cal_step6_starttoes")
+COLLISION_GIS.update({v: range(6, 91) for v in CAL_STEPS[2:]})
+# Rodanthe village (GIS 77-83) held at the 40% the other villages keep, as before 2026-11-04
+RODANTHE_40 = ("cal_step1_base", "cal_step2_growth", "cal_step3_module", "cal_step4_road")
+# One toe per domain: the mean of its screened cells (toe above TOE_MIN_M_NAVD88 and TOE_BELOW_CREST_M under the
+# crest) over these surveys, every cell of the domain given it
+TOE_DOMAIN_AVG = {v: (1996, 1997) for v in ("cal_step6_toeavg", "cal_step3_module_dt", "cal_step4_road_dt",
+                                             "cal_step6_toeavg_cw", "cal_step6_toeavg_la")}
+LARSON_ALONE = ("cal_step6_toeavg_la",)
+# Larson alone's Cs, in the model (2026-11-04): cal_step6_toeavg_la at other Cs, chosen on 1996-2009 alone
+LA_CS_SWEEP = {f"cal_la_cs{round(cs * 1e6):d}": cs for cs in (1e-5, 3e-5, 5e-5, 8e-5)}
+for _v, _cs in LA_CS_SWEEP.items():
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)
+LARSON_ALONE = LARSON_ALONE + tuple(LA_CS_SWEEP)
+# The model-change steps with Larson alone, the default since 2026-11-04 (Cs 1.9e-5, no beach factor): steps 3
+# and 4 again (Rodanthe 40%); step 5 is cal_step6_toeavg_la
+for _v in ("cal_step3_module_la", "cal_step4_road_la"):
+    VARIANTS[_v] = ("storm", 1.9e-5, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+LARSON_ALONE = LARSON_ALONE + ("cal_step3_module_la", "cal_step4_road_la")
+# cal_step6_toeavg_la with the 198 m gate as one island-wide road trigger, 198 m less the island's median beach
+# (~50 m) = 150 m, the roadway manager's own setting (road_dune_rebuild_trigger_m), in place of the per-domain gates
+# (2026-11-04); set through ROAD_DUNE_REBUILD below
+VARIANTS["cal_final_rd150u"] = ("storm", 1.9e-5, False, (0.02, 0.04))
+TOE_DOMAIN_AVG["cal_final_rd150u"] = (1996, 1997)
+LARSON_ALONE = LARSON_ALONE + ("cal_final_rd150u",)
+# cal_step3_module_la with the domain toe averaged over every calibration survey (1998 left out, as the toe screen),
+# not only the two nearest the start: the toe after Bonnie and Dennis lowered the beach, at the cost of using
+# surveys from after the start (2026-11-04, option 1 for Buxton)
+VARIANTS["cal_step3_module_la_alltoes"] = ("storm", 1.9e-5, False, (0.02, 0.04))
+TOE_DOMAIN_AVG["cal_step3_module_la_alltoes"] = (1996, 1997, 1999, 2000, 2001, 2004, 2005, 2009)
+RODANTHE_40 = RODANTHE_40 + ("cal_step3_module_la_alltoes",)
+LARSON_ALONE = LARSON_ALONE + ("cal_step3_module_la_alltoes",)
+# ... and at stronger Cs: 5e-5, and 1e-4, about the older beach-factor runs' Cs at Buxton's narrow beaches
+for _v, _cs in (("cal_step3_module_la_alltoes_cs50", 5e-5), ("cal_step3_module_la_alltoes_cs100", 1e-4),
+                 ("cal_step3_module_la_alltoes_cs10", 1e-5), ("cal_step3_module_la_alltoes_cs30", 3e-5),
+                 # the hourly offline fit's Cs (larson_hourly), in the per-storm module
+                 ("cal_step3_module_la_alltoes_cs110", 1.1e-4)):
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = TOE_DOMAIN_AVG["cal_step3_module_la_alltoes"]
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+# cal_step3_module_la_alltoes_cs110 with the later steps: + the 150 m road rule (Rodanthe 40%), then + Rodanthe 90%
+for _v, _rod40 in (("cal_alltoes_cs110_road", True), ("cal_alltoes_cs110_final", False)):
+    VARIANTS[_v] = ("storm", 1.1e-4, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = TOE_DOMAIN_AVG["cal_step3_module_la_alltoes"]
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+    if _rod40:
+        RODANTHE_40 = RODANTHE_40 + (_v,)
+# The same two Cs on the default toes (1996 and 1997), to set against the all-survey toes (no road rule, Rodanthe 40%,
+# as cal_step3_module_la; the cal_la_cs* sweep carries the road rule and Rodanthe 90%)
+for _v, _cs in (("cal_step3_module_la_cs50", 5e-5), ("cal_step3_module_la_cs100", 1e-4)):
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+# The 1996 transect toes (input_prep/9-dune-toes/HAT_toe_method_line.py: one per domain, the median of five
+# 100 m transects of the 1996 lidar, front dune inside the model window, no lower than the berm; 2026-11-05), at
+# the offline refit's Cs (8e-6), 1e-5 and the current 1.9e-5; and the current toes at 8e-6 to set against them. As
+# cal_step3_module_la: Larson alone, dune growth 0.02-0.04, no road rule, Rodanthe 40%
+TRANSECT_TOES_FILE = (PROJECT_ROOT / "data" / "hatteras_init" / "9-dune-toes" / "1-transects-1996" / "1-toes"
+                      / "domain_toes_1996.csv")
+TRANSECT_TOES = ("cal_transect_cs8", "cal_transect_cs10", "cal_transect_cs19")
+for _v, _cs in (("cal_transect_cs8", 8e-6), ("cal_transect_cs10", 1e-5), ("cal_transect_cs19", 1.9e-5),
+                ("cal_step3_module_la_cs8", 8e-6)):
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the transect toes for TRANSECT_TOES
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+# The hand-checked 1996 Automorph toes (input_prep/9-dune-toes/HAT_toe_automorph_final.py, 2026-11-09), one per domain,
+# at about their offline refit's Cs (9.7e-6) and at the current 1.9e-5: otherwise cal_step6_toeavg_la (road rule, Rodanthe 90%)
+AUTOMORPH_TOES_FILE = TRANSECT_TOES_FILE.with_name("automorph_domain_toes_1996.csv")
+# cal_automorph_module_cs10: the module alone, cal_step2_growth with the module on (no road rule, Rodanthe 40%)
+AUTOMORPH_TOES = ("cal_automorph_cs10", "cal_automorph_cs19", "cal_automorph_module_cs10")
+for _v, _cs in (("cal_automorph_cs10", 1e-5), ("cal_automorph_cs19", 1.9e-5), ("cal_automorph_module_cs10", 1e-5)):
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the Automorph toes
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+RODANTHE_40 = RODANTHE_40 + ("cal_automorph_module_cs10",)
+# cal_step2_growth and cal_automorph_module_cs10 with the road's first bulldozing kept off the dunes (2026-11-09): in
+# year 1 it clears the starting topography above road grade, up to 17 m3/m, and put that on the dune
+_NOSCRAPE_CS = {f"cal_automorph_module_cs{_c}_noscrape": _c * 1e-6 for _c in (10, 30, 50, 100, 200)}
+NO_FIRST_SCRAPE = ("cal_step2_growth_noscrape", *_NOSCRAPE_CS)
+VARIANTS["cal_step2_growth_noscrape"] = (None, None, False, (0.02, 0.04))
+for _v, _cs in _NOSCRAPE_CS.items():
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the Automorph toes
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+RODANTHE_40 = RODANTHE_40 + NO_FIRST_SCRAPE
+AUTOMORPH_TOES = AUTOMORPH_TOES + tuple(_NOSCRAPE_CS)
+# The toe at the model's own berm (Barrier3D's dune stands on it; Laura, 2026-11-09), every cell, with the road fix, at
+# lower Cs: the water above the toe is about 1-2 m more than with the lidar toes, and it enters squared
+TOE_AT_BERM_M = 1.7                              # Barrier3D's berm, every domain [m NAVD88]
+TOE_AT_BERM = {f"cal_toeberm_cs{_c}": _c * 1e-6 for _c in (1, 2, 5, 10, 30, 100)}
+TOE_AT_BERM.update({"cal_toeberm_cs0p1": 1e-7, "cal_toeberm_cs0p3": 3e-7})   # the low end of the sensitivity sweep
+# The same with lateral erosion (COLLISION_ROWS below; 2026-11-11): the front row keeps its height until the face has
+# retreated through it, so the Cs needed is higher
+TOE_AT_BERM.update({f"cal_toeberm_lat_cs{_c}": _c * 1e-6 for _c in (1, 3, 10, 20, 30, 50, 70, 100, 150, 200, 250)})
+for _v, _cs in TOE_AT_BERM.items():
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the berm
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+RODANTHE_40 = RODANTHE_40 + tuple(TOE_AT_BERM)
+NO_FIRST_SCRAPE = NO_FIRST_SCRAPE + tuple(TOE_AT_BERM)
+# Which dune rows lose the collision volume, per variant (cascade/dune_collision.lower_dunes): "proportional" (both,
+# in proportion to their height; every variant not listed), "front" (the seaward row only), "equal" (both alike) or
+# "lateral" (the face retreats through the front row, which keeps its height until its sand is gone)
+COLLISION_ROWS = {v: "lateral" for v in TOE_AT_BERM if "_lat_" in v}
+# cal_automorph_module_cs10 at stronger Cs, island-wide, read on GIS 9-15 where the dunes stay too high (2026-11-09, test)
+AUTOMORPH_CS_SWEEP = {f"cal_automorph_module_cs{round(cs * 1e6):d}": cs for cs in (3e-5, 5e-5, 1e-4, 2e-4)}
+for _v, _cs in AUTOMORPH_CS_SWEEP.items():
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the Automorph toes
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+AUTOMORPH_TOES = AUTOMORPH_TOES + tuple(AUTOMORPH_CS_SWEEP)
+# cal_automorph_module_cs10 with automatic Automorph toes on GIS 9-15(HAT_toe_automorph_cells.py, 2026-11-09, test): each
+# cell's own toe, or the median of the same cells for the whole domain; the other domains keep the hand-checked toes
+AUTOMORPH_CELL_FILE = TRANSECT_TOES_FILE.with_name("automorph_cell_toes_1996.csv")
+AUTOMORPH_CELL_TOES = {"cal_automorph_cells_9_15": "toe_m_navd88", "cal_automorph_cellmed_9_15": "toe_domain_median_m_navd88"}
+for _v in AUTOMORPH_CELL_TOES:
+    VARIANTS[_v] = ("storm", 1e-5, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the Automorph toes
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+AUTOMORPH_TOES = AUTOMORPH_TOES + tuple(AUTOMORPH_CELL_TOES)
+# The automatic Automorph toe of every cell of every domain, at the Cs of the domain-toe sweep (2026-11-09, test): as
+# cal_automorph_module_cs10 and AUTOMORPH_CS_SWEEP, only per cell
+AUTOMORPH_CELLS_ALL_FILE = TRANSECT_TOES_FILE.with_name("automorph_cell_toes_all_1996.csv")
+AUTOMORPH_CELLS_ALL = {f"cal_automorph_cellsall_cs{_c}{_s}": _c * 1e-6 for _c in (10, 30, 50, 100, 200)
+                       for _s in ("", "_noscrape")}       # _noscrape: with the road fix (NO_FIRST_SCRAPE)
+NO_FIRST_SCRAPE = NO_FIRST_SCRAPE + tuple(v for v in AUTOMORPH_CELLS_ALL if v.endswith("_noscrape"))
+for _v, _cs in AUTOMORPH_CELLS_ALL.items():
+    VARIANTS[_v] = ("storm", _cs, False, (0.02, 0.04))
+    TOE_DOMAIN_AVG[_v] = (1996, 1997)            # overridden by the cell toes
+    LARSON_ALONE = LARSON_ALONE + (_v,)
+    RODANTHE_40 = RODANTHE_40 + (_v,)
+# Domain toes with the per-cell beach widths (survey medians), for the comparison with the domain beach factor
+CELL_WIDTHS = ("cal_step6_toeavg_cw",)
+RODANTHE_40 = RODANTHE_40 + ("cal_step3_module_dt", "cal_step4_road_dt")
+CAL_STEPS = CAL_STEPS + tuple(TOE_DOMAIN_AVG)
+COLLISION_GIS.update({v: range(6, 91) for v in TOE_DOMAIN_AVG})
 BEACH_FOLLOWS_SHORELINE = ("cal_g16_nocape_dynw", "cal_g16_nocape_dynw_sw")
 WIDTH_FROM_START = TOES_FROM_START + ("cal_g16_nocape_dynw_sw",)
 # The road's dune rebuild per variant, (setback gate m, rebuild trigger m MHW or None for the hindcast's berm floor),
 # from the lidar rebuilds along NC-12 (dune-storm-response/2026-10-29-collision-test-2009-2025, tables/
 # observed_dune_rebuilds.csv): rebuilt up to 140 m behind the dune; crest before a rebuild median 2.66 m NAVD88
-ROAD_DUNE_REBUILD = {"cal_g16_nocape_rd150": (150.0, None), "cal_g16_nocape_rd150h": (150.0, 2.66 - MHW_NAVD88_M)}
-# NCDOT's criterion: dune maintenance where NC 12 is within 650 ft (198 m) of the shoreline (Bonner Bridge
-# Replacement FEIS, NCDOT/FHWA 2008, p. 2-128); the road manager measures from the dune, so each domain's gate is
-# 198 m less its median beach width (the toe table's, as the collision module's)
+ROAD_DUNE_REBUILD = {"cal_g16_nocape_rd150": (150.0, None), "cal_g16_nocape_rd150h": (150.0, 2.66 - MHW_NAVD88_M),
+                     "cal_final_rd150u": (150.0, None),
+                     "cal_alltoes_cs110_road": (150.0, None), "cal_alltoes_cs110_final": (150.0, None)}
+# A 198 m shoreline-to-road gate: the Bonner Bridge Replacement FEIS (NCDOT/FHWA 2008, p. 2-128) lists a shoreline
+# within 650 ft (198 m) of the road as a monitoring warning sign for bridge phasing (the landward reach of Isabel's
+# washover fans), not as a dune maintenance rule; NCDOT's criterion is 230 ft (70 m) from MHW to the pavement
+# (p. 2-64; input_prep/4-mgmt-forcings/road_dune_rebuild/NCDOT_road_dune_criteria.txt). The road manager measures
+# from the dune, so each domain's gate is 198 m less its median beach width (the toe table's, as the module's)
 SHORELINE_GATE, SHORELINE_GATE_M = ("cal_g16_nocape_rd198", "cal_g16_nocape_rd198_rl02", "cal_g16_nocape_rd198_cs145",
                                     "cal_g16_nocape_rd198_dry", "cal_g16_nocape_rd198_dry_cs087"), 198.0
 # The collision beach width on the dry beach, beach start to toe (2026-11-03; HAT_dune_toes.py since then); the
 # road gate above keeps the width to the crest, so that only the beach factor changes
 DRY_BEACH = ("cal_g16_nocape_rd198_dry", "cal_g16_nocape_rd198_dry_cs087")
+_VF_ON = tuple(v for v in VILLAGE_FILTER if v.startswith("cal_g16_nocape_rd198_dry"))
+SHORELINE_GATE, DRY_BEACH = SHORELINE_GATE + _VF_ON, DRY_BEACH + _VF_ON
+SHORELINE_GATE = SHORELINE_GATE + ("cal_control_g16_rd198", "cal_step4_road", "cal_step5_rodanthe90",
+                                   "cal_step6_starttoes", "cal_step6_toeavg", "cal_step4_road_dt",
+                                   "cal_step6_toeavg_cw", "cal_step6_toeavg_la", *LA_CS_SWEEP, "cal_step4_road_la",
+                                   "cal_automorph_cs10", "cal_automorph_cs19")
+DRY_BEACH = DRY_BEACH + CAL_STEPS[2:]
 # The beach lowering the water at the dune, m per m of beach (DuneCollisionManager beach_runup_loss), per variant
 RUNUP_LOSS = {"cal_g16_nocape_rd198_rl02": 0.02}
 # Per-village dune caps, m NAVD88: the lidar 95th percentile of each village's crest cells
@@ -260,6 +450,9 @@ GROIN_STRENGTH.update({f"cal_g{round(g * 100):02d}": g for g in (0.13, 0.16, 0.1
 GROIN_STRENGTH["cal_control_g16"] = GROIN_STRENGTH["cal_hs2p75"] = GROIN_STRENGTH["cal_g16_nocape"] = 0.16
 GROIN_STRENGTH.update({"cal_g16_capeg05": 0.16, "cal_g16_capeg10": 0.16, "cal_g16_nocape_vcap": 0.16,
                        "cal_g16_nocape_vcap_ow0": 0.16, **{v: 0.16 for v in TOES_FROM_START + BEACH_FOLLOWS_SHORELINE + tuple(ROAD_DUNE_REBUILD) + SHORELINE_GATE}})
+GROIN_STRENGTH.update({v: 0.16 for v in VILLAGE_FILTER})
+GROIN_STRENGTH.update({v: 0.16 for v in CAL_STEPS})
+GROIN_STRENGTH["cal_step2_growth_noscrape"] = 0.16
 # CASCADE's wave height (m) per variant off the runner's 2.0
 HS_M = {"control_hs3": 3.0, "storm_w45_r04_hs3": 3.0, "control_hs3_ends": 3.0, "storm_w45_r04_hs3_ends": 3.0,
         "control_hs2p5": 2.5, "storm_w45_r04_hs2p5": 2.5, "storm_cs145_r04_hs3_ends": 3.0, "storm_cs145_r04_hs2p5": 2.5,
@@ -350,7 +543,8 @@ def toes():
                 on_clip = (S.mosaic_on_clip(srcs[0], grids[g]) if kind == "mosaic"
                            else S.raster_on_clip(srcs, grids[g]))
                 z = S.profiles(S.downsample(on_clip * scale + offsets.get(year, 0.0)), shear, c0)
-                add(year, g, z, i0, i1)
+                # The survey's windows follow the dune, as the crest script moved them (2026-11-03)
+                add(year, g, z, *S.survey_windows(START, year, g, i0, i1))
         finally:
             for s in srcs:
                 s.close()
@@ -726,6 +920,40 @@ def _launch(variant):
         return out
 
     toe = per_gis(cell_toes(st))
+    if variant in TOE_DOMAIN_AVG:
+        s_ = st[st.survey.isin(TOE_DOMAIN_AVG[variant])]
+        s_ = s_[(s_.toe_m_navd88 > TOE_MIN_M_NAVD88) & (s_.toe_m_navd88 < s_.crest_m_navd88 - TOE_BELOW_CREST_M)]
+        dm = s_.groupby("gis").toe_m_navd88.mean()
+        toe = {g: np.full(50, dm.get(g, dm.median())) for g in range(1, 91)}
+        print()
+        print(f"EXPERIMENT one toe per domain, the mean over the {TOE_DOMAIN_AVG[variant]} surveys: island "
+              f"{dm.mean():.2f} m NAVD88, range {dm.min():.2f}-{dm.max():.2f}", flush=True)
+    if variant in TRANSECT_TOES:
+        tt = pd.read_csv(TRANSECT_TOES_FILE).set_index("gis").toe_m_navd88
+        toe = {g: np.full(50, tt[g]) for g in range(1, 91)}
+        print(f"EXPERIMENT one toe per domain from the 1996 transects ({TRANSECT_TOES_FILE.name}): island "
+              f"{tt.mean():.2f} m NAVD88, range {tt.min():.2f}-{tt.max():.2f}", flush=True)
+    if variant in AUTOMORPH_TOES:
+        tt = pd.read_csv(AUTOMORPH_TOES_FILE).set_index("gis").toe_m_navd88
+        toe = {g: np.full(50, tt[g]) for g in range(1, 91)}
+        print(f"EXPERIMENT one toe per domain, Automorph hand-checked ({AUTOMORPH_TOES_FILE.name}): island "
+              f"{tt.mean():.2f} m NAVD88, range {tt.min():.2f}-{tt.max():.2f}", flush=True)
+    if variant in AUTOMORPH_CELL_TOES:
+        ct = pd.read_csv(AUTOMORPH_CELL_FILE).sort_values(["gis", "cell"])
+        for g, c_ in ct.groupby("gis"):
+            toe[g] = c_[AUTOMORPH_CELL_TOES[variant]].to_numpy(float)
+        print(f"EXPERIMENT automatic Automorph toes on GIS {ct.gis.min()}-{ct.gis.max()} "
+              f"({AUTOMORPH_CELL_TOES[variant]}), range {ct[AUTOMORPH_CELL_TOES[variant]].min():.2f}-"
+              f"{ct[AUTOMORPH_CELL_TOES[variant]].max():.2f} m NAVD88", flush=True)
+    if variant in TOE_AT_BERM:
+        toe = {g: np.full(50, TOE_AT_BERM_M) for g in range(1, 91)}
+        print(f"EXPERIMENT the toe at the berm, {TOE_AT_BERM_M:g} m NAVD88, every cell", flush=True)
+    if variant in AUTOMORPH_CELLS_ALL:
+        ct = pd.read_csv(AUTOMORPH_CELLS_ALL_FILE).sort_values(["gis", "cell"])
+        toe = {g: c_.toe_m_navd88.to_numpy(float) for g, c_ in ct.groupby("gis")}
+        print(f"EXPERIMENT automatic Automorph toe per cell on every domain ({len(ct)} cells): island "
+              f"{ct.toe_m_navd88.mean():.2f} m NAVD88, range {ct.toe_m_navd88.min():.2f}-{ct.toe_m_navd88.max():.2f}",
+              flush=True)
     if variant in WIDTH_FROM_START:
         sp = pd.read_csv(EXP_DIR / "dune_toes.csv")
         sp = sp[sp.survey == "start"]
@@ -754,6 +982,51 @@ def _launch(variant):
     log = []
     orig_build = H.build_cascade
 
+    # The village overwash filter (VILLAGE_FILTER), on every managed village domain's beach/dune manager
+    def village_filter(c):
+        p = VILLAGE_FILTER.get(variant)
+        if p is None:
+            return
+        n = 0
+        for i, mgr in enumerate(c.nourishments):
+            if mgr is not None and c._beach_nourishment_module[i]:
+                mgr._overwash_filter = p
+                n += 1
+        print(f"\nEXPERIMENT village overwash filter {p:g}% to the shoreface on {n} village domains", flush=True)
+
+    # the 198 m (650 ft) shoreline-to-road gate (SHORELINE_GATE) as each road manager's gate behind the dune; was applied
+    # only with the module on until 2026-11-04 (cal_control_g16_rd198 ran without it)
+    def road_gate(c, dom, width):
+        if variant not in SHORELINE_GATE:
+            return
+        w = pd.Series({g: np.nanmedian(width[g]) for g in range(1, 91)})
+        w = w.fillna(w.median())
+        for g in range(1, 91):
+            r = c.roadways[dom.gis_to_pad(g)]
+            if r is not None:
+                r._dune_mgmt_road_setback_trigger = max(SHORELINE_GATE_M - w[g], 0.0)
+        print(f"\nEXPERIMENT road dune rebuild where NC 12 is within {SHORELINE_GATE_M:g} m of the shoreline: "
+              f"gates median {SHORELINE_GATE_M - w.median():.0f} m, range {SHORELINE_GATE_M - w.max():.0f}-"
+              f"{SHORELINE_GATE_M - w.min():.0f} m", flush=True)
+
+    # Rodanthe (GIS 77-83) held at 40% (RODANTHE_40), and the road's first bulldozing kept off the dunes (NO_FIRST_SCRAPE)
+    def rodanthe_40(c, dom):
+        if variant in NO_FIRST_SCRAPE:
+            n = sum(1 for r in c.roadways if r is not None)
+            for r in c.roadways:
+                if r is not None:
+                    r._discard_first_bulldoze = True
+            print(f"\nEXPERIMENT the first road bulldozing kept off the dunes on {n} road domains", flush=True)
+        if variant not in RODANTHE_40:
+            return
+        n = 0
+        for g in range(77, 84):
+            i = dom.gis_to_pad(g)
+            if c.nourishments[i] is not None and c._beach_nourishment_module[i]:
+                c.nourishments[i]._overwash_filter = 40.0
+                n += 1
+        print(f"\nEXPERIMENT Rodanthe overwash filter held at 40% on {n} domains (GIS 77-83)", flush=True)
+
     managers = {}
 
     def build_cascade(*a, **k):
@@ -773,18 +1046,34 @@ def _launch(variant):
                 width_collision = width
                 if variant in DRY_BEACH:
                     # the dry beach, as HAT_dune_toes.py: 0 where the crest is within one cell of the beach start
-                    s0 = st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)]
+                    s0 = sp if variant in WIDTH_FROM_START else st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)]
                     dry = np.where(s0.toe_to_crest_m.notna(), s0.beach_width_m - s0.toe_to_crest_m,
                                    np.where(s0.beach_width_m < 2 * 10, 0.0, np.nan))
                     width_collision = per_gis(s0.assign(dry=dry).groupby(["gis", "cell"]).dry.median())
+                    if variant in TOE_DOMAIN_AVG and variant not in CELL_WIDTHS:
+                        # one beach factor per domain, the mean of max(0, 1 - W / W0) over its cells in the toe's
+                        # surveys, given to the module as the width W0 (1 - factor) (2026-11-04; HAT_dune_toes.py)
+                        sw = st[st.survey.isin(TOE_DOMAIN_AVG[variant])]
+                        dw = pd.Series(np.where(sw.toe_to_crest_m.notna(), sw.beach_width_m - sw.toe_to_crest_m,
+                                                np.where(sw.beach_width_m < 2 * 10, 0.0, np.nan)), index=sw.index)
+                        bf = np.clip(1 - dw / w0, 0, None).groupby(sw.gis).mean()
+                        width_collision = {g: np.full(50, w0 * (1 - bf.get(g, bf.median()))) for g in range(1, 91)}
+                        print()
+                        print(f"EXPERIMENT one beach factor per domain, the mean over the {TOE_DOMAIN_AVG[variant]} "
+                              f"surveys: island {bf.mean():.2f}", flush=True)
+                    if variant in LARSON_ALONE:
+                        width_collision = {g: np.zeros(50) for g in range(1, 91)}
+                        print(f"EXPERIMENT Larson alone: beach factor 1 everywhere, Cs {cs:.1e}", flush=True)
             for g in on:
                 toe_m[dom.gis_to_pad(g)] = toe[g] - MHW_NAVD88_M
                 if w0:
                     width_m[dom.gis_to_pad(g)] = width_collision[g]
-            if w0 or variant in BEACH_FOLLOWS_SHORELINE or variant in RUNUP_LOSS:
+            # Larson-alone variants zero the widths above (beach factor 1), so they run as before without them
+            if (w0 and variant not in LARSON_ALONE) or variant in BEACH_FOLLOWS_SHORELINE or variant in RUNUP_LOSS:
                 raise SystemExit(f"{variant}: the module's beach options were removed from cascade/dune_collision.py on "
                                  "2026-11-04; check out git tag collision-with-beach-factor to rerun it")
-            k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs)
+            k.update(dune_collision_module=True, dune_collision_toe_elevation=toe_m, dune_collision_cs=cs,
+                     dune_collision_rows=COLLISION_ROWS.get(variant, "proportional"))
             if variant in ROAD_DUNE_REBUILD:
                 gate, trigger = ROAD_DUNE_REBUILD[variant]
                 k["road_dune_rebuild_trigger_m"] = gate
@@ -793,17 +1082,8 @@ def _launch(variant):
                 print(f"\nEXPERIMENT road dune rebuild: setback gate {gate:g} m, trigger "
                       + ("berm floor" if trigger is None else f"{trigger:.2f} m MHW"), flush=True)
             c = orig_build(*a, **k)
-            # NCDOT's 650 ft (198 m) shoreline-to-road criterion as each road manager's gate behind the dune
-            if variant in SHORELINE_GATE:
-                w = pd.Series({g: np.nanmedian(width[g]) for g in range(1, 91)})
-                w = w.fillna(w.median())
-                for g in range(1, 91):
-                    r = c.roadways[dom.gis_to_pad(g)]
-                    if r is not None:
-                        r._dune_mgmt_road_setback_trigger = max(SHORELINE_GATE_M - w[g], 0.0)
-                print(f"\nEXPERIMENT road dune rebuild where NC 12 is within {SHORELINE_GATE_M:g} m of the shoreline: "
-                      f"gates median {SHORELINE_GATE_M - w.median():.0f} m, range {SHORELINE_GATE_M - w.max():.0f}-"
-                      f"{SHORELINE_GATE_M - w.min():.0f} m", flush=True)
+            road_gate(c, dom, width)
+            rodanthe_40(c, dom)
             # Per-village dune caps and Rodanthe's overwash-to-dune share, on the village managers (m above the berm)
             for name, (lo, hi) in VILLAGE_DOMAINS.items():
                 for g in range(lo, hi + 1):
@@ -814,11 +1094,16 @@ def _launch(variant):
                         mgr._artificial_maximum_dune_height = VILLAGE_CAPS_M[name] - k["berm_elevation"]
                     if variant in RODANTHE_NO_OW_TO_DUNE and name == "Rodanthe":
                         mgr._overwash_to_dune = 0
+            village_filter(c)
             managers.update({g: dom.gis_to_pad(g) for g in on}, cascade=c)
             print(f"\nEXPERIMENT collision: dune_collision_module on GIS {on[0]}-{on[-1]}, Cs {cs:.1e}"
                   + (f", beach W0 {w0:g} m" if w0 else ""), flush=True)
             return c
         c = orig_build(*a, **k)
+        village_filter(c)
+        dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
+        road_gate(c, dom, per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median()))
+        rodanthe_40(c, dom)
         if rule is None:
             return c
         cls = type(c)
@@ -867,6 +1152,73 @@ def _launch(variant):
                                                                    collision[pad].volume_TS))])]
         if log:
             pd.concat(log).round(4).to_csv(EXP_DIR / "logs" / f"collision_{variant}.csv", index=False)
+        if managers:
+            collision_cell_table(collision, managers, variant)
+
+
+# The managers' per-cell series (DuneCollisionManager: collision_volume_TS, collision_storms_TS, dune_row_loss_TS,
+# collision_deficit_TS) as one row per domain and model year, beside the run's log and in its tables/ folder
+def collision_cell_table(collision, pads, variant):
+    rows = []
+    for g, pad in pads.items():
+        m = collision[pad]
+        vol = getattr(m, "collision_volume_TS", None)
+        if vol is None:
+            continue
+        storms, loss, deficit = m.collision_storms_TS, m.dune_row_loss_TS, m.collision_deficit_TS
+        for t in range(1, len(m.crest_lowering_TS) + 1):
+            r = dict(year=RUN_START + t, gis=g, rows=m.rows,
+                     volume_m3_m=float(vol[t].mean() * 100),
+                     collision_storms_per_cell=float(storms[t].mean()),
+                     cells_in_collision=int((storms[t] > 0).sum()),
+                     front_rows_collapsed=int(loss[t, :, 0].sum()),
+                     back_rows_collapsed=int(loss[t, :, 1:].sum()))
+            if deficit is not None:
+                r["front_deficit_m3_m"] = float(deficit[t, :, 0].mean() * 100)
+                r["back_deficit_m3_m"] = float(deficit[t, :, 1:].mean() * 100)
+            rows.append(r)
+    if not rows:
+        return
+    t = pd.DataFrame(rows).round(4)
+    t.to_csv(EXP_DIR / "logs" / f"collision_cells_{variant}.csv", index=False)
+    rd = run_dir(variant)
+    if rd is not None:
+        t.to_csv(rd / "tables" / "collision_cells.csv", index=False)
+    print(f"EXPERIMENT collision per cell: {t.volume_m3_m.sum() / t.gis.nunique():.1f} m3/m eroded per domain, "
+          f"{t.front_rows_collapsed.sum()} front and {t.back_rows_collapsed.sum()} back rows collapsed", flush=True)
+
+
+# Where and when the dune cells collapse, and the collision volume, one figure per run (action "collapse")
+def plot_collapse(variants):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from site_layer import hat_figure_style as S
+    S.apply_style()
+    for v in variants:
+        f = EXP_DIR / "logs" / f"collision_cells_{v}.csv"
+        if not f.exists():
+            print(f"  no {f.name}: run {v} first")
+            continue
+        t = pd.read_csv(f)
+        years = sorted(t.year.unique())
+        fig, axs = plt.subplots(1, 2, figsize=(S.FIG_W_DOUBLE, 4.6), sharey=True, layout="constrained")
+        for ax, col, cmap, lab in ((axs[0], "volume_m3_m", "Purples", "Collision volume eroded (m³/m)"),
+                                   (axs[1], "front_rows_collapsed", "Oranges", "Front-row cells collapsed (of 50)")):
+            grid = t.pivot_table(index="year", columns="gis", values=col).reindex(index=years, columns=range(1, 91))
+            im = ax.imshow(grid.values, aspect="auto", origin="lower", cmap=cmap, interpolation="nearest",
+                           extent=(0.5, 90.5, years[0] - 0.5, years[-1] + 0.5), vmin=0)
+            fig.colorbar(im, ax=ax, orientation="horizontal", location="bottom", shrink=0.8, label=lab)
+            ax.set_xlabel(S.DOMAIN_AXIS_LABEL)
+        axs[0].set_ylabel("Model year")
+        for k, ax in enumerate(axs):
+            ax.text(-0.02, 1.02, f"({'ab'[k]})", transform=ax.transAxes, fontsize=10, fontweight="bold", ha="right")
+        out = EXP_DIR / f"collision_collapse_{v}.png"
+        S.save(fig, out, bbox_inches="tight", close=True)
+        S.record_caption(out, (f"Collision-regime dune erosion per GIS domain and model year, run {v} (rows mode "
+                               f"{t.rows.iloc[0]}): (a) the volume the collision rule eroded, domain mean (m3/m); "
+                               "(b) front-row dune cells eroded through to the toe (collapsed), of the domain's 50."))
+        print(f"wrote {out}")
 
 
 def run_dir(variant):
@@ -1044,6 +1396,20 @@ RUN_STYLES = {
     # The 2026-10-29 calibration (village dune cap 8.0 m); drawn against cal_control, Hs in purples off
     # CoastSat's blue
     "cal_control": ("No collision, Hs 3.0 m", "#8C8C8C", 1.6),
+    "cal_automorph_cs10": ("Collision, Automorph toes, Cs 1e-5", "#7B3F99", 1.8),
+    "cal_automorph_module_cs10": ("Collision module on (Automorph toes, Cs 1e-5)", "#7B3F99", 1.8),
+    "cal_step2_growth": ("Collision module off", "#8C8C8C", 1.6),
+    "cal_automorph_module_cs30": ("Collision module on, Cs 3e-5", "#74A9CF", 1.6),
+    "cal_automorph_module_cs50": ("Collision module on, Cs 5e-5", "#31A354", 1.6),
+    "cal_automorph_module_cs100": ("Collision module on, Cs 1e-4", "#FD8D3C", 1.6),
+    "cal_automorph_module_cs200": ("Collision module on, Cs 2e-4", "#D7301F", 1.6),
+    "cal_automorph_cellsall_cs10": ("Toe per cell, Cs 1e-5", "#7B3F99", 1.8),
+    "cal_automorph_cellsall_cs30": ("Toe per cell, Cs 3e-5", "#74A9CF", 1.6),
+    "cal_automorph_cellsall_cs50": ("Toe per cell, Cs 5e-5", "#31A354", 1.6),
+    "cal_automorph_cellsall_cs100": ("Toe per cell, Cs 1e-4", "#FD8D3C", 1.6),
+    "cal_automorph_cellsall_cs200": ("Toe per cell, Cs 2e-4", "#D7301F", 1.6),
+    "cal_automorph_cells_9_15": ("Collision module on, a toe per cell, GIS 9-15", "#D7301F", 1.6),
+    "cal_automorph_cellmed_9_15": ("Collision module on, the cells' domain median, GIS 9-15", "#2B8CBE", 1.6),
     "cal_hs2": ("Hs 2.0 m", "#CBC9E2", 1.6),
     "cal_hs2p5": ("Hs 2.5 m", "#9E9AC8", 1.6),
     "cal_r03": ("Hs 3.0 m (growth 0.02-0.04, groin 0.10)", "#756BB1", 1.8),
@@ -1201,7 +1567,8 @@ def plot(variants=None, base="control"):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("action", choices=["toes", "twl", "calibrate", "empirical", "run", "score", "plot", "_launch"])
+    ap.add_argument("action", choices=["toes", "twl", "calibrate", "empirical", "run", "score", "plot", "collapse",
+                                       "_launch"])
     ap.add_argument("variant", nargs="*")
     args = ap.parse_args()
     if args.action == "_launch":
@@ -1209,6 +1576,8 @@ def main():
     elif args.action == "run":
         with ThreadPoolExecutor(WORKERS) as ex:
             list(ex.map(launch, args.variant or list(VARIANTS)))
+    elif args.action == "collapse":
+        plot_collapse(args.variant)
     elif args.action == "plot":
         # The calibration runs (cal_*) are on the 2026-10-29 defaults; their baseline is cal_control
         cal = any(v.startswith("cal_") for v in args.variant)
