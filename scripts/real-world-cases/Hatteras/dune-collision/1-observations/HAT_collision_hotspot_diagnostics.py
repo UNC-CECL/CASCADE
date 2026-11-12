@@ -3,7 +3,7 @@ How the collision hotspots were found, what lowered their dunes, and what the lo
 
     python scripts/real-world-cases/Hatteras/dune-collision/1-observations/HAT_collision_hotspot_diagnostics.py
 
-Three figures in the workspace's dune-collision/1-observations/2-hotspots/, beside collision_hotspot_crests.png,
+Four figures (`map` as an argument draws only the last) in the workspace's dune-collision/1-observations/2-hotspots/, beside collision_hotspot_crests.png,
 from the same module-off controls, lidar and hotspot rule as HAT_collision_motivation_alongshore.py (imported, A):
 
     collision_hotspot_classification.png  every domain's mean overprediction against the crest lowering the model
@@ -12,6 +12,8 @@ from the same module-off controls, lidar and hotspot rule as HAT_collision_motiv
                                           surveys, the largest storm of each interval named
     collision_hotspot_profiles.png        per hotspot, one representative 10 m cell: the lidar profile the period
                                           started from and its last survey, the model's crest at both
+    collision_hotspot_map.png             the island, quarter-turned as the study-area figure, each domain filled
+                                          by its class, one panel per period
 
 Profiles: the start's own 1 m DEM clip (what the model started from) and the period's last lidar on the same
 grid, as HAT_survey_dune_crests.py reads them (its vertical shifts applied), oriented ocean first and put in that
@@ -411,14 +413,96 @@ def fig_profiles(data, hots):
     print(f"wrote {out}")
 
 
+# ---- 4: map --------------------------------------------------------------------------------------------------------
+def fig_map(data, hots):
+    """Where the hotspots are: the reach quarter-turned (as the study-area figure), one panel per period, each
+    domain filled by its class from the classification figure."""
+    sys.path.insert(0, str(A._HAT_DIR / "figure_making" / "island"))
+    import study_area_figures as SA
+    dom, outline, _ = SA.load_layers()
+    frame = SA.Frame(dom, outline)
+    land = outline.geometry.union_all()
+    window = frame.window(dom, pad_along_km=3.0, pad_sea_km=2.6, pad_sound_km=4.2)
+    x0, x1, y0, y1 = window
+    w = 7.48
+    h_ax = w * (y1 - y0) / (x1 - x0)
+    fig = plt.figure(figsize=(w, 2 * h_ax + 1.05))
+    H = fig.get_size_inches()[1]
+    fill = {"hotspot": A.HIGH_C, "loose": "#F4A582", "loose_txt": "#D6604D", "single": "0.70"}
+    sea = frame.seaward
+    rows = []
+    for i, (key, d) in enumerate(data.items()):
+        ax = fig.add_axes([0, 1 - (0.28 + (i + 1) * h_ax + i * 0.32) / H, 1, h_ax / H])
+        SA.draw_reach(ax, frame, dom, outline, None, True, window, show_road=False, piers=False, groin=False,
+                      scalebar=i == 1, arrow=i == 0, arrow_xy=(0.965, 0.80), water_labels=i == 0, ends=True, box_lw=0.25)
+        m = classes(d, hots[key])
+        lm, lruns, lsingles = A.collision_hotspots_loose(d)
+        strict = set(m.index[m["class"] == "hotspot"])
+        loose = {g for lo, hi in lruns for g in range(lo, hi + 1)}
+        for ids, c in ((set(lsingles) - strict, fill["single"]), (loose - strict, fill["loose"]),
+                       (strict, fill["hotspot"])):
+            if ids:
+                g = dom[dom.ID.isin(sorted(ids))].geometry.intersection(land)
+                frame.geoms(g).plot(ax=ax, facecolor=c, edgecolor="white", lw=0.4, zorder=6)
+        for h in hots[key]:                                   # strict hotspots named off the beach
+            p = frame.along((h["lo"] + h["hi"]) / 2)[0] + sea * 2300
+            ax.text(p[0], p[1], f"GIS {h['lo']}–{h['hi']}", ha="center", va="center", fontsize=8,
+                    fontweight="bold", color=A.HIGH_C, zorder=9, path_effects=SA.HALO)
+        same = {(h["lo"], h["hi"]) for h in hots[key]}
+        for lo, hi in lruns:                                  # loose stretches, one line further out
+            if (lo, hi) in same:
+                continue
+            p = frame.along((lo + hi) / 2)[0] + sea * (3150 if any(a <= hi and lo <= b for a, b in same) else 2300)
+            ax.text(p[0], p[1], f"{lo}–{hi}", ha="center", va="center", fontsize=7.5, color=fill["loose_txt"],
+                    zorder=9, path_effects=SA.HALO)
+        for g in lsingles:
+            p = frame.along(g)[0] + sea * 2300
+            ax.text(p[0], p[1], str(g), ha="center", va="center", fontsize=7, color=INK_MUTED, zorder=9,
+                    path_effects=SA.HALO)
+        ax.text(0.005, 1.02, f"({'ab'[i]})", transform=ax.transAxes, fontweight="bold", fontsize=10,
+                ha="left", va="bottom", color=INK)
+        ax.text(0.045, 1.02, f"{d['label']}, no collision module", transform=ax.transAxes, fontsize=10,
+                ha="left", va="bottom", color=INK)
+        rows.append(lm.drop(columns="hit").add_prefix("loose_").join(
+            m[["persist", "mean_m", "lidar_drop_m", "missed_loss_m", "class"]].add_prefix("strict_"))
+            .assign(loose_hotspot=lambda x: x.index.isin(sorted(loose)), loose_single=lambda x: x.index.isin(lsingles),
+                    period=key))
+    fig.legend(handles=[Patch(facecolor=fill["hotspot"], label="Hotspot, strict rule (and loose)"),
+                        Patch(facecolor=fill["loose"], label="Hotspot, loose rule only"),
+                        Patch(facecolor=fill["single"], label="Loose rule, single domain"),
+                        Patch(facecolor="white", edgecolor=INK, lw=0.4, label="Neither")],
+               loc="lower center", ncol=4, frameon=False, fontsize=7.5, bbox_to_anchor=(0.5, 0.0))
+    out = OUT_DIR / "collision_hotspot_map.png"
+    save(fig, out, dpi=300, facecolor="white", close=True)
+    pd.concat(rows).round(3).rename_axis("gis").to_csv(SUPPORT_DIR / "collision_hotspot_map.csv")
+    record_caption(out, (
+        "Where the collision hotspots are, by a strict and a loose rule. Hatteras Island from Cape Point (left) to "
+        "Pea Island (right), turned a quarter turn so north points right and the ocean lies below, with the 90 "
+        "Barrier3D domains (500 m alongshore), every tenth numbered; fills clipped to the island. Both rules compare "
+        "the module-off control with the lidar crests. Strict (dark red, bold labels; collision_hotspot_classification"
+        f".png): the model's crest more than {A.HOT_OFF_M:g} m above the lidar's in at least half the surveys after "
+        f"the start and on average, the lidar crest {A.HOT_DROP_M:g} m or more lower at the period's last survey than "
+        f"its first, and the model missing at least {A.HOT_DROP_M:g} m of that loss. Loose (light red, labels "
+        "further out): the loss is taken to whichever later survey the model missed most of (so a drop the dune was "
+        "later rebuilt from counts), the overprediction is judged only from that survey on (so a late mismatch is "
+        f"not diluted), and every threshold is {A.LOOSE_OFF_M:g} m. Both need two or more neighbouring domains (one-"
+        "domain gaps bridged); grey numbers, a single domain meeting the loose rule. A drop found only at the "
+        "period's last survey is judged on that one survey. (a) Calibration, 1996–2009. (b) Test, 2009–2025."))
+    print(f"wrote {out}")
+
+
 def main():
     apply_style()
     SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
     data = {k: A.load(k) for k in A.PERIODS}
     hots, _ = A.hotspots(data)
+    if "map" in sys.argv[1:]:
+        fig_map(data, hots)
+        return
     fig_classification(data, hots)
     fig_storms(data, hots)
     fig_profiles(data, hots)
+    fig_map(data, hots)
 
 
 if __name__ == "__main__":

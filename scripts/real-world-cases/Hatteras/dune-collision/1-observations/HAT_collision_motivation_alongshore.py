@@ -213,6 +213,41 @@ def collision_hotspots(d):
     return m, col_runs, other_runs
 
 
+# The looser hotspot rule (2026-11-12): the drop to any later survey, persistence counted from it, 0.75 m
+LOOSE_OFF_M, LOOSE_PERSIST, LOOSE_DROP_M = 0.75, 0.5, 0.75
+
+
+def collision_hotspots_loose(d):
+    """As collision_hotspots, loosened for drops the strict rule cannot see. Per domain, against the period's first
+    survey, the survey after it where the missed loss (lidar crest loss less the model's) is largest among those
+    whose lidar loss is at least LOOSE_DROP_M: a drop the dune later recovered from (rebuilt) still counts. The
+    overprediction is then judged from that survey on (more than LOOSE_OFF_M in at least LOOSE_PERSIST of them,
+    LOOSE_OFF_M on average), so a late-starting mismatch is not diluted by the years before. Returns
+    (per-domain table, stretches of two or more domains, single domains meeting it)."""
+    t = d["table"].sort_values("survey")
+    rows = {}
+    for gis, s in t.groupby("gis"):
+        s = s.reset_index(drop=True)
+        if len(s) < 2:
+            continue
+        lidar_drop = s.survey_median_m.iloc[0] - s.survey_median_m
+        missed = lidar_drop - (s.model_median_m.iloc[0] - s.model_median_m)
+        ok = (lidar_drop >= LOOSE_DROP_M) & (s.index > 0)
+        k = int(missed.where(ok).idxmax()) if ok.any() else int(missed.iloc[1:].idxmax())
+        after = s.model_minus_survey_m.iloc[k:]
+        rows[gis] = dict(drop_survey=int(s.survey.iloc[k]), lidar_drop_m=lidar_drop.iloc[k],
+                         missed_loss_m=missed.iloc[k], persist=(after > LOOSE_OFF_M).mean(), mean_m=after.mean())
+    m = pd.DataFrame.from_dict(rows, orient="index").reindex(range(1, 91))
+    hit = ((m.persist >= LOOSE_PERSIST) & (m.mean_m >= LOOSE_OFF_M) & (m.lidar_drop_m >= LOOSE_DROP_M)
+           & (m.missed_loss_m >= LOOSE_DROP_M)).fillna(False).to_numpy()
+    runs = stretches(hit)
+    covered = np.zeros(90, bool)
+    for lo, hi in runs:
+        covered[lo - 1:hi] = True
+    m["hit"] = hit
+    return m, runs, [i + 1 for i in np.flatnonzero(hit & ~covered)]
+
+
 def exposure(d):
     """Per GIS: storms per cell in collision (toe < R_high < model crest at the start of the storm's year)."""
     ss, crests, toes = d["storm_series"], d["crests"], d["toes"]
