@@ -750,7 +750,7 @@ def build_cascade(
     wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction,
     berm_elevation, MHW, data_base, parameter_file,
     relocation_setback_m=None, beta=0.04, road_dune_rebuild_trigger_m=20.0,
-    village_dune_cap_navd88_m=None,
+    village_dune_cap_navd88_m=None, village_dune_migration_until_nourished=True,
     groin_module=False, groin_updrift_pad=None, groin_downdrift_pad=None,
     groin_strength_history=None, groin_start_year=1,
     groin_spread_weights=(1.0, 0.0, 0.0),
@@ -820,6 +820,11 @@ def build_cascade(
             this behind the dune, RoadwayManager leaves the dunes to
             Barrier3D's natural growth instead of rebuilding them. 20 m is
             obx-cascade's default.
+        village_dune_migration_until_nourished: Village dune lines migrate
+            with the shoreline until their domain is first nourished, then
+            CASCADE's fixed line (cascade_pipeline/village_migration.py).
+            False keeps CASCADE's fixed village dune line throughout (the
+            behaviour of every run before 2026-11-12).
         village_dune_cap_navd88_m: The beach/dune manager's dune cap, m
             NAVD88, which it clips the whole village dune cell to every
             year. None keeps obx-cascade's 4 m above the berm (Nags Head).
@@ -907,6 +912,12 @@ def build_cascade(
     if village_dune_cap_navd88_m is not None:
         for manager in cascade.nourishments:
             manager._artificial_maximum_dune_height = village_dune_cap_navd88_m - berm_elevation
+
+    # Village dune lines follow the shoreline until the first nourishment (cascade_pipeline/village_migration.py;
+    # the default since 2026-11-12, the lidar's 1996-2009 dune lines moving with the shoreline in the villages too)
+    if village_dune_migration_until_nourished:
+        from cascade_pipeline.village_migration import migrate_until_nourished
+        migrate_until_nourished(cascade)
 
     # The relocation target is an argument (road_relocation_setback); None relocates to the measured offset
 

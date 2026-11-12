@@ -236,6 +236,9 @@ def setup_scenario(r):
 
     # The beach/dune manager clips village dunes to this every year, m NAVD88 (lidar-measured, 2026-10-29)
     r.VILLAGE_DUNE_CAP_NAVD88_M = r.RUN_CONFIG.village_dune_cap_navd88_m
+
+    # Village dune lines migrate until their domain is first nourished, then CASCADE's fixed line (2026-11-12)
+    r.VILLAGE_MIGRATE_UNTIL_NOURISHED = r.RUN_CONFIG.village_dune_migration_until_nourished
     # -----------------------------------------------------------------------------
 
     # Sensitivity tokens

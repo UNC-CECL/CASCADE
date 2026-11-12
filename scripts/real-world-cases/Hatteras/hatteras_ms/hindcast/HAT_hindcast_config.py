@@ -161,6 +161,9 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # beach_dune_manager's village dune cap, m NAVD88 (2026-10-29): obx-cascade's 4 m above the berm
     # (5.7 m, Nags Head) pinned village dunes below lidar; 8.0 m is the lidar village p95 / tallest medians
     ("village_dune_cap_navd88_m",    ("village_dune_cap_navd88_m",), _as_float, 8.0),
+    # Village dune lines follow the shoreline until the first nourishment, then CASCADE's fixed line (2026-11-12:
+    # the 1996-2009 lidar shows them moving with the shoreline; cascade_pipeline/village_migration.py)
+    ("village_dune_migration_until_nourished", ("village_dune_migration_until_nourished",), _as_bool, True),
 
     # Management, not physics: a defence someone decides to build
     ("sandbags",                     ("sandbags",),                 _as_bool,  False),

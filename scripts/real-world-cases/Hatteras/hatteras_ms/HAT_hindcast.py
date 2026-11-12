@@ -143,6 +143,7 @@ r.cascade = build_cascade(
 
     # The villages: beach/dune management, overwash removal and nourishment
     village_dune_cap_navd88_m=r.VILLAGE_DUNE_CAP_NAVD88_M,
+    village_dune_migration_until_nourished=r.VILLAGE_MIGRATE_UNTIL_NOURISHED,
     beach_dune_manager_on=r.BEACH_DUNE_MANAGEMENT_ON,
     overwash_filter=r.OVERWASH_FILTER,
     overwash_to_dune=r.OVERWASH_TO_DUNE,

@@ -65,6 +65,10 @@ road_dune_rebuild_trigger_m: 20
 # Village (beach/dune manager) dune cap, m NAVD88; obx-cascade's own is 5.7 (4 m above the berm)
 village_dune_cap_navd88_m: 8.0
 
+# Village dune lines follow the shoreline until the domain is first nourished, then CASCADE's fixed line;
+# false = CASCADE's fixed village dune line throughout (every run before 2026-11-12)
+village_dune_migration_until_nourished: true
+
 sandbags: false
 
 # --- output (does not change the simulation) ---------------------------------
