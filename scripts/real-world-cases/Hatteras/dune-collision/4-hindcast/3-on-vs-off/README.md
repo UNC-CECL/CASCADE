@@ -18,6 +18,13 @@ testing-log section, script) is that folder's `README.md`. Each script names its
 
 What was tested and found, with the figure names: `../TESTING_2026-11-09_to_11.md`.
 
+Presentation figures for the original design (2026-11-12, log section 20), `HAT_collision_on_off_position.py`:
+`zonesonoff` and `zonescrest` (position change, and with the crest offset heatmaps, each with a `_nozones` twin, in
+`6-missed-drops/1-zones/`), `zonessens` and `zonessensvmig` (the % sensitivity on the zn2 zones, village dune lines
+fixed or migrating), `villagemig` and `villagemigcrests` (village dune lines fixed against migrating, no added erosion),
+the last four in `6-missed-drops/2-by-design/3-lower-both-rows_equal-rows/`. `HAT_be_hotspot_zones.py zones lowerboth`
+draws the zone figure from the original design's run.
+
 Most of these were drawn by session scripts from runs already made (nothing in them is refit); the crest maps go
 through `HAT_collision_crest_compare.py` and the position plots through `HAT_dune_collision.py plot`.
 

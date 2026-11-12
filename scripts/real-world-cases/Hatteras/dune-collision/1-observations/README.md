@@ -93,10 +93,13 @@ What they show (from the 2026-10-27/28 record, `../4-hindcast/1-calibration-1996
 
 `8-dune-change-by-survey/HAT_dune_change_by_survey.py [region ...]`: every 1996-2009 lidar survey on the 2009 datum,
 the coast unrolled along NC-12, for the stretches where the module misses the measured crest drops: north of Buxton
-(GIS 10-15), Avon south (GIS 21-26) and Rodanthe (GIS 82-89). Per region `<region>_dunes_by_survey.png`,
+(GIS 10-15), Avon south (GIS 21-26) and Rodanthe (GIS 82-89). Each region in its own subfolder, south to north
+(`1-buxton/`, `2-avon-south/`, `3-rodanthe/`, each with its `supporting/`; since 2026-11-12): `<region>_dunes_by_survey.png`,
 `<region>_dune_change_between_surveys.png`, `<region>_dune_profiles.png`, `<region>_aerial_by_year.png`, and the
-same surveys and photographs as north-up maps in true geometry, `<region>_plan_lidar.png` and
-`<region>_plan_aerial.png` (2026-11-12); across them
+same surveys, their change and the photographs as north-up maps in true geometry, `<region>_plan_lidar.png`,
+`<region>_plan_dune_change.png` and `<region>_plan_aerial.png`. The three plan figures of a region share one fixed
+layout (the same size, nine panel slots at the same places, colour bar and legend fixed), so they stack as layers on
+slides; each change map sits under its later survey's map. At the top, across the regions,
 `hotspot_crest_check.png` (the picked survey crest against the highest lidar point between NC-12 and the beach);
 `supporting/` holds `datum_check.csv`, `hotspot_crest_check.csv` and the unzipped 2002 photographs. The surveys, the
 datum and the unrolled frame are in `../../site_layer/hat_lidar_strips.py` (its `REGIONS`; add a Region there to draw another stretch). Since 2026-11-12 the strips unroll the
@@ -104,6 +107,16 @@ coast along NC-12's 2008 alignment smoothed over about 1 km (Gaussian, sigma 250
 offset: along the raw road, Rodanthe's S-curves (about 40 degrees of turning in 4 km) bent the shoreline and the house
 rows out of shape. Profiles and the crest check still measure from the road itself. Merged on 2026-11-12 from `8-buxton-dune-change` (asked because the module cannot lower GIS 10-12 in
 time, `../4-hindcast/TESTING_2026-11-09_to_11.md` section 4) and `9-hotspot-dune-change` (sections 17-18).
+
+Two island-wide checks beside them (2026-11-12, testing log section 20), figures at the folder's top:
+- `HAT_dune_line_position.py [plot]` -> `dune_line_retreat.png`: did the dune line move landward with the shoreline,
+  in the villages as on the open coast? Beach start, toe and crest per 10 m cell in the 1996 frame, first survey to
+  2009. Yes, where the shoreline retreated (about 1:1 in the Tri-Village and on the open coast); where it accreted the
+  dune line stayed. The basis for the pipeline's village dune migration until the first nourishment.
+- `HAT_independent_crest_heatmap.py [plot]` -> `crest_offset_picked_vs_independent.png`: the picked crest (the crest
+  heatmaps') against the highest point from NC-12 + 8 m to MHW, GIS 9-89. The picks read 0.2-0.6 m lower (10 m cell
+  centres), and about 0.8 m more at Buxton 9-15 in 2004-05 beside the rebuilt dune (hatched since on the crest
+  heatmaps); the independent crest fails in the villages (rooftops).
 
 **Buxton.** At GIS 10-12 the original foredune was cut down and pushed landward in 1997-1999 (GIS 11 already by 1998;
 1998-1999 the strongest loss, along the dune front), ending at about the Dennis peak water level (3.6-4 m); then a new,

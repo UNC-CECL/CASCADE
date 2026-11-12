@@ -534,9 +534,33 @@ BE_HOTSPOT_100 = {
                                    23: -0.97, 24: -0.70, 82: -0.63, 83: -0.67, 84: -0.79, 85: -1.26, 86: -1.09,
                                    87: -0.88, 88: -0.90, 89: -0.66}}
 BE_HOTSPOT = {f"{_b}_be{_p}": (_b, _p / 100) for _b in BE_HOTSPOT_100 for _p in (25, 50, 75, 100)}
-for _alias, (_base, _) in BE_HOTSPOT.items():
+# The original design's second zone set (2026-11-12, zn2): Buxton from GIS 9, its sink in the run without the module
+# (residual -0.51 m/yr; 9 gets this design's own -0.45), and Avon south moved two domains north, its rates for GIS
+# 21-24 put on 23-26 where its missed crest drops are (23-27); Rodanthe unchanged. Zones 9-14, 23-26, 82-89.
+# Variants whose 100% rates are not their base's own
+BE_HOTSPOT_RATES = {}
+_ZN2 = {(_g + 2 if 21 <= _g <= 24 else _g): _r for _g, _r in BE_HOTSPOT_100["cal_toeberm_cs2"].items()}
+_ZN2[9] = -0.45
+for _p in (25, 50, 75, 100):
+    BE_HOTSPOT[f"cal_toeberm_cs2_zn2_be{_p}"] = ("cal_toeberm_cs2", _p / 100)
+    BE_HOTSPOT_RATES[f"cal_toeberm_cs2_zn2_be{_p}"] = dict(sorted(_ZN2.items()))
+# Dune migration on in the villages (2026-11-12): CASCADE hands every village BeachDuneManager a beach-width threshold
+# of 0 m (cascade.py), so a village dune line stays put until its beach is gone, which suits a nourished beach; there
+# was no nourishment at Avon or the Tri-Village in 1996-2009 (HATTERAS_NOURISHMENT_PROJECTS: 2014 onward). These
+# variants raise the threshold out of reach, so the dune line follows the shoreline in the villages as elsewhere.
+# The manager's own beach-width record keeps subtracting shoreline change as before (it assumes a fixed dune line)
+VILLAGE_MIGRATE = {"cal_toeberm_cs2_vmig"}
+VILLAGE_MIGRATE_THRESHOLD_M = 1e9
+# cal_toeberm_cs2_vdefault (2026-11-12): the original design rerun on the new pipeline default (village dune lines
+# migrate until first nourished, cascade_pipeline/village_migration.py), to check it reproduces cal_toeberm_cs2_vmig
+_VMIG_ALIAS = {"cal_toeberm_cs2_vmig": "cal_toeberm_cs2", "cal_toeberm_cs2_vdefault": "cal_toeberm_cs2"}
+for _p in (50, 100):
+    BE_HOTSPOT[f"cal_toeberm_cs2_zn2_vmig_be{_p}"] = ("cal_toeberm_cs2", _p / 100)
+    BE_HOTSPOT_RATES[f"cal_toeberm_cs2_zn2_vmig_be{_p}"] = dict(sorted(_ZN2.items()))
+    VILLAGE_MIGRATE.add(f"cal_toeberm_cs2_zn2_vmig_be{_p}")
+for _alias, (_base, _) in [*BE_HOTSPOT.items(), *((a, (b, None)) for a, b in _VMIG_ALIAS.items())]:
     for _name, _obj in list(globals().items()):
-        if not _name.isupper() or _name in ("BE_HOTSPOT", "BE_HOTSPOT_100"):
+        if not _name.isupper() or _name in ("BE_HOTSPOT", "BE_HOTSPOT_100", "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE"):
             continue
         if isinstance(_obj, dict) and _base in _obj:
             _obj[_alias] = _obj[_base]
@@ -1051,6 +1075,18 @@ def _launch(variant):
                 n += 1
         print(f"\nEXPERIMENT village overwash filter {p:g}% to the shoreface on {n} village domains", flush=True)
 
+    # Village dune migration on (VILLAGE_MIGRATE): the village managers' beach-width threshold out of reach
+    def village_migrate(c):
+        if variant not in VILLAGE_MIGRATE:
+            return
+        n = 0
+        for i, mgr in enumerate(c.nourishments):
+            if mgr is not None and c._beach_nourishment_module[i]:
+                mgr._beach_width_threshold = VILLAGE_MIGRATE_THRESHOLD_M
+                n += 1
+        print(f"\nEXPERIMENT dune migration on in the villages: beach-width threshold {VILLAGE_MIGRATE_THRESHOLD_M:g} m "
+              f"on {n} village domains", flush=True)
+
     # the 198 m (650 ft) shoreline-to-road gate (SHORELINE_GATE) as each road manager's gate behind the dune; was applied
     # only with the module on until 2026-11-04 (cal_control_g16_rd198 ran without it)
     def road_gate(c, dom, width):
@@ -1183,12 +1219,14 @@ def _launch(variant):
                     if variant in RODANTHE_NO_OW_TO_DUNE and name == "Rodanthe":
                         mgr._overwash_to_dune = 0
             village_filter(c)
+            village_migrate(c)
             managers.update({g: dom.gis_to_pad(g) for g in on}, cascade=c)
             print(f"\nEXPERIMENT collision: dune_collision_module on GIS {on[0]}-{on[-1]}, Cs {cs:.1e}"
                   + (f", beach W0 {w0:g} m" if w0 else ""), flush=True)
             return c
         c = orig_build(*a, **k)
         village_filter(c)
+        village_migrate(c)
         dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
         road_gate(c, dom, per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median()))
         rodanthe_40(c, dom)
@@ -1339,7 +1377,7 @@ def launch(variant):
     sink = BUXTON_SINK if variant in SINK_VARIANTS else None
     if variant in BE_HOTSPOT:
         _b, _f = BE_HOTSPOT[variant]
-        sink = {g: round(_f * r, 4) for g, r in BE_HOTSPOT_100[_b].items()}
+        sink = {g: round(_f * r, 4) for g, r in BE_HOTSPOT_RATES.get(variant, BE_HOTSPOT_100[_b]).items()}
     overrides = {**(sink or {}), **ENDS.get(variant, {})}
     if overrides:
         env["HAT_BE_OVERRIDE"] = ",".join(f"{g}={r}" for g, r in overrides.items())

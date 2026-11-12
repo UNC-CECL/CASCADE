@@ -6,8 +6,9 @@ groin's 5-7 excluded; input_prep/7-source-sink/README.md, the zone rework step 2
 
     python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/3-on-vs-off/HAT_be_hotspot_zones.py [results]
 
-"zones" draws step 1's figure, hotspot_erosion_zones.png, beside the tables. "results" (step 2) reads the 25-100% runs
-(HAT_dune_collision.py BE_HOTSPOT) and writes each design's _alongshore.png and _crests_over_time.png in 2-by-design/,
+"zones" draws step 1's figure, hotspot_erosion_zones.png, beside the tables; "zones lowerboth" (or any design
+tag's start) draws it from that design's run instead, as hotspot_erosion_zones_<tag>.png with its own tables. "results" (step 2) reads the 25-100% runs
+(HAT_dune_collision.py BE_HOTSPOT) and writes each design's _alongshore.png and _crests_over_time.png in 2-by-design/<design>/,
 and in 3-compared/ hotspot_erosion_designs_compared.png and supporting/hotspot_erosion_results.csv (per run and zone:
 the imposed rate, the extra retreat it produced and the share retained, the gap left to CoastSat, the extra overwash,
 the lidar crest drops caught). "crests" and "positions" build the 2 x 2 composites in 3-compared/. The position change
@@ -78,9 +79,14 @@ def target_lrr():
     return t.set_index("gis_domain")["target_lrr_m_yr"]
 
 
-def main():
+def table_suffix(base):
+    """'' for the base the runs were set up from (the tables step 2 reads); _<tag> for any other design."""
+    return "" if base == BASE else f"_{DESIGNS[base][1]}"
+
+
+def main(base=BASE):
     (ZONES_DIR / "supporting").mkdir(parents=True, exist_ok=True)
-    d = M.pairs(BASE)
+    d = M.pairs(base)
     d["cls"] = d.apply(M.classify, axis=1)
     per = d.groupby("gis").agg(missed=("cls", lambda c: int((c == 0).sum())),
                                caught=("cls", lambda c: int((c == 1).sum())),
@@ -88,7 +94,7 @@ def main():
     per["missed_intervals"] = d[d.cls == 0].groupby("gis").apply(
         lambda x: " ".join(f"{a}-{b % 100:02d}" for a, b in zip(x.a, x.b)), include_groups=False)
     per = per.reindex(range(1, 91))
-    rate = pd.read_csv(H.run_dir(BASE) / "tables" / "shoreline_change_rate.csv").set_index("gis_domain").lrr_m_yr
+    rate = pd.read_csv(H.run_dir(base) / "tables" / "shoreline_change_rate.csv").set_index("gis_domain").lrr_m_yr
     tgt = target_lrr()
     per["model_lrr"], per["coastsat_lrr"] = rate, tgt
     per["residual"] = tgt - rate                              # (-): the model erodes too little; Barrier3D's sign
@@ -111,8 +117,9 @@ def main():
                          ss_zones=", ".join(sorted({s for s in z.ss_zone if s})) or "none",
                          rates_100=" ".join(f"{g}={r:+.2f}" for g, r in z.residual.items() if r < 0)))
     zones = pd.DataFrame(rows)
-    per.round(3).to_csv(ZONES_DIR / "supporting" / "be_hotspot_by_gis.csv")
-    zones.to_csv(ZONES_DIR / "supporting" / "be_hotspot_zones.csv", index=False)
+    sfx = table_suffix(base)
+    per.round(3).to_csv(ZONES_DIR / "supporting" / f"be_hotspot_by_gis{sfx}.csv")
+    zones.to_csv(ZONES_DIR / "supporting" / f"be_hotspot_zones{sfx}.csv", index=False)
     pd.set_option("display.width", 250)
     pd.set_option("display.max_colwidth", 120)
     print("source/sink zones:", ss)
@@ -130,12 +137,36 @@ DESIGNS = {
     "cal_toeberm_lat_cs10": ("Face retreat, equal rows, Cs 1e-5", "faceretreat_equal_cs1e-5", "#2171B5"),
     "cal_toeberm_lat_cs3_maxmed": ("Face retreat, low back row, Cs 3e-6", "faceretreat_lowback_cs3e-6", "#E66101"),
 }
+# Each design's subfolder of 2-by-design/: the base (where the zones were found) first
+DESIGN_FOLDERS = {"cal_toeberm_lat_cs3_maxmed": "1-base_face-retreat_low-back-row",
+                  "cal_step2_growth_noscrape": "2-no-collision_equal-rows",
+                  "cal_toeberm_cs2": "3-lower-both-rows_equal-rows",
+                  "cal_toeberm_lat_cs10": "4-face-retreat_equal-rows"}
+
+
+def design_dir(base):
+    return DESIGN_DIR / DESIGN_FOLDERS[base]
+
+
 COLOURS = {0: "#1A1A1A", 25: "#CBC9E2", 50: "#9E9AC8", 75: "#756BB1", 100: "#54278F"}
 TS_GIS = (11, 12, 13, 23, 84, 86)
 EVENTS = ((1998.65, "Bonnie"), (1999.67, "Dennis"), (2003.71, "Isabel"))
 ZONES = {"Buxton, GIS 10-14": range(10, 15), "Avon south, GIS 21-24": range(21, 25),
          "Rodanthe, GIS 82-89": range(82, 90)}
 ZONE_COLOURS = {"Buxton, GIS 10-14": "#E66101", "Avon south, GIS 21-24": "#1A9850", "Rodanthe, GIS 82-89": "#2171B5"}
+# The original design's zones since 2026-11-12 (zn2): Buxton from GIS 9, its sink in the run without the module, and
+# Avon south moved two domains north, from its shoreline sink (21-24) onto its missed crest drops (23-27); its runs are
+# cal_toeberm_cs2_zn2_be* (HAT_dune_collision.py BE_HOTSPOT_RATES)
+ZONES_AVN2 = {"Buxton, GIS 9-14": range(9, 15), "Avon south, GIS 23-26": range(23, 27),
+              "Rodanthe, GIS 82-89": range(82, 90)}
+ZONE_COLOURS["Buxton, GIS 9-14"] = ZONE_COLOURS["Buxton, GIS 10-14"]
+ZONE_COLOURS["Avon south, GIS 23-26"] = ZONE_COLOURS["Avon south, GIS 21-24"]
+ORIGINAL = "cal_toeberm_cs2"                    # the original design: lower both rows, equal rows, Cs 2e-6
+
+
+def zones_of(base):
+    """The zone set a design's figures mark: Avon south at 23-26 for the original design, 21-24 for the rest."""
+    return ZONES_AVN2 if base == ORIGINAL else ZONES
 SOURCE_HOTSPOTS = ((35, 38), (51, 55))          # missed-drop hotspots on a source/sink source: no erosion added
 MARKERS = ("o", "s", "^", "D")
 SHARED = "toe at the berm, growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's interior"
@@ -267,7 +298,7 @@ def alongshore_figure(plt, S, base, per, data, res):
     for k, ax in enumerate((ax_a, ax_b, *small)):
         ax.text(-0.01 if k < 2 else -0.04, 1.02, f"({'abcde'[k]})", transform=ax.transAxes, fontsize=10,
                 fontweight="bold", ha="right", va="bottom")
-    out = DESIGN_DIR / f"hotspot_erosion_{tag}_alongshore.png"
+    out = design_dir(base) / f"hotspot_erosion_{tag}_alongshore.png"
     S.save(fig, out, bbox_inches="tight", close=True)
     S.record_caption(out, (
         "Background erosion added in the hotspots of missed lidar crest drops that lie on a source/sink sink "
@@ -313,7 +344,7 @@ def crests_figure(plt, S, base, data, lid):
     axs[0, 0].set_ylim(0, 9)
     h, l = axs[0, 0].get_legend_handles_labels()
     fig.legend(h, l, loc="outside lower center", ncol=4, fontsize=7.5, frameon=False)
-    out = DESIGN_DIR / f"hotspot_erosion_{tag}_crests_over_time.png"
+    out = design_dir(base) / f"hotspot_erosion_{tag}_crests_over_time.png"
     S.save(fig, out, bbox_inches="tight", close=True)
     S.record_caption(out, (
         "Domain-median dune crest (m NAVD88; the higher of Barrier3D's two dune rows) through 1996-2009 in six "
@@ -432,8 +463,8 @@ def composite(kind, name_out, caption):
     import matplotlib.image as mpimg
     import matplotlib.pyplot as plt
     from site_layer.hat_figure_style import record_caption
-    imgs = [(mpimg.imread(DESIGN_DIR / f"hotspot_erosion_{tag}_{kind}.png"), name)
-            for name, tag, _ in DESIGNS.values()]
+    imgs = [(mpimg.imread(design_dir(base) / f"hotspot_erosion_{tag}_{kind}.png"), name)
+            for base, (name, tag, _) in DESIGNS.items()]
     h, w = imgs[0][0].shape[:2]
     scale = 9.0 / w
     fig, axs = plt.subplots(2, 2, figsize=(2 * w * scale, 2 * (h * scale + 0.45)))
@@ -449,7 +480,7 @@ def composite(kind, name_out, caption):
     print(f"wrote {out}")
 
 
-def zones():
+def zones(base=BASE):
     """Step 1 on its own: how the zones were found. (a) every lidar survey interval and domain classed by the base
     run (missed, caught, model only, neither); (b) missed drops per domain, the missed-drop stretches bracketed;
     (c) the source/sink residual with its +-0.5 m/yr rule and the source and sink zones it makes. The three zones
@@ -461,9 +492,12 @@ def zones():
     from matplotlib.patches import Patch
     from site_layer import hat_figure_style as S
     S.apply_style()
-    per = pd.read_csv(ZONES_DIR / "supporting" / "be_hotspot_by_gis.csv", index_col=0)
-    zt = pd.read_csv(ZONES_DIR / "supporting" / "be_hotspot_zones.csv")
-    d = M.pairs(BASE)
+    sfx = table_suffix(base)
+    if not (ZONES_DIR / "supporting" / f"be_hotspot_zones{sfx}.csv").is_file():
+        main(base)
+    per = pd.read_csv(ZONES_DIR / "supporting" / f"be_hotspot_by_gis{sfx}.csv", index_col=0)
+    zt = pd.read_csv(ZONES_DIR / "supporting" / f"be_hotspot_zones{sfx}.csv")
+    d = M.pairs(base)
     d["cls"] = d.apply(M.classify, axis=1)
     ivs = list(zip(M.SURVEYS[:-1], M.SURVEYS[1:]))
     grid = np.full((len(ivs), 90), np.nan)
@@ -515,7 +549,7 @@ def zones():
     ax_c.set_xticks([1] + list(range(10, 91, 10)))
     ax_c.set_xlabel(S.DOMAIN_AXIS_LABEL)
     for ax in (ax_a, ax_b, ax_c):
-        for zn, zr in ZONES.items():
+        for zn, zr in zones_of(base).items():
             if ax is ax_a:
                 ax.axvspan(zr[0] - 0.5, zr[-1] + 0.5, facecolor="none", edgecolor=ZONE_COLOURS[zn], lw=1.6, zorder=5)
             else:
@@ -525,27 +559,36 @@ def zones():
                 ax.axvspan(a - 0.5, b + 0.5, facecolor="none", edgecolor="0.75", hatch="////", lw=0, zorder=0)
         if ax is not ax_a:
             ax.spines[["top", "right"]].set_visible(False)
-    for zn, zr in ZONES.items():
+    for zn, zr in zones_of(base).items():
         ax_b.text((zr[0] + zr[-1]) / 2, ymax + 1.85, zn.split(",")[0], ha="center", va="top", fontsize=7.5,
                   fontweight="bold", color=ZONE_COLOURS[zn])
     for ax, L in zip((ax_a, ax_b, ax_c), "abc"):
         ax.set_title(f"({L})", loc="left", fontweight="bold", x=-0.085 if ax is ax_a else -0.085)
-    out = ZONES_DIR / "hotspot_erosion_zones.png"
+    out = ZONES_DIR / f"hotspot_erosion_zones{sfx}.png"
     S.save(fig, out, dpi=300, facecolor="white", close=True)
     S.record_caption(out, (
-        "How the hotspot erosion zones were found (step 1), from the base run (face retreat, low back row, Cs 3e-6; "
-        f"{SHARED}). (a) Each lidar survey interval and domain: red, the lidar crest fell at least "
+        f"How the hotspot erosion zones were found (step 1), from the run {DESIGNS[base][0].lower()} "
+        f"({SHARED}). The same three zones come out of the run without the collision module (its Buxton sink one "
+        "domain longer, GIS 9-14) and of each design tested. (a) Each lidar survey interval and domain: red, the lidar crest fell at least "
         f"{M.DROP_M:g} m and the model fell less than half as much (missed); green, caught; blue, the model fell at "
         "least that much with no drop in the lidar; light, neither; white, too few surveyed cells. (b) Missed drops "
         "per domain; bracketed, the missed-drop stretches (three or more domains, a one-domain gap allowed). (c) The "
         "source/sink residual, smoothed CoastSat 1996-2009 shoreline rate minus the model's (negative: the model "
         f"erodes too little); dashed, the ±{SIG_M_YR:g} m/yr rule; dark bars pass it; pale, GIS 1, 5-7 and 90, "
         f"excluded. A sink or source zone is {MIN_WIDTH} or more neighbouring domains past the rule with one sign. "
-        "Coloured, the three missed-drop stretches on a sink, which got the background erosion (Buxton GIS 10-14, "
-        "Avon south GIS 21-24, Rodanthe GIS 82-89; the sink's extent); hatched, the two on a source (GIS 35-38, "
-        "51-55), given none."))
+        "Coloured, the three missed-drop stretches on a sink, which got the background erosion ("
+        + ("Buxton GIS 9-14, its sink in the run without the module; Avon south GIS 23-26, moved two domains north of "
+           "its sink (21-24) onto its missed drops; " if base == ORIGINAL else
+           "Buxton GIS 10-14, Avon south GIS 21-24, ")
+        + "Rodanthe GIS 82-89; otherwise the sink's extent); hatched, the two on a source (GIS 35-38, 51-55), given "
+        "none."))
     print(f"wrote {out}")
 
 
 if __name__ == "__main__":
-    {"results": results, "positions": positions, "crests": crests, "zones": zones}.get(sys.argv[1] if len(sys.argv) > 1 else "", main)()
+    # zones [nocollision|lowerboth|faceretreat_equal|faceretreat_lowback]: step 1's figure from that design's run
+    _arg = sys.argv[1] if len(sys.argv) > 1 else ""
+    if _arg == "zones" and len(sys.argv) > 2:
+        zones(next(b for b, (_, tag, _) in DESIGNS.items() if tag.startswith(sys.argv[2])))
+    else:
+        {"results": results, "positions": positions, "crests": crests, "zones": zones}.get(_arg, main)()

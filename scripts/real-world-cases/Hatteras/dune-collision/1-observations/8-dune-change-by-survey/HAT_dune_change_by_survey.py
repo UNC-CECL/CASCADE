@@ -19,7 +19,8 @@ landward out of that window, or a new one is built elsewhere, the pick lands on 
 Here, independently of the windows: for every alongshore line, the highest lidar point between NC-12 (+8 m) and the
 beach (the first point below mean high water), and its distance seaward of the road.
 
-Writes, in the workspace's dune-collision/1-observations/8-dune-change-by-survey/, per region:
+Writes, in the workspace's dune-collision/1-observations/8-dune-change-by-survey/, per region in its own subfolder
+(1-buxton/, 2-avon-south/, 3-rodanthe/, south to north):
 - <region>_dunes_by_survey.png: the coast unrolled along NC-12 smoothed over about 1 km, one strip per survey (terrain colours, hillshade, the
   cross-shore stretched), the berm (1.7 m) contour, NC-12 where it was, the domain boundaries
 - <region>_dune_change_between_surveys.png: each survey minus the one before
@@ -27,6 +28,7 @@ Writes, in the workspace's dune-collision/1-observations/8-dune-change-by-survey
   with the storm series' 1998 and 1999 peak water levels (Bonnie 2.64 m, Dennis 3.65 m NAVD88)
 - <region>_aerial_by_year.png: the aerial photographs of 1993-2009 in the same frame
 - <region>_plan_lidar.png, <region>_plan_aerial.png: the surveys and the photographs as north-up maps, true geometry
+- <region>_plan_dune_change.png: each survey minus the one before, as north-up maps
 and across them:
 - hotspot_crest_check.png: per domain, the picked crest against the highest point between NC-12 and the beach
 - supporting/hotspot_crest_check.csv, supporting/datum_check.csv (each survey's difference from 2009 on NC-12 per
@@ -54,6 +56,12 @@ from site_layer import hat_lidar_strips as L  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 OUT = WORKSPACE / "dune-collision" / "1-observations" / "8-dune-change-by-survey"
 IMAGERY_CACHE = OUT / "supporting" / "imagery_2002_unzipped"
+# One subfolder per region, south to north (2026-11-12); the island-wide crest check stays at the top
+REGION_ORDER = ("buxton", "avon_south", "rodanthe")
+
+
+def region_dir(r):
+    return OUT / f"{REGION_ORDER.index(r.name) + 1}-{r.name.replace('_', '-')}"
 SEAWARD_OF_ROAD_M = 8.0          # the independent crest: searched from this far seaward of NC-12 (off the shoulder)
 PLAN_LAND_M, PLAN_SEA_EXTRA_M = 120.0, 20.0   # the plan maps: landward of NC-12, beyond the strips' reach
 PLAN_AERIAL_RES_M = 1.0
@@ -94,7 +102,7 @@ def strips(r, surv, st, S_, plt):
     L.colorbar(fig, axs, plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(*L.TERRAIN_RANGE)),
                "Elevation (m NAVD88)")
     _legend(fig, r, (Line2D([], [], color="0.6", lw=0.6, label="Berm, 1.7 m (module toe; white on the map)"),))
-    out = OUT / f"{r.name}_dunes_by_survey.png"
+    out = region_dir(r) / f"{r.name}_dunes_by_survey.png"
     S_.save(fig, out, bbox_inches="tight", close=True)
     S_.record_caption(out, (
         f"Lidar elevation of {_title(r)}, in every 1996-2009 survey (rows; flight months beneath each year), "
@@ -134,7 +142,7 @@ def strip_changes(r, surv, st, S_, plt):
     fig.supylabel(L.STRIP_YLABEL, fontsize=8)
     L.colorbar(fig, axs, im, "Elevation change between surveys (m; red lower, blue higher)", extend="both")
     _legend(fig, r)
-    out = OUT / f"{r.name}_dune_change_between_surveys.png"
+    out = region_dir(r) / f"{r.name}_dune_change_between_surveys.png"
     S_.save(fig, out, bbox_inches="tight", close=True)
     S_.record_caption(out, (
         f"Elevation change of {_title(r)}, between successive lidar surveys (rows), the coast unrolled as in "
@@ -212,7 +220,7 @@ def profiles(r, surv, g, dom, roads, S_, plt):
           Line2D([], [], color="0.55", lw=0.6, label="Berm, 1.7 m (module toe)")]
     fig.legend(handles=h, loc="outside lower center", ncol=7, fontsize=7, frameon=False, handlelength=2.0,
                columnspacing=1.3)
-    out = OUT / f"{r.name}_dune_profiles.png"
+    out = region_dir(r) / f"{r.name}_dune_profiles.png"
     S_.save(fig, out, bbox_inches="tight", close=True)
     S_.record_caption(out, (
         f"One cross-shore lidar profile per domain, {_title(r)} (the 100 m transect nearest each domain's middle), in "
@@ -245,7 +253,7 @@ def imagery_strips(r, st, g, S_, plt):
         " (relocation records)" if r.relocated_by_survey else " (2008 alignment)")),
                         Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain boundary")],
                loc="outside lower center", ncol=2, fontsize=7, frameon=False, handlelength=2.2)
-    out = OUT / f"{r.name}_aerial_by_year.png"
+    out = region_dir(r) / f"{r.name}_aerial_by_year.png"
     S_.save(fig, out, bbox_inches="tight", close=True)
     years = ", ".join(str(x[0]) for x in rows)
     S_.record_caption(out, (
@@ -271,12 +279,60 @@ def _plan_window(r, g, roads):
     return min(xs) - PLAN_LAND_M, max(xs) + r.sea_m + PLAN_SEA_EXTRA_M, t.f + h * t.e + L.PAD_M, t.f - L.PAD_M
 
 
-def _plan_axes(S_, plt, n, window):
+# The plan maps share one fixed layout per region (2026-11-12), so they stack as layers on slides: the same figure
+# size, PLAN_COLS panels at the same positions, the colour bar and legend in the same places (an empty slot or no colour
+# bar is left blank, not closed up). The change maps sit in their later survey's slot, under that survey's map
+PLAN_COLS = 9
+PLAN_IN = dict(left=0.12, right=0.12, gap=0.07, top=0.42, bottom=1.05)       # inches
+
+
+def _plan_axes(S_, plt, window):
+    """The fixed layout: figure, the PLAN_COLS panel axes (south-north map panels, left to right) and the colour-bar
+    axes; nothing laid out by matplotlib, and saved without trimming, so every plan figure of a region matches."""
     x0, x1, y0, y1 = window
-    panel_w = S_.FIG_W_DOUBLE * 0.93 / n
-    fig, axs = plt.subplots(1, n, figsize=(S_.FIG_W_DOUBLE, panel_w * (y1 - y0) / (x1 - x0) + 0.8),
-                            layout="constrained", squeeze=False)
-    return fig, axs[0]
+    m = PLAN_IN
+    W = S_.FIG_W_DOUBLE
+    pw = (W - m["left"] - m["right"] - m["gap"] * (PLAN_COLS - 1)) / PLAN_COLS
+    ph = pw * (y1 - y0) / (x1 - x0)
+    H = m["top"] + ph + m["bottom"]
+    fig = plt.figure(figsize=(W, H))
+    axs = [fig.add_axes([(m["left"] + k * (pw + m["gap"])) / W, m["bottom"] / H, pw / W, ph / H])
+           for k in range(PLAN_COLS)]
+    for ax in axs:
+        ax.axis("off")                                   # switched back on by the panels that are drawn
+    cax = fig.add_axes([0.275, 0.62 / H, 0.45, 0.09 / H])
+    cax.axis("off")
+    return fig, axs, cax
+
+
+def _plan_panel(ax):
+    ax.axis("on")
+
+
+def _plan_colorbar(fig, cax, mappable, label, extend="neither"):
+    cax.axis("on")
+    cb = fig.colorbar(mappable, cax=cax, orientation="horizontal", extend=extend)
+    cb.set_label(label, fontsize=8)
+    cb.ax.tick_params(labelsize=7, width=0.5, length=2.5)
+    cb.outline.set_linewidth(0.5)
+
+
+def _plan_legend(fig, handles):
+    H = fig.get_size_inches()[1]
+    fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.5, 0.17 / H), ncol=len(handles), fontsize=7,
+               frameon=False, handlelength=2.2, columnspacing=1.6)
+
+
+def _plan_save(S_, fig, out):
+    S_.save(fig, out, dpi=300, close=True)                 # no trimming: every plan figure keeps the same frame
+
+
+def _legend_handles(r, extra=()):
+    from matplotlib.lines import Line2D
+    h = [Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12")]
+    if r.washed_out_survey:
+        h.append(Line2D([], [], color=L.ROAD_C, lw=1.0, ls=(0, (4, 2)), label=f"NC-12, washed out ({r.washed_out_survey})"))
+    return h + [Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain boundary"), *extra]
 
 
 def _plan_decorate(ax, r, year, dom, roads, window, crs, first):
@@ -324,8 +380,9 @@ def plan_lidar(r, surv, g, dom, roads, S_, plt):
     years = sorted(surv)
     ls = LightSource(azdeg=315, altdeg=45)
     cmap = plt.get_cmap("terrain")
-    fig, axs = _plan_axes(S_, plt, len(years), window)
+    fig, axs, cax = _plan_axes(S_, plt, window)
     for k, (ax, y) in enumerate(zip(axs, years)):
+        _plan_panel(ax)
         z = surv[y][0]
         zz = np.where(np.isfinite(z), z, L.TERRAIN_RANGE[0])
         rgb = ls.shade(np.clip(zz, *L.TERRAIN_RANGE), cmap=cmap, vert_exag=1, blend_mode="soft",
@@ -336,16 +393,49 @@ def plan_lidar(r, surv, g, dom, roads, S_, plt):
                    extent=extent, origin="upper")
         _plan_decorate(ax, r, y, dom, roads, window, crs, k == 0)
         ax.set_title(f"{y}{'*' if y == 2001 else ''}\n{L.MONTHS.get(y, '')}", fontsize=7)
-    L.colorbar(fig, axs, plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(*L.TERRAIN_RANGE)),
-               "Elevation (m NAVD88)")
-    _legend(fig, r, (Line2D([], [], color="0.6", lw=0.6, label="Berm, 1.7 m (white on the map)"),))
-    out = OUT / f"{r.name}_plan_lidar.png"
-    S_.save(fig, out, bbox_inches="tight", close=True)
+    _plan_colorbar(fig, cax, plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(*L.TERRAIN_RANGE)),
+                   "Elevation (m NAVD88)")
+    _plan_legend(fig, _legend_handles(r, (Line2D([], [], color="0.6", lw=0.6, label="Berm, 1.7 m (white on the map)"),)))
+    out = region_dir(r) / f"{r.name}_plan_lidar.png"
+    _plan_save(S_, fig, out)
     S_.record_caption(out, (
         f"Lidar elevation of {_title(r)}, in every 1996-2009 survey (columns; flight months under each year), as maps "
         f"with north up and true geometry (no stretch; the strips of {r.name}_dunes_by_survey show the same surveys "
         f"unrolled along the coast). Elevation with hillshade, {DATUM_NOTE}. White contour: the berm, 1.7 m NAVD88. "
         f"Magenta: {r.note} Grey: the domain outlines, numbered on the first map. *2001 is unclassified lidar."))
+    print(f"wrote {out}")
+
+
+def plan_changes(r, surv, g, dom, roads, S_, plt):
+    """North-up maps of each survey minus the one before: the plan view of strip_changes."""
+    t, shape, crs = g
+    window = _plan_window(r, g, roads)
+    extent = (t.c, t.c + shape[1] * t.a, t.f + shape[0] * t.e, t.f)
+    years = sorted(surv)
+    pairs = list(zip(years[:-1], years[1:]))
+    fig, axs, cax = _plan_axes(S_, plt, window)
+    for k, (a, b) in enumerate(pairs):
+        ax = axs[years.index(b)]                                # under the later survey's map in the lidar figure
+        _plan_panel(ax)
+        za, zb = surv[a][0], surv[b][0]
+        land = (np.nan_to_num(za, nan=-9) > L.MHW_M) | (np.nan_to_num(zb, nan=-9) > L.MHW_M)
+        d = np.where(land & np.isfinite(za) & np.isfinite(zb), zb - za, np.nan)
+        ax.set_facecolor("0.93")                                # no data / water, so white stays "no change"
+        im = ax.imshow(d, extent=extent, cmap="RdBu", vmin=-L.DIFF_MAX, vmax=L.DIFF_MAX, interpolation="nearest")
+        _plan_decorate(ax, r, b, dom, roads, window, crs, k == 0)
+        ax.set_title(f"{a}–{str(b)[2:]}{'*' if 2001 in (a, b) else ''}\n ", fontsize=7)   # two lines, as the lidar titles
+    _plan_colorbar(fig, cax, im, "Elevation change between surveys (m; red lower, blue higher)", extend="both")
+    _plan_legend(fig, _legend_handles(r))
+    out = region_dir(r) / f"{r.name}_plan_dune_change.png"
+    _plan_save(S_, fig, out)
+    S_.record_caption(out, (
+        f"Elevation change of {_title(r)} between successive lidar surveys (columns), as maps with north up and true "
+        f"geometry (the plan view of {r.name}_dune_change_between_surveys), each in the slot of its later survey's map "
+        f"in {r.name}_plan_lidar (the first slot left empty), on the 2009 datum, land only (above mean "
+        "high water in either survey); red lower, blue higher, clipped at ±3 m; light grey, water or no data. "
+        f"Magenta: NC-12 at the later survey; {r.note} Grey: the domain outlines, numbered on the first map. The "
+        "survey grids differ (1 m to about 2.7 m), so changes of a few decimetres along steep dune faces are partly "
+        "resampling; where the 2005 survey leaves out buildings, the houses show as red. *2001 is unclassified lidar."))
     print(f"wrote {out}")
 
 
@@ -364,8 +454,9 @@ def plan_aerial(r, g, dom, roads, S_, plt):
         if (rgb.sum(axis=-1) > 0).mean() < 0.05:
             continue
         rows.append((y, im.date, rgb))
-    fig, axs = _plan_axes(S_, plt, len(rows), window)
+    fig, axs, _ = _plan_axes(S_, plt, window)
     for k, (ax, (y, date, rgb)) in enumerate(zip(axs, rows)):
+        _plan_panel(ax)
         img = np.clip(rgb / 255.0, 0, 1)
         img[rgb.sum(axis=-1) == 0] = 1.0
         ax.imshow(img, extent=(x0, x1, y0, y1), interpolation="bilinear")
@@ -374,11 +465,10 @@ def plan_aerial(r, g, dom, roads, S_, plt):
             if ln.get_color() == L.ROAD_C:
                 ln.set_alpha(0.5)
         ax.set_title(f"{y}\n{L.IMAGERY_LABELS.get(y, date[5:] if len(date) > 4 else '')}", fontsize=7)
-    fig.legend(handles=[Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12"),
-                        Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain outline")],
-               loc="outside lower center", ncol=2, fontsize=7, frameon=False)
-    out = OUT / f"{r.name}_plan_aerial.png"
-    S_.save(fig, out, bbox_inches="tight", close=True)
+    _plan_legend(fig, [Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12"),
+                       Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain outline")])
+    out = region_dir(r) / f"{r.name}_plan_aerial.png"
+    _plan_save(S_, fig, out)
     S_.record_caption(out, (
         f"Aerial photographs of {_title(r)} ({', '.join(str(x[0]) for x in rows)}; columns, flight dates under each "
         f"year), as maps with north up and true geometry (no stretch; {r.name}_aerial_by_year shows them unrolled "
@@ -505,6 +595,7 @@ def main():
         profiles(r, surv, g, dom, roads, S_, plt)
         imagery_strips(r, st, g, S_, plt)
         plan_lidar(r, surv, g, dom, roads, S_, plt)
+        plan_changes(r, surv, g, dom, roads, S_, plt)
         plan_aerial(r, g, dom, roads, S_, plt)
         crest += crest_rows(r, st, surv, picked)
         print(f"  {r.label} done")
