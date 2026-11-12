@@ -24,11 +24,11 @@ Runs: HAT_dune_collision.py cal_step1_base, cal_step2_growth, cal_step3_module_l
 cal_step6_toeavg_la; HAT_collision_test_2009.py step1_base, step2_module_la, step3_road_la,
 nocape_rd198_dry_toeavg_la. The same steps with the domain beach factor (W0 25 m, Cs 1.02e-4; cal_step3_module_dt,
 cal_step4_road_dt, cal_step6_toeavg; step2_module_dt, step3_road_dt, nocape_rd198_dry_toeavg) were the figure until
-the switch to Larson alone; their figures are in the workspace's beach-factor-steps-until-2026-11-04/. (The
+the switch to Larson alone; their figures are in the workspace's 4-hindcast/_superseded/beach-factor-steps-until-2026-11-04/. (The
 per-cell-toe steps, cal_step3_module ... cal_step6_starttoes and step2_module, step3_road, nocape_rd198_dry,
 nocape_rd198_dry_ts, are kept as run on 2026-11-04.)
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/: model_steps_position_<start>_<end>.png (shoreline
+Writes, in the workspace's dune-collision/4-hindcast/2-model-steps/: model_steps_position_<start>_<end>.png (shoreline
 position change, each step and CoastSat), model_steps_fit.png (shoreline and dune crest error per step, island and
 zones) and supporting/model_steps_fit.csv.
 

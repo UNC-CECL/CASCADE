@@ -12,7 +12,7 @@ else differs. In the model a relocation only moves the road: its setback grows b
 rebuild rule (off where the road is 20 m or more behind the dune) and the overwash bulldozed off the road follow from
 there. No dune is removed or built, as one was in 2000-2004.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/6-other-tests/road-relocation-1999/ (D:):
+Writes, in the workspace's dune-collision/4-hindcast/5-road/road-relocation-1999/ (D:):
 - relocation_crests_over_time_GIS9-15.png: the domain-median crest through time, with and without the relocation
 - relocation_difference_by_domain.png: relocation minus none, GIS 5-20: 2009 crest, overwash, shoreline change
 - supporting/relocation_road_by_domain.csv: road setback and dune rebuilds per domain and year
@@ -39,7 +39,7 @@ import HAT_collision_row_mode_sweep as R  # noqa: E402
 H = R.H
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = P.OUT / "6-other-tests" / "road-relocation-1999"
+OUT = P.OUT / "5-road" / "road-relocation-1999"
 PAIRS = (("cal_step2_growth_noscrape", "Module off", "#8C8C8C"),
          ("cal_toeberm_cs1", "Module on, Cs 1e-6", "#2171B5"),
          ("cal_toeberm_cs2", "Module on, Cs 2e-6", "#7B3F99"))

@@ -12,7 +12,7 @@ cal_step3_module_la[_cs50|_cs100] (one toe per domain from the 1996 and 1997 sur
 [_cs10|_cs30|_cs50|_cs100|_cs110] (one toe per domain averaged over every 1996-2009 survey, 1998 left out), and
 cal_alltoes_cs110_road / _final (+ the 150 m road rule, + Rodanthe 90%).
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:), the figures named in FIGURES.
+Writes, under the workspace's dune-collision/4-hindcast/ (D:), the figures named in FIGURES.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -61,21 +61,21 @@ FIGURES = {
     "1-module-on-off/base_vs_module_position_1996_2009.png": (
         "Shoreline change with and without the collision module, 1996–2009",
         (BASE, ("cal_step3_module_la", "Collision module (with dune growth 0.02–0.04)", PURPLE, 2.2))),
-    "3-cs-and-toes/alltoes_position_1996_2009.png": (
+    "_superseded/automorph-toes/alltoes_position_1996_2009.png": (
         "Sensitivity of shoreline change to the dune-toe definition, 1996–2009",
         (OFF, ("cal_step3_module_la_alltoes", f"Collision module, {ALL_TOES}", PURPLE, 2.2),
          ("cal_step3_module_la", f"Collision module, {START_TOES} (current)", PURPLE_LIGHT, 2.0, DASH))),
-    "3-cs-and-toes/domaintoes_cs_position_1996_2009.png": (
+    "_superseded/automorph-toes/domaintoes_cs_position_1996_2009.png": (
         "Sensitivity of shoreline change to the impact coefficient, start-survey toes, 1996–2009",
         (OFF, ("cal_step3_module_la", cs(1.9, -5), RAMP[1], 2.0),
          ("cal_step3_module_la_cs50", cs(5.0, -5), RAMP[3], 2.0),
          ("cal_step3_module_la_cs100", cs(1.0, -4), RAMP[4], 2.2))),
-    "3-cs-and-toes/alltoes_cs_position_1996_2009.png": (
+    "_superseded/automorph-toes/alltoes_cs_position_1996_2009.png": (
         "Sensitivity of shoreline change to the impact coefficient, 1996–2009",
         (OFF, ("cal_step3_module_la_alltoes", cs(1.9, -5), RAMP[1], 2.0),
          ("cal_step3_module_la_alltoes_cs50", cs(5.0, -5), RAMP[3], 2.0),
          ("cal_step3_module_la_alltoes_cs100", cs(1.0, -4), RAMP[4], 2.2))),
-    "3-cs-and-toes/alltoes_cs_sweep_position_1996_2009.png": (
+    "_superseded/automorph-toes/alltoes_cs_sweep_position_1996_2009.png": (
         "Sensitivity of shoreline change to the impact coefficient, 1996–2009",
         (OFF,) + tuple((v, cs(m, e), c, 2.0) for v, (m, e), c in zip(
             ("cal_step3_module_la_alltoes_cs10", "cal_step3_module_la_alltoes", "cal_step3_module_la_alltoes_cs30",

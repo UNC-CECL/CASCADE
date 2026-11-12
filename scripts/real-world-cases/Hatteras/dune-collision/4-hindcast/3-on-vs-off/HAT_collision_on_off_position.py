@@ -16,7 +16,7 @@ hs     2009-2025, the module on at Hs 1.5-3.5 (nocape, nocape_hs*; HAT_collision
        settings before 2026-11-03 (width to the crest, W0 45 m, Cs 1.24e-4, deepest-dip toes, no road rule), and
        only Hs 3.0 has solved ends: the others are on ENDS_BY_HS, interpolated or extrapolated.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/: collision_on_off_position_<start>_<end>.png and
+Writes, under the workspace's dune-collision/4-hindcast/ (each figure's topic folder): collision_on_off_position_<start>_<end>.png and
 collision_hs_sweep_position_2009_2025.png, with the captions under supporting/.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -41,7 +41,7 @@ for _p in (_HAT_DIR, _HERE.parents[1] / "1-calibration-1996-2009", _HERE.parents
 from hatteras_paths import WORKSPACE  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = WORKSPACE / "dune-collision" / "4-hindcast" / "3-on-vs-off"
+OUT = WORKSPACE / "dune-collision" / "4-hindcast"
 # (start, end, script module, off variant, on variant)
 WINDOWS = ((1996, 2009, "HAT_dune_collision", "cal_control_g16_rd198", "cal_g16_nocape_rd198_dry"),
            (2009, 2025, "HAT_collision_test_2009", "control_rd198", "nocape_rd198_dry"))
@@ -174,7 +174,7 @@ def hs():
     out, gis, ch = figure(
         2009, 2025, "HAT_collision_test_2009", HS_SWEEP,
         "Shoreline position change with the collision module on, wave height sweep, 2009–2025",
-        "6-other-tests/collision_hs_sweep_position_2009_2025.png",
+        "8-other-forcings/collision_hs_sweep_position_2009_2025.png",
         "the dune collision module on (off at Cape Point GIS 1-5) at deep-water wave heights (alongshore "
         "diffusivity) of 1.5-3.5 m. These runs are on the module's settings before 2026-11-03 (beach width to the "
         "crest, W0 45 m, Cs 1.24e-4, deepest-dip toes, no 198 m road rule). Only Hs 3.0 runs on end conditions "
@@ -191,7 +191,7 @@ def sand():
     out, gis, ch = figure(
         2009, 2025, "HAT_collision_test_2009", runs,
         "Shoreline position change, collision-eroded sand deleted or put on the beach, 2009–2025",
-        "6-other-tests/collision_sand_to_beach_position_2009_2025.png",
+        "8-other-forcings/collision_sand_to_beach_position_2009_2025.png",
         "all with the 198 m road-dune rule: the dune collision module off (grey), on as it is, the eroded dune "
         "sand deleted (purple), and on with that sand placed on the beach and shoreface after each storm as CASCADE "
         "places a nourishment (orange; shoreline seaward by 2V/(2h_b + D_shoreface), Ashton and Lorenzo-Trueba 2018).")
@@ -210,7 +210,7 @@ def upkeep():
     out, gis, ch = figure(
         2009, 2025, "HAT_collision_test_2009", runs,
         "Shoreline position change with Rodanthe village dune upkeep, 2009–2025",
-        "6-other-tests/rodanthe_dune_upkeep_position_2009_2025.png",
+        "8-other-forcings/rodanthe_dune_upkeep_position_2009_2025.png",
         "the dune collision module off and the 198 m road-dune rule in all; only Rodanthe village (GIS 77-83) "
         "differs. Grey: the village default (9% of each year's overwash bulldozed onto the dune, 40% returned to "
         "the shoreface). Greens: 30% and 59% bulldozed onto the dune. Orange: a dune cell more than 0.5 m below its "
@@ -233,7 +233,7 @@ def village():
     out, gis, ch = figure(
         2009, 2025, "HAT_collision_test_2009", runs,
         "Shoreline position change with more village overwash returned to the beach, 2009–2025",
-        "6-other-tests/village_overwash_position_2009_2025.png",
+        "8-other-forcings/village_overwash_position_2009_2025.png",
         "the 198 m road-dune rule in all. In the managed villages each year's overwash is cleared and a share "
         "returned to the shoreface: 40% (the default) or 90% (Rogers et al. 2015 give 40-90%, residential to "
         "commercial). Greys: the dune collision module off; purples: on (dry beach, W0 25 m, Cs 1.02e-4, "
@@ -255,7 +255,7 @@ def toes():
     out, gis, ch = figure(
         2009, 2025, "HAT_collision_test_2009", runs,
         "Shoreline position change, dune toes from the start vs later surveys, 2009–2025",
-        "6-other-tests/toes_start_vs_median_position_2009_2025.png",
+        "8-other-forcings/toes_start_vs_median_position_2009_2025.png",
         "the dune collision module off (grey) and on with two sets of dune toes, fixed for the whole run: the "
         "per-cell median of the 2014-2019 lidar surveys (purple, the default) and the 2009 start profile alone "
         "(orange). Both on the module's settings before 2026-11-03 (beach width to the crest, W0 45 m, Cs 1.24e-4, "
@@ -275,7 +275,7 @@ def toesnow():
     out, gis, ch = figure(
         2009, 2025, "HAT_collision_test_2009", runs,
         "Shoreline position change, dune toes from the start vs later surveys, 2009–2025",
-        "6-other-tests/toes_start_vs_median_position_2009_2025_current.png",
+        "8-other-forcings/toes_start_vs_median_position_2009_2025_current.png",
         "the dune collision module off (grey) and on with two sets of dune toes and beach widths, fixed for the "
         "whole run: the per-cell median of the 2014-2019 lidar surveys (purple, the default) and the 2009 start "
         "profile alone (orange). Current settings in all: dry beach (beach start to toe), W0 25 m, Cs 1.02e-4, "
@@ -302,7 +302,7 @@ def widths():
         out, gis, ch = figure(
             start, end, module, runs,
             f"Shoreline position change, per-cell beach widths vs one beach factor per domain, {start}–{end}",
-            f"6-other-tests/beach_widths_vs_domain_factor_position_{start}_{end}.png",
+            f"8-other-forcings/beach_widths_vs_domain_factor_position_{start}_{end}.png",
             "the base (dune collision module off, no 198 m road rule, villages 40% of overwash to the shoreface; grey) "
             "and the module with the 198 m road-dune rule and Rodanthe (GIS 77-83) 90% of overwash to the "
             "shoreface, one toe per domain from the lidar nearest the start, and the beach either per 10 m cell (the "
@@ -324,7 +324,7 @@ def win8():
     out, gis, ch = figure(
         1996, 2009, "HAT_dune_collision", runs,
         "Shoreline position change, starting dunes from hand-picked windows vs an 8-cell search, 1996–2009",
-        "6-other-tests/dune-search-win8/start_dunes_win8_position_1996_2009.png",
+        "3-collision-design/dune-search-window/start_dunes_win8_position_1996_2009.png",
         "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, with the starting dunes and interior "
         "from the 1996-start DEM picked two ways: the highest cell in each domain's hand-picked window (dune-topo v3, "
         "the default; solid) or the highest cell within 8 cells (80 m) of each profile's beach start, the earlier "
@@ -352,7 +352,7 @@ def maxmed():
     out, gis, ch = figure(
         1996, 2009, "HAT_dune_collision", MAXMED_RUNS,
         "Shoreline position change, a back dune row at the window median, 1996–2009",
-        "6-other-tests/dune-rows-maxmed/dune_rows_maxmed_position_1996_2009.png",
+        "3-collision-design/dune-rows/dune_rows_maxmed_position_1996_2009.png",
         "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's starting dunes and interior. "
         "Barrier3D's two dune rows: both at the highest cell of each profile's hand-picked window (v3, as now), or "
         "the seaward row there and the landward row at the median elevation of the same window (dashed); the dune "
@@ -379,7 +379,7 @@ def maxmedlat():
     out, gis, ch = figure(
         1996, 2009, "HAT_dune_collision", MAXMED_LAT_RUNS,
         "Shoreline position change, a back dune row at the window median with lateral erosion, 1996–2009",
-        "6-other-tests/dune-rows-maxmed/dune_rows_maxmed_lateral_position_1996_2009.png",
+        "3-collision-design/dune-rows/dune_rows_maxmed_lateral_position_1996_2009.png",
         "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's starting dunes and interior, "
         "toe at the berm. Grey: the dune collision module off; purple: on, both dune rows at the window maximum, the "
         "eroded volume from both rows in proportion (Cs 2e-6, the current setting); blue: both rows at the maximum, "
@@ -410,7 +410,7 @@ def behot():
             1996, 2009, "HAT_dune_collision", runs,
             f"Shoreline position change, hotspot erosion on {name.split(',')[0].lower()}, "
             f"{name.split(', ', 1)[1]}, 1996–2009",
-            f"6-other-tests/hotspot-erosion/hotspot_erosion_{tag}_position_1996_2009.png",
+            f"6-missed-drops/2-by-design/hotspot_erosion_{tag}_position_1996_2009.png",
             f"{Z.SHARED}. Black: the design {name}"
             + ("; grey: no collision, equal rows" if base != "cal_step2_growth_noscrape" else "")
             + "; purples, light to dark: the same with 25, 50, 75 and 100% of the background erosion that closes "

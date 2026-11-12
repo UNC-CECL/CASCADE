@@ -13,7 +13,7 @@ Runs: HAT_dune_collision.py cal_la_cs10, cal_step6_toeavg_la (1.9e-5), cal_la_cs
 cal_step6_toeavg (beach factor), cal_step1_base; HAT_collision_test_2009.py la_cs10, nocape_rd198_dry_toeavg_la,
 la_cs30, la_cs50, la_cs80, nocape_rd198_dry_toeavg, step1_base.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:): cs_sweep_fit.png (shoreline and crest error
+Writes, in the workspace's dune-collision/4-hindcast/4-cs-and-toes/ (D:): cs_sweep_fit.png (shoreline and crest error
 against Cs, both periods), cs_sweep_position_<start>_<end>.png (shoreline position change at each Cs, CoastSat)
 and supporting/cs_sweep_fit.csv.
 
@@ -34,7 +34,7 @@ _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_collision_model_steps as M  # noqa: E402
 import HAT_collision_on_off_position as P  # noqa: E402
-OUT = P.OUT / "3-cs-and-toes"   # this script's figures (topic subfolder)
+OUT = P.OUT / "4-cs-and-toes"   # this script's figures (topic subfolder)
 
 # --- CONFIG ------------------------------------------------------------------
 CS_VALUES = (1e-5, 1.9e-5, 3e-5, 5e-5, 8e-5)
@@ -128,7 +128,7 @@ def main():
             for cs, v, c in zip(CS_VALUES, sweep, CS_COLORS))
         out, *_ = P.figure(
             start, end, module, runs, f"Collision module, Larson alone, at five Cs, {start}–{end}",
-            f"3-cs-and-toes/cs_sweep_position_{start}_{end}.png",
+            f"4-cs-and-toes/cs_sweep_position_{start}_{end}.png",
             "the base (module off, no 198 m road rule, Rodanthe 40%) and the collision module with Larson alone (no "
             "beach factor) at Cs 1e-5 to 8e-5, light to dark, each with one toe per domain, the 198 m road rule and "
             "Rodanthe 90%; Cs 1.9e-5 is the offline fit.")
@@ -139,7 +139,7 @@ def main():
                 (sweep[1], "Larson alone, Cs 1.9e-5 (offline fit)", "#6A51A3", 2.2))
         out, *_ = P.figure(
             start, end, module, pair, f"Collision module, Larson alone: Cs 1e-5 against 1.9e-5, {start}–{end}",
-            f"3-cs-and-toes/cs_pair_position_{start}_{end}.png",
+            f"4-cs-and-toes/cs_pair_position_{start}_{end}.png",
             "the base (module off, no 198 m road rule, Rodanthe 40%) and the collision module with Larson alone (no "
             "beach factor) at Cs 1e-5 (the best calibration fit in the model) and 1.9e-5 (the offline fit to the lidar "
             "crest changes), each with one toe per domain, the 198 m road rule and Rodanthe 90%.")

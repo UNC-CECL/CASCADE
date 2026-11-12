@@ -10,7 +10,7 @@ Runs (HAT_dune_collision.py, 1996-2009, all with the road fix, dune growth 0.02-
 Rodanthe 40%, toe at the berm, 1.7 m NAVD88; only the module differs from the off run): cal_step2_growth_noscrape
 (module off), cal_toeberm_cs* (proportional) and cal_toeberm_lat_cs* (lateral). Runs not yet made are skipped.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/3-cs-and-toes/ (D:):
+Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/ (D:):
 - lateral_vs_proportional_sensitivity.png and supporting/lateral_vs_proportional_sensitivity.csv: crest RMSE (GIS
   6-90 and 9-15), 2009 mean offset, share within 0.5 m, overwash hits and false alarms, shoreline RMSE, against Cs
 - lateral_collapse_<variant>.png: collision volume and front-row cells collapsed by domain and year, for the best
@@ -40,7 +40,7 @@ sys.path.insert(0, str(P._HAT_DIR / "dune-collision" / "4-hindcast" / "1-calibra
 import HAT_dune_collision as H  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = P.OUT / "3-cs-and-toes"
+OUT = P.OUT / "3-collision-design"
 OFF = "cal_step2_growth_noscrape"
 PROPORTIONAL = {"cal_toeberm_cs0p1": 1e-7, "cal_toeberm_cs0p3": 3e-7, **{f"cal_toeberm_cs{c}": c * 1e-6
                 for c in (1, 2, 5, 10, 30, 100)}}

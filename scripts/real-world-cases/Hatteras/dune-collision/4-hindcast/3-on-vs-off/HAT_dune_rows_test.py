@@ -13,7 +13,7 @@ rows at the window max / back row at the window median), cal_toeberm_cs2 (both r
 the current setting), cal_toeberm_cs2_front (both at max, front row eroded) and cal_toeberm_cs2_maxmed (back row at
 median, front row eroded).
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/6-other-tests/dune-rows-maxmed/ (D:):
+Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/dune-rows/ (D:):
 - dune_rows_maxmed_crests_over_time_GIS9-15.png: the domain-median crest (the higher row) through time, and the
   front and back rows of the max/median run
 - supporting/dune_rows_maxmed_metrics.csv: crest RMSE, 2009 offset, overwash, shoreline skill per run
@@ -39,7 +39,7 @@ import HAT_collision_row_mode_sweep as R  # noqa: E402
 H = R.H
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = P.OUT / "6-other-tests" / "dune-rows-maxmed"
+OUT = P.OUT / "3-collision-design" / "dune-rows"
 TS_GIS = range(9, 16)
 EVENTS = ((1998.65, "Bonnie"), (1999.67, "Dennis"), (2003.71, "Isabel"))
 # -----------------------------------------------------------------------------

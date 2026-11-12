@@ -4,7 +4,7 @@ Modelled against observed overwash for several runs side by side, from each run'
 
     python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/3-on-vs-off/HAT_overwash_compare.py
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/6-other-tests/dune-rows-maxmed/ (D:):
+Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/dune-rows/ (D:):
 - dune_rows_maxmed_lateral_overwash_vs_off.png: the run figures in a 2 x 2 grid, each headed with its run
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -25,7 +25,7 @@ import HAT_collision_row_mode_sweep as R  # noqa: E402
 H = R.H
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = P.OUT / "6-other-tests" / "dune-rows-maxmed" / "dune_rows_maxmed_lateral_overwash_vs_off.png"
+OUT = P.OUT / "3-collision-design" / "dune-rows" / "dune_rows_maxmed_lateral_overwash_vs_off.png"
 RUNS = (("cal_step2_growth_noscrape", "Module off"),
         ("cal_toeberm_lat_cs3_maxmed", "Back row at median, lateral, Cs 3e-6"),
         ("cal_toeberm_lat_cs10_maxmed", "Back row at median, lateral, Cs 1e-5"),

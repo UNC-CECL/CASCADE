@@ -10,7 +10,7 @@ the model's storm series). Runs (HAT_dune_collision.py, nothing rerun): cal_step
 cal_step3_module_la (Larson, Cs 1.9e-5), identical otherwise. Crests: each run's dune_crest_vs_lidar.csv
 (domain medians); GIS 6-90 (the module is off at Cape Point).
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:): collision_isabel.png, the PDF and
+Writes, in the workspace's dune-collision/4-hindcast/7-storm-examples/ (D:): collision_isabel.png, the PDF and
 supporting/collision_isabel.csv.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -29,7 +29,7 @@ import pandas as pd
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_collision_on_off_position as P  # noqa: E402
-OUT = P.OUT / "5-storm-examples"   # this script's figures (topic subfolder)
+OUT = P.OUT / "7-storm-examples"   # this script's figures (topic subfolder)
 
 sys.path.insert(0, str(P._HAT_DIR / "dune-collision" / "4-hindcast" / "1-calibration-1996-2009"))
 

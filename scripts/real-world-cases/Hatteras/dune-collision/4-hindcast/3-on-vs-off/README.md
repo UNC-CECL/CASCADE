@@ -1,55 +1,29 @@
 # 3-on-vs-off — shoreline position change with the collision module on and off
 
-Output folders (since 2026-11-05), in the workspace's `dune-collision/4-hindcast/3-on-vs-off/`, each with its own
-`supporting/` (CSV, PDF, CAPTIONS.md); each script sets its folder in `OUT` or in the figure name:
+The scripts stay here; their figures are in the workspace's `dune-collision/4-hindcast/` (D:), one folder per
+question since 2026-11-12, each with its own `supporting/` (CSV, PDF, CAPTIONS.md). The full index (folder, question,
+testing-log section, script) is that folder's `README.md`. Each script names its folder in `OUT` or the figure name:
 
-| Folder | Figures | Script |
-|---|---|---|
-| `1-module-on-off/` | module on vs off, crest comparison | `HAT_collision_on_off_position.py onoff`, `HAT_collision_toe_cs_figures.py`, `HAT_collision_crest_compare.py` |
-| `2-model-steps/` | cumulative model changes; `slides/` the same built up one line at a time | `HAT_collision_model_steps.py`, `HAT_collision_toe_cs_figures.py` |
-| `3-cs-and-toes/` | Cs sweeps, dune-toe definition; `lateral_*`: the toe-at-berm Cs sweep, proportional against lateral erosion (2026-11-11) | `HAT_collision_cs_sweep.py`, `HAT_collision_toe_cs_figures.py`, `HAT_collision_row_mode_sweep.py` |
-| `4-road-rule/` | road-rule threshold, plan view, strips | `HAT_road_rule_*.py` |
-| `5-storm-examples/` | Dennis at Buxton, Isabel | `HAT_collision_buxton_dennis.py`, `HAT_collision_isabel.py` |
-| `6-other-tests/` | Hs sweep, sand to beach, Rodanthe upkeep, village overwash, toe and beach-width tests | `HAT_collision_on_off_position.py` (other modes) |
-| `_archive/` | beach-factor era figures no script writes any more | — |
+| Folder | Script |
+|---|---|
+| `1-module-on-off/` | `HAT_collision_on_off_position.py onoff`, `HAT_collision_crest_compare.py`, `HAT_collision_missed_drops.py`, `HAT_collision_toe_cs_figures.py` |
+| `2-model-steps/` | `HAT_collision_model_steps.py`, `HAT_collision_toe_cs_figures.py` |
+| `3-collision-design/` (`dune-rows/`, `dune-search-window/`, `logs/`) | `HAT_collision_row_mode_sweep.py`, `HAT_dune_rows_test.py`, `HAT_overwash_compare.py`, `HAT_collision_on_off_position.py maxmed / maxmedlat / win8` |
+| `4-cs-and-toes/` | `HAT_collision_cs_sweep.py` |
+| `5-road/` (`road-rule/`, `road-relocation-1999/`, `bulldoze-fix/`) | `HAT_road_rule_*.py`, `HAT_road_relocation_test.py` |
+| `6-missed-drops/` (`1-zones/`, `2-by-design/`, `3-compared/`) | `HAT_be_hotspot_zones.py`, `HAT_collision_on_off_position.py behot` |
+| `7-storm-examples/` | `HAT_collision_buxton_dennis.py`, `HAT_collision_isabel.py` |
+| `8-other-forcings/` | `HAT_collision_on_off_position.py` (other modes) |
+| `_superseded/` | Automorph-toe, before-road-fix and beach-factor figures; no script writes them any more (`HAT_collision_toe_cs_figures.py` still names the old all-toes and domain-toes figures there) |
 
-**2026-11-09 to 11** (what was tested and found: `../TESTING_2026-11-09_to_11.md`). Added, with captions in each
-folder's `supporting/CAPTIONS.md`:
-
-- `1-module-on-off/toeberm_cs5e-6_*`: module off against on, toe at the berm, Cs 5e-6, module only: crest error by
-  survey, 2009 crest map, crests over time (GIS 10-14), shoreline, overwash, where the module helps (table
-  `supporting/toeberm_cs5e-6_where_module_helps_by_domain.csv`); the set shown to Laura on 2026-11-10, whose talk
-  order is in `8-advisor-2026-11-10/README.md`. `automorph_toes_cs1e-5_*`: the same comparison on the Automorph toes.
-- `3-cs-and-toes/`: `toeberm_Cs_sensitivity.png` (Cs 1e-7 to 1e-4; `supporting/toeberm_Cs_sensitivity.csv`),
-  `toeberm_crest_2009_map_Cs_sweep.png`, `toeberm_cs_sweep_*`, `toeberm_storm_vs_toe_GIS9-15.png`;
-  `automorph_domain_toes_*` and `automorph_cell_toes_*` (Cs sweeps on the two toe sets, storm against toe);
-  `before-road-fix-2026-11-09/`, the same sweeps before the road fix; `lateral_*`, lateral against proportional
-  erosion (`HAT_collision_row_mode_sweep.py`).
-- `6-other-tests/road_first_bulldoze_fix_*`: crests and shoreline with and without the road fix.
-- `6-other-tests/road-relocation-1999/`: the 1999 NC-12 relocation switched on, module off and Cs 1e-6 / 2e-6
-  (`HAT_road_relocation_test.py`; testing log section 12).
-- `6-other-tests/dune-search-win8/start_dunes_win8_position_1996_2009.png`: starting dunes from the hand-picked
-  windows against the earlier 8-cell search (`HAT_collision_on_off_position.py win8`; testing log section 14).
-- `6-other-tests/dune-rows-maxmed/`: a back dune row at the window median, front row eroded: position change
-  (`HAT_collision_on_off_position.py maxmed`) and crests over time GIS 9-15 (`HAT_dune_rows_test.py`); testing log
-  section 15. `dune_rows_maxmed_lateral_*`: the same with lateral erosion, Cs 3e-6 to 2e-5 (`maxmedlat`,
-  `HAT_dune_rows_test.py lateral`; section 16); `dune_rows_maxmed_lateral_overwash_vs_off.png`, their overwash
-  against the imagery beside the module off (`HAT_overwash_compare.py`).
-- `6-other-tests/hotspot-erosion/`: background erosion in the missed crest-drop hotspots that lie on a source/sink
-  sink (GIS 10-14, 21-24, 82-89), 25-100% of each design's CoastSat residual, on four designs (no collision; lower
-  both rows; face retreat on equal rows and on a low back row): per design `hotspot_erosion_<design>_alongshore`,
-  `_crests_over_time`, `_position_1996_2009`, and `hotspot_erosion_designs_compared.png`
-  (`HAT_be_hotspot_zones.py [results]`, `HAT_collision_on_off_position.py behot`; testing log section 17; the
-  design-name key is at the top of the log).
-- `1-module-on-off/missed_crest_drops.png`: lidar against model crest change per domain and survey interval, and
-  which measured drops the module misses (`HAT_collision_missed_drops.py`; testing log section 13).
+What was tested and found, with the figure names: `../TESTING_2026-11-09_to_11.md`.
 
 Most of these were drawn by session scripts from runs already made (nothing in them is refit); the crest maps go
 through `HAT_collision_crest_compare.py` and the position plots through `HAT_dune_collision.py plot`.
 
 Since 2026-11-04 the main figures here are the model-change steps, `HAT_collision_model_steps.py` (Larson alone,
 Cs 1.9e-5, since the evening of 2026-11-04; the beach-factor version is in the workspace's
-`_archive/beach-factor-steps-until-2026-11-04/`):
+`dune-collision/4-hindcast/_superseded/beach-factor-steps-until-2026-11-04/`):
 `model_steps_position_1996_2009.png`, `model_steps_position_2009_2025.png` (each step's shoreline change against
 CoastSat) and `model_steps_fit.png` (shoreline and crest RMSE per step, island and zones; table
 `supporting/model_steps_fit.csv`, the earlier toe and width versions beside it). The steps and what they show:
@@ -102,7 +76,7 @@ dunes were too tall (Avon +0.43, Rodanthe +0.87 m) they were holding the shoreli
 the missing sand (CoastSat accretes at Avon and the Tri-Village, which no Hs reproduces) shows. The sand the module
 erodes is also deleted, not put on the beach (open to-do), which adds to the loss.
 
-Figures, in the workspace's `dune-collision/4-hindcast/3-on-vs-off/`: `collision_on_off_position_1996_2009.png`
+Figures, in the workspace's `dune-collision/4-hindcast/1-module-on-off/`: `collision_on_off_position_1996_2009.png`
 and `collision_on_off_position_2009_2025.png` (captions under `supporting/`).
 
 What they show (2026-11-03):

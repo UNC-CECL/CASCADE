@@ -12,7 +12,7 @@ behind the dune (median over the 2009-2025 run final_rd150u, the roadway manager
 thresholds at 150 m and at the per-domain gate behind the dune. The map is turned so north points right (ocean
 below), as the crest-offset map, and split into three panels.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:): road_rule_plan_view.png and
+Writes, in the workspace's dune-collision/4-hindcast/5-road/road-rule/ (D:): road_rule_plan_view.png and
 supporting/road_rule_plan_view.csv.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -31,7 +31,7 @@ import pandas as pd
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_collision_on_off_position as P  # noqa: E402
-OUT = P.OUT / "4-road-rule"   # this script's figures (topic subfolder)
+OUT = P.OUT / "5-road" / "road-rule"   # this script's figures (topic subfolder)
 import HAT_road_rule_threshold as R  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------

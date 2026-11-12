@@ -24,7 +24,7 @@ Notes, data and figures that are not model runs go in the matching folders of
 4-hindcast/                the module in real model runs
     1-calibration-1996-2009/   Cs, beach limit, dune growth, Hs and groin fitted with the module on
     2-test-2009-2025/          the calibration carried unchanged to 2009-2025
-    3-on-vs-off/               shoreline position change with each model change, and the module on and off
+    3-on-vs-off/               the figure scripts: module on and off, each test; figures on D: in 4-hindcast/<question>/
 5-forecast/                not started
 ```
 
@@ -36,7 +36,7 @@ Notes, data and figures that are not model runs go in the matching folders of
 | `HAT_collision_calibration.py` | `4-hindcast/1-calibration-1996-2009/` | `2026-10-29-collision-calibration` |
 | `HAT_collision_test_2009.py` | `4-hindcast/2-test-2009-2025/` | `2026-10-29-collision-test-2009-2025` |
 | `HAT_collision_toe_comparison.py` | `3-module-tests/1-rule-comparison/` | none: offline, `tables/toe_comparison.csv` there |
-| `HAT_collision_on_off_position.py`, `HAT_collision_model_steps.py` | `4-hindcast/3-on-vs-off/` | none: figures from the runs above, in the workspace's `dune-collision/4-hindcast/3-on-vs-off/` |
+| `HAT_collision_on_off_position.py`, `HAT_collision_model_steps.py` | `4-hindcast/3-on-vs-off/` | none: figures from the runs above, in the workspace's `dune-collision/4-hindcast/<question>/` (index: its README.md) |
 
 The road and village dune management studies (`HAT_road_dune_rebuild.py`, `HAT_measured_dune_heights.py`)
 moved on 2026-11-03 to `../hatteras_ms/experiments/dunes/`.
@@ -108,7 +108,7 @@ Each change added one at a time (`4-hindcast/3-on-vs-off/HAT_collision_model_ste
 What it says: in calibration the module takes back the crest error the faster dune growth adds (0.96 to 0.90 m) and
 costs 0.05 m/yr of shoreline; in the test it leaves the dunes too low (bias -0.7 m), and the shoreline gain over the
 base is the road rule and Rodanthe 90%. With the beach factor the same steps ended at 1.19 / 0.87 and 2.10 / 1.50
-(`beach-factor-steps-until-2026-11-04/` in the workspace's `4-hindcast/3-on-vs-off/`). Whether the module should stay
+(`4-hindcast/_superseded/beach-factor-steps-until-2026-11-04/` in the workspace). Whether the module should stay
 on is the open question.
 
 The toes: per cell, the median over every survey of the period before 2026-11-04 (in 2009-2025, the 2014-2019

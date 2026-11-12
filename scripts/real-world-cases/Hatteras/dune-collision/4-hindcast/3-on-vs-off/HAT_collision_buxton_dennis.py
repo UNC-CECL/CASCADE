@@ -10,7 +10,7 @@ Runs (HAT_dune_collision.py, nothing rerun): cal_step2_growth (module off), cal_
 cal_step3_module_dt (beach factor); all with growth 0.02-0.04, one toe per domain, no road rule, Rodanthe 40%, so
 the module is the only difference. Crests: each run's dune_crest_vs_lidar.csv (domain medians at each survey).
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:): collision_buxton_dennis.png, the PDF and
+Writes, in the workspace's dune-collision/4-hindcast/7-storm-examples/ (D:): collision_buxton_dennis.png, the PDF and
 supporting/collision_buxton_dennis.csv.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -28,7 +28,7 @@ import pandas as pd
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_collision_on_off_position as P  # noqa: E402
-OUT = P.OUT / "5-storm-examples"   # this script's figures (topic subfolder)
+OUT = P.OUT / "7-storm-examples"   # this script's figures (topic subfolder)
 
 sys.path.insert(0, str(P._HAT_DIR / "dune-collision" / "4-hindcast" / "1-calibration-1996-2009"))
 

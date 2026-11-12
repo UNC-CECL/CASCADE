@@ -9,7 +9,7 @@ the road fix, Cs 2e-6 (cal_toeberm_cs2); the module-off run is listed beside it.
 A drop is a fall of 0.5 m or more in the domain median between two surveys. Pairs where either survey covers fewer
 than 10 of a domain's 50 cells are left out (grey), as are domains 1-5, where the module does not run.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/1-module-on-off/ (D:):
+Writes, in the workspace's dune-collision/4-hindcast/1-module-on-off/ (D:):
 - missed_crest_drops.png: (a) lidar change, (b) model change, (c) each pair classed: lidar drop missed (model under
   half of it), lidar drop caught (half or more), model drop the lidar does not show, neither
 - supporting/missed_crest_drops.csv: the pairs, with the module-off and Cs 1e-6 changes too

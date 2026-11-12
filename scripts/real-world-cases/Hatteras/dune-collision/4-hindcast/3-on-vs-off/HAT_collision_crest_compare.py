@@ -14,7 +14,7 @@ cal_step3_module_la_alltoes (Larson alone, Cs 1.9e-5, dune growth 0.02-0.04, one
 1996-2009 survey, 1998 left out). Crests: each run's
 tables/dune_crest_vs_lidar.csv.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:): crest_offset_base_vs_module_1996_2009.png
+Writes, in the workspace's dune-collision/4-hindcast/1-module-on-off/ (D:): crest_offset_base_vs_module_1996_2009.png
 and supporting/crest_offset_base_vs_module_1996_2009.csv.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,

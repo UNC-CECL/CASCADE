@@ -10,7 +10,7 @@ HAT_collision_test_2009.py nocape_rd198_dry_toeavg_la) and with one 150 m trigge
 Road setback: each roadway manager's yearly distance from the dune to the road (_road_setback_TS), median and range
 over the run; rebuilds: the years it rebuilt the dune (_dunes_rebuilt_TS).
 
-Writes, in the workspace's dune-collision/4-hindcast/3-on-vs-off/ (D:): road_rule_threshold.png and
+Writes, in the workspace's dune-collision/4-hindcast/5-road/road-rule/ (D:): road_rule_threshold.png and
 supporting/road_rule_threshold.csv.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -30,7 +30,7 @@ import pandas as pd
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_collision_on_off_position as P  # noqa: E402
-OUT = P.OUT / "4-road-rule"   # this script's figures (topic subfolder)
+OUT = P.OUT / "5-road" / "road-rule"   # this script's figures (topic subfolder)
 
 for _p in (P._HAT_DIR / "dune-collision" / "4-hindcast" / "1-calibration-1996-2009",
            P._HAT_DIR / "dune-collision" / "4-hindcast" / "2-test-2009-2025"):
