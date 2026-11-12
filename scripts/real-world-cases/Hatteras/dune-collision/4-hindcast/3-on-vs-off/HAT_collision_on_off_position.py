@@ -314,10 +314,124 @@ def widths():
               f"(GIS {gis[d.argmin()]}) to {d.max():+.1f} m (GIS {gis[d.argmax()]})")
 
 
+# The starting dunes from the hand-picked windows (dune-topo v3) against the earlier fixed search, 8 cells landward of
+# each profile's beach start (v3_win8, HAT_dune_topo_win8.py), module off and on at Cs 2e-6, toe at the berm (2026-11-11)
+def win8():
+    runs = (("cal_step2_growth_noscrape", "Module off, hand-picked dune windows (v3)", "#7f7f7f", 1.8),
+            ("cal_step2_growth_noscrape_win8", "Module off, 8-cell dune search", "#7f7f7f", 1.6, (0, (4, 2))),
+            ("cal_toeberm_cs2", "Module on (Cs 2e-6), hand-picked dune windows (v3)", "#7B3294", 2.0),
+            ("cal_toeberm_cs2_win8", "Module on (Cs 2e-6), 8-cell dune search", "#E66101", 1.8, (0, (4, 2))))
+    out, gis, ch = figure(
+        1996, 2009, "HAT_dune_collision", runs,
+        "Shoreline position change, starting dunes from hand-picked windows vs an 8-cell search, 1996–2009",
+        "6-other-tests/dune-search-win8/start_dunes_win8_position_1996_2009.png",
+        "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, with the starting dunes and interior "
+        "from the 1996-start DEM picked two ways: the highest cell in each domain's hand-picked window (dune-topo v3, "
+        "the default; solid) or the highest cell within 8 cells (80 m) of each profile's beach start, the earlier "
+        "Benton-parity search (v3_win8; dashed), with the road setback raised by how far seaward the 8-cell dune "
+        "sits so NC-12 stays in place; the dune collision module off (grey) and on (toe at the berm, Cs 2e-6).")
+    print(f"wrote {out}")
+    for a, b in (("cal_step2_growth_noscrape_win8", "cal_step2_growth_noscrape"), ("cal_toeberm_cs2_win8", "cal_toeberm_cs2")):
+        d = np.asarray(ch[a] - ch[b])
+        print(f"  {a:32s} minus {b:26s}: mean {d.mean():+.1f} m, range {d.min():+.1f} (GIS {gis[d.argmin()]}) "
+              f"to {d.max():+.1f} m (GIS {gis[d.argmax()]})")
+
+
+# Two equal dune rows at the window maximum (v3) against a back row at the window median (v3_maxmed,
+# HAT_dune_topo_maxmed.py), the module eroding both rows in proportion or the front row only (2026-11-11)
+MAXMED_RUNS = (("cal_step2_growth_noscrape", "Module off, both rows at the window max (v3)", "#7f7f7f", 1.8),
+               ("cal_step2_growth_noscrape_maxmed", "Module off, back row at the window median", "#7f7f7f", 1.6,
+                (0, (4, 2))),
+               ("cal_toeberm_cs2", "Module on, both rows at max, both rows eroded (current)", "#7B3294", 2.0),
+               ("cal_toeberm_cs2_front", "Module on, both rows at max, front row eroded", "#2171B5", 1.8),
+               ("cal_toeberm_cs2_maxmed", "Module on, back row at median, front row eroded", "#E66101", 1.8,
+                (0, (4, 2))))
+
+
+def maxmed():
+    out, gis, ch = figure(
+        1996, 2009, "HAT_dune_collision", MAXMED_RUNS,
+        "Shoreline position change, a back dune row at the window median, 1996–2009",
+        "6-other-tests/dune-rows-maxmed/dune_rows_maxmed_position_1996_2009.png",
+        "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's starting dunes and interior. "
+        "Barrier3D's two dune rows: both at the highest cell of each profile's hand-picked window (v3, as now), or "
+        "the seaward row there and the landward row at the median elevation of the same window (dashed); the dune "
+        "collision module off (grey) or on (toe at the berm, Cs 2e-6), its eroded volume taken from both rows in "
+        "proportion to their height (purple, as now) or from the seaward row only (blue, orange).")
+    print(f"wrote {out}")
+    for a, b in (("cal_step2_growth_noscrape_maxmed", "cal_step2_growth_noscrape"), ("cal_toeberm_cs2_front", "cal_toeberm_cs2"),
+                 ("cal_toeberm_cs2_maxmed", "cal_toeberm_cs2_front"), ("cal_toeberm_cs2_maxmed", "cal_toeberm_cs2")):
+        d = np.asarray(ch[a] - ch[b])
+        print(f"  {a:34s} minus {b:26s}: mean {d.mean():+.1f} m, range {d.min():+.1f} (GIS {gis[d.argmin()]}) "
+              f"to {d.max():+.1f} m (GIS {gis[d.argmax()]})")
+
+
+# The median back row with lateral erosion (the face retreats through the front row, then the back), 2026-11-11
+MAXMED_LAT_RUNS = (("cal_step2_growth_noscrape", "Module off, both rows at the window max (v3)", "#7f7f7f", 1.8),
+                   ("cal_toeberm_cs2", "Module on, both rows at max, proportional, Cs 2e-6 (current)", "#7B3294", 2.0),
+                   ("cal_toeberm_lat_cs10", "Module on, both rows at max, lateral, Cs 1e-5", "#2171B5", 1.8),
+                   ("cal_toeberm_lat_cs3_maxmed", "Back row at median, lateral, Cs 3e-6", "#FDAE61", 1.6, (0, (4, 2))),
+                   ("cal_toeberm_lat_cs10_maxmed", "Back row at median, lateral, Cs 1e-5", "#F46D43", 1.8, (0, (4, 2))),
+                   ("cal_toeberm_lat_cs20_maxmed", "Back row at median, lateral, Cs 2e-5", "#D73027", 1.8, (0, (4, 2))))
+
+
+def maxmedlat():
+    out, gis, ch = figure(
+        1996, 2009, "HAT_dune_collision", MAXMED_LAT_RUNS,
+        "Shoreline position change, a back dune row at the window median with lateral erosion, 1996–2009",
+        "6-other-tests/dune-rows-maxmed/dune_rows_maxmed_lateral_position_1996_2009.png",
+        "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's starting dunes and interior, "
+        "toe at the berm. Grey: the dune collision module off; purple: on, both dune rows at the window maximum, the "
+        "eroded volume from both rows in proportion (Cs 2e-6, the current setting); blue: both rows at the maximum, "
+        "lateral erosion (the face retreats through the front row, which keeps its height until its sand above the "
+        "toe is gone, then the back row; Cs 1e-5); oranges to red (dashed): the back row at the median of each "
+        "profile's window, lateral erosion, Cs 3e-6, 1e-5, 2e-5.")
+    print(f"wrote {out}")
+    for v in ("cal_toeberm_lat_cs3_maxmed", "cal_toeberm_lat_cs10_maxmed", "cal_toeberm_lat_cs20_maxmed"):
+        for b in ("cal_toeberm_cs2", "cal_toeberm_lat_cs10"):
+            d = np.asarray(ch[v] - ch[b])
+            print(f"  {v:28s} minus {b:22s}: mean {d.mean():+.1f} m, range {d.min():+.1f} (GIS {gis[d.argmin()]}) "
+                  f"to {d.max():+.1f} m (GIS {gis[d.argmax()]})")
+
+
+# Background erosion in the missed crest-drop hotspots on a source/sink sink (GIS 10-14, 21-24, 82-89), 25-100% of
+# each design's own CoastSat residual (2026-11-12; HAT_be_hotspot_zones.py, whose DESIGNS give the plain names)
+def behot():
+    import HAT_be_hotspot_zones as Z
+    for base, (name, tag, _) in Z.DESIGNS.items():
+        if any(H_run_missing(v) for v, _ in Z.runs_for(base)):
+            print(f"  skipping {name}: runs missing")
+            continue
+        runs = (("cal_step2_growth_noscrape", "No collision, equal rows", "#7f7f7f", 1.8),) * (
+            base != "cal_step2_growth_noscrape") + (
+            (base, name, "#1A1A1A", 1.8),
+            *((f"{base}_be{p}", f"  + {p}% hotspot erosion", Z.COLOURS[p], 1.6) for p in Z.FRACS))
+        out, gis, ch = figure(
+            1996, 2009, "HAT_dune_collision", runs,
+            f"Shoreline position change, hotspot erosion on {name.split(',')[0].lower()}, "
+            f"{name.split(', ', 1)[1]}, 1996–2009",
+            f"6-other-tests/hotspot-erosion/hotspot_erosion_{tag}_position_1996_2009.png",
+            f"{Z.SHARED}. Black: the design {name}"
+            + ("; grey: no collision, equal rows" if base != "cal_step2_growth_noscrape" else "")
+            + "; purples, light to dark: the same with 25, 50, 75 and 100% of the background erosion that closes "
+            "its shoreline gap to CoastSat (smoothed CoastSat LRR minus its own) added in the hotspots of missed "
+            "lidar crest drops that lie on a source/sink sink, GIS 10-14, 21-24 and 82-89.")
+        print(f"wrote {out}")
+        for v, p in Z.runs_for(base)[1:]:
+            d = np.asarray(ch[v] - ch[base])
+            print(f"  {name} +{p}% minus base: mean {d.mean():+.1f} m, range {d.min():+.1f} (GIS {gis[d.argmin()]}) "
+                  f"to {d.max():+.1f} m (GIS {gis[d.argmax()]})")
+
+
+def H_run_missing(v):
+    import HAT_be_hotspot_zones as Z
+    return Z.H.run_dir(v) is None
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    ap.add_argument("action", nargs="?", default="onoff", choices=["onoff", "hs", "sand", "upkeep", "village", "toes", "toesnow", "widths"])
-    {"onoff": onoff, "hs": hs, "sand": sand, "upkeep": upkeep, "village": village, "toes": toes, "toesnow": toesnow, "widths": widths}[ap.parse_args().action]()
+    ap.add_argument("action", nargs="?", default="onoff", choices=["onoff", "hs", "sand", "upkeep", "village", "toes", "toesnow", "widths", "win8", "maxmed", "maxmedlat", "behot"])
+    {"onoff": onoff, "hs": hs, "sand": sand, "upkeep": upkeep, "village": village, "toes": toes, "toesnow": toesnow, "widths": widths, "win8": win8, "maxmed": maxmed, "maxmedlat": maxmedlat, "behot": behot}[ap.parse_args().action]()
 
 
 if __name__ == "__main__":

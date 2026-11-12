@@ -26,6 +26,23 @@ folder's `supporting/CAPTIONS.md`:
   `before-road-fix-2026-11-09/`, the same sweeps before the road fix; `lateral_*`, lateral against proportional
   erosion (`HAT_collision_row_mode_sweep.py`).
 - `6-other-tests/road_first_bulldoze_fix_*`: crests and shoreline with and without the road fix.
+- `6-other-tests/road-relocation-1999/`: the 1999 NC-12 relocation switched on, module off and Cs 1e-6 / 2e-6
+  (`HAT_road_relocation_test.py`; testing log section 12).
+- `6-other-tests/dune-search-win8/start_dunes_win8_position_1996_2009.png`: starting dunes from the hand-picked
+  windows against the earlier 8-cell search (`HAT_collision_on_off_position.py win8`; testing log section 14).
+- `6-other-tests/dune-rows-maxmed/`: a back dune row at the window median, front row eroded: position change
+  (`HAT_collision_on_off_position.py maxmed`) and crests over time GIS 9-15 (`HAT_dune_rows_test.py`); testing log
+  section 15. `dune_rows_maxmed_lateral_*`: the same with lateral erosion, Cs 3e-6 to 2e-5 (`maxmedlat`,
+  `HAT_dune_rows_test.py lateral`; section 16); `dune_rows_maxmed_lateral_overwash_vs_off.png`, their overwash
+  against the imagery beside the module off (`HAT_overwash_compare.py`).
+- `6-other-tests/hotspot-erosion/`: background erosion in the missed crest-drop hotspots that lie on a source/sink
+  sink (GIS 10-14, 21-24, 82-89), 25-100% of each design's CoastSat residual, on four designs (no collision; lower
+  both rows; face retreat on equal rows and on a low back row): per design `hotspot_erosion_<design>_alongshore`,
+  `_crests_over_time`, `_position_1996_2009`, and `hotspot_erosion_designs_compared.png`
+  (`HAT_be_hotspot_zones.py [results]`, `HAT_collision_on_off_position.py behot`; testing log section 17; the
+  design-name key is at the top of the log).
+- `1-module-on-off/missed_crest_drops.png`: lidar against model crest change per domain and survey interval, and
+  which measured drops the module misses (`HAT_collision_missed_drops.py`; testing log section 13).
 
 Most of these were drawn by session scripts from runs already made (nothing in them is refit); the crest maps go
 through `HAT_collision_crest_compare.py` and the position plots through `HAT_dune_collision.py plot`.

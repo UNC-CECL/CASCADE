@@ -485,6 +485,63 @@ SINK_VARIANTS = ("sink", "storm_cs2e5_r06_sink")
 STABLE_GIS = (20, 21, 22, 59, 60, 61, 62)
 WORKERS = 4
 REPORT_GIS = range(5, 21)
+# The 1999 NC-12 relocation switched on (HATTERAS_ROAD_EVENTS: GIS 9-14 moved 20-80 m landward of the 1996 road),
+# otherwise each its base variant, module off and on at the berm toe (2026-11-11, test): does moving the road change
+# the dunes? Each alias joins every table its base is in
+RELOCATION_1999 = {f"{_b}_reloc": _b for _b in ("cal_step2_growth_noscrape", "cal_toeberm_cs1", "cal_toeberm_cs2")}
+# The starting dunes from the earlier fixed search, 8 cells landward of each profile's beach start (dune-topo v3_win8,
+# input_prep/1-barrier3d-domains/1-extraction/HAT_dune_topo_win8.py), otherwise each its base variant (2026-11-11,
+# test); the road setback grows by how far seaward the 8-cell dune sits, so NC-12 stays where it is
+WIN8_START = {f"{_b}_win8": _b for _b in ("cal_step2_growth_noscrape", "cal_toeberm_cs2")}
+WIN8_VERSION = "v3_win8"
+WIN8_COMPARE = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / "1996-start" / "dune-topo"
+                / WIN8_VERSION / "start_crest_compare.csv")
+# A distinct back dune row (2026-11-11, test): the front (seaward) row v3's window maximum, the back row the median of
+# the same window (input_prep/1-barrier3d-domains/1-extraction/HAT_dune_topo_maxmed.py), set in DuneDomain[0, :, 1]
+# after the build; with the module on, collision erodes the front row only. cal_toeberm_cs2_front: v3's equal rows,
+# front-row erosion, to separate the two changes
+MAXMED_START = {f"{_b}_maxmed": _b for _b in ("cal_step2_growth_noscrape", "cal_toeberm_cs2")}
+# ... and with lateral erosion (the face retreats through the front row, then the back), around its best Cs on v3
+MAXMED_START.update({f"cal_toeberm_lat_cs{_c}_maxmed": f"cal_toeberm_lat_cs{_c}" for _c in (3, 10, 20)})
+FRONT_ONLY = {"cal_toeberm_cs2_front": "cal_toeberm_cs2"}
+MAXMED_BACK_DIR = (PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains" / "1996-start" / "dune-topo"
+                   / "v3_maxmed" / "dunes_back")
+for _alias, _base in {**RELOCATION_1999, **WIN8_START, **MAXMED_START, **FRONT_ONLY}.items():
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("RELOCATION_1999", "WIN8_START", "MAXMED_START", "FRONT_ONLY"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj:
+            globals()[_name] = _obj + (_alias,)
+COLLISION_ROWS.update({"cal_toeberm_cs2_maxmed": "front", "cal_toeberm_cs2_front": "front"})
+# Background erosion in the missed crest-drop hotspots that sit on a source/sink sink (2026-11-12, Laura's test;
+# 3-on-vs-off/HAT_be_hotspot_zones.py): the 100% rate is smoothed CoastSat LRR minus the base run's, fixed from the
+# base, m/yr in Barrier3D's sign ((-) erosion), in the fixed zones Buxton 10-14, Avon south 21-24, Rodanthe 82-89;
+# each variant a fraction of its own base's. Four bases (2026-11-12): no collision, equal rows; lower both rows, equal
+# rows, Cs 2e-6; face retreat, equal rows, Cs 1e-5; face retreat, low back row, Cs 3e-6
+BE_HOTSPOT_100 = {
+    "cal_step2_growth_noscrape": {10: -0.73, 11: -1.42, 12: -1.97, 13: -2.03, 14: -0.84, 21: -0.50, 22: -1.01,
+                                  23: -0.97, 24: -0.70, 82: -0.88, 83: -1.04, 84: -1.33, 85: -2.19, 86: -1.51,
+                                  87: -1.14, 88: -0.99, 89: -0.69},
+    "cal_toeberm_cs2": {10: -0.65, 11: -0.88, 12: -1.84, 13: -2.01, 14: -0.83, 21: -0.50, 22: -1.01, 23: -0.97,
+                        24: -0.70, 82: -0.78, 83: -0.92, 84: -1.19, 85: -2.02, 86: -1.39, 87: -1.07, 88: -0.96,
+                        89: -0.68},
+    "cal_toeberm_lat_cs10": {10: -0.57, 11: -0.80, 12: -1.81, 13: -2.00, 14: -0.83, 21: -0.51, 22: -1.01, 23: -0.97,
+                             24: -0.70, 82: -0.72, 83: -0.84, 84: -1.11, 85: -1.91, 86: -1.25, 87: -0.99, 88: -0.93,
+                             89: -0.67},
+    "cal_toeberm_lat_cs3_maxmed": {10: -0.56, 11: -0.81, 12: -1.82, 13: -2.00, 14: -0.83, 21: -0.50, 22: -1.01,
+                                   23: -0.97, 24: -0.70, 82: -0.63, 83: -0.67, 84: -0.79, 85: -1.26, 86: -1.09,
+                                   87: -0.88, 88: -0.90, 89: -0.66}}
+BE_HOTSPOT = {f"{_b}_be{_p}": (_b, _p / 100) for _b in BE_HOTSPOT_100 for _p in (25, 50, 75, 100)}
+for _alias, (_base, _) in BE_HOTSPOT.items():
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("BE_HOTSPOT", "BE_HOTSPOT_100"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj:
+            globals()[_name] = _obj + (_alias,)
 # -----------------------------------------------------------------------------
 
 
@@ -1027,6 +1084,35 @@ def _launch(variant):
                 n += 1
         print(f"\nEXPERIMENT Rodanthe overwash filter held at 40% on {n} domains (GIS 77-83)", flush=True)
 
+    # The 8-cell starting dunes (WIN8_START): each road's setback, measured from v3's dune, grows by how far seaward of
+    # it the 8-cell dune sits, so NC-12 stays in place
+    def win8_road(c, dom):
+        if variant not in WIN8_START:
+            return
+        add = pd.read_csv(WIN8_COMPARE).set_index("gis").road_setback_add_m
+        n = 0
+        for g in range(1, 91):
+            r = c.roadways[dom.gis_to_pad(g)]
+            if r is not None and add.get(g, 0) > 0:
+                r._road_setback += float(add[g])
+                n += 1
+        print(f"\nEXPERIMENT 8-cell starting dunes ({WIN8_VERSION}): road setback raised on {n} domains, by up to "
+              f"{add.max():.0f} m", flush=True)
+
+    # The back dune row at the window median (MAXMED_START), after checking the front row is v3's dune file
+    def maxmed_back(c, dom):
+        if variant not in MAXMED_START:
+            return
+        from site_layer.hat_topo_version import topo_dirs
+        _, dune_dir, _ = topo_dirs("1996-start")
+        for g in range(1, 91):
+            b = c.barrier3d[dom.gis_to_pad(g)]
+            front = np.load(Path(dune_dir) / f"domain_{g}_dune.npy")
+            if not np.allclose(b._DuneDomain[0, :, 0], front, atol=1e-9):
+                raise SystemExit(f"GIS {g}: DuneDomain row 0 is not v3's dune file; the back row would be misaligned")
+            b._DuneDomain[0, :, 1] = np.load(MAXMED_BACK_DIR / f"domain_{g}_dune_back.npy")
+        print(f"\nEXPERIMENT back dune row at the window median on GIS 1-90 ({MAXMED_BACK_DIR.parent.name})", flush=True)
+
     managers = {}
 
     def build_cascade(*a, **k):
@@ -1084,6 +1170,8 @@ def _launch(variant):
             c = orig_build(*a, **k)
             road_gate(c, dom, width)
             rodanthe_40(c, dom)
+            win8_road(c, dom)
+            maxmed_back(c, dom)
             # Per-village dune caps and Rodanthe's overwash-to-dune share, on the village managers (m above the berm)
             for name, (lo, hi) in VILLAGE_DOMAINS.items():
                 for g in range(lo, hi + 1):
@@ -1104,6 +1192,8 @@ def _launch(variant):
         dom = HATTERAS_DOMAINS.for_total(k["alongshore_section_count"])
         road_gate(c, dom, per_gis(st[~st.survey.isin(TOE_SURVEYS_EXCLUDED)].groupby(["gis", "cell"]).beach_width_m.median()))
         rodanthe_40(c, dom)
+        win8_road(c, dom)
+        maxmed_back(c, dom)
         if rule is None:
             return c
         cls = type(c)
@@ -1247,12 +1337,19 @@ def launch(variant):
         per = growth if isinstance(growth, dict) else {g: growth for g in range(1, 91)}
         env["HAT_GROWTH_OVERRIDE"] = ",".join(f"{g}={lo:.3f}:{hi:.3f}" for g, (lo, hi) in sorted(per.items()))
     sink = BUXTON_SINK if variant in SINK_VARIANTS else None
+    if variant in BE_HOTSPOT:
+        _b, _f = BE_HOTSPOT[variant]
+        sink = {g: round(_f * r, 4) for g, r in BE_HOTSPOT_100[_b].items()}
     overrides = {**(sink or {}), **ENDS.get(variant, {})}
     if overrides:
         env["HAT_BE_OVERRIDE"] = ",".join(f"{g}={r}" for g, r in overrides.items())
     if variant in HS_M:
         env["HAT_HS"] = str(HS_M[variant])
     env["HAT_GROIN_STRENGTH"] = str(GROIN_STRENGTH.get(variant, GROIN_STRENGTH_BASE))
+    if variant in RELOCATION_1999:
+        env["HAT_RELOCATIONS"] = "1"
+    if variant in WIN8_START:
+        env["HAT_TOPO_VERSION_1996_START"] = WIN8_VERSION
     t0 = time.time()
     with open(logs / f"{variant}.log", "w", encoding="utf-8") as fh:
         p = subprocess.run([sys.executable, str(_HERE), "_launch", variant],
