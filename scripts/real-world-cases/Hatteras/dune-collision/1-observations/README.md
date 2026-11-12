@@ -89,25 +89,46 @@ What they show (from the 2026-10-27/28 record, `../4-hindcast/1-calibration-1996
 - Forcing the lidar crests into the model makes the missing Buxton shoreline erosion appear
   (`5-forced-dune-crests/`; figures in the workspace's `5-forced-dune-crests/`).
 
-## 8-buxton-dune-change (2026-11-11)
+## 8-dune-change-by-survey (2026-11-11, merged 2026-11-12)
 
-`8-buxton-dune-change/HAT_buxton_dune_change.py`: every 1996-2009 lidar survey of GIS 10-15 on the 2009 datum (the
-model's vertical offsets, then each survey's remaining NC-12 difference from 2009; on the road at GIS 15 every survey is
-within 0.05 m of 2009, `supporting/buxton_datum_check.csv`), on the model clips' 1 m grid: maps by survey, change between
-surveys, and one cross-shore profile per domain. Asked because the collision module cannot lower GIS 10-12 in time
-(`../4-hindcast/TESTING_2026-11-09_to_11.md`, section 4).
+`8-dune-change-by-survey/HAT_dune_change_by_survey.py [region ...]`: every 1996-2009 lidar survey on the 2009 datum,
+the coast unrolled along NC-12, for the stretches where the module misses the measured crest drops: north of Buxton
+(GIS 10-15), Avon south (GIS 21-26) and Rodanthe (GIS 82-89). Per region `<region>_dunes_by_survey.png`,
+`<region>_dune_change_between_surveys.png`, `<region>_dune_profiles.png`, `<region>_aerial_by_year.png`, and the
+same surveys and photographs as north-up maps in true geometry, `<region>_plan_lidar.png` and
+`<region>_plan_aerial.png` (2026-11-12); across them
+`hotspot_crest_check.png` (the picked survey crest against the highest lidar point between NC-12 and the beach);
+`supporting/` holds `datum_check.csv`, `hotspot_crest_check.csv` and the unzipped 2002 photographs. The surveys, the
+datum and the unrolled frame are in `../../site_layer/hat_lidar_strips.py` (its `REGIONS`; add a Region there to draw another stretch). Since 2026-11-12 the strips unroll the
+coast along NC-12's 2008 alignment smoothed over about 1 km (Gaussian, sigma 250 m), with the road drawn at its true
+offset: along the raw road, Rodanthe's S-curves (about 40 degrees of turning in 4 km) bent the shoreline and the house
+rows out of shape. Profiles and the crest check still measure from the road itself. Merged on 2026-11-12 from `8-buxton-dune-change` (asked because the module cannot lower GIS 10-12 in
+time, `../4-hindcast/TESTING_2026-11-09_to_11.md` section 4) and `9-hotspot-dune-change` (sections 17-18).
 
-Found: at GIS 10-12 the original foredune was cut down and pushed landward in 1997-1999 (GIS 11 already by 1998;
+**Buxton.** At GIS 10-12 the original foredune was cut down and pushed landward in 1997-1999 (GIS 11 already by 1998;
 1998-1999 the strongest loss, along the dune front), ending at about the Dennis peak water level (3.6-4 m); then a new,
 taller dune (6-7 m) was built about 50-80 m landward, beside the relocated NC-12, from 2001 to 2004. GIS 13 kept its
 front dune (about 6 m) and gained a second, lower ridge behind it; GIS 14-15 held. So the lidar "crest" at GIS 10-12
 is one dune until 1999 and a different, built dune after 2001: the model, with one dune line and no road relocation,
 cannot follow either the loss or the rebuild. The 2005 survey does not cover GIS 10-11.
 
-Also `buxton_aerial_by_year.png` (2026-11-11): the aerial photographs of 1993-2008 in the same unrolled frame (USGS
+`buxton_aerial_by_year.png` (2026-11-11): the aerial photographs of 1993-2008 in the same unrolled frame (USGS
 scans 1993-1998 and 2002, the 2002 frames unzipped from the draft delivery into `supporting/imagery_2002_unzipped/`;
 Google Earth 2004; NOAA 2008; no 2009 capture reaches GIS 10-15). They confirm the road positions: the paved road sits
 on the old alignment through 1997 (1998 covers GIS 12-15 only) and on the relocated one by October 2002, when the strip
 between the new road and the beach at GIS 10-12 is bare sand where the old road and foredune were; the vegetated old
 foredune survives at GIS 13-15. The relocation (after Dennis, in place by 16 March 2000) is from the NCDOT NC 12 Buxton
 to Avon Feasibility Study (December 2015), section 2.1 and Figure 4.
+
+**The hotspots (Rodanthe, Avon south) and the crest check.** The 1998-1999 drops are real at Buxton (GIS 10-12, as above) and at Rodanthe GIS 83-87 (the
+foredune lowered 0.5-2 m and its crest moved 10-75 m landward; at GIS 86 it was flattened and a new ridge stood 22 m
+from the road by 1999). From 2004 the picks read low where a new dune stands landward of the picking window: Buxton
+GIS 10-12 by 0.8-3.4 m, Rodanthe GIS 85 by 1.4-2.0 m. With the strips widened (Rodanthe to 240 m, Avon
+south to 280 m seaward of NC-12), GIS 88's dune (about 185 m out) also drops for real in 1998-1999 (7.7 to 6.2 m), and
+at Avon south the 2005-2009 change shows the dune front cut by 2-3 m at GIS 23-25, so its late picked drop (6.4-6.8 to
+4.6-5.3 m) looks real too. At Rodanthe the lidar and the October 2002 photograph show a straight-edged, flat sand pad
+between the road and the beach at GIS 86 from 1999, and 2001-2004 adds a straight +2-3 m ridge 30-50 m from the road
+along GIS 84-87: both look built. Limits: the 1996-2004 surveys at Avon show the houses (the independent crest there is
+rooftops), GIS 82-83 have buildings, so the independent crest is trusted at Buxton and GIS 84-89; on Rodanthe's own
+road the 1998 survey sits 0.29 m above 2009 (2001: 0.13 m) after the island-wide correction
+(`supporting/datum_check.csv`), so the 1998-1999 drops there may be about 0.3 m smaller than they read.

@@ -12,6 +12,7 @@ Six modules, each answering one question, each answering it in one place.
 | `hat_observed_rates.py` | *Where is the observed shoreline* — the CoastSat chainage, the per-window rate fits the model is graded against, the transect-to-domain lookup. | 22 |
 | `hat_elevation_products.py` | *Which* elevation product and stage — `2009-2014` or `2009-2014-1996`, gapfilled 1 m or resampled 10 m. | 13 |
 | `hat_extension_domains.py` | *Which alongshore reach* a run models, and the 500 m bins that number the coast beyond the 90 surveyed domains. | 11 |
+| `hat_lidar_strips.py` | *What the dunes looked like in each survey* — the 1996-2009 lidar on the 2009 datum, the coast unrolled along NC-12, the aerial photographs in that frame, for any stretch (`REGIONS`). Added 2026-11-12 (from 8-buxton-dune-change). | 1 |
 
 ## Why the indirection exists
 
