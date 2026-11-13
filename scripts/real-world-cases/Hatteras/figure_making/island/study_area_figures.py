@@ -812,7 +812,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
     win_h = n1 - n0
     win_w = win_h * pw / panel_in                          # equal scale in both directions
     # Names on the ocean side, domain numbers on the sound side (README)
-    e0 = bx0 - 8000.0      # 8 pt names need a kilometre more of ocean
+    e0 = bx0 - 9000.0      # 8 pt names need a kilometre more of ocean; one more of sound so "90" clears the legend
     e1 = e0 + win_w
     fh = top + panel_in + bottom
 
@@ -906,9 +906,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
         ax_in.apply_aspect()
         in_bottom = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[1]
     else:
-        # the legend takes the inset's corner, its top just below the "90" label so the two do not touch
-        y90 = (dom.geometry.iloc[-1].bounds[1] - n0) / (n1 - n0)
-        in_bottom = y90 + 0.004
+        in_bottom = 1 - inset_gap / panel_in + 0.012  # the legend takes the inset's corner
     # The legend under the locator, in the open sound; the groin bar as drawn here
     handles = framework_handles()
     handles[-1].set_marker("_")
