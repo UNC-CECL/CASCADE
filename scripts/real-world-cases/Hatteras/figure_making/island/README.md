@@ -465,6 +465,9 @@ under supporting/; --talk writes the same paths under output/figures/talk/:
     domain_framework_vertical.png
                           the same, NORTH UP as a portrait page: the reach
                           running up the page, ocean to the east
+    domain_framework_vertical_aerial.png
+                          the vertical layout on Esri World Imagery, no
+                          community shading (needs network)
     domain_metrics.png    the island width and highest cell the 2004-start
                           extraction gives each domain
     site_overview.png     study_area and domain_framework as one two-panel

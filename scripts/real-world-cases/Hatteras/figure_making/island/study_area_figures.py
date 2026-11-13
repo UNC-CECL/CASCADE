@@ -68,6 +68,7 @@ SUBJECT = {
     "site_overview": ("site",),
     "domain_framework": ("site",),
     "domain_framework_vertical": ("site",),
+    "domain_framework_vertical_aerial": ("site",),
     "domain_metrics": ("site",),
     "domain_grid": ("site",),
     "domain_schematic": ("site",),
@@ -449,7 +450,8 @@ def regional_inset(ax, outline, vector=True, lat_side="right", tick_labels=True,
     states.plot(ax=ax, facecolor=LAND, edgecolor="white", lw=0.5, zorder=1)      # state borders in white
     states.dissolve().plot(ax=ax, facecolor="none", edgecolor=LAND_EDGE, lw=0.4, zorder=2)   # the coast
     o = outline.to_crs("EPSG:4326")
-    o.plot(ax=ax, facecolor=locator_c, edgecolor=locator_c, lw=locator_lw, zorder=4)
+    if locator_c is not None:          # None: the box alone marks the reach
+        o.plot(ax=ax, facecolor=locator_c, edgecolor=locator_c, lw=locator_lw, zorder=4)
     bx0, by0, bx1, by1 = o.total_bounds
     pad = 0.18
     ax.add_patch(Rectangle((bx0 - pad, by0 - pad), bx1 - bx0 + 2 * pad, by1 - by0 + 2 * pad,
@@ -602,7 +604,7 @@ def fig_study_area(dom, outline, roads, frame, vector):
     ih, edge = 0.58, 0.018
     iw = ih * fh / fw
     ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=C["LOCATOR"], locator_lw=2.4)
+    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=None)
     letter_corner(ax_in, 1)
     handles = [
         Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
@@ -619,7 +621,7 @@ def fig_study_area(dom, outline, roads, frame, vector):
         "NC-12 centreline as digitised on 2008 imagery; the villages of Buxton, Avon, Salvo, Waves and "
         "Rodanthe; the Buxton groin field (red, white-edged bar drawn just offshore, labelled Buxton groins). The map is turned "
         "a quarter turn, north to the right, so the UTM-aligned boxes are level and the reach steps down the "
-        "page where the coast bends. (b) Hatteras Island (teal) on the North Carolina coast; the box marks the reach; "
+        "page where the coast bends. (b) The box marks Hatteras Island on the North Carolina coast; "
         "the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N). "
         + ("Land is the island outline shapefile. " if vector else "Basemap: Esri World Imagery. ")
         + "Inset: Natural Earth 10 m coastline and state boundaries.")
@@ -696,7 +698,7 @@ def fig_domain_framework(dom, outline, roads, frame, vector):
     ih, edge = 0.58, 0.018
     iw = ih * fh / fw
     ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=C["LOCATOR"], locator_lw=2.4)
+    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=None)
     letter_corner(ax_in, 1)
     top_row(ax, ax_in, framework_handles(), letter=0, north=frame.north(), text_kw=MAP_TEXT_DARK)
     out = save(fig, fig_path("domain_framework"), vector=True, dpi=300)
@@ -706,15 +708,20 @@ def fig_domain_framework(dom, outline, roads, frame, vector):
         "UTM-aligned boxes are level), numbered every tenth; the community domains (steel blue; Buxton 7–8, "
         "Avon 21–31, Salvo–Waves–Rodanthe 68–83), where NC-12 is a maintained street network rather than a "
         "relocatable road; NC-12 as digitised on 2008 imagery; the Buxton groin field (red, white-edged bar "
-        f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.) (b) Hatteras Island "
-        "(teal) on the North Carolina coast; the box marks the reach; the white lines are the 2° graticule "
+        f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.) (b) The box marks "
+        "Hatteras Island on the North Carolina coast; the white lines are the 2° graticule "
         "(80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state boundaries.")
     plt.close(fig)
     return out[0]
 
 
 # The domain framework NORTH UP, as a portrait figure
-def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
+def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aerial=False):
+    # aerial: Esri World Imagery under the same layout, with the house rule for type on imagery
+    tk = MAP_TEXT if aerial else MAP_TEXT_DARK
+    box_ec = "white" if aerial else INK
+    leader_c = "white" if aerial else INK_MUTED
+    road_c = ROAD_ON_IMAGERY if aerial else C["ROAD"]
     boxes = dom.geometry
     bx0, by0, bx1, by1 = boxes.total_bounds
     pad_n = 2600.0          # room for the end names clear of the frame
@@ -742,26 +749,32 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     from shapely.geometry import box as _box
     win = _box(e0, n0, e1, n1)
     land = outline.geometry.intersection(win)
-    gpd.GeoSeries(land[~land.is_empty], crs=outline.crs).plot(
-        ax=ax, facecolor=LAND, edgecolor=LAND_EDGE, lw=0.3, zorder=1)
+    if aerial:
+        img, ext = tiles((e0, n0, e1, n1), 12, imagery_source())
+        ax.imshow(img, extent=ext, zorder=0, interpolation="bilinear")
+        ax.set_xlim(e0, e1)
+        ax.set_ylim(n0, n1)
+    else:
+        gpd.GeoSeries(land[~land.is_empty], crs=outline.crs).plot(
+            ax=ax, facecolor=LAND, edgecolor=LAND_EDGE, lw=0.3, zorder=1)
 
     # the domains, by role
     zones = set()
     for lo, hi in HATTERAS_COMMUNITY_ZONES:
         zones.update(range(lo, hi + 1))
-    boxes.plot(ax=ax, facecolor="white", edgecolor=INK, lw=0.3, zorder=3)
+    boxes.plot(ax=ax, facecolor="none", edgecolor=box_ec, lw=0.3, zorder=3)
     for g, geom in zip(dom.ID.values, boxes.values):
-        fc = ROLE["community"] if g in zones else None
+        fc = ROLE["community"] if (g in zones and not aerial) else None    # aerial: no shading
         if fc:
-            ax.add_patch(mpl.patches.Polygon(xy2d(geom), closed=True, facecolor=fc, edgecolor=INK,
-                                             lw=0.3, zorder=4))
-    roads[2008].clip(win).plot(ax=ax, color=C["ROAD"], lw=0.9, zorder=5)
+            ax.add_patch(mpl.patches.Polygon(xy2d(geom), closed=True, facecolor=fc, edgecolor=box_ec,
+                                             lw=0.3, zorder=4, alpha=0.85 if aerial else 1.0))
+    roads[2008].clip(win).plot(ax=ax, color=road_c, lw=0.9, zorder=5)
 
     # Every tenth domain numbered on the SOUND side, the villages named on the OCEAN side beside (README)
     cen = np.c_[boxes.centroid.x.values, boxes.centroid.y.values]
     for i, g in enumerate(dom.ID.values):
         if g == FIRST or g % 10 == 0:
-            map_label(ax, dom.geometry.iloc[i].bounds[0] - 500, cen[i, 1], str(g), MAP_TEXT_DARK,
+            map_label(ax, dom.geometry.iloc[i].bounds[0] - 500, cen[i, 1], str(g), tk,
                       ha="right")
     names = {"Buxton": ANN.town_spans["Buxton"], "Avon": ANN.town_spans["Avon"],
              "Salvo": (ANN.village_lines["Salvo"],) * 2, "Waves": (ANN.village_lines["Waves"],) * 2,
@@ -770,22 +783,22 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
         sel = dom[(dom.ID >= lo) & (dom.ID <= hi)]
         y = sel.geometry.centroid.y.mean()
         east = sel.total_bounds[2]
-        place_label(ax, east + 1100, y, name, MAP_TEXT_DARK, ha="left")
-        ax.plot([east + 120, east + 900], [y, y], color=INK_MUTED, lw=0.5, zorder=7)
+        place_label(ax, east + 1100, y, name, tk, ha="left")
+        ax.plot([east + 120, east + 900], [y, y], color=leader_c, lw=0.5, zorder=7)
     # North up: the shore runs north-south, so the groin bar lies east-west
     for name, pos in ANN.groins.items():
         i = int(np.clip(round(pos) - FIRST, 0, len(dom) - 1))
         groin_marker(ax, dom.geometry.iloc[i].bounds[2] + 250,
                      np.interp(pos - FIRST, np.arange(len(cen)), cen[:, 1]), marker="_")
     # The ends and the water bodies the end names
-    place_label(ax, bx0 - 300, by0 - 800, "Cape Point", MAP_TEXT_DARK, ha="right", va="top")
-    place_label(ax, bx1 + 1100, by1 + 400, "Pea Island", MAP_TEXT_DARK, ha="left", va="bottom")
+    place_label(ax, bx0 - 300, by0 - 800, "Cape Point", tk, ha="right", va="top")
+    place_label(ax, bx1 + 1100, by1 + 400, "Pea Island", tk, ha="left", va="bottom")
     for x_, y_, words in ((0.84, 0.22, ("Atlantic", "Ocean")), (0.13, 0.50, ("Pamlico", "Sound"))):
         ax.text(x_, y_, "\n".join(spaced_caps(w) for w in words), transform=ax.transAxes,
-                ha="center", va="center", **MAP_TEXT_DARK)
+                ha="center", va="center", **tk)
 
     # North is up here
-    north_dart(ax, axes_point(ax, 0.92, 0.48), north=(0.0, 1.0), arrow_m=1600.0, text_kw=MAP_TEXT_DARK)
+    north_dart(ax, axes_point(ax, 0.91, 0.07), north=(0.0, 1.0), arrow_m=2600.0, text_kw=tk)  # lower-right corner, open ocean
     ticks_e = np.arange(math.ceil(e0 / 5000) * 5000, e1, 5000)
     ticks_n = np.arange(math.ceil(n0 / 5000) * 5000, n1, 5000)
     ax.set_xticks(ticks_e)
@@ -797,31 +810,42 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     ax.set_ylabel("northing (km)", fontsize=9, labelpad=2)
 
     # The locator in the upper left, over the open sound (README)
-    side = 1.20
-    ax_in = fig.add_axes([(left + 0.30) / fw, (bottom + 0.985 * panel_in - side) / fh,
+    side, inset_gap = 1.38, 0.05                     # inches; the gap from the frame's corner
+    ax_in = fig.add_axes([(left + inset_gap) / fw, (bottom + panel_in - inset_gap - side) / fh,
                           side / fw, side / fh])
-    regional_inset(ax_in, outline, vector, lat_side="left", tick_labels=False, locator_c=C["LOCATOR"],
-                   locator_lw=2.4)
+    regional_inset(ax_in, outline, vector, lat_side="left", tick_labels=False, locator_c=None)
+    ax_in.set_anchor("NW")                           # pinned to the corner once its aspect shrinks it
+    ax_in.apply_aspect()
+    in_bottom = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[1]
     # The legend under the locator, in the open sound; the groin bar as drawn here
     handles = framework_handles()
     handles[-1].set_marker("_")
+    if aerial:
+        handles[0] = Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain")
+        handles[1] = Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment")
     framework_legend(ax, handles, "upper left",
-                     anchor=(0.015, 0.985 - side / panel_in - 0.03))
+                     anchor=(inset_gap / pw, in_bottom - 0.012))
     _title(ax, 0, "")
     letter_corner(ax_in, 1)
+    if aerial:
+        credit_figure(fig, "Imagery: Esri World Imagery")
 
-    out = save(fig, fig_path("domain_framework_vertical"), vector=True, dpi=300)
+    name = "domain_framework_vertical_aerial" if aerial else "domain_framework_vertical"
+    out = save(fig, fig_path(name), vector=not aerial, dpi=300)
+    base = ("on Esri World Imagery" if aerial else "over the island outline")
     record_caption(out[0],
-        f"The domain framework, north up. (a) The {LAST - FIRST + 1} Barrier3D domain boxes over the island "
-        "outline in their true orientation, the reach running south to north up the page from Cape Point "
+        f"The domain framework, north up. (a) The {LAST - FIRST + 1} Barrier3D domain boxes {base} "
+        "in their true orientation, the reach running south to north up the page from Cape Point "
         "(GIS 1) to the southern end of Pea Island (GIS 90), with the Atlantic to the east; every tenth "
-        "domain is numbered on the sound side and the villages are named on the ocean side. The community "
-        "domains (steel blue; Buxton 7–8, Avon 21–31, Salvo–Waves–Rodanthe 68–83) are where NC-12 is a "
-        "maintained street network rather than a relocatable road; NC-12 as digitised on 2008 imagery. "
+        "domain is numbered on the sound side and the villages are named on the ocean side. "
+        + ("" if aerial else "The community domains (steel blue; Buxton 7–8, Avon 21–31, Salvo–Waves–Rodanthe "
+           "68–83) are where NC-12 is a maintained street network rather than a relocatable road; ")
+        + "NC-12 as digitised on 2008 imagery"
+        + (" (yellow). " if aerial else ". ") +
         f"(The {N_BUFFER} buffer domains beyond each end, which pad the alongshore transport solve, "
         "are not drawn.) The Buxton groin field is the red, white-edged bar drawn offshore. Coordinates are "
-        "UTM zone 18N in kilometres, at equal scale in both directions. (b) Hatteras Island (teal) on the "
-        "North Carolina coast; the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N); "
+        "UTM zone 18N in kilometres, at equal scale in both directions. (b) The box marks Hatteras Island on "
+        "the North Carolina coast; the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N); "
         "Natural Earth 10 m coastline and state boundaries. This is the content of `domain_framework` "
         "unturned; a manuscript wants one of the two, not both.")
     plt.close(fig)
@@ -853,7 +877,7 @@ def fig_site_overview(dom, outline, roads, frame, vector):
     ih, iw = 1.3 / fh, 1.3 / fw
     pos = ax_a.get_position()
     ax_in = fig.add_axes([pos.x1 - 0.06 / fw - iw, pos.y1 - 0.06 / fh - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=C["LOCATOR"], locator_lw=2.4)
+    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=None)
     letter_corner(ax_in, 1)
     # (a) letter on the inset's top line, the arrow beside the inset; no legend in (a)
     top_row(ax_a, ax_in, None, letter=0, north=frame.north(),
@@ -862,13 +886,13 @@ def fig_site_overview(dom, outline, roads, frame, vector):
     draw_reach(ax_b, frame, dom, outline, roads[2008], vector=True, window=window, label_villages=False,
                water_labels=False, piers=False, scalebar=False, numbers=False, arrow=False,
                ends=False, groin=False)
-    draw_role_fills(ax_b, frame, dom)
+    draw_role_fills(ax_b, frame, dom, ends=False)
     utm_frame(ax_b, frame)
     study_area_labels(ax_b, frame, dom, True, outline, text_kw=MAP_TEXT_DARK, leader_c=INK_MUTED,
                       numbers=False, villages=False, water=False, groin_label=False)
     north_dart(ax_b, axes_point(ax_b, 0.78, 0.90), north=frame.north(), text_kw=MAP_TEXT_DARK)
     handles = framework_handles()
-    handles[3] = Line2D([], [], color=INK, lw=1.0, label="NC-12, 2008 alignment" + ("" if vector else " (yellow in a)"))
+    handles[1] = Line2D([], [], color=INK, lw=1.0, label="NC-12, 2008 alignment" + ("" if vector else " (yellow in a)"))
     framework_legend(ax_b, handles, "lower right" if frame.seaward[1] < 0 else "upper right")
     letter_corner(ax_b, 2)
     out = save(fig, fig_path("site_overview"), vector=False, dpi=300)
@@ -878,12 +902,11 @@ def fig_site_overview(dom, outline, roads, frame, vector):
         f"{LAST - FIRST + 1} Barrier3D domain boxes, 500 m alongshore by 2000 m cross-shore, numbered every "
         "tenth; the NC-12 centreline as digitised on 2008 imagery; the villages; the Buxton groin field "
         "(red, white-edged bar drawn offshore, labelled Buxton groins). (b) The reach on the North Carolina "
-        "coast (Natural Earth 10 m), Hatteras Island in teal; the white lines are the 2° graticule (80°, 78° "
+        "coast (Natural Earth 10 m), the box marks Hatteras Island; the white lines are the 2° graticule (80°, 78° "
         "and 76° W; 34° and 36° N). (c) The same "
-        "frame with the roles the hindcast assigns the domains: the interior domains scored against "
-        f"CoastSat (GIS {SCORE_INTERIOR_GIS[0]}–{SCORE_INTERIOR_GIS[1]}), the end domains carrying the "
-        f"alongshore boundary condition (GIS {FIRST}, {LAST}) and the community zones where roadway "
-        "management is off; UTM 18N northing along the frame, easting up it. The 15 buffer domains beyond "
+        "frame on the island outline, the community domains (steel blue; Buxton 7–8, Avon 21–31, "
+        "Salvo–Waves–Rodanthe 68–83) where NC-12 is a maintained street network rather than a relocatable "
+        "road; UTM 18N northing along the frame, easting up it. The 15 buffer domains beyond "
         "each end are not drawn.")
     plt.close(fig)
     return out[0]
@@ -1917,6 +1940,7 @@ FIGURES = {
     "domain_framework": lambda dom, outline, roads, frame, vector: fig_domain_framework(dom, outline, roads, frame, vector),
     "domain_metrics": lambda **k: fig_domain_metrics(),
     "domain_framework_vertical": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector),
+    "domain_framework_vertical_aerial": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector, aerial=True),
     "site_overview": lambda dom, outline, roads, frame, vector: fig_site_overview(dom, outline, roads, frame, vector),
     "domain_grid": lambda dom, outline, roads, frame, vector: fig_domain_grid(dom, roads, vector),
     "forcing_timeline_1984": lambda **k: fig_forcing_timeline("forcing_timeline_1984"),
