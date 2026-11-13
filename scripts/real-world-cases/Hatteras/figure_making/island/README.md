@@ -476,6 +476,10 @@ reach_elevation); 1-site/README.md is the index.
     domain_framework_noinset.png, domain_framework_vertical_noinset.png
                           the horizontal and vertical versions without the
                           regional inset
+    domain_framework_aerial.png, domain_framework_aerial_noinset.png,
+    domain_framework_vertical_aerial_noinset.png
+                          the aerial versions: toned Esri imagery, no
+                          community shading, the road keyed (need network)
     domain_metrics.png    the island width and highest cell the 2004-start
                           extraction gives each domain
     site_overview.png     study_area and domain_framework as one two-panel

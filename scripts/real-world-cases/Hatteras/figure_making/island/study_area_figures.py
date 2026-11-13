@@ -72,6 +72,9 @@ SUBJECT = {
     "domain_framework_vertical": ("site", "domain-framework"),
     "domain_framework_vertical_noinset": ("site", "domain-framework"),
     "domain_framework_vertical_aerial": ("site", "domain-framework"),
+    "domain_framework_vertical_aerial_noinset": ("site", "domain-framework"),
+    "domain_framework_aerial": ("site", "domain-framework"),
+    "domain_framework_aerial_noinset": ("site", "domain-framework"),
     "domain_metrics": ("site", "domain-geometry"),
     "domain_grid": ("site", "domain-geometry"),
     "domain_schematic": ("site", "domain-geometry"),
@@ -288,7 +291,8 @@ class ReachArt(typing.NamedTuple):
 def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
                label_every=10, label_villages=True, water_labels=True, box_lw=0.35,
                arrow_xy=(0.965, 0.20), ocean_x=0.55, sound_x=0.20, piers=True, scalebar=True,
-               numbers=True, arrow=True, show_road=True, water=None, ends=True, groin=True):
+               numbers=True, arrow=True, show_road=True, water=None, ends=True, groin=True,
+               tone=False, box_alpha=1.0):
     map_axes(ax, window)
     x0, x1, y0, y1 = window
     if vector:
@@ -297,8 +301,8 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
         box_c, road_c, water_c = INK, C["ROAD"], INK_MUTED
     else:
         img, (l, r, b, t) = tiles(frame.unrotate_bounds(x0, x1, y0, y1), zoom, imagery_source())
-        im = ax.imshow(img, extent=(l, r, b, t), transform=frame.image_transform(ax), zorder=0,
-                       interpolation="bilinear")
+        im = ax.imshow(tone_imagery(img) if tone else img, extent=(l, r, b, t),
+                       transform=frame.image_transform(ax), zorder=0, interpolation="bilinear")
         if water is not None:
             # one flat water colour; the imagery shows only inside the island outline
             ax.set_facecolor(water)
@@ -306,7 +310,7 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
         box_c, road_c, water_c = "white", ROAD_ON_IMAGERY, "white"
         credit(ax, "Imagery: Esri World Imagery")
 
-    frame.geoms(dom.geometry).plot(ax=ax, facecolor="none", edgecolor=box_c, lw=box_lw, zorder=4)
+    frame.geoms(dom.geometry).plot(ax=ax, facecolor="none", edgecolor=box_c, lw=box_lw, alpha=box_alpha, zorder=4)
     if show_road:
         # on imagery the yellow road gets a dark keyline, so it holds against white sand as well as green marsh
         road_pe = None if vector else [mpl.patheffects.withStroke(linewidth=2.6, foreground="0.1")]
@@ -736,20 +740,29 @@ def draw_buffers(ax, frame, dom, label=True):
 
 
 # The domains over the island outline, with the community domains and the inset
-def fig_domain_framework(dom, outline, roads, frame, vector, inset=True):
-    # the study_area layout: same window, inset, top row and scale bar, on the vector base
+def fig_domain_framework(dom, outline, roads, frame, vector, inset=True, aerial=False):
+    # the study_area layout: same window, inset, top row and scale bar; on the vector base, or on toned
+    # imagery (aerial: no community shading, white type, the road keyed, as the vertical aerial)
+    tk = MAP_TEXT if aerial else MAP_TEXT_DARK
     window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
     fig, ax = reach_figure(window)
     fw, fh = fig.get_size_inches()
-    draw_reach(ax, frame, dom, outline, roads[2008], vector=True, window=window,
-               label_villages=False, water_labels=False, numbers=False, ends=False, groin=False,
-               piers=False, scalebar=False, arrow=False)
-    draw_role_fills(ax, frame, dom, ends=False)
-    draw_hotspots(ax, dom, frame)
+    road_c = draw_reach(ax, frame, dom, outline, roads[2008], vector=not aerial, window=window,
+                        label_villages=False, water_labels=False, numbers=False, ends=False, groin=False,
+                        piers=False, scalebar=False, arrow=False, tone=aerial,
+                        box_lw=0.25 if aerial else 0.35, box_alpha=0.5 if aerial else 1.0).road_c
+    if not aerial:
+        draw_role_fills(ax, frame, dom, ends=False)
+    draw_hotspots(ax, dom, frame, halo=aerial)
     # water names and scale bar where study_area has them
-    study_area_labels(ax, frame, dom, True, outline, text_kw=MAP_TEXT_DARK, leader_c=INK_MUTED,
+    study_area_labels(ax, frame, dom, not aerial, outline, text_kw=tk, leader_c="white" if aerial else INK_MUTED,
                       shift_m={"Buxton": 4000.0})
-    scale_bar_km(ax, text_kw=MAP_TEXT_DARK)
+    scale_bar_km(ax, text_kw=tk)
+    handles = framework_handles()
+    if aerial:
+        key = [mpl.patheffects.withStroke(linewidth=2.6, foreground="0.1")]
+        handles[0] = Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain")
+        handles[1] = Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment", path_effects=key)
     ih, edge = 0.58, 0.018
     iw = ih * fh / fw
     if inset:
@@ -760,16 +773,19 @@ def fig_domain_framework(dom, outline, roads, frame, vector, inset=True):
         # no locator: an empty point in its corner, so top_row puts the legend in the corner itself
         ax_in = fig.add_axes([0.996 - edge * fh / fw, 0.994 - edge, 1e-4, 1e-4])
         ax_in.set_axis_off()
-    leg = top_row(ax, ax_in, framework_handles(), letter=0 if inset else None, north=frame.north(),
-                  text_kw=MAP_TEXT_DARK, legend_kw=FRAMED_LEGEND)
+    leg = top_row(ax, ax_in, handles, letter=0 if inset else None, north=frame.north(),
+                  text_kw=None if aerial else MAP_TEXT_DARK, legend_kw=FRAMED_LEGEND)
     frame_legend(leg)
-    out = save(fig, fig_path("domain_framework" + ("" if inset else "_noinset")), vector=True, dpi=300)
+    name = "domain_framework" + ("_aerial" if aerial else "") + ("" if inset else "_noinset")
+    out = save(fig, fig_path(name), vector=not aerial, dpi=300)
     record_caption(out[0],
-        "The domain framework. " + ("(a) " if inset else "") + f"The {LAST - FIRST + 1} Barrier3D domain boxes (500 m alongshore) over the "
-        "island outline, south to north from left to right (a quarter turn, north to the right, so the "
-        "UTM-aligned boxes are level), numbered every tenth; the community domains (steel blue; Buxton 7–8, "
-        "Avon 21–31, Salvo–Waves–Rodanthe 68–83), where NC-12 is a maintained street network rather than a "
-        "relocatable road; NC-12 as digitised on 2008 imagery; the NCDOT NC 12 hot spots (orange dashed; NCDOT 2021: Buxton 8–14, Avon 28–35, Rodanthe S-Curves 84–88; data/hatteras_init/4-mgmt-forcing/ncdot_hotspots); the Buxton groin field (red, white-edged bar "
+        "The domain framework. " + ("(a) " if inset else "") + f"The {LAST - FIRST + 1} Barrier3D domain boxes (500 m alongshore) "
+        + ("on Esri World Imagery" if aerial else "over the island outline")
+        + ", south to north from left to right (a quarter turn, north to the right, so the "
+        "UTM-aligned boxes are level), numbered every tenth; "
+        + ("" if aerial else "the community domains (steel blue; Buxton 7–8, Avon 21–31, Salvo–Waves–Rodanthe "
+           "68–83), where NC-12 is a maintained street network rather than a relocatable road; ")
+        + "NC-12 as digitised on 2008 imagery" + (" (yellow)" if aerial else "") + "; the NCDOT NC 12 hot spots (orange dashed; NCDOT 2021: Buxton 8–14, Avon 28–35, Rodanthe S-Curves 84–88; data/hatteras_init/4-mgmt-forcing/ncdot_hotspots); the Buxton groin field (red, white-edged bar "
         f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.)"
         + (" (b) The box marks Hatteras Island on the North Carolina coast; the white lines are the 2° "
            "graticule (80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state "
@@ -890,7 +906,9 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
         ax_in.apply_aspect()
         in_bottom = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[1]
     else:
-        in_bottom = 1 - inset_gap / panel_in + 0.012  # the legend takes the inset's corner
+        # the legend takes the inset's corner, its top just below the "90" label so the two do not touch
+        y90 = (dom.geometry.iloc[-1].bounds[1] - n0) / (n1 - n0)
+        in_bottom = y90 + 0.004
     # The legend under the locator, in the open sound; the groin bar as drawn here
     handles = framework_handles()
     handles[-1].set_marker("_")
@@ -2022,6 +2040,9 @@ FIGURES = {
     "domain_framework_vertical": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector),
     "domain_framework_vertical_aerial": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector, aerial=True),
     "domain_framework_noinset": lambda dom, outline, roads, frame, vector: fig_domain_framework(dom, outline, roads, frame, vector, inset=False),
+    "domain_framework_aerial": lambda dom, outline, roads, frame, vector: fig_domain_framework(dom, outline, roads, frame, vector, aerial=True),
+    "domain_framework_aerial_noinset": lambda dom, outline, roads, frame, vector: fig_domain_framework(dom, outline, roads, frame, vector, inset=False, aerial=True),
+    "domain_framework_vertical_aerial_noinset": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector, aerial=True, inset=False),
     "domain_framework_vertical_noinset": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector, inset=False),
     "site_overview": lambda dom, outline, roads, frame, vector: fig_site_overview(dom, outline, roads, frame, vector),
     "domain_grid": lambda dom, outline, roads, frame, vector: fig_domain_grid(dom, roads, vector),
