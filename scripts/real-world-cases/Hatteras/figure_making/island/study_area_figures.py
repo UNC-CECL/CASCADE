@@ -248,7 +248,7 @@ def canvas_source():
 def letter_corner(ax, i, x=0.06, y=0.94, ha="left"):
     ax.text(x, y, f"({chr(ord('a') + i)})", transform=ax.transAxes, ha=ha, va="top",
             fontsize=10, fontweight="bold", color=INK, zorder=20,
-            bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
+            bbox=dict(facecolor="white", alpha=1.0, edgecolor="none", boxstyle="square,pad=0.15"))
 
 
 # The tile attribution once for the whole figure, in the bottom margin
@@ -308,7 +308,10 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
 
     frame.geoms(dom.geometry).plot(ax=ax, facecolor="none", edgecolor=box_c, lw=box_lw, zorder=4)
     if show_road:
-        frame.geoms(road.geometry).plot(ax=ax, color=road_c, lw=0.9, zorder=5)
+        # on imagery the yellow road gets a dark keyline, so it holds against white sand as well as green marsh
+        road_pe = None if vector else [mpl.patheffects.withStroke(linewidth=2.6, foreground="0.1")]
+        frame.geoms(road.geometry).plot(ax=ax, color=road_c, lw=0.9 if vector else 1.2, zorder=5,
+                                        path_effects=road_pe)
 
     sea = frame.seaward
     cen = frame.pts(frame.centroids)
@@ -419,10 +422,33 @@ def utm_frame(ax, frame, every_x_km=10, every_y_km=5, fontsize=8):
 
 
 # The framework legend, one column inside the map over open water
-def framework_legend(ax, handles, corner="lower right", anchor=None):
+def framework_legend(ax, handles, corner="lower right", anchor=None, framed=False):
     anchor = anchor or {"lower right": (0.985, 0.025), "lower left": (0.015, 0.025),
                         "upper right": (0.985, 0.975), "upper left": (0.015, 0.975)}[corner]
-    ax.legend(handles=handles, loc=corner, bbox_to_anchor=anchor, ncol=1, **MAP_LEGEND)
+    leg = ax.legend(handles=handles, loc=corner, bbox_to_anchor=anchor, ncol=1,
+                    **{**MAP_LEGEND, **(FRAMED_LEGEND if framed else {})})
+    if framed:
+        frame_legend(leg)
+    return leg
+
+
+# A finished legend: solid white with a thin ink edge, matching the inset's frame
+FRAMED_LEGEND = dict(framealpha=1.0, edgecolor=INK, borderpad=0.5)
+
+
+def frame_legend(leg):
+    leg.get_frame().set_linewidth(0.6)
+    leg.get_frame().set_boxstyle("square", pad=0.0)
+    return leg
+
+
+# Imagery toned down so the overlays lead: 20% toward grey, 12% darker
+def tone_imagery(img, desat=0.20, darken=0.12):
+    a = np.asarray(img).astype(float)
+    rgb = a[..., :3] / (255.0 if a.max() > 1.5 else 1.0)
+    lum = (0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2])[..., None]
+    rgb = (rgb * (1 - desat) + lum * desat) * (1 - darken)
+    return np.clip(rgb, 0, 1)
 
 
 # SHORT labels
@@ -635,7 +661,8 @@ def fig_study_area(dom, outline, roads, frame, vector):
     letter_corner(ax_in, 1)
     handles = [
         Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain, 500 m alongshore"),
-        Line2D([], [], color=road_c, lw=1.2, label="NC-12"),
+        Line2D([], [], color=road_c, lw=1.2, label="NC-12",
+               path_effects=None if vector else [mpl.patheffects.withStroke(linewidth=2.6, foreground="0.1")]),
         groin_handle(),
     ]
     # legend left of the inset, (a) and the north arrow on the same top line
@@ -733,8 +760,9 @@ def fig_domain_framework(dom, outline, roads, frame, vector, inset=True):
         # no locator: an empty point in its corner, so top_row puts the legend in the corner itself
         ax_in = fig.add_axes([0.996 - edge * fh / fw, 0.994 - edge, 1e-4, 1e-4])
         ax_in.set_axis_off()
-    top_row(ax, ax_in, framework_handles(), letter=0 if inset else None, north=frame.north(),
-            text_kw=MAP_TEXT_DARK)
+    leg = top_row(ax, ax_in, framework_handles(), letter=0 if inset else None, north=frame.north(),
+                  text_kw=MAP_TEXT_DARK, legend_kw=FRAMED_LEGEND)
+    frame_legend(leg)
     out = save(fig, fig_path("domain_framework" + ("" if inset else "_noinset")), vector=True, dpi=300)
     record_caption(out[0],
         "The domain framework. " + ("(a) " if inset else "") + f"The {LAST - FIRST + 1} Barrier3D domain boxes (500 m alongshore) over the "
@@ -763,7 +791,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
     n0, n1 = by0 - pad_n, by1 + pad_n
 
     fw = FIG_W_SINGLE
-    left, right, top, bottom = 0.52, 0.10, 0.30, 0.48      # inches
+    left, right, top, bottom = 0.52, 0.10, 0.08, 0.48      # inches; the panel letters sit inside
     pw = fw - left - right
     win_h = n1 - n0
     win_w = win_h * pw / panel_in                          # equal scale in both directions
@@ -786,7 +814,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
     land = outline.geometry.intersection(win)
     if aerial:
         img, ext = tiles((e0, n0, e1, n1), 12, imagery_source())
-        ax.imshow(img, extent=ext, zorder=0, interpolation="bilinear")
+        ax.imshow(tone_imagery(img), extent=ext, zorder=0, interpolation="bilinear")
         ax.set_xlim(e0, e1)
         ax.set_ylim(n0, n1)
     else:
@@ -797,13 +825,16 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
     zones = set()
     for lo, hi in HATTERAS_COMMUNITY_ZONES:
         zones.update(range(lo, hi + 1))
-    boxes.plot(ax=ax, facecolor="none", edgecolor=box_ec, lw=0.3, zorder=3)
+    boxes.plot(ax=ax, facecolor="none", edgecolor=box_ec, lw=0.25 if aerial else 0.3, alpha=0.5 if aerial else 1.0,
+               zorder=3)
     for g, geom in zip(dom.ID.values, boxes.values):
         fc = ROLE["community"] if (g in zones and not aerial) else None    # aerial: no shading
         if fc:
             ax.add_patch(mpl.patches.Polygon(xy2d(geom), closed=True, facecolor=fc, edgecolor=box_ec,
                                              lw=0.3, zorder=4, alpha=0.85 if aerial else 1.0))
-    roads[2008].clip(win).plot(ax=ax, color=road_c, lw=0.9, zorder=5)
+    # on imagery the yellow road gets a dark keyline, so it holds against white sand as well as green marsh
+    road_pe = [mpl.patheffects.withStroke(linewidth=2.6, foreground="0.1")] if aerial else None
+    roads[2008].clip(win).plot(ax=ax, color=road_c, lw=1.2 if aerial else 0.9, zorder=5, path_effects=road_pe)
     draw_hotspots(ax, dom, lw=1.2, halo=aerial)
 
     # Every tenth domain numbered on the SOUND side, the villages named on the OCEAN side beside (README)
@@ -828,12 +859,16 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
                      np.interp(pos - FIRST, np.arange(len(cen)), cen[:, 1]), marker="_")
     # The ends and the water bodies the end names
     place_label(ax, bx0 - 300, by0 - 800, "Cape Point", tk, ha="right", va="top")
-    place_label(ax, bx1 + 1100, by1 + 400, "Pea Island", tk, ha="left", va="bottom")
+    y90 = dom.geometry.iloc[-1].centroid.y
+    place_label(ax, dom.geometry.iloc[-1].bounds[2] + 1100, y90, "Pea Island", tk, ha="left")
+    ax.plot([dom.geometry.iloc[-1].bounds[2] + 120, dom.geometry.iloc[-1].bounds[2] + 900], [y90, y90],
+            color=leader_c, lw=0.5, zorder=7)
     for x_, y_, words in ((0.84, 0.22, ("Atlantic", "Ocean")), (0.13, 0.50, ("Pamlico", "Sound"))):
         ax.text(x_, y_, "\n".join(spaced_caps(w) for w in words), transform=ax.transAxes,
                 ha="center", va="center", **tk)
 
     # North is up here
+    scale_bar_km(ax, length_m=5000, segments=2, x=0.57, y=0.06, text_kw=tk)   # lower right, beside the arrow
     north_dart(ax, axes_point(ax, 0.91, 0.07), north=(0.0, 1.0), arrow_m=2600.0, text_kw=tk)  # lower-right corner, open ocean
     ticks_e = np.arange(math.ceil(e0 / 5000) * 5000, e1, 5000)
     ticks_n = np.arange(math.ceil(n0 / 5000) * 5000, n1, 5000)
@@ -861,11 +896,12 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
     handles[-1].set_marker("_")
     if aerial:
         handles[0] = Patch(facecolor="none", edgecolor=INK, lw=0.6, label="model domain")
-        handles[1] = Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment")
-    framework_legend(ax, handles, "upper left",
+        handles[1] = Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment",
+                            path_effects=[mpl.patheffects.withStroke(linewidth=2.6, foreground="0.1")])
+    framework_legend(ax, handles, "upper left", framed=True,
                      anchor=(inset_gap / pw, in_bottom - 0.012))
     if inset:
-        _title(ax, 0, "")
+        letter_corner(ax, 0, x=0.975, y=0.985, ha="right")
         letter_corner(ax_in, 1)
     if aerial:
         credit_figure(fig, "Imagery: Esri World Imagery")
