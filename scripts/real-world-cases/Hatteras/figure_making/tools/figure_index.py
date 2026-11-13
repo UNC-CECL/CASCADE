@@ -64,9 +64,9 @@ LAYOUT = {
 
 # Where do I find ...: common questions pointed at checked paths
 FAQ = [
-    ("Where is the study area / a map of the domains?", "1-site/study_area.png"),
+    ("Where is the study area / a map of the domains?", "1-site/study-area/study_area.png"),
     ("Which way do the domain numbers run?", "4-model-mechanics/brie/brie_domain_orientation.png"),
-    ("What does one domain look like as the model reads it?", "1-site/domain_grid.png"),
+    ("What does one domain look like as the model reads it?", "1-site/domain-geometry/domain_grid.png"),
     ("What are the observed shoreline-change rates?", "2-observations/shoreline/observed_rates.png"),
     ("How do the two calibration periods compare (observed)?", "2-observations/shoreline/coastsat_calibration_periods.png"),
     ("How has the dune line moved?", "2-observations/duneline/duneline_positions_overview.png"),

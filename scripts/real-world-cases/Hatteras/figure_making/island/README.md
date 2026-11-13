@@ -454,7 +454,12 @@ disagree.
 
 Writes into the numbered output/figures/ layout (1-site/, 2-observations/,
 3-model-inputs/; see SUBJECT below), PNG at the top and PDF + CAPTIONS.md
-under supporting/; --talk writes the same paths under output/figures/talk/:
+under supporting/; --talk writes the same paths under output/figures/talk/.
+Since 2026-11-13 1-site/ is split by question: study-area/ (study_area,
+site_overview), domain-framework/ (every domain_framework* version) and
+domain-geometry/ (domain_grid, domain_schematic, domain_metrics,
+reach_elevation); 1-site/README.md is the index.
+
 
     study_area.png        the reach on satellite imagery with the 90 domain
                           boxes, NC-12, the villages and structures, and a
@@ -468,6 +473,9 @@ under supporting/; --talk writes the same paths under output/figures/talk/:
     domain_framework_vertical_aerial.png
                           the vertical layout on Esri World Imagery, no
                           community shading (needs network)
+    domain_framework_noinset.png, domain_framework_vertical_noinset.png
+                          the horizontal and vertical versions without the
+                          regional inset
     domain_metrics.png    the island width and highest cell the 2004-start
                           extraction gives each domain
     site_overview.png     study_area and domain_framework as one two-panel

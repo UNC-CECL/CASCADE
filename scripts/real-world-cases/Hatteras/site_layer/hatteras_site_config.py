@@ -708,6 +708,19 @@ HATTERAS_COMMUNITY_ZONES = (
     (68, 83),   # Salvo / Waves / Rodanthe (Tri-Village)
 )
 
+# NCDOT's NC 12 hot spots in the reach (NCDOT 2021, "NC 12 Hot Spots"), GIS ranges, inclusive, keyed by NCDOT's
+# number. A reference, not a model input: no run reads it. Georeferenced from NCDOT's own maps: the overview map's
+# symbol, trimmed where the text or a detailed map ends the hot spot sooner (Buxton's south end at the Cape Hatteras
+# Motel; Rodanthe at the pavement removed for the Jug Handle Bridge). Sources, figures and reasoning in
+# data/hatteras_init/4-mgmt-forcing/ncdot_hotspots/ (input_prep/4-mgmt-forcings/ncdot_hotspots/HAT_ncdot_hotspots.py);
+# the eros_hot / hotspot fields of HAT_domains.json carry the same ranges (2026-11-13). Not the model's own erosion
+# zones (BE_HOTSPOT, collision hotspots), which come from CoastSat and the runs.
+HATTERAS_NCDOT_HOTSPOTS = {
+    5: ("Buxton", 8, 14),
+    4: ("Avon", 28, 35),               # the 2015 R-4070B study puts the Avon problem in south Avon (to GIS ~26)
+    3: ("Rodanthe S-Curves", 84, 88),
+}
+
 # Per-domain road elevation, m MHW-relative (2009 lidar under the 2004 line); one set for every period
 HATTERAS_ROAD_ELEVATION_FILE = _tv_mgmt.init_relpath(_tv_mgmt.ROAD_ELEVATION_FILE)
 

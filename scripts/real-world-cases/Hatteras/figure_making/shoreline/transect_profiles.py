@@ -90,8 +90,9 @@ EXAMPLES = {
                                  "2017 nourishment (placed June 2017 to February 2018): 2018 is the first survey after."),
     "avon_coastsat_hotspot_gis25": (25, "Avon", "The erosion hotspot of the CoastSat rates at the south end of "
                                     "Avon (-2.2 m/yr)."),
-    "avon_mapped_hotspot_gis34": (34, "North of Avon", "Inside the Avon erosion hotspot of domains.geojson (GIS "
-                                  "32-36), where CoastSat has the shoreline advancing (+1.7 m/yr)."),
+    "avon_mapped_hotspot_gis34": (34, "North of Avon", "Inside NCDOT's Avon NC 12 hot spot (NCDOT 2021, GIS 28-35; "
+                                  "4-mgmt-forcing/ncdot_hotspots), where CoastSat has the shoreline advancing "
+                                  "(+1.7 m/yr)."),
     "salvo_wimble_accretion_gis67": (67, "Salvo, Wimble Shoals", "The fastest-accreting domain away from Cape "
                                      "Point (CoastSat +2.9 m/yr)."),
     "pea_island_overwash_gis87": (87, "Rodanthe-Pea Island overwash", "Inside the Rodanthe-Pea Island overwash "

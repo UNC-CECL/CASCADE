@@ -64,15 +64,18 @@ from site_layer.hat_figure_style import FIGURES_ROOT as FIG_ROOT, figure_dir  # 
 
 # Which numbered output/figures/ folder each figure belongs to
 SUBJECT = {
-    "study_area": ("site",),
-    "site_overview": ("site",),
-    "domain_framework": ("site",),
-    "domain_framework_vertical": ("site",),
-    "domain_framework_vertical_aerial": ("site",),
-    "domain_metrics": ("site",),
-    "domain_grid": ("site",),
-    "domain_schematic": ("site",),
-    "reach_elevation": ("site",),
+    # 1-site/ in three folders by question: where the reach is, how the domains tile it, what a domain is
+    "study_area": ("site", "study-area"),
+    "site_overview": ("site", "study-area"),
+    "domain_framework": ("site", "domain-framework"),
+    "domain_framework_noinset": ("site", "domain-framework"),
+    "domain_framework_vertical": ("site", "domain-framework"),
+    "domain_framework_vertical_noinset": ("site", "domain-framework"),
+    "domain_framework_vertical_aerial": ("site", "domain-framework"),
+    "domain_metrics": ("site", "domain-geometry"),
+    "domain_grid": ("site", "domain-geometry"),
+    "domain_schematic": ("site", "domain-geometry"),
+    "reach_elevation": ("site", "domain-geometry"),
     "forcing_timeline_1984": ("inputs", "3-forcing"),
     "forcing_timeline_1996": ("inputs", "3-forcing"),
     "management_footprint": ("inputs", "4-management"),
@@ -682,7 +685,7 @@ def draw_buffers(ax, frame, dom, label=True):
 
 
 # The domains over the island outline, with the community domains and the inset
-def fig_domain_framework(dom, outline, roads, frame, vector):
+def fig_domain_framework(dom, outline, roads, frame, vector, inset=True):
     # the study_area layout: same window, inset, top row and scale bar, on the vector base
     window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
     fig, ax = reach_figure(window)
@@ -697,26 +700,33 @@ def fig_domain_framework(dom, outline, roads, frame, vector):
     scale_bar_km(ax, text_kw=MAP_TEXT_DARK)
     ih, edge = 0.58, 0.018
     iw = ih * fh / fw
-    ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
-    regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=None)
-    letter_corner(ax_in, 1)
-    top_row(ax, ax_in, framework_handles(), letter=0, north=frame.north(), text_kw=MAP_TEXT_DARK)
-    out = save(fig, fig_path("domain_framework"), vector=True, dpi=300)
+    if inset:
+        ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
+        regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=None)
+        letter_corner(ax_in, 1)
+    else:
+        # no locator: an empty point in its corner, so top_row puts the legend in the corner itself
+        ax_in = fig.add_axes([0.996 - edge * fh / fw, 0.994 - edge, 1e-4, 1e-4])
+        ax_in.set_axis_off()
+    top_row(ax, ax_in, framework_handles(), letter=0 if inset else None, north=frame.north(),
+            text_kw=MAP_TEXT_DARK)
+    out = save(fig, fig_path("domain_framework" + ("" if inset else "_noinset")), vector=True, dpi=300)
     record_caption(out[0],
-        f"The domain framework. (a) The {LAST - FIRST + 1} Barrier3D domain boxes (500 m alongshore) over the "
+        "The domain framework. " + ("(a) " if inset else "") + f"The {LAST - FIRST + 1} Barrier3D domain boxes (500 m alongshore) over the "
         "island outline, south to north from left to right (a quarter turn, north to the right, so the "
         "UTM-aligned boxes are level), numbered every tenth; the community domains (steel blue; Buxton 7–8, "
         "Avon 21–31, Salvo–Waves–Rodanthe 68–83), where NC-12 is a maintained street network rather than a "
         "relocatable road; NC-12 as digitised on 2008 imagery; the Buxton groin field (red, white-edged bar "
-        f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.) (b) The box marks "
-        "Hatteras Island on the North Carolina coast; the white lines are the 2° graticule "
-        "(80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state boundaries.")
+        f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.)"
+        + (" (b) The box marks Hatteras Island on the North Carolina coast; the white lines are the 2° "
+           "graticule (80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state "
+           "boundaries." if inset else ""))
     plt.close(fig)
     return out[0]
 
 
 # The domain framework NORTH UP, as a portrait figure
-def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aerial=False):
+def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aerial=False, inset=True):
     # aerial: Esri World Imagery under the same layout, with the house rule for type on imagery
     tk = MAP_TEXT if aerial else MAP_TEXT_DARK
     box_ec = "white" if aerial else INK
@@ -811,12 +821,15 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
 
     # The locator in the upper left, over the open sound (README)
     side, inset_gap = 1.38, 0.05                     # inches; the gap from the frame's corner
-    ax_in = fig.add_axes([(left + inset_gap) / fw, (bottom + panel_in - inset_gap - side) / fh,
-                          side / fw, side / fh])
-    regional_inset(ax_in, outline, vector, lat_side="left", tick_labels=False, locator_c=None)
-    ax_in.set_anchor("NW")                           # pinned to the corner once its aspect shrinks it
-    ax_in.apply_aspect()
-    in_bottom = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[1]
+    if inset:
+        ax_in = fig.add_axes([(left + inset_gap) / fw, (bottom + panel_in - inset_gap - side) / fh,
+                              side / fw, side / fh])
+        regional_inset(ax_in, outline, vector, lat_side="left", tick_labels=False, locator_c=None)
+        ax_in.set_anchor("NW")                       # pinned to the corner once its aspect shrinks it
+        ax_in.apply_aspect()
+        in_bottom = ax.transAxes.inverted().transform(fig.transFigure.transform(ax_in.get_position().p0))[1]
+    else:
+        in_bottom = 1 - inset_gap / panel_in + 0.012  # the legend takes the inset's corner
     # The legend under the locator, in the open sound; the groin bar as drawn here
     handles = framework_handles()
     handles[-1].set_marker("_")
@@ -825,16 +838,17 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
         handles[1] = Line2D([], [], color=road_c, lw=1.2, label="NC-12, 2008 alignment")
     framework_legend(ax, handles, "upper left",
                      anchor=(inset_gap / pw, in_bottom - 0.012))
-    _title(ax, 0, "")
-    letter_corner(ax_in, 1)
+    if inset:
+        _title(ax, 0, "")
+        letter_corner(ax_in, 1)
     if aerial:
         credit_figure(fig, "Imagery: Esri World Imagery")
 
-    name = "domain_framework_vertical_aerial" if aerial else "domain_framework_vertical"
+    name = ("domain_framework_vertical_aerial" if aerial else "domain_framework_vertical") + ("" if inset else "_noinset")
     out = save(fig, fig_path(name), vector=not aerial, dpi=300)
     base = ("on Esri World Imagery" if aerial else "over the island outline")
     record_caption(out[0],
-        f"The domain framework, north up. (a) The {LAST - FIRST + 1} Barrier3D domain boxes {base} "
+        "The domain framework, north up. " + ("(a) " if inset else "") + f"The {LAST - FIRST + 1} Barrier3D domain boxes {base} "
         "in their true orientation, the reach running south to north up the page from Cape Point "
         "(GIS 1) to the southern end of Pea Island (GIS 90), with the Atlantic to the east; every tenth "
         "domain is numbered on the sound side and the villages are named on the ocean side. "
@@ -844,9 +858,11 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
         + (" (yellow). " if aerial else ". ") +
         f"(The {N_BUFFER} buffer domains beyond each end, which pad the alongshore transport solve, "
         "are not drawn.) The Buxton groin field is the red, white-edged bar drawn offshore. Coordinates are "
-        "UTM zone 18N in kilometres, at equal scale in both directions. (b) The box marks Hatteras Island on "
-        "the North Carolina coast; the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N); "
-        "Natural Earth 10 m coastline and state boundaries. This is the content of `domain_framework` "
+        "UTM zone 18N in kilometres, at equal scale in both directions. "
+        + ("(b) The box marks Hatteras Island on the North Carolina coast; the white lines are the 2° "
+           "graticule (80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state "
+           "boundaries. " if inset else "") +
+        "This is the content of `domain_framework` "
         "unturned; a manuscript wants one of the two, not both.")
     plt.close(fig)
     return out[0]
@@ -1941,6 +1957,8 @@ FIGURES = {
     "domain_metrics": lambda **k: fig_domain_metrics(),
     "domain_framework_vertical": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector),
     "domain_framework_vertical_aerial": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector, aerial=True),
+    "domain_framework_noinset": lambda dom, outline, roads, frame, vector: fig_domain_framework(dom, outline, roads, frame, vector, inset=False),
+    "domain_framework_vertical_noinset": lambda dom, outline, roads, frame, vector: fig_domain_framework_vertical(dom, outline, roads, vector, inset=False),
     "site_overview": lambda dom, outline, roads, frame, vector: fig_site_overview(dom, outline, roads, frame, vector),
     "domain_grid": lambda dom, outline, roads, frame, vector: fig_domain_grid(dom, roads, vector),
     "forcing_timeline_1984": lambda **k: fig_forcing_timeline("forcing_timeline_1984"),
