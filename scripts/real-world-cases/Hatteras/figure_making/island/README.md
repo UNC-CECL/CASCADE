@@ -459,9 +459,9 @@ under supporting/; --talk writes the same paths under output/figures/talk/:
     study_area.png        the reach on satellite imagery with the 90 domain
                           boxes, NC-12, the villages and structures, and a
                           regional inset
-    domain_framework.png  the domains by role (boundary, scored interior,
-                          community zones, buffers) over the island outline,
-                          with a regional inset
+    domain_framework.png  the domains over the island outline in the
+                          study_area layout, community domains in steel
+                          blue, NC-12 (2008), with a regional inset
     domain_framework_vertical.png
                           the same, NORTH UP as a portrait page: the reach
                           running up the page, ocean to the east

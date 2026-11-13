@@ -104,7 +104,7 @@ ROAD_ON_IMAGERY = "#ffd23f"   # a road-map yellow: legible on sand and asphalt
 PROFILE_GROUND = "#cdb26f"    # a cross-shore profile's ground fill: a profile, not a topography map, so not terrain
 ROLE = {                       # fills for domain_framework
     "boundary": "0.40",        # the end domains: dark, few, the boundary condition
-    "community": "#e6b39a",    # the community zones: the settlement tint of a topographic map
+    "community": "#7fa3c7",    # the community zones: steel blue, clear of the pale water and ivory land
 }
 HALO = _halo(2.0)
 # White type on imagery needs a dark halo, the opposite of the house one
@@ -424,12 +424,8 @@ def framework_legend(ax, handles, corner="lower right", anchor=None):
 # SHORT labels
 def framework_handles():
     return [
-        Patch(facecolor="white", edgecolor=INK, lw=0.6,
-              label=f"interior, GIS {SCORE_INTERIOR_GIS[0]}–{SCORE_INTERIOR_GIS[1]}"),
-        Patch(facecolor=ROLE["boundary"], edgecolor=INK, lw=0.6,
-              label=f"ends, GIS {FIRST} and {LAST}"),
-        Patch(facecolor=ROLE["community"], edgecolor=INK, lw=0.6, label="community zone"),
-        Line2D([], [], color=C["ROAD"], lw=1.0, label="NC-12, 2008"),
+        Patch(facecolor=ROLE["community"], edgecolor=INK, lw=0.6, label="community domains"),
+        Line2D([], [], color=C["ROAD"], lw=1.0, label="NC-12, 2008 alignment"),
         groin_handle(),
     ]
 
@@ -650,13 +646,13 @@ def domain_metrics(product=TOPO_PRODUCT):
 
 
 # The end domains and the community zones filled on the reach map
-def draw_role_fills(ax, frame, dom):
+def draw_role_fills(ax, frame, dom, ends=True):
     rdom = frame.geoms(dom.geometry)
     zones = set()
     for lo, hi in HATTERAS_COMMUNITY_ZONES:
         zones.update(range(lo, hi + 1))
     for g, geom in zip(dom.ID.values, rdom.values):
-        if g in (FIRST, LAST):
+        if ends and g in (FIRST, LAST):
             fc = ROLE["boundary"]
         elif g in zones:
             fc = ROLE["community"]
@@ -683,38 +679,36 @@ def draw_buffers(ax, frame, dom, label=True):
                     color=INK_MUTED, zorder=8)
 
 
-# The domains by role over the island outline, with the inset
+# The domains over the island outline, with the community domains and the inset
 def fig_domain_framework(dom, outline, roads, frame, vector):
-    window = frame.window(dom, pad_along_km=3.5, pad_sea_km=7.5, pad_sound_km=13.0)
-    fig, ax = reach_figure(window, panel_frac=(0.048, 0.10, 0.94, 0.885))
+    # the study_area layout: same window, inset, top row and scale bar, on the vector base
+    window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
+    fig, ax = reach_figure(window)
     fw, fh = fig.get_size_inches()
     draw_reach(ax, frame, dom, outline, roads[2008], vector=True, window=window,
                label_villages=False, water_labels=False, numbers=False, ends=False, groin=False,
                piers=False, scalebar=False, arrow=False)
-    draw_role_fills(ax, frame, dom)
-    utm_frame(ax, frame)
+    draw_role_fills(ax, frame, dom, ends=False)
+    # water names and scale bar where study_area has them
     study_area_labels(ax, frame, dom, True, outline, text_kw=MAP_TEXT_DARK, leader_c=INK_MUTED,
-                      shift_m={}, ocean_x=0.60, sound_x=0.25)
-    # The regional inset in the upper right corner, the legend and arrow beside it
-    ih, iw = 1.3 / fh, 1.3 / fw
-    pos = ax.get_position()
-    ax_in = fig.add_axes([pos.x1 - 0.06 / fw - iw, pos.y1 - 0.06 / fh - ih, iw, ih])
+                      shift_m={"Buxton": 4000.0})
+    scale_bar_km(ax, text_kw=MAP_TEXT_DARK)
+    ih, edge = 0.58, 0.018
+    iw = ih * fh / fw
+    ax_in = fig.add_axes([0.996 - edge * fh / fw - iw, 0.994 - edge - ih, iw, ih])
     regional_inset(ax_in, outline, vector, tick_labels=False, locator_c=C["LOCATOR"], locator_lw=2.4)
     letter_corner(ax_in, 1)
     top_row(ax, ax_in, framework_handles(), letter=0, north=frame.north(), text_kw=MAP_TEXT_DARK)
     out = save(fig, fig_path("domain_framework"), vector=True, dpi=300)
     record_caption(out[0],
-        f"The domain framework. (a) The {LAST - FIRST + 1} Barrier3D domain boxes over the island outline, "
-        "south to north from left to right (a quarter turn, north to the right, so the UTM-aligned boxes are "
-        "level; UTM 18N northing runs along the frame and easting up it), with the roles the hindcast "
-        f"assigns them: the interior domains scored against the CoastSat record (GIS "
-        f"{SCORE_INTERIOR_GIS[0]}–{SCORE_INTERIOR_GIS[1]}), the end domains that carry the alongshore "
-        f"boundary condition (GIS {FIRST}, {LAST}), and the community zones (Buxton 7–8, Avon 21–31, "
-        "Salvo–Waves–Rodanthe 68–83) where NC-12 is a maintained street network rather than a relocatable "
-        f"road. (The {N_BUFFER} buffer domains beyond each end, which pad the alongshore transport solve, "
-        "are not drawn.) The Buxton groin field is the red, white-edged bar drawn offshore. (b) Hatteras "
-        "Island (teal) on the North Carolina coast; the box marks the reach; the white lines are the 2° "
-        "graticule (80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state boundaries.")
+        f"The domain framework. (a) The {LAST - FIRST + 1} Barrier3D domain boxes (500 m alongshore) over the "
+        "island outline, south to north from left to right (a quarter turn, north to the right, so the "
+        "UTM-aligned boxes are level), numbered every tenth; the community domains (steel blue; Buxton 7–8, "
+        "Avon 21–31, Salvo–Waves–Rodanthe 68–83), where NC-12 is a maintained street network rather than a "
+        "relocatable road; NC-12 as digitised on 2008 imagery; the Buxton groin field (red, white-edged bar "
+        f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.) (b) Hatteras Island "
+        "(teal) on the North Carolina coast; the box marks the reach; the white lines are the 2° graticule "
+        "(80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state boundaries.")
     plt.close(fig)
     return out[0]
 
@@ -757,7 +751,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
         zones.update(range(lo, hi + 1))
     boxes.plot(ax=ax, facecolor="white", edgecolor=INK, lw=0.3, zorder=3)
     for g, geom in zip(dom.ID.values, boxes.values):
-        fc = ROLE["boundary"] if g in (FIRST, LAST) else (ROLE["community"] if g in zones else None)
+        fc = ROLE["community"] if g in zones else None
         if fc:
             ax.add_patch(mpl.patches.Polygon(xy2d(geom), closed=True, facecolor=fc, edgecolor=INK,
                                              lw=0.3, zorder=4))
@@ -821,12 +815,10 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
         f"The domain framework, north up. (a) The {LAST - FIRST + 1} Barrier3D domain boxes over the island "
         "outline in their true orientation, the reach running south to north up the page from Cape Point "
         "(GIS 1) to the southern end of Pea Island (GIS 90), with the Atlantic to the east; every tenth "
-        "domain is numbered on the ocean side and the villages are named on the sound side. The roles the "
-        f"hindcast assigns the domains: the interior domains scored against the CoastSat record (GIS "
-        f"{SCORE_INTERIOR_GIS[0]}–{SCORE_INTERIOR_GIS[1]}), the end domains that carry the alongshore "
-        f"boundary condition (GIS {FIRST}, {LAST}), and the community zones (Buxton 7–8, Avon 21–31, "
-        "Salvo–Waves–Rodanthe 68–83) where NC-12 is a maintained street network rather than a relocatable "
-        f"road. (The {N_BUFFER} buffer domains beyond each end, which pad the alongshore transport solve, "
+        "domain is numbered on the sound side and the villages are named on the ocean side. The community "
+        "domains (steel blue; Buxton 7–8, Avon 21–31, Salvo–Waves–Rodanthe 68–83) are where NC-12 is a "
+        "maintained street network rather than a relocatable road; NC-12 as digitised on 2008 imagery. "
+        f"(The {N_BUFFER} buffer domains beyond each end, which pad the alongshore transport solve, "
         "are not drawn.) The Buxton groin field is the red, white-edged bar drawn offshore. Coordinates are "
         "UTM zone 18N in kilometres, at equal scale in both directions. (b) Hatteras Island (teal) on the "
         "North Carolina coast; the white lines are the 2° graticule (80°, 78° and 76° W; 34° and 36° N); "
