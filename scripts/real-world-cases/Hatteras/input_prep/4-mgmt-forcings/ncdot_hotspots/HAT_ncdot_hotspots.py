@@ -105,8 +105,8 @@ F_POINTS = {"R-4070B Begin Project (Old Lighthouse Road)": (1155, 1584),
             "Park Drive (south edge of Avon)": (1293, 743)}
 
 OVAL_FILL, OVAL_EDGE = "#9ecae1", fs.C_1997
-RANGE_C = fs.C_1984
-SOURCE_C = {"nourish": "#2166ac", "removed": fs.C["ACCENT"], "bridge": fs.C["ADDED"]}
+RANGE_C = "#e66101"                  # orange: the domain_framework figures' hot-spot colour
+SOURCE_C = {"nourish": "#2166ac", "removed": fs.C["ACCENT"], "bridge": "0.35"}   # bridge grey, clear of the orange
 # -----------------------------------------------------------------------------
 
 
@@ -525,7 +525,7 @@ def fig_map(d, outline, road, ovals):
         "NCDOT's NC 12 hot spots on the model domains. (a) The reach, north up, every tenth domain numbered; the "
         "three hot spots of NCDOT (2021) inside it (3 Rodanthe 'S' Curves, 4 Avon, 5 Buxton; 1, 2, 6 and 7 lie "
         "outside) with their map symbols georeferenced from the report's overview map (blue) and the ranges taken "
-        "from them (red dashed; GIS 8-14, 28-35, 84-88). The boxes mark panels (b)-(d). (b-d) Each hot spot, every "
+        "from them (orange dashed; GIS 8-14, 28-35, 84-88). The boxes mark panels (b)-(d). (b-d) Each hot spot, every "
         "second domain numbered. NCDOT draws every hot spot with the same 3.8 km symbol, so the symbol places a hot "
         "spot but does not measure it; a range follows the symbol and is trimmed where NCDOT's text or detailed "
         "maps end the hot spot sooner (Buxton's south end at the Cape Hatteras Motel, GIS 8; Rodanthe at the "
@@ -584,14 +584,14 @@ def fig_georeference(d, outline, road, ovals, bux, rod, r4070):
     out = fs.save(fig, OUT_DIR / "ncdot_hotspots_georeference.png", vector=True, dpi=300)
     rf = rod["removed"][:, 1]
     fs.record_caption(out[0],
-        "The evidence behind each hot-spot range (red dashed), every NCDOT map georeferenced onto the 2008 NC-12 "
+        "The evidence behind each hot-spot range (orange dashed), every NCDOT map georeferenced onto the 2008 NC-12 "
         "line. (a) Buxton: the beach nourishment line of NCDOT (2021) Long-Term Alternative 5 (blue), Begin at the "
         "NC-12 bend at Old Lighthouse Road, the hot spot's south end in the report's text; it runs on north of the "
         "hot-spot symbol as a design length. (b) Avon: the 2021 report has no detailed map, so the range is the "
         "symbol; the 2015 Buxton-to-Avon feasibility study (R-4070B) ends its one Buxton-Avon hot-spot project at "
         "Nino Road in south Avon (green diamonds), south of the symbol. (c) Rodanthe 'S' Curves: the pavement "
         f"removed when the Jug Handle Bridge opened (purple, GIS {gis_of(d, rf.min())[0]:.1f}-"
-        f"{gis_of(d, rf.max())[0]:.1f}) and the bridge (orange). Scale from each map's own bar or dimension lines; "
+        f"{gis_of(d, rf.max())[0]:.1f}) and the bridge (grey). Scale from each map's own bar or dimension lines; "
         "fit statistics in georeference_fits.csv.")
     plt.close(fig)
     return out[0]

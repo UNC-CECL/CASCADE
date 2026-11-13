@@ -50,7 +50,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
-    HATTERAS_ANNOTATIONS as ANN, HATTERAS_COMMUNITY_ZONES, HATTERAS_DOMAINS,
+    HATTERAS_ANNOTATIONS as ANN, HATTERAS_COMMUNITY_ZONES, HATTERAS_DOMAINS, HATTERAS_NCDOT_HOTSPOTS,
     HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_ROAD_EVENTS, SCORE_INTERIOR_GIS,
 )
 
@@ -430,8 +430,32 @@ def framework_handles():
     return [
         Patch(facecolor=ROLE["community"], edgecolor=INK, lw=0.6, label="community domains"),
         Line2D([], [], color=C["ROAD"], lw=1.0, label="NC-12, 2008 alignment"),
+        hotspot_handle(),
         groin_handle(),
     ]
+
+
+# NCDOT's NC 12 hot spots (hatteras_site_config.HATTERAS_NCDOT_HOTSPOTS): a dashed outline around each range's boxes,
+# orange, as in the reference figures of data/hatteras_init/4-mgmt-forcing/ncdot_hotspots/ (red is the groins)
+HOTSPOT_C = "#e66101"
+HOTSPOT_LS = (0, (4, 2))
+
+
+def hotspot_handle():
+    return Line2D([], [], color=HOTSPOT_C, lw=1.2, ls=HOTSPOT_LS, label="NCDOT NC 12 hot spot")
+
+
+# Draw the outlines; `frame` rotates them for the quarter-turned maps, None leaves them in UTM
+def draw_hotspots(ax, dom, frame=None, buf_m=90.0, lw=1.1, zorder=6, halo=False):
+    for _, (_, lo, hi) in sorted(HATTERAS_NCDOT_HOTSPOTS.items()):
+        g = dom[(dom.ID >= lo) & (dom.ID <= hi)].geometry.union_all().buffer(buf_m, join_style=2)
+        if frame is not None:
+            g = shp_rotate(g, frame.deg, origin=frame.origin)
+        for poly in getattr(g, "geoms", [g]):
+            x, y = poly.exterior.xy
+            pe = [mpl.patheffects.withStroke(linewidth=lw + 1.6, foreground="white")] if halo else None
+            ax.plot(x, y, color=HOTSPOT_C, lw=lw, ls=HOTSPOT_LS, zorder=zorder, solid_capstyle="butt",
+                    path_effects=pe)
 
 
 NE_STATES = _ml.NE_STATES
@@ -694,6 +718,7 @@ def fig_domain_framework(dom, outline, roads, frame, vector, inset=True):
                label_villages=False, water_labels=False, numbers=False, ends=False, groin=False,
                piers=False, scalebar=False, arrow=False)
     draw_role_fills(ax, frame, dom, ends=False)
+    draw_hotspots(ax, dom, frame)
     # water names and scale bar where study_area has them
     study_area_labels(ax, frame, dom, True, outline, text_kw=MAP_TEXT_DARK, leader_c=INK_MUTED,
                       shift_m={"Buxton": 4000.0})
@@ -716,7 +741,7 @@ def fig_domain_framework(dom, outline, roads, frame, vector, inset=True):
         "island outline, south to north from left to right (a quarter turn, north to the right, so the "
         "UTM-aligned boxes are level), numbered every tenth; the community domains (steel blue; Buxton 7–8, "
         "Avon 21–31, Salvo–Waves–Rodanthe 68–83), where NC-12 is a maintained street network rather than a "
-        "relocatable road; NC-12 as digitised on 2008 imagery; the Buxton groin field (red, white-edged bar "
+        "relocatable road; NC-12 as digitised on 2008 imagery; the NCDOT NC 12 hot spots (orange dashed; NCDOT 2021: Buxton 8–14, Avon 28–35, Rodanthe S-Curves 84–88; data/hatteras_init/4-mgmt-forcing/ncdot_hotspots); the Buxton groin field (red, white-edged bar "
         f"drawn offshore). (The {N_BUFFER} buffer domains beyond each end are not drawn.)"
         + (" (b) The box marks Hatteras Island on the North Carolina coast; the white lines are the 2° "
            "graticule (80°, 78° and 76° W; 34° and 36° N); Natural Earth 10 m coastline and state "
@@ -779,6 +804,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
             ax.add_patch(mpl.patches.Polygon(xy2d(geom), closed=True, facecolor=fc, edgecolor=box_ec,
                                              lw=0.3, zorder=4, alpha=0.85 if aerial else 1.0))
     roads[2008].clip(win).plot(ax=ax, color=road_c, lw=0.9, zorder=5)
+    draw_hotspots(ax, dom, lw=1.2, halo=aerial)
 
     # Every tenth domain numbered on the SOUND side, the villages named on the OCEAN side beside (README)
     cen = np.c_[boxes.centroid.x.values, boxes.centroid.y.values]
@@ -854,7 +880,8 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5, aer
         "domain is numbered on the sound side and the villages are named on the ocean side. "
         + ("" if aerial else "The community domains (steel blue; Buxton 7–8, Avon 21–31, Salvo–Waves–Rodanthe "
            "68–83) are where NC-12 is a maintained street network rather than a relocatable road; ")
-        + "NC-12 as digitised on 2008 imagery"
+        + "NC-12 as digitised on 2008 imagery; "
+        + "the NCDOT NC 12 hot spots (orange dashed; NCDOT 2021: Buxton 8–14, Avon 28–35, Rodanthe S-Curves 84–88; data/hatteras_init/4-mgmt-forcing/ncdot_hotspots)"
         + (" (yellow). " if aerial else ". ") +
         f"(The {N_BUFFER} buffer domains beyond each end, which pad the alongshore transport solve, "
         "are not drawn.) The Buxton groin field is the red, white-edged bar drawn offshore. Coordinates are "
@@ -903,6 +930,7 @@ def fig_site_overview(dom, outline, roads, frame, vector):
                water_labels=False, piers=False, scalebar=False, numbers=False, arrow=False,
                ends=False, groin=False)
     draw_role_fills(ax_b, frame, dom, ends=False)
+    draw_hotspots(ax_b, dom, frame)
     utm_frame(ax_b, frame)
     study_area_labels(ax_b, frame, dom, True, outline, text_kw=MAP_TEXT_DARK, leader_c=INK_MUTED,
                       numbers=False, villages=False, water=False, groin_label=False)
@@ -922,7 +950,7 @@ def fig_site_overview(dom, outline, roads, frame, vector):
         "and 76° W; 34° and 36° N). (c) The same "
         "frame on the island outline, the community domains (steel blue; Buxton 7–8, Avon 21–31, "
         "Salvo–Waves–Rodanthe 68–83) where NC-12 is a maintained street network rather than a relocatable "
-        "road; UTM 18N northing along the frame, easting up it. The 15 buffer domains beyond "
+        "road; the NCDOT NC 12 hot spots (orange dashed; NCDOT 2021: Buxton 8–14, Avon 28–35, Rodanthe S-Curves 84–88; data/hatteras_init/4-mgmt-forcing/ncdot_hotspots); UTM 18N northing along the frame, easting up it. The 15 buffer domains beyond "
         "each end are not drawn.")
     plt.close(fig)
     return out[0]
