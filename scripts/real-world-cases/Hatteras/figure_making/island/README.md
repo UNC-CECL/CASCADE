@@ -454,7 +454,8 @@ disagree.
 
 Writes into the numbered output/figures/ layout (1-site/, 2-observations/,
 3-model-inputs/; see SUBJECT below), PNG at the top and PDF + CAPTIONS.md
-under supporting/; --talk writes the same paths under output/figures/talk/.
+under supporting/; --talk writes into a talk/ folder inside each topic folder
+(since 2026-11-15; before, a separate output/figures/talk/ tree).
 Since 2026-11-13 1-site/ is split by question: study-area/ (study_area,
 site_overview), domain-framework/ (every domain_framework* version) and
 domain-geometry/ (domain_grid, domain_schematic, domain_metrics,
@@ -827,7 +828,7 @@ box centres, removed column by column
 
 ```text
 `output/figures/<numbered subject>/.../<name>.png`, the folder created.
-Under `talk/` in talk mode, mirroring the same path.
+In talk mode, in the `talk/` folder inside the same topic folder.
 ```
 
 **`Frame()`**
@@ -1183,7 +1184,7 @@ overran the page. Returns the mosaic and its cross-shore extent
 A projector reads pale fills as white and thin lines as nothing, and a
 slide is seen from further away than a page. So: the water barely off
 the white of the slide (the land still ivory), type one point larger,
-hairlines heavier, and the output kept apart under talk/.
+hairlines heavier, and the output kept apart in each topic's talk/ folder.
 ```
 
 **`anchor_at()`**

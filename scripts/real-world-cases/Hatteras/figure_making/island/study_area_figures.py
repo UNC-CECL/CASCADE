@@ -85,14 +85,14 @@ SUBJECT = {
     "observed_rates": ("observations", "shoreline"),
     "dune_lines": ("observations", "duneline"),
 }
-TALK = False        # set by talk_mode(); the projector set mirrors the layout
+TALK = False        # set by talk_mode(); the projector set goes in a talk/ folder inside each topic folder
 
 
 # `output/figures/<numbered subject>/.../<name>.png`, the folder created
 def fig_path(name):
     d = figure_dir(*SUBJECT[name])
     if TALK:
-        d = FIG_ROOT / "talk" / d.relative_to(FIG_ROOT)
+        d = d / "talk"
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{name}.png"
 TILE_CACHE = Path(tempfile.gettempdir()) / "hat_tile_cache"

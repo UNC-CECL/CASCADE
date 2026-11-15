@@ -3,7 +3,7 @@ A slide-sized table of the hindcast's dune and wave settings, for a talk.
 
     python scripts/figure_making/model/dune_settings_table.py
 
-Writes output/figures/talk/4-model-mechanics/dune_and_wave_settings_table.png
+Writes output/figures/4-model-mechanics/talk/dune_and_wave_settings_table.png
 (16:9). Values as adopted 2026-10-13; see MODEL_VARIABLES.md for the full list.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
@@ -30,7 +30,7 @@ sys.path.insert(0, str(_HAT_DIR))
 from site_layer.hat_figure_style import C, INK, INK_MUTED, apply_style, figure_dir, save  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = figure_dir("talk", "4-model-mechanics") / "dune_and_wave_settings_table.png"
+OUT = figure_dir("mechanics") / "talk" / "dune_and_wave_settings_table.png"   # a projector figure only
 HEADER = ("Parameter", "Value", "Source")
 ROWS = (
     ("Maximum dune elevation\n(Dmaxel)", "5.5 m NAVD88\none value, island-wide",

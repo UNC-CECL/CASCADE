@@ -92,7 +92,7 @@ Never beside the script. `figure_dir()` resolves `output/figures/`:
 | `inputs` | `3-model-inputs/<step>/` | how each model input is built (`INPUT_STEPS`) |
 | `mechanics` | `4-model-mechanics/<...>/` | how Barrier3D, BRIE and CASCADE work |
 | `results` | `5-results/` | hindcasts and scenarios |
-| `talk` | `talk/<same path>` | projector versions |
+| — | `<topic>/talk/` | projector versions, inside each topic folder (since 2026-11-15) |
 
 A cross-run comparison goes to `COMPARISONS_ROOT`; when it is also a finished
 manuscript figure, the same run of the same script writes it to `5-results/`

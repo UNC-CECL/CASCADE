@@ -155,15 +155,14 @@ def tree_lines() -> list[str]:
         d = FIGURES / key
         if not d.is_dir():
             continue
-        n = sum(1 for p in d.rglob("*.png") if "supporting" not in p.parts)
+        n = sum(1 for p in d.rglob("*.png") if not {"supporting", "talk"} & set(p.parts))
         depth = key.count("/")
         name = key.split("/")[-1] + "/"
         short = blurb.split(":")[0].split(".")[0]
         lines.append(f"{'  ' * (depth + 1)}{name:<{30 - 2 * depth}} {n:>3}  {short}")
-    talk = FIGURES / "talk"
-    if talk.is_dir():
-        n = sum(1 for p in talk.rglob("*.png") if "supporting" not in p.parts)
-        lines.append(f"  {'talk/':<30} {n:>3}  projector versions, same paths as above")
+    n = sum(1 for p in FIGURES.rglob("*.png") if "talk" in p.parts and "supporting" not in p.parts)
+    if n:
+        lines.append(f"  {'<topic>/talk/':<30} {n:>3}  projector versions, inside each topic folder")
     lines.append("```")
     return lines
 
@@ -183,7 +182,7 @@ def main() -> Path:
         "",
         "**Bring everything up to date:** `python scripts/figure_making/tools/regenerate_all_figures.py`",
         "(one folder: `--only 5-results`). Each figure's PDF and caption sit in the",
-        "`supporting/` folder beside it; `talk/` holds projector versions at the same paths.",
+        "`supporting/` folder beside it; a `talk/` folder beside it holds the projector versions.",
         "Retired figures are deleted, never kept in here.",
         "",
     ]
@@ -225,7 +224,7 @@ def main() -> Path:
 
     out = FIGURES / "README.md"
     out.write_text("\n".join(lines), encoding="utf-8")
-    print(f"wrote {out} ({total} figures listed, talk/ aside)")
+    print(f"wrote {out} ({total} figures listed, talk versions aside)")
     return out
 
 

@@ -40,7 +40,7 @@ scripts were brought in line with `scripts/STYLE.md`, 2026-09-30).
 | how each model input is built (elevation, domains and the initial island, offset, forcing, management, observed target, source/sink) | `output/figures/3-model-inputs/<step>/` |
 | how the models work | `output/figures/4-model-mechanics/<barrier3d, brie, cascade, storm_routing>/` |
 | hindcasts, scenarios, worked examples | `output/figures/5-results/` |
-| the same figures for a projector | `output/figures/talk/<same path>` |
+| the same figures for a projector | a `talk/` folder inside each topic folder |
 | the house style, drawn | `output/figures/style/` |
 | the observed record itself | `data/hatteras_init/5-scr/1-observations/raw_shoreline_change/` |
 | a comparison across runs | `output/comparisons/` |
@@ -56,7 +56,7 @@ Each has a `PUBLISH` switch to hold a figure back while its layout is broken.
 
 Resolve these through `scripts/site_layer/hat_figure_style.py`:
 `figure_dir(subject, ...)` with subject one of `site`, `observations`,
-`inputs`, `mechanics`, `results`, `style`, `talk` (and, under `inputs`, a step
+`inputs`, `mechanics`, `results`, `style` (and, under `inputs`, a step
 from `INPUT_STEPS`), plus `COMPARISONS_ROOT`, `OBSERVATIONS_OUT`. It raises on
 anything else, so a new top-level folder cannot appear by typo.
 

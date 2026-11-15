@@ -48,7 +48,7 @@ FIGURE_SUBJECTS = {
     "mechanics": "4-model-mechanics",  # how Barrier3D, BRIE and CASCADE work
     "results": "5-results",            # hindcasts and scenarios
     "style": "style",
-    "talk": "talk",                    # projector versions, mirroring the above
+    # projector versions sit in a talk/ folder inside each topic folder (since 2026-11-15), not a tree of their own
 }
 # the model-input steps under 3-model-inputs/, numbered as data/hatteras_init/
 INPUT_STEPS = ("0-elevation", "1-domains", "2-brie-offset", "3-forcing",
