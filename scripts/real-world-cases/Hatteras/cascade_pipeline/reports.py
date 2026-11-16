@@ -248,6 +248,9 @@ def beach_dune_report(*, start_year, end_year, beach_dune_enabled,
               f"community zones, "
               f"{config.default_overwash_filter_pct:.0f}% "
               f"elsewhere   (PERCENT, not a fraction)")
+        for first, last, pct in config.zone_overwash_filter_pct:
+            print(f"                      {pct:.0f}% in GIS {first}-{last} "
+                  f"(village override)")
         print(f"overwash_to_dune      {overwash_to_dune:.0f}%")
         print(f"module on             {sum(management_on)} domains "
               f"= community zones {list(community_zones)} "

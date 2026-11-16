@@ -900,9 +900,13 @@ HATTERAS_NOURISHMENT_PROJECTS = (
     ),
 )
 
-# Overwash filter for developed ground, a PERCENT: 40, the residential end of Rogers et al. (2015)
+# Overwash filter for developed ground, a PERCENT: 40, the residential end of Rogers et al. (2015).
+# Rodanthe village (GIS 77-83) 90, the commercial end, since 2026-11-04: at 40 the 2009-2025 test retreated the
+# village shoreline ~53 m against CoastSat's ~22 m; at 90, ~28 m (dune-collision/4-hindcast/8-other-forcings/
+# village_overwash_position_2009_2025.png). NCDOT and the county bulldoze overwash off the roads toward the beach.
 HATTERAS_BEACH_DUNE = BeachDuneConfig(
     community_overwash_filter_pct=40.0,
     default_overwash_filter_pct=0.0,
     overwash_to_dune_pct=9.0,
+    zone_overwash_filter_pct=((77, 83, 90.0),),   # Rodanthe
 )

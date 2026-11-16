@@ -61,7 +61,7 @@ Compiled 2026-10-13 from the code, not from a run's saved output.
 | `group_roadway_abandonment` | Road | None | None | no | — | Abandon roads in groups |
 | `nourishment_interval` | Nourishment | None | None (fills injected by year from the schedule) | no | yr | Years between fills |
 | `nourishment_volume` | Nourishment | 300 | 0 at start; historical volumes injected per year | yes | m³/m | Fill volume |
-| `overwash_filter` | Nourishment | 40 | 40 in community zones, 0 elsewhere | yes | % | Overwash removed from the interior |
+| `overwash_filter` | Nourishment | 40 | 40 in community zones, 90 at Rodanthe GIS 77-83 (since 2026-11-04), 0 elsewhere | yes | % | Overwash removed from the interior |
 | `overwash_to_dune` | Nourishment | 10 | 9 | yes | % | Overwash moved to the dunes |
 | `beach_full_cross_shore` | Nourishment | 70 | 70 | no | m | Target beach width |
 | `sandbag_elevation` | Nourishment | 1.5 | 0 | n/a | m above the berm | Dune height sandbags restore (sandbags off) |

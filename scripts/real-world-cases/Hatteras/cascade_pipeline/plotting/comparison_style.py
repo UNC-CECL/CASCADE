@@ -102,13 +102,15 @@ def run_subtitle(window, run_name):
 
 
 # The shared one-row legend redrawn as one centred legend whose columns are two headed groups: data, then map
-def group_legend(fig, ax):
+# features. rows: entries per column; by default all the data in one column, so a long data list (e.g. one line
+# per Cs) can be wrapped into several shorter columns instead
+def group_legend(fig, ax, rows=None):
     old = fig.legends.pop()
     entries = list(zip(old.legend_handles, (t.get_text() for t in old.get_texts())))
     map_labels = {h.get_label() for h in annotation_legend_handles(HATTERAS_ANNOTATIONS)}
     data = [e for e in entries if e[1] not in map_labels]
     features = [e for e in entries if e[1] in map_labels]
-    rows = max(1, len(data))
+    rows = max(1, rows or len(data))
 
     # Filled column by column: each column is a heading row (blank after a group's first) and `rows` entries
     blank = (Line2D([], [], ls="none"), "")
@@ -168,7 +170,7 @@ def sign_labels_outside(ax):
 
 
 # The whole finish, on a figure plot_annotated_rate_comparison drew with publication_text on
-def restyle(fig, ax, subtitle):
-    group_legend(fig, ax)
+def restyle(fig, ax, subtitle, legend_rows=None):
+    group_legend(fig, ax, rows=legend_rows)
     km_axis(fig, ax, subtitle)
     sign_labels_outside(ax)

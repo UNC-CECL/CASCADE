@@ -33,6 +33,9 @@ class BeachDuneConfig:
             undeveloped ground filters nothing, so this is normally 0.
         overwash_to_dune_pct: Percent of the remaining overwash bulldozed onto
             the dunes. filter + to_dune must stay under 100.
+        zone_overwash_filter_pct: Per-village overrides of the community
+            percent, ((first_gis, last_gis, percent), ...), applied over the
+            community zones (a village that clears more sand to the beach).
         minimum_community_width_m: BeachDuneManager's own hard-coded threshold,
             repeated here so pre-flight checks can use it. Below this average
             interior width the community is abandoned and management stops.
@@ -42,6 +45,7 @@ class BeachDuneConfig:
     default_overwash_filter_pct: float = 0.0
     overwash_to_dune_pct: float = 9.0
     minimum_community_width_m: float = 50.0
+    zone_overwash_filter_pct: tuple = ()
 
     def __post_init__(self):
         for name in ("community_overwash_filter_pct",
@@ -53,11 +57,17 @@ class BeachDuneConfig:
                     f"overwash_filter is a PERCENT (filter_overwash divides "
                     f"by 100), so {value} filters {value:.1f}% of overwash, "
                     f"not {value * 100:.0f}%. Pass {value * 100:.0f}.")
-        total = self.community_overwash_filter_pct + self.overwash_to_dune_pct
-        if total >= 100:
-            raise ValueError(
-                f"overwash_filter + overwash_to_dune must be under 100%, "
-                f"got {total}")
+        for value in (self.community_overwash_filter_pct,
+                      *(pct for _, _, pct in self.zone_overwash_filter_pct)):
+            if 0.0 < value < 1.0:
+                raise ValueError(
+                    f"overwash filter {value} looks like a fraction; it is a "
+                    f"PERCENT. Pass {value * 100:.0f}.")
+            total = value + self.overwash_to_dune_pct
+            if total >= 100:
+                raise ValueError(
+                    f"overwash_filter + overwash_to_dune must be under 100%, "
+                    f"got {total}")
 
 
 DEFAULT_BEACH_DUNE = BeachDuneConfig()
@@ -321,10 +331,12 @@ def build_overwash_filter(geometry, community_zones,
     including nourished domains outside a village, which are road corridor and
     refuge rather than development.
 
+    A village in config.zone_overwash_filter_pct takes its own percent.
+
     Args:
         geometry: DomainGeometry describing the padded array.
         community_zones: Iterable of inclusive (first_gis, last_gis) spans.
-        config: BeachDuneConfig supplying the two percentages.
+        config: BeachDuneConfig supplying the percentages.
 
     Returns:
         A list of geometry.total_domains percentages.
@@ -334,6 +346,9 @@ def build_overwash_filter(geometry, community_zones,
         for gis in range(first_gis, last_gis + 1):
             values[geometry.gis_to_pad(gis)] = (
                 config.community_overwash_filter_pct)
+    for first_gis, last_gis, pct in config.zone_overwash_filter_pct:
+        for gis in range(first_gis, last_gis + 1):
+            values[geometry.gis_to_pad(gis)] = pct
     return values
 
 
