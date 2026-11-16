@@ -141,6 +141,37 @@ STARTS = {
 SURVEY_VERTICAL_OFFSET_M = {"1996-start": {1996: -0.24, 1997: -0.34, 1999: -0.32},
                             "2009-start": {2011: -0.79, 2012: -0.09, 2014: -0.13, 2016: -0.21, 2017: -0.10,
                                            2018: -0.12, 2019: -0.12, 2020: -0.13}}
+# Windows that follow the dune (2026-11-03, Hannah). A fixed window, picked on the start's dunes, counts a dune that
+# moved landward as one that lowered: on the 1996 start 32% of the 2009 cells had their crest on the window's
+# landward edge (GIS 77-88 nearly all) and 139 fell to the berm; on the 2009 start, 67-91% of the 2020 cells at
+# GIS 22-25 and 75-76. Barrier3D's dune line moves with its shoreline, so the model is compared with the dune
+# wherever it now stands. Each 10 m cell's window is the start's, moved cross-shore by however far that cell's crest
+# moved from the start, as found in the previous survey (the start's own crest before the first): the window steps
+# along with the dune, survey by survey. A cell whose crest in the moved window is not on a dune (WINDOW_FLAGS) keeps
+# the previous position for the next survey. The shifts go to SHIFTS_FILE beside the crests, and the toe pickers read
+# them (window_shifts), so every script picks in the same windows. Interim (the same day, superseded): the 2009
+# survey on the 1996 start read in the 2009 start's windows. Before both: survey-crests/fixed-windows-until-2026-11-03/
+SHIFTS_FILE = "survey_window_shifts.csv"
+# Not a dune: the crest is on the moved window's landward edge (still climbing: a back dune, the road, a house pad),
+# or it stands less than NO_PEAK_M above the lowest ground within PEAK_CELLS landward of it (flat: back-barrier,
+# overwash or a destroyed dune)
+NO_PEAK_M = 0.3
+PEAK_CELLS = 3
+# A crest on the moved window's landward edge steps the window landward, one 10 m cell at a time, until the crest is
+# a peak inside it (the dune that moved), at most this far from the start's window (2026-11-03, after the hotspot
+# session found the first version never followed: the edge flag kept every retreating dune at its old position)
+FOLLOW_MAX_M = 60
+# How the survey windows move (--windows; shoreline_retreat adopted 2026-11-03, Hannah, after a trial of all four
+# against the 2009 start's own picks: survey-crests/trial-*/ in each start): "shoreline" moves each domain's start window by how far the observed
+# shoreline moved since the start (CoastSat, the mean within SHORELINE_HALF_WINDOW_DAYS of the start and of each
+# survey's mid-flight date; the median over the domain's transects), because Barrier3D's dune row sits a set distance
+# behind its shoreline and moves with it, so that is where the model's dune is (2026-11-03, Hannah, in place of the
+# patches "follow" needed); "follow" tracks the crest itself (the rules above); "fixed" keeps the start's window
+# "shoreline_retreat": the same, but the window never moves seaward of the start's: a fill moves the shoreline
+# seaward without moving the dune (Buxton 2017-18 and 2022: 20 m seaward, 93% of 2020 crests on the landward edge)
+WINDOW_MODES = ("shoreline", "shoreline_retreat", "follow", "fixed")
+SHORELINE_START_DATE = {"1996-start": "1996-09-15", "2009-start": "2009-08-15"}   # the start surveys' mid-flight
+SHORELINE_HALF_WINDOW_DAYS = 182
 # The road check: every survey against the 2009 lidar on the 2008 NC-12 line
 REF_2009 = POLYGONS / "2009/noaa_usace2009_nc_dem_Job1076020/2009_full.tif"
 ROAD_LINE = tv.MGMT_ROOT / "road_offset" / "raw_offset" / "2008" / "nc12_2008.geojson"
@@ -240,6 +271,53 @@ def frame(start, gis, windows):
     return shear, c0, int(w["i0"]), int(w["i1"])
 
 
+# The per-cell windows that follow the dune, as main() wrote them: {(survey, gis): shift in cells per 10 m cell,
+# landward +}. Shared by every script that picks on the surveys (the toe picker, the collision calibration's toes)
+_SHIFTS = {}
+
+
+def window_shifts(start):
+    if start not in _SHIFTS:
+        t = pd.read_csv(tv.product_dir(start) / "survey-crests" / SHIFTS_FILE).sort_values(["survey", "gis", "cell"])
+        _SHIFTS[start] = {(int(s), int(g)): d.shift_cells.to_numpy(int) for (s, g), d in t.groupby(["survey", "gis"])}
+    return _SHIFTS[start]
+
+
+# Per survey, per GIS domain: how far the observed shoreline moved landward since the start (m, landward +). CoastSat
+# chainage is seaward +; each transect's mean within the half window of each date, differenced, the domain's median
+def shoreline_moves(start, surveys):
+    from site_layer.hat_observed_rates import COASTSAT_TIMESERIES, TRANSECT_DOMAINS
+    lk = pd.read_csv(TRANSECT_DOMAINS / "transect_domain_lookup.csv").dropna(subset=["domain_number"])
+    half = pd.Timedelta(days=SHORELINE_HALF_WINDOW_DAYS)
+    t0 = pd.Timestamp(SHORELINE_START_DATE[start], tz="UTC")
+    mids = {}
+    for year, (_, _, flown, _, _) in surveys.items():
+        parts = flown.split(" to ")
+        a = pd.Timestamp(parts[0] + "-01", tz="UTC")
+        b = pd.Timestamp(parts[-1] + "-01", tz="UTC") + pd.offsets.MonthEnd(0)
+        mids[year] = a + (b - a) / 2
+    rows = []
+    for _, r in lk.iterrows():
+        f = COASTSAT_TIMESERIES / f"{r.transect_id[:11]}_timeseries" / f"{r.transect_id}.csv"
+        if not f.exists():
+            continue
+        d = pd.read_csv(f)
+        d.columns = ["date", "ch"]
+        d["date"] = pd.to_datetime(d.date, utc=True)
+        base = d[(d.date - t0).abs() <= half].ch.mean()
+        for year, m in mids.items():
+            rows.append(dict(survey=year, gis=int(r.domain_number),
+                             landward_m=-(d[(d.date - m).abs() <= half].ch.mean() - base)))
+    return pd.DataFrame(rows).groupby(["survey", "gis"]).landward_m.median()
+
+
+# One survey's windows on one domain: the start's (i0, i1) moved per cell, as arrays
+def survey_windows(start, year, g, i0, i1, n=50):
+    s = window_shifts(start).get((int(year), int(g)))
+    s = np.zeros(n, int) if s is None else s
+    return i0 + s, i1 + s
+
+
 # Profiles in the start's frame, ocean first, m MHW; nodata at the NODATA sentinel
 def profiles(raw_navd, shear, c0):
     a = X.orient_ocean_right(raw_navd, X.OCEAN_LOC)[:, ::-1]
@@ -254,14 +332,21 @@ def profiles(raw_navd, shear, c0):
     return zs[:, c0:]
 
 
-# find_dunes, with the crest kept only where the whole window was surveyed; m MHW, and why a crest is missing
-def crests(z, i0, i1):
+# find_dunes, with the crest kept only where the whole window was surveyed; m MHW, and why a crest is missing.
+# i0, i1: the window, one pair for every profile or an array per profile (the windows that follow the dune).
+# Also returns each crest's cell index and its flag (WINDOW_FLAGS: "" on a dune)
+def crests(z, i0, i1, with_index=False):
+    n = z.shape[0]
+    i0s, i1s = np.broadcast_to(np.asarray(i0, int), (n,)), np.broadcast_to(np.asarray(i1, int), (n,))
     above = z > X.BEACH_START_THR_M
     sb = np.where(above.any(axis=1), above.argmax(axis=1), -1)
-    out = np.full(z.shape[0], np.nan)
-    edge = np.zeros(z.shape[0], bool)
-    status = np.full(z.shape[0], "ok", dtype=object)
-    for i in range(z.shape[0]):
+    out = np.full(n, np.nan)
+    idx = np.full(n, -1, int)
+    flag = np.full(n, "", dtype=object)
+    edge = np.zeros(n, bool)
+    status = np.full(n, "ok", dtype=object)
+    for i in range(n):
+        i0, i1 = max(int(i0s[i]), 0), int(i1s[i])
         a = max(i0, int(sb[i])) if (X.CLIP_WINDOW_TO_BEACH and sb[i] >= 0) else i0
         b = min(i1, z.shape[1])
         if b <= a:
@@ -276,22 +361,32 @@ def crests(z, i0, i1):
             status[i] = "water"
             continue
         k = int(np.argmax(np.where(valid, win, -np.inf)))
-        out[i], edge[i] = win[k], (a + k == b - 1)
+        out[i], edge[i], idx[i] = win[k], (a + k == b - 1), a + k
+        behind = z[i, a + k + 1:a + k + 1 + PEAK_CELLS]
+        behind = behind[behind > X.NODATA_SENTINEL_M + 1e-9]
+        if edge[i]:
+            flag[i] = "landward_edge"
+        elif behind.size and win[k] - behind.min() < NO_PEAK_M:
+            flag[i] = "no_peak"
+    if with_index:
+        return out, edge, status, idx, flag
     return out, edge, status
 
 
 # The check: the start's arrays through this code, exact windows, must give its dune files. Returns the start's
 # crests (m NAVD88, domain x cell), the reference the first survey's spikes are judged against
-def check_start(start, frames):
+def check_start(start, frames, with_index=False):
     worst = 0.0
     out = np.full((91, 50), np.nan)
+    loc = np.full((91, 50), -1, int)
     for g in range(1, 91):
         shear, c0, i0, i1 = frames[g]
         z = profiles(np.load(tv.npy_dirs(start)[0] / f"domain_{g}.npy").astype(float), shear, c0)
         above = z > X.BEACH_START_THR_M
         sb = np.where(above.any(axis=1), above.argmax(axis=1), -1)
-        e, _ = X.find_dunes(z, sb, i0, i1)
+        e, dl = X.find_dunes(z, sb, i0, i1)
         out[g] = np.asarray(e[:50], float) + X.MHW_M
+        loc[g] = np.asarray(dl[:50], int)
         h = e - (X.BERM_ELEV_NAVD_M - X.MHW_M)
         h[np.isfinite(h) & (h < 0)] = X.MIN_DUNE_H_M
         h[~np.isfinite(h)] = X.MIN_DUNE_H_M
@@ -300,7 +395,7 @@ def check_start(start, frames):
     if worst > 1e-3:
         raise SystemExit(f"{start} check failed: max |difference| from the dune files {worst:.4f} m")
     print(f"{start} check passed: this code reproduces its dune files (max |difference| {worst:.1e} m)")
-    return out
+    return (out, loc) if with_index else out
 
 
 # Vertical unit of a raster survey: stated in its CRS, else from its land elevations against the start's arrays
@@ -362,12 +457,24 @@ def drop_spikes(t, cover, start_crests):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--start", choices=list(STARTS), default="2009-start")
-    start = ap.parse_args().start
+    ap.add_argument("--windows", choices=WINDOW_MODES, default="shoreline_retreat")
+    ap.add_argument("--trial", action="store_true",
+                    help="write to survey-crests/trial-<windows>/, leaving the tables the pipeline reads alone")
+    args = ap.parse_args()
+    start, mode = args.start, args.windows
     prod, surveys = STARTS[start]
     windows = json.loads(tv.picks_dir(start).joinpath(
         f"HAT_dune_search_windows_{tv.topo_dirs(start)[2]}.json").read_text(encoding="utf-8"))
     frames = {g: frame(start, g, windows) for g in range(1, 91)}
-    start_crests = check_start(start, frames)
+    start_crests, start_loc = check_start(start, frames, with_index=True)
+    # Where each cell's dune was last found (cell index on the start's straightened profile); the start's own crest
+    # before the first survey. The window for a survey is the start's moved by (last found - start)
+    last_loc, last_crest = start_loc.copy(), start_crests.copy()
+    shift_rows = []
+    moves = shoreline_moves(start, surveys) if mode.startswith("shoreline") else {}
+    if mode.startswith("shoreline"):
+        print(moves.groupby("survey").describe()[["mean", "min", "50%", "max"]].round(1).to_string(), flush=True)
+        moves = moves.to_dict()
     clips = product(prod).gapfill_1m
     grids = {g: clip_grid(clips / f"clip_domain_{g}_filled.tif") for g in range(1, 91)}
     # 1 m road pixels per domain and the 2009 lidar on them, for the road check
@@ -406,13 +513,49 @@ def main():
                     d = (on_m - ref09[g])[roads[g]]
                     road_diffs.append(d[np.isfinite(d)])
                 z = profiles(downsample(on_m), shear, c0)
-                c, edge, status = crests(z, i0, i1)
-                c_wide, _, _ = crests(z, max(i0 - WIDEN_CELLS, 0), i1 + WIDEN_CELLS)
+                if mode.startswith("shoreline"):
+                    # the start window moved by the domain's observed shoreline move since the start
+                    mv = moves.get((year, g), np.nan)
+                    sh = np.full(50, int(round(mv / BLOCK)) if np.isfinite(mv) else 0)
+                    if mode == "shoreline_retreat":
+                        sh = np.maximum(sh, 0)
+                elif mode == "fixed":
+                    sh = np.zeros(50, int)
+                else:
+                    # The window follows the dune: the start's, moved by where this cell's dune was last found
+                    ok_loc = last_loc[g] >= 0
+                    sh = np.where(ok_loc & (start_loc[g] >= 0), last_loc[g] - start_loc[g], 0)
+                c, edge, status, loc, flag = crests(z, i0 + sh, i1 + sh, with_index=True)
+                # A dune moving landward first shows as a crest on the window's landward edge: step that cell's
+                # window landward a cell at a time until its crest is a peak inside it, no further than FOLLOW_MAX_M
+                # from the start's window. A cell that finds none keeps its edge crest and flag ("follow" only)
+                pending = (status == "ok") & (flag == "landward_edge") & (mode == "follow")
+                for e in range(1, FOLLOW_MAX_M // BLOCK + 1):
+                    trial = sh + e
+                    pending &= trial * BLOCK <= FOLLOW_MAX_M
+                    if not pending.any():
+                        break
+                    c2, e2, st2, loc2, fl2 = crests(z, i0 + trial, i1 + trial, with_index=True)
+                    hit = pending & (st2 == "ok") & (fl2 == "")
+                    c, edge, loc, flag = (np.where(hit, c2, c), np.where(hit, e2, edge), np.where(hit, loc2, loc),
+                                          np.where(hit, fl2, flag))
+                    sh = np.where(hit, trial, sh)
+                    pending &= ~hit
+                c_wide, _, _ = crests(z, np.maximum(i0 + sh - WIDEN_CELLS, 0), i1 + sh + WIDEN_CELLS)
+                c_fixed, edge_fixed, _ = crests(z, i0, i1)
+                # A lidar spike (SPIKE_M above the cell's last crest) does not move the window
+                found = (status == "ok") & (flag == "") & (loc >= 0) & ~(c + X.MHW_M - last_crest[g] > SPIKE_M)
+                last_loc[g] = np.where(found, loc, last_loc[g])
+                last_crest[g] = np.where(found, c + X.MHW_M, last_crest[g])
                 for cell in range(50):
                     rows.append(dict(survey=year, flown=flown, model_state=state, gis=g, cell=cell,
                                      crest_m_navd88=c[cell] + X.MHW_M,
                                      crest_widened_window_m_navd88=c_wide[cell] + X.MHW_M,
-                                     at_landward_edge=bool(edge[cell]), status=status[cell]))
+                                     at_landward_edge=bool(edge[cell]), status=status[cell],
+                                     window_shift_m=int(sh[cell]) * BLOCK, window_flag=flag[cell],
+                                     crest_fixed_window_m_navd88=c_fixed[cell] + X.MHW_M,
+                                     fixed_window_at_landward_edge=bool(edge_fixed[cell])))
+                    shift_rows.append(dict(survey=year, gis=g, cell=cell, shift_cells=int(sh[cell])))
                 cover.append(dict(survey=year, gis=g, cells_with_crest=int(np.isfinite(c[:50]).sum()),
                                   cells_not_surveyed=int((status[:50] == "not_surveyed").sum()),
                                   cells_beach_landward_of_window=int((status[:50] == "beach_landward_of_window").sum()),
@@ -429,10 +572,19 @@ def main():
         print(f"{year}: crest in {n} of 4500 cells ({n / 45:.0f}%)", flush=True)
     t, cover = drop_spikes(pd.DataFrame(rows), pd.DataFrame(cover), start_crests)
     out = tv.product_dir(start) / "survey-crests"
+    if args.trial:
+        out = out / f"trial-{mode}"
     out.mkdir(parents=True, exist_ok=True)
     t.round(3).to_csv(out / "survey_dune_crests.csv", index=False)
     cover.to_csv(out / "survey_coverage.csv", index=False)
     pd.DataFrame(sources_tab).to_csv(out / "survey_sources.csv", index=False)
+    pd.DataFrame(shift_rows).to_csv(out / SHIFTS_FILE, index=False)
+    s = t.groupby("survey").agg(shift_median_m=("window_shift_m", "median"),
+                                shift_p90_m=("window_shift_m", lambda x: x.quantile(0.9)),
+                                flagged=("window_flag", lambda x: (x != "").mean()),
+                                edge_moved=("at_landward_edge", "mean"),
+                                edge_fixed=("fixed_window_at_landward_edge", "mean"))
+    print(s.round(3).to_string())
     print(out)
 
 

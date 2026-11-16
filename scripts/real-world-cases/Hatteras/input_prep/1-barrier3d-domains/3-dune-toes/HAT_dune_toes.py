@@ -3,6 +3,7 @@ Dune toes and beach widths per 10 m dune cell, from a start's lidar surveys: the
 
     python scripts/real-world-cases/Hatteras/input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py --start 1996-start
     python scripts/real-world-cases/Hatteras/input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py --start 2009-start
+    python scripts/real-world-cases/Hatteras/input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py --start 2009-start --cells
     python scripts/real-world-cases/Hatteras/input_prep/1-barrier3d-domains/3-dune-toes/HAT_dune_toes.py --figures
 
 The dune-collision module (cascade/dune_collision.py) lowers a dune the water
@@ -11,13 +12,20 @@ each cell's toe and beach width. Step 3 of the stage, after 2-survey-crests:
 both are taken from the same profiles HAT_survey_dune_crests.py reads crests from (the start's own arrays, then every
 survey of its window, on the start's frame and dune windows): the crest is the
 highest point of the dune window, the beach start the first cell above the beach
-threshold, the toe the point of the beach-to-crest profile furthest below the
-straight line between them (the beach start on a straight or convex face), and
+threshold, the toe the point of the profile furthest below the straight line from the beach start to the
+first dune (the beach start on a straight or convex face), and
 the beach width the dry beach, the beach start to the toe (0 where the crest stands within one cell of the
 beach start). Until 2026-11-03 the beach width ran to the crest, the dune face included (kept as
 beach_to_crest_m): it made a broad dune face read as a wide beach, and the toe is where the swash meets the dune.
+The first dune is the seaward-most peak with a dip of FOREDUNE_DROP_M behind it, the crest where none has one.
+Until 2026-11-03 the line ran to the crest: on a field of several ridges (GIS ~32-35, 63-67 in 1997) the toe then
+fell in a swale 35-90 m inside the field, against the dune lines traced from imagery
+(dune-collision/1-observations/2-toes-vs-dunelines/); the earlier tables are kept in
+9-dune-toes/0-previous-methods/<start>/deepest-dip-until-2026-11-03/.
 
-Each cell then gets one value, fixed for the run (2026-10-29: kept simple):
+Each domain gets one toe, fixed for the run (since 2026-11-04): the mean of its screened cells over the lidar
+surveys nearest the start (TOE_DOMAIN_SURVEYS: 1996 and 1997; 2004, 2005 and 2009), the toe screen as below. Until
+then each cell had its own (2026-10-29), kept as toe_cell_median_m_navd88:
 the median toe over the surveys whose toe is above TOE_MIN_M_NAVD88 and at least
 TOE_BELOW_CREST_M below that survey's crest, and the median beach width over the
 surveys; only survey cells with crest status "ok" in survey_dune_crests.csv count
@@ -40,12 +48,12 @@ dune_toe_cells.csv (one row per domain and cell: the values the runner uses).
 output/figures/3-model-inputs/1-domains/dune_toes/: dune_toes_alongshore.png
 (toe, crest above toe and beach width per domain), dune_toes_survey_spread.png
 (each survey's toe against the fixed value) and dune_toes_method.png (how a toe is
-read off one profile and what the module does with it, on one typical cell, EXAMPLE).
+read off one profile, made one per domain and used by the module, on one typical cell, EXAMPLE).
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-10-29
+Version: 2026-11-04
 """
 from __future__ import annotations
 
@@ -72,6 +80,13 @@ TOE_BELOW_CREST_M = 0.5          # and at least this far below the crest
 FOREDUNE_DROP_M = 1.0            # a peak with a dip this deep behind it is the first dune: the toe is picked under
                                  # a chord to it, not to the crest (2026-11-03, after the 1997 imagery check)
 TOE_SURVEYS_EXCLUDED = {"1996-start": (1998,), "2009-start": ()}
+# The toe the runner uses since 2026-11-04: one per domain, the mean of its screened cells over the lidar surveys
+# nearest the start, (start whose survey table holds them, surveys). No lidar before 1996, so 1996 and 1997; for 2009
+# the surveys up to it, read on the 1996 start's windows (nothing after the start). Per-cell survey medians before
+# (kept as toe_cell_median_m_navd88): in the 2009-2025 test they took the toes from 2014-2019, after the start, and a
+# single cell's low toe over-erodes (the erosion goes with the square of the water above it)
+BEACH_WIDTH_LIMIT_M = 25.0       # the module's beach_width_limit (dry beach), for the domain beach factor
+TOE_DOMAIN_SURVEYS = {"1996-start": ("1996-start", (1996, 1997)), "2009-start": ("1996-start", (2004, 2005, 2009))}
 CELLS = 50                       # 10 m dune cells per domain
 GIS = range(1, 91)
 # -----------------------------------------------------------------------------
@@ -97,11 +112,14 @@ def crest_and_toe(z, i0, i1, X):
     n = z.shape[0]
     out = {k: np.full(n, np.nan) for k in ("crest", "toe", "beach_start_idx", "crest_idx", "toe_idx",
                                            "foredune_idx")}
+    # One window for every profile, or one per profile (the survey windows that follow the dune, since 2026-11-03)
+    i0s, i1s = np.broadcast_to(np.asarray(i0, int), (n,)), np.broadcast_to(np.asarray(i1, int), (n,))
     above = z > X.BEACH_START_THR_M
     sb = np.where(above.any(axis=1), above.argmax(axis=1), -1)
     for i in range(n):
         if sb[i] < 0:
             continue
+        i0, i1 = max(int(i0s[i]), 0), int(i1s[i])
         a = max(i0, int(sb[i])) if X.CLIP_WINDOW_TO_BEACH else i0
         b = min(i1, z.shape[1])
         if b <= a:
@@ -158,9 +176,11 @@ def domain_profiles(start, domains=GIS):
             scale = S.US_FT if unit == "ft" else 1.0
             for g in domains:
                 shear, c0, i0, i1 = frames[g]
+                # The survey's windows follow the dune, as the crest script moved them (S.survey_windows, 2026-11-03)
+                w0, w1 = S.survey_windows(start, year, g, i0, i1)
                 on_clip = (S.mosaic_on_clip(srcs[0], grids[g]) if kind == "mosaic"
                            else S.raster_on_clip(srcs, grids[g]))
-                yield year, g, S.profiles(S.downsample(on_clip * scale + offsets.get(year, 0.0)), shear, c0), i0, i1
+                yield year, g, S.profiles(S.downsample(on_clip * scale + offsets.get(year, 0.0)), shear, c0), w0, w1
         finally:
             for s in srcs:
                 s.close()
@@ -214,6 +234,29 @@ def cell_table(t, start):
         out[name.replace("_m_navd88", "").replace("_m", "") + "_source"] = np.where(
             own.notna(), "cell", np.where(out[name].notna(), "domain median", "none"))
     out["surveys_with_toe"] = good.groupby(["gis", "cell"]).size().reindex(full).fillna(0).astype(int)
+    # The toe the runner reads: the domain mean over the surveys nearest the start (TOE_DOMAIN_SURVEYS)
+    src, years = TOE_DOMAIN_SURVEYS[start]
+    n = t if src == start else pd.read_csv(S.tv.product_dir(src) / "dune-toes" / "survey_dune_toes.csv")
+    n = n[(n.survey.astype(str).isin([str(y) for y in years])) & (n.status == "ok")]
+    n = n[(n.toe_m_navd88 > TOE_MIN_M_NAVD88) & (n.toe_m_navd88 < n.crest_m_navd88 - TOE_BELOW_CREST_M)]
+    dm = n.groupby("gis").toe_m_navd88.mean()
+    out = out.rename(columns={"toe_m_navd88": "toe_cell_median_m_navd88"})
+    out["toe_m_navd88"] = dm.reindex(full.get_level_values("gis")).to_numpy()
+    # The beach the same way since 2026-11-04, one value per domain: the domain mean of the module's beach factor,
+    # max(0, 1 - W / BEACH_WIDTH_LIMIT_M), over every ok cell of those surveys (beach_factor). The mean of the
+    # factor, not of the width: the factor is 0 beyond the limit, so a mean width over it switches the module off on
+    # a domain whose dune is half behind a narrow beach. beach_width_m is the width that gives that factor,
+    # BEACH_WIDTH_LIMIT_M (1 - factor), what the module reads; the per-cell medians kept as beach_width_cell_median_m
+    nw = t if src == start else pd.read_csv(S.tv.product_dir(src) / "dune-toes" / "survey_dune_toes.csv")
+    nw = nw[(nw.survey.astype(str).isin([str(y) for y in years])) & (nw.status == "ok")]
+    bf = np.clip(1 - nw.beach_width_m / BEACH_WIDTH_LIMIT_M, 0, None).groupby(nw.gis).mean()
+    out = out.rename(columns={"beach_width_m": "beach_width_cell_median_m"})
+    out["beach_factor"] = bf.reindex(full.get_level_values("gis")).to_numpy()
+    out["beach_width_m"] = BEACH_WIDTH_LIMIT_M * (1 - out.beach_factor)
+    out["beach_width_source"] = np.where(out.beach_width_m.notna(), out.toe_source, "none")
+    print(f"beach factor: domain mean over {src} {years}: island {bf.mean():.2f}, range {bf.min():.2f}-{bf.max():.2f}")
+    out["toe_source"] = np.where(out.toe_m_navd88.notna(), f"domain mean {src} {'+'.join(map(str, years))}", "none")
+    print(f"toe: domain mean over {src} {years}: island {dm.mean():.2f} m NAVD88, range {dm.min():.2f}-{dm.max():.2f}")
     return out.reset_index()
 
 
@@ -354,19 +397,22 @@ def figures(beach_width_limit_m=25.0):
     print(f"wrote {png}")
 
 
-# The method figure's example: a typical cell (toe 2.93 m NAVD88, beach 35 m, crest 3.25 m above the toe,
-# a toe in all 8 surveys), and the storm series of its window
+# The method figure's example: a typical cell (GIS 22, cell 32) and its domain, and the storm series of the
+# calibration window
 EXAMPLE = ("1996-start", 22, 32)
 HEADROOM_M = 2.3                 # above the crest on the profile panels, room for the notes
 EXAMPLE_STORMS = ("data", "hatteras_init", "3-env-forcings", "3-storms", "hindcast_storms", "1997_2009",
                   "1997_2009_storms_v3_240_summary.csv")
+PERIOD_LABEL = {"1996-start": "1996–2009", "2009-start": "2009–2025"}
 
 
-def method_figure(beach_width_limit_m=25.0):
+def method_figure():
+    """How the toe is measured and used (redrawn 2026-11-04 for one toe per domain, no beach factor): (a) one
+    profile, (b) the regimes the domain toe and the crest decide, (c) one domain, every cell's toe in its start
+    surveys and the one domain toe, (d) the domain toes along the island for both periods."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
     from hatteras_paths import WORKSPACE
     from site_layer import hat_figure_style as fs
     fs.apply_style()
@@ -375,22 +421,19 @@ def method_figure(beach_width_limit_m=25.0):
     start, g, cell = EXAMPLE
     X = S.X
     c = colours[start]
-    excluded = TOE_SURVEYS_EXCLUDED[start]
+    years = [str(y) for y in TOE_DOMAIN_SURVEYS[start][1]]
     profiles = {survey: (z[cell], crest_and_toe(z, i0, i1, X))
                 for survey, _, z, i0, i1 in domain_profiles(start, [g])}
-    fixed = tables[start][1].set_index(["gis", "cell"]).loc[(g, cell)]
+    dom_toe = float(tables[start][1].groupby("gis").toe_m_navd88.first()[g])
     storms = pd.read_csv(WORKSPACE.joinpath(*EXAMPLE_STORMS))
     peak = storms.Rhigh * 10 + MHW_NAVD88_M                          # dam MHW to m NAVD88
 
-    fig = plt.figure(figsize=fs.figsize("double", height=6.4), layout="constrained")
-    grid = fig.add_gridspec(2, 2)
-    ax_a, ax_b, ax_d = fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1]), fig.add_subplot(grid[1, 1])
-    ax_c_top, ax_c = grid[1, 0].subgridspec(2, 1, height_ratios=(1, 2), hspace=0.05).subplots(sharex=True)
+    fig, ((ax_a, ax_b), (ax_c, ax_d)) = plt.subplots(2, 2, figsize=fs.figsize("double", height=6.4),
+                                                     layout="constrained")
 
-    # One survey's profile, the anatomy drawn on it: the survey whose toe is nearest the cell's fixed one
-    survey = min((s for s in profiles if s != "start" and int(s) not in excluded
-                  and np.isfinite(profiles[s][1]["toe"][cell])),
-                 key=lambda s: abs(profiles[s][1]["toe"][cell] + MHW_NAVD88_M - fixed.toe_m_navd88))
+    # (a) One start survey's profile at the example cell: the survey whose toe is nearest the domain toe
+    cands = [s for s in profiles if str(s) in years and np.isfinite(profiles[s][1]["toe"][cell])]
+    survey = min(cands, key=lambda s: abs(profiles[s][1]["toe"][cell] + MHW_NAVD88_M - dom_toe))
     z, r = profiles[survey]
     sb, ci, ti = (int(r[k][cell]) for k in ("beach_start_idx", "crest_idx", "toe_idx"))
     lo, hi = max(sb - 4, 0), min(ci + 6, len(z))
@@ -405,31 +448,28 @@ def method_figure(beach_width_limit_m=25.0):
         ax.set_ylabel("Elevation (m NAVD88)")
         fs.open_frame(ax)
     ax_a.fill_between(x, zz, 0, color=fs.C["BASE_FILL"], lw=0, zorder=1)
-    ax_a.plot([0, (ci - sb) * 10], [base, crest], color=fs.INK_MUTED, lw=0.9, ls="--", zorder=3)
+    fi = int(r["foredune_idx"][cell])
+    top = z[fi] + MHW_NAVD88_M
+    ax_a.plot([0, (fi - sb) * 10], [base, top], color=fs.INK_MUTED, lw=0.9, ls="--", zorder=3)
     for (xi, zi, name, dx, dy, ha) in ((0, base, "beach start", 8, -12, "left"),
-                                        ((ti - sb) * 10, toe, "toe", 6, 6, "left"),
+                                        ((ti - sb) * 10, toe, "toe", 6, -12, "left"),
                                         ((ci - sb) * 10, crest, "crest", -6, 6, "right")):
         ax_a.plot(xi, zi, "o", ms=6, color=c if name == "toe" else fs.INK, zorder=5)
         ax_a.annotate(f"{name} {zi:.2f} m", (xi, zi), xytext=(dx, dy), textcoords="offset points", ha=ha,
                       fontsize=7.5, color=fs.INK)
-    # The dry beach: beach start to toe, no part of the dune face
-    ax_a.annotate("", (0, 0.35), ((ti - sb) * 10, 0.35), arrowprops=dict(arrowstyle="<->", color=fs.INK_MUTED, lw=0.8))
-    ax_a.text((ti - sb) * 5, 0.5, f"beach width {(ti - sb) * 10} m", ha="center", fontsize=7, color=fs.INK_MUTED)
-    # The height collision can remove, measured off on the open water seaward of the beach
-    xc = x[0] + 12
-    for level, xi in ((toe, (ti - sb) * 10), (crest, (ci - sb) * 10)):
-        ax_a.plot([xc - 4, xi], [level, level], color=c, lw=0.6, ls=":", zorder=2)
-    ax_a.annotate("", (xc, toe), (xc, crest), arrowprops=dict(arrowstyle="<->", color=c, lw=0.9))
-    ax_a.text(xc + 3, (toe + crest) / 2, f"{crest - toe:.2f} m that\ncollision can\nremove", fontsize=7,
-              color=fs.INK, va="center")
-    ax_a.text(0.98, 0.97, f"GIS {g}, cell {cell}, {survey} survey\ntoe: furthest below the dashed chord\n"
-              f"the runner keeps: toe {fixed.toe_m_navd88:.2f} m, beach {fixed.beach_width_m:g} m (survey medians)",
+    # The largest gap under the line, the toe's definition
+    k = (ti - sb) * 10
+    chord_at = base + (top - base) * k / max((fi - sb) * 10, 1)
+    if chord_at - toe > 0.15:
+        ax_a.annotate("", (k, toe), (k, chord_at), arrowprops=dict(arrowstyle="<->", color=c, lw=0.8))
+    ax_a.text(0.98, 0.97, f"GIS {g}, cell {cell}, {survey} survey\n"
+              "toe: the point furthest below the dashed line\nfrom the beach start to the first dune",
               transform=ax_a.transAxes, fontsize=7, color=fs.INK_MUTED, va="top", ha="right")
-    fs._title(ax_a, 0, "Reading one profile")
+    fs._title(ax_a, 0, "Reading the toe off one profile")
 
-    # The regimes the toe and crest divide the storm water into (Sallenger 2000), and the window's storms
-    bands = ((0, toe, fs.C["WATER"], "swash: below the toe, nothing"),
-             (toe, crest, fs.C["ACCENT_FILL"], "collision: lowered, never\nbelow the toe (this module)"),
+    # (b) The regimes the domain toe and this crest split the storms into (Sallenger 2000)
+    bands = ((0, dom_toe, fs.C["WATER"], "swash: below the toe, nothing"),
+             (dom_toe, crest, fs.C["ACCENT_FILL"], "collision: Larson lowers the\ndune, never below the toe"),
              (crest, crest + HEADROOM_M, fs.C["ADDED_FILL"], "overwash: over the crest\n(Barrier3D)"))
     for b0, b1, colour, label in bands:
         ax_b.axhspan(b0, b1, color=colour, alpha=0.55, lw=0, zorder=0)
@@ -437,92 +477,157 @@ def method_figure(beach_width_limit_m=25.0):
         ax_b.text(x[0] + 4, (b0 + b1) / 2, f"{label}\n{n} storm{'s' if n != 1 else ''}", fontsize=7,
                   va="center", color=fs.INK, zorder=6,
                   bbox=dict(facecolor="white", alpha=0.8, edgecolor="none", boxstyle="square,pad=0.2"))
+    ax_b.axhline(dom_toe, color=c, lw=1.2, ls="--", zorder=3)
+    ax_b.text(x[-1] - 22, dom_toe - 0.12, f"domain toe {dom_toe:.2f} m", ha="right", va="top", fontsize=7,
+              color=c, zorder=6)
     jitter = np.random.default_rng(0).uniform(-4, 4, len(peak))
     ax_b.scatter(x[-1] - 10 + jitter, peak, s=8, color=fs.INK, alpha=0.6, lw=0, zorder=5, clip_on=False)
-    ax_b.text(x[-1] - 2, crest + HEADROOM_M - 0.15, "storm peaks", ha="right", fontsize=7, color=fs.INK_MUTED, va="top")
-    fs._title(ax_b, 1, "What the toe and crest decide")
+    ax_b.text(x[-1] - 2, crest + HEADROOM_M - 0.15, "storm peaks, 1997–2009", ha="right", fontsize=7,
+              color=fs.INK_MUTED, va="top")
+    fs._title(ax_b, 1, "What the toe decides")
 
-    # The beach factor, and how many cells it lets collision reach
-    w = np.linspace(0, 160, 200)
-    ax_c_top.plot(w, np.clip(1 - w / beach_width_limit_m, 0, None), color=fs.INK, lw=1.6)
-    ax_c_top.set_ylabel("factor")
-    ax_c_top.set_ylim(0, 1.1)
-    ax_c_top.set_yticks([0, 1])
-    ax_c_top.text(beach_width_limit_m + 3, 0.55, f"1 − W / {beach_width_limit_m:g} m", fontsize=7.5,
-                  color=fs.INK)
-    shares = []
+    # (c) One domain: every cell's toe in the start surveys, screened, and the one domain toe (their mean)
+    t = tables[start][0]
+    d = t[(t.gis == g) & t.survey.astype(str).isin(years) & (t.status == "ok") & t.toe_m_navd88.notna()].copy()
+    ok = (d.toe_m_navd88 > TOE_MIN_M_NAVD88) & (d.toe_m_navd88 < d.crest_m_navd88 - TOE_BELOW_CREST_M)
+    crest_med = d.groupby("cell").crest_m_navd88.median()
+    ax_c.plot(crest_med.index * 10 + 5, crest_med, color=fs.INK_MUTED, lw=1.0, drawstyle="steps-mid",
+              label="crest (survey median)")
+    fills = [c, "white", fs.INK]
+    for y, mfc in zip(years, fills):
+        e = d[ok & (d.survey.astype(str) == y)]
+        ax_c.plot(e.cell * 10 + 5, e.toe_m_navd88, ls="none", marker="o", ms=4.5, mew=1.0, mfc=mfc, mec=c,
+                  label=f"toe, {y} survey")
+    bad = d[~ok]
+    if len(bad):
+        ax_c.plot(bad.cell * 10 + 5, bad.toe_m_navd88, ls="none", marker="x", ms=4.5, color=fs.INK_MUTED,
+                  label="screened out")
+    ax_c.axhline(dom_toe, color=c, lw=1.6, ls="--", label=f"domain toe {dom_toe:.2f} m (mean)")
+    ax_c.axvline(cell * 10 + 5, color=fs.INK_MUTED, lw=0.6, ls=":")
+    ax_c.text(cell * 10 + 9, 0.6, f"cell {cell}, panel (a)", fontsize=6.5, color=fs.INK_MUTED)
+    ax_c.set_xlim(0, CELLS * 10)
+    ax_c.set_ylim(0.5, 9.0)
+    ax_c.set_xlabel(f"Alongshore position in GIS {g}, south to north (m)")
+    ax_c.set_ylabel("Elevation (m NAVD88)")
+    ax_c.legend(loc="upper left", ncol=2, fontsize=6.5, frameon=False)
+    fs.open_frame(ax_c)
+    fs._title(ax_c, 2, f"One toe for GIS {g}")
+
+    # (d) The domain toes along the island, both periods
+    ax_d.axvspan(0.5, 5.5, color=fs.INK_MUTED, alpha=0.12, lw=0)
+    ax_d.text(3, 1.08, "module\noff", ha="center", va="bottom", fontsize=6.5, color=fs.INK_MUTED)
     for s, (_, cells) in tables.items():
-        widths = cells.beach_width_m.dropna()
-        ax_c.hist(widths, bins=np.arange(0, 165, 10), histtype="step", lw=1.6, color=colours[s], label=s)
-        shares.append(f"{s[:4]} {100 * (widths < beach_width_limit_m).mean():.0f}%")
-    for ax in (ax_c_top, ax_c):
-        ax.axvline(beach_width_limit_m, color=fs.INK_MUTED, lw=0.8, ls="--")
-        ax.set_xlim(0, 160)
-        fs.open_frame(ax)
-    ax_c.set_xlabel("Beach width W (m)")
-    ax_c.set_ylabel("Dune cells")
-    ax_c.text(0.98, 0.95, "cells under " + f"{beach_width_limit_m:g} m:\n" + ", ".join(shares),
-              transform=ax_c.transAxes, ha="right", va="top", fontsize=7, color=fs.INK)
-    ax_c.legend(loc="center right", fontsize=7, frameon=False)
-    fs._title(ax_c_top, 2, "A wide beach shields the dune")
-
-    # The same cell in every survey: each one's toe, and the one value the runner keeps
-    for s, (zs, rs) in profiles.items():
-        if s == "start" or int(s) in excluded or not np.isfinite(rs["toe"][cell]):
-            continue
-        ax_d.plot((np.arange(lo, hi) - sb) * 10.0, zs[lo:hi] + MHW_NAVD88_M, color=c, lw=0.9, alpha=0.45)
-        ax_d.plot((rs["toe_idx"][cell] - sb) * 10, rs["toe"][cell] + MHW_NAVD88_M, "o", ms=4.5, color=c, zorder=4)
-    ax_d.axhline(fixed.toe_m_navd88, color=fs.INK, lw=1.2, ls="--", zorder=3)
-    ax_d.text(x[0] + 3, fixed.toe_m_navd88 + 0.12, f"fixed toe {fixed.toe_m_navd88:.2f} m (median)",
-              fontsize=7.5, color=fs.INK)
-    ax_d.set_xlim(x[0], x[-1])
-    ax_d.set_ylim(0, crest + HEADROOM_M)
-    ax_d.set_xlabel("Distance landward of the beach start (m)")
-    ax_d.set_ylabel("Elevation (m NAVD88)")
+        v = cells.groupby("gis").toe_m_navd88.first()
+        src_years = ", ".join(str(y) for y in TOE_DOMAIN_SURVEYS[s][1])
+        ax_d.plot(v.index, v, color=colours[s], lw=1.6, drawstyle="steps-mid",
+                  label=f"{PERIOD_LABEL.get(s, s)} run ({src_years} surveys)")
+    ax_d.plot(g, dom_toe, "o", ms=6, mfc="white", mec=c, mew=1.4, zorder=5)
+    ax_d.annotate(f"GIS {g}", (g, dom_toe), xytext=(-6, -16), textcoords="offset points", ha="right", fontsize=7, color=fs.INK)
+    ax_d.set_xlim(0.5, 90.5)
+    ax_d.set_ylim(1.0, 4.5)
+    ax_d.set_xlabel(fs.DOMAIN_AXIS_LABEL)
+    ax_d.set_ylabel("Domain toe (m NAVD88)")
+    ax_d.grid(axis="y")
+    ax_d.legend(loc="upper right", fontsize=7, frameon=False)
     fs.open_frame(ax_d)
-    used = [s for s in profiles if s != "start" and int(s) not in excluded]
-    fs._title(ax_d, 3, f"One value from {len(used)} surveys")
-    ax_d.legend(handles=[Line2D([], [], color=c, lw=0.9, alpha=0.6, label="one survey's profile"),
-                         Line2D([], [], ls="none", marker="o", ms=4.5, color=c, label="its toe")],
-                loc="upper left", fontsize=7, frameon=False)
+    fs._title(ax_d, 3, "One toe per domain, along the island")
 
     png = fs.figure_dir("inputs", "1-domains", "dune_toes") / "dune_toes_method.png"
     fs.save(fig, png, close=True)
+    d.assign(kept=ok).round(3).to_csv(png.parent / "supporting" / "dune_toes_method_domain.csv", index=False)
     fs.record_caption(png, (
-        f"How the dune-collision inputs are read, on one typical cell (GIS {g}, cell {cell}, {start}). "
-        "(a) A surveyed cross-shore profile: the beach start is the first point above the beach threshold, "
-        "the crest the highest point in the dune window, and the toe the point furthest below the straight "
-        "chord between them (dashed); the beach width is the dry beach, from the beach start to the toe, and the crest "
-        "above the toe is what collision can remove. (b) The toe and crest split a storm's peak water level "
-        "(R_high, Stockdon run-up on the tide gauge) into the regimes of Sallenger (2000): below the toe the "
-        "dune is untouched, between toe and crest the module lowers it storm by storm (Larson et al. 2004) but "
-        "never below the toe, and over the crest Barrier3D's overwash takes over; dots are the peak water "
-        f"levels of the {len(peak)} storms in the 1997-2009 series, counted per band at this cell. (c) Collision "
-        f"is scaled by max(0, 1 − W / {beach_width_limit_m:g} m), so a beach {beach_width_limit_m:g} m or wider "
-        "shields its dune completely; below, the beach widths of every dune cell for both starts. (d) The same "
-        "cell in every survey that found a toe there, with each survey's toe; the runner holds one value per "
-        "cell for the whole run, the median (dashed)."))
+        "How the dune toe is measured and used by the dune-collision module. (a) One lidar profile (GIS "
+        f"{g}, cell {cell}, {survey}): the beach start is the first point above the beach threshold, the first "
+        "dune the most seaward peak with a 1 m dip behind it (the crest on a single foredune), and the toe the "
+        "point furthest below the straight line between them (dashed). (b) The domain toe and the crest split "
+        "each storm's peak water level into the regimes of Sallenger (2000): below the toe nothing happens; "
+        "between toe and crest the module lowers the dune by Larson et al. (2004), never below the toe; over "
+        "the crest Barrier3D's overwash takes over. Dots: the peak water levels of the 1997-2009 storm series. "
+        f"(c) Every 10 m cell's toe in GIS {g} in the {' and '.join(years)} surveys; toes below "
+        f"{TOE_MIN_M_NAVD88:g} m NAVD88 or within {TOE_BELOW_CREST_M:g} m of the crest are screened out (x), and "
+        "the mean of the rest is the domain's one toe (dashed), held for the run. (d) The domain toes along the "
+        "island: 1996-2009 from the 1996 and 1997 surveys, 2009-2025 from the 2004, 2005 and 2009 surveys "
+        "(nothing after the start). The module is off at Cape Point (GIS 1-5)."))
     print(f"wrote {png}")
+    print(f"GIS {g}: {int(ok.sum())} toes kept, {int((~ok).sum())} screened out, domain toe {dom_toe:.2f} m, "
+          f"kept range {d[ok].toe_m_navd88.min():.2f}-{d[ok].toe_m_navd88.max():.2f} m")
+
+
+def transect_figure():
+    """One lidar transect across the example domain and the toe picked on it (2026-11-04): the simple version of
+    the method figure's panel (a), with the domain toe the model uses."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from site_layer import hat_figure_style as fs
+    fs.apply_style()
+    start, g, cell = EXAMPLE
+    c = _start_colours()[start]
+    years = [str(y) for y in TOE_DOMAIN_SURVEYS[start][1]]
+    dom_toe = float(_tables()[start][1].groupby("gis").toe_m_navd88.first()[g])
+    survey = years[-1]
+    z, r = next((z[cell], crest_and_toe(z, i0, i1, S.X)) for s, _, z, i0, i1 in domain_profiles(start, [g])
+                if str(s) == survey)
+    sb, ci, ti, fi = (int(r[k][cell]) for k in ("beach_start_idx", "crest_idx", "toe_idx", "foredune_idx"))
+    lo, hi = max(sb - 4, 0), min(ci + 6, len(z))
+    x = (np.arange(lo, hi) - sb) * 10.0
+    zz = z[lo:hi] + MHW_NAVD88_M
+    toe, crest, base, top = zz[ti - lo], zz[ci - lo], zz[sb - lo], z[fi] + MHW_NAVD88_M
+
+    fig, ax = plt.subplots(figsize=fs.figsize("single", height=3.0), layout="constrained")
+    ax.fill_between(x, zz, 0, color=fs.C["BASE_FILL"], lw=0, zorder=1)
+    ax.plot(x, zz, color=fs.INK, lw=1.6, zorder=4)
+    ax.plot([0, (fi - sb) * 10], [base, top], color=fs.INK_MUTED, lw=0.9, ls="--", zorder=3)
+    ax.plot((ti - sb) * 10, toe, "o", ms=8, color=c, zorder=5)
+    ax.annotate(f"dune toe {toe:.2f} m", ((ti - sb) * 10, toe), xytext=(8, -14), textcoords="offset points",
+                fontsize=8, color=c, fontweight="bold")
+    ax.plot(0, base, "o", ms=5, color=fs.INK, zorder=5)
+    ax.annotate("beach start", (0, base), xytext=(6, -12), textcoords="offset points", fontsize=7.5, color=fs.INK)
+    ax.plot((ci - sb) * 10, crest, "o", ms=5, color=fs.INK, zorder=5)
+    ax.annotate(f"crest {crest:.2f} m", ((ci - sb) * 10, crest), xytext=(-6, 6), textcoords="offset points",
+                ha="right", fontsize=7.5, color=fs.INK)
+    ax.text(x[0] + 2, 0.25, "ocean", fontsize=7.5, style="italic", color="#4F7CA6")
+    ax.set_xlim(x[0], x[-1])
+    ax.set_ylim(0, crest + 1.0)
+    ax.set_xlabel("Distance landward of the beach start (m)")
+    ax.set_ylabel("Elevation (m NAVD88)")
+    fs.open_frame(ax)
+    png = fs.figure_dir("inputs", "1-domains", "dune_toes") / "dune_toe_transect.png"
+    fs.save(fig, png, close=True)
+    fs.record_caption(png, (
+        f"The dune toe on one lidar transect across GIS {g} (cell {cell}, {survey} survey). The toe (red) is the "
+        "point on the profile furthest below the straight line (dashed) from the beach start to the dune: the "
+        "break in slope where the beach turns up into the dune face. The model uses one toe per domain, the mean "
+        f"of every cell's toe in the {' and '.join(years)} surveys ({dom_toe:.2f} m NAVD88 for GIS {g})."))
+    print(f"wrote {png}: toe {toe:.2f} m, crest {crest:.2f} m, domain toe {dom_toe:.2f} m")
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[1],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--start", choices=list(S.STARTS))
+    ap.add_argument("--cells", action="store_true",
+                    help="rewrite dune_toe_cells.csv from the saved survey_dune_toes.csv (no profiles read)")
     ap.add_argument("--figures", action="store_true",
                     help="draw the figures from the saved tables of every start built so far")
     args = ap.parse_args()
     if args.figures:
         figures()
         method_figure()
+        transect_figure()
         return
     if not args.start:
         ap.error("--start is required unless --figures")
-    t = survey_toes(args.start)
-    cells = cell_table(t, args.start)
     out = S.tv.product_dir(args.start) / "dune-toes"
+    if args.cells:
+        t = pd.read_csv(out / "survey_dune_toes.csv")
+        t["survey"] = t.survey.astype(str)
+    else:
+        t = survey_toes(args.start)
+    cells = cell_table(t, args.start)
     out.mkdir(parents=True, exist_ok=True)
-    t.round(3).to_csv(out / "survey_dune_toes.csv", index=False)
+    if not args.cells:
+        t.round(3).to_csv(out / "survey_dune_toes.csv", index=False)
     cells.round(3).to_csv(out / "dune_toe_cells.csv", index=False)
     print(cells.groupby("toe_source").size().to_string())
     print(cells[["toe_m_navd88", "beach_width_m"]].describe().round(2).to_string())
