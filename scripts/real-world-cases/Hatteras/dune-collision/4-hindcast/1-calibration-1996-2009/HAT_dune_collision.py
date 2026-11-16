@@ -566,6 +566,86 @@ for _alias, (_base, _) in [*BE_HOTSPOT.items(), *((a, (b, None)) for a, b in _VM
             _obj[_alias] = _obj[_base]
         elif isinstance(_obj, tuple) and _base in _obj:
             globals()[_name] = _obj + (_alias,)
+# The design grid (2026-11-13): every erosion x start design rerun on the village-migration default (each run's own
+# settings, the new default from the pipeline), named <run>_vdefault. Lower both rows on the low back row had no run:
+# the back row at the window median as MAXMED_START, both rows lowered (proportional, the default). The original
+# design's cal_toeberm_cs2_vdefault exists (2026-11-12). Order simple -> complex, plain names as in the testing log
+DESIGN_GRID = {
+    "nocollision_equal": "cal_step2_growth_noscrape_vdefault",
+    "nocollision_lowback": "cal_step2_growth_noscrape_maxmed_vdefault",
+    "lowerboth_equal": "cal_toeberm_cs2_vdefault",
+    "lowerboth_lowback": "cal_toeberm_cs2_maxmed_both_vdefault",
+    "lowerfront_equal": "cal_toeberm_cs2_front_vdefault",
+    "lowerfront_lowback": "cal_toeberm_cs2_maxmed_vdefault",
+    "faceretreat_equal": "cal_toeberm_lat_cs10_vdefault",
+    "faceretreat_lowback": "cal_toeberm_lat_cs3_maxmed_vdefault"}
+MAXMED_START["cal_toeberm_cs2_maxmed_both_vdefault"] = "cal_toeberm_cs2"
+_GRID_ALIAS = {"cal_toeberm_cs2_maxmed_both_vdefault": "cal_toeberm_cs2",
+               **{_v: _v[:-len("_vdefault")] for _v in DESIGN_GRID.values()
+                  if _v not in ("cal_toeberm_cs2_vdefault", "cal_toeberm_cs2_maxmed_both_vdefault")}}
+for _alias, _base in _GRID_ALIAS.items():
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("DESIGN_GRID", "BE_HOTSPOT", "BE_HOTSPOT_100", "BE_HOTSPOT_RATES",
+                                            "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
+# The Cs sweep of every module design (2026-11-13; Hannah picks each design's Cs from the sensitivity plots):
+# grid_<erosion>_<start>_cs<N>_vdefault, N in 1e-6, each a copy of its design's DESIGN_GRID run with only Cs changed;
+# where the design's current Cs is in the sweep, its DESIGN_GRID run stands in (DESIGN_SWEEP maps both)
+DESIGN_SWEEP_CS = (1, 2, 3, 5, 10, 20, 30)
+# Higher Cs where a design was still improving at 3e-5 (lower front row, equal rows; 2026-11-13)
+DESIGN_SWEEP_EXTRA = {"lowerfront_equal": (50, 100, 200)}
+DESIGN_SWEEP = {}                                  # (design key, N) -> run
+
+
+def sweep_cs(key):
+    """The Cs values (N, in 1e-6) a design was swept over."""
+    return DESIGN_SWEEP_CS + DESIGN_SWEEP_EXTRA.get(key, ())
+
+
+for _key, _run in DESIGN_GRID.items():
+    if _key.startswith("nocollision"):
+        continue
+    _now = round(VARIANTS[_run][1] * 1e6)
+    for _c in sweep_cs(_key):
+        _v = _run if _c == _now else f"grid_{_key}_cs{_c}_vdefault"
+        DESIGN_SWEEP[(_key, _c)] = _v
+        if _v == _run:
+            continue
+        for _name, _obj in list(globals().items()):
+            if not _name.isupper() or _name in ("DESIGN_GRID", "DESIGN_SWEEP", "DESIGN_SWEEP_CS", "DESIGN_SWEEP_EXTRA", "BE_HOTSPOT",
+                                                "BE_HOTSPOT_100", "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+                continue
+            if isinstance(_obj, dict) and _run in _obj and _v not in _obj:
+                _obj[_v] = _obj[_run]
+            elif isinstance(_obj, tuple) and _run in _obj and _v not in _obj:
+                globals()[_name] = _obj + (_v,)
+        VARIANTS[_v] = ("storm", _c * 1e-6, False, (0.02, 0.04))
+        TOE_AT_BERM[_v] = _c * 1e-6
+# The front-runners with the 198 m road rule on (2026-11-15; Rodanthe kept at 40%, its share still open): each
+# <run>_road a copy of its DESIGN_SWEEP run (or no collision) with only the road rule added. (design key, N) -> run
+ROAD_TEST_CS = {"nocollision_equal": (None,), "faceretreat_equal": (3, 5, 10), "lowerfront_equal": (20, 30, 50),
+                "lowerboth_equal": (1, 2, 3)}
+ROAD_TEST = {}
+for _key, _cs in ROAD_TEST_CS.items():
+    for _c in _cs:
+        _b = DESIGN_GRID[_key] if _c is None else DESIGN_SWEEP[(_key, _c)]
+        _v = f"{_b}_road"
+        ROAD_TEST[(_key, _c)] = _v
+        for _name, _obj in list(globals().items()):
+            if not _name.isupper() or _name in ("DESIGN_GRID", "DESIGN_SWEEP", "DESIGN_SWEEP_CS", "DESIGN_SWEEP_EXTRA",
+                                                "ROAD_TEST", "ROAD_TEST_CS", "BE_HOTSPOT", "BE_HOTSPOT_100",
+                                                "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+                continue
+            if isinstance(_obj, dict) and _b in _obj and _v not in _obj:
+                _obj[_v] = _obj[_b]
+            elif isinstance(_obj, tuple) and _b in _obj and _v not in _obj:
+                globals()[_name] = _obj + (_v,)
+        if _v not in SHORELINE_GATE:
+            SHORELINE_GATE = SHORELINE_GATE + (_v,)
 # -----------------------------------------------------------------------------
 
 
@@ -1317,7 +1397,8 @@ def collision_cell_table(collision, pads, variant):
 
 
 # Where and when the dune cells collapse, and the collision volume, one figure per run (action "collapse")
-def plot_collapse(variants):
+def plot_collapse(variants, out_names=None):
+    """out_names: optional {variant: png path}; default EXP_DIR / collision_collapse_<variant>.png"""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -1341,7 +1422,8 @@ def plot_collapse(variants):
         axs[0].set_ylabel("Model year")
         for k, ax in enumerate(axs):
             ax.text(-0.02, 1.02, f"({'ab'[k]})", transform=ax.transAxes, fontsize=10, fontweight="bold", ha="right")
-        out = EXP_DIR / f"collision_collapse_{v}.png"
+        out = (out_names or {}).get(v) or EXP_DIR / f"collision_collapse_{v}.png"
+        out.parent.mkdir(parents=True, exist_ok=True)
         S.save(fig, out, bbox_inches="tight", close=True)
         S.record_caption(out, (f"Collision-regime dune erosion per GIS domain and model year, run {v} (rows mode "
                                f"{t.rows.iloc[0]}): (a) the volume the collision rule eroded, domain mean (m3/m); "

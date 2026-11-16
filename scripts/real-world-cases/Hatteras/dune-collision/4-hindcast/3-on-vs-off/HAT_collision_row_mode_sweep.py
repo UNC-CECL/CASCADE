@@ -10,12 +10,14 @@ Runs (HAT_dune_collision.py, 1996-2009, all with the road fix, dune growth 0.02-
 Rodanthe 40%, toe at the berm, 1.7 m NAVD88; only the module differs from the off run): cal_step2_growth_noscrape
 (module off), cal_toeberm_cs* (proportional) and cal_toeberm_lat_cs* (lateral). Runs not yet made are skipped.
 
-Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/ (D:):
-- lateral_vs_proportional_sensitivity.png and supporting/lateral_vs_proportional_sensitivity.csv: crest RMSE (GIS
+Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/_tests/1-faceretreat-vs-lowerboth-cs-sweep/
+(D:; names since 2026-11-13: face retreat was "lateral", lower both rows "proportional"):
+- faceretreat_vs_lowerboth_cs_sensitivity.png and supporting/faceretreat_vs_lowerboth_cs_sensitivity.csv: crest RMSE (GIS
   6-90 and 9-15), 2009 mean offset, share within 0.5 m, overwash hits and false alarms, shoreline RMSE, against Cs
-- lateral_collapse_<variant>.png: collision volume and front-row cells collapsed by domain and year, for the best
-  lateral Cs and the strongest one
-- lateral_crests_over_time_GIS10-14.png: the domain-median crest through time, off, best proportional, best lateral
+- faceretreat_equal_cs<Cs>_row_collapse.png: collision volume and front-row cells collapsed by domain and year, for
+  the strongest face-retreat Cs (2.5e-4); the best one (1e-5) goes to its design folder,
+  3-collision-design/4-face-retreat/1-equal-rows/
+- faceretreat_vs_lowerboth_crests_over_time_GIS10-14.png: the domain-median crest through time, off, best proportional, best lateral
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -40,7 +42,11 @@ sys.path.insert(0, str(P._HAT_DIR / "dune-collision" / "4-hindcast" / "1-calibra
 import HAT_dune_collision as H  # noqa: E402
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = P.OUT / "3-collision-design"
+import collision_designs as CD  # noqa: E402
+OUT = CD.TEST_DIRS["cs_sweep"]
+# collapse figures: run -> png (the best face-retreat Cs in its design folder)
+COLLAPSE_OUT = {"cal_toeberm_lat_cs10": CD.BY_OLD_RUN["cal_toeberm_lat_cs10"].folder / "faceretreat_equal_cs1e-5_row_collapse.png",
+                "cal_toeberm_lat_cs250": OUT / "faceretreat_equal_cs2.5e-4_row_collapse.png"}
 OFF = "cal_step2_growth_noscrape"
 PROPORTIONAL = {"cal_toeberm_cs0p1": 1e-7, "cal_toeberm_cs0p3": 3e-7, **{f"cal_toeberm_cs{c}": c * 1e-6
                 for c in (1, 2, 5, 10, 30, 100)}}
@@ -82,7 +88,7 @@ def sensitivity(S, plt):
         rows += [dict(mode=name, **metrics(v, cs)) for v, cs in runs.items() if _done(v)]
     t = pd.DataFrame(rows)
     (OUT / "supporting").mkdir(parents=True, exist_ok=True)
-    t.round(4).to_csv(OUT / "supporting" / "lateral_vs_proportional_sensitivity.csv", index=False)
+    t.round(4).to_csv(OUT / "supporting" / "faceretreat_vs_lowerboth_cs_sensitivity.csv", index=False)
     panels = (("crest_rmse_m", "Crest RMSE, GIS 6–90 (m)"), ("crest_rmse_gis9_15_m", "Crest RMSE, GIS 9–15 (m)"),
               ("bias_2009_m", "Mean crest offset, 2009 (m)"), ("within_0p5_pct", "Domain-surveys within ±0.5 m (%)"),
               ("overwash_false_alarm_pct", "Overwash false alarms (%)"), ("shoreline_rmse_m_yr", "Shoreline RMSE (m/yr)"))
@@ -102,7 +108,7 @@ def sensitivity(S, plt):
     for ax in axs[-1]:
         ax.set_xlabel("Cs (log scale)")
     fig.legend(loc="outside lower center", ncol=3, fontsize=8, frameon=False)
-    out = OUT / "lateral_vs_proportional_sensitivity.png"
+    out = OUT / "faceretreat_vs_lowerboth_cs_sensitivity.png"
     S.save(fig, out, bbox_inches="tight", close=True)
     S.record_caption(out, (
         "Sensitivity of the 1996-2009 hindcast to the collision module's Cs (Larson et al. 2004 alone, toe at the berm, "
@@ -140,7 +146,7 @@ def recount_collapses(v):
 
 
 def collapse(variants):
-    (OUT / "logs").mkdir(exist_ok=True)
+    (OUT / "logs").mkdir(parents=True, exist_ok=True)
     for v in variants:
         src = H.EXP_DIR / "logs" / f"collision_cells_{v}.csv"
         if src.exists():
@@ -149,11 +155,7 @@ def collapse(variants):
             print(f"{v}: {t.front_rows_collapsed.sum()} front-row collapses after the recount "
                   f"(the run's own count: {pd.read_csv(src).front_rows_collapsed.sum()})")
     H.EXP_DIR, saved = OUT, H.EXP_DIR        # plot_collapse reads logs/ and writes beside it: point it here
-    H.plot_collapse(variants)
-    for v in variants:                       # the house names: lateral_collapse_<variant>.png
-        p = OUT / f"collision_collapse_{v}.png"
-        if p.exists():
-            p.replace(OUT / f"lateral_collapse_{v}.png")
+    H.plot_collapse(variants, out_names=COLLAPSE_OUT)
     H.EXP_DIR = saved
 
 
@@ -191,7 +193,7 @@ def crests_over_time(S, plt, runs):
     axs[0].set_ylim(0, 9)
     h, l = axs[0].get_legend_handles_labels()
     fig.legend(h, l, loc="outside lower center", ncol=3, fontsize=7.5, frameon=False)
-    out = OUT / "lateral_crests_over_time_GIS10-14.png"
+    out = OUT / "faceretreat_vs_lowerboth_crests_over_time_GIS10-14.png"
     S.save(fig, out, bbox_inches="tight", close=True)
     S.record_caption(out, ("Domain-median dune crest through 1996-2009, GIS 10-14: model with the collision module off "
                            "and on at the best-fitting Cs of each way of taking the eroded volume (proportional, "

@@ -8,10 +8,10 @@ testing-log section, script) is that folder's `README.md`. Each script names its
 |---|---|
 | `1-module-on-off/` | `HAT_collision_on_off_position.py onoff`, `HAT_collision_crest_compare.py`, `HAT_collision_missed_drops.py`, `HAT_collision_toe_cs_figures.py` |
 | `2-model-steps/` | `HAT_collision_model_steps.py`, `HAT_collision_toe_cs_figures.py` |
-| `3-collision-design/` (`dune-rows/`, `dune-search-window/`, `logs/`) | `HAT_collision_row_mode_sweep.py`, `HAT_dune_rows_test.py`, `HAT_overwash_compare.py`, `HAT_collision_on_off_position.py maxmed / maxmedlat / win8` |
+| `3-collision-design/` (one folder per design since 2026-11-13: `<erosion>/<start>/`, `0-all-designs/`, `_tests/`; names, folders, colours and runs in `collision_designs.py`) | `HAT_collision_on_off_position.py designs` (each design alone + all overlaid), `HAT_be_hotspot_zones.py` and `behot` / `behotsimple` (each design's `hotspot-erosion/`), `HAT_collision_row_mode_sweep.py`, `HAT_dune_rows_test.py`, `HAT_overwash_compare.py`, `HAT_collision_on_off_position.py maxmed / maxmedlat / win8` (`_tests/`) |
 | `4-cs-and-toes/` | `HAT_collision_cs_sweep.py` |
 | `5-road/` (`road-rule/`, `road-relocation-1999/`, `bulldoze-fix/`) | `HAT_road_rule_*.py`, `HAT_road_relocation_test.py` |
-| `6-missed-drops/` (`1-zones/`, `2-by-design/`, `3-compared/`) | `HAT_be_hotspot_zones.py`, `HAT_collision_on_off_position.py behot` |
+| `6-missed-drops/` (`1-zones/`) | `HAT_be_hotspot_zones.py zones`, `HAT_collision_on_off_position.py zonesonoff / zonescrest` |
 | `7-storm-examples/` | `HAT_collision_buxton_dennis.py`, `HAT_collision_isabel.py` |
 | `8-other-forcings/` | `HAT_collision_on_off_position.py` (other modes) |
 | `_superseded/` | Automorph-toe, before-road-fix and beach-factor figures; no script writes them any more (`HAT_collision_toe_cs_figures.py` still names the old all-toes and domain-toes figures there) |
@@ -22,7 +22,7 @@ Presentation figures for the original design (2026-11-12, log section 20), `HAT_
 `zonesonoff` and `zonescrest` (position change, and with the crest offset heatmaps, each with a `_nozones` twin, in
 `6-missed-drops/1-zones/`), `zonessens` and `zonessensvmig` (the % sensitivity on the zn2 zones, village dune lines
 fixed or migrating), `villagemig` and `villagemigcrests` (village dune lines fixed against migrating, no added erosion),
-the last four in `6-missed-drops/2-by-design/3-lower-both-rows_equal-rows/`. `HAT_be_hotspot_zones.py zones lowerboth`
+the last four in `3-collision-design/2-lower-both-rows/1-equal-rows/` (`hotspot-erosion/`, `village-dune-migration/`). `HAT_be_hotspot_zones.py zones lowerboth`
 draws the zone figure from the original design's run.
 
 Most of these were drawn by session scripts from runs already made (nothing in them is refit); the crest maps go

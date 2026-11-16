@@ -6,17 +6,17 @@ HAT_collision_on_off_position.py maxmed (same runs, MAXMED_RUNS there).
     python scripts/real-world-cases/Hatteras/dune-collision/4-hindcast/3-on-vs-off/HAT_dune_rows_test.py [lateral]
 
 "lateral" draws the same for the median back row with lateral erosion (MAXMED_LAT_RUNS there; 2026-11-11), into
-dune_rows_maxmed_lateral_crests_over_time_GIS9-15.png and supporting/dune_rows_maxmed_lateral_metrics.csv.
+low_back_row_faceretreat_cs_crests_over_time_GIS9-15.png and supporting/low_back_row_faceretreat_cs_metrics.csv.
 
 Runs (HAT_dune_collision.py, 1996-2009, module-only setup): cal_step2_growth_noscrape and _maxmed (module off, both
 rows at the window max / back row at the window median), cal_toeberm_cs2 (both rows at max, both eroded in proportion,
 the current setting), cal_toeberm_cs2_front (both at max, front row eroded) and cal_toeberm_cs2_maxmed (back row at
 median, front row eroded).
 
-Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/dune-rows/ (D:):
-- dune_rows_maxmed_crests_over_time_GIS9-15.png: the domain-median crest (the higher row) through time, and the
+Writes, in the workspace's dune-collision/4-hindcast/3-collision-design/_tests/2-low-back-row-start/ (D:):
+- low_back_row_vs_equal_crests_over_time_GIS9-15.png: the domain-median crest (the higher row) through time, and the
   front and back rows of the max/median run
-- supporting/dune_rows_maxmed_metrics.csv: crest RMSE, 2009 offset, overwash, shoreline skill per run
+- supporting/low_back_row_vs_equal_metrics.csv: crest RMSE, 2009 offset, overwash, shoreline skill per run
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -39,7 +39,7 @@ import HAT_collision_row_mode_sweep as R  # noqa: E402
 H = R.H
 
 # --- CONFIG ------------------------------------------------------------------
-OUT = P.OUT / "3-collision-design" / "dune-rows"
+OUT = P.OUT / "3-collision-design" / "_tests" / "2-low-back-row-start"
 TS_GIS = range(9, 16)
 EVENTS = ((1998.65, "Bonnie"), (1999.67, "Dennis"), (2003.71, "Isabel"))
 # -----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ EVENTS = ((1998.65, "Bonnie"), (1999.67, "Dennis"), (2003.71, "Isabel"))
 def main():
     lateral = len(sys.argv) > 1 and sys.argv[1] == "lateral"
     runs = P.MAXMED_LAT_RUNS if lateral else P.MAXMED_RUNS
-    tag = "dune_rows_maxmed_lateral" if lateral else "dune_rows_maxmed"
+    tag = "low_back_row_faceretreat_cs" if lateral else "low_back_row_vs_equal"
     back_of = "cal_toeberm_lat_cs10_maxmed" if lateral else "cal_toeberm_cs2_maxmed"
     import matplotlib
     matplotlib.use("Agg")

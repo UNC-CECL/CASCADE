@@ -8,10 +8,10 @@ groin's 5-7 excluded; input_prep/7-source-sink/README.md, the zone rework step 2
 
 "zones" draws step 1's figure, hotspot_erosion_zones.png, beside the tables; "zones lowerboth" (or any design
 tag's start) draws it from that design's run instead, as hotspot_erosion_zones_<tag>.png with its own tables. "results" (step 2) reads the 25-100% runs
-(HAT_dune_collision.py BE_HOTSPOT) and writes each design's _alongshore.png and _crests_over_time.png in 2-by-design/<design>/,
-and in 3-compared/ hotspot_erosion_designs_compared.png and supporting/hotspot_erosion_results.csv (per run and zone:
+(HAT_dune_collision.py BE_HOTSPOT) and writes each design's _alongshore.png and _crests_over_time.png in
+3-collision-design/<erosion>/<start>/hotspot-erosion/, and in 3-collision-design/0-all-designs/hotspot-erosion/ hotspot_erosion_designs_compared.png and supporting/hotspot_erosion_results.csv (per run and zone:
 the imposed rate, the extra retreat it produced and the share retained, the gap left to CoastSat, the extra overwash,
-the lidar crest drops caught). "crests" and "positions" build the 2 x 2 composites in 3-compared/. The position change
+the lidar crest drops caught). "crests" and "positions" build the 2 x 2 composites there too. The position change
 is HAT_collision_on_off_position.py behot.
 
 The 100% rate of each hotspot zone is that residual, fixed from the base run (measured before any background erosion,
@@ -38,14 +38,16 @@ _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
 import HAT_collision_on_off_position as P  # noqa: E402
 import HAT_collision_missed_drops as M  # noqa: E402
+import collision_designs as CD  # noqa: E402
 
 H = M.H
 
 # --- CONFIG ------------------------------------------------------------------
 OUT = P.OUT / "6-missed-drops"
 ZONES_DIR = OUT / "1-zones"                     # step 1: the zones, their tables and figure
-DESIGN_DIR = OUT / "2-by-design"                # step 2: each design's own figures
-COMPARED_DIR = OUT / "3-compared"               # the designs side by side, the results table
+# step 2 (since 2026-11-13): each design's figures in 3-collision-design/<erosion>/<start>/hotspot-erosion/
+# (collision_designs.hotspot_dir), the designs side by side in 3-collision-design/0-all-designs/hotspot-erosion/
+COMPARED_DIR = CD.ALL_DIR / "hotspot-erosion"
 BASE = "cal_toeberm_lat_cs3_maxmed"            # face retreat, low back row, Cs 3e-6: where the hotspots were found
 SIG_M_YR, MIN_WIDTH = 0.5, 3                   # the source/sink zone rules
 EXCLUDE = {1, 90, 5, 6, 7}                     # locked ends, groin footprint
@@ -137,15 +139,11 @@ DESIGNS = {
     "cal_toeberm_lat_cs10": ("Face retreat, equal rows, Cs 1e-5", "faceretreat_equal_cs1e-5", "#2171B5"),
     "cal_toeberm_lat_cs3_maxmed": ("Face retreat, low back row, Cs 3e-6", "faceretreat_lowback_cs3e-6", "#E66101"),
 }
-# Each design's subfolder of 2-by-design/: the base (where the zones were found) first
-DESIGN_FOLDERS = {"cal_toeberm_lat_cs3_maxmed": "1-base_face-retreat_low-back-row",
-                  "cal_step2_growth_noscrape": "2-no-collision_equal-rows",
-                  "cal_toeberm_cs2": "3-lower-both-rows_equal-rows",
-                  "cal_toeberm_lat_cs10": "4-face-retreat_equal-rows"}
 
 
 def design_dir(base):
-    return DESIGN_DIR / DESIGN_FOLDERS[base]
+    """The design's hotspot-erosion folder, 3-collision-design/<erosion>/<start>/hotspot-erosion/."""
+    return CD.hotspot_dir(base)
 
 
 COLOURS = {0: "#1A1A1A", 25: "#CBC9E2", 50: "#9E9AC8", 75: "#756BB1", 100: "#54278F"}

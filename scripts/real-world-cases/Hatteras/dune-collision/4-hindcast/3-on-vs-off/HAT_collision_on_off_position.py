@@ -60,7 +60,8 @@ Y_HALF_M = 100.0
 
 
 # One position-change figure: runs = ((variant, label, colour, width), ...), the first drawn by the run figure's call
-def figure(start, end, module, runs, title, out_name, caption, height_scale=1.0, legend_runs=None):
+def figure(start, end, module, runs, title, out_name, caption, height_scale=1.0, legend_runs=None, post=None,
+           legend_rows=None):
     import importlib
     import matplotlib
     matplotlib.use("Agg")
@@ -130,7 +131,7 @@ def figure(start, end, module, runs, title, out_name, caption, height_scale=1.0,
                for v, lab, c, w, ls in slots]
     fig.legend(handles + [h for h, _ in entries], [h.get_label() for h in handles] + [t for _, t in entries],
                loc="outside lower center")
-    restyle(fig, ax, subtitle)
+    restyle(fig, ax, subtitle, legend_rows=legend_rows)  # legend_rows: wrap long legends into more columns
     hidden = {lab for v, lab, *_ in slots if v not in shown}
     for leg in fig.legends:                       # after restyle, which redraws the legend text
         for text in leg.get_texts():
@@ -139,6 +140,8 @@ def figure(start, end, module, runs, title, out_name, caption, height_scale=1.0,
     if height_scale != 1.0:                       # taller plot, same axis range: closer lines pull apart
         w, h = fig.get_size_inches()
         fig.set_size_inches(w, h * height_scale)
+    if post:                                      # extra drawing on the finished axes (e.g. zone shading)
+        post(ax)
     out = OUT / out_name                          # out_name may start with a topic subfolder
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
@@ -324,7 +327,7 @@ def win8():
     out, gis, ch = figure(
         1996, 2009, "HAT_dune_collision", runs,
         "Shoreline position change, starting dunes from hand-picked windows vs an 8-cell search, 1996–2009",
-        "3-collision-design/dune-search-window/start_dunes_win8_position_1996_2009.png",
+        "3-collision-design/_tests/3-dune-search-window/search_window_hand_vs_8cell_position_1996_2009.png",
         "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, with the starting dunes and interior "
         "from the 1996-start DEM picked two ways: the highest cell in each domain's hand-picked window (dune-topo v3, "
         "the default; solid) or the highest cell within 8 cells (80 m) of each profile's beach start, the earlier "
@@ -352,7 +355,7 @@ def maxmed():
     out, gis, ch = figure(
         1996, 2009, "HAT_dune_collision", MAXMED_RUNS,
         "Shoreline position change, a back dune row at the window median, 1996–2009",
-        "3-collision-design/dune-rows/dune_rows_maxmed_position_1996_2009.png",
+        "3-collision-design/_tests/2-low-back-row-start/low_back_row_vs_equal_position_1996_2009.png",
         "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's starting dunes and interior. "
         "Barrier3D's two dune rows: both at the highest cell of each profile's hand-picked window (v3, as now), or "
         "the seaward row there and the landward row at the median elevation of the same window (dashed); the dune "
@@ -379,7 +382,7 @@ def maxmedlat():
     out, gis, ch = figure(
         1996, 2009, "HAT_dune_collision", MAXMED_LAT_RUNS,
         "Shoreline position change, a back dune row at the window median with lateral erosion, 1996–2009",
-        "3-collision-design/dune-rows/dune_rows_maxmed_lateral_position_1996_2009.png",
+        "3-collision-design/_tests/2-low-back-row-start/low_back_row_faceretreat_cs_position_1996_2009.png",
         "growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, v3's starting dunes and interior, "
         "toe at the berm. Grey: the dune collision module off; purple: on, both dune rows at the window maximum, the "
         "eroded volume from both rows in proportion (Cs 2e-6, the current setting); blue: both rows at the maximum, "
@@ -410,7 +413,7 @@ def behot():
             1996, 2009, "HAT_dune_collision", runs,
             f"Shoreline position change, hotspot erosion on {name.split(',')[0].lower()}, "
             f"{name.split(', ', 1)[1]}, 1996–2009",
-            f"6-missed-drops/2-by-design/{Z.DESIGN_FOLDERS[base]}/hotspot_erosion_{tag}_position_1996_2009.png",
+            str(Z.design_dir(base).relative_to(OUT) / f"hotspot_erosion_{tag}_position_1996_2009.png"),
             f"{Z.SHARED}. Black: the design {name}"
             + ("; grey: no collision, equal rows" if base != "cal_step2_growth_noscrape" else "")
             + "; purples, light to dark: the same with 25, 50, 75 and 100% of the background erosion that closes "
@@ -636,9 +639,9 @@ def _zonescrest(shade=True, both=True):
 
 ZN2 = "cal_toeberm_cs2_zn2_be"                                 # the original design's runs on the second zone set
 # The sensitivity series: (0% run, % run prefix, percentages, file tag, caption note)
-SENS = {"zn2": ("cal_toeberm_cs2", "cal_toeberm_cs2_zn2_be", (25, 50, 75, 100), "zn2",
+SENS = {"zn2": ("cal_toeberm_cs2", "cal_toeberm_cs2_zn2_be", (25, 50, 75, 100), "lowerboth_equal_cs2e-6_adjusted_zones",
                 "runs cal_toeberm_cs2_zn2_be25 to _be100"),
-        "vmig": ("cal_toeberm_cs2_vmig", "cal_toeberm_cs2_zn2_vmig_be", (50, 100), "zn2_vmig",
+        "vmig": ("cal_toeberm_cs2_vmig", "cal_toeberm_cs2_zn2_vmig_be", (50, 100), "lowerboth_equal_cs2e-6_adjusted_zones_village_migration",
                  "with dune migration on in the villages (their beach managers otherwise hold the dune line fixed "
                  "until the beach is gone); runs cal_toeberm_cs2_vmig, cal_toeberm_cs2_zn2_vmig_be50 and _be100")}
 
@@ -652,7 +655,7 @@ def zonessensvmig():
 
 
 def _zonessens(series):
-    """In 6-missed-drops/2-by-design/<original design>/: the % sensitivity on the original design, zones 9-14, 23-26,
+    """In the original design's hotspot-erosion/ folder: the % sensitivity on the original design, zones 9-14, 23-26,
     82-89, in the style of the zones figures: (a) shoreline position change, CoastSat against 0-100%; (b-f) the crest
     offset from the lidar at each %."""
     import matplotlib.pyplot as plt
@@ -751,8 +754,13 @@ def _zonessens(series):
     print(f"wrote {out}")
 
 
+def _village_mig_dir(Z):
+    import collision_designs as CD
+    return CD.BY_OLD_RUN[Z.ORIGINAL].folder / "village-dune-migration"
+
+
 def villagemig():
-    """In 6-missed-drops/2-by-design/<original design>/: the original design with the village dune lines held fixed
+    """In the original design's village-dune-migration/ folder: the original design with the village dune lines held fixed
     (CASCADE's default) against migrating, no added erosion: (a) position change against CoastSat, (b) the position
     difference, (c) the domain-median dune crest difference at each survey; the villages shaded."""
     import matplotlib.pyplot as plt
@@ -810,7 +818,7 @@ def villagemig():
     cb = fig.colorbar(im, cax=cax, orientation="horizontal", extend="both")
     cb.set_label("Model dune crest, migrate − fixed (m; red lower when the dune line migrates)", fontsize=8)
     cb.ax.tick_params(labelsize=7.5)
-    out = Z.design_dir(Z.ORIGINAL) / "village_dune_migration_position_and_crest_1996_2009.png"
+    out = _village_mig_dir(Z) / "lowerboth_equal_cs2e-6_village_dune_migration_position_and_crest_1996_2009.png"
     S.save(fig, out, dpi=300, facecolor="white", close=True)
     S.record_caption(out, (
         "The original design (lower both rows, equal rows, Cs 2e-6; " + Z.SHARED + "), no added erosion, with the "
@@ -879,7 +887,7 @@ def villagemigcrests():
     axs[0, 0].set_ylim(0, 9)
     h, lab = axs[0, 0].get_legend_handles_labels()
     fig.legend(h, lab, loc="outside lower center", ncol=4, fontsize=7.5, frameon=False)
-    out = Z.design_dir(Z.ORIGINAL) / "village_dune_migration_crests_over_time.png"
+    out = _village_mig_dir(Z) / "lowerboth_equal_cs2e-6_village_dune_migration_crests_over_time.png"
     S.save(fig, out, dpi=300, bbox_inches="tight", close=True)
     S.record_caption(out, (
         "Domain-median dune crest (m NAVD88; the higher of Barrier3D's two dune rows) through 1996-2009, the original "
@@ -992,6 +1000,158 @@ def behotsimple():
         print(f"wrote {out}")
 
 
+# The collision designs on the village-migration default (2026-11-13; collision_designs.py, HAT_dune_collision.py
+# DESIGN_GRID): each design alone against CoastSat in its own folder, then all eight overlaid in 0-all-designs/,
+# simple to complex, the hotspot zones (Buxton 9-14, Avon south 23-26, Rodanthe 82-89) shaded
+DESIGN_CAPTION = ("growth 0.02-0.04, groin 0.16, the road fix, no road rule, Rodanthe 40%, toe at the berm, v3's "
+                  "interior, village dune lines migrating until the first nourishment (the default since 2026-11-12; "
+                  "none before 2009). Erosion: no collision (the module off), lower both rows (the eroded volume "
+                  "from both dune rows in proportion), lower front row (from the seaward row only), face retreat "
+                  "(the seaward face cut back: the front row keeps its height until its sand is gone, then the back "
+                  "row). Start: equal rows (both rows at the highest cell of each profile's hand-picked window; "
+                  "solid) or low back row (the back row at the window median; dashed). Shaded: the hotspot zones of "
+                  "the missed crest drops (grey), Buxton GIS 9-14, Avon south 23-26, Rodanthe 82-89; no erosion is "
+                  "added in them here.")
+
+
+def _design_zone_shade(ax):
+    import HAT_be_hotspot_zones as Z
+    for zn, zr in Z.ZONES_AVN2.items():
+        # neutral grey, so colour means a design only (the designs use the zones' usual orange and green)
+        ax.axvspan(zr[0] - 0.5, zr[-1] + 0.5, color="0.55", alpha=0.18, lw=0, zorder=0)
+        ax.text((zr[0] + zr[-1]) / 2, 0.025, zn.split(",")[0] + " zone", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=7.5, fontweight="bold", color="0.25", zorder=7)
+
+
+def designs():
+    import pandas as pd
+    import collision_designs as CD
+    import HAT_be_hotspot_zones as Z
+    have = [d for d in CD.DESIGNS if not H_run_missing(d.run)]
+    for d in CD.DESIGNS:
+        if d not in have:
+            print(f"  skipping {d.name}: run {d.run} missing")
+    for d in have:
+        # Reference, grey: no collision on the same starting rows, so only the module differs; for no collision on
+        # the low back row, no collision on equal rows (the start alone); the base itself has none
+        ref = next((r for r in have if r.erosion == "nocollision"
+                    and r.start == (d.start if d.erosion != "nocollision" else "equal")), None)
+        ref = None if ref is d else ref
+        me = (d.run, d.name, d.colour, 2.0, d.linestyle)
+        # the reference first, so the run figure draws it underneath and the design goes on top
+        runs = (((ref.run, ref.name + " (reference)", "#7F7F7F", 1.4, ref.linestyle),) if ref else ()) + (me,)
+        out, gis, ch = figure(
+            1996, 2009, "HAT_dune_collision", runs,
+            f"Shoreline position change, {d.name}, 1996–2009",
+            str((d.folder / f"{d.tag}_position_1996_2009.png").relative_to(OUT)),
+            f"design {d.name} (run {d.run}; coloured)"
+            + (f" against {ref.name} (run {ref.run}; grey), " + ("the same start without the module" if
+               d.erosion != "nocollision" else "the start alone") if ref else "") + ": " + DESIGN_CAPTION,
+            post=_design_zone_shade)
+        print(f"wrote {out}")
+    if len(have) < 2:
+        return
+    out, gis, ch = figure(
+        1996, 2009, "HAT_dune_collision", tuple((d.run, d.name, d.colour, 1.7, d.linestyle) for d in have),
+        f"Shoreline position change, {len(have)} collision designs, 1996–2009",
+        str((CD.ALL_DIR / "all_designs_position_1996_2009.png").relative_to(OUT)),
+        "each collision design as one line, in order: " + "; ".join(f"{d.name} ({d.run})" for d in have) + ". "
+        + DESIGN_CAPTION, height_scale=1.25, post=_design_zone_shade)
+    print(f"wrote {out}")
+    # The table beside it: shoreline change in each zone and island-wide against CoastSat, and the crest scores
+    S, cs, *_ = _simple_inputs()
+    obs = pd.Series(np.asarray(cs["smoothed"]), index=np.asarray(cs["gis_x"]).round().astype(int))
+    obs = obs.groupby(level=0).mean().reindex(gis)
+    rows = []
+    for d in have:
+        c = pd.Series(np.asarray(ch[d.run]), index=gis)
+        crest = pd.read_csv(Z.H.run_dir(d.run) / "tables" / "dune_crest_vs_lidar.csv")
+        crest = crest[(crest.survey > 1996) & crest.gis.between(6, 90)]
+        r = dict(order=len(rows) + 1, design=d.name, tag=d.tag, run=d.run,
+                 shoreline_rmse_vs_coastsat_m=float(np.sqrt(((c - obs) ** 2).mean())),
+                 crest_rmse_m=float(np.sqrt((crest.model_minus_survey_m ** 2).mean())),
+                 crest_offset_2009_m=float(crest[crest.survey == 2009].model_minus_survey_m.mean()))
+        for zn, zr in Z.ZONES_AVN2.items():
+            k = zn.split(",")[0].lower().replace(" ", "_")
+            r[f"{k}_change_m"] = float(c.loc[list(zr)].mean())
+            r[f"{k}_coastsat_m"] = float(obs.loc[list(zr)].mean())
+        rows.append(r)
+    t = pd.DataFrame(rows)
+    sup = CD.ALL_DIR / "supporting"
+    sup.mkdir(parents=True, exist_ok=True)
+    t.round(3).to_csv(sup / "all_designs_summary.csv", index=False)
+    print(t.round(2).to_string(index=False))
+
+
+def designsdiff():
+    """In 3-collision-design/0-all-designs/: each design's shoreline position change minus No collision, equal rows,
+    1996-2009: (a) zoomed to the design differences; (b) the same lines with CoastSat minus No collision, for scale."""
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import collision_designs as CD
+    import HAT_be_hotspot_zones as Z
+    S, cs, change, *_ = _simple_inputs()
+    ref, rest = CD.DESIGNS[0], CD.DESIGNS[1:]
+    missing = [d.run for d in CD.DESIGNS if H_run_missing(d.run)]
+    if missing:
+        raise SystemExit(f"runs missing: {missing}")
+    c0 = change(ref.run)
+    gis = np.arange(1, len(c0) + 1)
+    obs = (pd.Series(np.asarray(cs["smoothed"]), index=np.asarray(cs["gis_x"]).round().astype(int))
+           .groupby(level=0).mean().reindex(gis).to_numpy())
+    diff = {d: change(d.run) - c0 for d in rest}
+    fig = plt.figure(figsize=(S.FIG_W_DOUBLE, 6.6), layout="constrained")
+    gs = fig.add_gridspec(3, 1, height_ratios=(0.32, 2.2, 1.6))
+    strip, ax, axb = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
+    _context_strip(strip, S)
+    strip.set_xlim(0.5, 90.5)
+    lim = max(2.0, np.ceil(max(np.nanmax(np.abs(v)) for v in diff.values()) + 0.5))
+    for a, title in ((ax, "(a) Each design minus No collision, equal rows"),
+                     (axb, "(b) The same, beside CoastSat minus No collision, equal rows")):
+        _design_zone_shade(a)
+        a.axhline(0, color=ref.colour, lw=1.4, zorder=2)
+        for d, v in diff.items():
+            a.plot(gis, v, color=d.colour, ls=d.linestyle, lw=1.6, zorder=5, label=d.name)
+        a.set_xlim(0.5, 90.5)
+        a.set_xticks([1] + list(range(10, 91, 10)))
+        a.grid(axis="y", color="0.92", lw=0.5)
+        a.spines[["top", "right"]].set_visible(False)
+        a.set_title(title, loc="left", fontsize=9, fontweight="bold")
+        a.text(1.005, 0.97, "seaward", transform=a.transAxes, fontsize=7, color=S.INK_MUTED, va="top", rotation=90)
+        a.text(1.005, 0.03, "landward", transform=a.transAxes, fontsize=7, color=S.INK_MUTED, va="bottom",
+               rotation=90)
+    ax.set_ylim(-lim, lim)
+    ax.set_ylabel("Difference in shoreline\nposition change (m)")
+    ax.tick_params(labelbottom=False)
+    axb.plot(gis, obs - c0, color="#6BAED6", lw=2.0, ls=(0, (4, 2)), zorder=4,
+             label="CoastSat minus No collision, equal rows")
+    axb.set_ylim(-40, 40)
+    axb.set_ylabel("Difference (m)")
+    axb.set_xlabel(S.DOMAIN_AXIS_LABEL)
+    h, l = ax.get_legend_handles_labels()
+    hb, lb = axb.get_legend_handles_labels()
+    from matplotlib.lines import Line2D
+    h = [Line2D([0], [0], color=ref.colour, lw=1.4)] + h + [hb[-1]]
+    l = [f"{ref.name} (zero line)"] + l + [lb[-1]]
+    fig.legend(h, l, loc="outside lower center", ncol=2, frameon=False, fontsize=7.5)
+    out = CD.ALL_DIR / "all_designs_minus_nocollision_position_1996_2009.png"
+    S.save(fig, out, dpi=300, facecolor="white", close=True)
+    t = pd.DataFrame({"gis": gis, "coastsat_minus_nocollision_m": obs - c0,
+                      **{f"{d.tag}_minus_nocollision_m": v for d, v in diff.items()}})
+    t.round(3).to_csv(out.parent / "supporting" / out.name.replace(".png", ".csv"), index=False)
+    S.record_caption(out, (
+        "Shoreline position change 1996-2009 of each collision design minus that of No collision, equal rows "
+        f"({ref.run}), per GIS domain, both smoothed with a 7-domain LOWESS north of domain 10; positive: the design "
+        "ends further seaward. (a) Zoomed to the design differences; (b) the same lines on a wider scale beside "
+        "CoastSat's change minus No collision (blue dashed), the shoreline the model still misses. Above: the "
+        "villages and the shoals' alongshore footprints. Runs: " + "; ".join(f"{d.name} ({d.run})" for d in rest)
+        + ". " + DESIGN_CAPTION))
+    print(f"wrote {out}")
+    for d, v in diff.items():
+        i = int(np.nanargmax(np.abs(v)))
+        print(f"  {d.name:42s} mean {np.nanmean(v):+.2f} m, largest {v[i]:+.2f} m at GIS {gis[i]}")
+
+
 def H_run_missing(v):
     import HAT_be_hotspot_zones as Z
     return Z.H.run_dir(v) is None
@@ -999,8 +1159,8 @@ def H_run_missing(v):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    ap.add_argument("action", nargs="?", default="onoff", choices=["onoff", "hs", "sand", "upkeep", "village", "toes", "toesnow", "widths", "win8", "maxmed", "maxmedlat", "behot", "behotsimple", "zonesonoff", "zonescrest", "zonessens", "zonessensvmig", "villagemig", "villagemigcrests"])
-    {"onoff": onoff, "hs": hs, "sand": sand, "upkeep": upkeep, "village": village, "toes": toes, "toesnow": toesnow, "widths": widths, "win8": win8, "maxmed": maxmed, "maxmedlat": maxmedlat, "behot": behot, "behotsimple": behotsimple, "zonesonoff": zonesonoff, "zonescrest": zonescrest, "zonessens": zonessens, "zonessensvmig": zonessensvmig, "villagemig": villagemig, "villagemigcrests": villagemigcrests}[ap.parse_args().action]()
+    ap.add_argument("action", nargs="?", default="onoff", choices=["designs", "designsdiff", "onoff", "hs", "sand", "upkeep", "village", "toes", "toesnow", "widths", "win8", "maxmed", "maxmedlat", "behot", "behotsimple", "zonesonoff", "zonescrest", "zonessens", "zonessensvmig", "villagemig", "villagemigcrests"])
+    {"designs": designs, "designsdiff": designsdiff, "onoff": onoff, "hs": hs, "sand": sand, "upkeep": upkeep, "village": village, "toes": toes, "toesnow": toesnow, "widths": widths, "win8": win8, "maxmed": maxmed, "maxmedlat": maxmedlat, "behot": behot, "behotsimple": behotsimple, "zonesonoff": zonesonoff, "zonescrest": zonescrest, "zonessens": zonessens, "zonessensvmig": zonessensvmig, "villagemig": villagemig, "villagemigcrests": villagemigcrests}[ap.parse_args().action]()
 
 
 if __name__ == "__main__":
