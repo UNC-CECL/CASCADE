@@ -5,12 +5,14 @@ The road's dune rebuild rule, three versions: where NC 12's dunes get rebuilt, a
 
 The roadway manager rebuilds a domain's dunes to the design height when its front dune row drops below a trigger,
 but only where the road sits no farther behind the dune than a gate (obx-cascade's dune_mgmt_road_setback_trigger).
-Three gates: the hindcast's 20 m; 150 m, just past the farthest road at a lidar rebuild; and NCDOT's own criterion,
-dune maintenance where NC 12 is within 650 ft (198 m) of the shoreline (Bonner Bridge Replacement FEIS, NCDOT/FHWA
-2008, p. 2-128, from the landward reach of Hurricane Isabel's washover fans), which on the manager's axis, the road
-behind the dune, is 198 m less the domain's beach width. The same FEIS: minor dune maintenance 2-3 times a year,
-most often where the dune is within 25 ft (7.6 m) of the road (p. 2-144, 2-128); CAMA Major Permit 86-99 (renewed
-2021) authorises it on Hatteras in mapped areas.
+Three gates: the hindcast's 20 m; 150 m, just past the farthest road at a lidar rebuild; and 198 m (650 ft) from the
+shoreline, which on the manager's axis, the road behind the dune, is 198 m less the domain's beach width. The 650 ft
+is not an NCDOT dune maintenance rule: the Bonner Bridge Replacement FEIS (NCDOT/FHWA 2008, p. 2-128) lists it as a
+monitoring warning sign for bridge phasing, from the landward reach of Hurricane Isabel's washover fans. NCDOT's
+criterion is 230 ft (70 m) from MHW to the pavement, from NC 12 maintenance records (p. 2-64), which less a ~50 m
+beach is about the hindcast's 20 m (NCDOT_road_dune_criteria.txt, this folder). The same FEIS: minor dune maintenance
+2-3 times a year, most often where the dune is within 25 ft (7.6 m) of the road (p. 2-144, 2-128); CAMA Major Permit
+86-99 (renewed 2021) authorises it on Hatteras in mapped areas.
 
 A rebuild in the lidar: a domain's median spike-screened crest up >= 1 m at >= 0.4 m/yr between surveys (natural
 growth here is under ~0.1 m/yr), outside the village zones (the beach/dune manager's) and where there is a road.
@@ -56,7 +58,7 @@ SURVEYS_EXCLUDED = (1998, 2001)
 VILLAGES = {"Buxton": (7, 8), "Avon": (21, 31), "Salvo": (68, 71), "Waves": (72, 76), "Rodanthe": (77, 83)}
 JUMP_M, RATE_M_YR = 1.0, 0.4          # a rebuild in the lidar
 GATE_NOW_M, GATE_FIT_M = 20.0, 150.0  # the hindcast's gate; just past the farthest road at a lidar rebuild (140 m)
-SHORE_GATE_M = 198.0                  # NCDOT: NC 12 within 650 ft of the shoreline (Bonner Bridge FEIS 2008, p. 2-128)
+SHORE_GATE_M = 198.0                  # 650 ft from the shoreline: the FEIS's warning sign (2008, p. 2-128), not a rule
 MHW_M = 0.36                          # MHW, m NAVD88
 BERM_MHW_M, MIN_DUNE_M = 1.34, 0.3    # Barrier3D berm (m MHW) and the roadway manager's absolute minimum dune
 DESIGN_M_NAVD88 = 3.94 + MHW_M        # the hindcast's rebuild height
@@ -123,9 +125,9 @@ def main():
     for y in STARTS:
         g = gates[(gates.start == y) & gates.road_setback_m.notna()]
         print(f"{y} start: road domains {len(g)}; rebuild allowed now {g.rebuild_now.sum()}, 150 m {g.rebuild_fit.sum()}, "
-              f"NCDOT 198 m {g.rebuild_ncdot.sum()}")
+              f"198 m from the shoreline {g.rebuild_ncdot.sum()}")
     print(f"lidar rebuilds inside the gate: now {(reb.road_setback_m <= GATE_NOW_M).sum()}, 150 m "
-          f"{(reb.road_setback_m <= GATE_FIT_M).sum()}, NCDOT {(reb.road_setback_m <= reb.gate_ncdot_m).sum()} of {len(reb)}")
+          f"{(reb.road_setback_m <= GATE_FIT_M).sum()}, 198 m from the shoreline {(reb.road_setback_m <= reb.gate_ncdot_m).sum()} of {len(reb)}")
 
     # Figure: (a) the road behind the dune and the three gates along the island, the lidar rebuilds on it;
     # (b) the crest before and after each rebuild against the triggers and the design height
@@ -152,7 +154,7 @@ def main():
     ax.legend([road09, road96, now, fit, shore, obs],
               ["Road behind the dune, 2009 start", "Road behind the dune, 1996 start", f"Gate now ({GATE_NOW_M:g} m)",
                f"Gate fitted to the lidar ({GATE_FIT_M:g} m)",
-               f"NCDOT: road within {SHORE_GATE_M:g} m (650 ft) of the shoreline", "Rebuild in the lidar"],
+               f"Road within {SHORE_GATE_M:g} m (650 ft) of the shoreline", "Rebuild in the lidar"],
               loc="upper left", bbox_to_anchor=(0.0, 0.92), fontsize=7, frameon=False, ncol=2)
 
     ax = axs[1]
@@ -186,8 +188,9 @@ def main():
         "The road's dune rebuild rule. (a) NC 12's distance behind the dune per domain (GIS 1 at Cape Point, 90 at "
         "the Pea Island boundary; the model's road setback inputs, 2009 start shaded, 1996 dotted) against three "
         f"gates within which the roadway manager may rebuild: the hindcast's {GATE_NOW_M:g} m; {GATE_FIT_M:g} m, "
-        "just past the farthest road at a lidar rebuild; and NCDOT's criterion, NC 12 within 650 ft (198 m) of the "
-        "shoreline (Bonner Bridge Replacement FEIS 2008, p. 2-128), here 198 m less each domain's beach width. "
+        "just past the farthest road at a lidar rebuild; and NC 12 within 650 ft (198 m) of the shoreline, a "
+        "monitoring warning sign in the Bonner Bridge Replacement FEIS (2008, p. 2-128), here 198 m less each "
+        "domain's beach width. "
         "Stars: dune rebuilds in the lidar (domain-median crest up at least 1 m at 0.4 m/yr or more between "
         "surveys, village zones excluded). (b) The crest before and after each rebuild against the hindcast's "
         "trigger (the berm floor), the median crest before a rebuild, and the design height."))

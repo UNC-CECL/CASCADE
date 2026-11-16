@@ -9,7 +9,8 @@ road_elevation/HAT_road_elevation.py the per-domain road elevation, one set for 
 road_offset/                         the road setback per domain: produce, audit, figures, compare (own README)
 road_relocation/                     how far the road moved between vintages (own README)
 village_dune_cap/HAT_village_dune_cap.py  the village dune cap per village, from the lidar (a measurement; the runner reads one value)
-road_dune_rebuild/HAT_road_dune_rebuild.py  where the road manager may rebuild dunes: three gates (20 m, 150 m, NCDOT's 650 ft from the shoreline) against the lidar rebuilds (a measurement; the runner reads one value)
+road_dune_rebuild/HAT_road_dune_rebuild.py  where the road manager may rebuild dunes: three gates (20 m, 150 m, 650 ft from the shoreline) against the lidar rebuilds (a measurement; the runner reads one value)
+road_dune_rebuild/NCDOT_road_dune_criteria.txt  what NCDOT's documents say about dune management (230 ft buffer, 25 ft dune offset; the 650 ft is a monitoring warning sign, not a maintenance rule)
 ncdot_hotspots/HAT_ncdot_hotspots.py  NCDOT's NC 12 hot spots (2021 report, 2015 R-4070B study) georeferenced onto the domains: Buxton 8-14, Avon 28-35, Rodanthe 84-88 (a reference; the reasoning is in the data folder's README)
 ```
 

@@ -1,0 +1,111 @@
+NCDOT criteria for NC 12 dune management: what the documents say
+Compiled 2026-11-11 from NCDOT, FHWA and NC Division of Coastal Management documents.
+Page numbers are the document's own unless marked "PDF p."
+
+BOTTOM LINE
+- No NCDOT document found sets a distance at which dunes are rebuilt. Any model gate is our
+  translation of their criteria.
+- The best-supported, citable criterion is the 230 ft (70.1 m) buffer from mean high water to
+  the edge of pavement. It was derived from NC 12 maintenance records, and NCDOT ties it to dune
+  protection.
+- 230 ft (70 m) less the island's ~50 m median beach is ~20 m behind the dune, the hindcast's
+  default gate. (The ~50 m median beach is taken from the code comments and has not been
+  recomputed.)
+- The 150 m gate (198 m less the beach) has no NCDOT basis. Its only support is the lidar,
+  with rebuilds seen up to 140 m behind the dune.
+
+CORRECTION NEEDED IN OUR CODE AND FIGURE TEXT
+Our text says "NCDOT maintains the dune where NC 12 is within 650 ft (198 m) of the shoreline
+(FEIS 2008, p. 2-128)". That is not what p. 2-128 says. There, 650 ft is one of several possible
+"warning signs" for a monitoring program that decides when to build bridge Phases III and IV:
+  "A distance between the shoreline and the road of less than 650 feet (198 meters) (650 feet is
+  based on measurements of the landward extent of washover fans that developed during Hurricane
+  Isabel and should generally allow natural shoreline processes to occur without notable effects
+  on NC 12 operations)"
+It is a distance at which the road is comfortably safe, not a dune maintenance limit.
+The wording appears in:
+  dune-collision/4-hindcast/3-on-vs-off/HAT_road_rule_strip.py:154 (figure text)
+  dune-collision/4-hindcast/3-on-vs-off/HAT_road_rule_threshold.py:143 (figure text)
+  dune-collision/4-hindcast/3-on-vs-off/HAT_collision_model_steps.py:19
+  dune-collision/4-hindcast/1-calibration-1996-2009/HAT_dune_collision.py:210, 388
+  dune-collision/4-hindcast/2-test-2009-2025/HAT_collision_test_2009.py:91
+  input_prep/4-mgmt-forcings/road_dune_rebuild/HAT_road_dune_rebuild.py:9, 59, 189
+  input_prep/4-mgmt-forcings/README.md:12
+
+NCDOT CRITERIA
+1. 230 ft (70.1 m) vulnerability buffer, from mean high water to the edge of pavement
+   - FEIS p. 2-64: "When the distance from the edge of NC 12's pavement to the active shoreline
+     becomes less than or equal to the buffer width of 230 feet (70.1 meters), the vulnerability
+     of NC 12 to short-term storm impacts can be mitigated by the presence of dunes."
+   - R-3116B (PDF p. 16) and R-4070B (PDF p. 15): "the 230 foot distance was determined through
+     an empirical analysis of roadway maintenance data."
+   - Monitoring report 2019 (PDF p. 22): it originated in Stone, Overton and Fisher (1991),
+     which proposed 230 ft "to indicate when a coastal highway became vulnerable to repetitive
+     overwash and sand deposits resulting in excessive maintenance costs", based on "NCDOT
+     maintenance records for NC 12."
+   - It is applied island-wide: in the Refuge (FEIS), Frisco-Hatteras Village (R-3116B) and
+     Avon-Buxton (R-4070B).
+2. Dune placement about 25 ft (7.6 m) from the edge of pavement
+   - R-3116B (PDF p. 17) and R-4070B (PDF p. 15): "NCDOT recommends placing dunes approximately
+     25 feet from the edge of NC 12 pavement." Their design dune is 10 ft high, with a 15 ft
+     crest, a 3:1 road-side slope and a 5:1 ocean-side slope.
+   - FEIS p. 2-128: "the frequency of dune maintenance is highest when a dune is less than
+     25 feet [7.6 meters] from the road."
+3. When to replenish a dune
+   - FEIS p. 2-64: "Dunes would need to be replenished once 50 percent of their volume was lost."
+   - Monitoring report 2019 (PDF p. 2): one vulnerability indicator is a dune crest elevation
+     less than 10 ft above the NC 12 centerline.
+
+HOW NCDOT DESCRIBES THE MAINTENANCE (FEIS, Oregon Inlet to Rodanthe)
+- p. 4-68: dune maintenance, dune rebuilding and sandbag-based dunes are "generally storm related
+  activities." Whether and how often they occur increases with:
+  (1) decrease in the distance between NC 12 and the shoreline, (2) degradation of the dunes,
+  (3) storm magnitude, (4) storm frequency, (5) sediment supply.
+- Table 4-13 (p. 4-69):
+  - Road scraping: 1-2 times a month.
+  - Minor dune maintenance: 2-3 times a year.
+  - Dune rebuilding: 1-2 times a year. Bulldozers push sand into a dune from the landward side,
+    with sand from the landward shoulder of the easement or another source on the island, and
+    "no beach scraping."
+  - Sandbag-core dune with berm: 1-2 times a year.
+- p. 2-144: this work is concentrated in the three Refuge hot spots (the 'S' Curves, the Sandbag
+  Area and the Canal Zone).
+- p. 4-68 and p. xxii: after the Record of Decision, maintenance in the Refuge is confined to the
+  100 ft NC 12 easement. Table 4-13 notes that earlier work often went partly or completely
+  outside it. This conflicts with the lidar's 140 m rebuilds, at least in the Refuge after 2008.
+
+PERMIT (Coastal Resources Commission variance files CRC-VR-24-12 and 24-13, December 2024)
+- CAMA Major Permit 86-99, first issued 4 September 1999 and modified many times since,
+  authorizes NCDOT to perform dune maintenance along NC 12 on Hatteras Island. It was last
+  renewed in December 2021 for five years.
+- "Dune maintenance is authorized in specific areas where DCM has previously reviewed and
+  authorized" this work. Those mapped areas are the closest thing to a formal "where" rule. The
+  maps are exhibits in the variance file ("Maps from previous 86-99 approval areas").
+- Example: after the 15-17 November 2024 storm, NCDOT rebuilt the primary dune at the Pea Island
+  Visitor Center under the permit's maintenance clause.
+- 15A NCAC 07H .0308: temporary sandbags may protect a road only if it is "imminently
+  threatened": its right-of-way is less than 20 ft from the erosion scarp. This is for sandbags,
+  not dunes.
+
+NOT YET FOUND
+- The text and maps of CAMA Permit 86-99.
+- Stone, Overton and Fisher (1991), the original 230 ft study.
+- Where the lidar's 140 m rebuilds were, and whether all of them were road-protection work.
+
+SOURCES
+- FHWA and NCDOT (2008). Bonner Bridge Replacement Project FEIS, TIP B-2500, Vol. I.
+  https://connect.ncdot.gov/letting/Design%20Build%20Program/B-2500/FEIS%20Vol%20I%2020080917.pdf
+- NCDOT (2016). NC 12 Hatteras Village Feasibility Study (R-3116B), prepared by URS.
+  https://www.ncdot.gov/projects/nc-12-south/Documents/R-3116B_feasibility_study.pdf
+- NCDOT (2015). NC 12 Avon to Buxton Feasibility Study (R-4070B), prepared by URS.
+  https://www.ncdot.gov/projects/nc-12-south/Documents/R-4070B_feasibility_study.pdf
+- Sciaudone, E. J. and M. F. Overton (2020). Coastal Monitoring Program, NC 12 Transportation
+  Management Plan, TIP B-2500, 2019 Update Report. NCSU, for NCDOT.
+  https://www.ncdot.gov/projects/nc-12-south/Documents/coastal-monitoring-program.pdf
+- NC Coastal Resources Commission (2024). Variance order CRC-VR-24-12 (NCDOT).
+  https://deq.nc.gov/coastal-management/crc-vr-24-12-ncdot/download?attachment=
+- NC DEQ (2024). Staff recommendation, CRC-VR-24-13 (NCDOT).
+  https://www.deq.nc.gov/24-13-dot-staff-rec-crc/open
+- Secondary: Deale, C. S. and J. London. "Hatteras Island and Highway 12: A chain of
+  complexity." Journal of Hospitality & Tourism Cases 10(1): 6-15. Repeats the 25 ft and 230 ft
+  criteria, citing the URS studies.
