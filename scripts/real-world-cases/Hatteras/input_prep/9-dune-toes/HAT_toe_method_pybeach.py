@@ -51,7 +51,7 @@ import pandas as pd
 
 # --- CONFIG ------------------------------------------------------------------
 # As HAT_toe_common (not imported here: pybeach's environment has none of the project's packages)
-OUT = Path(r"D:\research\UNC\hatteras_ch1\model_runs\data\hatteras_init\9-dune-toes\1-transects-1996")
+OUT = Path(r"D:\research\UNC\ch1_hatteras\model_runs\data\hatteras_init\9-dune-toes\1-transects-1996")
 VIEWER = OUT / "1-toes" / "viewer_data_1996.json"
 DEST = OUT / "3-methods" / "4-pybeach"
 BERM_M = 1.7                      # as HAT_toe_common.BERM_M

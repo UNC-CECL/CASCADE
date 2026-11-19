@@ -12,7 +12,7 @@ the storm series, by the measurement actions of
 | `empirical` | crest loss over pre-storm crest against R_high/D_high and against beach width | `collision_empirical*.csv/png` |
 
 The motivation figures (2026-11-03) go to the first four topic folders of
-`D:\research\UNC\hatteras_ch1\model_runs\dune-collision\1-observations\`, in reading order (the problem, where it is worst, what happens there, what sets it;
+`D:\research\UNC\ch1_hatteras\model_runs\dune-collision\1-observations\`, in reading order (the problem, where it is worst, what happens there, what sets it;
 then `5-forced-dune-crests`, why it matters, and `6-toes-vs-dunelines`, a check on the toe input),
 each with its PNGs and a `supporting/` (PDFs, `CAPTIONS.md`, the numbers behind each panel):
 

@@ -2,7 +2,7 @@
 
 No hindcast runs. Numbered from simplest to most complex, as `../../hard-structures/groin/3-module-tests/`.
 Each script's header says what it runs and how; figures and their captions (`supporting/CAPTIONS.md`) are
-in the workspace twin, `D:\research\UNC\hatteras_ch1\model_runs\dune-collision\3-module-tests\<folder>\figures\`.
+in the workspace twin, `D:\research\UNC\ch1_hatteras\model_runs\dune-collision\3-module-tests\<folder>\figures\`.
 
 ```
 1-rule-comparison/   offline against the lidar crest change: which collision rule fits best

@@ -12,7 +12,7 @@ storm series. Runs in seconds.
     python collision_explained_figures.py
 
 The figures are written to the workspace twin of this folder,
-`D:\research\UNC\hatteras_ch1\model_runs\dune-collision\2-module-explained\figures\`; each figure's
+`D:\research\UNC\ch1_hatteras\model_runs\dune-collision\2-module-explained\figures\`; each figure's
 Tests / How to read / Shows caption is in `figures/supporting/CAPTIONS.md` there, with the PDFs.
 
 | figure | question |

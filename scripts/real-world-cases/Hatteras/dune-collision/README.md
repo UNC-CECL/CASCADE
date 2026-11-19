@@ -8,7 +8,7 @@ by **what kind of claim** they hold and numbered in the order the work builds on
 Named `dune-storm-response/` until 2026-11-03. The runs keep that name: they are under
 `output/raw_runs/dune-storm-response/<tag>/` on the workspace (run kind `dune-storm-response`).
 Notes, data and figures that are not model runs go in the matching folders of
-`D:\research\UNC\hatteras_ch1\model_runs\dune-collision\`.
+`D:\research\UNC\ch1_hatteras\model_runs\dune-collision\`.
 
 ```
 1-observations/            the problem, in the lidar and CoastSat; no model fit
