@@ -35,6 +35,11 @@ work runs, and where the data tree is grouped the same way the names match.
 7-source-sink/        the background-erosion calibration
     1-prepare/  2-calibrate/  3-figures/  4-export/
 8-overwash-analysis/  the observed overwash record and its figures
+9-dune-toes/          measuring the dune toe, one per domain
+10-beach-slope/       measuring the beach slope for the storm run-up (2026-11-23;
+                      the storm series still uses the NC state team's 0.06)
+11-datums/            where MHW (0.36, NOAA Duck) and the berm (1.7, source not
+                      recorded) come from, and a first berm measurement (2026-11-23)
 
 HAT_units_datum_check.py   a cross-stage check: are the inputs in the units and
                            datum the model assumes (m, MHW vs NAVD88)?
