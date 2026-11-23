@@ -65,6 +65,9 @@ def region_dir(r):
 SEAWARD_OF_ROAD_M = 8.0          # the independent crest: searched from this far seaward of NC-12 (off the shoulder)
 PLAN_LAND_M, PLAN_SEA_EXTRA_M = 120.0, 20.0   # the plan maps: landward of NC-12, beyond the strips' reach
 PLAN_AERIAL_RES_M = 1.0
+AERIAL_ROAD_C = L.ROAD_C           # NC-12 on the photographs: the same magenta as the lidar and change maps, opaque,
+AERIAL_ROAD_LW = 0.9               # as on the lidar and change maps
+PLAN_AERIAL_FIRST_YEAR = 1996     # the north-up aerial maps start with the lidar (1996)
 THICK = (1998, 1999, 2004)       # the profiles drawn thicker: before and after Dennis, and after Isabel
 CREST_TABLE = (WORKSPACE / "data" / "hatteras_init" / "1-barrier3d-domains" / "1996-start" / "survey-crests"
                / "survey_dune_crests.csv")
@@ -118,7 +121,7 @@ def _legend(fig, r, extra=()):
     h = [Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12")]
     if r.washed_out_survey:
         h.append(Line2D([], [], color=L.ROAD_C, lw=1.0, ls=(0, (4, 2)),
-                        label=f"NC-12, washed out ({r.washed_out_survey})"))
+                        label=f"NC-12, old alignment (washed out {r.washed_out_survey})"))
     h += [Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain boundary"), *extra]
     fig.legend(handles=h, loc="outside lower center", ncol=len(h), fontsize=7, frameon=False, handlelength=2.2,
                columnspacing=1.6)
@@ -244,15 +247,18 @@ def imagery_strips(r, st, g, S_, plt):
         img[img.sum(axis=-1) == 0] = 1.0
         ax.imshow(img, extent=st.extent(), origin="lower", aspect="auto", interpolation="bilinear")
         st.draw(ax, y)
-        ax.lines[0].set_alpha(0.45)                    # the road line see-through: the road in the photograph shows
+        for ln in ax.lines:                            # the road lines lighter, to stand out on the photograph
+            if ln.get_color() == L.ROAD_C:
+                ln.set_color(AERIAL_ROAD_C)
+                ln.set_linewidth(AERIAL_ROAD_LW)
         L.row_label(ax, str(y), L.IMAGERY_LABELS.get(y, date[5:] if len(date) > 4 else None))
     st.top_axis(axs[0])
     axs[-1].set_xlabel(L.STRIP_XLABEL, fontsize=8)
     fig.supylabel(L.STRIP_YLABEL, fontsize=8)
-    fig.legend(handles=[Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12" + (
-        " (relocation records)" if r.relocated_by_survey else " (2008 alignment)")),
-                        Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain boundary")],
-               loc="outside lower center", ncol=2, fontsize=7, frameon=False, handlelength=2.2)
+    h = _legend_handles(r, road_c=AERIAL_ROAD_C, road_lw=AERIAL_ROAD_LW) if r.relocated_by_survey else [
+        Line2D([], [], color=AERIAL_ROAD_C, lw=AERIAL_ROAD_LW, label="NC-12 (2008 alignment)"),
+        Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain boundary")]
+    fig.legend(handles=h, loc="outside lower center", ncol=len(h), fontsize=7, frameon=False, handlelength=2.2)
     out = region_dir(r) / f"{r.name}_aerial_by_year.png"
     S_.save(fig, out, bbox_inches="tight", close=True)
     years = ", ".join(str(x[0]) for x in rows)
@@ -262,7 +268,7 @@ def imagery_strips(r, st, g, S_, plt):
         "1993-1998 and 2002, USGS georeferenced scans of USACE Field Research Facility photography (Henderson, in "
         "prep., doi:10.5066/P1CXBCDW; 2002 from the draft delivery); 2004 and 2009, Google Earth Pro historical "
         "imagery captured and georeferenced by Hannah Henry; 2008, NOAA NGS ortho-rectified colour mosaic (InPort "
-        f"48695); years with no photograph over this stretch are left out. Magenta, see-through: {r.note} Grey: the "
+        f"48695); years with no photograph over this stretch are left out. Magenta: {r.note} Grey: the "
         "domain boundaries. White: no photograph. Georeferencing errors of a few metres (USGS: about 1.2 m) can offset "
         "a photograph against the road line."))
     print(f"wrote {out}")
@@ -327,11 +333,12 @@ def _plan_save(S_, fig, out):
     S_.save(fig, out, dpi=300, close=True)                 # no trimming: every plan figure keeps the same frame
 
 
-def _legend_handles(r, extra=()):
+def _legend_handles(r, extra=(), road_c=None, road_lw=1.0):
     from matplotlib.lines import Line2D
-    h = [Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12")]
+    road_c = road_c or L.ROAD_C
+    h = [Line2D([], [], color=road_c, lw=road_lw, label="NC-12")]
     if r.washed_out_survey:
-        h.append(Line2D([], [], color=L.ROAD_C, lw=1.0, ls=(0, (4, 2)), label=f"NC-12, washed out ({r.washed_out_survey})"))
+        h.append(Line2D([], [], color=road_c, lw=road_lw, ls=(0, (4, 2)), label=f"NC-12, old alignment (washed out {r.washed_out_survey})"))
     return h + [Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain boundary"), *extra]
 
 
@@ -352,6 +359,11 @@ def _plan_decorate(ax, r, year, dom, roads, window, crs, first):
         for part in getattr(geom, "geoms", [geom]):
             x, y = part.xy
             ax.plot(x, y, color=L.ROAD_C, lw=0.9, ls=(0, (4, 2)) if year == r.washed_out_survey else "-", zorder=8)
+    if r.relocated_by_survey is not None and not old and "1978" in roads:   # after the move: old alignment, dashed
+        for geom in roads["1978"].geometry:
+            for part in getattr(geom, "geoms", [geom]):
+                x, y = part.xy
+                ax.plot(x, y, color=L.ROAD_C, lw=0.9, ls=(0, (4, 2)), zorder=8)
     ax.set_xlim(x0, x1)
     ax.set_ylim(y0, y1)
     ax.set_aspect("equal")
@@ -446,7 +458,7 @@ def plan_aerial(r, g, dom, roads, S_, plt):
     window = _plan_window(r, g, roads)
     x0, x1, y0, y1 = window
     rows = []
-    for y in L.IMAGERY_YEARS:
+    for y in (y_ for y_ in L.IMAGERY_YEARS if y_ >= PLAN_AERIAL_FIRST_YEAR):
         im = L.imagery(y, IMAGERY_CACHE)
         if not im.files:
             continue
@@ -454,27 +466,34 @@ def plan_aerial(r, g, dom, roads, S_, plt):
         if (rgb.sum(axis=-1) > 0).mean() < 0.05:
             continue
         rows.append((y, im.date, rgb))
-    fig, axs, _ = _plan_axes(S_, plt, window)
+    fig, axs, cax = _plan_axes(S_, plt, window)
+    for ax in [*axs[len(rows):], cax]:                       # no colour bar and no empty slots: trimmed below
+        fig.delaxes(ax)
     for k, (ax, (y, date, rgb)) in enumerate(zip(axs, rows)):
         _plan_panel(ax)
         img = np.clip(rgb / 255.0, 0, 1)
         img[rgb.sum(axis=-1) == 0] = 1.0
         ax.imshow(img, extent=(x0, x1, y0, y1), interpolation="bilinear")
         _plan_decorate(ax, r, y, dom, roads, window, crs, k == 0)
-        for ln in ax.lines:
+        for ln in ax.lines:                            # the road lines lighter, to stand out on the photograph
             if ln.get_color() == L.ROAD_C:
-                ln.set_alpha(0.5)
+                ln.set_color(AERIAL_ROAD_C)
+                ln.set_linewidth(AERIAL_ROAD_LW)
         ax.set_title(f"{y}\n{L.IMAGERY_LABELS.get(y, date[5:] if len(date) > 4 else '')}", fontsize=7)
-    _plan_legend(fig, [Line2D([], [], color=L.ROAD_C, lw=1.0, label="NC-12"),
-                       Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain outline")])
+    H = fig.get_size_inches()[1]
+    fig.legend(handles=_legend_handles(r, road_c=AERIAL_ROAD_C, road_lw=AERIAL_ROAD_LW)[:-1]
+               + [Line2D([], [], color=L.BOUNDARY_C, lw=0.6, label="Domain outline")],
+               loc="upper center", bbox_to_anchor=((axs[0].get_position().x0 + axs[len(rows) - 1].get_position().x1) / 2,
+                                                 (PLAN_IN["bottom"] - 0.08) / H), ncol=3, fontsize=7,
+               frameon=False, handlelength=2.2, columnspacing=1.6)
     out = region_dir(r) / f"{r.name}_plan_aerial.png"
-    _plan_save(S_, fig, out)
+    S_.save(fig, out, dpi=300, bbox_inches="tight", pad_inches=0.05, close=True)   # trimmed: its own frame
     S_.record_caption(out, (
         f"Aerial photographs of {_title(r)} ({', '.join(str(x[0]) for x in rows)}; columns, flight dates under each "
         f"year), as maps with north up and true geometry (no stretch; {r.name}_aerial_by_year shows them unrolled "
         "along the coast). Sources as in that figure: USGS georeferenced scans of USACE Field Research Facility "
-        "photography 1993-1998 and 2002 (Henderson, in prep., doi:10.5066/P1CXBCDW), Google Earth Pro captures "
-        "georeferenced by Hannah Henry (2004, 2009), NOAA NGS ortho-rectified mosaic (2008). Magenta, see-through: "
+        "photography 1996-1998 and 2002 (Henderson, in prep., doi:10.5066/P1CXBCDW), Google Earth Pro captures "
+        "georeferenced by Hannah Henry (2004, 2009), NOAA NGS ortho-rectified mosaic (2008). Magenta: "
         f"{r.note} Grey: the domain outlines, numbered on the first map. White: no photograph."))
     print(f"wrote {out}")
 

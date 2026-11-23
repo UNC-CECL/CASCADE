@@ -98,7 +98,8 @@ REGIONS = {
                      washed_out_survey=1999,
                      note=("NC-12 where it was at each survey: the old alignment through 1998, washed out by Hurricane "
                            "Dennis in the September 1999 survey (dashed), and the relocated alignment from 2000 (about "
-                           "3,500 ft moved landward just north of Buxton, in place by 16 March 2000; NCDOT 2015).")),
+                           "3,500 ft moved landward just north of Buxton, in place by 16 March 2000; NCDOT 2015), "
+                           "with the old alignment kept as a dashed line from 2000 on, before and after the move.")),
     # Avon's dune stands 150-250 m out, behind the oceanfront houses
     "avon_south": Region("avon_south", "Avon south", range(21, 27), (21, 22, 23, 24, 25, 26), sea_m=280.0,
                          note=("NC-12 on its 2008 alignment (it did not move here in 1996-2009). The 1996-2004 "
@@ -281,6 +282,8 @@ class Strip:
         y = self.road78 if old else self.road08
         ax.plot(self.s / 1000, y, color=ROAD_C, lw=1.0, ls=(0, (4, 2)) if year == r.washed_out_survey else "-",
                 solid_capstyle="butt", zorder=8)
+        if self.road78 is not None and not old:                # after the move: the old alignment stays, dashed
+            ax.plot(self.s / 1000, self.road78, color=ROAD_C, lw=1.0, ls=(0, (4, 2)), zorder=8)
         for e in self.boundaries()[1:-1]:
             ax.axvline(e / 1000, color=BOUNDARY_C, lw=0.6, zorder=6)
         ax.set_xlim(ext[0], ext[1])
