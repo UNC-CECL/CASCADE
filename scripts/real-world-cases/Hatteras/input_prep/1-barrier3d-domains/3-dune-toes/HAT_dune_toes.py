@@ -397,6 +397,128 @@ def figures(beach_width_limit_m=25.0):
     print(f"wrote {png}")
 
 
+# The screened cell toes each start's domain mean is taken over (as cell_table): the TOE_DOMAIN_SURVEYS surveys,
+# spike screen ok, toe above TOE_MIN_M_NAVD88 and TOE_BELOW_CREST_M under the crest
+def _domain_toe_inputs(start):
+    src, years = TOE_DOMAIN_SURVEYS[start]
+    n = pd.read_csv(S.tv.product_dir(src) / "dune-toes" / "survey_dune_toes.csv")
+    n = n[(n.survey.astype(str).isin([str(y) for y in years])) & (n.status == "ok")]
+    return n[(n.toe_m_navd88 > TOE_MIN_M_NAVD88) & (n.toe_m_navd88 < n.crest_m_navd88 - TOE_BELOW_CREST_M)], years
+
+
+BERM_M_NAVD88 = 1.7              # Barrier3D's berm on every Hatteras domain, as the collision scripts
+
+
+def domain_toe_figure(starts=("1996-start",)):
+    """The one toe per domain the runner reads, alongshore, for the given starts, against Barrier3D's berm."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from site_layer import hat_figure_style as fs
+    fs.apply_style()
+    colours = {"1996-start": fs.C_1997, "2009-start": fs.C["ADDED"]}
+    tables = {s: v for s, v in _tables().items() if s in starts}
+    out_dir = fs.figure_dir("inputs", "1-domains", "dune_toes")
+    fig, ax = plt.subplots(figsize=fs.figsize("double", height=2.8), layout="constrained")
+    ax.axhline(BERM_M_NAVD88, color=fs.INK_MUTED, lw=1.0, ls="--", zorder=2)
+    handles, spans = [], []
+    for start, (_, cells) in tables.items():
+        c = colours[start]
+        used = cells.groupby("gis").toe_m_navd88.first().reindex(GIS)
+        _, years = _domain_toe_inputs(start)
+        ax.plot(used.index, used, color=c, lw=1.8, drawstyle="steps-mid", zorder=3)
+        for gis in used[used.isna()].index:
+            ax.plot(gis, 1.15, ls="none", marker="x", ms=6, mew=1.4, color=c, zorder=4)
+        yrs = ", ".join(map(str, years))
+        handles.append(Line2D([], [], color=c, lw=1.8, label=f"{start[:4]} start ({yrs} lidar)"))
+        spans.append(f"{start}, {yrs} ({used.mean():.2f} m on average, {used.min():.2f}-{used.max():.2f} m)")
+        print(f"{start}: domain toe mean {used.mean():.2f}, range {used.min():.2f}-{used.max():.2f} m NAVD88, "
+              f"no toe at GIS {list(used[used.isna()].index)}")
+    ax.set_xlim(0.5, 90.5)
+    ax.set_ylim(1.0, 4.2)
+    ax.set_ylabel("Dune toe (m NAVD88)")
+    ax.set_xlabel(fs.DOMAIN_AXIS_LABEL)
+    ax.grid(axis="y")
+    fs.open_frame(ax)
+    fs.town_bands(ax, label=True)
+    handles.append(Line2D([], [], color=fs.INK_MUTED, lw=1.0, ls="--", label=f"berm ({BERM_M_NAVD88:g} m)"))
+    ax.legend(handles=handles, loc="lower right", ncol=2, fontsize=8, frameon=False)
+    png = out_dir / "dune_toe_domain_mean.png"
+    fs.save(fig, png, close=True)
+    fs.record_caption(png, (
+        "The dune toe the collision module reads, one per GIS domain (input_prep/1-barrier3d-domains/3-dune-toes, "
+        "dune_toe_cells.csv toe_m_navd88): the mean of the domain's 10 m cell toes in the lidar surveys nearest "
+        f"the start, each toe above {TOE_MIN_M_NAVD88:g} m NAVD88, at least {TOE_BELOW_CREST_M:g} m below that "
+        "survey's crest and passing the crest spike screen. Dashed: Barrier3D's berm, "
+        f"{BERM_M_NAVD88:g} m NAVD88 on every domain. Grey bands: the villages. Start: " + "; ".join(spans) + "."))
+    print(f"wrote {png}")
+
+
+def dune_toe_crest_figure(start="1996-start"):
+    """The domain toe the runner reads against the domain mean crest from the same surveys, alongshore."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    from site_layer import hat_figure_style as fs
+    fs.apply_style()
+    _, cells = _tables()[start]
+    toe = cells.groupby("gis").toe_m_navd88.first().reindex(GIS)
+    # The crest: the mean over every spike-screened cell of the same surveys (not only the cells with a toe)
+    src, years = TOE_DOMAIN_SURVEYS[start]
+    n = pd.read_csv(S.tv.product_dir(src) / "dune-toes" / "survey_dune_toes.csv")
+    n = n[(n.survey.astype(str).isin([str(y) for y in years])) & (n.status == "ok")]
+    crest = n.groupby("gis").crest_m_navd88.mean().reindex(GIS)
+    height = crest - toe
+    c_toe, c_crest = fs.C_1997, fs.C["ACCENT"]
+    c_height = fs.SMOOTH_RAMP[1]                    # light blue, between the shading and the toe blue
+    fig, (ax, ax_h) = plt.subplots(2, 1, sharex=True, figsize=fs.figsize("double", height=4.8),
+                                   height_ratios=(3, 2), layout="constrained")
+    ax.fill_between(toe.index, toe, crest, step="mid", color=fs.C_1997_FILL, alpha=0.35, lw=0, zorder=2)
+    ax.axhline(BERM_M_NAVD88, color=fs.INK_MUTED, lw=1.0, ls="--", zorder=2)
+    ax.plot(crest.index, crest, color=c_crest, lw=1.8, drawstyle="steps-mid", zorder=3)
+    ax.plot(toe.index, toe, color=c_toe, lw=1.8, drawstyle="steps-mid", zorder=3)
+    ax.set_ylim(1.0, np.ceil(crest.max()) + 1.0)
+    ax.set_ylabel("Elevation (m NAVD88)")
+    # (b) The crest above the toe, the shading of (a) on its own axis
+    ax_h.fill_between(height.index, 0, height, step="mid", color=fs.C_1997_FILL, alpha=0.6, lw=0, zorder=2)
+    ax_h.plot(height.index, height, color=c_height, lw=1.4, drawstyle="steps-mid", zorder=3)
+    ax_h.axhline(height.mean(), color=fs.INK_MUTED, lw=0.8, ls=":", zorder=3)
+    ax_h.annotate(f"mean {height.mean():.2f} m", (49.5, height.mean()), xytext=(0, 2), textcoords="offset points",
+                  ha="center", va="bottom", fontsize=7, color=fs.INK_MUTED)   # over the low GIS 46-54 stretch
+    ax_h.set_ylim(0, np.ceil(height.max()))
+    ax_h.set_ylabel("Crest above toe (m)")
+    ax_h.set_xlabel(fs.DOMAIN_AXIS_LABEL)
+    for k, a in enumerate((ax, ax_h)):
+        a.set_xlim(0.5, 90.5)
+        a.grid(axis="y")
+        fs.open_frame(a)
+        fs.town_bands(a, label=(k == 0))
+        a.text(0.008, 0.985, f"({'ab'[k]})", transform=a.transAxes, ha="left", va="top", fontsize=10,
+               fontweight="bold", color=fs.INK, zorder=20)
+    yrs = ", ".join(map(str, years))
+    ax.legend(handles=[Line2D([], [], color=c_crest, lw=1.8, label="dune crest"),
+                       Patch(color=fs.C_1997_FILL, alpha=0.6, label="crest above toe"),
+                       Line2D([], [], color=c_toe, lw=1.8, label="dune toe"),
+                       Line2D([], [], color=fs.INK_MUTED, lw=1.0, ls="--", label=f"berm ({BERM_M_NAVD88:g} m)")],
+              loc="upper right", bbox_to_anchor=(1.0, 0.93), ncol=4, fontsize=8, frameon=False)
+    png = fs.figure_dir("inputs", "1-domains", "dune_toes") / "dune_toe_vs_crest.png"
+    fs.save(fig, png, close=True)
+    fs.record_caption(png, (
+        f"Dune toe and crest per GIS domain, {start[:4]} start ({yrs} lidar). Toe (blue): the one toe the collision "
+        "module reads, the mean of the domain's 10 m cell toes that sit above "
+        f"{TOE_MIN_M_NAVD88:g} m NAVD88 and at least {TOE_BELOW_CREST_M:g} m below that survey's crest. Crest "
+        "(purple): the mean of every spike-screened cell crest in the same surveys. Shading, and (b) on its own: "
+        f"the crest above the toe, {height.mean():.2f} m on average (dotted) ({height.min():.2f} m at GIS {height.idxmin()}, {height.max():.2f} m "
+        f"at GIS {height.idxmax()}). Dashed: Barrier3D's berm, {BERM_M_NAVD88:g} m NAVD88. Grey bands: the villages."))
+    print(f"{start}: crest {crest.mean():.2f} m ({crest.min():.2f}-{crest.max():.2f}), toe {toe.mean():.2f} m, "
+          f"crest above toe {height.mean():.2f} m ({height.min():.2f} at GIS {height.idxmin()}, "
+          f"{height.max():.2f} at GIS {height.idxmax()})")
+    print(f"wrote {png}")
+
+
 # The method figure's example: a typical cell (GIS 22, cell 32) and its domain, and the storm series of the
 # calibration window
 EXAMPLE = ("1996-start", 22, 32)
@@ -610,8 +732,20 @@ def main():
                     help="rewrite dune_toe_cells.csv from the saved survey_dune_toes.csv (no profiles read)")
     ap.add_argument("--figures", action="store_true",
                     help="draw the figures from the saved tables of every start built so far")
+    ap.add_argument("--domain-toe-figure", action="store_true",
+                    help="draw only dune_toe_domain_mean.png (the one toe per domain, alongshore)")
+    ap.add_argument("--toe-crest-figure", action="store_true",
+                    help="draw only dune_toe_vs_crest.png (domain toe against domain crest, alongshore)")
     args = ap.parse_args()
+    if args.domain_toe_figure or args.toe_crest_figure:
+        if args.domain_toe_figure:
+            domain_toe_figure()
+        if args.toe_crest_figure:
+            dune_toe_crest_figure()
+        return
     if args.figures:
+        domain_toe_figure()
+        dune_toe_crest_figure()
         figures()
         method_figure()
         transect_figure()
