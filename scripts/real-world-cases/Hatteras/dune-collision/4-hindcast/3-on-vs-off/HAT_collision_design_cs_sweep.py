@@ -90,7 +90,7 @@ def reference(d):
     return next(r for r in CD.DESIGNS if r.erosion == "nocollision" and r.start == d.start)
 
 
-def draw(S, plt, designs, tables, out, caption):
+def draw(S, plt, designs, tables, out, caption, current_apart=False):
     fig, axs = plt.subplots(4, 2, figsize=(S.FIG_W_DOUBLE, 9.6), sharex=True, layout="constrained")
     refs = {}
     for d in designs:
@@ -107,7 +107,8 @@ def draw(S, plt, designs, tables, out, caption):
             t = tables[d.tag].sort_values("cs")
             if t.empty:
                 continue
-            ax.plot(t.cs, t[col], marker="o", ms=3.5, lw=1.8, color=d.colour, ls=d.linestyle,
+            line = t[~t.current] if current_apart else t      # current_apart: the ringed run is not on the curve
+            ax.plot(line.cs, line[col], marker="o", ms=3.5, lw=1.8, color=d.colour, ls=d.linestyle,
                     label=d.name.rsplit(", Cs", 1)[0] if k == 0 else None)
             cur = t[t.current]
             ax.plot(cur.cs, cur[col], "o", ms=9, mfc="none", mec=d.colour, mew=1.4, zorder=6,
@@ -340,15 +341,34 @@ def cs_label(c):
     return f"{m}e{int(e)}"
 
 
+def stamp(src, out, label, run):
+    """Copy a run's figure with a band added on top naming its design and Cs (the run's own figure does not)."""
+    from PIL import Image, ImageDraw, ImageFont
+    im = Image.open(src).convert("RGB")
+    h = max(60, im.height // 18)
+    canvas = Image.new("RGB", (im.width, im.height + h), "white")
+    canvas.paste(im, (0, h))
+    draw = ImageDraw.Draw(canvas)
+    fonts = Path(r"C:\Windows\Fonts")
+    try:
+        bold = ImageFont.truetype(str(fonts / "arialbd.ttf"), int(h * 0.55))
+        small = ImageFont.truetype(str(fonts / "arial.ttf"), int(h * 0.36))
+    except OSError:
+        bold = small = ImageFont.load_default()
+    draw.text((int(h * 0.4), h // 2), label, fill="#1A1A1A", font=bold, anchor="lm")
+    draw.text((im.width - int(h * 0.4), h // 2), f"run {run}", fill="#666666", font=small, anchor="rm")
+    canvas.save(out, dpi=im.info.get("dpi", (300, 300)))
+
+
 def crests(S):
-    """Copy each run's crest-offset overview into its design folder, renamed by design and Cs, with a caption."""
-    import shutil
+    """Copy each run's crest-offset overview into its design folder, renamed by design and Cs and labelled with
+    them on a band across the top, with a caption."""
     note = (" Each run's own figure (CASCADE run figures/dune_crests/dune_crest_offset_overview_v2.png), copied: "
             "model minus lidar median dune crest by GIS domain and lidar survey, the run's shoreline position change "
             "1996-2009 against CoastSat on top. Toe at the berm, growth 0.02-0.04, groin 0.16, the road fix, no road "
             "rule, Rodanthe 40%, village dune lines migrating until the first nourishment.")
-    jobs = [(d.run, d.folder / f"{d.tag}_crest_offset_1996_2009.png", f"{d.name} (run {d.run}), no Cs.")
-            for d in CD.DESIGNS if d.erosion == "nocollision"]
+    jobs = [(d.run, d.folder / f"{d.tag}_crest_offset_1996_2009.png", f"{d.name} (run {d.run}), no Cs.",
+             f"{d.name} (no collision module)") for d in CD.DESIGNS if d.erosion == "nocollision"]
     for d in CD.DESIGNS:
         if d.erosion == "nocollision":
             continue
@@ -357,15 +377,20 @@ def crests(S):
             name = d.name.rsplit(", Cs", 1)[0]
             jobs.append((v, d.folder / "cs-sweep" / f"{key(d)}_cs{cs_label(c)}_crest_offset_1996_2009.png",
                          f"{name}, Cs {cs_label(c)} (run {v})" + (", the Cs its position plot uses now." if v == d.run
-                                                                     else ".")))
+                                                                     else "."),
+                         f"{name}, Cs {cs_label(c)}" + (" (current)" if v == d.run else "")))
     n = 0
-    for v, out, what in jobs:
+    for v, out, what, label in jobs:
         rd = H.run_dir(v)
         if rd is None or not (rd / CREST_FIG).is_file():
             print(f"  missing crest figure: {v}")
             continue
         out.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(rd / CREST_FIG, out)
+        try:
+            stamp(rd / CREST_FIG, out, label, v)
+        except OSError as e:          # open in a viewer on Windows
+            print(f"  could not write {out.name} (open elsewhere?): {e}")
+            continue
         S.record_caption(out, "Dune crest offset and shoreline change, " + what + note)
         n += 1
     print(f"copied {n} of {len(jobs)} crest figures")

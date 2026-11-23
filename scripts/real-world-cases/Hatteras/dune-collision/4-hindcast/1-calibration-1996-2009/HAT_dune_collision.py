@@ -410,6 +410,9 @@ CAL_STEPS = CAL_STEPS + tuple(TOE_DOMAIN_AVG)
 COLLISION_GIS.update({v: range(6, 91) for v in TOE_DOMAIN_AVG})
 BEACH_FOLLOWS_SHORELINE = ("cal_g16_nocape_dynw", "cal_g16_nocape_dynw_sw")
 WIDTH_FROM_START = TOES_FROM_START + ("cal_g16_nocape_dynw_sw",)
+# RETIRED 2026-11-20 (Hannah: "we should only be using the 20m trigger"): the 150 m (ROAD_DUNE_REBUILD) and 198 m
+# (SHORELINE_GATE, ROAD_TEST's <run>_road) road-dune gates below. New runs use CASCADE's 20 m road-behind-dune trigger
+# (hat_run.yaml road_dune_rebuild_trigger_m, the pipeline default); these variants stay only to reproduce past runs.
 # The road's dune rebuild per variant, (setback gate m, rebuild trigger m MHW or None for the hindcast's berm floor),
 # from the lidar rebuilds along NC-12 (dune-storm-response/2026-10-29-collision-test-2009-2025, tables/
 # observed_dune_rebuilds.csv): rebuilt up to 140 m behind the dune; crest before a rebuild median 2.66 m NAVD88
@@ -625,6 +628,31 @@ for _key, _run in DESIGN_GRID.items():
                 globals()[_name] = _obj + (_v,)
         VARIANTS[_v] = ("storm", _c * 1e-6, False, (0.02, 0.04))
         TOE_AT_BERM[_v] = _c * 1e-6
+# Domain-averaged toes on every module design (2026-11-23, Laura's suggestion via Hannah): each design's own settings
+# on the village-migration default and the 20 m road trigger, the toe one value per domain (TOE_DOMAIN_AVG: the mean of
+# the screened 1996 and 1997 toe cells, island median 2.89 m NAVD88) instead of the berm (1.7 m), and Cs swept
+# upward, the toe about 1.2 m higher (offline, the same island-median 1997-2009 lowering as berm Cs 2e-6 needs about
+# 4e-5). toedom_<design key>_cs<N>_vdefault, N in 1e-6; (design key, N) -> run
+TOEDOM_CS = (5, 10, 20, 50, 100)
+TOEDOM = {}
+for _key, _run in DESIGN_GRID.items():
+    if _key.startswith("nocollision"):
+        continue
+    for _c in TOEDOM_CS:
+        _v = f"toedom_{_key}_cs{_c}_vdefault"
+        TOEDOM[(_key, _c)] = _v
+        for _name, _obj in list(globals().items()):
+            if not _name.isupper() or _name in ("TOEDOM", "TOE_AT_BERM", "DESIGN_GRID", "DESIGN_SWEEP", "DESIGN_SWEEP_CS",
+                                                "DESIGN_SWEEP_EXTRA", "BE_HOTSPOT", "BE_HOTSPOT_100", "BE_HOTSPOT_RATES",
+                                                "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+                continue
+            if isinstance(_obj, dict) and _run in _obj and _v not in _obj:
+                _obj[_v] = _obj[_run]
+            elif isinstance(_obj, tuple) and _run in _obj and _v not in _obj:
+                globals()[_name] = _obj + (_v,)
+        VARIANTS[_v] = ("storm", _c * 1e-6, False, (0.02, 0.04))
+        TOE_DOMAIN_AVG[_v] = (1996, 1997)
+# RETIRED 2026-11-20 with the 198 m gate (see ROAD_DUNE_REBUILD above): kept to reproduce the 2026-11-16 check.
 # The front-runners with the 198 m road rule on (2026-11-15; Rodanthe kept at 40%, its share still open): each
 # <run>_road a copy of its DESIGN_SWEEP run (or no collision) with only the road rule added. (design key, N) -> run
 ROAD_TEST_CS = {"nocollision_equal": (None,), "faceretreat_equal": (3, 5, 10), "lowerfront_equal": (20, 30, 50),
@@ -646,6 +674,108 @@ for _key, _cs in ROAD_TEST_CS.items():
                 globals()[_name] = _obj + (_v,)
         if _v not in SHORELINE_GATE:
             SHORELINE_GATE = SHORELINE_GATE + (_v,)
+# No collision on the current default (village migration) with the 1999 Buxton relocation on
+# (HATTERAS_ROAD_EVENTS: GIS 9-14, 1999), nothing else different (2026-11-20); _vdefault_reloc keeps CASCADE's 20 m
+# road-to-dune rebuild trigger (Hannah: the trigger should only be 20 m), _road_reloc has the 198 m gate
+_RELOC_NOW = {"cal_step2_growth_noscrape_vdefault_reloc": "cal_step2_growth_noscrape_vdefault",
+              "cal_step2_growth_noscrape_vdefault_road_reloc": "cal_step2_growth_noscrape_vdefault_road"}
+for _alias, _base in _RELOC_NOW.items():
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("RELOCATION_1999", "DESIGN_GRID", "DESIGN_SWEEP", "ROAD_TEST",
+                                            "ROAD_TEST_CS", "BE_HOTSPOT", "BE_HOTSPOT_100", "BE_HOTSPOT_RATES",
+                                            "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
+    RELOCATION_1999[_alias] = _base
+# The Buxton dunes flattened in 1999 and a dune rebuilt in front of the relocated road (2026-11-20, Hannah: does the
+# rebuild matter?). Both on cal_step2_growth_noscrape_vdefault_reloc (no collision, 20 m road trigger, 1999 relocation):
+# _flat        after the 1999 storms (into the 1 January 2000 state), every GIS 10-12 dune cell whose crest stands
+#              above its 1999 post-Dennis lidar crest (survey_dune_crests.csv, ok cells) is lowered to it, both rows
+#              scaled together; never raised. GIS 10-12 only: the lidar's flattened reach (9, 13, 14 held)
+# _flat_ridge  the same, and after the 2000 storms (into 1 January 2001) a 2-cell (20 m) ridge in the interior just
+#              seaward of the relocated road, one height per domain: the median 2004 independent crest (the highest
+#              point seaward of the road, 1-observations/8-dune-change-by-survey/supporting/
+#              independent_crest_by_domain.csv), which catches the built dune 25-29 m seaward of the road. The ridge
+#              only raises ground. It is interior, not dune: it becomes the dune line only if the shoreline retreats to
+#              it (Barrier3D takes the front interior row into the dunes as it retreats); the road manages it from
+#              then, when it is within 20 m
+BUXTON_FLATTEN = {"cal_step2_growth_noscrape_vdefault_reloc_flat": False,
+                  "cal_step2_growth_noscrape_vdefault_reloc_flat_ridge": True}
+FLATTEN_GIS, FLATTEN_SURVEY, FLATTEN_AFTER_YEAR = (10, 11, 12), "1999", 1999
+RIDGE_AFTER_YEAR, RIDGE_CELLS = 2000, 2
+RIDGE_CREST_M_NAVD88 = {10: 6.02, 11: 6.53, 12: 5.87}
+for _alias in BUXTON_FLATTEN:
+    _base = "cal_step2_growth_noscrape_vdefault_reloc"
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("BUXTON_FLATTEN", "DESIGN_GRID", "DESIGN_SWEEP", "ROAD_TEST",
+                                            "ROAD_TEST_CS", "BE_HOTSPOT", "BE_HOTSPOT_100", "BE_HOTSPOT_RATES",
+                                            "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
+# The 1999 relocation as a prescribed dune-line shift instead of a flattening (2026-11-23, advisor's idea; Hannah's
+# interview: does the shift explain the CoastSat erosion?). On cal_step2_growth_noscrape_vdefault_reloc, after the 1999
+# storms (into 1 January 2000, with the road event): the front N interior rows are removed (N = the event's road
+# displacement / 10 m, sand deleted and reported), both dune rows set to one height per domain (the median 2004
+# independent crest, as the ridge), the road setback reduced by N x 10 m (so the road stands behind the new dune as it
+# stood behind the old one) and the removed width banked as beach: the shoreline does not move (CoastSat shows no step
+# in 2000), the beach widens by N x 10 m and CASCADE's beach-width control pins the dune line until the shoreline has
+# eroded that extra beach; then native Barrier3D dune migration resumes
+# _shift    GIS 9-12, where the 2004 lidar has the new dune 25-29 m seaward of the road
+# _shift14  GIS 9-14, the whole event (at 13-14 the old dune was still the highest point in 2004)
+DUNE_SHIFT = {"cal_step2_growth_noscrape_vdefault_reloc_shift": (9, 10, 11, 12),
+              "cal_step2_growth_noscrape_vdefault_reloc_shift14": (9, 10, 11, 12, 13, 14)}
+SHIFT_AFTER_YEAR = 1999
+SHIFT_CREST_M_NAVD88 = {9: 5.52, 10: 6.02, 11: 6.53, 12: 5.87, 13: 5.76, 14: 6.07}
+for _alias in DUNE_SHIFT:
+    _base = "cal_step2_growth_noscrape_vdefault_reloc"
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("DUNE_SHIFT", "BUXTON_FLATTEN", "DESIGN_GRID", "DESIGN_SWEEP",
+                                            "ROAD_TEST", "ROAD_TEST_CS", "BE_HOTSPOT", "BE_HOTSPOT_100",
+                                            "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
+# The same GIS 9-12 dune-line shift on every other design of the grid (2026-11-23, Hannah: does a collision design
+# match the shoreline change best with the shift?): <design run>_reloc_shift, each design's own settings and Cs, the
+# 1999 relocation on, 20 m road trigger
+SHIFT_DESIGNS = {f"{_run}_reloc_shift": _run for _key, _run in DESIGN_GRID.items() if _key != "nocollision_equal"}
+for _alias, _base in SHIFT_DESIGNS.items():
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("SHIFT_DESIGNS", "DUNE_SHIFT", "BUXTON_FLATTEN", "RELOCATION_1999",
+                                            "DESIGN_GRID", "DESIGN_SWEEP", "ROAD_TEST", "ROAD_TEST_CS", "BE_HOTSPOT",
+                                            "BE_HOTSPOT_100", "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
+    RELOCATION_1999[_alias] = _base
+    DUNE_SHIFT[_alias] = DUNE_SHIFT["cal_step2_growth_noscrape_vdefault_reloc_shift"]
+# The flattening and the shift together (2026-11-23, Hannah: one year, keep it simple): GIS 10-12 flattened to the 1999
+# lidar after the 1999 storms (BUXTON_FLATTEN, no ridge), two storm years on the low dunes, then after the 2001 storms
+# (into 1 January 2002, between the 2001 and 2004 surveys) the GIS 9-12 dune-line shift, N rows chosen so the road
+# stands at its pre-relocation setback behind the new dune (the road displacement if the shoreline did not move)
+FLAT_SHIFT = {"cal_step2_growth_noscrape_vdefault_reloc_flat_shift": (9, 10, 11, 12)}
+FLAT_SHIFT_AFTER_YEAR = 2001
+for _alias in FLAT_SHIFT:
+    _base = "cal_step2_growth_noscrape_vdefault_reloc"
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("FLAT_SHIFT", "SHIFT_DESIGNS", "DUNE_SHIFT", "BUXTON_FLATTEN",
+                                            "DESIGN_GRID", "DESIGN_SWEEP", "ROAD_TEST", "ROAD_TEST_CS", "BE_HOTSPOT",
+                                            "BE_HOTSPOT_100", "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
 # -----------------------------------------------------------------------------
 
 
@@ -1061,6 +1191,126 @@ def collide(cascade, dom, toe, loss, to_beach):
 
 
 # Child process: collision erosion after each model year, then the unchanged hindcast
+def flatten_and_ridge(c, ridge):
+    """BUXTON_FLATTEN: patch the model's yearly update to lower GIS 10-12 to the 1999 lidar crests after 1999 and,
+    with ridge, raise a ridge just seaward of the road after 2000. On the class, so the saved model still pickles."""
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS
+    s = pd.read_csv(SURVEY_CRESTS)
+    s = s[(s.survey.astype(str) == FLATTEN_SURVEY) & (s.status == "ok") & s.gis.isin(FLATTEN_GIS)]
+    cls = type(c)
+    orig_update = cls.update
+    calls = [0]
+
+    def update(self):
+        orig_update(self)
+        calls[0] += 1
+        year = RUN_START + calls[0]                     # update k runs calendar year 1996 + k
+        dom = HATTERAS_DOMAINS.for_total(len(self.barrier3d))
+        if year == FLATTEN_AFTER_YEAR:
+            for g, grp in s.groupby("gis"):
+                b = self.barrier3d[dom.gis_to_pad(g)]
+                t = b._time_index - 1
+                before = (b._DuneDomain[t].max(axis=1) + b._BermEl) * 10 + MHW_NAVD88_M
+                n = 0
+                for cell, crest in zip(grp.cell, grp.crest_m_navd88):
+                    target = max((crest - MHW_NAVD88_M) / 10.0 - b._BermEl, b._DuneRestart)   # dam above the berm
+                    rows = b._DuneDomain[t, cell, :]
+                    top = rows.max()
+                    if top > target:
+                        b._DuneDomain[t, cell, :] = np.maximum(rows * target / top, b._DuneRestart)
+                        n += 1
+                after = (b._DuneDomain[t].max(axis=1) + b._BermEl) * 10 + MHW_NAVD88_M
+                print(f"\nEXPERIMENT flatten {year} GIS {g}: {n} of {len(grp)} lidar cells lowered, median crest "
+                      f"{np.median(before):.2f} -> {np.median(after):.2f} m NAVD88", flush=True)
+        if ridge and year == RIDGE_AFTER_YEAR:
+            for g in FLATTEN_GIS:
+                pad = dom.gis_to_pad(g)
+                b, r = self.barrier3d[pad], self.roadways[pad]
+                start = int(r._road_setback / 10)       # the road's first interior row (roadway_manager)
+                lo = max(start - RIDGE_CELLS, 0)
+                z = (RIDGE_CREST_M_NAVD88[g] - MHW_NAVD88_M) / 10.0          # interior: dam above MHW
+                old = b._InteriorDomain[lo:start, :].copy()
+                b._InteriorDomain[lo:start, :] = np.maximum(old, z)
+                print(f"\nEXPERIMENT ridge {year} GIS {g}: interior rows {lo}-{start - 1} (road setback "
+                      f"{r._road_setback:g} m) raised from median {np.median(old) * 10 + MHW_NAVD88_M:.2f} to "
+                      f"{RIDGE_CREST_M_NAVD88[g]:.2f} m NAVD88", flush=True)
+
+    cls.update = update
+
+
+def dune_shift(c, gis_list, after_year=SHIFT_AFTER_YEAR, to_old_setback=False):
+    """DUNE_SHIFT: patch the model's yearly update to move the GIS dune lines landward after `after_year` and bank the
+    removed width as beach, released to native dune migration once the shoreline has eroded it. N rows: the road's
+    displacement / 10 m, or, with to_old_setback, as many as put the road back at its setback behind the dune after
+    the 1998 update (before the relocation). On the class (pickles)."""
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_ROAD_EVENTS
+    disp = next(e for e in HATTERAS_ROAD_EVENTS if getattr(e, "year", None) == SHIFT_AFTER_YEAR).displacement_m
+    cls = type(c)
+    orig_update = cls.update
+    calls, banked, pre = [0], {}, {}                    # banked: pad -> beach width before the shift (m)
+
+    def set_width(self, pad, i, value):
+        lists = [self._beach_width[pad], self.roadways[pad]._beach_width]
+        ows = getattr(self, "_outwash", None) or []
+        ow = ows[pad] if pad < len(ows) else None
+        if ow is not None and getattr(ow, "_beach_width", None) is not None:
+            lists.append(ow._beach_width)
+        for lst in lists:
+            lst[i] = value
+
+    def update(self):
+        orig_update(self)
+        calls[0] += 1
+        year = RUN_START + calls[0]                     # update k runs calendar year 1996 + k
+        dom = HATTERAS_DOMAINS.for_total(len(self.barrier3d))
+        if year == SHIFT_AFTER_YEAR - 1:               # the setbacks before the relocation (fires before 1999)
+            for g in gis_list:
+                pre[g] = float(self.roadways[dom.gis_to_pad(g)]._road_setback)
+        if year == after_year:
+            for g in gis_list:
+                pad = dom.gis_to_pad(g)
+                b, r = self.barrier3d[pad], self.roadways[pad]
+                assert not b._Shrub_ON, "dune_shift does not move shrub domains"
+                n = (max(int(round((r._road_setback - pre[g]) / 10)), 0) if to_old_setback
+                     else int(round(disp[g] / 10)))
+                t, i = b._time_index - 1, r._time_index - 1
+                old_crest = np.median((b._DuneDomain[t].max(axis=1) + b._BermEl) * 10 + MHW_NAVD88_M)
+                gone = np.clip(b._InteriorDomain[:n], 0, None).mean(axis=1).sum() * 10 * 10     # m3 per m alongshore
+                gone_dune = ((b._DuneDomain[t] + b._BermEl) * 10).mean(axis=0).sum() * 10
+                b._InteriorDomain = b._InteriorDomain[n:]
+                b._DuneDomain[t] = max((SHIFT_CREST_M_NAVD88[g] - MHW_NAVD88_M) / 10.0 - b._BermEl, b._DuneRestart)
+                _, _, w = b.FindWidths(b._InteriorDomain, b._SL)
+                b.InteriorWidth_AvgTS[-1] = w
+                b.DomainTS[t] = b._InteriorDomain
+                setback = r._road_setback
+                r._road_setback = setback - n * 10
+                w0 = float(r._beach_width[i])
+                set_width(self, pad, i, w0 + n * 10)
+                r._beach_width_threshold = w0
+                r._beach_management_active = True
+                b.dune_migration_on = False
+                banked[pad] = (g, w0)
+                print(f"\nEXPERIMENT dune shift {year} GIS {g}: {n} interior rows removed ({gone:.0f} m3/m interior + "
+                      f"{gone_dune:.0f} m3/m old dune deleted), dune crest {old_crest:.2f} -> "
+                      f"{SHIFT_CREST_M_NAVD88[g]:.2f} m NAVD88, road setback {setback:g} -> {r._road_setback:g} m, "
+                      f"beach {w0:g} -> {w0 + n * 10:g} m", flush=True)
+        for pad, (g, w0) in list(banked.items()):
+            if year <= after_year:
+                continue
+            b, r = self.barrier3d[pad], self.roadways[pad]
+            i = r._time_index - 1
+            bw = float(r._beach_width[i])
+            if bw <= w0:                                # the banked beach is gone: native dune migration again
+                r._release_beach_width_control(b)
+                b.SCRagg[i] -= (w0 - bw) / 10           # carry the overshoot into the next dune migration
+                set_width(self, pad, i, w0)
+                del banked[pad]
+                print(f"\nEXPERIMENT dune shift {year} GIS {g}: banked beach eroded (width {bw:.1f} m), native dune "
+                      f"migration resumed", flush=True)
+
+    cls.update = update
+
+
 def _launch(variant):
     import runpy
     import cascade_pipeline.hindcast as H
@@ -1312,6 +1562,13 @@ def _launch(variant):
         rodanthe_40(c, dom)
         win8_road(c, dom)
         maxmed_back(c, dom)
+        if variant in BUXTON_FLATTEN:
+            flatten_and_ridge(c, BUXTON_FLATTEN[variant])
+        if variant in DUNE_SHIFT:
+            dune_shift(c, DUNE_SHIFT[variant])
+        if variant in FLAT_SHIFT:
+            flatten_and_ridge(c, False)
+            dune_shift(c, FLAT_SHIFT[variant], after_year=FLAT_SHIFT_AFTER_YEAR, to_old_setback=True)
         if rule is None:
             return c
         cls = type(c)
