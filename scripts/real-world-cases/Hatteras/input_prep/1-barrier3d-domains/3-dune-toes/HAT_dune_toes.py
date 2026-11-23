@@ -291,7 +291,6 @@ def figures(beach_width_limit_m=25.0):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
-    from matplotlib.patches import Patch
     from site_layer import hat_figure_style as fs
     fs.apply_style()
     colours = _start_colours()
@@ -300,32 +299,34 @@ def figures(beach_width_limit_m=25.0):
     span = " and ".join(f"{s} ({', '.join(str(y) for y in S.STARTS[s][1] if y not in TOE_SURVEYS_EXCLUDED[s])})"
                         for s in tables)
 
-    # 1. Alongshore: toe, dune height above the toe, beach width
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=fs.figsize("double", height=7.0),
+    # 1. Alongshore: the one-per-domain values the runner reads (since 2026-11-04): toe, crest above it, beach
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=fs.figsize("double", height=6.4),
                              layout="constrained")
-    for start, (t, cells) in tables.items():
-        c = colours[start]
-        cells = cells.set_index(["gis", "cell"])
-        st = t[(t.survey != "start") & (t.status == "ok")].copy()
-        st = st[~st.survey.astype(int).isin(TOE_SURVEYS_EXCLUDED[start])]
-        crest = st.groupby(["gis", "cell"]).crest_m_navd88.median().reindex(cells.index)
-        series = (cells.toe_m_navd88, crest - cells.toe_m_navd88, cells.beach_width_m)
-        for ax, values in zip(axes, series):
-            mid, lo, hi = _by_domain(values)
-            ax.fill_between(mid.index, lo, hi, color=c, alpha=0.18, lw=0, step="mid", zorder=2)
-            ax.plot(mid.index, mid, color=c, lw=1.6, drawstyle="steps-mid", zorder=3)
-        # Domains whose toe is mostly the domain median, and the ones with none
-        share = (cells.toe_source != "cell").groupby(level="gis").mean()
-        filled = share[(share >= 0.5) & (cells.toe_source == "none").groupby(level="gis").mean().lt(1)].index
-        empty = (cells.toe_source == "none").groupby(level="gis").all()
-        empty = empty[empty].index
-        mid = _by_domain(cells.toe_m_navd88)[0]
-        axes[0].plot(filled, mid.reindex(filled), ls="none", marker="o", ms=5, mfc="white", mec=c, mew=1.2, zorder=4)
-        for g in empty:
+    handles, spans = [], []
+    # Dark blue 1996 over a wider light blue 2009 (Hannah, 2026-11-23), so the overlaps stay readable
+    blues = {"1996-start": (fs.C_1997, 1.6, 4), "2009-start": (fs.SMOOTH_RAMP[1], 2.4, 3)}
+    for start, (_, cells) in tables.items():
+        c, lw, z = blues[start]
+        dom = cells.groupby("gis")[["toe_m_navd88", "beach_width_m"]].first().reindex(GIS)
+        n, years = _domain_toe_inputs(start)        # only for the years; the crest is over every ok cell
+        src = TOE_DOMAIN_SURVEYS[start][0]
+        a = pd.read_csv(S.tv.product_dir(src) / "dune-toes" / "survey_dune_toes.csv")
+        a = a[(a.survey.astype(str).isin([str(y) for y in years])) & (a.status == "ok")]
+        crest = a.groupby("gis").crest_m_navd88.mean().reindex(GIS)
+        for ax, values in zip(axes, (dom.toe_m_navd88, crest - dom.toe_m_navd88, dom.beach_width_m)):
+            ax.plot(values.index, values, color=c, lw=lw, drawstyle="steps-mid", zorder=z)
+        for g in dom.index[dom.toe_m_navd88.isna()]:
             axes[0].plot(g, 1.15, ls="none", marker="x", ms=6, mew=1.4, color=c, zorder=4)
-            axes[0].annotate(f"GIS {g}: no toe", (g, 1.15), xytext=(6, 0), textcoords="offset points",
-                             ha="left", va="center", fontsize=7, color=fs.INK_MUTED)
-    axes[2].axhline(beach_width_limit_m, color=fs.INK_MUTED, lw=0.8, ls="--", zorder=2)
+        yrs = ", ".join(map(str, years))
+        handles.append(Line2D([], [], color=c, lw=lw, label=f"{start[:4]} start ({yrs} lidar)"))
+        spans.append(f"{start} ({yrs})")
+    axes[0].axhline(BERM_M_NAVD88, color=fs.INK_MUTED, lw=1.0, ls="--", zorder=2)
+    axes[2].axhline(beach_width_limit_m, color=fs.INK_MUTED, lw=1.0, ls="--", zorder=2)
+    axes[0].annotate(f"berm {BERM_M_NAVD88:g} m", (90.5, BERM_M_NAVD88), xytext=(-2, -3), textcoords="offset points",
+                     ha="right", va="top", fontsize=7, color=fs.INK_MUTED)
+    axes[2].annotate(f"{beach_width_limit_m:g} m: no collision loss beyond", (90.5, beach_width_limit_m),
+                     xytext=(-2, 3), textcoords="offset points", ha="right", va="bottom", fontsize=7,
+                     color=fs.INK_MUTED)
     labels = ("Dune toe (m NAVD88)", "Crest above toe (m)", "Beach width (m)")
     for k, (ax, label) in enumerate(zip(axes, labels)):
         ax.set_xlim(0.5, 90.5)
@@ -333,28 +334,24 @@ def figures(beach_width_limit_m=25.0):
         ax.grid(axis="y")
         fs.open_frame(ax)
         fs.town_bands(ax, label=(k == 0))
-        fs.structures(ax, label=(k == len(axes) - 1))
-    axes[0].set_ylim(1.0, None)
-    axes[2].set_ylim(0, None)
+        ax.text(0.008, 0.985, f"({'abc'[k]})", transform=ax.transAxes, ha="left", va="top", fontsize=10,
+                fontweight="bold", color=fs.INK, zorder=20)
+    axes[0].set_ylim(1.0, 4.4)
+    axes[1].set_ylim(0, 6)
+    axes[2].set_ylim(0, 30)
     axes[-1].set_xlabel(fs.DOMAIN_AXIS_LABEL)
-    handles = [Line2D([], [], color=colours[s], lw=1.6, label=f"{s}: domain median") for s in tables]
-    handles += [Patch(color=fs.INK_MUTED, alpha=0.25, label="middle half of the domain's 50 cells"),
-                Line2D([], [], ls="none", marker="o", ms=5, mfc="white", mec=fs.INK, label="half or more of the cells take the domain median"),
-                Line2D([], [], color=fs.INK_MUTED, lw=0.8, ls="--",
-                       label=f"beach width {beach_width_limit_m:g} m: no collision loss at or beyond")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=2, fontsize=7, frameon=False)
+    axes[1].legend(handles=handles, loc="upper right", ncol=2, fontsize=8, frameon=False)
     png = out_dir / "dune_toes_alongshore.png"
     fs.save(fig, png, close=True)
     fs.record_caption(png, (
-        "The dune-collision inputs per GIS domain, as the runner reads them "
-        "(input_prep/1-barrier3d-domains/3-dune-toes): top, each 10 m dune cell's toe, the median over the "
-        f"surveys whose toe is above {TOE_MIN_M_NAVD88:g} m NAVD88 and at least {TOE_BELOW_CREST_M:g} m below "
-        "that survey's crest; middle, the cell's median crest over the same surveys less its toe, the height "
-        "a storm can take off; bottom, the cell's median beach width (the dry beach, beach start to toe), with the width "
-        "beyond which the module takes nothing. Lines: the domain median; bands: the middle half of the "
-        "domain's cells. A cell without a value takes its domain's median (open circles where half or more "
-        "do); a domain with none is left out of the collision (cross). Surveys: " + span + "; spike-screened "
-        "cells left out."))
+        "The dune-collision inputs per GIS domain, one value per domain as the runner reads them since 2026-11-04 "
+        "(input_prep/1-barrier3d-domains/3-dune-toes, dune_toe_cells.csv). (a) The toe: the mean of the domain's "
+        f"10 m cell toes in the lidar nearest the start that sit above {TOE_MIN_M_NAVD88:g} m NAVD88 and at least "
+        f"{TOE_BELOW_CREST_M:g} m below that survey's crest; dashed, Barrier3D's berm. (b) The mean crest of every "
+        "spike-screened cell in the same surveys less the toe, the height a storm can take off. (c) The beach "
+        "width the module reads: the width that gives the domain mean of its beach factor, max(0, 1 - W / "
+        f"{beach_width_limit_m:g} m), over every screened cell, so never above {beach_width_limit_m:g} m; dashed, "
+        "the width beyond which the module takes nothing. Surveys: " + "; ".join(spans) + "."))
     print(f"wrote {png}")
 
     # 2. How much a fixed toe hides: each survey's domain-median toe against the value used
@@ -385,15 +382,16 @@ def figures(beach_width_limit_m=25.0):
     fig.legend(handles=[Line2D([], [], ls="none", marker="o", ms=4, color=fs.INK_MUTED, alpha=0.6,
                                label="one survey's domain-median toe"),
                         Line2D([], [], ls="none", marker="_", ms=7, mew=1.6, color=fs.INK,
-                               label="the fixed toe the runner uses (domain median of the cell values)")],
+                               label="the one toe the runner reads (domain mean over the surveys nearest the start)")],
                loc="outside lower center", ncol=2, fontsize=7, frameon=False)
     png = out_dir / "dune_toes_survey_spread.png"
     fs.save(fig, png, close=True)
     fs.record_caption(png, (
         "How much the fixed dune toe hides. Per GIS domain, each survey's median toe over the domain's "
-        "screened cells (dots), against the one value the runner holds for the whole run (tick: the domain "
-        "median of the per-cell survey medians). The spread between surveys is what the fixed toe leaves "
-        f"out, a choice kept for simplicity (2026-10-29). Surveys: {span}."))
+        "screened cells (dots), against the one value the runner holds for the whole run (tick: the mean of the "
+        "domain's screened cell toes in the surveys nearest the start, 1996 and 1997 for the 1996 start, 2004, "
+        "2005 and 2009 for the 2009 start). The spread between surveys is what the fixed toe leaves "
+        f"out, a choice kept for simplicity (2026-10-29). Surveys shown: {span}."))
     print(f"wrote {png}")
 
 
