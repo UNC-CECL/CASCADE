@@ -486,9 +486,9 @@ def dune_toe_crest_figure(start="1996-start"):
     ax_h.fill_between(height.index, 0, height, step="mid", color=fs.C_1997_FILL, alpha=0.6, lw=0, zorder=2)
     ax_h.plot(height.index, height, color=c_height, lw=1.4, drawstyle="steps-mid", zorder=3)
     ax_h.axhline(height.mean(), color=fs.INK_MUTED, lw=0.8, ls=":", zorder=3)
-    ax_h.annotate(f"mean {height.mean():.2f} m", (49.5, height.mean()), xytext=(0, 2), textcoords="offset points",
-                  ha="center", va="bottom", fontsize=7, color=fs.INK_MUTED)   # over the low GIS 46-54 stretch
-    ax_h.set_ylim(0, np.ceil(height.max()))
+    ax_h.annotate(f"mean {height.mean():.2f} m", (1.0, height.mean()), xytext=(0, 2), textcoords="offset points",
+                  ha="left", va="bottom", fontsize=7, color=fs.INK_MUTED)   # over the low Cape Point end
+    ax_h.set_ylim(0, 6)                             # fixed, so the two starts compare
     ax_h.set_ylabel("Crest above toe (m)")
     ax_h.set_xlabel(fs.DOMAIN_AXIS_LABEL)
     for k, a in enumerate((ax, ax_h)):
@@ -504,7 +504,7 @@ def dune_toe_crest_figure(start="1996-start"):
                        Line2D([], [], color=c_toe, lw=1.8, label="dune toe"),
                        Line2D([], [], color=fs.INK_MUTED, lw=1.0, ls="--", label=f"berm ({BERM_M_NAVD88:g} m)")],
               loc="upper right", bbox_to_anchor=(1.0, 0.93), ncol=4, fontsize=8, frameon=False)
-    png = fs.figure_dir("inputs", "1-domains", "dune_toes") / "dune_toe_vs_crest.png"
+    png = fs.figure_dir("inputs", "1-domains", "dune_toes") / f"dune_toe_vs_crest_{start[:4]}.png"
     fs.save(fig, png, close=True)
     fs.record_caption(png, (
         f"Dune toe and crest per GIS domain, {start[:4]} start ({yrs} lidar). Toe (blue): the one toe the collision "
@@ -735,17 +735,19 @@ def main():
     ap.add_argument("--domain-toe-figure", action="store_true",
                     help="draw only dune_toe_domain_mean.png (the one toe per domain, alongshore)")
     ap.add_argument("--toe-crest-figure", action="store_true",
-                    help="draw only dune_toe_vs_crest.png (domain toe against domain crest, alongshore)")
+                    help="draw only dune_toe_vs_crest_<start>.png, both starts (domain toe against domain crest, alongshore)")
     args = ap.parse_args()
     if args.domain_toe_figure or args.toe_crest_figure:
         if args.domain_toe_figure:
             domain_toe_figure()
         if args.toe_crest_figure:
-            dune_toe_crest_figure()
+            for start in TOE_DOMAIN_SURVEYS:
+                dune_toe_crest_figure(start)
         return
     if args.figures:
         domain_toe_figure()
-        dune_toe_crest_figure()
+        for start in TOE_DOMAIN_SURVEYS:
+            dune_toe_crest_figure(start)
         figures()
         method_figure()
         transect_figure()
