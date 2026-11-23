@@ -173,11 +173,10 @@ NOW_RUNS = (("cal_step2_growth_noscrape_vdefault", "No collision, road not reloc
 NOW_GIS = range(8, 16)
 # The Buxton dunes flattened to the 1999 lidar at GIS 10-12, without and with the ridge in front of the relocated road
 # (HAT_dune_collision.py BUXTON_FLATTEN, 2026-11-20); relocation only for reference. ROYGBIV, CoastSat keeps blue
-FLAT_RUNS = (("cal_step2_growth_noscrape_vdefault_reloc", "Road relocated (reference)", "#D7301F", 1.8, (0, (4, 2))),
-             ("cal_step2_growth_noscrape_vdefault_reloc_flat", "+ GIS 10-12 flattened to the 1999 lidar", "#F28E2B",
-              1.8, "-"),
-             ("cal_step2_growth_noscrape_vdefault_reloc_flat_ridge", "+ flattened, ridge before the road 2001",
-              "#1A9850", 1.8, "-"))
+FLAT_RUNS = (("cal_step2_growth_noscrape_vdefault_reloc", "Road moved inland, dunes left in place", "#D7301F", 1.8,
+              (0, (4, 2))),
+             ("cal_step2_growth_noscrape_vdefault_reloc_flat_ridge",
+              "Road and dunes moved landward", "#1A9850", 2.2, "-"))
 INDEPENDENT_CRESTS = (P.OUT.parent / "1-observations" / "8-dune-change-by-survey" / "supporting"
                       / "independent_crest_by_domain.csv")
 
@@ -206,16 +205,17 @@ NOW_TEXT = dict(
     runs_text="NC-12 on its 1996 line (solid) or moved 20-80 m landward at GIS 9-14 in 1999 (dashed)",
     rebuild_run=1)
 FLAT_TEXT = dict(
-    tag="flatten_ridge", title="Shoreline position change north of Buxton, dunes flattened and rebuilt, 1996–2009",
-    runs_text="NC-12 moved 20-80 m landward at GIS 9-14 in 1999 in all three: relocation only (red dashed); with the "
-              "GIS 10-12 dunes lowered to the 1999 post-Dennis lidar crest after the 1999 storms (orange); and with a "
-              "20 m ridge also raised just seaward of the road at the start of 2001 to the 2004 lidar's independent "
-              "crest, 5.9-6.5 m (green)",
-    rebuild_run=2, indep=True)
+    tag="flatten_ridge", title="Shoreline position change north of Buxton, NC-12 moved with and without its dunes, 1996–2009",
+    runs_text="NC-12 moved 20-80 m landward at GIS 9-14 in 1999 in both: the dunes left in place (red dashed); and the "
+              "dunes moved landward with it, as observed (green): at GIS 10-12 the old dune line takes the height of "
+              "the 1999 post-Dennis lidar (NCDOT's bulldozed replacement dune) after the 1999 storms, and the new dune "
+              "ridge is built 20 m wide just seaward of the road at the start of 2001, at the 2004 lidar's "
+              "independent crest, 5.9-6.5 m",
+    rebuild_run=1, indep=True, island=True)
 # The 1999 relocation as a dune-line shift (HAT_dune_collision.py DUNE_SHIFT, 2026-11-23, advisor's idea): front
 # interior rows removed, the dune rebuilt at the 2004 crest, the removed width banked as beach; relocation only for
 # reference
-SHIFT_RUNS = (("cal_step2_growth_noscrape_vdefault_reloc", "Road relocated (reference)", "#D7301F", 1.8, (0, (4, 2))),
+SHIFT_RUNS = (("cal_step2_growth_noscrape_vdefault_reloc", "Road moved inland, dunes left in place", "#D7301F", 1.8, (0, (4, 2))),
               ("cal_step2_growth_noscrape_vdefault_reloc_shift", "+ dune line shifted landward, GIS 9-12", "#F28E2B",
                1.8, "-"),
               ("cal_step2_growth_noscrape_vdefault_reloc_shift14", "+ dune line shifted landward, GIS 9-14", "#6A3D9A",
@@ -233,7 +233,7 @@ SHIFT_TEXT = dict(
 # The flattening and the shift together (HAT_dune_collision.py FLAT_SHIFT, 2026-11-23): GIS 10-12 flattened to the 1999
 # lidar, the GIS 9-12 dune line moved with the road at the start of 2002; against the shift only and the flatten only
 FLATSHIFT_RUNS = (
-    ("cal_step2_growth_noscrape_vdefault_reloc", "Road relocated (reference)", "#D7301F", 1.8, (0, (4, 2))),
+    ("cal_step2_growth_noscrape_vdefault_reloc", "Road moved inland, dunes left in place", "#D7301F", 1.8, (0, (4, 2))),
     ("cal_step2_growth_noscrape_vdefault_reloc_shift", "+ dune line shifted 2000, GIS 9-12", "#F28E2B", 1.8, "-"),
     ("cal_step2_growth_noscrape_vdefault_reloc_flat", "+ GIS 10-12 flattened to the 1999 lidar, never rebuilt",
      "#1A9850", 1.8, (0, (1, 1))),
@@ -248,6 +248,45 @@ FLATSHIFT_TEXT = dict(
               "and lowered the same way, then after the 2001 storms the GIS 9-12 dune line moved as in orange, by as "
               "many rows as put the road back at its pre-relocation setback (purple)",
     rebuild_run=3, indep=True)
+
+
+# The storms at Hatteras's own beach slope (HAT_dune_collision.py SLOPE_0P085, 2026-11-23): road relocated 1999 and
+# the 2001 ridge, no prescribed lowering; three designs, each with the 0.06 storms (dashed) and the 0.085 storms (solid)
+SLOPE_RUNS = tuple(
+    (f"{run}_reloc_ridge{suf}", f"{name}, slope {sl}", col, 2.0 if suf else 1.4, "-" if suf else (0, (4, 2)))
+    for run, name, col in (("cal_step2_growth_noscrape_vdefault", "No collision", "#D7301F"),
+                           ("cal_toeberm_cs2_vdefault", "Lower both rows, Cs 2e-6", "#F28E2B"),
+                           ("cal_toeberm_lat_cs10_vdefault", "Face retreat, Cs 1e-5", "#6A3D9A"))
+    for suf, sl in (("", "0.06"), ("_b0p085", "0.085")))
+SLOPE_TEXT = dict(
+    tag="beach_slope_0p085",
+    title="Shoreline position change north of Buxton, storms at beach slope 0.06 and 0.085, 1996–2009",
+    runs_text="NC-12 moved 20-80 m landward at GIS 9-14 in 1999 and a 20 m ridge raised just seaward of it at the "
+              "start of 2001 (2004 crest, 5.9-6.5 m), with no prescribed lowering of the old dunes, in every run; "
+              "the storm series' run-up and the collision module's water level at the NC state team's beach slope "
+              "0.06 (dashed) or Hatteras's measured long-term slope 0.085 (solid; long events trimmed to 240 h); "
+              "No collision (red), Lower both rows (orange) and Face retreat (purple), equal rows, at their Cs",
+    rebuild_run=1, indep=True, island=True,
+    out=P.OUT / "8-other-forcings" / "beach-slope-0p085")
+
+
+# Hs retuned on the 0.085 storms (HAT_dune_collision.py HS_SWEEP_0P085, 2026-11-23): No collision, road relocated +
+# 2001 ridge; one line per Hs, ROYGBIV-ordered, against the old approach (0.06 storms, Hs 3.0, black dashed)
+_B85 = "cal_step2_growth_noscrape_vdefault_reloc_ridge_b0p085"
+HS_RUNS = (("cal_step2_growth_noscrape_vdefault_reloc_ridge", "Old: slope 0.06, Hs 3.0", "#252525", 1.6, (0, (4, 2))),
+           (_B85 + "_hs2p0", "Slope 0.085, Hs 2.0", "#1A9850", 1.8, "-"),
+           (_B85 + "_hs2p5", "Slope 0.085, Hs 2.5", "#2166ac", 1.8, "-"),
+           (_B85, "Slope 0.085, Hs 3.0", "#6A3D9A", 1.8, "-"),
+           (_B85 + "_hs3p5", "Slope 0.085, Hs 3.5", "#D7301F", 1.8, "-"))
+HS_TEXT = dict(
+    tag="beach_slope_0p085_hs_sweep",
+    title="Shoreline position change, storms at slope 0.085 with Hs retuned, 1996–2009",
+    runs_text="no collision module; NC-12 moved 20-80 m landward at GIS 9-14 in 1999 and a 20 m ridge raised just "
+              "seaward of it at the start of 2001, no prescribed lowering, in every run; the storm series and run-up at "
+              "Hatteras's measured beach slope 0.085 (long events trimmed to 200 h) with the model's wave height Hs "
+              "2.0, 2.5, 3.0 or 3.5 m (solid), against the old approach, slope 0.06 and Hs 3.0 (black dashed)",
+    rebuild_run=3, indep=True, island=True,
+    out=P.OUT / "8-other-forcings" / "beach-slope-0p085" / "hs-sweep")
 
 
 def shift_designs():
@@ -300,6 +339,7 @@ def now(runs=NOW_RUNS, text=NOW_TEXT):
     without the 1999 relocation (2026-11-20): does the road's dune management hold back the Buxton erosion? Writes
     NOW_OUT/<tag>_position_GIS8-15.png, <tag>_crests_GIS8-15.png, supporting/<tag>_road.csv. With FLAT_RUNS/FLAT_TEXT
     (action flat): the dunes flattened, with and without the rebuilt ridge"""
+    out_dir = text.get("out", NOW_OUT)
     NOW_RUNS = runs
     tag = text["tag"]
     import matplotlib
@@ -307,17 +347,26 @@ def now(runs=NOW_RUNS, text=NOW_TEXT):
     import matplotlib.pyplot as plt
     from site_layer import hat_figure_style as S
     S.apply_style()
-    (NOW_OUT / "supporting").mkdir(parents=True, exist_ok=True)
+    (out_dir / "supporting").mkdir(parents=True, exist_ok=True)
     # Position change against CoastSat, zoomed to GIS 8-15
     out, gis, ch = P.figure(
         1996, 2009, "HAT_dune_collision", [r[:4] + (r[4],) for r in NOW_RUNS],
         text["title"],
-        str((NOW_OUT / f"{tag}_position_GIS8-15.png").relative_to(P.OUT)),
+        str((out_dir / f"{tag}_position_GIS8-15.png").relative_to(P.OUT)),
         "no collision module, growth 0.02-0.04, groin 0.16, village dune lines migrating until first nourished, "
         "Rodanthe 40%, the road rebuilding dunes only where it is within 20 m behind them; " + text["runs_text"]
         + ". Zoomed to GIS 8-15; shaded: the relocated domains.",
         post=_zoom)
     print(f"wrote {out}")
+    if text.get("island"):                              # the same, the whole island
+        out, *_ = P.figure(
+            1996, 2009, "HAT_dune_collision", [r[:4] + (r[4],) for r in NOW_RUNS], text["title"].replace(
+                "north of Buxton", "island-wide"),
+            str((out_dir / f"{tag}_position_island.png").relative_to(P.OUT)),
+            "no collision module, growth 0.02-0.04, groin 0.16, village dune lines migrating until first nourished, "
+            "Rodanthe 40%, the road rebuilding dunes only where it is within 20 m behind them; " + text["runs_text"]
+            + ".")
+        print(f"wrote {out}")
     for g in NOW_GIS:
         i = list(gis).index(g)
         print(f"  GIS {g}: " + ", ".join(f"{lab} {np.asarray(ch[v])[i]:+6.1f} m" for v, lab, *_ in NOW_RUNS))
@@ -326,7 +375,7 @@ def now(runs=NOW_RUNS, text=NOW_TEXT):
     global DIFF_GIS
     DIFF_GIS = NOW_GIS
     road = road_table(runs)
-    road.to_csv(NOW_OUT / "supporting" / f"{tag}_road.csv", index=False)
+    road.to_csv(out_dir / "supporting" / f"{tag}_road.csv", index=False)
     print(road.groupby(["variant", "gis"]).agg(setback_1997=("setback_m", "first"), setback_2009=("setback_m", "last"),
                                                rebuilds=("dunes_rebuilt", "sum")).reset_index().to_string(index=False))
     sv = pd.read_csv(H.SURVEY_CRESTS)
@@ -364,7 +413,7 @@ def now(runs=NOW_RUNS, text=NOW_TEXT):
     axs[0, 0].set_ylim(0, 9)
     h, l = axs[0, 0].get_legend_handles_labels()
     fig.legend(h, l, loc="outside lower center", ncol=3, fontsize=8, frameon=False)
-    out = NOW_OUT / f"{tag}_crests_GIS8-15.png"
+    out = out_dir / f"{tag}_crests_GIS8-15.png"
     S.save(fig, out, bbox_inches="tight", close=True)
     S.record_caption(out, (
         "Domain-median dune crest (m NAVD88), 1996-2009, GIS 8-15, no collision module, the road rebuilding dunes only "
@@ -382,6 +431,10 @@ def main():
         return now()
     if sys.argv[1:] == ["flat"]:
         return now(FLAT_RUNS, FLAT_TEXT)
+    if sys.argv[1:] == ["hs"]:
+        return now(HS_RUNS, HS_TEXT)
+    if sys.argv[1:] == ["slope"]:
+        return now(SLOPE_RUNS, SLOPE_TEXT)
     if sys.argv[1:] == ["flatshift"]:
         return now(FLATSHIFT_RUNS, FLATSHIFT_TEXT)
     if sys.argv[1:] == ["shiftdesigns"]:

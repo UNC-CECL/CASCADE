@@ -776,6 +776,51 @@ for _alias in FLAT_SHIFT:
             _obj[_alias] = _obj[_base]
         elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
             globals()[_name] = _obj + (_alias,)
+# The storms at Hatteras's own beach slope (2026-11-23, Hannah): the run-up in the storm series and the collision
+# module's hourly water level at 0.085 (the long-term 1996-2020 foreshore slope, input_prep/10-beach-slope/) instead
+# of 0.06, long events trimmed to 200 h (the 240 h drop rule loses Isabel at 0.085; 200 h is the collision module's tested limit). The test: the road relocated in
+# 1999 and the 2001 ridge seaward of it, but NO prescribed lowering, so any Buxton drop is the storms' own; No
+# collision, Lower both rows and Face retreat (equal rows, their Cs), each at 0.06 (<run>_reloc_ridge) and 0.085
+# (<run>_reloc_ridge_b0p085). Hourly water level: twl(0.085, STORMS_0P085 summary, "twl_hourly_1996_2009_b0p085.csv")
+STORMS_0P085 = (PROJECT_ROOT / "data" / "hatteras_init" / "3-env-forcings" / "3-storms" / "hindcast_storms"
+                / "1997_2009_slope0p085_test" / "1997_2009_storms_v3_trim200_b0p085.npy")
+RIDGE_ONLY, SLOPE_0P085 = {}, set()
+for _key in ("nocollision_equal", "lowerboth_equal", "faceretreat_equal"):
+    _base = DESIGN_GRID[_key]
+    for _alias in (f"{_base}_reloc_ridge", f"{_base}_reloc_ridge_b0p085"):
+        for _name, _obj in list(globals().items()):
+            if not _name.isupper() or _name in ("RIDGE_ONLY", "SLOPE_0P085", "RELOCATION_1999", "SHIFT_DESIGNS",
+                                                "DUNE_SHIFT", "FLAT_SHIFT", "BUXTON_FLATTEN", "DESIGN_GRID",
+                                                "DESIGN_SWEEP", "ROAD_TEST", "ROAD_TEST_CS", "BE_HOTSPOT",
+                                                "BE_HOTSPOT_100", "BE_HOTSPOT_RATES", "VILLAGE_MIGRATE",
+                                                "_GRID_ALIAS"):
+                continue
+            if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+                _obj[_alias] = _obj[_base]
+            elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+                globals()[_name] = _obj + (_alias,)
+        RELOCATION_1999[_alias] = _base
+        RIDGE_ONLY[_alias] = _base
+        if _alias.endswith("_b0p085"):
+            SLOPE_0P085.add(_alias)
+# Hs retuned on the 0.085 storms (2026-11-23, Hannah): No collision, road relocated + 2001 ridge, Hs 2.0/2.5/3.5
+# (3.0 is <run>_reloc_ridge_b0p085); Hannah picks the best Hs from the position-change plots
+HS_SWEEP_0P085 = {f"cal_step2_growth_noscrape_vdefault_reloc_ridge_b0p085_hs{str(_h).replace('.', 'p')}": _h
+                  for _h in (2.0, 2.5, 3.5)}
+for _alias, _hs in HS_SWEEP_0P085.items():
+    _base = "cal_step2_growth_noscrape_vdefault_reloc_ridge_b0p085"
+    for _name, _obj in list(globals().items()):
+        if not _name.isupper() or _name in ("HS_SWEEP_0P085", "HS_M", "RIDGE_ONLY", "SLOPE_0P085",
+                                            "RELOCATION_1999", "DESIGN_GRID", "DESIGN_SWEEP", "_GRID_ALIAS"):
+            continue
+        if isinstance(_obj, dict) and _base in _obj and _alias not in _obj:
+            _obj[_alias] = _obj[_base]
+        elif isinstance(_obj, tuple) and _base in _obj and _alias not in _obj:
+            globals()[_name] = _obj + (_alias,)
+    RELOCATION_1999[_alias] = RELOCATION_1999[_base]
+    RIDGE_ONLY[_alias] = RIDGE_ONLY[_base]
+    SLOPE_0P085.add(_alias)
+    HS_M[_alias] = _hs
 # -----------------------------------------------------------------------------
 
 
@@ -859,8 +904,9 @@ def toes():
 
 # Hourly total water level
 
-def twl():
+def twl(slope=BEACH_SLOPE, summary=None, name="twl_hourly_1996_2009.csv"):
     from site_layer import hat_env_forcings as env
+    summary = summary or STORM_SUMMARY
     w = pd.read_csv(env.DUCK_GAUGE_FILE, index_col="t", parse_dates=True)["v"]
     wis = pd.read_csv(env.WIS_FILE, index_col="time", parse_dates=True)[["waveHs", "waveTp"]]
     idx = pd.date_range(TWL_START, TWL_END, freq="h")
@@ -868,19 +914,19 @@ def twl():
                        "Tp": wis.waveTp.reindex(idx)}).dropna()
     # Stockdon et al. (2006) R2%, as historical_storm_creation_v3_HAT.calculate_r2_percent
     L0 = 9.81 * df.Tp ** 2 / (2 * np.pi)
-    setup = 0.35 * BEACH_SLOPE * np.sqrt(df.Hs * L0)
-    swash = np.sqrt((0.75 * BEACH_SLOPE * np.sqrt(df.Hs * L0)) ** 2 + (0.06 * np.sqrt(df.Hs * L0)) ** 2)
+    setup = 0.35 * slope * np.sqrt(df.Hs * L0)
+    swash = np.sqrt((0.75 * slope * np.sqrt(df.Hs * L0)) ** 2 + (0.06 * np.sqrt(df.Hs * L0)) ** 2)
     df["R2"] = 1.1 * (setup + swash / 2)
     df["TWL"] = df.water_level + df.R2
     # Check: each storm's peak in the series is the peak of these hours
-    ev = pd.read_csv(STORM_SUMMARY, parse_dates=["StartTime", "EndTime"])
+    ev = pd.read_csv(summary, parse_dates=["StartTime", "EndTime"])
     peak = np.array([df.TWL.loc[a:b].max() for a, b in zip(ev.StartTime, ev.EndTime)])
     diff = peak - (ev.Rhigh * 10 + MHW_NAVD88_M)
     print(f"{len(df)} hours; storm peaks against the series: max |difference| {np.nanmax(np.abs(diff)):.4f} m "
           f"over {len(ev)} events")
     EXP_DIR.mkdir(parents=True, exist_ok=True)
-    df.round(4).to_csv(EXP_DIR / "twl_hourly_1996_2009.csv", index_label="time")
-    print(f"wrote {EXP_DIR / 'twl_hourly_1996_2009.csv'}")
+    df.round(4).to_csv(EXP_DIR / name, index_label="time")
+    print(f"wrote {EXP_DIR / name}")
 
 
 # Calibration
@@ -1191,7 +1237,7 @@ def collide(cascade, dom, toe, loss, to_beach):
 
 
 # Child process: collision erosion after each model year, then the unchanged hindcast
-def flatten_and_ridge(c, ridge):
+def flatten_and_ridge(c, ridge, flatten=True):
     """BUXTON_FLATTEN: patch the model's yearly update to lower GIS 10-12 to the 1999 lidar crests after 1999 and,
     with ridge, raise a ridge just seaward of the road after 2000. On the class, so the saved model still pickles."""
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS
@@ -1206,7 +1252,7 @@ def flatten_and_ridge(c, ridge):
         calls[0] += 1
         year = RUN_START + calls[0]                     # update k runs calendar year 1996 + k
         dom = HATTERAS_DOMAINS.for_total(len(self.barrier3d))
-        if year == FLATTEN_AFTER_YEAR:
+        if flatten and year == FLATTEN_AFTER_YEAR:
             for g, grp in s.groupby("gis"):
                 b = self.barrier3d[dom.gis_to_pad(g)]
                 t = b._time_index - 1
@@ -1372,7 +1418,8 @@ def _launch(variant):
     if variant in TOES_FROM_START:
         good = sp[(sp.toe_m_navd88 > TOE_MIN_M_NAVD88) & (sp.toe_m_navd88 < sp.crest_m_navd88 - TOE_BELOW_CREST_M)]
         toe = per_gis(good.set_index(["gis", "cell"]).toe_m_navd88)
-    hours = pd.read_csv(EXP_DIR / "twl_hourly_1996_2009.csv", index_col="time", parse_dates=True)
+    hours = pd.read_csv(EXP_DIR / ("twl_hourly_1996_2009_b0p085.csv" if variant in SLOPE_0P085
+                                   else "twl_hourly_1996_2009.csv"), index_col="time", parse_dates=True)
     if rule == "width":
         fit = pd.read_csv(EXP_DIR / "collision_empirical_fit.csv").iloc[0]
         flown = pd.read_csv(SURVEY_CRESTS).groupby("survey").flown.first()
@@ -1564,6 +1611,8 @@ def _launch(variant):
         maxmed_back(c, dom)
         if variant in BUXTON_FLATTEN:
             flatten_and_ridge(c, BUXTON_FLATTEN[variant])
+        if variant in RIDGE_ONLY:
+            flatten_and_ridge(c, True, flatten=False)
         if variant in DUNE_SHIFT:
             dune_shift(c, DUNE_SHIFT[variant])
         if variant in FLAT_SHIFT:
@@ -1725,6 +1774,8 @@ def launch(variant):
     env["HAT_GROIN_STRENGTH"] = str(GROIN_STRENGTH.get(variant, GROIN_STRENGTH_BASE))
     if variant in RELOCATION_1999:
         env["HAT_RELOCATIONS"] = "1"
+    if variant in SLOPE_0P085:
+        env["HAT_STORM_FILE"] = str(STORMS_0P085)
     if variant in WIN8_START:
         env["HAT_TOPO_VERSION_1996_START"] = WIN8_VERSION
     t0 = time.time()

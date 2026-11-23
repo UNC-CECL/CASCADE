@@ -56,6 +56,11 @@ _ap.add_argument("--long-events", choices=("drop", "trim"), default="drop",
 # THE SPLIT RULE (2026-09-29, Hannah adopted "split12")
 _ap.add_argument("--split-gap", type=int, default=None,
                  help="hours below the berm that split a grouped event (v3_split<H>_...)")
+# THE BEACH SLOPE (2026-11-23): 0.06 from the NC state team; Hatteras's own measured long-term value is 0.085
+# (input_prep/10-beach-slope/). Any other slope is written with _b<slope> in the name, so it never replaces the
+# model's series by accident
+_ap.add_argument("--beach-slope", type=float, default=0.06,
+                 help="foreshore slope for the Stockdon run-up (default 0.06, the NC state team's)")
 _ap.add_argument("--save-dir", default=None,
                  help="write here instead of the window's hindcast_storms folder (for checks)")
 _args = _ap.parse_args()
@@ -79,7 +84,7 @@ water_name = "v"         # name of the column that contains the water levels [m 
 t_name_wis = "time"  # name of the column that contains the datetimes in the WIS file
 waveHs_name = "waveHs"   # name of the column that contains the significant wave heights [m] in the WIS file
 waveTp_name = "waveTp"   # name of the column that contains the wave periods [s] in the WIS file
-beach_slope = 0.06       # average beach slope for calculating run-up
+beach_slope = _args.beach_slope   # beach slope for the run-up (default 0.06, NC state team)
 berm_elevation = 1.7    # average berm elevation [m NAVD88]
 weather_grouping = 24    # if storms occur within the specified limit, they are assumed part of same weather system and are grouped into one event [hrs]
 MHW = 0.36              # conversion from NAVD88 to MHW [m]: 0 m NAVD88 = X m MHW
@@ -89,9 +94,10 @@ long_events = _args.long_events      # "drop" (v3_<N>) or "trim" (v3_trim<N>)
 split_gap = _args.split_gap          # None, or hours below the berm that split an event
 save_dfs = True         # determine whether to save the dataframes as csv and npy files
 save_dir = _args.save_dir or str(_env.storm_window_dir(START_YEAR, END_YEAR))  # derived from the window
-save_name = "{0}_storms_v3_{1}{2}{3}".format(  # the rules are in the name: v3_72, v3_trim24, v3_split12_trim24
+save_name = "{0}_storms_v3_{1}{2}{3}{4}".format(  # the rules are in the name: v3_72, v3_trim24, v3_split12_trim24
     PERIOD_TAG, "split{0}_".format(split_gap) if split_gap else "",
-    "trim" if long_events == "trim" else "", max_storm_dur)
+    "trim" if long_events == "trim" else "", max_storm_dur,
+    "" if beach_slope == 0.06 else "_b{0}".format(str(beach_slope).replace(".", "p")))
 # -----------------------------------------------------------------------------
 _Path(save_dir).mkdir(parents=True, exist_ok=True)
 

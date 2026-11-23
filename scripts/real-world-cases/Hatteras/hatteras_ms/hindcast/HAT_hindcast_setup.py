@@ -315,6 +315,9 @@ def setup_scenario(r):
     # Which version folder that resolved to (v1, v2, or flat); see the json write.
     r.ISLAND_OFFSET_VERSION = island_offset_version(r.START_YEAR)
     r.STORM_FILE = r.HATTERAS_DATA_BASE / r.PERIOD["storm_file"]
+    # HAT_STORM_FILE: another storm series for this run (a test, e.g. a different beach slope; 2026-11-23)
+    if os.environ.get("HAT_STORM_FILE", "").strip():
+        r.STORM_FILE = Path(os.environ["HAT_STORM_FILE"].strip())
     r.ROAD_SETBACK_FILE = r.HATTERAS_DATA_BASE / r.PERIOD["road_setback_file"]
 
     # Resolve the combinations that cannot both be true
