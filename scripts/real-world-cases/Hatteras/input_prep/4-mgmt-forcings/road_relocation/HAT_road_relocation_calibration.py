@@ -304,7 +304,7 @@ def draw_buxton(ax):
 
 def buxton_handles():
     return [*road_handles(),
-            Line2D([], [], color="0.35", lw=0.6, label="GIS domain; label, the move in the model")]
+            Line2D([], [], color="0.35", lw=0.6, label="GIS domain (label: modelled move)")]
 
 
 # (c) The move per domain, rows aligned with the map's domains -------------------------
